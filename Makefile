@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.57 2003/12/02 11:50:38 bzfpfend Exp $
+# $Id: Makefile,v 1.58 2003/12/19 13:35:18 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -238,6 +238,7 @@ OBJSCIPLIBOBJ	=	objbranchrule.o \
 			objnodesel.o \
 			objpresol.o \
 			objpricer.o \
+			objprobdata.o \
 			objreader.o \
 			objsepa.o
 

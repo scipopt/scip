@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.113 2003/12/18 15:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.114 2003/12/19 13:35:18 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -379,9 +379,8 @@ RETCODE SCIPfree(
    CHECK_OKAY( SCIPfreeProb(*scip) );
    assert((*scip)->stage == SCIP_STAGE_INIT);
 
-   CHECK_OKAY( SCIPdialoghdlrFree(&(*scip)->dialoghdlr) );
    CHECK_OKAY( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
-
+   CHECK_OKAY( SCIPdialoghdlrFree(&(*scip)->dialoghdlr) );
    SCIPclockFree(&(*scip)->totaltime);
    SCIPinterruptFree(&(*scip)->interrupt);
    CHECK_OKAY( SCIPmemFree(&(*scip)->mem) );
@@ -3012,7 +3011,7 @@ RETCODE SCIPsolve(
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
             printf("infinite\n");
          else
-            printf("%.2f%%\n", SCIPgetGap(scip));
+            printf("%.2f%%\n", 100.0*SCIPgetGap(scip));
       }
       break;
 
