@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.187 2004/07/19 15:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.188 2004/07/20 09:39:31 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6701,7 +6701,7 @@ RETCODE SCIPfreeCutpool(
    CUTPOOL**        cutpool             /**< pointer to store cut pool */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPfreeCutpool", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPfreeCutpool", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPcutpoolFree(cutpool, scip->mem->solvemem, scip->set, scip->lp) );
 

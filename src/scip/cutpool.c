@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.28 2004/05/04 19:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.29 2004/07/20 09:39:31 bzfpfets Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -283,6 +283,7 @@ RETCODE SCIPcutpoolFree(
    /* free cuts */
    for( i = 0; i < (*cutpool)->ncuts; ++i )
    {
+      CHECK_OKAY( SCIProwUnlock( (*cutpool)->cuts[i]->row ) );
       CHECK_OKAY( cutFree(&(*cutpool)->cuts[i], memhdr, set, lp) );
    }
    freeMemoryArrayNull(&(*cutpool)->cuts);
