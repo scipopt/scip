@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.11 2004/08/10 15:00:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.12 2004/08/11 14:30:44 bzfwolte Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -515,7 +515,7 @@ RETCODE aggregation(
 
                   /* don't aggregate rows that would lead to a too extreme aggregation factor */
                   fact = - aggrcoefs[col] / nonzcoefs[row]; 
-                  if( fact < minrowfac || fact > maxrowfac )
+                  if( fact < minrowfac || fact > maxrowfac || SCIPisZero(scip, fact) )
                      continue;
                   
                   /* choose row with best aggregation score */
