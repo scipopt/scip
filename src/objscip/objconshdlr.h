@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.4 2003/12/08 13:24:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.5 2003/12/08 13:32:05 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -459,13 +459,6 @@ public:
     *  constraint handler should call SCIPvarLock(y, nlockspos + nlocksneg, nlockspos + nlocksneg) and
     *  SCIPlockConsVars(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
     *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
-    *
-    *  input:
-    *  - scip            : SCIP main data structure
-    *  - conshdlr        : the constraint handler itself
-    *  - cons            : the constraint that should lock rounding of its variables
-    *  - nlockspos       : number of times, the roundings should be locked for the constraint
-    *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation
     */
    virtual RETCODE scip_lock(
       SCIP*         scip,               /**< SCIP data structure */
@@ -497,13 +490,6 @@ public:
     *    SCIPunlockConsVars(scip, c, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg).
     *
     *  The unlocking method should exactly undo all lockings performed in the locking method of the constraint handler.
-    *
-    *  input:
-    *  - scip            : SCIP main data structure
-    *  - conshdlr        : the constraint handler itself
-    *  - cons            : the constraint that should unlock rounding of its variables
-    *  - nunlockspos     : number of times, the roundings should be unlocked for the constraint
-    *  - nunlocksneg     : number of times, the roundings should be unlocked for the constraint's negation
     */
    virtual RETCODE scip_unlock(
       SCIP*         scip,               /**< SCIP data structure */
@@ -537,11 +523,6 @@ public:
     *
     *  This method is always called before a constraint of the constraint handler is deactivated. The constraint
     *  handler may use this call to update his own (statistical) data.
-    *
-    *  input:
-    *  - scip            : SCIP main data structure
-    *  - conshdlr        : the constraint handler itself
-    *  - cons            : the constraint that will be deactivated
     */
    virtual RETCODE scip_deactive(
       SCIP*         scip,               /**< SCIP data structure */
