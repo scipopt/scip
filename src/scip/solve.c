@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.132 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.133 2004/09/09 13:59:24 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -662,6 +662,10 @@ RETCODE priceAndCutLoop(
    NODE* actnode;
    RESULT result;
    EVENT event;
+   Real loclowerbound;
+   Real glblowerbound;
+   Real upperbound;
+   Bool separate;
    Bool mustprice;
    Bool mustsepar;
    Bool root;
@@ -690,6 +694,12 @@ RETCODE priceAndCutLoop(
    actdepth = SCIPnodeGetDepth(actnode);
    root = (actdepth == 0);
 
+   /* check, if we want to separate at this node */
+   loclowerbound = SCIPnodeGetLowerbound(actnode);
+   glblowerbound = SCIPtreeGetLowerbound(tree, set);
+   upperbound = primal->upperbound;
+   separate = SCIPsetIsLE(set, loclowerbound - glblowerbound, set->maxsepabounddist * (upperbound - glblowerbound));
+
    /* solve initial LP of price-and-cut loop */
    debugMessage("node: solve LP with price and cut\n");
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
@@ -704,7 +714,7 @@ RETCODE priceAndCutLoop(
    /* price-and-cut loop */
    ncolvars = prob->ncolvars;
    mustprice = TRUE;
-   mustsepar = TRUE;
+   mustsepar = separate;
    *cutoff = FALSE;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepar) )
    {
@@ -803,6 +813,7 @@ RETCODE priceAndCutLoop(
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
       mustsepar = mustsepar
+         && separate
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE)
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT)
          && SCIPsetIsLT(set, SCIPnodeGetLowerbound(actnode), primal->cutoffbound);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.35 2004/09/07 18:22:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.36 2004/09/09 13:59:24 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -220,12 +220,12 @@ RETCODE SCIPsepaExec(
 
    if( (depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) )
    {
-      int oldncutsfound;
+      int oldncutsstored;
       int ncutsfound;
 
       debugMessage("executing separator <%s>\n", sepa->name);
 
-      oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+      oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
 
       /* reset the statistics for current node */
       if( sepa->lastsepanode != stat->ntotalnodes )
@@ -262,7 +262,7 @@ RETCODE SCIPsepaExec(
          sepa->ncallsatnode++;
       }
 
-      ncutsfound = SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+      ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
       sepa->ncutsfound += ncutsfound;
       sepa->ncutsfoundatnode += ncutsfound;
    }

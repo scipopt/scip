@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.23 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.24 2004/09/09 13:59:24 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -281,9 +281,6 @@ RETCODE sepastoreAddCut(
       sepastore->ncuts, maxsepacuts, scorefactor, cutefficacy, cutscore);
    /*debug(SCIProwPrint(cut, NULL));*/
 
-   /* capture the cut */
-   SCIProwCapture(cut);
-   
    /* search the correct position of the cut in the cuts array */
    for( c = 0; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
    {
@@ -383,6 +380,9 @@ RETCODE sepastoreAddCut(
    sepastore->ncuts++;
    assert(c == 0 || sepastore->scores[c-1] >= sepastore->scores[c]);
    assert(c == sepastore->ncuts-1 || sepastore->scores[c] >= sepastore->scores[c+1]);
+
+   /* capture the cut */
+   SCIProwCapture(cut);
 
    /* if the array consists of more than "maxsepacuts" cuts, release the worst cut */
    if( sepastore->ncuts > maxsepacuts )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.108 2004/09/07 18:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.109 2004/09/09 13:59:24 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2463,6 +2463,7 @@ RETCODE SCIPtreeFree(
    assert((*tree)->nchildren == 0);
    assert((*tree)->nsiblings == 0);
    assert((*tree)->actnode == NULL);
+   assert((*tree)->probingnode == NULL);
 
    debugMessage("free tree\n");
 

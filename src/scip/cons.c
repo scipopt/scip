@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.92 2004/09/07 18:22:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.93 2004/09/09 13:59:23 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1575,7 +1575,7 @@ RETCODE SCIPconshdlrSeparate(
       {
          CONS** conss;
          Longint oldndomchgs;
-         int oldncutsfound;
+         int oldncutsstored;
          int oldnactiveconss;
 
          debugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
@@ -1590,7 +1590,7 @@ RETCODE SCIPconshdlrSeparate(
          conss = &(conshdlr->sepaconss[firstcons]);
          
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
-         oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
          oldnactiveconss = stat->nactiveconss;
 
          /* check, if we want to use eager evaluation */
@@ -1635,7 +1635,7 @@ RETCODE SCIPconshdlrSeparate(
             conshdlr->nsepacalls++;
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
-         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
          conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
          conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
       }
@@ -1705,7 +1705,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
       {
          CONS** conss;
          Longint oldndomchgs;
-         int oldncutsfound;
+         int oldncutsstored;
          int oldnactiveconss;
 
          debugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
@@ -1719,7 +1719,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          /* get the array of the constraints to be processed */
          conss = &(conshdlr->enfoconss[firstcons]);
 
-         oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
          oldnactiveconss = stat->nactiveconss;
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
 
@@ -1766,7 +1766,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
             conshdlr->nenfolpcalls++;
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
-         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
          conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
          if( *result != SCIP_BRANCHED )
          {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.108 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.109 2004/09/09 13:59:24 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -115,6 +115,9 @@
 
 /* Cut Separation */
 
+#define SCIP_DEFAULT_MAXSEPABOUNDDIST   0.2 /**< maximal relative distance from current node's dual bound to primal bound
+                                             *   compared to best node's dual bound for applying separation
+                                             *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_MAXSEPACUTS        100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_MAXSEPACUTSROOT   2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_MINCUTEFFICACY    0.05 /**< minimal efficacy for a cut to enter the LP */
@@ -450,6 +453,11 @@ RETCODE SCIPsetCreate(
          "propagation/maxproproundsroot",
          "maximal number of propagation rounds in the root node (-1: unlimited)",
          &(*set)->maxproproundsroot, SCIP_DEFAULT_MAXPROPROUNDSROOT, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/maxsepabounddist",
+         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)",
+         &(*set)->maxsepabounddist, SCIP_DEFAULT_MAXSEPABOUNDDIST, 0.0, 1.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "separating/maxsepacuts",

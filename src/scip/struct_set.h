@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.26 2004/09/07 18:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.27 2004/09/09 13:59:24 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -64,6 +64,9 @@ struct Set
    Real             branchscorefac;     /**< branching score factor to weigh downward and upward gain prediction */
    Real             presolabortfac;     /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+   Real             maxsepabounddist;   /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying separation
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
    Real             mincutefficacy;     /**< minimal efficacy for a cut to enter the LP */
    Real             mincutefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    Real             mincutortho;        /**< minimal orthogonality for a cut to enter the LP */

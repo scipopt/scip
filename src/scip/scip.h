@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.165 2004/09/07 18:22:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.166 2004/09/09 13:59:23 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4375,8 +4375,6 @@ Real SCIPfrac(
                                                                            
 #define SCIPisLbBetter(scip, lb1, lb2)   SCIPsetIsLbBetter(scip->set, lb1, lb2)
 #define SCIPisUbBetter(scip, ub1, ub2)   SCIPsetIsUbBetter(scip->set, ub1, ub2)
-#define SCIPisCutViolated(scip, act,rhs) SCIPsetIsCutViolated((scip)->set, \
-      (SCIPtreeGetCurrentDepth((scip)->tree) == 0), act, rhs)
                                                                            
 #define SCIPisRelEQ(scip, val1, val2)    SCIPsetIsRelEQ((scip)->set, val1, val2)    
 #define SCIPisRelLT(scip, val1, val2)    SCIPsetIsRelLT((scip)->set, val1, val2)    

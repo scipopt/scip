@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.47 2004/09/07 18:22:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.48 2004/09/09 13:59:23 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -873,12 +873,12 @@ RETCODE SCIPbranchruleExecLPSol(
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
    {
       Longint oldndomchgs;
-      int oldncutsfound;
+      int oldncutsstored;
 
       debugMessage("executing LP branching rule <%s>\n", branchrule->name);
 
       oldndomchgs = stat->nboundchgs + stat->nholechgs;
-      oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+      oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
 
       /* start timing */
       SCIPclockStart(branchrule->clock, set);
@@ -907,7 +907,7 @@ RETCODE SCIPbranchruleExecLPSol(
          branchrule->nlpcalls++;
       if( *result == SCIP_CUTOFF )
          branchrule->ncutoffs++;
-      branchrule->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+      branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
       if( *result != SCIP_BRANCHED )
       {
          assert(tree->nchildren == 0);

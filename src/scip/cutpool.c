@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.33 2004/09/07 18:22:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.34 2004/09/09 13:59:23 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -446,7 +446,7 @@ RETCODE SCIPcutpoolSeparate(
 {
    CUT* cut;
    Bool found;
-   int oldncutsfound;
+   int oldncutsstored;
    int c;
 
    assert(cutpool != NULL);
@@ -474,7 +474,7 @@ RETCODE SCIPcutpoolSeparate(
    SCIPclockStart(cutpool->clock, set);
 
    /* remember the current total number of found cuts */
-   oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+   oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
 
    /* process all unprocessed cuts in the pool */
    for( c = cutpool->firstunprocessed; c < cutpool->ncuts; ++c )
@@ -521,7 +521,7 @@ RETCODE SCIPcutpoolSeparate(
    cutpool->firstunprocessed = cutpool->ncuts;
 
    /* update the number of found cuts */
-   cutpool->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
+   cutpool->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
 
    /* stop timing */
    SCIPclockStop(cutpool->clock, set);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.17 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.18 2004/09/09 13:59:24 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -41,7 +41,6 @@
 #define DEFAULT_MAXAGGRS              4 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          8 /**< maximal number of aggreagtions for each row per round in the root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_MINVIOLATION        0.2 /**< min. violation of unscaled c-MIR cut to be used */
 #define DEFAULT_MAXSLACK            0.1 /**< max. slack of rows to be used */
 #define DEFAULT_SLACKSCORE         1e-3 /**< weight of slack in the aggregation scoring of the rows */
 #define DEFAULT_MAXROWFAC          1e+4 /**< max. row aggregation factor */
@@ -67,7 +66,6 @@ struct SepaData
    int              maxaggrs;           /**< maximal number of aggregations for each row per separation round */
    int              maxaggrsroot;       /**< maximal number of aggreagtions for each row per sepa. r. in the root node */
    Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
-   Real             minviolation;       /**< min. violation of unscaled c-MIR cut to be used */
    Real             maxslack;         	/**< maximal slack of rows to be used as startrow */
    Real             slackscore;         /**< weight of slack in the aggregation scoring of the rows */
    int              maxrowfac;          /**< maximal row aggregation factor */
@@ -352,7 +350,7 @@ RETCODE aggregation(
        */ 
       ntesteddeltas = 0;
       bestdelta = 0.0;
-      bestviolation = -1.0;
+      bestviolation = 0.0;
       for( c = 0; c < ncols && ntesteddeltas < sepadata->maxtestdelta; c++ )
       {
          VAR* var;
@@ -419,7 +417,7 @@ RETCODE aggregation(
       }
   
       /* delta found */
-      if( bestviolation >= sepadata->minviolation * bestdelta )
+      if( SCIPisFeasPositive(scip, bestviolation) )
       {
          Real cutact;
          Real violation;
@@ -876,10 +874,6 @@ RETCODE SCIPincludeSepaCmir(
          "separating/cmir/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
-         "separating/cmir/minviolation",
-         "min. violation of unscaled c-MIR cut to be used",
-         &sepadata->minviolation, DEFAULT_MINVIOLATION, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "separating/cmir/maxslack",
          "maximal slack of rows to be used",

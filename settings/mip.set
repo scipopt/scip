@@ -118,6 +118,10 @@ propagation/maxproprounds = 100
 # [type: int, range: [-1,2147483647], default: 1000]
 propagation/maxproproundsroot = 1000
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0.2]
+separating/maxsepabounddist = 0.2
+
 # maximal number of cuts separated per separation round (0: disable local separation)
 # [type: int, range: [0,2147483647], default: 100]
 separating/maxsepacuts = 100
@@ -1009,10 +1013,6 @@ separating/cmir/maxaggrsroot = 8
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cmir/dynamiccuts = TRUE
-
-# min. violation of unscaled c-MIR cut to be used
-# [type: real, range: [0,1.79769313486232e+308], default: 0.2]
-separating/cmir/minviolation = 0.2
 
 # maximal slack of rows to be used
 # [type: real, range: [0,1.79769313486232e+308], default: 0.1]
