@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.60 2004/01/07 13:14:13 bzfpfend Exp $
+# $Id: Makefile,v 1.61 2004/01/24 17:21:07 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -196,6 +196,7 @@ SCIPLIBOBJ	=	branch.o \
 			stat.o \
 			tree.o \
 			var.o \
+			branch_conffullstrong.o \
 			branch_fullstrong.o \
 			branch_history.o \
 			branch_mostinf.o \
@@ -213,7 +214,9 @@ SCIPLIBOBJ	=	branch.o \
 			cons_varub.o \
 			dialog_default.o \
 			disp_default.o \
-			heur_diving.o \
+			heur_coefdiving.o \
+			heur_fracdiving.o \
+			heur_histdiving.o \
 			heur_rounding.o \
 			heur_simplerounding.o \
 			nodesel_bfs.o \

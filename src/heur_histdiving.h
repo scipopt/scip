@@ -14,25 +14,25 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_diving.h,v 1.2 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_histdiving.h,v 1.1 2004/01/24 17:21:11 bzfpfend Exp $"
 
-/**@file   heur_diving.h
- * @brief  LP diving heuristic
+/**@file   heur_histdiving.h
+ * @brief  LP diving heuristic that chooses fixings w.r.t. the history values
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __HEUR_DIVING_H__
-#define __HEUR_DIVING_H__
+#ifndef __HEUR_HISTDIVING_H__
+#define __HEUR_HISTDIVING_H__
 
 
 #include "scip.h"
 
 
-/** creates the diving heuristic and includes it in SCIP */
+/** creates the histdiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurDiving(
+RETCODE SCIPincludeHeurHistdiving(
    SCIP*            scip                /**< SCIP data structure */
    );
 

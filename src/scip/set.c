@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.86 2004/01/22 14:42:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.87 2004/01/24 17:21:12 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -114,6 +114,12 @@
 /* Constraint Settings */
 
 #define SCIP_DEFAULT_CONSAGELIMIT     2000 /**< maximum age an unnecessary constr. can reach before it is deleted, or -1 */
+
+
+/* History Settings */
+
+#define SCIP_DEFAULT_HISTORYEPS      1e-01 /**< default minimal variable distance value to use for history updates */
+#define SCIP_DEFAULT_HISTORYDELTA    1e-04 /**< default minimal objective distance value to use for history updates */
 
 
 /* Conflict Analysis */
@@ -331,8 +337,13 @@ RETCODE SCIPsetCreate(
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "numerics/historyeps",
-                  "minimal distance value to use for branching history updates",
+                  "minimal variable distance value to use for branching history updates",
                   &(*set)->historyeps, SCIP_DEFAULT_HISTORYEPS, machineeps*1e+03, 1.0,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "numerics/historydelta",
+                  "minimal objective distance value to use for branching history updates",
+                  &(*set)->historydelta, SCIP_DEFAULT_HISTORYDELTA, 0.0, REAL_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
                   "memory/memsavefac",

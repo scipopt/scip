@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.1 2004/01/07 13:14:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.2 2004/01/24 17:21:11 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching history
@@ -123,6 +123,11 @@ void SCIPhistoryUpdate(
 
    /* apply a lower limit on the distance to avoid numerical instabilities due to very large summands */
    distance = MAX(distance, set->historyeps);
+
+   /* slightly increase objective delta, s.t. history values are not zero, and fractionalities are
+    * always used at least a bit
+    */
+   objdelta += set->historydelta;
 
    /* update the history values */
    history->count[dir] += weight;

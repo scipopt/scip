@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.93 2004/01/22 14:42:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.94 2004/01/24 17:21:11 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -888,7 +888,7 @@ RETCODE rowAddCoeff(
    assert(memhdr != NULL);
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(col->var_probindex == SCIPvarGetProbIndex(col->var));
+   assert(col->var_probindex == SCIPvarGetProbindex(col->var));
    assert(!SCIPsetIsZero(set, val));
    /*assert(rowSearchCoeff(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
@@ -1294,7 +1294,7 @@ RETCODE SCIPcolCreate(
    (*col)->strongbranchitlim = -1;
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
-   (*col)->var_probindex = SCIPvarGetProbIndex(var);
+   (*col)->var_probindex = SCIPvarGetProbindex(var);
    (*col)->sorted = TRUE;
    (*col)->objchanged = FALSE;
    (*col)->lbchanged = FALSE;
@@ -2246,7 +2246,7 @@ RETCODE SCIProwCreate(
       for( i = 0; i < len; ++i )
       {
          assert(col[i]->var != NULL);
-         assert(col[i]->var_probindex == SCIPvarGetProbIndex(col[i]->var));
+         assert(col[i]->var_probindex == SCIPvarGetProbindex(col[i]->var));
          (*row)->cols_probindex[i] = col[i]->var_probindex;
          (*row)->linkpos[i] = -1;
       }
@@ -4556,8 +4556,8 @@ RETCODE SCIPlpSumRows(
             assert(row->cols[i]->var != NULL);
             assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
             assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
-            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
+            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
+            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
             idx = row->cols_probindex[i];
             assert(0 <= idx && idx < nvars);
             CHECK_OKAY( SCIPrealarrayIncVal(sumcoef, set, idx, weights[r] * row->vals[i]) );
@@ -4663,8 +4663,8 @@ void sumMIRRow(
             assert(row->cols[i]->var != NULL);
             assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
             assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
-            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
+            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
+            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
             idx = row->cols_probindex[i];
             assert(0 <= idx && idx < nvars);
             mircoef[idx] += weights[r] * row->vals[i];
@@ -4715,7 +4715,7 @@ void transformMIRRow(
    {
       var = vars[v];
       assert(var != NULL);
-      idx = SCIPvarGetProbIndex(var);
+      idx = SCIPvarGetProbindex(var);
       assert(0 <= idx && idx < nvars);
 
       if( SCIPsetIsZero(set, mircoef[idx]) )
@@ -4822,7 +4822,7 @@ void roundMIRRow(
    {
       var = vars[v];
       assert(var != NULL);
-      idx = SCIPvarGetProbIndex(var);
+      idx = SCIPvarGetProbindex(var);
       assert(0 <= idx && idx < nvars);
 
       /* calculate the coefficient in the retransformed cut */
@@ -4923,8 +4923,8 @@ void substituteMIRRow(
                assert(row->cols[i]->var != NULL);
                assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
                assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
-               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
+               assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
+               assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
                idx = row->cols_probindex[i];
                mircoef[idx] -= mul * row->vals[i];
             }
@@ -5268,6 +5268,10 @@ RETCODE SCIPlpSetCutoffbound(
    assert(lp != NULL);
 
    debugMessage("setting LP upper objective limit from %g to %g\n", lp->cutoffbound, cutoffbound);
+   
+   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved */
+   if( cutoffbound > lp->cutoffbound && lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
+      lp->solved = FALSE;
    lp->cutoffbound = cutoffbound;
 
    return SCIP_OKAY;
@@ -5896,7 +5900,7 @@ RETCODE SCIPlpUpdateVar(
       return SCIP_INVALIDDATA;
    }
 
-   assert(SCIPvarGetProbIndex(var) >= 0);
+   assert(SCIPvarGetProbindex(var) >= 0);
 
    deltaval = 0.0;
    deltainf = 0;
@@ -6017,7 +6021,7 @@ RETCODE SCIPlpUpdateAddVar(
 {
    assert(lp != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetProbIndex(var) != -1);
+   assert(SCIPvarGetProbindex(var) != -1);
 
    /* add the variable to the loose objective value sum */
    CHECK_OKAY( SCIPlpUpdateVarObj(lp, set, var, 0.0, SCIPvarGetObj(var)) );
@@ -6043,7 +6047,7 @@ RETCODE SCIPlpUpdateVarColumn(
    assert(lp != NULL);
    assert(lp->nloosevars > 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetProbIndex(var) != -1);
+   assert(SCIPvarGetProbindex(var) != -1);
 
    obj = SCIPvarGetObj(var);
 
@@ -6992,8 +6996,9 @@ RETCODE SCIPlpEndDive(
    /* resolve LP to reset solution */
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
 
-   /* switch to standard (non-diving) mode */
+   /* switch to standard (non-diving) mode and remember the diving node */
    lp->diving = FALSE;
+   stat->lastdivenode = stat->nnodes;
 
 #ifndef NDEBUG
    {

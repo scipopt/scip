@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.84 2004/01/22 14:42:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.85 2004/01/24 17:21:12 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -314,7 +314,7 @@ RETCODE initRootLP(
    for( v = 0; v < prob->nvars; ++v )
    {
       var = prob->vars[v];
-      assert(SCIPvarGetProbIndex(var) >= 0);
+      assert(SCIPvarGetProbindex(var) >= 0);
 
       if( SCIPvarIsInitial(var) )
       {
@@ -1028,7 +1028,7 @@ RETCODE enforceConstraints(
           */
          assert(tree->nchildren == 0);
 
-         if( prob->ncont == 0 && set->nactivepricers == 0 )
+         if( prob->ncontvars == 0 && set->nactivepricers == 0 )
             resolved = TRUE;
          else
          {
@@ -1232,7 +1232,7 @@ RETCODE SCIPsolveCIP(
          tree->actnodehaslp = tree->actnodehaslp
             && (set->lpsolvefreq >= 1 && SCIPnodeGetDepth(actnode) % set->lpsolvefreq == 0);
          tree->actnodehaslp = tree->actnodehaslp || (SCIPnodeGetDepth(actnode) == 0 && set->lpsolvefreq == 0);
-         tree->actnodehaslp = tree->actnodehaslp || (SCIPnodeGetDepth(actnode) == 0 && prob->ncont > 0);
+         tree->actnodehaslp = tree->actnodehaslp || (SCIPnodeGetDepth(actnode) == 0 && prob->ncontvars > 0);
          tree->actnodehaslp = tree->actnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound);
          
          /* external node solving loop */

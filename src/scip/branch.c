@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.34 2004/01/19 14:10:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.35 2004/01/24 17:21:08 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -255,7 +255,7 @@ RETCODE SCIPbranchcandGetPseudoCands(
       
       /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
       npcs = 0;
-      for( v = 0; v < prob->nbin + prob->nint + prob->nimpl; ++v )
+      for( v = 0; v < prob->nbinvars + prob->nintvars + prob->nimplvars; ++v )
       {
          var = prob->vars[v];
          assert(var != NULL);

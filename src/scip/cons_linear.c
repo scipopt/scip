@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.83 2004/01/22 14:42:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.84 2004/01/24 17:21:08 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1370,7 +1370,7 @@ RETCODE consdataTightenVarBounds(
    return SCIP_OKAY;
 }
 #else
-#define BOUNDSCALETOL 1e-3
+#define BOUNDSCALETOL 1e-5
 /** tightens bounds of a single variable due to activity bounds */
 static
 RETCODE consdataTightenVarBounds(

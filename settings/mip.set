@@ -46,9 +46,13 @@ numerics/cutvioleps = 0.05
 # [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
-# minimal distance value to use for branching history updates
+# minimal variable distance value to use for branching history updates
 # [type: real, range: [1.0842021724855e-16,1], default: 0.1]
 numerics/historyeps = 0.1
+
+# minimal objective distance value to use for branching history updates
+# [type: real, range: [0,1.79769313486232e+308], default: 0.0001]
+numerics/historydelta = 0.0001
 
 # fraction of maximal memory usage resulting in switch to memory saving mode
 # [type: real, range: [0,1], default: 0.8]
@@ -251,8 +255,8 @@ constraints/linear/maxaggrnormscale = 5
 conflict/logicor/priority = 800000
 
 # frequency for separating cuts of constraint handler <logicor> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/logicor/sepafreq = 1
+# [type: int, range: [-1,2147483647], default: 5]
+constraints/logicor/sepafreq = 5
 
 # frequency for propagating domains of constraint handler <logicor> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -275,7 +279,7 @@ constraints/logicor/minvarusefac = -0.2
 conflict/setppc/priority = 700000
 
 # frequency for separating cuts of constraint handler <setppc> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
+# [type: int, range: [-1,2147483647], default: 5]
 constraints/setppc/sepafreq = 0
 
 # frequency for propagating domains of constraint handler <setppc> (-1: never, 0: only in root node)
@@ -320,7 +324,7 @@ nodeselection/bfs/memsavepriority = 0
 
 # minimal plunging depth, before new best node may be selected
 # [type: int, range: [0,2147483647], default: 5]
-nodeselection/bfs/minplungedepth = 5
+nodeselection/bfs/minplungedepth = 2
 
 # maximal plunging depth, before new best node is forced to be selected
 # [type: int, range: [0,2147483647], default: 25]
@@ -349,6 +353,10 @@ nodeselection/restartdfs/memsavepriority = 50000
 # frequency for selecting the best node instead of the deepest one (0: never)
 # [type: int, range: [0,2147483647], default: 1000]
 nodeselection/restartdfs/selectbestfreq = 1000
+
+# priority of branching rule <conffullstrong>
+# [type: int, range: [-2147483648,2147483647], default: -100]
+branching/conffullstrong/priority = -100
 
 # priority of branching rule <fullstrong>
 # [type: int, range: [-2147483648,2147483647], default: 0]
@@ -386,37 +394,101 @@ branching/mostinf/priority = 100
 # [type: int, range: [-2147483648,2147483647], default: 50]
 branching/leastinf/priority = 50
 
-# priority of heuristic <diving>
-# [type: int, range: [-2147483648,2147483647], default: -1000000]
-heuristics/diving/priority = -1000000
+# priority of heuristic <coefdiving>
+# [type: int, range: [-2147483648,2147483647], default: -1002000]
+heuristics/coefdiving/priority = -1002000
 
-# frequency for calling primal heuristic <diving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <coefdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
-heuristics/diving/freq = 10
+heuristics/coefdiving/freq = 10
 
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
-heuristics/diving/divestartdepth = 0.5
+heuristics/coefdiving/divestartdepth = 0.5
 
 # maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.2]
-heuristics/diving/maxlpiterquot = 0.2
+# [type: real, range: [0,1], default: 0.1]
+heuristics/coefdiving/maxlpiterquot = 0.1
 
 # maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
-heuristics/diving/maxdiveubquot = 0.8
+heuristics/coefdiving/maxdiveubquot = 0.8
 
 # maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
 # [type: real, range: [0,1e+99], default: 4]
-heuristics/diving/maxdiveavgquot = 4
+heuristics/coefdiving/maxdiveavgquot = 4
 
 # maximal UBQUOT when no solution was found yet
 # [type: real, range: [0,1], default: 0.1]
-heuristics/diving/maxdiveubquotnosol = 0.1
+heuristics/coefdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet
 # [type: real, range: [0,1e+99], default: 8]
-heuristics/diving/maxdiveavgquotnosol = 8
+heuristics/coefdiving/maxdiveavgquotnosol = 8
+
+# priority of heuristic <fracdiving>
+# [type: int, range: [-2147483648,2147483647], default: -1000000]
+heuristics/fracdiving/priority = -1000000
+
+# frequency for calling primal heuristic <fracdiving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/fracdiving/freq = 10
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristics/fracdiving/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.1]
+heuristics/fracdiving/maxlpiterquot = 0.1
+
+# maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristics/fracdiving/maxdiveubquot = 0.8
+
+# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1e+99], default: 4]
+heuristics/fracdiving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristics/fracdiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1e+99], default: 8]
+heuristics/fracdiving/maxdiveavgquotnosol = 8
+
+# priority of heuristic <histdiving>
+# [type: int, range: [-2147483648,2147483647], default: -1001000]
+heuristics/histdiving/priority = -1001000
+
+# frequency for calling primal heuristic <histdiving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/histdiving/freq = 10
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristics/histdiving/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.1]
+heuristics/histdiving/maxlpiterquot = 0.1
+
+# maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristics/histdiving/maxdiveubquot = 0.8
+
+# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1e+99], default: 4]
+heuristics/histdiving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristics/histdiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1e+99], default: 8]
+heuristics/histdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <rounding>
 # [type: int, range: [-2147483648,2147483647], default: -1000]

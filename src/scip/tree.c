@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.75 2004/01/22 14:42:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.76 2004/01/24 17:21:13 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -2311,7 +2311,7 @@ RETCODE SCIPtreeBranchVar(
       return SCIP_INVALIDDATA;
    }
 
-   assert(SCIPvarGetProbIndex(var) >= 0);
+   assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
       || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER

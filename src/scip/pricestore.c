@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.7 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.8 2004/01/24 17:21:11 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -500,7 +500,7 @@ RETCODE SCIPpricestoreApplyVars(
    {
       var = pricestore->bdviolvars[v];
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-      assert(SCIPvarGetProbIndex(var) >= 0);
+      assert(SCIPvarGetProbindex(var) >= 0);
       assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
@@ -528,7 +528,7 @@ RETCODE SCIPpricestoreApplyVars(
    {
       var = pricestore->vars[v];
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-      assert(SCIPvarGetProbIndex(var) >= 0);
+      assert(SCIPvarGetProbindex(var) >= 0);
       assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
       /* transform variable into column variable, if needed */

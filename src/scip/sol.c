@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.27 2003/12/18 13:44:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.28 2004/01/24 17:21:12 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -623,6 +623,71 @@ RETCODE SCIPsolCheck(
       CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, prob, sol, chckintegrality, chcklprows, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
    }
+
+   return SCIP_OKAY;
+}
+
+/** try to round given solution */
+RETCODE SCIPsolRound(
+   SOL*             sol,                /**< primal solution */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   Bool*            success             /**< pointer to store whether rounding was successful */
+   )
+{
+   int nvars;
+   int v;
+
+   assert(sol != NULL);
+   assert(success != NULL);
+
+   /* store solution in its own arrays */
+   CHECK_OKAY( SCIPsolUnlink(sol, set, prob) );
+
+   /* round all roundable fractional variables in the corresponding direction as long as no unroundable var was found */
+   nvars = prob->nbinvars + prob->nintvars;
+   for( v = 0; v < nvars; ++v )
+   {
+      VAR* var;
+      Real solval;
+      Bool mayrounddown;
+      Bool mayroundup;
+
+      var = prob->vars[v];
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var, &solval) );
+
+      /* if solution value is already integral, there is nothing to do */
+      if( SCIPsetIsIntegral(set, solval) )
+         continue;
+
+      /* get rounding possibilities */
+      mayrounddown = SCIPvarMayRoundDown(var);
+      mayroundup = SCIPvarMayRoundUp(var);
+
+      /* choose rounding direction */
+      if( mayrounddown && mayroundup )
+      {
+         /* we can round in both directions: round in objective function direction */
+         if( SCIPvarGetObj(var) >= 0.0 )
+            solval = SCIPsetFloor(set, solval);
+         else
+            solval = SCIPsetCeil(set, solval);
+      }
+      else if( mayrounddown )
+         solval = SCIPsetFloor(set, solval);
+      else if( mayroundup )
+         solval = SCIPsetCeil(set, solval);
+      else
+         break;
+
+      /* store new solution value */
+      CHECK_OKAY( SCIPsolSetVal(sol, set, stat, tree, var, solval) );
+   }
+
+   /* check, if rounding was successful */
+   *success = (v == nvars);
 
    return SCIP_OKAY;
 }

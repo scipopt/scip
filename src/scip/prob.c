@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.38 2004/01/19 14:10:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.39 2004/01/24 17:21:11 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -152,10 +152,10 @@ RETCODE SCIPprobCreate(
    (*prob)->vars = NULL;
    (*prob)->varssize = 0;
    (*prob)->nvars = 0;
-   (*prob)->nbin = 0;
-   (*prob)->nint = 0;
-   (*prob)->nimpl = 0;
-   (*prob)->ncont = 0;
+   (*prob)->nbinvars = 0;
+   (*prob)->nintvars = 0;
+   (*prob)->nimplvars = 0;
+   (*prob)->ncontvars = 0;
    (*prob)->ncolvars = 0;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
@@ -346,12 +346,12 @@ void probInsertVar(
 
    /* insert variable in array */
    insertpos = prob->nvars;
-   intstart = prob->nbin;
-   implstart = intstart + prob->nint;
-   contstart = implstart + prob->nimpl;
+   intstart = prob->nbinvars;
+   implstart = intstart + prob->nintvars;
+   contstart = implstart + prob->nimplvars;
 
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-      prob->ncont++;
+      prob->ncontvars++;
    else
    {
       if( insertpos > contstart )
@@ -363,7 +363,7 @@ void probInsertVar(
       assert(insertpos == contstart);
 
       if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-         prob->nimpl++;
+         prob->nimplvars++;
       else
       {
          if( insertpos > implstart )
@@ -375,7 +375,7 @@ void probInsertVar(
          assert(insertpos == implstart);
 
          if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-            prob->nint++;
+            prob->nintvars++;
          else
          {
             assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
@@ -387,18 +387,18 @@ void probInsertVar(
             }
             assert(insertpos == intstart);
 
-            prob->nbin++;
+            prob->nbinvars++;
          }
       }
    }
    prob->nvars++;
 
-   assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && insertpos == prob->nbin - 1)
-      || (SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && insertpos == prob->nbin + prob->nint - 1)
-      || (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbin + prob->nint + prob->nimpl - 1)
+   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && insertpos == prob->nbinvars - 1)
+      || (SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && insertpos == prob->nbinvars + prob->nintvars - 1)
+      || (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbinvars + prob->nintvars + prob->nimplvars - 1)
       || (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-         && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
+         && insertpos == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars - 1));
 
    prob->vars[insertpos] = var;
    var->probindex = insertpos;
@@ -427,27 +427,27 @@ void probRemoveVar(
    assert(prob->vars != NULL);
    assert(prob->vars[var->probindex] == var);
 
-   intstart = prob->nbin;
-   implstart = intstart + prob->nint;
-   contstart = implstart + prob->nimpl;
+   intstart = prob->nbinvars;
+   implstart = intstart + prob->nintvars;
+   contstart = implstart + prob->nimplvars;
 
    switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
       assert(0 <= var->probindex && var->probindex < intstart);
-      prob->nbin--;
+      prob->nbinvars--;
       break;
    case SCIP_VARTYPE_INTEGER:
       assert(intstart <= var->probindex && var->probindex < implstart);
-      prob->nint--;
+      prob->nintvars--;
       break;
    case SCIP_VARTYPE_IMPLINT:
       assert(implstart <= var->probindex && var->probindex < contstart);
-      prob->nimpl--;
+      prob->nimplvars--;
       break;
    case SCIP_VARTYPE_CONTINUOUS:
       assert(contstart <= var->probindex && var->probindex < prob->nvars);
-      prob->ncont--;
+      prob->ncontvars--;
       break;
    default:
       errorMessage("unknown variable type\n");
@@ -489,7 +489,7 @@ void probRemoveVar(
    prob->nvars--;
    var->probindex = -1;
 
-   assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
+   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
 
    /* update number of column variables in problem */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -535,7 +535,7 @@ RETCODE SCIPprobAddVar(
    }
 
    debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      SCIPvarGetName(var), prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
+      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
 
    return SCIP_OKAY;
 }
@@ -588,7 +588,7 @@ RETCODE SCIPprobVarChangedStatus(
 {
    assert(prob != NULL);
    assert(var != NULL);
-   assert(SCIPvarGetProbIndex(var) != -1);
+   assert(SCIPvarGetProbindex(var) != -1);
 
    /* get current status of variable */
    switch( SCIPvarGetStatus(var) )
@@ -1023,7 +1023,7 @@ void SCIPprobPrintStatistics(
 
    fprintf(file, "  Problem name     : %s\n", prob->name);
    fprintf(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-      prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
+      prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    fprintf(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
 }
 

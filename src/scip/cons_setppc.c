@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.31 2004/01/22 14:42:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.32 2004/01/24 17:21:09 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -36,7 +36,7 @@
 #define CONSHDLR_SEPAPRIORITY   +700000
 #define CONSHDLR_ENFOPRIORITY   +700000
 #define CONSHDLR_CHECKPRIORITY  -700000
-#define CONSHDLR_SEPAFREQ             1
+#define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
 

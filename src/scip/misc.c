@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.18 2004/01/22 14:42:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.19 2004/01/24 17:21:11 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -607,7 +607,11 @@ RETCODE SCIPrealarrayCopy(
    assert(sourcerealarray != NULL);
 
    CHECK_OKAY( SCIPrealarrayCreate(realarray, memhdr) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*realarray)->vals, sourcerealarray->vals, sourcerealarray->valssize) );
+   if( sourcerealarray->valssize > 0 )
+   {
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*realarray)->vals, sourcerealarray->vals,
+                     sourcerealarray->valssize) );
+   }
    (*realarray)->valssize = sourcerealarray->valssize;
    (*realarray)->firstidx = sourcerealarray->firstidx;
    (*realarray)->minusedidx = sourcerealarray->minusedidx;
@@ -944,7 +948,10 @@ RETCODE SCIPintarrayCopy(
    assert(sourceintarray != NULL);
 
    CHECK_OKAY( SCIPintarrayCreate(intarray, memhdr) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
+   if( sourceintarray->valssize > 0 )
+   {
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
+   }
    (*intarray)->valssize = sourceintarray->valssize;
    (*intarray)->firstidx = sourceintarray->firstidx;
    (*intarray)->minusedidx = sourceintarray->minusedidx;
@@ -1281,7 +1288,11 @@ RETCODE SCIPboolarrayCopy(
    assert(sourceboolarray != NULL);
 
    CHECK_OKAY( SCIPboolarrayCreate(boolarray, memhdr) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*boolarray)->vals, sourceboolarray->vals, sourceboolarray->valssize) );
+   if( sourceboolarray->valssize > 0 )
+   {
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*boolarray)->vals, sourceboolarray->vals, 
+                     sourceboolarray->valssize) );
+   }
    (*boolarray)->valssize = sourceboolarray->valssize;
    (*boolarray)->firstidx = sourceboolarray->firstidx;
    (*boolarray)->minusedidx = sourceboolarray->minusedidx;

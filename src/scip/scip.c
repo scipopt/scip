@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.122 2004/01/22 14:42:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.123 2004/01/24 17:21:11 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1610,6 +1610,18 @@ int SCIPgetNDisps(
    return scip->set->ndisps;
 }
 
+/** automatically selects display columns for being shown w.r.t. the display width parameter */
+RETCODE SCIPautoselectDisps(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPselectDisps", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPdispAutoActivate(scip->set) );
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -1780,7 +1792,8 @@ RETCODE SCIPreadProb(
       {      
          infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
             "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-            scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
+            scip->origprob->nvars, scip->origprob->nbinvars, scip->origprob->nintvars,
+            scip->origprob->nimplvars, scip->origprob->ncontvars,
             scip->origprob->nconss);
 #if 0
          printf(" var names :  ");
@@ -2009,7 +2022,7 @@ RETCODE SCIPaddVar(
    CHECK_OKAY( checkStage(scip, "SCIPaddVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    /* avoid inserting the same variable twice */
-   if( SCIPvarGetProbIndex(var) != -1 )
+   if( SCIPvarGetProbindex(var) != -1 )
       return SCIP_OKAY;
 
    /* insert the negation variable x instead of the negated variable x' in x' = offset - x */
@@ -2074,7 +2087,7 @@ RETCODE SCIPaddPricedVar(
    }
 
    /* add variable to problem if not yet inserted */
-   if( SCIPvarGetProbIndex(var) == -1 )
+   if( SCIPvarGetProbindex(var) == -1 )
    {
       /* check variable's status */
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
@@ -2106,10 +2119,10 @@ RETCODE SCIPgetVarsData(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
    int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
-   int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
-   int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
-   int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
+   int*             nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetVarsData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE) );
@@ -2121,14 +2134,14 @@ RETCODE SCIPgetVarsData(
          *vars = scip->origprob->vars;
       if( nvars != NULL )
          *nvars = scip->origprob->nvars;
-      if( nbin != NULL )
-         *nbin = scip->origprob->nbin;
-      if( nint != NULL )
-         *nint = scip->origprob->nint;
-      if( nimpl != NULL )
-         *nimpl = scip->origprob->nimpl;
-      if( ncont != NULL )
-         *ncont = scip->origprob->ncont;
+      if( nbinvars != NULL )
+         *nbinvars = scip->origprob->nbinvars;
+      if( nintvars != NULL )
+         *nintvars = scip->origprob->nintvars;
+      if( nimplvars != NULL )
+         *nimplvars = scip->origprob->nimplvars;
+      if( ncontvars != NULL )
+         *ncontvars = scip->origprob->ncontvars;
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
@@ -2139,14 +2152,14 @@ RETCODE SCIPgetVarsData(
          *vars = scip->transprob->vars;
       if( nvars != NULL )
          *nvars = scip->transprob->nvars;
-      if( nbin != NULL )
-         *nbin = scip->transprob->nbin;
-      if( nint != NULL )
-         *nint = scip->transprob->nint;
-      if( nimpl != NULL )
-         *nimpl = scip->transprob->nimpl;
-      if( ncont != NULL )
-         *ncont = scip->transprob->ncont;
+      if( nbinvars != NULL )
+         *nbinvars = scip->transprob->nbinvars;
+      if( nintvars != NULL )
+         *nintvars = scip->transprob->nintvars;
+      if( nimplvars != NULL )
+         *nimplvars = scip->transprob->nimplvars;
+      if( ncontvars != NULL )
+         *ncontvars = scip->transprob->ncontvars;
       return SCIP_OKAY;
 
    default:
@@ -2215,13 +2228,13 @@ int SCIPgetNBinVars(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return scip->origprob->nbin;
+      return scip->origprob->nbinvars;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      return scip->transprob->nbin;
+      return scip->transprob->nbinvars;
 
    default:
       errorMessage("invalid SCIP stage\n");
@@ -2239,13 +2252,13 @@ int SCIPgetNIntVars(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return scip->origprob->nint;
+      return scip->origprob->nintvars;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      return scip->transprob->nint;
+      return scip->transprob->nintvars;
 
    default:
       errorMessage("invalid SCIP stage\n");
@@ -2263,13 +2276,13 @@ int SCIPgetNImplVars(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return scip->origprob->nimpl;
+      return scip->origprob->nimplvars;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      return scip->transprob->nimpl;
+      return scip->transprob->nimplvars;
 
    default:
       errorMessage("invalid SCIP stage\n");
@@ -2287,13 +2300,13 @@ int SCIPgetNContVars(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return scip->origprob->ncont;
+      return scip->origprob->ncontvars;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      return scip->transprob->ncont;
+      return scip->transprob->ncontvars;
 
    default:
       errorMessage("invalid SCIP stage\n");
@@ -2308,10 +2321,10 @@ RETCODE SCIPgetOrigVarsData(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
    int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
-   int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
-   int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
-   int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
+   int*             nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetOrigVarsData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
@@ -2320,14 +2333,15 @@ RETCODE SCIPgetOrigVarsData(
       *vars = scip->origprob->vars;
    if( nvars != NULL )
       *nvars = scip->origprob->nvars;
-   if( nbin != NULL )
-      *nbin = scip->origprob->nbin;
-   if( nint != NULL )
-      *nint = scip->origprob->nint;
-   if( nimpl != NULL )
-      *nimpl = scip->origprob->nimpl;
-   if( ncont != NULL )
-      *ncont = scip->origprob->ncont;
+   if( nbinvars != NULL )
+      *nbinvars = scip->origprob->nbinvars;
+   if( nintvars != NULL )
+      *nintvars = scip->origprob->nintvars;
+   if( nimplvars != NULL )
+      *nimplvars = scip->origprob->nimplvars;
+   if( ncontvars != NULL )
+      *ncontvars = scip->origprob->ncontvars;
+
    return SCIP_OKAY;
 }
 
@@ -2360,7 +2374,7 @@ int SCIPgetNOrigBinVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNOrigBinVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return scip->origprob->nbin;
+   return scip->origprob->nbinvars;
 }
 
 /** gets number of integer original problem variables */
@@ -2370,7 +2384,7 @@ int SCIPgetNOrigIntVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNOrigIntVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return scip->origprob->nint;
+   return scip->origprob->nintvars;
 }
 
 /** gets number of implicit integer original problem variables */
@@ -2380,7 +2394,7 @@ int SCIPgetNOrigImplVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNOrigImplVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return scip->origprob->nimpl;
+   return scip->origprob->nimplvars;
 }
 
 /** gets number of continuous original problem variables */
@@ -2390,7 +2404,7 @@ int SCIPgetNOrigContVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNOrigContVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return scip->origprob->ncont;
+   return scip->origprob->ncontvars;
 }
 
 /** returns variable of given name in the problem, or NULL if not existing */
@@ -2942,8 +2956,8 @@ RETCODE SCIPpresolve(
       /* print presolved problem statistics */
       infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
          "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-         scip->transprob->nvars, scip->transprob->nbin, scip->transprob->nint, scip->transprob->nimpl,
-         scip->transprob->ncont, scip->transprob->nconss);
+         scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
+         scip->transprob->ncontvars, scip->transprob->nconss);
 
       for( h = 0; h < scip->set->nconshdlrs; ++h )
       {
@@ -3882,7 +3896,7 @@ RETCODE SCIPchgVarType(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      if( SCIPvarGetProbIndex(var) >= 0 )
+      if( SCIPvarGetProbindex(var) >= 0 )
       {
          CHECK_OKAY( SCIPprobChgVarType(scip->origprob, scip->set, scip->branchcand, var, vartype) );
       }
@@ -3899,7 +3913,7 @@ RETCODE SCIPchgVarType(
          errorMessage("cannot change type of original variables while solving the problem\n");
          return SCIP_INVALIDCALL;
       }
-      if( SCIPvarGetProbIndex(var) >= 0 )
+      if( SCIPvarGetProbindex(var) >= 0 )
       {
          CHECK_OKAY( SCIPprobChgVarType(scip->transprob, scip->set, scip->branchcand, var, vartype) );
       }
@@ -5173,6 +5187,16 @@ RETCODE SCIPsolveDiveLP(
    return SCIP_OKAY;
 }
 
+/** returns the number of the node where the last LP diving was applied */
+Longint SCIPgetLastDivenode(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLastDivenode", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   return scip->stat->lastdivenode;
+}
+
 
 
 
@@ -6344,6 +6368,20 @@ RETCODE SCIPprintBestTransSol(
    return SCIP_OKAY;
 }
 
+/** try to round given solution */
+RETCODE SCIProundSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution */
+   Bool*            success             /**< pointer to store whether rounding was successful */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIProundSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPsolRound(sol, scip->set, scip->stat, scip->transprob, scip->tree, success) );
+
+   return SCIP_OKAY;
+}
+
 /** adds feasible primal solution to solution storage by copying it */
 RETCODE SCIPaddSol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -7410,6 +7448,7 @@ void printLPStatistics(
    assert(file != NULL);
 
    fprintf(file, "LP                 :         Time        Calls   Iterations    Iter/call     Iter/sec\n");
+
    fprintf(file, "  primal LP        : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->primallptime),
       scip->stat->nprimallps,
@@ -7419,6 +7458,7 @@ void printLPStatistics(
       fprintf(file, " %12.2f\n", (Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
    else
       fprintf(file, "            -\n");
+
    fprintf(file, "  dual LP          : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nduallps, 
@@ -7428,19 +7468,7 @@ void printLPStatistics(
       fprintf(file, " %12.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
       fprintf(file, "            -\n");
-#if 0
-   fprintf(file, "  total            : %12.2f %12d %12lld %12.2f",
-      SCIPclockGetTime(scip->stat->primallptime) + SCIPclockGetTime(scip->stat->duallptime),
-      scip->stat->nlps,
-      scip->stat->nlpiterations,
-      scip->stat->nlps > 0 ? (Real)scip->stat->nlpiterations/(Real)scip->stat->nlps : 0.0);
-   if( SCIPclockGetTime(scip->stat->primallptime) + SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
-      fprintf(file, " %12.2f\n", (Real)scip->stat->nlpiterations/
-         (SCIPclockGetTime(scip->stat->primallptime) + SCIPclockGetTime(scip->stat->duallptime)));
-   else
-      fprintf(file, "            -\n");
-#endif
-   /*fprintf(file, "  strong branching : %12.2f %12d            -            -            -\n",*/
+
    fprintf(file, "  strong branching : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->strongbranchtime),
       scip->stat->nstrongbranchs,

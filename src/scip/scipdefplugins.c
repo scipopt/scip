@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.8 2004/01/07 13:14:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.9 2004/01/24 17:21:12 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -23,6 +23,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "branch_conffullstrong.h"
 #include "branch_fullstrong.h"
 #include "branch_history.h"
 #include "branch_mostinf.h"
@@ -40,7 +41,9 @@
 #include "cons_varub.h"
 #include "dialog_default.h"
 #include "disp_default.h"
-#include "heur_diving.h"
+#include "heur_coefdiving.h"
+#include "heur_fracdiving.h"
+#include "heur_histdiving.h"
 #include "heur_rounding.h"
 #include "heur_simplerounding.h"
 #include "nodesel_bfs.h"
@@ -83,11 +86,14 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselRestartdfs(scip) );
+   CHECK_OKAY( SCIPincludeBranchruleConffullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleHistory(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
-   CHECK_OKAY( SCIPincludeHeurDiving(scip) );
+   CHECK_OKAY( SCIPincludeHeurCoefdiving(scip) );
+   CHECK_OKAY( SCIPincludeHeurFracdiving(scip) );
+   CHECK_OKAY( SCIPincludeHeurHistdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
    CHECK_OKAY( SCIPincludeHeurSimplerounding(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );

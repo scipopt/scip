@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.19 2003/12/15 17:45:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.20 2004/01/24 17:21:12 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -195,6 +195,17 @@ RETCODE SCIPsolCheck(
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether solution is feasible */
+   );
+
+/** try to round given solution */
+extern
+RETCODE SCIPsolRound(
+   SOL*             sol,                /**< primal solution */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
 /** gets objective value of primal CIP solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.3 2003/12/23 12:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.4 2004/01/24 17:21:11 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -277,7 +277,7 @@ int SCIPvarGetIndex(
 
 /** gets position of variable in problem, or -1 if variable is not active */
 extern
-int SCIPvarGetProbIndex(
+int SCIPvarGetProbindex(
    VAR*             var                 /**< problem variable */
    );
 
@@ -432,7 +432,7 @@ Real SCIPvarGetBranchingPriority(
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemoveable(var)        (var)->removeable
 #define SCIPvarGetIndex(var)            (var)->index
-#define SCIPvarGetProbIndex(var)        (var)->probindex
+#define SCIPvarGetProbindex(var)        (var)->probindex
 #define SCIPvarGetTransVar(var)         (var)->data.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
 #define SCIPvarGetAggrVar(var)          (var)->data.aggregate.var

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.103 2004/01/22 14:42:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.104 2004/01/24 17:21:12 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -876,6 +876,12 @@ int SCIPgetNDisps(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** automatically selects display columns for being shown w.r.t. the display width parameter */
+extern
+RETCODE SCIPautoselectDisps(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
@@ -1049,10 +1055,10 @@ RETCODE SCIPgetVarsData(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
    int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
-   int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
-   int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
-   int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
+   int*             nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
 /** gets array with active problem variables; data may become invalid after
@@ -1101,10 +1107,10 @@ RETCODE SCIPgetOrigVarsData(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
    int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
-   int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
-   int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
-   int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
+   int*             nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
 /** gets array with original problem variables; data may become invalid after
@@ -2015,6 +2021,12 @@ RETCODE SCIPsolveDiveLP(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** returns the number of the node where the last LP diving was applied */
+extern
+Longint SCIPgetLastDivenode(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
@@ -2535,6 +2547,14 @@ extern
 RETCODE SCIPprintBestTransSol(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/** try to round given solution */
+extern
+RETCODE SCIProundSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution */
+   Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
 /** adds feasible primal solution to solution storage by copying it */

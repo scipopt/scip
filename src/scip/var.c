@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.66 2004/01/19 14:10:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.67 2004/01/24 17:21:13 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4083,7 +4083,7 @@ int SCIPvarGetIndex(
 }
 
 /** gets position of variable in problem, or -1 if variable is not active */
-int SCIPvarGetProbIndex(
+int SCIPvarGetProbindex(
    VAR*             var                 /**< problem variable */
    )
 {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.24 2003/12/15 17:45:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.25 2004/01/24 17:21:09 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -577,7 +577,7 @@ RETCODE SCIPeventProcess(
       /* inform LP about bound change */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         assert(SCIPvarGetProbIndex(var) >= 0);
+         assert(SCIPvarGetProbindex(var) >= 0);
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
             CHECK_OKAY( SCIPcolChgLb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
@@ -600,7 +600,7 @@ RETCODE SCIPeventProcess(
       /* inform LP about bound change */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         assert(SCIPvarGetProbIndex(var) >= 0);
+         assert(SCIPvarGetProbindex(var) >= 0);
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
             CHECK_OKAY( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );

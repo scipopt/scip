@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.5 2004/01/22 14:42:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.6 2004/01/24 17:21:08 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -82,6 +82,7 @@ DECL_BRANCHFREE(branchFreeHistory)
 #define MINMAXDEPTH   20
 #define MAXMAXDEPTH  100
 #define MAXSIZE     5000
+#define FRACSCORE   1e-3
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpHistory)
@@ -147,6 +148,8 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       Real up;
       Real downgain;
       Real upgain;
+      Real downscore;
+      Real upscore;
       Real besthistscore;
       Real bestsbscore;
       Real depthfac;
@@ -185,7 +188,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       depthfac = 1.1 - (Real)actdepth/(Real)maxdepth;
       depthfac = MAX(depthfac, 0.0);
       depthfac = MIN(depthfac, 1.0);
-      sizefac = 1.1 - (Real)nintvars/(Real)MAXSIZE;
+      sizefac = 1.2 - sqrt((Real)nintvars/(Real)MAXSIZE);
       sizefac = MAX(sizefac, 0.0);
       sizefac = MIN(sizefac, 1.0);
       prio = depthfac * sizefac;
@@ -268,8 +271,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       if( sbiter == 0 )
       {
          int nlps = SCIPgetNLPs(scip);
-         sbiter = 2*(SCIPgetNLPIterations(scip)) / MAX(1, nlps);
+         sbiter = 2*SCIPgetNLPIterations(scip) / MAX(1, nlps);
          sbiter = MAX(sbiter, 10);
+         sbiter = MIN(sbiter, 100);
       }
       bestsbcand = -1;
       bestsbscore = -SCIPinfinity(scip);
@@ -327,7 +331,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          }
 
          /* check for a better score */
-         score = SCIPgetBranchScore(scip, downgain, upgain) + 1e-4; /* no gain -> use fractionalities */
+         downscore = downgain + FRACSCORE * lpcandsfrac[c];
+         upscore = upgain + FRACSCORE * (1.0-lpcandsfrac[c]);
+         score = SCIPgetBranchScore(scip, downscore, upscore);
          score *= SCIPvarGetBranchingPriority(lpcands[c]);
          if( score > bestsbscore )
          {
@@ -344,9 +350,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
       
-         debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), prio=%g, score=%g) -- best: <%s>, lookahead=%d/%d\n",
+         debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), prio=%g, score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, SCIPvarGetBranchingPriority(lpcands[c]), 
-            score, SCIPvarGetName(lpcands[c]), lookahead, maxlookahead);
+            score, SCIPvarGetName(lpcands[bestsbcand]), bestsbscore, lookahead, maxlookahead);
       }
 
       /* free buffer for the unreliable candidates */

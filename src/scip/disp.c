@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.25 2003/12/01 16:14:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.26 2004/01/24 17:21:09 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -33,6 +33,7 @@
 #include "set.h"
 #include "stat.h"
 #include "misc.h"
+#include "scip.h"
 #include "disp.h"
 
 #include "struct_disp.h"
@@ -42,6 +43,15 @@
 /*
  * display column methods
  */
+
+static
+DECL_PARAMCHGD(paramChgdDispActive)
+{
+   /* automatically select the now active display columns */
+   CHECK_OKAY( SCIPautoselectDisps(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** creates a display column */
 RETCODE SCIPdispCreate(
@@ -94,7 +104,7 @@ RETCODE SCIPdispCreate(
    sprintf(paramname, "display/%s/active", name);
    sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  (int*)(&(*disp)->dispstatus), (int)dispstatus, 0, 2, NULL, NULL) );
+                  (int*)(&(*disp)->dispstatus), (int)dispstatus, 0, 2, paramChgdDispActive, NULL) );
 
    return SCIP_OKAY;
 }

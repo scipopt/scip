@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.29 2004/01/13 11:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.30 2004/01/24 17:21:12 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -158,6 +158,7 @@ void SCIPstatReset(
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
    stat->lastdispnode = 0;
+   stat->lastdivenode = 0;
    stat->ndisplines = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
