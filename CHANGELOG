@@ -31,8 +31,6 @@ interface:
   SCIPconshdlrIsPresolvingDelayed(), SCIPconshdlrWasSeparationDelayed(), SCIPconshdlrWasPropagationDelayed(), and
   SCIPconshdlrWasPresolvingDelayed()
 - new method SCIPinProbing()
-- methods SCIPgetBinvarRepresentative() and SCIPvarGetProbvarBinary() now behave differently on fixed variables:
-  the negated flag is now set to TRUE iff the variable is fixed to FALSE (was the other way around before)
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);

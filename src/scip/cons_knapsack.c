@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.87 2005/02/09 16:14:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.88 2005/02/09 16:33:53 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1153,7 +1153,7 @@ RETCODE addCoef(
    if( var == NULL )
    {
       /* variable is fixed: if it is fixed to one, reduce capacity */
-      if( !negated )
+      if( negated )
          consdata->capacity -= weight;
    }
    else

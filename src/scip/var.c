@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.149 2005/02/09 16:14:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.150 2005/02/09 16:33:54 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5975,7 +5975,7 @@ VAR* SCIPvarGetProbvar(
 }
 
 /** gets corresponding active problem variable of a binary variable and updates the given negation status;
- *  for fixed variables, NULL is returned and the negation status is switched iff the variable is fixed to FALSE
+ *  for fixed variables, NULL is returned and the negation status is switched iff the variable is fixed to TRUE
  */
 RETCODE SCIPvarGetProbvarBinary(
    VAR**            var,                /**< pointer to binary problem variable */
@@ -6003,7 +6003,7 @@ RETCODE SCIPvarGetProbvarBinary(
 
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPvarGetLbGlobal(*var) > 0.5 || SCIPvarGetUbGlobal(*var) < 0.5);
-         *negated = *negated ^ (SCIPvarGetUbGlobal(*var) < 0.5);
+         *negated = *negated ^ (SCIPvarGetLbGlobal(*var) > 0.5);
          *var = NULL;
          break;
 
