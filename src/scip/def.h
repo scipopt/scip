@@ -74,9 +74,7 @@ typedef enum Setting SETTING;
 
 
 #define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) < SCIP_OKAY ) return _restat_; }
-#define CHECK_NULL(x) { if( (x) < SCIP_OKAY ) return NULL; }
 #define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
-#define ALLOC_NULL(x) { if( NULL == (x) ) return NULL; }
 
 #ifndef SQR
 #define SQR(x)        ((x)*(x))

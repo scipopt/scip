@@ -57,7 +57,8 @@ extern
 DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound);/**< node comparator for best lower bound */
 
 extern
-NODE* SCIPnodeCreate(                   /**< creates a child node of the active node */
+RETCODE SCIPnodeCreate(                 /**< creates a child node of the active node */
+   NODE**           node,               /**< pointer to node data structure */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree                /**< branch-and-bound tree */
@@ -110,8 +111,8 @@ RETCODE SCIPnodeToSubroot(              /**< converts the active node into a sub
  */
 
 extern
-TREE* SCIPtreeCreate(                   /**< creates an initialized tree data structure */
-   MEM*             mem,                /**< block memory buffers */
+RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data structure */
+   TREE**           tree,               /**< pointer to tree data structure */
    const SET*       set                 /**< global SCIP settings */
    );
 

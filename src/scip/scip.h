@@ -34,13 +34,24 @@ typedef struct Scip SCIP;
 
 
 extern
-RETCODE SCIPaddRow(void);
+RETCODE SCIPinit(                       /**< initializes SCIP data structures */
+   SCIP**           scip                /**< pointer to SCIP data structure */
+   );
 
 extern
-RETCODE SCIPaddCol(void);
+RETCODE SCIPaddRow(
+   void
+   );
 
 extern
-RETCODE SCIPaddConstraint(void);
+RETCODE SCIPaddCol(
+   void
+   );
+
+extern
+RETCODE SCIPaddConstraint(
+   void
+   );
 
 
 

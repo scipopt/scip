@@ -41,26 +41,27 @@
 #define DEFAULT_NODECMP      &SCIPnodeCmpLowerbound
 
 
-SET* SCIPsetCreate(                     /**< creates global SCIP settings */
-   void
+RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
+   SET**            set                 /**< pointer to SCIP settings */
    )
 {
-   SET* set;
-   
-   ALLOC_NULL( allocMemory(set) );
-   set->epsZero = SCIP_DEFAULT_EPSZERO;
-   set->infinity = SCIP_DEFAULT_INFINITY;
-   set->memGrowFac = DEFAULT_MEMGROWFAC;
-   set->memGrowInit = DEFAULT_MEMGROWINIT;
-   set->bufGrowFac = DEFAULT_BUFGROWFAC;
-   set->bufGrowInit = DEFAULT_BUFGROWINIT;
-   set->treeGrowFac = DEFAULT_TREEGROWFAC;
-   set->treeGrowInit = DEFAULT_TREEGROWINIT;
-   set->pathGrowFac = DEFAULT_PATHGROWFAC;
-   set->pathGrowInit = DEFAULT_PATHGROWINIT;
-   set->nodecmp = DEFAULT_NODECMP;
+   assert(set != NULL);
 
-   return set;
+   ALLOC_OKAY( allocMemory(*set) );
+
+   (*set)->epsZero = SCIP_DEFAULT_EPSZERO;
+   (*set)->infinity = SCIP_DEFAULT_INFINITY;
+   (*set)->memGrowFac = DEFAULT_MEMGROWFAC;
+   (*set)->memGrowInit = DEFAULT_MEMGROWINIT;
+   (*set)->bufGrowFac = DEFAULT_BUFGROWFAC;
+   (*set)->bufGrowInit = DEFAULT_BUFGROWINIT;
+   (*set)->treeGrowFac = DEFAULT_TREEGROWFAC;
+   (*set)->treeGrowInit = DEFAULT_TREEGROWINIT;
+   (*set)->pathGrowFac = DEFAULT_PATHGROWFAC;
+   (*set)->pathGrowInit = DEFAULT_PATHGROWINIT;
+   (*set)->nodecmp = DEFAULT_NODECMP;
+
+   return SCIP_OKAY;
 }
 
 static

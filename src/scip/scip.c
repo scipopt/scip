@@ -23,12 +23,65 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <assert.h>
+
+#include "set.h"
+#include "mem.h"
+#include "prob.h"
 #include "tree.h"
+#include "lp.h"
+#include "stat.h"
 #include "scip.h"
 
 
 /** SCIP main data structure */
 struct Scip
 {
+   MEM*             mem;                /**< block memory buffers */
+   SET*             set;                /**< global SCIP settings */
+   PROB*            prob;               /**< original problem data */
    TREE*            tree;               /**< branch and bound tree */
+   LP*              lp;                 /**< LP data */
+   STAT*            stat;               /**< dynamic problem statistics */
 };
+
+
+
+
+RETCODE SCIPcreate(                     /**< creates and initializes SCIP data structures */
+   SCIP**           scip                /**< pointer to SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   ALLOC_OKAY( allocMemory(*scip) );
+
+   CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
+   CHECK_OKAY( SCIPsetCreate(&(*scip)->set) );
+   CHECK_OKAY( SCIPprobCreate(&(*scip)->prob) );
+   CHECK_OKAY( SCIPtreeCreate(&(*scip)->tree, (*scip)->set) );
+   CHECK_OKAY( SCIPlpCreate(&(*scip)->lp) );
+   CHECK_OKAY( SCIPstatCreate(&(*scip)->stat) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPfree(                       /**< frees SCIP data structures */
+   SCIP**           scip                /**< pointer to SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(*scip != NULL);
+
+   CHECK_OKAY( SCIPstatFree(&(*scip)->stat) );
+   CHECK_OKAY( SCIPlpFree(&(*scip)->lp) );
+   CHECK_OKAY( SCIPtreeCreate(&(*scip)->tree, (*scip)->set) );
+   CHECK_OKAY( SCIPprobCreate(&(*scip)->prob) );
+   CHECK_OKAY( SCIPsetCreate(&(*scip)->set) );
+   CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
+
+   ALLOC_OKAY( allocMemory(*scip) );
+
+   return SCIP_OKAY;
+}
+

@@ -28,6 +28,11 @@
 #include "mem.h"
 
 
+
+/*
+ * dynamically sized arrays
+ */
+
 static
 RETCODE memEnsurePtrbufSize(            /**< ensures, that pointer array buffer can store at least num entries */
    MEM*             mem,                /**< block memory buffers */
@@ -120,42 +125,95 @@ RETCODE memEnsureRealbufSize(           /**< ensures, that real array buffer can
    return SCIP_OKAY;
 }
 
-void** SCIPmemGetPtrbuf(                /**< returns buffer for storing pointer array */
+
+
+/*
+ * external methods
+ */
+
+RETCODE SCIPmemCreate(                  /**< creates block memory structures */
+   MEM**            mem                 /**< pointer to block memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   ALLOC_OKAY( allocMemory(*mem) );
+
+   ALLOC_OKAY( (*mem)->treemem = createBlockMemory(1, FALSE, 10) );
+   ALLOC_OKAY( (*mem)->statemem = createBlockMemory(1, FALSE, 10) );
+   ALLOC_OKAY( (*mem)->lpmem = createBlockMemory(1, FALSE, 10) );
+   ALLOC_OKAY( (*mem)->dommem = createBlockMemory(1, FALSE, 10) );
+   ALLOC_OKAY( (*mem)->consmem = createBlockMemory(1, FALSE, 10) );
+   ALLOC_OKAY( (*mem)->primalmem = createBlockMemory(1, FALSE, 10) );
+   ALLOC_OKAY( (*mem)->tempmem = createBlockMemory(1, FALSE, 10) );
+   (*mem)->ptrbuf = NULL;
+   (*mem)->charbuf = NULL;
+   (*mem)->intbuf = NULL;
+   (*mem)->realbuf = NULL;
+   (*mem)->ptrbufsize = 0;
+   (*mem)->charbufsize = 0;
+   (*mem)->intbufsize = 0;
+   (*mem)->realbufsize = 0;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPmemGetPtrbuf(               /**< returns buffer for storing pointer array */
+   void***          ptrbuf,             /**< pointer to a pointer array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of pointer buffer */
    )
 {
-   CHECK_NULL( memEnsurePtrbufSize(mem, set, size) );
-   return mem->ptrbuf;
+   assert(ptrbuf != NULL);
+
+   CHECK_OKAY( memEnsurePtrbufSize(mem, set, size) );
+   *ptrbuf = mem->ptrbuf;
+
+   return SCIP_OKAY;
 }
 
-char* SCIPmemGetCharbuf(                /**< returns buffer for storing char array */
+RETCODE SCIPmemGetCharbuf(              /**< returns buffer for storing char array */
+   char**           charbuf,            /**< pointer to char array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of char buffer */
    )
 {
-   CHECK_NULL( memEnsureCharbufSize(mem, set, size) );
-   return mem->charbuf;
+   assert(charbuf != NULL);
+
+   CHECK_OKAY( memEnsureCharbufSize(mem, set, size) );
+   *charbuf = mem->charbuf;
+
+   return SCIP_OKAY;
 }
 
-int* SCIPmemGetIntbuf(                  /**< returns buffer for storing int array */
+RETCODE SCIPmemGetIntbuf(               /**< returns buffer for storing int array */
+   int**            intbuf,             /**< pointer to int array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of int buffer */
    )
 {
-   CHECK_NULL( memEnsureIntbufSize(mem, set, size) );
-   return mem->intbuf;
+   assert(intbuf != NULL);
+
+   CHECK_OKAY( memEnsureIntbufSize(mem, set, size) );
+   *intbuf = mem->intbuf;
+
+   return SCIP_OKAY;
 }
 
-Real* SCIPmemGetRealbuf(                /**< returns buffer for storing Real array */
+RETCODE SCIPmemGetRealbuf(              /**< returns buffer for storing Real array */
+   Real**           realbuf,            /**< pointer to Real array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of real buffer */
    )
 {
-   CHECK_NULL( memEnsureRealbufSize(mem, set, size) );
-   return mem->realbuf;
+   assert(realbuf != NULL);
+
+   CHECK_OKAY( memEnsureRealbufSize(mem, set, size) );
+   *realbuf = mem->realbuf;
+
+   return SCIP_OKAY;
 }

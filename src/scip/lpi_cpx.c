@@ -152,24 +152,24 @@ void lpstateUnpack(                     /**< unpacks row and column basis status
 }
 
 static
-LPSTATE* lpstateCreate(                 /**< creates LP state information object */
+RETCODE lpstateCreate(                  /**< creates LP state information object */
+   LPSTATE**        lpstate,            /**< pointer to LP state */
    MEM*             mem,                /**< block memory buffers */
    int              ncol,               /**< number of columns to store */
    int              nrow                /**< number of rows to store */
    )
 {
-   LPSTATE* lpstate;
-
+   assert(lpstate != NULL);
    assert(mem != NULL);
    assert(ncol >= 0);
    assert(nrow >= 0);
 
-   ALLOC_NULL( allocBlockMemory(mem->statemem, lpstate) );
-   ALLOC_NULL( allocBlockMemoryArray(mem->statemem, lpstate->packcstat, colpacketNum(ncol)) );
-   ALLOC_NULL( allocBlockMemoryArray(mem->statemem, lpstate->packrstat, rowpacketNum(nrow)) );
-   lpstate->dnorm = NULL;
+   ALLOC_OKAY( allocBlockMemory(mem->statemem, *lpstate) );
+   ALLOC_OKAY( allocBlockMemoryArray(mem->statemem, (*lpstate)->packcstat, colpacketNum(ncol)) );
+   ALLOC_OKAY( allocBlockMemoryArray(mem->statemem, (*lpstate)->packrstat, rowpacketNum(nrow)) );
+   (*lpstate)->dnorm = NULL;
 
-   return lpstate;
+   return SCIP_OKAY;
 }
 
 static
@@ -394,8 +394,7 @@ int cpxObjsen(OBJSEN objsen)
 }
 
 RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
-   LPI**            lpi,                /**< pointer to an LP interface structure */
-   const char*      name                /**< name of the LP */
+   LPI**            lpi                 /**< pointer to an LP interface structure */
    )
 {
    int     restat;
@@ -419,7 +418,7 @@ RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
 
    /* create LP */
    allocMemory(*lpi);
-   (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, (char*)name);
+   (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, "SCIP_CPLEX");
    CHECK_ZERO(restat);
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
@@ -1135,7 +1134,7 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
    assert(0 <= nrow && nrow < SCIP_MAXNROW);
    
    /* allocate lpstate data */
-   ALLOC_OKAY( *lpstate = lpstateCreate(mem, ncol, nrow) );
+   CHECK_OKAY( lpstateCreate(lpstate, mem, ncol, nrow) );
 
    /* allocate temporary buffer for storing uncompressed basis information */
    ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, cstat, ncol) );

@@ -27,15 +27,28 @@
 #include "stat.h"
 
 
-STAT* SCIPstatCreate(                   /**< creates problem statistics data */
-   void
+RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
+   STAT**           stat                /**< pointer to problem statistics data */
    )
 {
-   STAT* stat;
-   
-   ALLOC_NULL( allocMemory(stat) );
-   stat->numcolidx = 0;
-   stat->numrowidx = 0;
+   assert(stat != NULL);
 
-   return stat;
+   ALLOC_OKAY( allocMemory(*stat) );
+   (*stat)->numcolidx = 0;
+   (*stat)->numrowidx = 0;
+
+   return SCIP_OKAY;
 }
+
+RETCODE SCIPstatFree(                   /**< frees problem statistics data */
+   STAT**           stat                /**< pointer to problem statistics data */
+   )
+{
+   assert(stat != NULL);
+   assert(*stat != NULL);
+
+   freeMemory(*stat);
+
+   return SCIP_OKAY;
+}
+

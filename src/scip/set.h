@@ -52,8 +52,8 @@ struct Set
 
 
 extern
-SET* SCIPsetCreate(                     /**< creates global SCIP settings */
-   void
+RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
+   SET**            set                 /**< pointer to SCIP settings */
    );
 
 extern

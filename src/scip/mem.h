@@ -59,28 +59,37 @@ struct Mem
 
 
 extern
-void** SCIPmemGetPtrbuf(                /**< returns buffer for storing pointer array */
+RETCODE SCIPmemCreate(                  /**< creates block memory structures */
+   MEM**            mem                 /**< pointer to block memory structure */
+   );
+
+extern
+RETCODE SCIPmemGetPtrbuf(               /**< returns buffer for storing pointer array */
+   void***          ptrbuf,             /**< pointer to a pointer array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of pointer buffer */
    );
 
 extern
-char* SCIPmemGetCharbuf(                /**< returns buffer for storing char array */
+RETCODE SCIPmemGetCharbuf(              /**< returns buffer for storing char array */
+   char**           charbuf,            /**< pointer to char array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of char buffer */
    );
 
 extern
-int* SCIPmemGetIntbuf(                  /**< returns buffer for storing int array */
+RETCODE SCIPmemGetIntbuf(               /**< returns buffer for storing int array */
+   int**            intbuf,             /**< pointer to int array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of int buffer */
    );
 
 extern
-Real* SCIPmemGetRealbuf(                /**< returns buffer for storing Real array */
+RETCODE SCIPmemGetRealbuf(              /**< returns buffer for storing Real array */
+   Real**           realbuf,            /**< pointer to Real array */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of real buffer */

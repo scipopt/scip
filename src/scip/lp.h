@@ -34,14 +34,24 @@
 
 
 /** variable type */
-enum VarType
+enum Coltype
 {
-   SCIP_VARTYPE_BINARY    = 0,          /**< binary variable: $x \in \{0,1\}$ */
-   SCIP_VARTYPE_INTEGER   = 1,          /**< integer variable: $x \in \{lb, \ldots, \ub\}$ */
-   SCIP_VARTYPE_IMPLINT   = 2,          /**< implicit integer variable: continous variable, that is allways integral */
-   SCIP_VARTYPE_CONTINOUS = 3           /**< continous variable: $x \in [lb,ub] */
+   SCIP_COLTYPE_BINARY    = 0,          /**< binary variable: $x \in \{0,1\}$ */
+   SCIP_COLTYPE_INTEGER   = 1,          /**< integer variable: $x \in \{lb, \ldots, \ub\}$ */
+   SCIP_COLTYPE_IMPLINT   = 2,          /**< implicit integer variable: continous variable, that is allways integral */
+   SCIP_COLTYPE_CONTINOUS = 3           /**< continous variable: $x \in [lb,ub] */
 };
-typedef enum VarType VARTYPE;
+typedef enum Coltype COLTYPE;
+
+/** row type */
+enum RowType
+{
+   SCIP_ROWTYPE_LESSEQUAL    = 0,       /**< less or equal row: $a^Tx \le \text{rhs}$ */
+   SCIP_ROWTYPE_EQUAL        = 1,       /**< equality row: $a^Tx = \text{rhs}$ */
+   SCIP_ROWTYPE_GREATEREQUAL = 2,       /**< greater or equal row: $a^Tx \ge \text{rhs}$ */
+   SCIP_ROWTYPE_RANGE        = 3        /**< ranged row: $\text{lhs} \le a^Tx \le \text{rhs}$ */
+};
+typedef enum RowType ROWTYPE;
 
 /** type of bound: lower or upper bound */
 enum BoundType
@@ -99,7 +109,7 @@ struct Col
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              numpos;             /**< number of positive coefficients */
    int              numneg;             /**< number of negative coefficients */
-   unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
+   unsigned int     coltype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
@@ -113,6 +123,7 @@ struct Row
    COL**            col;                /**< columns of row entries */
    Real*            val;                /**< coefficients of row entries */
    Real             rhs;                /**< right hand side of row */
+   Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             epsilon;            /**< maximal normed violation of row */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
    Real             maxval;             /**< maximal absolute value of row vector */
@@ -124,7 +135,7 @@ struct Row
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefficients with absolute value equal to maxval */
-   unsigned int     equality:1;         /**< TRUE iff row is an equality, FALSE iff row is a less or equal inequality */
+   unsigned int     rowtype:2;          /**< type of row: lessequal, equal, greaterequal, range */
    unsigned int     sorted:1;           /**< TRUE iff column indices are sorted in increasing order */
    unsigned int     validminmaxidx:1;   /**< TRUE iff minimal and maximal column index is valid */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
@@ -160,14 +171,13 @@ struct Lp
 
 
 extern
-DOMCHGDYN* SCIPdomchgdynCreate(         /**< creates a variable sized domain change data structure */
-   MEM*             mem                 /**< block memory buffers */   
+RETCODE SCIPdomchgdynCreate(            /**< creates a dynamically sized domain change data structure */
+   DOMCHGDYN**      domchgdyn           /**< pointer to dynamically sized domain change data structure */
    );
 
 extern
 void SCIPdomchgdynFree(                 /**< frees a dynamically sized domain change data structure */
-   DOMCHGDYN**      domchgdyn,          /**< pointer to dynamically sized domain change data structure */
-   MEM*             mem                 /**< block memory buffers */   
+   DOMCHGDYN**      domchgdyn           /**< pointer to dynamically sized domain change data structure */
    );
 
 extern
@@ -200,7 +210,8 @@ RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes 
    );
 
 extern
-DOMCHG* SCIPdomchgCreate(               /**< creates domain change data (fixed size) from dynamically sized data */
+RETCODE SCIPdomchgCreate(               /**< creates domain change data (fixed size) from dynamically sized data */
+   DOMCHG**         domchg,             /**< pointer to fixed size domain change data */
    MEM*             mem,                /**< block memory buffers */   
    const DOMCHGDYN* domchgdyn           /**< dynamically sized domain change data structure */
    );
@@ -235,7 +246,8 @@ RETCODE SCIPlpFlush(                    /**< applies all cached changes to the L
    );
 
 extern
-COL* SCIPcolCreate(                     /**< creates an LP column */
+RETCODE SCIPcolCreate(                  /**< creates an LP column */
+   COL**            col,                /**< pointer to column data */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
@@ -247,11 +259,12 @@ COL* SCIPcolCreate(                     /**< creates an LP column */
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   COLTYPE          coltype             /**< type of variable */
    );
 
 extern
-ROW* SCIProwCreate(                     /**< creates an LP row */
+RETCODE SCIProwCreate(                  /**< creates an LP row */
+   ROW**            row,                /**< pointer to LP row data */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
@@ -260,9 +273,10 @@ ROW* SCIProwCreate(                     /**< creates an LP row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
-   Bool             equality,           /**< TRUE iff row is an equality, FALSE iff row is a less or equal inequality */
    Real             rhs,                /**< right hand side of row */
-   Real             epsilon             /**< maximal normed violation of row */
+   Real             lhs,                /**< left hand side of row (for ranged rows) */
+   Real             epsilon,            /**< maximal normed violation of row */
+   ROWTYPE          rowtype             /**< type of row */
    );
 
 extern
@@ -443,6 +457,16 @@ RETCODE SCIPlpShrinkRows(               /**< removes all rows after the given nu
 extern
 RETCODE SCIPlpClear(                    /** removes all columns and rows from LP */
    LP*              lp                  /**< LP data */
+   );
+
+extern
+RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
+   LP**             lp                  /**< pointer to LP data object */
+   );
+
+extern
+RETCODE SCIPlpFree(                     /**< frees LP data object */
+   LP**             lp                  /**< pointer to LP data object */
    );
 
 #endif

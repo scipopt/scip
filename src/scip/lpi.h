@@ -78,8 +78,7 @@ typedef enum Pricing PRICING;
 
 extern 
 RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
-   LPI**            lpi,                /**< pointer to an LP interface structure */
-   const char*      name                /**< name of the LP */
+   LPI**            lpi                 /**< pointer to an LP interface structure */
    );
 
 extern

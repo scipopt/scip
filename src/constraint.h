@@ -81,8 +81,10 @@ typedef void CONSDATA;                  /**< constraint type specific data; defa
 
 
 extern
-CONS* SCIPconsCreate(                   /**< creates a constraint */
+RETCODE SCIPconsCreate(                 /**< creates a constraint */
+   CONS**           cons,               /**< pointer to constraint */
    MEM*             mem,                /**< block memory buffers */
+   Bool             original,           /**< belongs constraint to the original problem formulation? */
    Bool             model,              /**< is constraint necessary for feasibility? */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata            /**< data for this specific constraint */
@@ -95,21 +97,32 @@ void SCIPconsFree(                      /**< frees a constraint */
    );
 
 extern
-RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constraints */
+void SCIPconsCapture(                   /**< increases usage counter of constraint */
+   CONS*            cons                /**< constraint */
+   );
+
+extern
+void SCIPconsRelease(                   /**< decreases usage counter of constraint, and frees memory if necessary */
+   CONS**           cons,               /**< pointer to constraint */
+   MEM*             mem                 /**< block memory buffers */
+   );
+
+extern
+RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constraints and captures it */
    CONSLIST**       conslist,           /**< constraint list to extend */
    MEM*             mem,                /**< block memory buffers */
    CONS*            cons                /**< constraint to add */
    );
 
 extern
-void SCIPconslistFreePart(              /**< partially unlinks and deletes the constraints in the list */
+void SCIPconslistFreePart(              /**< partially unlinks and releases the constraints in the list */
    CONSLIST**       conslist,           /**< constraint list to delete from */
    MEM*             mem,                /**< block memory buffers */
    CONSLIST*        firstkeep           /**< first constraint list entry to keep */
-      );
+   );
 
 extern
-void SCIPconslistFree(                  /**< unlinks and deletes all the constraints in the list */
+void SCIPconslistFree(                  /**< unlinks and releases all the constraints in the list */
    CONSLIST**       conslist,           /**< constraint list to delete from */
    MEM*             mem                 /**< block memory buffers */
    );
