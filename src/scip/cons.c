@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.70 2004/04/05 15:48:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.71 2004/04/21 16:39:24 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2908,7 +2908,7 @@ RETCODE SCIPconsFreeData(
       /* free constraint data */
       if( cons->conshdlr->consdelete != NULL && cons->consdata != NULL )
       {
-         CHECK_OKAY( cons->conshdlr->consdelete(set->scip, cons->conshdlr, &cons->consdata) );
+         CHECK_OKAY( cons->conshdlr->consdelete(set->scip, cons->conshdlr, cons, &cons->consdata) );
       }
       assert(cons->consdata == NULL);
    }

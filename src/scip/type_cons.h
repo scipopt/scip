@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.7 2004/04/05 15:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.8 2004/04/21 16:39:25 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -91,9 +91,10 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  input:
  *    scip            : SCIP main data structure
  *    conshdlr        : the constraint handler itself
+ *    cons            : the constraint belonging to the constraint data
  *    consdata        : pointer to the constraint data to free
  */
-#define DECL_CONSDELETE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONSDATA** consdata)
+#define DECL_CONSDELETE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, CONSDATA** consdata)
 
 /** transforms constraint data into data belonging to the transformed problem
  *

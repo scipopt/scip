@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.152 2004/04/21 12:11:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.153 2004/04/21 16:39:25 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3579,6 +3579,8 @@ RETCODE SCIPgetVarStrongbranch(
    }
 
    CHECK_OKAY( SCIPcolGetStrongbranch(SCIPvarGetCol(var), scip->set, scip->stat, scip->lp, itlim, down, up, lperror) );
+
+   /**@todo if strong branching leads to infeasible LP, call LP conflict analysis */
 
    return SCIP_OKAY;
 }
