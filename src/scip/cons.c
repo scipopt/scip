@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.86 2004/07/12 11:14:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.87 2004/07/12 12:40:48 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -274,6 +274,9 @@ RETCODE conshdlrMarkConsObsolete(
       {
          assert(0 <= cons->sepaconsspos && cons->sepaconsspos < conshdlr->nusefulsepaconss);
          
+         if( cons->sepaconsspos < conshdlr->lastnusefulsepaconss )
+            conshdlr->lastnusefulsepaconss--;
+
          /* switch the last useful (non-obsolete) sepa constraint with this constraint */
          tmpcons = conshdlr->sepaconss[conshdlr->nusefulsepaconss-1];
          assert(tmpcons->sepaconsspos == conshdlr->nusefulsepaconss-1);
@@ -289,17 +292,21 @@ RETCODE conshdlrMarkConsObsolete(
       {
          assert(0 <= cons->enfoconsspos && cons->enfoconsspos < conshdlr->nusefulenfoconss);
          
-         /* if the constraint that becomes obsolete is not yet enforced on the current solution, we have to
-          * make sure to enforce it; this is not done, if the current solution was already enforced and only
-          * enforcement on the additional constraints is performed (because in this case, only the new useful
-          * constraints are enforced); thus, we have to reset the enforcement counters in order to enforce
-          * all constraints again, especially the now obsolete one; this case should occur neary never, because
-          * a constraint that was not enforced in the last enforcement is a newly added one, and it is very unlikely
-          * that this constraint will become obsolete before the next enforcement call;
-          * this check is not performed for separation and propagation, because they are not vital for the correctness
-          */
-         if( cons->enfoconsspos >= conshdlr->lastnusefulenfoconss )
+         if( cons->enfoconsspos < conshdlr->lastnusefulenfoconss )
+            conshdlr->lastnusefulenfoconss--;
+         else
          {
+            /* the constraint that becomes obsolete is not yet enforced on the current solution:
+             * we have to make sure that it will be enforced the next time; this is not done, if the current
+             * solution was already enforced and only enforcement on the additional constraints is performed
+             * (because in this case, only the new useful constraints are enforced);
+             * thus, we have to reset the enforcement counters in order to enforce all constraints again, especially
+             * the now obsolete one;
+             * this case should occur almost never, because a constraint that was not enforced in the last enforcement
+             * is a newly added one, and it is very unlikely that this constraint will become obsolete before the next
+             * enforcement call;
+             * this reset is not performed for separation and propagation, because they are not vital for correctness
+             */
             conshdlr->lastenfolpcount = -1;
             conshdlr->lastenfodomchgcount = -1;
          }
@@ -314,12 +321,14 @@ RETCODE conshdlrMarkConsObsolete(
          cons->enfoconsspos = conshdlr->nusefulenfoconss-1;
          
          conshdlr->nusefulenfoconss--;
-
       }
       if( cons->propagate )
       {
          assert(0 <= cons->propconsspos && cons->propconsspos < conshdlr->nusefulpropconss);
          
+         if( cons->propconsspos < conshdlr->lastnusefulpropconss )
+            conshdlr->lastnusefulpropconss--;
+
          /* switch the last useful (non-obsolete) prop constraint with this constraint */
          tmpcons = conshdlr->propconss[conshdlr->nusefulpropconss-1];
          assert(tmpcons->propconsspos == conshdlr->nusefulpropconss-1);
