@@ -1929,7 +1929,7 @@ RETCODE SCIPnodeActivate(
          if( tree->actnodehaslp )
          {
             todoMessage("decide: old active node becomes fork or subroot");
-            if( tree->actnode->depth % 15 == 0 ) /* ????????????? */
+            if( tree->actnode->depth % 25 == 0 ) /* ????????????? */
             {
                /* convert old active node into a subroot node */
                CHECK_OKAY( actnodeToSubroot(memhdr, set, stat, tree, lp) );
