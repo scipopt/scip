@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.79 2005/02/08 14:22:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.80 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -27,8 +27,8 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_setppc.h"
-#include "cons_linear.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_linear.h"
 
 
 #define CONSHDLR_NAME          "setppc"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.14 2005/02/08 16:13:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.15 2005/02/14 13:35:46 bzfpfend Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -27,11 +27,11 @@
 #define __PARAMSET_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_paramset.h"
-#include "pub_paramset.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_paramset.h"
+#include "scip/pub_paramset.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.7 2005/02/07 14:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.8 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -27,9 +27,9 @@
 #define __STRUCT_NODESEL_H__
 
 
-#include "def.h"
-#include "type_tree.h"
-#include "type_nodesel.h"
+#include "scip/def.h"
+#include "scip/type_tree.h"
+#include "scip/type_nodesel.h"
 
 
 

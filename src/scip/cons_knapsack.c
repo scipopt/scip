@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.88 2005/02/09 16:33:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.89 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -28,8 +28,8 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_knapsack.h"
-#include "cons_linear.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_linear.h"
 
 
 /* constraint handler properties */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.9 2005/01/21 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_xxx.c,v 1.10 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   reader_xxx.c
  * @brief  XXX file reader
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "reader_xxx.h"
+#include "scip/reader_xxx.h"
 
 
 #define READER_NAME             "xxxreader"

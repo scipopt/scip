@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.12 2005/01/21 09:16:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.13 2005/02/14 13:35:39 bzfpfend Exp $"
 
 /**@file   buffer.h
  * @brief  internal methods for memory buffers for temporary objects
@@ -27,10 +27,10 @@
 #define __BUFFER_H__
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_buffer.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_buffer.h"
 
 
 /** creates memory buffer storage */

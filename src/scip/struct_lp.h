@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.30 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.31 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -52,10 +52,10 @@
 #define __STRUCT_LP_H__
 
 
-#include "def.h"
-#include "type_lpi.h"
-#include "type_lp.h"
-#include "type_var.h"
+#include "scip/def.h"
+#include "scip/type_lpi.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
 
 
 

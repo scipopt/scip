@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.15 2005/02/07 14:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.16 2005/02/14 13:35:51 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -27,12 +27,12 @@
 #define __STRUCT_CONFLICT_H__
 
 
-#include "def.h"
-#include "type_clock.h"
-#include "type_lpi.h"
-#include "type_misc.h"
-#include "type_var.h"
-#include "type_conflict.h"
+#include "scip/def.h"
+#include "scip/type_clock.h"
+#include "scip/type_lpi.h"
+#include "scip/type_misc.h"
+#include "scip/type_var.h"
+#include "scip/type_conflict.h"
 
 
 

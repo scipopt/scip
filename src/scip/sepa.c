@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.45 2005/02/08 14:22:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.46 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -26,17 +26,17 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "paramset.h"
-#include "sepastore.h"
-#include "scip.h"
-#include "sepa.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/paramset.h"
+#include "scip/sepastore.h"
+#include "scip/scip.h"
+#include "scip/sepa.h"
 
-#include "struct_sepa.h"
+#include "scip/struct_sepa.h"
 
 
 

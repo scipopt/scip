@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.27 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.28 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -27,9 +27,9 @@
 #define __STRUCT_CONS_H__
 
 
-#include "def.h"
-#include "type_clock.h"
-#include "type_cons.h"
+#include "scip/def.h"
+#include "scip/type_clock.h"
+#include "scip/type_cons.h"
 
 
 

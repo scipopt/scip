@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.9 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.10 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -27,9 +27,9 @@
 #define __STRUCT_MISC_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_misc.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_misc.h"
 
 
 

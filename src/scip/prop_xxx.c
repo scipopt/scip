@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.c,v 1.5 2005/02/08 14:22:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.c,v 1.6 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   prop_xxx.c
  * @brief  xxx propagator
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "prop_xxx.h"
+#include "scip/prop_xxx.h"
 
 
 #define PROP_NAME              "xxx"

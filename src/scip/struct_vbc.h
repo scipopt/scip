@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_vbc.h,v 1.4 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_vbc.h,v 1.5 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   struct_vbc.h
  * @brief  datastructures for VBC Tool output
@@ -28,8 +28,8 @@
 
 #include <stdio.h>
 
-#include "def.h"
-#include "type_misc.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
 
 
 /** VBC Tool data structure */

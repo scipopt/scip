@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.6 2005/01/21 09:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.7 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_prob.h
  * @brief  type definitions for storing and manipulating the main problem
@@ -106,9 +106,9 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
 
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 
 #endif

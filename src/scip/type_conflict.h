@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.10 2005/02/07 14:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.11 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -112,10 +112,10 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
 
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_var.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_var.h"
 
 
 

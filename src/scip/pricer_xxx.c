@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.7 2005/02/07 14:08:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.8 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "pricer_xxx.h"
+#include "scip/pricer_xxx.h"
 
 
 #define PRICER_NAME            "xxx"

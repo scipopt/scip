@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.34 2005/01/21 09:16:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.35 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -71,7 +71,7 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
             Real poscoeffsum, Real negcoeffsum, Bool integral, CONS** upgdcons)
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_presol.h,v 1.7 2005/02/08 14:22:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_presol.h,v 1.8 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_presol.h
  * @brief  public methods for presolvers
@@ -27,9 +27,9 @@
 #define __PUB_PRESOL_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_presol.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_presol.h"
 
 
 

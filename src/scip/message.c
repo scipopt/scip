@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.13 2005/01/21 09:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.14 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "message.h"
+#include "scip/message.h"
 
 
 /** prints a message depending on the verbosity level, acting like the printf() command */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.h,v 1.6 2005/01/21 09:16:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.h,v 1.7 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   interrupt.h
  * @brief  methods for catching the user CTRL-C interrupt
@@ -27,9 +27,9 @@
 #define __INTERRUPT_H__
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_interrupt.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_interrupt.h"
 
 
 

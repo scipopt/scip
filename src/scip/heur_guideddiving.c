@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.9 2005/02/08 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.10 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "heur_guideddiving.h"
+#include "scip/heur_guideddiving.h"
 
 
 #define HEUR_NAME             "guideddiving"

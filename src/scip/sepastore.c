@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.34 2005/01/31 12:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.35 2005/02/14 13:35:51 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -25,15 +25,15 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "set.h"
-#include "stat.h"
-#include "lp.h"
-#include "var.h"
-#include "tree.h"
-#include "sepastore.h"
+#include "scip/def.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/tree.h"
+#include "scip/sepastore.h"
 
-#include "struct_sepastore.h"
+#include "scip/struct_sepastore.h"
 
 
 

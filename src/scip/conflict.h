@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.28 2005/02/08 16:13:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.29 2005/02/14 13:35:40 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -27,17 +27,17 @@
 #define __CONFLICT_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_tree.h"
-#include "type_conflict.h"
-#include "pub_conflict.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_tree.h"
+#include "scip/type_conflict.h"
+#include "scip/pub_conflict.h"
 
 
 

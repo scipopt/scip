@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.h,v 1.3 2005/01/21 09:16:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.h,v 1.4 2005/02/14 13:35:40 bzfpfend Exp $"
 
 /**@file   cons_conjunction.h
  * @brief  constraint handler for conjunction constraints
@@ -27,7 +27,7 @@
 #define __CONS_CONJUNCTION_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the handler for conjunction constraints and includes it in SCIP */

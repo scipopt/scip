@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.36 2005/02/08 14:22:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.37 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "cons_or.h"
+#include "scip/cons_or.h"
 
 
 /* constraint handler properties */

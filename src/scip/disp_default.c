@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.49 2005/02/08 15:47:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.50 2005/02/14 13:35:42 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "disp_default.h"
+#include "scip/disp_default.h"
 
 
 #define DISP_NAME_SOLFOUND      "solfound"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.40 2005/02/09 16:33:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.41 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -27,15 +27,15 @@
 #define __PUB_VAR_H__
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_history.h"
-#include "type_var.h"
-#include "type_cons.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_history.h"
+#include "scip/type_var.h"
+#include "scip/type_cons.h"
 
 #ifdef NDEBUG
-#include "struct_var.h"
-#include "history.h"
+#include "scip/struct_var.h"
+#include "scip/history.h"
 #endif
 
 

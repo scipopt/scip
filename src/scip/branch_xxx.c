@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.10 2005/01/21 09:16:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.11 2005/02/14 13:35:39 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "branch_xxx.h"
+#include "scip/branch_xxx.h"
 
 
 #define BRANCHRULE_NAME            "xxx"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.16 2005/02/08 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.17 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "heur_objpscostdiving.h"
+#include "scip/heur_objpscostdiving.h"
 
 
 #define HEUR_NAME             "objpscostdiving"

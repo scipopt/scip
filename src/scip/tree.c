@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.134 2005/02/09 15:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.135 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -25,20 +25,20 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "vbc.h"
-#include "event.h"
-#include "lp.h"
-#include "var.h"
-#include "primal.h"
-#include "tree.h"
-#include "solve.h"
-#include "cons.h"
-#include "nodesel.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/vbc.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/primal.h"
+#include "scip/tree.h"
+#include "scip/solve.h"
+#include "scip/cons.h"
+#include "scip/nodesel.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */

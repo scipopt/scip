@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.h,v 1.3 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.h,v 1.4 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   prop_xxx.h
  * @brief  xxx propagator
@@ -27,7 +27,7 @@
 #define __PROP_XXX_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the xxx propagator and includes it in SCIP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.30 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.31 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -27,20 +27,20 @@
 #define __PRIMAL_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_event.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_sol.h"
-#include "type_primal.h"
-#include "type_tree.h"
-#include "type_heur.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_event.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_sol.h"
+#include "scip/type_primal.h"
+#include "scip/type_tree.h"
+#include "scip/type_heur.h"
 
-#include "struct_primal.h"
+#include "scip/struct_primal.h"
 
 
 

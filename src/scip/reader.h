@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.20 2005/02/08 16:13:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.21 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -27,12 +27,12 @@
 #define __READER_H__
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_set.h"
-#include "type_reader.h"
-#include "pub_reader.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_set.h"
+#include "scip/type_reader.h"
+#include "scip/pub_reader.h"
 
 
 

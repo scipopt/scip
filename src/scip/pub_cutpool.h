@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cutpool.h,v 1.4 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cutpool.h,v 1.5 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_cutpool.h
  * @brief  public methods for storing cuts in a cut pool
@@ -27,8 +27,8 @@
 #define __PUB_CUTPOOL_H__
 
 
-#include "def.h"
-#include "type_cutpool.h"
+#include "scip/def.h"
+#include "scip/type_cutpool.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.6 2005/02/07 14:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_disp.h,v 1.7 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   type_disp.h
  * @brief  type definitions for displaying runtime statistics
@@ -97,9 +97,9 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
 
 #include <stdio.h>
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 
 #endif

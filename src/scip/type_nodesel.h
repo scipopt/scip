@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.7 2005/02/07 14:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.8 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_nodesel.h
  * @brief  type definitions for node selectors
@@ -112,10 +112,10 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_tree.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_tree.h"
+#include "scip/type_scip.h"
 
 
 #endif

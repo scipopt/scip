@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.8 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_history.h,v 1.9 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_history.h
  * @brief  datastructures for branching and inference history
@@ -27,8 +27,8 @@
 #define __STRUCT_HISTORY_H__
 
 
-#include "def.h"
-#include "type_history.h"
+#include "scip/def.h"
+#include "scip/type_history.h"
 
 
 /** branching and inference history information for single variable */

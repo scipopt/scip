@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.c,v 1.17 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.c,v 1.18 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   mem.c
  * @brief  block memory pools and memory buffers
@@ -25,9 +25,9 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "message.h"
-#include "mem.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/mem.h"
 
 
 

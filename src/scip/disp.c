@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.39 2005/02/07 14:08:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.40 2005/02/14 13:35:42 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -27,16 +27,16 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "memory.h"
-#include "set.h"
-#include "stat.h"
-#include "misc.h"
-#include "scip.h"
-#include "disp.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/memory.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/misc.h"
+#include "scip/scip.h"
+#include "scip/disp.h"
 
-#include "struct_disp.h"
+#include "scip/struct_disp.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.150 2005/02/08 14:22:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.151 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -46,8 +46,8 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_linear.h"
-#include "cons_knapsack.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_knapsack.h"
 
 
 #define CONSHDLR_NAME          "linear"

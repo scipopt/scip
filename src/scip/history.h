@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.14 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.15 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -27,14 +27,14 @@
 #define __HISTORY_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_history.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_history.h"
 
 #ifdef NDEBUG
-#include "struct_history.h"
+#include "scip/struct_history.h"
 #endif
 
 

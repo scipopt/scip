@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.41 2005/01/31 12:20:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.42 2005/02/14 13:35:42 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -25,17 +25,17 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "misc.h"
-#include "lp.h"
-#include "sepastore.h"
-#include "cutpool.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/misc.h"
+#include "scip/lp.h"
+#include "scip/sepastore.h"
+#include "scip/cutpool.h"
 
-#include "struct_cutpool.h"
+#include "scip/struct_cutpool.h"
 
 
 

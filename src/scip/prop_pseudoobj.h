@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.h,v 1.3 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.h,v 1.4 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.h
  * @brief  pseudoobj propagator
@@ -27,7 +27,7 @@
 #define __PROP_PSEUDOOBJ_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the pseudo objective function propagator and includes it in SCIP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.8 2005/01/21 09:16:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.9 2005/02/14 13:35:39 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "branch_inference.h"
+#include "scip/branch_inference.h"
 
 
 #define BRANCHRULE_NAME          "inference"

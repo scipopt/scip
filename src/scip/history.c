@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.17 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.18 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -25,12 +25,12 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "set.h"
-#include "history.h"
+#include "scip/def.h"
+#include "scip/set.h"
+#include "scip/history.h"
 
 #ifndef NDEBUG
-#include "struct_history.h"
+#include "scip/struct_history.h"
 #endif
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.12 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.13 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -27,11 +27,11 @@
 #define __STRUCT_PROB_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_cons.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_cons.h"
 
 
 /** main problem to solve */

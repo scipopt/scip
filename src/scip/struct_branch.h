@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.13 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.14 2005/02/14 13:35:51 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -26,9 +26,9 @@
 #define __STRUCT_BRANCH_H__
 
 
-#include "def.h"
-#include "type_var.h"
-#include "type_branch.h"
+#include "scip/def.h"
+#include "scip/type_var.h"
+#include "scip/type_branch.h"
 
 
 /** branching candidate storage */

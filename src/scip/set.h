@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.81 2005/02/08 17:15:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.82 2005/02/14 13:35:51 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -27,33 +27,33 @@
 #define __SET_H__
 
 
-#include "def.h"
-#include "message.h"
-#include "memory.h"
-#include "buffer.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_clock.h"
-#include "type_paramset.h"
-#include "type_event.h"
-#include "type_scip.h"
-#include "type_branch.h"
-#include "type_conflict.h"
-#include "type_cons.h"
-#include "type_disp.h"
-#include "type_heur.h"
-#include "type_nodesel.h"
-#include "type_presol.h"
-#include "type_pricer.h"
-#include "type_reader.h"
-#include "type_relax.h"
-#include "type_sepa.h"
-#include "type_prop.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/memory.h"
+#include "scip/buffer.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_clock.h"
+#include "scip/type_paramset.h"
+#include "scip/type_event.h"
+#include "scip/type_scip.h"
+#include "scip/type_branch.h"
+#include "scip/type_conflict.h"
+#include "scip/type_cons.h"
+#include "scip/type_disp.h"
+#include "scip/type_heur.h"
+#include "scip/type_nodesel.h"
+#include "scip/type_presol.h"
+#include "scip/type_pricer.h"
+#include "scip/type_reader.h"
+#include "scip/type_relax.h"
+#include "scip/type_sepa.h"
+#include "scip/type_prop.h"
 
-#include "struct_set.h"
+#include "scip/struct_set.h"
 
 #ifdef NDEBUG
-#include "pub_misc.h"
+#include "scip/pub_misc.h"
 #endif
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.6 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.7 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -27,11 +27,11 @@
 #define __VBC_H__
 
 
-#include "def.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_tree.h"
-#include "type_vbc.h"
+#include "scip/def.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_tree.h"
+#include "scip/type_vbc.h"
 
 
 

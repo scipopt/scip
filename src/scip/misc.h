@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.19 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.20 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -27,12 +27,12 @@
 #define __MISC_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_misc.h"
-#include "pub_misc.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_misc.h"
+#include "scip/pub_misc.h"
 
 
 

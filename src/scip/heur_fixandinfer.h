@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.h,v 1.3 2005/01/21 09:16:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.h,v 1.4 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.h
  * @brief  fix-and-infer primal heuristic
@@ -27,7 +27,7 @@
 #define __HEUR_FIXANDINFER_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the fix-and-infer primal heuristic and includes it in SCIP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.44 2005/02/07 14:08:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.45 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -26,17 +26,17 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "vbc.h"
-#include "paramset.h"
-#include "tree.h"
-#include "scip.h"
-#include "nodesel.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/vbc.h"
+#include "scip/paramset.h"
+#include "scip/tree.h"
+#include "scip/scip.h"
+#include "scip/nodesel.h"
 
-#include "struct_nodesel.h"
+#include "scip/struct_nodesel.h"
 
 
 

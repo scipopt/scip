@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.5 2005/02/07 14:08:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.6 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_relax.h
  * @brief  type definitions for relaxators
@@ -101,10 +101,10 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
 #define DECL_RELAXEXEC(x) RETCODE x (SCIP* scip, RELAX* relax, RESULT* result)
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
 
 
 #endif

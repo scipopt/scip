@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.13 2005/02/07 14:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.14 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -27,11 +27,11 @@
 #define __STRUCT_EVENT_H__
 
 
-#include "def.h"
-#include "type_event.h"
-#include "type_var.h"
-#include "type_sol.h"
-#include "type_tree.h"
+#include "scip/def.h"
+#include "scip/type_event.h"
+#include "scip/type_var.h"
+#include "scip/type_sol.h"
+#include "scip/type_tree.h"
 
 
 

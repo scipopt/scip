@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.8 2005/02/07 14:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.9 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -99,9 +99,9 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
 
 
 
-#include "def.h"
-#include "type_scip.h"
-#include "type_result.h"
+#include "scip/def.h"
+#include "scip/type_scip.h"
+#include "scip/type_result.h"
 
 
 #endif

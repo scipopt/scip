@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.51 2005/01/21 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.52 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -28,8 +28,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "reader_mps.h"
-#include "cons_linear.h"
+#include "scip/reader_mps.h"
+#include "scip/cons_linear.h"
 
 
 #define READER_NAME             "mpsreader"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.5 2005/02/02 19:45:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.6 2005/02/14 13:35:37 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
@@ -27,8 +27,8 @@
 
 extern "C"
 {
-#include "scip.h"
-#include "scipdefplugins.h"
+#include "scip/scip.h"
+#include "scip/scipdefplugins.h"
 }
 
 

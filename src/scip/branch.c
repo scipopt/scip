@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.61 2005/02/07 14:08:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.62 2005/02/14 13:35:38 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -25,22 +25,22 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "memory.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "paramset.h"
-#include "event.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "tree.h"
-#include "sepastore.h"
-#include "scip.h"
-#include "branch.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/paramset.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/tree.h"
+#include "scip/sepastore.h"
+#include "scip/scip.h"
+#include "scip/branch.h"
 
-#include "struct_branch.h"
+#include "scip/struct_branch.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.26 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.27 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -569,12 +569,12 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
 #define DECL_CONSPRINT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, FILE* file)
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_var.h"
-#include "type_sol.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_var.h"
+#include "scip/type_sol.h"
+#include "scip/type_scip.h"
 
 
 #endif

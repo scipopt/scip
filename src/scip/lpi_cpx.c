@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.80 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.81 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -26,9 +26,9 @@
 #include <assert.h>
 
 #include "cplex.h"
-#include "bitencode.h"
-#include "lpi.h"
-#include "message.h"
+#include "scip/bitencode.h"
+#include "scip/lpi.h"
+#include "scip/message.h"
 
 
 

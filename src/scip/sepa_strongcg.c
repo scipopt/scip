@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.8 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.9 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -27,7 +27,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "sepa_strongcg.h"
+#include "scip/sepa_strongcg.h"
 
 
 #define SEPA_NAME              "strongcg"

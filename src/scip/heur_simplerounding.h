@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.h,v 1.4 2005/01/21 09:16:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.h,v 1.5 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.h
  * @brief  simple and fast LP rounding heuristic
@@ -27,7 +27,7 @@
 #define __HEUR_SIMPLEROUNDING_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the simple rounding heuristic and includes it in SCIP */

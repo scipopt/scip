@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.h,v 1.3 2005/01/21 09:16:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.h,v 1.4 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.h
  * @brief  linesearchdiving primal heuristic
@@ -27,7 +27,7 @@
 #define __HEUR_LINESEARCHDIVING_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the linesearchdiving primal heuristic and includes it in SCIP */

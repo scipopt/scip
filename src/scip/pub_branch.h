@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.9 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.10 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_branch.h
  * @brief  public methods for branching rules
@@ -26,9 +26,9 @@
 #define __PUB_BRANCH_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_branch.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_branch.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_prop.h,v 1.4 2005/02/08 14:22:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_prop.h,v 1.5 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_prop.h
  * @brief  public methods for propagators
@@ -27,9 +27,9 @@
 #define __PUB_PROP_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_prop.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_prop.h"
 
 
 

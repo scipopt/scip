@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_clock.h,v 1.4 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_clock.h,v 1.5 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   type_clock.h
  * @brief  type definitions for clocks and timing issues
@@ -39,7 +39,7 @@ typedef struct CPUClock CPUCLOCK;       /**< CPU clock counter */
 typedef struct WallClock WALLCLOCK;     /**< wall clock counter */
 
 
-#include "def.h"
+#include "scip/def.h"
 
 
 #endif

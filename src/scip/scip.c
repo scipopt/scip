@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.268 2005/02/11 13:49:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.269 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -31,43 +31,43 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "def.h"
-#include "retcode.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "vbc.h"
-#include "interrupt.h"
-#include "lpi.h"
-#include "mem.h"
-#include "misc.h"
-#include "history.h"
-#include "event.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "sol.h"
-#include "primal.h"
-#include "tree.h"
-#include "pricestore.h"
-#include "sepastore.h"
-#include "cutpool.h"
-#include "solve.h"
-#include "scip.h"
+#include "scip/def.h"
+#include "scip/retcode.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/vbc.h"
+#include "scip/interrupt.h"
+#include "scip/lpi.h"
+#include "scip/mem.h"
+#include "scip/misc.h"
+#include "scip/history.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/sol.h"
+#include "scip/primal.h"
+#include "scip/tree.h"
+#include "scip/pricestore.h"
+#include "scip/sepastore.h"
+#include "scip/cutpool.h"
+#include "scip/solve.h"
+#include "scip/scip.h"
 
-#include "branch.h"
-#include "conflict.h"
-#include "cons.h"
-#include "dialog.h"
-#include "disp.h"
-#include "heur.h"
-#include "nodesel.h"
-#include "reader.h"
-#include "presol.h"
-#include "pricer.h"
-#include "relax.h"
-#include "sepa.h"
-#include "prop.h"
+#include "scip/branch.h"
+#include "scip/conflict.h"
+#include "scip/cons.h"
+#include "scip/dialog.h"
+#include "scip/disp.h"
+#include "scip/heur.h"
+#include "scip/nodesel.h"
+#include "scip/reader.h"
+#include "scip/presol.h"
+#include "scip/pricer.h"
+#include "scip/relax.h"
+#include "scip/sepa.h"
+#include "scip/prop.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -76,7 +76,7 @@
  * are implemented as defines for performance reasons (e.g. the numerical comparisons)
  */
 #ifndef NDEBUG
-#include "struct_scip.h"
+#include "scip/struct_scip.h"
 #endif
 
 

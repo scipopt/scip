@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.6 2005/01/25 12:46:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.7 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -27,8 +27,8 @@
 #define __STRUCT_DIALOG_H__
 
 
-#include "def.h"
-#include "type_dialog.h"
+#include "scip/def.h"
+#include "scip/type_dialog.h"
 
 
 

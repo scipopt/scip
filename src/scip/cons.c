@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.115 2005/02/08 16:13:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.116 2005/02/14 13:35:40 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -26,18 +26,18 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "var.h"
-#include "prob.h"
-#include "tree.h"
-#include "sepastore.h"
-#include "cons.h"
+#include "scip/def.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/tree.h"
+#include "scip/sepastore.h"
+#include "scip/cons.h"
 
 #ifndef NDEBUG
-#include "struct_cons.h"
+#include "scip/struct_cons.h"
 #endif
 
 

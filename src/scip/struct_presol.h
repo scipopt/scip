@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_presol.h,v 1.9 2005/02/07 18:12:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_presol.h,v 1.10 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_presol.h
  * @brief  datastructures for presolvers
@@ -27,9 +27,9 @@
 #define __STRUCT_PRESOL_H__
 
 
-#include "def.h"
-#include "type_clock.h"
-#include "type_presol.h"
+#include "scip/def.h"
+#include "scip/type_clock.h"
+#include "scip/type_presol.h"
 
 
 /** presolver */

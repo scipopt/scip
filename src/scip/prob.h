@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.44 2005/02/02 20:06:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.45 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -27,20 +27,20 @@
 #define __PROB_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_event.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_tree.h"
-#include "type_branch.h"
-#include "type_cons.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_event.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_tree.h"
+#include "scip/type_branch.h"
+#include "scip/type_cons.h"
 
-#include "struct_prob.h"
+#include "scip/struct_prob.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.10 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.11 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -27,12 +27,12 @@
 #define __PUB_TREE_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_tree.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_tree.h"
 
 #ifdef NDEBUG
-#include "struct_tree.h"
+#include "scip/struct_tree.h"
 #endif
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.71 2005/01/31 12:20:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.72 2005/02/14 13:35:42 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -32,7 +32,7 @@
 #include <limits.h>
 #include <float.h>
 
-#include "type_retcode.h"
+#include "scip/type_retcode.h"
 
 
 

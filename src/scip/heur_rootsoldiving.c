@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.12 2005/02/08 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.13 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "heur_rootsoldiving.h"
+#include "scip/heur_rootsoldiving.h"
 
 
 #define HEUR_NAME         "rootsoldiving"

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.c,v 1.9 2005/01/21 09:16:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.c,v 1.10 2005/02/14 13:35:38 bzfpfend Exp $"
 
 /**@file   bitencode.c
  * @brief  packing single and dual bit values
@@ -25,8 +25,8 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "bitencode.h"
+#include "scip/def.h"
+#include "scip/bitencode.h"
 
 
 /** encode a single bit vector into packed format */

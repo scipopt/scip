@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.h,v 1.4 2005/01/21 09:16:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.h,v 1.5 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.h
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -27,7 +27,7 @@
 #define __HEUR_FRACDIVING_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the fracdiving heuristic and includes it in SCIP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.175 2005/02/07 14:08:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.176 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -35,18 +35,18 @@
 #include <limits.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "intervalarith.h"
-#include "clock.h"
-#include "lpi.h"
-#include "misc.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "sol.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/intervalarith.h"
+#include "scip/clock.h"
+#include "scip/lpi.h"
+#include "scip/misc.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/sol.h"
 
 
 /*

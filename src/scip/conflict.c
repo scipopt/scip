@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.85 2005/02/07 14:08:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.86 2005/02/14 13:35:39 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -111,25 +111,25 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "vbc.h"
-#include "lpi.h"
-#include "misc.h"
-#include "paramset.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "tree.h"
-#include "scip.h"
-#include "conflict.h"
-#include "cons.h"
-#include "prop.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/vbc.h"
+#include "scip/lpi.h"
+#include "scip/misc.h"
+#include "scip/paramset.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/tree.h"
+#include "scip/scip.h"
+#include "scip/conflict.h"
+#include "scip/cons.h"
+#include "scip/prop.h"
 
-#include "struct_conflict.h"
+#include "scip/struct_conflict.h"
 
 
 

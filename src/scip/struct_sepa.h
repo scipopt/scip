@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.9 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.10 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -27,9 +27,9 @@
 #define __STRUCT_SEPA_H__
 
 
-#include "def.h"
-#include "type_clock.h"
-#include "type_sepa.h"
+#include "scip/def.h"
+#include "scip/type_clock.h"
+#include "scip/type_sepa.h"
 
 
 /** separators data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.139 2005/02/09 13:44:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.140 2005/02/14 13:35:51 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -27,26 +27,26 @@
 #include <string.h>
 #include <math.h>
 
-#include "def.h"
-#include "set.h"
-#include "stat.h"
-#include "misc.h"
-#include "event.h"
-#include "lp.h"
-#include "paramset.h"
-#include "scip.h"
-#include "branch.h"
-#include "conflict.h"
-#include "cons.h"
-#include "disp.h"
-#include "heur.h"
-#include "nodesel.h"
-#include "presol.h"
-#include "pricer.h"
-#include "reader.h"
-#include "relax.h"
-#include "sepa.h"
-#include "prop.h"
+#include "scip/def.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/misc.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/paramset.h"
+#include "scip/scip.h"
+#include "scip/branch.h"
+#include "scip/conflict.h"
+#include "scip/cons.h"
+#include "scip/disp.h"
+#include "scip/heur.h"
+#include "scip/nodesel.h"
+#include "scip/presol.h"
+#include "scip/pricer.h"
+#include "scip/reader.h"
+#include "scip/relax.h"
+#include "scip/sepa.h"
+#include "scip/prop.h"
 
 
 

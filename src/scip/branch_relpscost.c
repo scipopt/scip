@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.23 2005/01/21 09:16:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.24 2005/02/14 13:35:39 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "branch_relpscost.h"
+#include "scip/branch_relpscost.h"
 
 
 #define BRANCHRULE_NAME          "relpscost"

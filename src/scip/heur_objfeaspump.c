@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.5 2005/02/08 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.6 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "heur_objfeaspump.h"
+#include "scip/heur_objfeaspump.h"
 
 
 #define HEUR_NAME             "objfeaspump"

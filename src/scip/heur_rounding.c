@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.38 2005/02/07 14:08:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.39 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "heur_rounding.h"
+#include "scip/heur_rounding.h"
 
 
 #define HEUR_NAME             "rounding"

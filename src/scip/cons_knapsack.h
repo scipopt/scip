@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.19 2005/01/21 09:16:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.20 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -27,7 +27,7 @@
 #define __CONS_KNAPSACK_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the handler for knapsack constraints and includes it in SCIP */

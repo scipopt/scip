@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.75 2005/02/08 14:22:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.76 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -28,8 +28,8 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_logicor.h"
-#include "cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_linear.h"
 
 
 #define CONSHDLR_NAME          "logicor"

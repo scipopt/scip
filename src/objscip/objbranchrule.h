@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.16 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.17 2005/02/14 13:35:37 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -31,7 +31,7 @@
 
 extern "C" 
 {
-#include "scip.h"
+#include "scip/scip.h"
 }
 
 

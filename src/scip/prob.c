@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.67 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.68 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -26,17 +26,17 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "misc.h"
-#include "event.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "tree.h"
-#include "branch.h"
-#include "cons.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/misc.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/tree.h"
+#include "scip/branch.h"
+#include "scip/cons.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_pricer.h,v 1.6 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_pricer.h,v 1.7 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_pricer.h
  * @brief  public methods for variable pricers
@@ -27,9 +27,9 @@
 #define __PUB_PRICER_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_pricer.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_pricer.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.24 2005/02/08 14:22:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.25 2005/02/14 13:35:40 bzfpfend Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -27,8 +27,8 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_eqknapsack.h"
-#include "cons_linear.h"
+#include "scip/cons_eqknapsack.h"
+#include "scip/cons_linear.h"
 
 
 /* constraint handler properties */

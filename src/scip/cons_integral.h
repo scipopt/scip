@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.h,v 1.10 2005/01/21 09:16:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.h,v 1.11 2005/02/14 13:35:40 bzfpfend Exp $"
 
 /**@file   cons_integral.h
  * @brief  constraint handler for the integrality constraint
@@ -27,7 +27,7 @@
 #define __CONS_INTEGRAL_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the handler for the integrality constraint and includes it in SCIP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.5 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.6 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_prop.h
  * @brief  type definitions for propagators
@@ -130,10 +130,10 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
       BOUNDTYPE boundtype, BDCHGIDX* bdchgidx, RESULT* result)
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
 
 
 #endif

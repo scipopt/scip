@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.h,v 1.8 2005/01/21 09:16:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.h,v 1.9 2005/02/14 13:35:39 bzfpfend Exp $"
 
 /**@file   branch_leastinf.h
  * @brief  least infeasible LP branching rule
@@ -27,7 +27,7 @@
 #define __BRANCH_LEASTINF_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the least infeasible LP braching rule and includes it in SCIP */

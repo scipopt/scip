@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.150 2005/02/09 16:33:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.151 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -27,18 +27,18 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "history.h"
-#include "event.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "primal.h"
-#include "cons.h"
-#include "prop.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/history.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/primal.h"
+#include "scip/cons.h"
+#include "scip/prop.h"
 
 
 

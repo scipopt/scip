@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.6 2005/01/21 09:17:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.7 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_misc.h
  * @brief  type definitions for miscellaneous datastructures
@@ -66,7 +66,7 @@ typedef struct PtrArray PTRARRAY;       /**< dynamic array for storing pointers 
 
 
 
-#include "def.h"
+#include "scip/def.h"
 
 
 #endif

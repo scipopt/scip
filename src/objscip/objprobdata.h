@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.9 2005/01/21 09:16:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.10 2005/02/14 13:35:38 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -31,7 +31,7 @@
 
 extern "C" 
 {
-#include "scip.h"
+#include "scip/scip.h"
 }
 
 

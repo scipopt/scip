@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.36 2005/02/08 16:13:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.37 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -27,15 +27,15 @@
 #define __SEPA_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_sepastore.h"
-#include "type_sepa.h"
-#include "pub_sepa.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_sepastore.h"
+#include "scip/type_sepa.h"
+#include "scip/pub_sepa.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.17 2005/02/08 14:22:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.18 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -27,12 +27,12 @@
 #define __PUB_CONS_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_cons.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_cons.h"
 
 #ifdef NDEBUG
-#include "struct_cons.h"
+#include "scip/struct_cons.h"
 #endif
 
 

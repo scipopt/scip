@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.10 2005/02/11 13:37:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.11 2005/02/14 13:35:46 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "presol_probing.h"
+#include "scip/presol_probing.h"
 
 
 #define PRESOL_NAME            "probing"

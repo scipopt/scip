@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.11 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.12 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -27,10 +27,10 @@
 #define __STRUCT_SEPASTORE_H__
 
 
-#include "def.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_sepastore.h"
+#include "scip/def.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_sepastore.h"
 
 
 /** storage for separated cuts

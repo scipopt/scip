@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.6 2005/02/08 14:22:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.7 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -27,9 +27,9 @@
 #define __PUB_SEPA_H__
 
 
-#include "def.h"
-#include "type_misc.h"
-#include "type_sepa.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_sepa.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.8 2005/02/08 14:22:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.9 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "prop_pseudoobj.h"
+#include "scip/prop_pseudoobj.h"
 
 
 #define PROP_NAME              "pseudoobj"

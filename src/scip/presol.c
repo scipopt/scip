@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.27 2005/02/08 14:22:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.28 2005/02/14 13:35:46 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -26,15 +26,15 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "memory.h"
-#include "set.h"
-#include "clock.h"
-#include "paramset.h"
-#include "scip.h"
-#include "presol.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/set.h"
+#include "scip/clock.h"
+#include "scip/paramset.h"
+#include "scip/scip.h"
+#include "scip/presol.h"
 
-#include "struct_presol.h"
+#include "scip/struct_presol.h"
 
 
 

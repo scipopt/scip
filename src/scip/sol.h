@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.37 2005/02/02 19:34:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.38 2005/02/14 13:35:51 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -29,19 +29,19 @@
 
 #include <stdio.h>
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_sol.h"
-#include "type_primal.h"
-#include "type_tree.h"
-#include "type_heur.h"
-#include "pub_sol.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_sol.h"
+#include "scip/type_primal.h"
+#include "scip/type_tree.h"
+#include "scip/type_heur.h"
+#include "scip/pub_sol.h"
 
 
 

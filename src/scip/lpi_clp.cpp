@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.12 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.13 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -38,9 +38,9 @@
 
 extern "C" 
 {
-#include "lpi.h"
-#include "bitencode.h"
-#include "message.h"
+#include "scip/lpi.h"
+#include "scip/bitencode.h"
+#include "scip/message.h"
 }
 
 

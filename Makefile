@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.96 2005/01/31 15:21:02 bzfberth Exp $
+# $Id: Makefile,v 1.97 2005/02/14 13:35:37 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -107,7 +107,7 @@ LPILIBNAME	=	lpi$(LPS)
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	lpi_cpx.o bitencode.o memory.o
+LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o scip/memory.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
@@ -115,40 +115,40 @@ ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	lpi_spx.o bitencode.o memory.o
-LPILIBSRC	=	src/lpi_spx.cpp src/bitencode.c
+LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o scip/memory.o
+LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/scip/memory.c
 endif
 
 ifeq ($(LPS),spxdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	lpi_spx.o bitencode.o memory.o
-LPILIBSRC	=	src/lpi_spx.cpp src/bitencode.c
+LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o scip/memory.o
+LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/scip/memory.c
 endif
 
 ifeq ($(LPS),spx121)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
 LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	lpi_spx121.o bitencode.o memory.o
-LPILIBSRC	=	src/lpi_spx121.cpp src/bitencode.c
+LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o scip/memory.o
+LPILIBSRC	=	src/scip/lpi_spx121.cpp src/scip/bitencode.c src/scip/memory.c
 endif
 
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	lpi_clp.o bitencode.o memory.o
-LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.cpp))
+LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o scip/memory.o
+LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c
 endif
 
 ifeq ($(LPS),clpdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	lpi_clp.o bitencode.o memory.o
-LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.cpp))
+LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o scip/memory.o
+LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
@@ -162,93 +162,93 @@ LPILIBDEP	=	src/depend.lpilib.$(LPS).$(OPT)
 #-----------------------------------------------------------------------------
 
 SCIPLIBNAME	=	scip
-SCIPLIBOBJ	=	branch.o \
-			buffer.o \
-			clock.o \
-			conflict.o \
-			cons.o \
-			cutpool.o \
-			dialog.o \
-			disp.o \
-			event.o \
-			heur.o \
-			history.o \
-			interrupt.o \
-			intervalarith.o \
-			lp.o \
-			mem.o \
-			memory.o \
-			message.o \
-			misc.o \
-			nodesel.o \
-			paramset.o \
-			presol.o \
-			pricestore.o \
-			pricer.o \
-			primal.o \
-			prob.o \
-			prop.o \
-			reader.o \
-			relax.o \
-			retcode.o \
-			scip.o \
-			scipdefplugins.o \
-			sepa.o \
-			sepastore.o \
-			set.o \
-			sol.o \
-			solve.o \
-			stat.o \
-			tree.o \
-			var.o \
-			vbc.o \
-			branch_allfullstrong.o \
-			branch_fullstrong.o \
-			branch_inference.o \
-			branch_mostinf.o \
-			branch_leastinf.o \
-			branch_pscost.o \
-			branch_relpscost.o \
-			cons_and.o \
-			cons_binpack.o \
-			cons_conjunction.o \
-			cons_eqknapsack.o \
-			cons_integral.o \
-			cons_invarknapsack.o \
-			cons_knapsack.o \
-			cons_linear.o \
-			cons_logicor.o \
-			cons_or.o \
-			cons_setppc.o \
-			cons_varbound.o \
-			cons_xor.o \
-			dialog_default.o \
-			disp_default.o \
-			heur_coefdiving.o \
-			heur_feaspump.o \
-			heur_fixandinfer.o \
-			heur_fracdiving.o \
-			heur_guideddiving.o \
-			heur_linesearchdiving.o \
-			heur_objfeaspump.o \
-			heur_objpscostdiving.o \
-			heur_pscostdiving.o \
-			heur_rootsoldiving.o \
-			heur_rounding.o \
-			heur_simplerounding.o \
-			nodesel_bfs.o \
-			nodesel_dfs.o \
-			nodesel_restartdfs.o \
-			presol_dualfix.o \
-			presol_probing.o \
-			presol_trivial.o \
-			prop_pseudoobj.o \
-			reader_cnf.o \
-			reader_mps.o \
-			sepa_cmir.o \
-			sepa_gomory.o \
-			sepa_intobj.o \
-			sepa_strongcg.o
+SCIPLIBOBJ	=	scip/branch.o \
+			scip/buffer.o \
+			scip/clock.o \
+			scip/conflict.o \
+			scip/cons.o \
+			scip/cutpool.o \
+			scip/dialog.o \
+			scip/disp.o \
+			scip/event.o \
+			scip/heur.o \
+			scip/history.o \
+			scip/interrupt.o \
+			scip/intervalarith.o \
+			scip/lp.o \
+			scip/mem.o \
+			scip/memory.o \
+			scip/message.o \
+			scip/misc.o \
+			scip/nodesel.o \
+			scip/paramset.o \
+			scip/presol.o \
+			scip/pricestore.o \
+			scip/pricer.o \
+			scip/primal.o \
+			scip/prob.o \
+			scip/prop.o \
+			scip/reader.o \
+			scip/relax.o \
+			scip/retcode.o \
+			scip/scip.o \
+			scip/scipdefplugins.o \
+			scip/sepa.o \
+			scip/sepastore.o \
+			scip/set.o \
+			scip/sol.o \
+			scip/solve.o \
+			scip/stat.o \
+			scip/tree.o \
+			scip/var.o \
+			scip/vbc.o \
+			scip/branch_allfullstrong.o \
+			scip/branch_fullstrong.o \
+			scip/branch_inference.o \
+			scip/branch_mostinf.o \
+			scip/branch_leastinf.o \
+			scip/branch_pscost.o \
+			scip/branch_relpscost.o \
+			scip/cons_and.o \
+			scip/cons_binpack.o \
+			scip/cons_conjunction.o \
+			scip/cons_eqknapsack.o \
+			scip/cons_integral.o \
+			scip/cons_invarknapsack.o \
+			scip/cons_knapsack.o \
+			scip/cons_linear.o \
+			scip/cons_logicor.o \
+			scip/cons_or.o \
+			scip/cons_setppc.o \
+			scip/cons_varbound.o \
+			scip/cons_xor.o \
+			scip/dialog_default.o \
+			scip/disp_default.o \
+			scip/heur_coefdiving.o \
+			scip/heur_feaspump.o \
+			scip/heur_fixandinfer.o \
+			scip/heur_fracdiving.o \
+			scip/heur_guideddiving.o \
+			scip/heur_linesearchdiving.o \
+			scip/heur_objfeaspump.o \
+			scip/heur_objpscostdiving.o \
+			scip/heur_pscostdiving.o \
+			scip/heur_rootsoldiving.o \
+			scip/heur_rounding.o \
+			scip/heur_simplerounding.o \
+			scip/nodesel_bfs.o \
+			scip/nodesel_dfs.o \
+			scip/nodesel_restartdfs.o \
+			scip/presol_dualfix.o \
+			scip/presol_probing.o \
+			scip/presol_trivial.o \
+			scip/prop_pseudoobj.o \
+			scip/reader_cnf.o \
+			scip/reader_mps.o \
+			scip/sepa_cmir.o \
+			scip/sepa_gomory.o \
+			scip/sepa_intobj.o \
+			scip/sepa_strongcg.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).a
@@ -262,17 +262,17 @@ SCIPLIBDEP	=	src/depend.sciplib.$(OPT)
 #-----------------------------------------------------------------------------
 
 OBJSCIPLIBNAME	=	objscip
-OBJSCIPLIBOBJ	=	objbranchrule.o \
-			objconshdlr.o \
-			objheur.o \
-			objnodesel.o \
-			objpresol.o \
-			objpricer.o \
-			objprobdata.o \
-			objreader.o \
-			objrelax.o \
-			objsepa.o \
-			objvardata.o
+OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
+			objscip/objconshdlr.o \
+			objscip/objheur.o \
+			objscip/objnodesel.o \
+			objscip/objpresol.o \
+			objscip/objpricer.o \
+			objscip/objprobdata.o \
+			objscip/objreader.o \
+			objscip/objrelax.o \
+			objscip/objsepa.o \
+			objscip/objvardata.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).a
@@ -326,6 +326,12 @@ testcplex:
 $(OBJDIR):	
 		-mkdir -p $(OBJDIR)
 
+$(OBJDIR)/scip:	$(OBJDIR)
+		-mkdir -p $(OBJDIR)/scip
+
+$(OBJDIR)/objscip:	$(OBJDIR)
+		-mkdir -p $(OBJDIR)/objscip
+
 $(LIBDIR):
 		-mkdir -p $(LIBDIR)
 
@@ -373,17 +379,17 @@ ifeq ($(LINKER),CPP)
 		$(LDFLAGS) -o $@
 endif
 
-$(SCIPLIBFILE):	$(OBJDIR) $(LIBDIR) $(SCIPLIBXXX) 
+$(SCIPLIBFILE):	$(OBJDIR)/scip $(LIBDIR) $(SCIPLIBXXX) 
 		-rm -f $@
 		$(AR) $(ARFLAGS) $@ $(SCIPLIBXXX) 
 		$(RANLIB) $@
 
-$(OBJSCIPLIBFILE):	$(OBJDIR) $(LIBDIR) $(OBJSCIPLIBXXX) 
+$(OBJSCIPLIBFILE):	$(OBJDIR)/objscip $(LIBDIR) $(OBJSCIPLIBXXX) 
 		-rm -f $@
 		$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBXXX) 
 		$(RANLIB) $@
 
-$(LPILIBFILE):	$(OBJDIR) $(LIBDIR) $(LPILIBXXX)
+$(LPILIBFILE):	$(OBJDIR)/scip $(LIBDIR) $(LPILIBXXX)
 		-rm -f $@
 		$(AR) $(ARFLAGS) $@ $(LPILIBXXX)
 		$(RANLIB) $@

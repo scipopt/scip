@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_reader.h,v 1.4 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_reader.h,v 1.5 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_reader.h
  * @brief  datastructures for input file readers
@@ -27,8 +27,8 @@
 #define __STRUCT_READER_H__
 
 
-#include "def.h"
-#include "type_reader.h"
+#include "scip/def.h"
+#include "scip/type_reader.h"
 
 
 /** input file reader */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.17 2005/02/07 14:08:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.18 2005/02/14 13:35:46 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nodesel_restartdfs.h"
+#include "scip/nodesel_restartdfs.h"
 
 
 #define NODESEL_NAME             "restartdfs"

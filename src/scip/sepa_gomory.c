@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.43 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.44 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -29,7 +29,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "sepa_gomory.h"
+#include "scip/sepa_gomory.h"
 
 
 #define SEPA_NAME              "gomory"

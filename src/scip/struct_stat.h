@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.30 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.31 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -27,11 +27,11 @@
 #define __STRUCT_STAT_H__
 
 
-#include "def.h"
-#include "type_stat.h"
-#include "type_clock.h"
-#include "type_vbc.h"
-#include "type_history.h"
+#include "scip/def.h"
+#include "scip/type_stat.h"
+#include "scip/type_clock.h"
+#include "scip/type_vbc.h"
+#include "scip/type_history.h"
 
 
 /** problem and runtime specific statistics */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.100 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.101 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -30,18 +30,18 @@
 
 #include <stdio.h>
 
-#include "def.h"
-#include "memory.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_misc.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_sol.h"
-#include "pub_lp.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_misc.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_sol.h"
+#include "scip/pub_lp.h"
 
-#include "struct_lp.h"
+#include "scip/struct_lp.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.h,v 1.3 2005/01/21 09:16:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.h,v 1.4 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.h
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -27,7 +27,7 @@
 #define __HEUR_PSCOSTDIVING_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the pscostdiving heuristic and includes it in SCIP */

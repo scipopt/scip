@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.18 2005/01/31 12:20:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.19 2005/02/14 13:35:42 bzfpfend Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -27,16 +27,16 @@
 #define __CUTPOOL_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_lp.h"
-#include "type_sepastore.h"
-#include "type_cutpool.h"
-#include "pub_cutpool.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_lp.h"
+#include "scip/type_sepastore.h"
+#include "scip/type_cutpool.h"
+#include "scip/pub_cutpool.h"
 
 
 

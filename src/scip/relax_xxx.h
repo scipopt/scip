@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.h,v 1.1 2005/02/07 18:12:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax_xxx.h,v 1.2 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   relax_xxx.h
  * @brief  xxx relaxator
@@ -27,7 +27,7 @@
 #define __RELAX_XXX_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the xxx relaxator and includes it in SCIP */

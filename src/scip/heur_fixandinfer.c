@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.10 2005/02/07 14:08:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.11 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "heur_fixandinfer.h"
+#include "scip/heur_fixandinfer.h"
 
 
 #define HEUR_NAME             "fixandinfer"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.10 2005/02/07 14:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.11 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -27,9 +27,9 @@
 #define __STRUCT_HEUR_H__
 
 
-#include "def.h"
-#include "type_clock.h"
-#include "type_heur.h"
+#include "scip/def.h"
+#include "scip/type_clock.h"
+#include "scip/type_heur.h"
 
 
 /** primal heuristics data */

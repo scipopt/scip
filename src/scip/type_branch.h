@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.9 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.10 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -118,9 +118,9 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
 
 
 
-#include "def.h"
-#include "type_result.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_buffer.h,v 1.4 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_buffer.h,v 1.5 2005/02/14 13:35:51 bzfpfend Exp $"
 
 /**@file   struct_buffer.h
  * @brief  datastructures for memory buffers for temporary objects
@@ -29,7 +29,7 @@
 
 #include <assert.h>
 
-#include "def.h"
+#include "scip/def.h"
 
 
 

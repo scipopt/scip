@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.43 2005/02/08 14:22:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.44 2005/02/14 13:35:45 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2
@@ -195,9 +195,9 @@ public:
 
 extern "C" 
 {
-#include "lpi.h"
-#include "bitencode.h"
-#include "message.h"
+#include "scip/lpi.h"
+#include "scip/bitencode.h"
+#include "scip/message.h"
 }
 
 

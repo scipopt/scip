@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.17 2005/01/21 09:16:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.18 2005/02/14 13:35:38 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "branch_allfullstrong.h"
+#include "scip/branch_allfullstrong.h"
 
 
 #define BRANCHRULE_NAME          "allfullstrong"

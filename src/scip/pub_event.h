@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_event.h,v 1.5 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_event.h,v 1.6 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_event.h
  * @brief  public methods for managing events
@@ -27,12 +27,12 @@
 #define __PUB_EVENT_H__
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_event.h"
-#include "type_var.h"
-#include "type_sol.h"
-#include "type_tree.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_event.h"
+#include "scip/type_var.h"
+#include "scip/type_sol.h"
+#include "scip/type_tree.h"
 
 
 

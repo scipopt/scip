@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.h,v 1.5 2005/01/21 09:16:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.h,v 1.6 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_varbound.h
  * @brief  constraint handler for varbound constraints
@@ -27,7 +27,7 @@
 #define __CONS_VARBOUND_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the handler for varbound constraints and includes it in SCIP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.h,v 1.7 2005/01/21 09:16:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.h,v 1.8 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   heur_rounding.h
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -27,7 +27,7 @@
 #define __HEUR_ROUNDING_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the rounding heuristic with infeasibility recovering and includes it in SCIP */

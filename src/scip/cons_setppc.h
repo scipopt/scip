@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.16 2005/01/21 09:16:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.17 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -27,7 +27,7 @@
 #define __CONS_SETPPC_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** type of setppc constraint: set partitioning, set packing, or set covering */

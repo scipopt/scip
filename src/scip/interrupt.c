@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.14 2005/01/21 09:16:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.15 2005/02/14 13:35:44 bzfpfend Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
@@ -28,9 +28,9 @@
 #include <stdlib.h>
 #include <signal.h>
 
-#include "def.h"
-#include "memory.h"
-#include "interrupt.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/interrupt.h"
 
 
 static volatile

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.5 2005/01/21 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.6 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -27,7 +27,7 @@
 #define __SCIPDEFPLUGINS_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** includes default SCIP plugins into SCIP */

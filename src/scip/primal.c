@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.61 2005/02/04 10:04:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.62 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -25,19 +25,19 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "vbc.h"
-#include "event.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "sol.h"
-#include "primal.h"
-#include "tree.h"
-#include "disp.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/vbc.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/sol.h"
+#include "scip/primal.h"
+#include "scip/tree.h"
+#include "scip/disp.h"
 
 
 

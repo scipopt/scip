@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.38 2005/02/08 16:13:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.39 2005/02/14 13:35:38 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -26,21 +26,21 @@
 #define __BRANCH_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_misc.h"
-#include "type_event.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_tree.h"
-#include "type_sepastore.h"
-#include "type_branch.h"
-#include "pub_branch.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_misc.h"
+#include "scip/type_event.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_tree.h"
+#include "scip/type_sepastore.h"
+#include "scip/type_branch.h"
+#include "scip/pub_branch.h"
 
 
 

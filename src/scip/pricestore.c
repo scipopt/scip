@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.24 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.25 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -25,17 +25,17 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "clock.h"
-#include "lp.h"
-#include "var.h"
-#include "prob.h"
-#include "tree.h"
-#include "pricestore.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/clock.h"
+#include "scip/lp.h"
+#include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/tree.h"
+#include "scip/pricestore.h"
 
-#include "struct_pricestore.h"
+#include "scip/struct_pricestore.h"
 
 
 

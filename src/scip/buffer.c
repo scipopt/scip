@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.19 2005/01/21 09:16:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.20 2005/02/14 13:35:39 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -25,13 +25,13 @@
 
 #include <assert.h>
 
-#include "def.h"
-#include "message.h"
-#include "memory.h"
-#include "set.h"
-#include "buffer.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/memory.h"
+#include "scip/set.h"
+#include "scip/buffer.h"
 
-#include "struct_buffer.h"
+#include "scip/struct_buffer.h"
 
 
 

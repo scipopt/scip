@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.5 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prop.h,v 1.6 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators
@@ -27,9 +27,9 @@
 #define __STRUCT_PROP_H__
 
 
-#include "def.h"
-#include "type_clock.h"
-#include "type_prop.h"
+#include "scip/def.h"
+#include "scip/type_clock.h"
+#include "scip/type_prop.h"
 
 
 /** propagators data */

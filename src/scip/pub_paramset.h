@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.5 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.6 2005/02/14 13:35:48 bzfpfend Exp $"
 
 /**@file   pub_paramset.h
  * @brief  public methods for handling parameter settings
@@ -27,9 +27,9 @@
 #define __PUB_PARAMSET_H__
 
 
-#include "def.h"
-#include "type_paramset.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_paramset.h"
+#include "scip/type_scip.h"
 
 
 

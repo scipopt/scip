@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.73 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.74 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -27,22 +27,22 @@
 #define __TREE_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_event.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_prob.h"
-#include "type_primal.h"
-#include "type_tree.h"
-#include "type_branch.h"
-#include "type_prop.h"
-#include "pub_tree.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_event.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_prob.h"
+#include "scip/type_primal.h"
+#include "scip/type_tree.h"
+#include "scip/type_branch.h"
+#include "scip/type_prop.h"
+#include "scip/pub_tree.h"
 
 #ifndef NDEBUG
-#include "struct_tree.h"
+#include "scip/struct_tree.h"
 #endif
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.14 2005/02/08 16:13:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.15 2005/02/14 13:35:47 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -27,14 +27,14 @@
 #define __PRICER_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_lp.h"
-#include "type_prob.h"
-#include "type_pricer.h"
-#include "pub_pricer.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_lp.h"
+#include "scip/type_prob.h"
+#include "scip/type_pricer.h"
+#include "scip/pub_pricer.h"
 
 
 

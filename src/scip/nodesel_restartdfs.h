@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.h,v 1.5 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.h,v 1.6 2005/02/14 13:35:46 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.h
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -27,7 +27,7 @@
 #define __NODESEL_RESTARTDFS_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the node selector for restarting depth first search and includes it in SCIP */

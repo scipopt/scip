@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.34 2005/02/07 14:08:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.35 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -27,19 +27,19 @@
 #define __EVENT_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_retcode.h"
-#include "type_set.h"
-#include "type_event.h"
-#include "type_lp.h"
-#include "type_var.h"
-#include "type_sol.h"
-#include "type_primal.h"
-#include "type_branch.h"
-#include "pub_event.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_set.h"
+#include "scip/type_event.h"
+#include "scip/type_lp.h"
+#include "scip/type_var.h"
+#include "scip/type_sol.h"
+#include "scip/type_primal.h"
+#include "scip/type_branch.h"
+#include "scip/pub_event.h"
 
-#include "struct_event.h"
+#include "scip/struct_event.h"
 
 
 

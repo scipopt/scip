@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.25 2005/02/08 14:22:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.26 2005/02/14 13:35:41 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -27,8 +27,8 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_varbound.h"
-#include "cons_linear.h"
+#include "scip/cons_varbound.h"
+#include "scip/cons_linear.h"
 
 
 /* constraint handler properties */

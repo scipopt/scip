@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.22 2005/02/07 14:08:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.23 2005/02/14 13:35:46 bzfpfend Exp $"
 
 /**@file   nodesel_dfs.c
  * @brief  node selector for depth first search
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nodesel_dfs.h"
+#include "scip/nodesel_dfs.h"
 
 
 #define NODESEL_NAME             "dfs"

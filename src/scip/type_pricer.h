@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.9 2005/02/07 14:08:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.10 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -127,9 +127,9 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
 
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 
 #endif

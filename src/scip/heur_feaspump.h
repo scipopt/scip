@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.h,v 1.6 2005/01/31 15:21:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.h,v 1.7 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur_feaspump.h
  * @brief  feaspump primal heuristic
@@ -27,7 +27,7 @@
 #define __HEUR_FEASPUMP_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the feaspump primal heuristic and includes it in SCIP */

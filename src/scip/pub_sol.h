@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.6 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.7 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
@@ -27,12 +27,12 @@
 #define __PUB_SOL_H__
 
 
-#include "def.h"
-#include "type_sol.h"
-#include "type_heur.h"
+#include "scip/def.h"
+#include "scip/type_sol.h"
+#include "scip/type_heur.h"
 
 #ifdef NDEBUG
-#include "struct_sol.h"
+#include "scip/struct_sol.h"
 #endif
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.7 2005/02/07 14:08:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.8 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -26,16 +26,16 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "stat.h"
-#include "clock.h"
-#include "paramset.h"
-#include "scip.h"
-#include "relax.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/clock.h"
+#include "scip/paramset.h"
+#include "scip/scip.h"
+#include "scip/relax.h"
 
-#include "struct_relax.h"
+#include "scip/struct_relax.h"
 
 
 

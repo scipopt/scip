@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.c,v 1.16 2005/01/21 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: retcode.c,v 1.17 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   retcode.c
  * @brief  methods for return codes for SCIP methods
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "retcode.h"
+#include "scip/retcode.h"
 
 
 /** prints error message for return code */

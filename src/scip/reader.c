@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.23 2005/02/07 14:08:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.24 2005/02/14 13:35:49 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -26,13 +26,13 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "memory.h"
-#include "set.h"
-#include "misc.h"
-#include "reader.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/set.h"
+#include "scip/misc.h"
+#include "scip/reader.h"
 
-#include "struct_reader.h"
+#include "scip/struct_reader.h"
 
 
 

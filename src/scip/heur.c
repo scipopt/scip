@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.42 2005/02/07 14:08:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.43 2005/02/14 13:35:43 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -26,16 +26,16 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "clock.h"
-#include "paramset.h"
-#include "primal.h"
-#include "scip.h"
-#include "heur.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/clock.h"
+#include "scip/paramset.h"
+#include "scip/primal.h"
+#include "scip/scip.h"
+#include "scip/heur.h"
 
-#include "struct_heur.h"
+#include "scip/struct_heur.h"
 
 
 

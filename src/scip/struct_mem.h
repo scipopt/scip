@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_mem.h,v 1.1 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_mem.h,v 1.2 2005/02/14 13:35:52 bzfpfend Exp $"
 
 /**@file   struct_mem.h
  * @brief  datastructures for block memory pools and memory buffers
@@ -27,9 +27,9 @@
 #define __STRUCT_MEM_H__
 
 
-#include "def.h"
-#include "memory.h"
-#include "type_mem.h"
+#include "scip/def.h"
+#include "scip/memory.h"
+#include "scip/type_mem.h"
 
 
 /** various block memory buffers */

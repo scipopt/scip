@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.31 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.32 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -26,7 +26,7 @@
 
 #include <assert.h>
 
-#include "sepa_cmir.h"
+#include "scip/sepa_cmir.h"
 
 
 #define SEPA_NAME              "cmir"

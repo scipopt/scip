@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.8 2005/02/07 18:12:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.9 2005/02/14 13:35:54 bzfpfend Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers
@@ -136,10 +136,10 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
 
 
 
-#include "def.h"
-#include "type_retcode.h"
-#include "type_result.h"
-#include "type_scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
 
 
 #endif

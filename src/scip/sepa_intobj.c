@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.14 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.15 2005/02/14 13:35:50 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -25,7 +25,7 @@
 
 #include <assert.h>
 
-#include "sepa_intobj.h"
+#include "scip/sepa_intobj.h"
 
 
 #define SEPA_NAME              "intobj"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.13 2005/02/09 13:44:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.14 2005/02/14 13:35:53 bzfpfend Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -27,23 +27,23 @@
 #define __STRUCT_SCIP_H__
 
 
-#include "def.h"
-#include "type_set.h"
-#include "type_stat.h"
-#include "type_clock.h"
-#include "type_interrupt.h"
-#include "type_mem.h"
-#include "type_event.h"
-#include "type_lp.h"
-#include "type_prob.h"
-#include "type_primal.h"
-#include "type_tree.h"
-#include "type_pricestore.h"
-#include "type_sepastore.h"
-#include "type_cutpool.h"
-#include "type_branch.h"
-#include "type_conflict.h"
-#include "type_dialog.h"
+#include "scip/def.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_clock.h"
+#include "scip/type_interrupt.h"
+#include "scip/type_mem.h"
+#include "scip/type_event.h"
+#include "scip/type_lp.h"
+#include "scip/type_prob.h"
+#include "scip/type_primal.h"
+#include "scip/type_tree.h"
+#include "scip/type_pricestore.h"
+#include "scip/type_sepastore.h"
+#include "scip/type_cutpool.h"
+#include "scip/type_branch.h"
+#include "scip/type_conflict.h"
+#include "scip/type_dialog.h"
 
 
 /** SCIP main data structure */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.24 2005/02/07 14:08:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.25 2005/02/14 13:35:46 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -26,13 +26,13 @@
 #include <assert.h>
 #include <string.h>
 
-#include "def.h"
-#include "message.h"
-#include "set.h"
-#include "misc.h"
-#include "paramset.h"
+#include "scip/def.h"
+#include "scip/message.h"
+#include "scip/set.h"
+#include "scip/misc.h"
+#include "scip/paramset.h"
 
-#include "struct_paramset.h"
+#include "scip/struct_paramset.h"
 
 
 
