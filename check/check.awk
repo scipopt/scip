@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.7 2004/06/03 09:42:42 bzfpfend Exp $
+# $Id: check.awk,v 1.8 2004/06/03 12:46:43 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -60,9 +60,9 @@ BEGIN {
     scuts    = 0;
     stottime = 0.0;
     sgap     = 0.0;
-    babprod  = 1;
-    timeprod = 1.0;
-    sblpprod = 1;
+    nodegeom = 1.0;
+    timegeom = 1.0;
+    sblpgeom = 1.0;
     brrule   = "default";
 
     printf("------------------+-------+------+-------+--------------+------+------+-------\n");
@@ -138,14 +138,6 @@ BEGIN {
    scuts    += cuts;
    nprobs++;
 
-   if( tottime < 0.01 )
-      timeprod *= 0.01;
-   else
-      timeprod *= tottime;
-   if( bbnodes >= 1 )
-      babprod  *= bbnodes;
-   if( sblps >= 1 )
-      sblpprod *= sblps;
    if (pb > 1e+19  ||  pb < -1e+19) {
       printf ("%-19s & %7d & %5d & %14.9g & %14s & %6.1f & %s \\\\\n", 
 	      pprob, bbnodes, sblps, db, 
@@ -185,6 +177,16 @@ BEGIN {
 	 pass++;
       }
    }
+   
+   if( tottime < 1.0 )
+      tottime = 1.0;
+   timegeom = timegeom^((nprobs-1)/nprobs) * tottime^(1.0/nprobs);
+   if( bbnodes < 1 )
+      bbnodes = 1;
+   nodegeom = nodegeom^((nprobs-1)/nprobs) * bbnodes^(1.0/nprobs);
+   if( sblps < 1 )
+      sblps = 1;
+   sblpgeom = sblpgeom^((nprobs-1)/nprobs) * sblps^(1.0/nprobs);
 }
 END {   
     printf("\\hline\n")                                                   >TEXFILE;
@@ -192,7 +194,7 @@ END {
     printf ("%-14s (%d) & %8d & %5d &                &                & %8.1f & %7.3f \\\\\n", 
 	    "Total", nprobs, sbab, ssblp, stottime, sgap)                 >TEXFILE;
     printf ("%-14s      & %8.1f & %5.1f &                &                & %8.1f &         \\\\\n",
-            "Geom.\\ Mean", babprod^(1.0/max(nprobs,1)), sblpprod^(1.0/max(nprobs,1)), timeprod^(1.0/max(nprobs,1)))  >TEXFILE;
+            "Geom.\\ Mean", nodegeom, sblpgeom, timegeom)                 >TEXFILE;
     printf("\\hline\n")                                                   >TEXFILE;
     printf("\\end{tabular}\n")                                            >TEXFILE;
     printf("\\caption{%s}\n", brrule)                                     >TEXFILE;
@@ -207,6 +209,6 @@ END {
     printf("  Cnt  Pass  Fail  kNodes FailTime  TotTime  NodeGeom  TimeGeom\n");
     printf("----------------------------------------------------------------\n");
     printf("%5d %5d %5d %7d %8.0f %8.0f %9.1f %9.1f\n",
-	   nprobs, pass, fail, sbab / 1000, failtime, stottime, babprod^(1.0/max(nprobs,1)), timeprod^(1.0/(max(nprobs,1))));
+	   nprobs, pass, fail, sbab / 1000, failtime, stottime, nodegeom, timegeom);
     printf("----------------------------------------------------------------\n");
 }
