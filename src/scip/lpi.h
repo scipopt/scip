@@ -255,9 +255,9 @@ extern
 RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
    LPI*             lpi,                /**< LP interface structure */
    Real*            objval,             /**< stores the objective value */
-   Real*            psol,               /**< primal solution vector */
-   Real*            pi,                 /**< dual solution vector */
-   Real*            slck,               /**< slack vector */
+   Real*            primsol,            /**< primal solution vector */
+   Real*            dualsol,            /**< dual solution vector */
+   Real*            slack,              /**< slack vector */
    Real*            redcost             /**< reduced cost vector */
    );
 
@@ -273,12 +273,12 @@ RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iteration
    );
 
 extern 
-RETCODE SCIPlpiOptPrimal(               /**< calls primal simplex to solve the LP */
+RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the LP */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-RETCODE SCIPlpiOptDual(                 /**< calls dual simplex to solve the LP */
+RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP */
    LPI*             lpi                 /**< LP interface structure */
    );
 

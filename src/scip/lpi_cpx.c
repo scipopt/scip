@@ -881,9 +881,9 @@ RETCODE SCIPlpiSetRealpar(              /**< sets floating point parameter of LP
 RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
    LPI*             lpi,                /**< LP interface structure */
    Real*            objval,             /**< stores the objective value */
-   Real*            psol,               /**< primal solution vector */
-   Real*            pi,                 /**< dual solution vector */
-   Real*            slck,               /**< slack vector */
+   Real*            primsol,            /**< primal solution vector */
+   Real*            dualsol,            /**< dual solution vector */
+   Real*            slack,              /**< slack vector */
    Real*            redcost             /**< reduced cost vector */
    )
 {
@@ -893,7 +893,7 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, psol, pi, slck, redcost) );
+   CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, slack, redcost) );
    assert(dummy == lpi->solstat);
 
    return SCIP_OKAY;
@@ -918,7 +918,7 @@ RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iteration
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiOptPrimal(               /**< calls primal simplex to solve the LP */
+RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the LP */
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -950,7 +950,7 @@ RETCODE SCIPlpiOptPrimal(               /**< calls primal simplex to solve the L
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiOptDual(                 /**< calls dual simplex to solve the LP */
+RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP */
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1131,8 +1131,8 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
 
    ncol = CPXgetnumcols(cpxenv, lpi->cpxlp);
    nrow = CPXgetnumrows(cpxenv, lpi->cpxlp);
-   assert(0 <= ncol && ncol < SCIP_MAXNCOL);
-   assert(0 <= nrow && nrow < SCIP_MAXNROW);
+   assert(ncol >= 0);
+   assert(nrow >= 0);
    
    /* allocate lpstate data */
    CHECK_OKAY( lpstateCreate(lpstate, memhdr, ncol, nrow) );

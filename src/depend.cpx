@@ -1,1 +1,4 @@
-$(OBJDIR)/cmain.o: src/cmain.c src/scip.h src/def.h src/retcode.h
+$(OBJDIR)/cmain.o: src/cmain.c src/scip.h src/def.h src/retcode.h src/memory.h \
+  src/message.h src/cons.h src/mem.h src/set.h src/sort.h src/nodesel.h \
+  src/tree.h src/lp.h src/stat.h src/lpi.h src/var.h src/cons_linear.h \
+  src/nodesel_dfs.h

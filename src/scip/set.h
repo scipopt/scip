@@ -42,12 +42,18 @@ typedef struct Set SET;                 /**< global SCIP settings */
 
 #include "def.h"
 #include "sort.h"
+#include "scip.h"
+#include "cons.h"
+#include "nodesel.h"
+#include "message.h"
 
 
 /** global SCIP settings */
 struct Set
 {
-   Real             epsZero;            /**< absolute values smaller than this are considered zero */
+   SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
+   VERBLEVEL        verblevel;          /**< verbosity level of output */
+   Real             epsilon;            /**< absolute values smaller than this are considered zero */
    Real             infinity;           /**< values larger than this are considered infinity */
    Real             memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
    int              memGrowInit;        /**< initial size of dynamically allocated arrays */
@@ -57,13 +63,21 @@ struct Set
    int              treeGrowInit;       /**< initial size of tree array */
    Real             pathGrowFac;        /**< memory growing factor for path array */
    int              pathGrowInit;       /**< initial size of path array */
-   DECL_SORTPTRCOMP((*nodecmp));        /**< compares two nodes regarding the order in the leaf list */
+   CONSHDLR**       conshdlrs;          /**< constraint handlers */
+   int              nconshdlrs;         /**< number of constraint handlers */
+   int              conshdlrssize;      /**< size of conshdlr array */
+   NODESEL**        nodesels;           /**< node selectors */
+   int              nnodesels;          /**< number of node selectors */
+   int              nodeselssize;       /**< size of nodesel array */
+   NODESEL*         nodesel;            /**< active node selector */
+   int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
 };
 
 
 extern
 RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
-   SET**            set                 /**< pointer to SCIP settings */
+   SET**            set,                /**< pointer to SCIP settings */
+   SCIP*            scip                /**< SCIP data structure */   
    );
 
 extern
@@ -72,83 +86,119 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    );
 
 extern
-int SCIPcalcMemGrowSize(                /**< calculate memory size for dynamically allocated arrays */
-   const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+RETCODE SCIPsetIncludeConsHdlr(         /**< inserts constraint handler in constraint handler list */
+   SET*             set,                /**< global SCIP settings */
+   CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 extern
-int SCIPcalcBufGrowSize(                /**< calculate memory size for buffer arrays */
+RETCODE SCIPsetFindConsHdlr(            /**< finds the constraint handler of the given name */
    const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+   const char*      name,               /**< name of constraint handler */
+   CONSHDLR**       conshdlr            /**< pointer for storing the constraint handler (returns NULL, if not found) */
    );
 
 extern
-int SCIPcalcPathGrowSize(               /**< calculate memory size for path array */
-   const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+RETCODE SCIPsetIncludeNodesel(          /**< inserts node selector in node selector list */
+   SET*             set,                /**< global SCIP settings */
+   NODESEL*         nodesel             /**< node selector */
    );
 
 extern
-Bool SCIPisEQ(                          /**< checks, if values are in range of epsZero */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   );
-
-extern
-Bool SCIPisL(                           /**< checks, if val1 is (more than epsZero) lower than val2 */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   );
-
-extern
-Bool SCIPisLE(                          /**< checks, if val1 is not (more than epsZero) greater than val2 */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   );
-
-extern
-Bool SCIPisG(                           /**< checks, if val1 is (more than epsZero) greater than val2 */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   );
-
-extern
-Bool SCIPisGE(                          /**< checks, if val1 is not (more than epsZero) lower than val2 */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   );
-
-extern
-Bool SCIPisZero(                        /**< checks, if value is in range epsZero of 0.0 */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
-   );
-
-extern
-Real SCIPinfinity(                      /**< returns infinity value */
+RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback functions */
    const SET*       set                 /**< global SCIP settings */
    );
 
 extern
-Bool SCIPisInfinity(                    /**< checks, if value is infinite */
+RETCODE SCIPsetExitCallbacks(           /**< calls exit methods of all user callback functions */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+int SCIPsetCalcMemGrowSize(             /**< calculate memory size for dynamically allocated arrays */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
+
+extern
+int SCIPsetCalcBufGrowSize(             /**< calculate memory size for buffer arrays */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
+
+extern
+int SCIPsetCalcTreeGrowSize(            /**< calculate memory size for tree array */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
+
+extern
+int SCIPsetCalcPathGrowSize(            /**< calculate memory size for path array */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
+
+extern
+RETCODE SCIPsetSetVerbLevel(            /**< sets verbosity level for message output */
+   SET*             set,                /**< global SCIP settings */
+   VERBLEVEL        verblevel           /**< verbosity level for message output */
+   );
+
+extern
+Bool SCIPsetIsEQ(                       /**< checks, if values are in range of epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsL(                        /**< checks, if val1 is (more than epsilon) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsLE(                       /**< checks, if val1 is not (more than epsilon) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsG(                        /**< checks, if val1 is (more than epsilon) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than epsilon) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsInfinity(                 /**< checks, if value is infinite */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against infinity */
    );
 
 extern
-Bool SCIPisPos(                         /**< checks, if value is greater than epsZero */
+Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilon of 0.0 */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 extern
-Bool SCIPisNeg(                         /**< checks, if value is lower than -epsZero */
+Bool SCIPsetIsPos(                      /**< checks, if value is greater than epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -epsilon */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );

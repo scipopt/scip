@@ -42,13 +42,6 @@ struct Mem
    MEMHDR*          probmem;            /**< memory blocks for original problem */
    MEMHDR*          solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
 #if 0
-   MEMHDR*          treemem;            /**< ptr to memory blocks for the tree */
-   MEMHDR*          statemem;           /**< ptr to memory blocks for LP states */
-   MEMHDR*          lpmem;              /**< ptr to memory blocks for LP data */
-   MEMHDR*          dommem;             /**< ptr to memory blocks for domains of variables */
-   MEMHDR*          consmem;            /**< ptr to memory blocks for constraint data */
-   MEMHDR*          primalmem;          /**< ptr to memory blocks for primal solutions */
-#endif
    MEMHDR*          tempmem;            /**< memory blocks for short living objects */
    void**           ptrbuf;             /**< buffer for storing temporary pointer arrays */
    char*            charbuf;            /**< buffer for storing temporary char arrays */
@@ -58,6 +51,7 @@ struct Mem
    int              charbufsize;        /**< size of char array buffer */
    int              intbufsize;         /**< size of int array buffer */
    int              realbufsize;        /**< size of real array buffer */
+#endif
 };
 
 
@@ -72,6 +66,7 @@ RETCODE SCIPmemFree(                    /**< frees block memory structures */
    MEM**            mem                 /**< pointer to block memory structure */
    );
 
+#if 0
 extern
 RETCODE SCIPmemGetPtrbuf(               /**< returns buffer for storing pointer array */
    void***          ptrbuf,             /**< pointer to a pointer array */
@@ -103,5 +98,6 @@ RETCODE SCIPmemGetRealbuf(              /**< returns buffer for storing Real arr
    const SET*       set,                /**< global SCIP settings */
    int              size                /**< minimal size of real buffer */
    );
+#endif
 
 #endif

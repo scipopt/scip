@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.9 2002/12/09 15:22:46 bzfpfend Exp $
+# $Id: Makefile,v 1.10 2003/01/20 15:58:59 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -88,18 +88,24 @@ NAME		=	scip
 #-----------------------------------------------------------------------------
 
 LIBOBJ		=	bab.o \
-			constraint.o \
+			cons.o \
 			cons_linear.o \
 			lp.o \
 			mem.o \
 			memory.o \
+			message.o \
+			nodesel.o \
+			nodesel_dfs.o \
+			price.o \
 			prob.o \
 			retcode.o \
 			scip.o \
 			set.o \
+			solve.o \
 			sort.o \
 			stat.o \
-			tree.o
+			tree.o \
+			var.o
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)

@@ -16,41 +16,38 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   retcode.h
- * @brief  return codes for SCIP methods
+/**@file   solve.h
+ * @brief  main solving loop and node processing
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __RETCODE_H__
-#define __RETCODE_H__
+#ifndef __SOLVE_H__
+#define __SOLVE_H__
 
-#include <stdio.h>
 
-/** return codes for SCIP methods: negative return codes are errors */
-enum Retcode
-{
-   SCIP_SUCCESS     =   2,              /**< normal termination with success */
-   SCIP_FAILURE     =   1,              /**< normal termination without success */
-   SCIP_OKAY        =   0,              /**< normal termination */
-   SCIP_ERROR       =  -1,              /**< unspecified error */
-   SCIP_NOMEMORY    =  -2,              /**< insufficient memory error */
-   SCIP_READERR     =  -3,              /**< file read error */
-   SCIP_NOFILE      =  -4,              /**< file not found error */
-   SCIP_LPERROR     =  -5,              /**< error in LP solver */
-   SCIP_NOPROBLEM   =  -6,              /**< no problem exists */
-   SCIP_INVALIDCALL =  -7,              /**< method cannot be called at this time in solution process */
-   SCIP_INVALIDDATA =  -8               /**< error in input data */
-};
-typedef enum Retcode RETCODE;           /**< return code for SCIP method */
-
+#include "def.h"
+#include "retcode.h"
+#include "set.h"
+#include "mem.h"
+#include "stat.h"
+#include "prob.h"
+#include "tree.h"
+#include "lp.h"
+#include "price.h"
 
 
 extern
-void SCIPretcodePrint(                  /**< prints error message for return code */
-   FILE*            errout,             /**< file stream to write error message */
-   RETCODE          retcode             /**< SCIP return code causing the error */
+RETCODE SCIPsolveCIP(                   /**< main solving loop */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            transprob,          /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< LP data */
+   PRICE*           price               /**< pricing storage */
    );
+
 
 #endif

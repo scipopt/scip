@@ -30,9 +30,26 @@
 typedef struct Prob PROB;               /**< main problem to solve */
 
 
+#include "memory.h"
 #include "retcode.h"
-#include "constraint.h"
+#include "cons.h"
 #include "lp.h"
+#include "var.h"
+
+
+/** main problem to solve */
+struct Prob
+{
+   char*            name;               /**< problem name */
+   VAR**            vars;               /**< array with problem variables ordered binary, integer, implicit, continous */
+   CONSLIST*        conslist;           /**< list of constraints of the problem */
+   int              varssize;           /**< available slots in vars vector */
+   int              nvars;              /**< number of variables in the problem (number of used slots in vars vector) */
+   int              nbin;               /**< number of binary variables */
+   int              nint;               /**< number of general integer variables */
+   int              nimpl;              /**< number of implicit integer variables */
+   int              ncont;              /**< number of continous variables */
+};
 
 
 /*
@@ -50,14 +67,14 @@ const char* SCIPprobGetName(            /**< gets problem name */
  */
 
 extern
-RETCODE SCIPprobAddCol(                 /**< adds variable to the problem */
+RETCODE SCIPprobAddVar(                 /**< adds variable to the problem */
    PROB*            prob,               /**< problem data */
    const SET*       set,                /**< global SCIP settings */
-   COL*             col                 /**< variable to add */
+   VAR*             var                 /**< variable to add */
    );
 
 extern
-RETCODE SCIPprobAddConstraint(          /**< adds constraint to the problem */
+RETCODE SCIPprobAddCons(                /**< adds constraint to the problem */
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
@@ -77,14 +94,18 @@ RETCODE SCIPprobCreate(                 /**< creates problem data structure */
 
 extern
 RETCODE SCIPprobFree(                   /**< frees problem data structure */
-   PROB**           prob                /**< pointer to problem data structure */
+   PROB**           prob,               /**< pointer to problem data structure */
+   MEMHDR*          memhdr,             /**< block memory buffer */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data (or NULL, if it's the original problem) */
    );
 
 extern
-RETCODE SCIPprobDuplicate(              /**< duplicates problem data */
-   PROB**           prob,               /**< pointer to target problem data structure */
-   MEMHDR*          memhdr,             /**< block memory of new problem data */
-   PROB*            source              /**< problem to duplicate */
+RETCODE SCIPprobTransform(              /**< transform problem data into normalized form */
+   PROB*            source,             /**< problem to transform */
+   MEMHDR*          memhdr,             /**< block memory buffer */
+   const SET*       set,                /**< global SCIP settings */
+   PROB**           target              /**< pointer to target problem data structure */
    );
 
 #endif

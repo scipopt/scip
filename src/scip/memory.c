@@ -29,9 +29,9 @@
 #include <string.h>
 
 #include "memory.h"
+#include "message.h"
 
-/* check memory structures after every call */
-#define DEBUG
+
 
 #define BLOCKHASH_SIZE     1013	/* should be prime */
 #define CHUNKLENGTH_MAX 1048576	/* maximal size of a chunk (in bytes) */
@@ -40,11 +40,7 @@
 #define GARBAGE_SIZE        256	/* size of lazy free list to start
 				   garbage collection */
 
-void
-errorMessage_call(const char *msg, const char *filename, int line)
-{
-   printf("[%s:%d] %s\n", filename, line, msg);
-}
+
 
 /******************************
  * Standard Memory Management *
@@ -109,7 +105,7 @@ memListRemove(void *ptr, const char *filename, int line)
    {
       char    s[255];
 
-      sprintf(s, "Error! Tried to free unknown pointer <%p>.\n", ptr);
+      sprintf(s, "Error! Tried to free unknown pointer <%p>.", ptr);
       errorMessage_call(s, filename, line);
    }
 }
@@ -146,7 +142,7 @@ memoryDiagnostic(void)
    {
       char    s[255];
 
-      sprintf(s, "Error! Used memory in list sums up to %ld instead of %ld\n",
+      sprintf(s, "Error! Used memory in list sums up to %ld instead of %ld",
 	 used, memused);
       errorMessage(s);
    }
@@ -176,7 +172,7 @@ allocMemory_call(size_t size, const char *filename, int line)
    {
       char    s[255];
 
-      sprintf(s, "Error! Insufficient memory for allocation of %ld bytes.\n",
+      sprintf(s, "Error! Insufficient memory for allocation of %ld bytes.",
 	 (long) size);
       errorMessage_call(s, filename, line);
       /* abort(); */
@@ -205,7 +201,7 @@ reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
    {
       char    s[255];
 
-      sprintf(s, "Error! Insufficient memory for reallocation of %ld bytes.\n", (long) size);
+      sprintf(s, "Error! Insufficient memory for reallocation of %ld bytes.", (long) size);
       errorMessage_call(s, filename, line);
       /* abort(); */
    }
@@ -248,7 +244,7 @@ freeMemory_call(void **ptr, const char *filename, int line)
       *ptr = NULL;
    }
    else
-      errorMessage_call("Warning! Try to free null pointer.\n", filename, line);
+      errorMessage_call("Warning! Try to free null pointer.", filename, line);
 }
 
 
@@ -1011,8 +1007,7 @@ createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
 	 mem->blockhash[i] = NULL;
    }
    else
-      errorMessage_call("Error! Insufficient memory for memory header.",
-	 filename, line);
+      errorMessage_call("Error! Insufficient memory for memory header.", filename, line);
 
    return mem;
 }
@@ -1192,8 +1187,7 @@ garbageCollection(BLKHDR * blk)
       if( chk == NULL )
       {
          char s[255];
-         sprintf( s, "chunk for lazy free block %p not found in block %p",
-            lazyFree, blk );
+         sprintf( s, "chunk for lazy free block %p not found in block %p", lazyFree, blk );
          errorMessage( s );
       }
 #endif
@@ -1255,8 +1249,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       {
 	 char    s[255];
 
-	 sprintf(s, "Error! Tried to free pointer <%p> of unknown size %ld.\n",
-	    *ptr, (long) size);
+	 sprintf(s, "Error! Tried to free pointer <%p> of unknown size %ld.", *ptr, (long) size);
 	 errorMessage_call(s, filename, line);
 	 return;
       }
@@ -1278,8 +1271,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
 	 garbageCollection(blk);
    }
    else
-      errorMessage_call("Warning! Try to free null block pointer.\n", filename,
-	 line);
+      errorMessage_call("Warning! Try to free null block pointer.", filename, line);
 
    checkMem(mem);
 }

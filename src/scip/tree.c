@@ -26,9 +26,21 @@
 #include <assert.h>
 
 #include "def.h"
-#include "sort.h"
 #include "tree.h"
+#include "nodesel.h"
 
+
+/** child information */
+struct Child
+{
+   int              arraypos;           /**< position of node in the children array */
+};
+
+/** sibling information */
+struct Sibling
+{
+   int              arraypos;           /**< position of node in the siblings array */
+};
 
 /** fork without LP solution, where only bounds and constraints have been changed */
 struct Junction
@@ -65,6 +77,8 @@ struct Node
 {
    union
    {
+      CHILD         child;              /**< data for child nodes */
+      SIBLING       sibling;            /**< data for sibling nodes */
       JUNCTION*     junction;           /**< data for junction nodes */
       FORK*         fork;               /**< data for fork nodes */
       SUBROOT*      subroot;            /**< data for subroot nodes */
@@ -82,7 +96,7 @@ struct Node
 struct Tree
 {
    NODE*            root;               /**< root node of the tree */
-   PQUEUE*          leaves;             /**< leaves of the tree */
+   NODEPQ*          leaves;             /**< leaves of the tree */
    NODE**           path;               /**< array of fork/subtree nodes storing the active path from root to leaf */
    NODE*            actNode;            /**< active node */
    NODE*            actLPFork;          /**< fork/subroot node defining the LP state of the active node */
@@ -122,7 +136,7 @@ RETCODE treeEnsureChildrenMem(          /**< resizes children array to be able t
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(set, num);
+      newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(tree->children, newsize) );
       tree->childrensize = newsize;
    }
@@ -145,7 +159,7 @@ RETCODE treeEnsureSiblingsMem(          /**< resizes siblings array to be able t
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(set, num);
+      newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(tree->siblings, newsize) );
       tree->siblingssize = newsize;
    }
@@ -168,7 +182,7 @@ RETCODE treeEnsurePathMem(              /**< resizes path array to be able to st
    {
       int newsize;
 
-      newsize = SCIPcalcPathGrowSize(set, num);
+      newsize = SCIPsetCalcPathGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(tree->path, newsize) );
       ALLOC_OKAY( reallocMemoryArray(tree->pathnlpcols, newsize) );
       ALLOC_OKAY( reallocMemoryArray(tree->pathnlprows, newsize) );
@@ -279,7 +293,7 @@ RETCODE forkFree(                       /**< frees fork data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   Bool             releaseData         /**< should the columns and rows of the node's arrays be released? */
+   Bool             releaseRows         /**< should the added rows of the node be released? */
    )
 {
    assert(fork != NULL);
@@ -291,12 +305,10 @@ RETCODE forkFree(                       /**< frees fork data */
    assert(set != NULL);
    assert(lp != NULL);
 
-   if( releaseData )
+   if( releaseRows )
    {
       int i;
-      
-      for( i = 0; i < (*fork)->naddedCols; ++i )
-         SCIPcolRelease(&((*fork)->addedCols[i]), memhdr, set, lp);
+
       for( i = 0; i < (*fork)->naddedRows; ++i )
          SCIProwRelease(&((*fork)->addedRows[i]), memhdr, set, lp);
    }
@@ -363,7 +375,7 @@ RETCODE subrootFree(                    /**< frees subroot */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   Bool             releaseData         /**< should the columns and rows of the node's arrays be released? */
+   Bool             releaseRows         /**< should the rows of the subroot be released? */
    )
 {
    assert(subroot != NULL);
@@ -376,12 +388,10 @@ RETCODE subrootFree(                    /**< frees subroot */
 
    CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, &((*subroot)->lpstate)) );
 
-   if( releaseData )
+   if( releaseRows )
    {
       int i;
       
-      for( i = 0; i < (*subroot)->ncols; ++i )
-         SCIPcolRelease(&((*subroot)->cols[i]), memhdr, set, lp);
       for( i = 0; i < (*subroot)->nrows; ++i )
          SCIProwRelease(&((*subroot)->rows[i]), memhdr, set, lp);
    }
@@ -424,20 +434,26 @@ RETCODE nodeAssignParent(               /**< makes node a child of the given par
 {
    assert(node != NULL);
    assert(node->parent == NULL);
+   assert(node->nodetype == SCIP_NODETYPE_CHILD);
+   assert(node->data.child.arraypos == -1);
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(tree != NULL);
-   assert(parent != NULL);
-   assert(parent->nodetype == SCIP_NODETYPE_ACTNODE);
+   assert(tree->actNode == parent);
+   assert(parent == NULL || parent->nodetype == SCIP_NODETYPE_ACTNODE);
 
    /* link node to parent */
    node->parent = parent;
-   node->lowerbound = parent->lowerbound;
-   node->depth = parent->depth+1;
+   if( parent != NULL )
+   {
+      node->lowerbound = parent->lowerbound;
+      node->depth = parent->depth+1;
+   }
 
    /* register node in the childlist of the active (the parent) node */
    CHECK_OKAY( treeEnsureChildrenMem(tree, set, tree->nchildren+1) );
    tree->children[tree->nchildren] = node;
+   node->data.child.arraypos = tree->nchildren;
    tree->nchildren++;
 
    return SCIP_OKAY;
@@ -446,7 +462,7 @@ RETCODE nodeAssignParent(               /**< makes node a child of the given par
 static
 void nodeReleaseParent(                 /**< decreases number of children of the parent, frees it if no children left */
    NODE*            node,               /**< child node */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    )
@@ -454,19 +470,25 @@ void nodeReleaseParent(                 /**< decreases number of children of the
    NODE* parent;
    Bool hasChildren = TRUE;
 
-   assert(memhdr != NULL);
    assert(node != NULL);
+   assert(memhdr != NULL);
    
    parent = node->parent;
    if( parent != NULL )
    {
       switch( parent->nodetype )
       {
-      case SCIP_NODETYPE_LEAF:
-         errorMessage("Leaf cannot be a parent node");
-         abort();
       case SCIP_NODETYPE_ACTNODE:
          errorMessage("Cannot release the parent-child relationship, if parent is the active node");
+         abort();
+      case SCIP_NODETYPE_SIBLING:
+         errorMessage("Sibling cannot be a parent node");
+         abort();
+      case SCIP_NODETYPE_CHILD:
+         errorMessage("Child cannot be a parent node");
+         abort();
+      case SCIP_NODETYPE_LEAF:
+         errorMessage("Leaf cannot be a parent node");
          abort();
       case SCIP_NODETYPE_JUNCTION:
          assert(parent->data.junction != NULL);
@@ -514,9 +536,10 @@ RETCODE SCIPnodeCreate(                 /**< creates a child node of the active 
    (*node)->parent = NULL;
    (*node)->conslist = NULL;
    (*node)->domchg = NULL;
-   (*node)->lowerbound = -SCIPinfinity(set);
+   (*node)->lowerbound = -set->infinity;
    (*node)->depth = 0;
-   (*node)->nodetype = SCIP_NODETYPE_LEAF;
+   (*node)->nodetype = SCIP_NODETYPE_CHILD;
+   (*node)->data.child.arraypos = -1;
    (*node)->active = FALSE;
    
    if( tree->pathlen > 0 )
@@ -524,28 +547,38 @@ RETCODE SCIPnodeCreate(                 /**< creates a child node of the active 
       assert(tree->path[tree->pathlen-1]->nodetype == SCIP_NODETYPE_ACTNODE);
       CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->path[tree->pathlen-1]) );
    }
+   else
+   {
+      /* we created the root node */
+      assert(tree->actNode == NULL);
+      CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, NULL) );
+   }
 
    return SCIP_OKAY;
 }
 
 RETCODE SCIPnodeFree(                   /**< frees node */
    NODE**           node,               /**< node data */
-   MEMHDR*          memhdr,             /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    )
 {
-   assert(memhdr != NULL);
    assert(node != NULL);
    assert(*node != NULL);
    assert(!(*node)->active);
+   assert(memhdr != NULL);
 
    /* free nodetype specific data */
    switch((*node)->nodetype)
    {
-   case SCIP_NODETYPE_LEAF:
-      break;
    case SCIP_NODETYPE_ACTNODE:
+      break;
+   case SCIP_NODETYPE_SIBLING:
+      break;
+   case SCIP_NODETYPE_CHILD:
+      break;
+   case SCIP_NODETYPE_LEAF:
       break;
    case SCIP_NODETYPE_JUNCTION:
       CHECK_OKAY( junctionFree(&((*node)->data.junction), memhdr) );
@@ -562,7 +595,7 @@ RETCODE SCIPnodeFree(                   /**< frees node */
    }
 
    /* free common data */
-   SCIPconslistFree(&((*node)->conslist), memhdr);
+   SCIPconslistFree(&((*node)->conslist), memhdr, set);
    SCIPdomchgFree(&((*node)->domchg), memhdr);
    nodeReleaseParent(*node, memhdr, set, lp);
 
@@ -593,9 +626,6 @@ RETCODE nodeDeactivate(                 /**< informs node, that it is no longer 
 
    switch( (*node)->nodetype )
    {
-   case SCIP_NODETYPE_LEAF:
-      errorMessage("Cannot deactivate leaf (which shouldn't be active)");
-      abort();
    case SCIP_NODETYPE_ACTNODE:
       if( tree->nchildren > 0 )
       {
@@ -604,6 +634,15 @@ RETCODE nodeDeactivate(                 /**< informs node, that it is no longer 
       }
       hasChildren = FALSE;
       break;
+   case SCIP_NODETYPE_SIBLING:
+      errorMessage("Cannot deactivate sibling (which shouldn't be active)");
+      abort();
+   case SCIP_NODETYPE_CHILD:
+      errorMessage("Cannot deactivate child (which shouldn't be active)");
+      abort();
+   case SCIP_NODETYPE_LEAF:
+      errorMessage("Cannot deactivate leaf (which shouldn't be active)");
+      abort();
    case SCIP_NODETYPE_JUNCTION:
       assert((*node)->data.junction != NULL);
       assert((*node)->data.junction->nchildren > 0);
@@ -633,7 +672,7 @@ RETCODE nodeDeactivate(                 /**< informs node, that it is no longer 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPnodeAddConstraint(          /**< adds local constraint to the node */
+RETCODE SCIPnodeAddCons(                /**< adds local constraint to the node */
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
@@ -646,32 +685,31 @@ RETCODE SCIPnodeAddConstraint(          /**< adds local constraint to the node *
    return SCIP_OKAY;
 }
 
-RETCODE SCIPtreeAddLocalConstraint(     /**< adds local constraint to the active node */
-   TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
-   CONS*            cons                /**< constraint to add */
+NODETYPE SCIPnodeGetType(               /**< gets the type of the node */
+   NODE*            node                /**< node */
    )
 {
-   assert(tree != NULL);
-   assert(tree->actNode != NULL);
+   assert(node != NULL);
 
-   CHECK_OKAY( SCIPnodeAddConstraint(tree->actNode, memhdr, cons) );
-
-   return SCIP_OKAY;
+   return node->nodetype;
 }
 
-RETCODE SCIPtreeAddGlobalConstraint(    /**< adds global constraint to the problem */
-   TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
-   CONS*            cons                /**< constraint to add */
+int SCIPnodeGetDepth(                   /**< gets the depth of the node */
+   NODE*            node                /**< node */
    )
 {
-   assert(tree != NULL);
-   assert(tree->root != NULL);
+   assert(node != NULL);
 
-   CHECK_OKAY( SCIPnodeAddConstraint(tree->root, memhdr, cons) );
+   return node->depth;
+}
 
-   return SCIP_OKAY;
+Real SCIPnodeGetLowerBound(             /**< gets the lower bound of the node */
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->lowerbound;
 }
 
 
@@ -714,12 +752,18 @@ void treeUpdatePathLPSize(              /**< updates the LP sizes of the active 
       
       switch( node->nodetype )
       {
-      case SCIP_NODETYPE_LEAF:
-         errorMessage("Leaf cannot be in the active path");
-         abort();
       case SCIP_NODETYPE_ACTNODE:
          assert(i == tree->pathlen-1);
          break;
+      case SCIP_NODETYPE_SIBLING:
+         errorMessage("Sibling cannot be in the active path");
+         abort();
+      case SCIP_NODETYPE_CHILD:
+         errorMessage("Child cannot be in the active path");
+         abort();
+      case SCIP_NODETYPE_LEAF:
+         errorMessage("Leaf cannot be in the active path");
+         abort();
       case SCIP_NODETYPE_JUNCTION:
          assert(node->data.junction != NULL);
          break;
@@ -803,7 +847,7 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    while( commonfork != NULL && !commonfork->active )
    {
       if( lpfork == NULL && 
-         (commonfork->nodetype == SCIP_NODETYPE_SUBROOT || commonfork->nodetype == SCIP_NODETYPE_SUBROOT) )
+         (commonfork->nodetype == SCIP_NODETYPE_FORK || commonfork->nodetype == SCIP_NODETYPE_SUBROOT) )
          lpfork = commonfork;
       if( subroot == NULL && commonfork->nodetype == SCIP_NODETYPE_SUBROOT )
          subroot = commonfork;
@@ -823,7 +867,7 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
       {
          lpfork = commonfork;
          while( lpfork != NULL &&
-            (lpfork->nodetype == SCIP_NODETYPE_SUBROOT || lpfork->nodetype == SCIP_NODETYPE_SUBROOT) )
+            (lpfork->nodetype == SCIP_NODETYPE_FORK || lpfork->nodetype == SCIP_NODETYPE_SUBROOT) )
             lpfork = lpfork->parent;
       }
       else
@@ -859,7 +903,9 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    
    /* undo the domain changes of the old active path */
    for( i = tree->pathlen-1; i > commonforkdepth; --i )
-      CHECK_OKAY( SCIPlpUndoDomchg(lp, set, tree->path[i]->domchg) );
+   {
+      CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, set, lp) );
+   }
 
    /* shrink active path to the common fork and deactivate the corresponding nodes */
    CHECK_OKAY( treeShrinkPath(tree, memhdr, set, lp, commonforkdepth) );
@@ -881,7 +927,9 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
 
    /* apply domain changes of the new path */
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
-      CHECK_OKAY( SCIPlpApplyDomchg(lp, set, tree->path[i]->domchg) );
+   {
+      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, set, lp) );
+   }
 
    /* remember LP defining fork and subroot */
    assert(subroot == NULL || lpfork != NULL);
@@ -980,12 +1028,12 @@ RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP stat
    int lpforkdepth;
    int d;
 
-   assert(memhdr != NULL);
-   assert(set != NULL);
    assert(tree != NULL);
    assert(tree->path != NULL);
    assert(tree->pathlen > 0);
    assert(tree->path[tree->pathlen-1]->nodetype == SCIP_NODETYPE_ACTNODE);
+   assert(memhdr != NULL);
+   assert(set != NULL);
    assert(lp != NULL);
 
    lpfork = tree->actLPFork;
@@ -1037,7 +1085,9 @@ RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP stat
       assert(pathnode->depth == d);
       assert(pathnode->nodetype == SCIP_NODETYPE_JUNCTION || pathnode->nodetype == SCIP_NODETYPE_FORK);
       if( pathnode->nodetype == SCIP_NODETYPE_FORK )
+      {
          CHECK_OKAY( forkAddLP(pathnode, memhdr, set, lp) );
+      }
    }
    tree->correctLPDepth = lpforkdepth;
 
@@ -1058,7 +1108,7 @@ RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP stat
          lpstate = lpfork->data.subroot->lpstate;
       }
       assert(lpstate != NULL);
-      CHECK_OKAY( SCIPlpSetState(lp, memhdr, lpstate) );
+      CHECK_OKAY( SCIPlpSetState(lp, memhdr, set, lpstate) );
    }
    
    return SCIP_OKAY;
@@ -1071,7 +1121,101 @@ RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP stat
  * Node Conversion
  */
 
-RETCODE SCIPnodeActivate(               /**< activates a leaf node */
+static
+RETCODE treeNodesToQueue(               /**< puts all nodes in the array on the node queue and makes them LEAFs */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   NODE**           nodes,              /**< array of nodes to put on the queue */
+   int              nnodes              /**< number of nodes in the array */
+   )
+{
+   int i;
+
+   assert(tree != NULL);
+   assert(set != NULL);
+   assert(nnodes == 0 || nodes != NULL);
+
+   for( i = 0; i < nnodes; ++i )
+   {
+      assert(nodes[i]->nodetype == SCIP_NODETYPE_SIBLING || nodes[i]->nodetype == SCIP_NODETYPE_CHILD);
+      nodes[i]->nodetype = SCIP_NODETYPE_LEAF;
+      CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, nodes[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+void treeRemoveSibling(                 /**< removes given node from the siblings array */
+   TREE*            tree,               /**< branch-and-bound tree */
+   NODE*            sibling             /**< sibling node to remove */
+   )
+{
+   assert(tree != NULL);
+   assert(sibling != NULL);
+   assert(sibling->nodetype == SCIP_NODETYPE_SIBLING);
+   assert(sibling->data.sibling.arraypos >= 0 && sibling->data.sibling.arraypos < tree->nsiblings);
+   assert(tree->siblings[sibling->data.sibling.arraypos] == sibling);
+   assert(tree->siblings[tree->nsiblings-1]->nodetype == SCIP_NODETYPE_SIBLING);
+
+   tree->siblings[sibling->data.sibling.arraypos] = tree->siblings[tree->nsiblings-1];
+   tree->siblings[sibling->data.sibling.arraypos]->data.sibling.arraypos = sibling->data.sibling.arraypos;
+   sibling->data.sibling.arraypos = -1;
+   tree->nsiblings--;
+}
+
+static
+void treeRemoveChild(                   /**< removes given node from the children array */
+   TREE*            tree,               /**< branch-and-bound tree */
+   NODE*            child               /**< child node to remove */
+   )
+{
+   assert(tree != NULL);
+   assert(child != NULL);
+   assert(child->nodetype == SCIP_NODETYPE_CHILD);
+   assert(child->data.child.arraypos >= 0 && child->data.child.arraypos < tree->nchildren);
+   assert(tree->children[child->data.child.arraypos] == child);
+   assert(tree->children[tree->nchildren-1]->nodetype == SCIP_NODETYPE_CHILD);
+
+   tree->children[child->data.child.arraypos] = tree->children[tree->nchildren-1];
+   tree->children[child->data.child.arraypos]->data.child.arraypos = child->data.child.arraypos;
+   child->data.child.arraypos = -1;
+   tree->nchildren--;
+}
+
+static
+void treeChildrenToSiblings(            /**< converts children into siblings, clears children array */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   NODE** tmpnodes;
+   int tmpnodessize;
+   int i;
+
+   assert(tree != NULL);
+
+   tmpnodes = tree->siblings;
+   tmpnodessize = tree->siblingssize;
+
+   tree->siblings = tree->children;
+   tree->nsiblings = tree->nchildren;
+   tree->siblingssize = tree->childrensize;
+
+   tree->children = tmpnodes;
+   tree->nchildren = 0;
+   tree->childrensize = tmpnodessize;
+   
+   for( i = 0; i < tree->nsiblings; ++i )
+   {
+      assert(tree->siblings[i]->nodetype == SCIP_NODETYPE_CHILD);
+      tree->siblings[i]->nodetype = SCIP_NODETYPE_SIBLING;
+
+      /* because CHILD.arraypos and SIBLING.arraypos are on the same position, we do not have to copy it */
+      assert(&(tree->siblings[i]->data.sibling.arraypos) == &(tree->siblings[i]->data.child.arraypos));
+   }
+}
+
+RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a leaf node */
    NODE*            node,               /**< leaf node to activate */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
@@ -1080,11 +1224,53 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    )
 {
    assert(node != NULL);
-   assert(node->nodetype == SCIP_NODETYPE_LEAF);
+   assert(node->nodetype == SCIP_NODETYPE_SIBLING
+      || node->nodetype == SCIP_NODETYPE_CHILD
+      || node->nodetype == SCIP_NODETYPE_LEAF);
    assert(!node->active);
    assert(memhdr != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
+
+   /* set up the new lists of siblings and children */
+   switch( node->nodetype )
+   {
+   case SCIP_NODETYPE_SIBLING:
+      /* move children to the queue, make them LEAFs */
+      CHECK_OKAY( treeNodesToQueue(tree, set, tree->children, tree->nchildren) );
+
+      /* remove selected sibling from the siblings array */
+      treeRemoveSibling(tree, node);
+
+      break;
+
+   case SCIP_NODETYPE_CHILD:
+      /* move siblings to the queue, make them LEAFs */
+      CHECK_OKAY( treeNodesToQueue(tree, set, tree->siblings, tree->nsiblings) );
+
+      /* remove selected child from the children array */      
+      treeRemoveChild(tree, node);
+
+      /* move other children to the siblings array, make them SIBLINGs */
+      treeChildrenToSiblings(tree);
+
+      break;
+
+   case SCIP_NODETYPE_LEAF:
+      /* move siblings to the queue, make them LEAFs */
+      CHECK_OKAY( treeNodesToQueue(tree, set, tree->siblings, tree->nsiblings) );
+      
+      /* move children to the queue, make them LEAFs */
+      CHECK_OKAY( treeNodesToQueue(tree, set, tree->children, tree->nchildren) );
+
+      /* remove node from the queue */
+      if( node != SCIPnodepqRemove(tree->leaves, set) )
+      {
+         errorMessage("Selected node is a leaf, but not the first on the queue");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+   }
 
    /* convert node into the actual node */
    node->nodetype = SCIP_NODETYPE_ACTNODE;
@@ -1192,7 +1378,9 @@ RETCODE SCIPnodeToSubroot(              /**< converts the active node into a sub
 
 RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data structure */
    TREE**           tree,               /**< pointer to tree data structure */
-   const SET*       set                 /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(tree != NULL);
@@ -1204,7 +1392,7 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
 
    (*tree)->root = NULL;
 
-   CHECK_OKAY( SCIPpqueueInit(&(*tree)->leaves, set->treeGrowInit, set->treeGrowFac, set->nodecmp) );
+   CHECK_OKAY( SCIPnodepqInit(&(*tree)->leaves) );
 
    (*tree)->path = NULL;
    (*tree)->actNode = NULL;
@@ -1225,6 +1413,9 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    (*tree)->siblingssize = 0;
    (*tree)->nsiblings = 0;
 
+   /* create root node */
+   CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, *tree) );
+   
    return SCIP_OKAY;
 }
 
@@ -1235,10 +1426,154 @@ RETCODE SCIPtreeFree(                   /**< frees tree data structure */
    assert(tree != NULL);
    assert(*tree != NULL);
 
-   SCIPpqueueFree(&(*tree)->leaves);
+   /* we don't need to free the nodes, because they are stored in block memory */
+
+   SCIPnodepqFree(&(*tree)->leaves);
+
+   freeMemoryArrayNull((*tree)->path);
+   freeMemoryArrayNull((*tree)->children);
+   freeMemoryArrayNull((*tree)->siblings);   
+
    SCIPdomchgdynFree(&(*tree)->domchgdyn);
+
+   freeMemoryArrayNull((*tree)->pathnlpcols);
+   freeMemoryArrayNull((*tree)->pathnlprows);
 
    freeMemory(*tree);
 
    return SCIP_OKAY;
+}
+
+RETCODE SCIPtreeAddLocalCons(           /**< adds local constraint to the active node */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->actNode != NULL);
+
+   CHECK_OKAY( SCIPnodeAddCons(tree->actNode, memhdr, cons) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPtreeAddGlobalCons(          /**< adds global constraint to the problem */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->root != NULL);
+
+   CHECK_OKAY( SCIPnodeAddCons(tree->root, memhdr, cons) );
+
+   return SCIP_OKAY;
+}
+
+NODE** SCIPtreeGetChildren(             /**< gets children array of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->children;
+}
+
+int SCIPtreeGetNChildren(               /**< gets number of children of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nchildren;
+}
+
+NODE** SCIPtreeGetSiblings(             /**< gets siblings array of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->siblings;
+}
+
+int SCIPtreeGetNSiblings(               /**< gets number of siblings of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nsiblings;
+}
+
+int SCIPtreeGetNLeaves(                 /**< gets number of leaves */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return SCIPnodepqLen(tree->leaves);
+}
+   
+int SCIPtreeGetNNodes(                  /**< gets number of nodes (children + siblings + leaves) */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return SCIPtreeGetNChildren(tree) + SCIPtreeGetNSiblings(tree) + SCIPtreeGetNLeaves(tree);
+}
+
+NODE* SCIPtreeGetBestLeaf(              /**< gets the best leaf from the node queue */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return SCIPnodepqFirst(tree->leaves);
+}
+
+NODE* SCIPtreeGetBestNode(              /**< gets the best node from the tree (child, sibling, or leaf) */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   SCIP* scip;
+   NODESEL* nodesel;
+   NODE* bestnode;
+   int i;
+
+   assert(tree != NULL);
+   assert(set != NULL);
+
+   scip = set->scip;
+   nodesel = set->nodesel;
+
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+
+   /* get the best leaf */
+   bestnode = SCIPtreeGetBestLeaf(tree);
+
+   /* check for better siblings */
+   for( i = 0; i < tree->nsiblings; ++i )
+   {
+      if( bestnode == NULL || SCIPnodeselCompare(nodesel, scip, tree->siblings[i], bestnode) <= 0 )
+      {
+         bestnode = tree->siblings[i];
+      }
+   }
+
+   /* check for better children */
+   for( i = 0; i < tree->nchildren; ++i )
+   {
+      if( bestnode == NULL || SCIPnodeselCompare(nodesel, scip, tree->children[i], bestnode) <= 0 )
+      {
+         bestnode = tree->children[i];
+      }
+   }
+
+   return bestnode;
 }

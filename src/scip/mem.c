@@ -29,6 +29,8 @@
 
 
 
+#if 0
+
 /*
  * dynamically sized arrays
  */
@@ -46,7 +48,7 @@ RETCODE memEnsurePtrbufSize(            /**< ensures, that pointer array buffer 
    {
       int newsize;
 
-      newsize = SCIPcalcBufGrowSize(set, num);
+      newsize = SCIPsetCalcBufGrowSize(set, num);
       freeBlockMemoryArrayNull(mem->tempmem, mem->ptrbuf, mem->ptrbufsize);
       ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, mem->ptrbuf, newsize) );
       mem->ptrbufsize = newsize;
@@ -69,7 +71,7 @@ RETCODE memEnsureCharbufSize(           /**< ensures, that char array buffer can
    {
       int newsize;
 
-      newsize = SCIPcalcBufGrowSize(set, num);
+      newsize = SCIPsetCalcBufGrowSize(set, num);
       freeBlockMemoryArrayNull(mem->tempmem, mem->charbuf, mem->charbufsize);
       ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, mem->charbuf, newsize) );
       mem->charbufsize = newsize;
@@ -92,7 +94,7 @@ RETCODE memEnsureIntbufSize(            /**< ensures, that int array buffer can 
    {
       int newsize;
 
-      newsize = SCIPcalcBufGrowSize(set, num);
+      newsize = SCIPsetCalcBufGrowSize(set, num);
       freeBlockMemoryArrayNull(mem->tempmem, mem->intbuf, mem->intbufsize);
       ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, mem->intbuf, newsize) );
       mem->intbufsize = newsize;
@@ -115,7 +117,7 @@ RETCODE memEnsureRealbufSize(           /**< ensures, that real array buffer can
    {
       int newsize;
 
-      newsize = SCIPcalcBufGrowSize(set, num);
+      newsize = SCIPsetCalcBufGrowSize(set, num);
       freeBlockMemoryArrayNull(mem->tempmem, mem->realbuf, mem->realbufsize);
       ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, mem->realbuf, newsize) );
       mem->realbufsize = newsize;
@@ -125,6 +127,7 @@ RETCODE memEnsureRealbufSize(           /**< ensures, that real array buffer can
    return SCIP_OKAY;
 }
 
+#endif
 
 
 /*
@@ -141,14 +144,7 @@ RETCODE SCIPmemCreate(                  /**< creates block memory structures */
 
    ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, TRUE, 10) );
    ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, FALSE, 10) );
-#if 0 /* ??? */
-   ALLOC_OKAY( (*mem)->treemem = createBlockMemory(1, FALSE, 10) );
-   ALLOC_OKAY( (*mem)->statemem = createBlockMemory(1, FALSE, 10) );
-   ALLOC_OKAY( (*mem)->lpmem = createBlockMemory(1, FALSE, 10) );
-   ALLOC_OKAY( (*mem)->dommem = createBlockMemory(1, FALSE, 10) );
-   ALLOC_OKAY( (*mem)->consmem = createBlockMemory(1, FALSE, 10) );
-   ALLOC_OKAY( (*mem)->primalmem = createBlockMemory(1, FALSE, 10) );
-#endif
+#if 0
    ALLOC_OKAY( (*mem)->tempmem = createBlockMemory(1, FALSE, 10) );
    (*mem)->ptrbuf = NULL;
    (*mem)->charbuf = NULL;
@@ -158,6 +154,7 @@ RETCODE SCIPmemCreate(                  /**< creates block memory structures */
    (*mem)->charbufsize = 0;
    (*mem)->intbufsize = 0;
    (*mem)->realbufsize = 0;
+#endif
 
    return SCIP_OKAY;
 }
@@ -170,21 +167,16 @@ RETCODE SCIPmemFree(                    /**< frees block memory structures */
 
    destroyBlockMemory((*mem)->probmem);
    destroyBlockMemory((*mem)->solvemem);
-#if 0 /* ??? */
-   destroyBlockMemory((*mem)->treemem);
-   destroyBlockMemory((*mem)->statemem);
-   destroyBlockMemory((*mem)->lpmem);
-   destroyBlockMemory((*mem)->dommem);
-   destroyBlockMemory((*mem)->consmem);
-   destroyBlockMemory((*mem)->primalmem);
-#endif
+#if 0
    destroyBlockMemory((*mem)->tempmem);
+#endif
 
    freeMemory(*mem);
 
    return SCIP_OKAY;
 }
-   
+
+#if 0   
 RETCODE SCIPmemGetPtrbuf(               /**< returns buffer for storing pointer array */
    void***          ptrbuf,             /**< pointer to a pointer array */
    MEM*             mem,                /**< block memory buffers */
@@ -244,3 +236,4 @@ RETCODE SCIPmemGetRealbuf(              /**< returns buffer for storing Real arr
 
    return SCIP_OKAY;
 }
+#endif

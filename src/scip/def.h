@@ -26,12 +26,10 @@
 #ifndef __DEF_H__
 #define __DEF_H__
 
-#define SCIP_VERSION  0.1               /**< SCIP version number */
 
-#define SCIP_MAXNCOL       0x0000fffff  /**< maximal number of columns; 20 bits available */
-#define SCIP_MAXNROW       0x0000fffff  /**< maximal number of rows; 20 bits available */
-#define SCIP_MAXNCHILDREN  0x00000ffff  /**< maximal number of children per node; 16 bits available */
-#define SCIP_MAXNADDEDROWS 0x0000fffff  /**< maximal number of added rows per node; 20 bits available */
+#define SCIP_VERSION                 10 /**< SCIP version number (multiplied by 100 to get integer number) */
+
+
 
 #define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) < SCIP_OKAY ) return _restat_; }
 #define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
@@ -62,21 +60,60 @@ typedef int Bool;                       /**< type used for boolean values */
 #define FALSE (0==1)                    /**< boolean value FALSE */
 #endif
 
+
 /*
  * Floating point values
  */
+
 typedef double Real;                    /**< type used for floating point values */
-#define SCIP_DEFAULT_EPSZERO     1e-09  /**< default upper bound for floating points to be considered zero */
+#define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
+#define SCIP_INVALID           1.0E+99  /**< floating point value is not valid */
+
 
 /*
  * Pointers
  */
 
 #ifndef NULL
-#define NULL 0                          /**< zero pointer */
+#define NULL ((void*)0)                 /**< zero pointer */
 #endif
 
+
+/*
+ * Message Output
+ */
+
+#define SCIP_DEFAULT_VERBLEVEL    SCIP_VERBLEVEL_NORMAL
+
+
+/*
+ * Dynamic Memory
+ */
+
+#define SCIP_DEFAULT_MEMGROWFAC       1.2
+#define SCIP_DEFAULT_MEMGROWINIT      4
+#define SCIP_DEFAULT_BUFGROWFAC       2.0
+#define SCIP_DEFAULT_BUFGROWINIT  65536
+#define SCIP_DEFAULT_TREEGROWFAC      2.0
+#define SCIP_DEFAULT_TREEGROWINIT 65536
+#define SCIP_DEFAULT_PATHGROWFAC      2.0
+#define SCIP_DEFAULT_PATHGROWINIT   256
+
+
+/*
+ * Pricing
+ */
+
+#define SCIP_DEFAULT_MAXPRICEVARS    16      /**< maximal number of variables priced in per pricing round */
+#define SCIP_PRICE_SCALELOOSE         1.0E-4 /**< scaling for pricing score of loose variables */
+
+
+/*
+ * Debugging
+ */
+
+#define DEBUG 1
 
 
 

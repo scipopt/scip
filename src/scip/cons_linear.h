@@ -28,46 +28,31 @@
 
 
 #include "scip.h"
-#include "constraint.h"
 
 
-#define CONSHDLR_NAME "linear"
-
-DECL_CONSINIT(SCIPconsInit_Linear);
-DECL_CONSEXIT(SCIPconsExit_Linear);
-DECL_CONSFREE(SCIPconsFree_Linear);
-DECL_CONSCHCK(SCIPconsChck_Linear);
-DECL_CONSPROP(SCIPconsProp_Linear);
-
-
-/** Constraint Handler for linear constraints. This can be made static, because the
- *  constraint handler doesn't need any specific data.
- */
-static
-CONSHDLR ConsHdlr_Linear = {
-   CONSHDLR_NAME,
-   SCIPconsInit_Linear,
-   SCIPconsExit_Linear,
-   SCIPconsFree_Linear,
-   SCIPconsChck_Linear,
-   SCIPconsProp_Linear,
-   NULL
-};
+DECL_CONSINIT(SCIPconsInitLinear);
+DECL_CONSEXIT(SCIPconsExitLinear);
+DECL_CONSFREE(SCIPconsFreeLinear);
+DECL_CONSTRAN(SCIPconsTranLinear);
+DECL_CONSCHCK(SCIPconsChckLinear);
+DECL_CONSPROP(SCIPconsPropLinear);
 
 
 extern
-RETCODE SCIPconsCreate_Linear(          /**< creates a linear constraint */
+RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear constraints and includes it in SCIP */
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+extern
+RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the row */
-   COL**            col,                /**< array with columns of row entries */
-   Real*            val,                /**< array with coefficients of row entries */
+   int              len,                /**< number of nonzeros in the constraint */
+   VAR**            var,                /**< array with variables of constraint entries */
+   Real*            val,                /**< array with coefficients of constraint entries */
+   Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Real             lhs,                /**< left hand side of row (for ranged rows) */
-   Real             epsilon,            /**< maximal normed violation of row */
-   ROWTYPE          rowtype,            /**< type of row */
-   Bool             original,           /**< belongs constraint to the original problem formulation? */
    Bool             model               /**< is constraint necessary for feasibility? */
    );
 

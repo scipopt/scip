@@ -34,7 +34,6 @@ typedef struct memory_header MEMHDR;
 #include "def.h"
 
 
-#define errorMessage(msg)                  errorMessage_call( (msg), __FILE__, __LINE__ )
 #define allocMemory(ptr)                   ((ptr) = allocMemory_call( sizeof(*(ptr)), __FILE__, __LINE__ ))
 #define allocMemoryArray(ptr,num)          ((ptr) = allocMemory_call( (num)*sizeof(*(ptr)), __FILE__, __LINE__ ))
 #define allocMemorySize(ptr,size)          ((ptr) = allocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
@@ -156,4 +155,4 @@ void freeBlockMemory_call(MEMHDR* mem, void** ptr, size_t size, const char *file
 
 
 
-#endif /* __BLKALLOC_H__ */
+#endif

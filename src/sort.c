@@ -40,6 +40,8 @@
 #include "sort.h"
 
 
+#if 0 /* PRIORITY QUEUE NOT NEEDED */
+
 #define PQ_PARENT(q) (((q)-1)/2)
 #define PQ_LEFTCHILD(p) (2*(p)+1)
 #define PQ_RIGHTCHILD(p) (2*(p)+2)
@@ -184,6 +186,11 @@ void* SCIPpqueueFirst(                  /**< returns the best element of the que
 
    return pqueue->slots[0];
 }
+
+#endif
+
+
+
 
 void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of pointers/Reals, sorted by first array */
    void**           ptrarray,           /**< pointer array to be sorted */

@@ -28,15 +28,19 @@
 
 enum Nodetype
 {
-   SCIP_NODETYPE_LEAF     = 0,          /**< unsolved leaf of the tree */
-   SCIP_NODETYPE_ACTNODE  = 1,          /**< the active node, whose data is stored in the dynamic data object */
-   SCIP_NODETYPE_JUNCTION = 2,          /**< fork without LP solution */
-   SCIP_NODETYPE_FORK     = 3,          /**< fork with solved LP and added rows and columns */
-   SCIP_NODETYPE_SUBROOT  = 4           /**< fork with solved LP and arbitrarily changed rows and columns */
+   SCIP_NODETYPE_ACTNODE  = 0,          /**< the active node, whose data is stored in the dynamic data object */
+   SCIP_NODETYPE_SIBLING  = 1,          /**< unsolved sibling of the active node */
+   SCIP_NODETYPE_CHILD    = 2,          /**< unsolved child of the active node */
+   SCIP_NODETYPE_LEAF     = 3,          /**< unsolved leaf of the tree, stored in the tree's queue */
+   SCIP_NODETYPE_JUNCTION = 4,          /**< fork without LP solution */
+   SCIP_NODETYPE_FORK     = 5,          /**< fork with solved LP and added rows and columns */
+   SCIP_NODETYPE_SUBROOT  = 6           /**< fork with solved LP and arbitrarily changed rows and columns */
 };
-
 typedef enum Nodetype NODETYPE;         /**< type of node */
+
 typedef struct Actnode ACTNODE;         /**< data for the actual node */
+typedef struct Child CHILD;             /**< data for child nodes */
+typedef struct Sibling SIBLING;         /**< data for sibling nodes */
 typedef struct Junction JUNCTION;       /**< data for junction nodes */
 typedef struct Fork FORK;               /**< data for fork nodes */
 typedef struct Subroot SUBROOT;         /**< data for subroot nodes */
@@ -46,7 +50,7 @@ typedef struct Tree TREE;               /**< branch and bound tree */
 
 
 #include "lp.h"
-#include "constraint.h"
+#include "cons.h"
 
 
 
@@ -68,7 +72,7 @@ RETCODE SCIPnodeCreate(                 /**< creates a child node of the active 
 extern
 RETCODE SCIPnodeFree(                   /**< frees node */
    NODE**           node,               /**< node data */
-   MEMHDR*          memhdr,             /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
@@ -106,10 +110,25 @@ RETCODE SCIPnodeToSubroot(              /**< converts the active node into a sub
    );
 
 extern
-RETCODE SCIPnodeAddConstraint(          /**< adds local constraint to the node */
+RETCODE SCIPnodeAddCons(                /**< adds local constraint to the node */
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
+   );
+
+extern
+NODETYPE SCIPnodeGetType(               /**< gets the type of the node */
+   NODE*            node                /**< node */
+   );
+
+extern
+int SCIPnodeGetDepth(                   /**< gets the depth of the node */
+   NODE*            node                /**< node */
+   );
+
+extern
+Real SCIPnodeGetLowerBound(             /**< gets the lower bound of the node */
+   NODE*            node                /**< node */
    );
 
 
@@ -120,7 +139,9 @@ RETCODE SCIPnodeAddConstraint(          /**< adds local constraint to the node *
 extern
 RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data structure */
    TREE**           tree,               /**< pointer to tree data structure */
-   const SET*       set                 /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern
@@ -137,18 +158,58 @@ RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP stat
    );
 
 extern
-RETCODE SCIPtreeAddLocalConstraint(     /**< adds local constraint to the active node */
+RETCODE SCIPtreeAddLocalCons(           /**< adds local constraint to the active node */
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
    );
 
 extern
-RETCODE SCIPtreeAddGlobalConstraint(    /**< adds global constraint to the problem */
+RETCODE SCIPtreeAddGlobalCons(          /**< adds global constraint to the problem */
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
    );
 
+extern
+NODE** SCIPtreeGetChildren(             /**< gets children array of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+int SCIPtreeGetNChildren(               /**< gets number of children of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+NODE** SCIPtreeGetSiblings(             /**< gets siblings array of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+int SCIPtreeGetNSiblings(               /**< gets number of siblings of actual node */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+int SCIPtreeGetNLeaves(                 /**< gets number of leaves */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern   
+int SCIPtreeGetNNodes(                  /**< gets number of nodes (children + siblings + leaves) */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+NODE* SCIPtreeGetBestLeaf(              /**< gets the best leaf from the node queue */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+NODE* SCIPtreeGetBestNode(              /**< gets the best node from the tree (child, sibling, or leaf) */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   );
 
 #endif

@@ -21,53 +21,24 @@
  * @author Tobias Achterberg
  */
 
-/**
- * In LP management, we have to differ between the actual LP and the LP stored in the LP solver.
- * All LP methods affect the actual LP only. Before solving the actual LP with the LP solver,
- * the LP solvers data has to be updated to the actual LP with a call to SCIPlpFlush().
- */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __LP_H__
 #define __LP_H__
 
 
-/** variable type */
-enum Coltype
+/** solution status after solving LP */
+enum LPSolStat
 {
-   SCIP_COLTYPE_BINARY    = 0,          /**< binary variable: $x \in \{0,1\}$ */
-   SCIP_COLTYPE_INTEGER   = 1,          /**< integer variable: $x \in \{lb, \ldots, \ub\}$ */
-   SCIP_COLTYPE_IMPLINT   = 2,          /**< implicit integer variable: continous variable, that is allways integral */
-   SCIP_COLTYPE_CONTINOUS = 3           /**< continous variable: $x \in [lb,ub] */
+   SCIP_LPSOLSTAT_OPTIMAL    = 0,       /**< LP was solved to optimality */
+   SCIP_LPSOLSTAT_INFEASIBLE = 1,       /**< LP is primal infeasible */
+   SCIP_LPSOLSTAT_UNBOUNDED  = 2,       /**< LP is primal unbounded */
+   SCIP_LPSOLSTAT_ITERLIMIT  = 3,       /**< iteration limit was reached during optimization */
+   SCIP_LPSOLSTAT_TIMELIMIT  = 4,       /**< time limit was reached during optimization */
+   SCIP_LPSOLSTAT_ERROR      = 5        /**< an error occured during optimization */
 };
-typedef enum Coltype COLTYPE;
+typedef enum LPSolStat LPSOLSTAT;
 
-/** row type */
-enum RowType
-{
-   SCIP_ROWTYPE_LESSEQUAL    = 0,       /**< less or equal row: $a^Tx \le \text{rhs}$ */
-   SCIP_ROWTYPE_EQUAL        = 1,       /**< equality row: $a^Tx = \text{rhs}$ */
-   SCIP_ROWTYPE_GREATEREQUAL = 2,       /**< greater or equal row: $a^Tx \ge \text{rhs}$ */
-   SCIP_ROWTYPE_RANGE        = 3        /**< ranged row: $\text{lhs} \le a^Tx \le \text{rhs}$ */
-};
-typedef enum RowType ROWTYPE;
-
-/** type of bound: lower or upper bound */
-enum BoundType
-{
-   SCIP_BOUNDTYPE_LOWER = 0,            /**< lower bound */
-   SCIP_BOUNDTYPE_UPPER = 1             /**< upper bound */
-};
-typedef enum BoundType BOUNDTYPE;
-
-typedef struct Dom DOM;                 /**< datastructures for storing domains of variables */
-typedef struct Hole HOLE;               /**< hole in a domain of an integer variable */
-typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an integer variable */
-typedef struct DomChg DOMCHG;           /**< changes in domains of variables (fixed sized arrays) */
-typedef struct DomChgDyn DOMCHGDYN;     /**< changes in domains of variables (dynamically sized arrays) */
-typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
-typedef struct HoleChg HOLECHG;         /**< changes in holelist of variables */
 typedef struct Col COL;                 /**< column of an LP */
 typedef struct ColList COLLIST;         /**< list of LP columns */
 typedef struct Row ROW;                 /**< row of an LP */
@@ -81,52 +52,44 @@ typedef struct Lp LP;                   /**< actual LP data */
 #include "set.h"
 #include "stat.h"
 #include "lpi.h"
+#include "var.h"
 
 
-
-/** domain of a variable */
-struct Dom
-{
-   HOLELIST*        holelist;           /**< list of holes (only for the integer variables) */
-   Real             lb;                 /**< lower bounds of variables */
-   Real             ub;                 /**< upper bounds of variables */
-};
 
 /** variable of the problem and corresponding LP column */
 struct Col
 {
-   char*            name;               /**< name of the column */
-   ROW**            row;                /**< rows of column entries */
+   const VAR*       var;                /**< variable, this column represents; there cannot be a column without variable */
+   ROW**            row;                /**< rows of column entries, that may have a nonzero dual solution value */
    Real*            val;                /**< coefficients of column entries */
-   DOM              dom;                /**< domain of variable in actual subproblem */
-   Real             problb;             /**< lower bound of variable in main problem */
-   Real             probub;             /**< upper bound of variable in main problem */
-   Real             obj;                /**< objective function value of variable */
+   Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
+   Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    int              index;              /**< consecutively numbered variable identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
-   int              numuses;            /**< number of times, this column is referenced */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              numpos;             /**< number of positive coefficients */
    int              numneg;             /**< number of negative coefficients */
-   unsigned int     coltype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
+   unsigned int     linked:1;           /**< TRUE iff column is inserted in corresponding row vectors */
+   unsigned int     inLP:1;             /**< TRUE iff column is in actual LP */
 };
 
 /** row of the LP */
 struct Row
 {
    char*            name;               /**< name of the row */
-   COL**            col;                /**< columns of row entries */
+   COL**            col;                /**< columns of row entries, that may have a nonzero primal solution value */
    Real*            val;                /**< coefficients of row entries */
    Real             rhs;                /**< right hand side of row */
-   Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             epsilon;            /**< maximal normed violation of row */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
    Real             maxval;             /**< maximal absolute value of row vector */
+   Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
+   Real             slack;              /**< slack value in LP, or SCIP_INVALID if not yet calculated */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
@@ -135,10 +98,12 @@ struct Row
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefficients with absolute value equal to maxval */
-   unsigned int     rowtype:2;          /**< type of row: lessequal, equal, greaterequal, range */
+   unsigned int     equality:1;         /**< TRUE iff row is an equality, FALSE iff row is a lower or equal inequality */
    unsigned int     sorted:1;           /**< TRUE iff column indices are sorted in increasing order */
    unsigned int     validminmaxidx:1;   /**< TRUE iff minimal and maximal column index is valid */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
+   unsigned int     linked:1;           /**< TRUE iff row is inserted in corresponding column vectors */
+   unsigned int     inLP:1;             /**< TRUE iff row is in actual LP */
 };
 
 /** actual LP data */
@@ -150,6 +115,8 @@ struct Lp
    COL**            chgbds;             /**< array of columns with changed bounds not yet applied to the LP solver */
    COL**            cols;               /**< array with actual LP columns in correct order */
    ROW**            rows;               /**< array with actual LP rows in correct order */
+   Real             objoffset;          /**< objective offset from bound shifting and fixing */
+   Real             objval;             /**< objective value of LP, or SCIP_INVALID */
    int              lpicolssize;        /**< available slots in lpicols vector */
    int              nlpicols;           /**< number of columns in the LP solver */
    int              lpirowssize;        /**< available slots in lpirows vector */
@@ -171,90 +138,70 @@ struct Lp
 
 
 extern
-RETCODE SCIPdomchgdynCreate(            /**< creates a dynamically sized domain change data structure */
-   DOMCHGDYN**      domchgdyn           /**< pointer to dynamically sized domain change data structure */
-   );
-
-extern
-void SCIPdomchgdynFree(                 /**< frees a dynamically sized domain change data structure */
-   DOMCHGDYN**      domchgdyn           /**< pointer to dynamically sized domain change data structure */
-   );
-
-extern
-RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain change into dynamically sized one */
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   const SET*       set,                /**< global SCIP settings */
-   DOMCHG*          domchg              /**< static domain change */
-   );
-
-extern
-RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes */
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   const SET*       set,                /**< global SCIP settings */
-   COL*             col,                /**< column to change the bounds for */
-   Real             newbound,           /**< new value for bound */
-   Real             oldbound,           /**< old value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   );
-
-extern
-RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes */
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   const SET*       set,                /**< global SCIP settings */
-   HOLELIST**       ptr,                /**< changed list pointer */
-   HOLELIST*        newlist,            /**< new value of list pointer */
-   HOLELIST*        oldlist             /**< old value of list pointer */
-   );
-
-extern
-RETCODE SCIPdomchgCreate(               /**< creates domain change data (fixed size) from dynamically sized data */
-   DOMCHG**         domchg,             /**< pointer to fixed size domain change data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const DOMCHGDYN* domchgdyn           /**< dynamically sized domain change data structure */
-   );
-
-extern
-void SCIPdomchgFree(                    /**< frees fixed size domain change data */
-   DOMCHG**         domchg,             /**< pointer to domain change */
-   MEMHDR*          memhdr              /**< block memory */
-   );
-
-extern
-RETCODE SCIPlpApplyDomchg(              /**< applies domain change */
-   LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   const DOMCHG*    domchg              /**< domain change to apply */
-   );
-
-extern
-RETCODE SCIPlpUndoDomchg(               /**< undoes domain change */
-   LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   const DOMCHG*    domchg              /**< domain change to remove */
-   );
-
-extern
-RETCODE SCIPlpFlush(                    /**< applies all cached changes to the LP solver */
-   LP*              lp,                 /**< actual LP data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-extern
 RETCODE SCIPcolCreate(                  /**< creates an LP column */
    COL**            col,                /**< pointer to column data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
-   const char*      name,               /**< name of column */
+   const VAR*       var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
-   Real*            val,                /**< array with coefficients of column entries */
-   Real             lb,                 /**< lower bound of variable */
-   Real             ub,                 /**< upper bound of variable */
-   Real             obj,                /**< objective function value */
-   COLTYPE          coltype             /**< type of variable */
+   Real*            val                 /**< array with coefficients of column entries */
+   );
+
+extern
+void SCIPcolFree(                       /**< frees an LP column */
+   COL**            col,                /**< pointer to LP column */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
+void SCIPcolCalcRedcost(                /**< calculates the reduced costs of a column */
+   COL*             col                 /**< LP column */
+   );
+
+extern
+void SCIPcolSort(                       /**< sorts column entries by row index */
+   COL* col                             /**< column to be sorted */
+   );
+
+extern
+RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val                 /**< value of coefficient */
+   );
+
+extern
+void SCIPcolDelCoeff(                   /**< deletes coefficient from column */
+   COL*             col,                /**< column to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row                 /**< coefficient to be deleted */
+   );
+
+extern
+RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val                 /**< value of coefficient */
+   );
+
+extern
+RETCODE SCIPcolBoundChanged(            /**< notifies LP column, that its bounds were changed */
+   COL*             col,                /**< LP column */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
 extern
@@ -269,17 +216,8 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
    Real             rhs,                /**< right hand side of row */
-   Real             lhs,                /**< left hand side of row (for ranged rows) */
    Real             epsilon,            /**< maximal normed violation of row */
-   ROWTYPE          rowtype             /**< type of row */
-   );
-
-extern
-void SCIPcolFree(                       /**< frees an LP column */
-   COL**            col,                /**< pointer to LP column */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   Bool             equality            /**< is row an equality? otherwise, it is a lower or equal inequality */
    );
 
 extern
@@ -291,21 +229,8 @@ void SCIProwFree(                       /**< frees an LP row */
    );
 
 extern
-void SCIPcolCapture(                    /**< increases usage counter of LP column */
-   COL*             col                 /**< LP column */
-   );
-
-extern
 void SCIProwCapture(                    /**< increases usage counter of LP row */
    ROW*             row                 /**< LP row */
-   );
-
-extern
-void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
-   COL**            col,                /**< pointer to LP column */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
    );
 
 extern
@@ -317,23 +242,8 @@ void SCIProwRelease(                    /**< decreases usage counter of LP row, 
    );
 
 extern
-void SCIPcolSort(                       /**< sorts column entries by row index */
-   COL* col                             /**< column to be sorted */
-   );
-
-extern
 void SCIProwSort(                       /**< sorts row entries by column index */
    ROW* row                             /**< row to be sorted */
-   );
-
-extern
-RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coefficient to an LP column */
-   COL*             col,                /**< LP column */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   ROW*             row,                /**< LP row */
-   Real             val                 /**< value of coefficient */
    );
 
 extern
@@ -347,29 +257,11 @@ RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coef
    );
 
 extern
-void SCIPcolDelCoeff(                   /**< deletes coefficient from column */
-   COL*             col,                /**< column to be changed */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   ROW*             row                 /**< coefficient to be deleted */
-   );
-
-extern
 void SCIProwDelCoeff(                   /**< deletes coefficient from row */
    ROW*             row,                /**< row to be changed */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    COL*             col                 /**< coefficient to be deleted */
-   );
-
-extern
-RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
-   COL*             col,                /**< LP column */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   ROW*             row,                /**< LP row */
-   Real             val                 /**< value of coefficient */
    );
 
 extern
@@ -418,6 +310,7 @@ extern
 RETCODE SCIPlpSetState(                 /**< loads LP state (like basis information) into solver */
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LPSTATE*         lpstate             /**< LP state information (like basis information) */
    );
 
@@ -461,6 +354,29 @@ RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
 extern
 RETCODE SCIPlpFree(                     /**< frees LP data object */
    LP**             lp                  /**< pointer to LP data object */
+   );
+
+extern
+RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simplex algorithm */
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   );
+
+extern
+RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex algorithm */
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   );
+
+extern
+RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
+   LP*              lp,                 /**< actual LP data */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr              /**< block memory buffers */
    );
 
 #endif

@@ -16,41 +16,50 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   retcode.h
- * @brief  return codes for SCIP methods
+/**@file   message.c
+ * @brief  message output methods
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __RETCODE_H__
-#define __RETCODE_H__
-
 #include <stdio.h>
+#include <assert.h>
 
-/** return codes for SCIP methods: negative return codes are errors */
-enum Retcode
+#include "message.h"
+
+
+void errorMessage_call(                 /**< prints an error message */
+   const char*      msg,                /**< message to print */
+   const char*      filename,           /**< name of the file, where the error occured */
+   int              line                /**< line of the file, where the error occured */
+   )
 {
-   SCIP_SUCCESS     =   2,              /**< normal termination with success */
-   SCIP_FAILURE     =   1,              /**< normal termination without success */
-   SCIP_OKAY        =   0,              /**< normal termination */
-   SCIP_ERROR       =  -1,              /**< unspecified error */
-   SCIP_NOMEMORY    =  -2,              /**< insufficient memory error */
-   SCIP_READERR     =  -3,              /**< file read error */
-   SCIP_NOFILE      =  -4,              /**< file not found error */
-   SCIP_LPERROR     =  -5,              /**< error in LP solver */
-   SCIP_NOPROBLEM   =  -6,              /**< no problem exists */
-   SCIP_INVALIDCALL =  -7,              /**< method cannot be called at this time in solution process */
-   SCIP_INVALIDDATA =  -8               /**< error in input data */
-};
-typedef enum Retcode RETCODE;           /**< return code for SCIP method */
+   printf("[%s:%d] ERROR: %s\n", filename, line, msg);
+}
 
+void todoMessage_call(                  /**< prints a todo message */
+   const char*      msg,                /**< message to print */
+   const char*      filename,           /**< name of the file, where the error occured */
+   int              line                /**< line of the file, where the error occured */
+   )
+{
+   printf("[%s:%d] TODO: %s\n", filename, line, msg);
+}
 
+void infoMessage(                       /**< prints a message depending on the verbosity level */
+   VERBLEVEL        verblevel,          /**< actual verbosity level */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*      msg                 /**< message to print */
+   )
+{
+   assert(verblevel > SCIP_VERBLEVEL_NONE);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
 
-extern
-void SCIPretcodePrint(                  /**< prints error message for return code */
-   FILE*            errout,             /**< file stream to write error message */
-   RETCODE          retcode             /**< SCIP return code causing the error */
-   );
+   if( msgverblevel <= verblevel )
+   {
+      printf(msg);
+      printf("\n");
+   }
+}
 
-#endif

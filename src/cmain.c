@@ -29,10 +29,16 @@
 
 #include "scip.h"
 #include "cons_linear.h"
+#include "nodesel_dfs.h"
 
 
 static const int   nrows = 2;
-static const int   ncols = 2;
+static const int   nvars = 2;
+
+static const char* var_name[] = { "x1"    , "x2"     };
+static const Real  var_obj [] = { -1.0    , -1.0     };
+static const Real  var_lb  [] = {  0.0    ,  0.0     };
+static const Real  var_ub  [] = { 10.0    ,  5.0     };
 
 static const char* row_name[] = { "lin1"  , "lin2"   };
 static const int   row_len [] = {        2,        2 };
@@ -45,59 +51,113 @@ main(void)
 {
    SCIP* scip = NULL;
    RETCODE retcode;
-   COL** cols;
-   COL** rowcols;
+   VAR** vars;
+   VAR** rowvars;
    Real* rowvals;
-   CONS* cons;
    int r;
-   int c;
+   int v;
    int i;
    int pos;
-   char cname[255];
 
-   printf("SCIP version %g\n", SCIP_VERSION);
+   printf("SCIP version %g\n", SCIPversion());
 
-   allocMemoryArray(cols, ncols);
-   allocMemoryArray(rowcols, ncols);
-   allocMemoryArray(rowvals, ncols);
+   /***************************
+    * Local Memory Allocation *
+    ***************************/
 
+   allocMemoryArray(vars, nvars);
+   allocMemoryArray(rowvars, nvars);
+   allocMemoryArray(rowvals, nvars);
+
+
+   /*********
+    * Setup *
+    *********/
+
+   printf("\nsetup SCIP\n");
+
+   /* initialize SCIP */
    CHECK_SCIP( SCIPcreate(&scip) );
+
+   /* change settings */
+   CHECK_SCIP( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
+
+   /* include user defined callbacks */
+   CHECK_SCIP( SCIPincludeConsHdlrLinear(scip) );
+   CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
+
+
+   /********************
+    * Problem Creation *
+    ********************/
+
+   printf("\ncreate problem\n");
+
+   /* create problem */
    CHECK_SCIP( SCIPcreateProb(scip, "test.lp") );
 
-#ifndef NDEBUG
-   SCIPdebugMemory(scip);
-#endif
-
-   for( c = 0; c < ncols; ++c )
+   /* create necessary variables */
+   for( v = 0; v < nvars; ++v )
    {
-      sprintf(cname, "x%d", c);
-      CHECK_SCIP( SCIPcreateCol(scip, &cols[c], cname, 0.0, 10.0, -1.0, SCIP_COLTYPE_INTEGER) );
+      CHECK_SCIP( SCIPcreateVar(scip, &vars[v], var_name[v], var_lb[v], var_ub[v], var_obj[v], SCIP_VARTYPE_INTEGER) );
+      CHECK_SCIP( SCIPaddVar(scip, vars[v]) );
    }
 
+   /* create constraints and add them to the problem */
    pos = 0;
    for( r = 0; r < nrows; ++r )
    {
+      CONS* cons;
+
       for( i = 0; i < row_len[r]; ++i )
       {
-         rowcols[i] = cols[row_idx[pos]];
+         rowvars[i] = vars[row_idx[pos]];
          rowvals[i] = row_val[pos];
          pos++;
       }
-      CHECK_SCIP( SCIPconsCreate_Linear(scip, &cons, row_name[r], row_len[r], rowcols, rowvals, row_rhs[r], 0.0, 1e-6,
-                     SCIP_ROWTYPE_LESSEQUAL, TRUE, TRUE) );
+      CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, row_name[r], row_len[r], rowvars, rowvals, 0.0, row_rhs[r], TRUE) );
+      CHECK_SCIP( SCIPaddCons(scip, cons) ); /* add as a global constraint */
    }
 
+
+   /*******************
+    * Problem Solving *
+    *******************/
+
+   /* solve problem */
+   printf("\nsolve problem\n");
+   CHECK_SCIP( SCIPsolve(scip) );
+
+   /* free solution process */
+   printf("\nfree problem solution\n");
+   CHECK_SCIP( SCIPfreeSolve(scip) );
+
+   /* solve problem again */
+   printf("\nsolve problem again\n");
    CHECK_SCIP( SCIPsolve(scip) );
 
 #ifndef NDEBUG
-   SCIPdebugMemory(scip);
+   /*SCIPdebugMemory(scip);*/
 #endif
 
+
+   /********************
+    * Deinitialization *
+    ********************/
+
+   printf("\nfree SCIP\n");
+
+   /* free SCIP */
    CHECK_SCIP( SCIPfree(&scip) );
 
+
+   /*****************************
+    * Local Memory Deallocation *
+    *****************************/
+
    freeMemoryArray(rowvals);
-   freeMemoryArray(rowcols);
-   freeMemoryArray(cols);
+   freeMemoryArray(rowvars);
+   freeMemoryArray(vars);
 
 #ifndef NDEBUG
    memoryCheckEmpty();
