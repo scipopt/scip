@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.18 2005/02/08 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.19 2005/02/08 09:18:12 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -527,7 +527,7 @@ DECL_HEUREXEC(heurExecFeaspump)
 
       /* swap the last solutions */
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
-      for ( j=heurdata->cyclelength-1; j > 0; j-- )
+      for( j = heurdata->cyclelength-1; j > 0; j-- )
          lastroundedsols[j] = lastroundedsols[j-1]; 
       lastroundedsols[0] = heurdata->roundedsol;
       heurdata->roundedsol = tmpsol;
