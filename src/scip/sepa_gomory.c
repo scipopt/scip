@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.23 2004/06/03 09:42:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.24 2004/07/09 15:31:01 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -22,6 +22,7 @@
  */
 
 /**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the LP Tableau) */
+/**@todo Gomory cuts don't seem to work with SOPLEX, but c-MIR cuts do! */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
