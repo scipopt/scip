@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.29 2004/08/10 14:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.30 2004/08/13 09:16:40 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -893,7 +893,7 @@ RETCODE propagateCons(
    {
       for( i = 0; i < nvars && SCIPvarGetUbLocal(vars[i]) > 0.5; ++i ) /* search fixed operator */
       {}
-      if( i < consdata->nvars )
+      if( i < nvars )
       {
          debugMessage("constraint <%s>: operator var <%s> fixed to 0.0 -> fix resultant <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
@@ -902,15 +902,17 @@ RETCODE propagateCons(
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
             CHECK_OKAY( analyzeConflictOne(scip, cons, i) );
-
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          }
-         else if( tightened )
+         else
          {
-            (*nfixedvars)++;
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            if( tightened )
+            {
+               CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+               (*nfixedvars)++;
+            }
          }
 
          return SCIP_OKAY;
@@ -932,18 +934,20 @@ RETCODE propagateCons(
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
             CHECK_OKAY( analyzeConflictOne(scip, cons, i) );
-
-            *cutoff = TRUE;
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-            return SCIP_OKAY;
+            *cutoff = TRUE;
          }
          else if( tightened )
          {
-            (*nfixedvars)++;
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            (*nfixedvars)++;
          }
       }
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+
+      if( !(*cutoff) )
+      {
+         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      }
 
       return SCIP_OKAY;
    }
@@ -1016,15 +1020,17 @@ RETCODE propagateCons(
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
          CHECK_OKAY( analyzeConflictZero(scip, cons) );
-         
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       }
-      else if( tightened )
+      else
       {
-         (*nfixedvars)++;
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         if( tightened )
+         {
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            (*nfixedvars)++;
+         }
       }
 
       return SCIP_OKAY;
@@ -1044,15 +1050,17 @@ RETCODE propagateCons(
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
          CHECK_OKAY( analyzeConflictZero(scip, cons) );
-         
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       }
-      else if( tightened )
+      else
       {
-         (*nfixedvars)++;
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         if( tightened )
+         {
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            (*nfixedvars)++;
+         }
       }
 
       return SCIP_OKAY;
@@ -1451,11 +1459,11 @@ DECL_CONSPRESOL(consPresolAnd)
       if( nrounds == 0 )
          consdata->propagated = FALSE;
 
-      /* remove all variables that are fixed to one */
-      CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
-
       /* propagate constraint */
       CHECK_OKAY( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars) );
+
+      /* remove all variables that are fixed to one */
+      CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
 
       if( !cutoff && !SCIPconsIsDeleted(cons) && !SCIPconsIsModifiable(cons) )
       {

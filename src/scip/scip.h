@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.153 2004/08/10 14:19:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.154 2004/08/13 09:16:41 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1816,7 +1816,9 @@ RETCODE SCIPaggregateVars(
    );
 
 /** converts variable into multi-aggregated variable; this changes the vars array returned from
- *  SCIPgetVars() and SCIPgetVarsData()
+ *  SCIPgetVars() and SCIPgetVarsData(); Warning! The integrality condition is not checked anymore on
+ *  the multiaggregated variable. You must not multiaggregate an integer variable without being sure,
+ *  that integrality on the aggregation variables implies integrality on the aggregated variable.
  */
 extern
 RETCODE SCIPmultiaggregateVar(
