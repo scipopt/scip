@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.254 2005/02/04 10:24:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.255 2005/02/04 10:44:04 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5828,10 +5828,10 @@ RETCODE SCIPaddVarImplic(
    }
 
    /* if y is binary variable the corresponding valid implication for y is allso added: 
-    *    if x <= 0  ==>  y <= 0    add y >= 1  ==>  x >= 1 (i=0->1, impltype=1(upper)->0, implbound=0->1)
-    *    if x <= 0  ==>  y >= 1    add y <= 0  ==>  x >= 1 (i=0->0, impltype=0(lower)->0, implbound=1->1)
-    *    if x >= 1  ==>  y <= 0    add y >= 1  ==>  x <= 0 (i=1->1, impltype=1(upper)->1, implbound=0->0)
-    *    if x >= 1  ==>  y >= 1    add y <= 0  ==>  x <= 0 (i=1->0, impltype=0(lower)->1, implbound=1->0)
+    *  "x <= 0  ==>  y <= 0": add "y >= 1  ==>  x >= 1"
+    *  "x <= 0  ==>  y >= 1": add "y <= 0  ==>  x >= 1"
+    *  "x >= 1  ==>  y <= 0": add "y >= 1  ==>  x <= 0"
+    *  "x >= 1  ==>  y >= 1": add "y <= 0  ==>  x <= 0"
     */    
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {

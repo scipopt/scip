@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.139 2005/02/04 10:24:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.140 2005/02/04 10:44:05 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5404,10 +5404,9 @@ RETCODE SCIPvarAddImplic(
       break;
       
    case SCIP_VARSTATUS_FIXED:
-      /*????????????????????????????????*/
-      if( varfixing == (var->glbdom.lb > 0.5) ) /**@todo implement implication */ 
-         printf("implication can be applied: <%s> %s %g\n", SCIPvarGetName(implvar), 
-            impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
+      /* nothing to do here; if varfixing corresponds to the fixed value of the variable, the implication could be
+       * applied directly, but it will (hopefully) also be found by propagation or presolving
+       */
       break;
       
    case SCIP_VARSTATUS_AGGREGATED:
@@ -5539,7 +5538,7 @@ RETCODE SCIPvarUseActiveImplics(
    }
 
    implicsFree(&oldimplics, blkmem);
-      
+
    return SCIP_OKAY;
 }
 
