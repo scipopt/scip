@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.4 2004/04/27 15:50:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.5 2004/11/17 12:42:33 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -66,11 +66,11 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
- *  - SCIP_CUTOFF     : at least one unmodifiable row is infeasible in the variable's bounds -> node is infeasible
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
- *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
- *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
- *  - SCIP_DIDNOTFIND : the separator searched, but did not find a feasible cutting plane
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  */
 #define DECL_SEPAEXEC(x) RETCODE x (SCIP* scip, SEPA* sepa, RESULT* result)
