@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.21 2003/12/01 14:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.22 2004/01/15 12:09:40 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -32,17 +32,12 @@
 #include "type_retcode.h"
 #include "type_result.h"
 #include "type_set.h"
-#include "type_misc.h"
 #include "type_primal.h"
 #include "type_scip.h"
 #include "type_heur.h"
 #include "pub_heur.h"
 
 
-
-/** compares two heuristics w. r. to their priority */
-extern
-DECL_SORTPTRCOMP(SCIPheurComp);
 
 /** creates a primal heuristic */
 extern

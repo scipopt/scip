@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.6 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.7 2004/01/15 12:09:40 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -31,7 +31,6 @@
 #include "memory.h"
 #include "type_retcode.h"
 #include "type_set.h"
-#include "type_misc.h"
 #include "type_lp.h"
 #include "type_prob.h"
 #include "type_scip.h"
@@ -39,10 +38,6 @@
 #include "pub_pricer.h"
 
 
-
-/** compares two pricers w. r. to their priority */
-extern
-DECL_SORTPTRCOMP(SCIPpricerComp);
 
 /** creates a variable pricer */
 extern

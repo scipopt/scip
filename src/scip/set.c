@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.81 2004/01/15 09:12:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.82 2004/01/15 12:09:41 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -90,8 +90,8 @@
 #define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LPSOLVEDEPTH       -1 /**< maximal depth for solving LPs (-1: no depth limit) */
 #define SCIP_DEFAULT_REDCOSTFREQ         4 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
-#define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a column can reach before it is deleted from the LP */
-#define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a row can reach before it is deleted from the LP */
+#define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a dynamic column can reach before it is deleted from the LP */
+#define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a dynamic row can reach before it is deleted from the LP */
 
 
 /* Pricing */
@@ -469,12 +469,12 @@ RETCODE SCIPsetCreate(
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "lp/colagelimit",
-                  "maximum age a column can reach before it is deleted from the LP",
+                  "maximum age a dynamic column can reach before it is deleted from the LP",
                   &(*set)->colagelimit, SCIP_DEFAULT_COLAGELIMIT, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "lp/rowagelimit",
-                  "maximum age a row can reach before it is deleted from the LP",
+                  "maximum age a dynamic row can reach before it is deleted from the LP",
                   &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT, 1, INT_MAX,
                   NULL, NULL) );
    assert(sizeof(int) == sizeof(CLOCKTYPE));

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.54 2003/12/01 14:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.55 2004/01/15 12:09:39 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -51,18 +51,6 @@
 /*
  * Constraint handler methods
  */
-
-/** compares two constraint handlers w. r. to their separation priority */
-extern
-DECL_SORTPTRCOMP(SCIPconshdlrCompSepa);
-
-/** compares two constraint handlers w. r. to their enforcing priority */
-extern
-DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo);
-
-/** compares two constraint handlers w. r. to their feasibility check priority */
-extern
-DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
 
 /** creates a constraint handler */
 extern

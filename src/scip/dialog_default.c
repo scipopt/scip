@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.11 2004/01/13 11:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.12 2004/01/15 12:09:40 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -144,6 +144,48 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
          printf("\n %20s ", "-->");
       printf("%8d  ", SCIPbranchruleGetPriority(sorted[i]));
       printf(SCIPbranchruleGetDesc(sorted[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   /* free temporary memory */
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &sorted) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display conflict command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict)
+{  /*lint --e{715}*/
+   CONFLICTHDLR** conflicthdlrs;
+   CONFLICTHDLR** sorted;
+   int nconflicthdlrs;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   conflicthdlrs = SCIPgetConflicthdlrs(scip);
+   nconflicthdlrs = SCIPgetNConflicthdlrs(scip);
+
+   /* copy conflicthdlrs array into temporary memory for sorting */
+   CHECK_OKAY( SCIPduplicateBufferArray(scip, &sorted, conflicthdlrs, nconflicthdlrs) );
+
+   /* sort the conflict handlers */
+   SCIPbsortPtr((void**)sorted, nconflicthdlrs, SCIPconflicthdlrComp);
+
+   /* display sorted list of conflict handlers */
+   printf("\n");
+   printf(" conflict handler     priority  description\n");
+   printf(" ----------------     --------  -----------\n");
+   for( i = 0; i < nconflicthdlrs; ++i )
+   {
+      printf(" %-20s ", SCIPconflicthdlrGetName(sorted[i]));
+      if( strlen(SCIPconflicthdlrGetName(sorted[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%8d  ", SCIPconflicthdlrGetPriority(sorted[i]));
+      printf(SCIPconflicthdlrGetDesc(sorted[i]));
       printf("\n");
    }
    printf("\n");
@@ -954,6 +996,15 @@ RETCODE SCIPincludeDialogDefault(
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* display conflict */
+   if( !SCIPdialogHasEntry(submenu, "conflict") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayConflict, NULL,
+                     "conflict", "display conflict handler priorities", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
    /* display conshdlrs */
    if( !SCIPdialogHasEntry(submenu, "conshdlrs") )
    {
@@ -1265,6 +1316,30 @@ RETCODE SCIPincludeDialogDefaultSet(
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
                         SCIPbranchruleGetName(branchrule), SCIPbranchruleGetDesc(branchrule), TRUE, NULL) );
+         CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+         CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* set conflict */
+   if( !SCIPdialogHasEntry(setmenu, "conflict") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                     "conflict", "change parameters for conflict handlers", TRUE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(setmenu, "conflict", &submenu) != 1 )
+      return SCIP_PLUGINNOTFOUND;
+
+   for( i = 0; i < SCIPgetNConflicthdlrs(scip); ++i )
+   {
+      CONFLICTHDLR* conflicthdlr = SCIPgetConflicthdlrs(scip)[i];
+
+      if( !SCIPdialogHasEntry(submenu, SCIPconflicthdlrGetName(conflicthdlr)) )
+      {
+         CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                        SCIPconflicthdlrGetName(conflicthdlr), SCIPconflicthdlrGetDesc(conflicthdlr), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_presol.h,v 1.1 2003/12/01 14:41:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_presol.h,v 1.2 2004/01/15 12:09:41 bzfpfend Exp $"
 
 /**@file   pub_presol.h
  * @brief  public methods for presolvers
@@ -28,9 +28,14 @@
 
 
 #include "def.h"
+#include "type_misc.h"
 #include "type_presol.h"
 
 
+
+/** compares two presolvers w. r. to their priority */
+extern
+DECL_SORTPTRCOMP(SCIPpresolComp);
 
 /** gets user data of presolver */
 extern

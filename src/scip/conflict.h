@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.8 2003/12/01 14:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.9 2004/01/15 12:09:39 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -44,10 +44,6 @@
 /*
  * Conflict Handler
  */
-
-/** compares two conflict handlers w. r. to their priority */
-extern
-DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
 
 /** creates a conflict handler */
 extern

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.2 2003/12/18 13:44:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.3 2004/01/15 12:09:40 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -28,6 +28,7 @@
 
 
 #include "def.h"
+#include "type_misc.h"
 #include "type_cons.h"
 
 #ifdef NDEBUG
@@ -39,6 +40,18 @@
 /*
  * Constraint handler methods
  */
+
+/** compares two constraint handlers w. r. to their separation priority */
+extern
+DECL_SORTPTRCOMP(SCIPconshdlrCompSepa);
+
+/** compares two constraint handlers w. r. to their enforcing priority */
+extern
+DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo);
+
+/** compares two constraint handlers w. r. to their feasibility check priority */
+extern
+DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
 
 /** gets name of constraint handler */
 extern

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.48 2004/01/13 11:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.49 2004/01/15 12:09:41 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -31,7 +31,6 @@
 #include "memory.h"
 #include "type_set.h"
 #include "type_stat.h"
-#include "type_misc.h"
 #include "type_event.h"
 #include "type_lp.h"
 #include "type_var.h"
@@ -48,10 +47,6 @@
 /*
  * Node methods
  */
-
-/** node comparator for best lower bound */
-extern
-DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound);
 
 /** creates a child node of the active node */
 extern

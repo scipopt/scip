@@ -164,7 +164,7 @@ $(OBJDIR)/nodesel.o: src/nodesel.c src/def.h src/type_retcode.h src/message.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_sepa.h \
   src/struct_set.h src/paramset.h src/pub_paramset.h src/tree.h \
-  src/type_misc.h src/type_lp.h src/pub_tree.h src/struct_tree.h \
+  src/type_lp.h src/pub_tree.h src/type_misc.h src/struct_tree.h \
   src/type_lpi.h src/scip.h src/type_prob.h src/type_dialog.h \
   src/pub_branch.h src/pub_conflict.h src/pub_cons.h src/pub_cutpool.h \
   src/type_cutpool.h src/pub_dialog.h src/pub_disp.h src/pub_event.h \

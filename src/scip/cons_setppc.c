@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.28 2003/11/27 17:48:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.29 2004/01/15 12:09:40 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -46,7 +46,7 @@
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
 
 #define CONFLICTHDLR_NAME      "setppc"
-#define CONFLICTHDLR_DESC      "conflict handler for set partitioning / packing / covering constraints"
+#define CONFLICTHDLR_DESC      "conflict handler creating set covering constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
 #ifdef BRANCHLP

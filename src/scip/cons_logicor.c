@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.23 2003/11/27 17:48:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.24 2004/01/15 12:09:39 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -46,7 +46,7 @@
 #define EVENTHDLR_DESC         "bound tighten event handler for logic or constraints"
 
 #define CONFLICTHDLR_NAME      "logicor"
-#define CONFLICTHDLR_DESC      "conflict handler for logic or constraints"
+#define CONFLICTHDLR_DESC      "conflict handler creating logic or constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
 #ifdef BRANCHLP

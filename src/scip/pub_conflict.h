@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_conflict.h,v 1.1 2003/12/01 14:41:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_conflict.h,v 1.2 2004/01/15 12:09:40 bzfpfend Exp $"
 
 /**@file   pub_conflict.h
  * @brief  public methods for conflict analysis handlers
@@ -29,9 +29,14 @@
 
 
 #include "def.h"
+#include "type_misc.h"
 #include "type_conflict.h"
 
 
+
+/** compares two conflict handlers w. r. to their priority */
+extern
+DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
 
 /** gets user data of conflict handler */
 extern
@@ -49,6 +54,12 @@ void SCIPconflicthdlrSetData(
 /** gets name of conflict handler */
 extern
 const char* SCIPconflicthdlrGetName(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
+/** gets description of conflict handler */
+extern
+const char* SCIPconflicthdlrGetDesc(
    CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 

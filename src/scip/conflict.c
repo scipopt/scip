@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.18 2003/12/23 12:13:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.19 2004/01/15 12:09:39 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -369,6 +369,16 @@ const char* SCIPconflicthdlrGetName(
    assert(conflicthdlr != NULL);
 
    return conflicthdlr->name;
+}
+
+/** gets description of conflict handler */
+const char* SCIPconflicthdlrGetDesc(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return conflicthdlr->desc;
 }
 
 /** gets priority of conflict handler */

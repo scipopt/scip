@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.22 2003/12/01 14:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.23 2004/01/15 12:09:41 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -33,17 +33,12 @@
 #include "type_result.h"
 #include "type_set.h"
 #include "type_stat.h"
-#include "type_misc.h"
 #include "type_sepastore.h"
 #include "type_scip.h"
 #include "type_sepa.h"
 #include "pub_sepa.h"
 
 
-
-/** compares two separators w. r. to their priority */
-extern
-DECL_SORTPTRCOMP(SCIPsepaComp);
 
 /** creates a separator */
 extern
