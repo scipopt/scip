@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.16 2004/10/28 14:30:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.17 2004/11/17 14:47:30 bzfpfend Exp $"
 
-/**@file   lp.h
+/**@file   pub_lp.h
  * @brief  public methods for LP management
  * @author Tobias Achterberg
  */

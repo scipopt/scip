@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.7 2004/04/29 15:20:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.8 2004/11/17 14:47:31 bzfpfend Exp $"
 
-/**@file   scipstruct.h
+/**@file   struct_scip.h
  * @brief  SCIP main data structure
  * @author Tobias Achterberg
  */

@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.h,v 1.1 2004/10/29 12:58:36 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.h,v 1.2 2004/11/17 14:47:31 bzfpfend Exp $"
 
-/**@file   sepa_strongcg.c
+/**@file   sepa_strongcg.h
  * @brief  Strong CG Cuts (Letchford & Lodi)
  * @author Kati Wolter
  * @author Tobias Achterberg

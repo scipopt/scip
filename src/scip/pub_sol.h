@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.2 2004/04/27 15:50:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.3 2004/11/17 14:47:31 bzfpfend Exp $"
 
-/**@file   sol.h
+/**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
  * @author Tobias Achterberg
  */

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.45 2004/11/17 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.46 2004/11/17 14:47:31 bzfpfend Exp $"
 
 /**@file   sol.c
- * @brief  methods and datastructures for storing primal CIP solutions
+ * @brief  methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */
 
