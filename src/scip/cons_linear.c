@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.126 2004/10/29 10:38:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.127 2004/11/01 14:51:26 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4341,6 +4341,7 @@ RETCODE preprocessConstraintPairs(
    /* get the constraint to be checked against all prior constraints */
    cons0 = conss[chkind];
    assert(SCIPconsIsActive(cons0));
+   assert(!SCIPconsIsModifiable(cons0));
 
    consdata0 = SCIPconsGetData(cons0);
    assert(consdata0 != NULL);
@@ -4358,14 +4359,13 @@ RETCODE preprocessConstraintPairs(
    diffidx1minus0size = consdata0->nvars;
 
    /* check constraint against all prior constraints */
-   for( c = (consdata0->changed ? 0 : firstchange); c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0);
-        ++c )
+   for( c = (consdata0->changed ? 0 : firstchange); c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0); ++c )
    {
       cons1 = conss[c];
       assert(cons1 != NULL);
 
-      /* ignore inactive constraints */
-      if( !SCIPconsIsActive(cons1) )
+      /* ignore inactive and modifiable constraints */
+      if( !SCIPconsIsActive(cons1) || SCIPconsIsModifiable(cons1) )
          continue;
 
       consdata1 = SCIPconsGetData(cons1);
@@ -4888,7 +4888,7 @@ DECL_CONSPRESOL(consPresolLinear)
       {
          for( c = firstchange; c < nconss; ++c )
          {
-            if( SCIPconsIsActive(conss[c]) )
+            if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
                CHECK_OKAY( preprocessConstraintPairs(scip, conss, firstchange, c, conshdlrdata->maxaggrnormscale,
                      nfixedvars, naggrvars, ndelconss, nupgdconss, nchgsides, nchgcoefs, result) );
