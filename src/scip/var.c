@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.145 2005/02/08 16:13:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.146 2005/02/08 16:56:37 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5371,19 +5371,29 @@ RETCODE SCIPvarAddImplic(
    case SCIP_VARSTATUS_LOOSE:
       CHECK_OKAY( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
          
-      /* add implication to the implications list */
+      /* check for conflicting and redundant implication */
       if( (implbound == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.ub, implbound))
          || (implbound == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.lb, implbound)) )
          *conflict = TRUE;
-      else if( implvar->varstatus != SCIP_VARSTATUS_FIXED )
+      else if( (implbound == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.lb, implbound))
+         || (implbound == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.ub, implbound)) )
       {
-         assert(var != implvar);
-         CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, varfixing, implvar, impltype, implbound, conflict) );
+         if( var == implvar )
+         {
+            /* variable implies itself: x == varfixing  =>  x == (impltype == SCIP_BOUNDTYPE_LOWER) */
+            assert(SCIPsetIsEQ(set, implbound, 0.0) || SCIPsetIsEQ(set, implbound, 1.0));
+            *conflict = ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
+         }
+         else if( implvar->varstatus != SCIP_VARSTATUS_FIXED )
+         {
+            /* add implication to the implications list */
+            CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, varfixing, implvar, impltype, implbound, conflict) );
+         
+            debugMessage("added implication: <%s> %s  ==>  <%s> %s %g\n", 
+               SCIPvarGetName(var), varfixing == FALSE ? "<= 0" : ">= 1",
+               SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
+         }
       }
-
-      debugMessage("implication added: "); 
-      debugMessage("<%s> %s  ==>  <%s> %s %g\n", SCIPvarGetName(var), varfixing == FALSE ? "<= 0" : ">= 1",
-         SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
       break;
       
    case SCIP_VARSTATUS_FIXED:
