@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_tree.h,v 1.9 2005/01/21 09:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_tree.h,v 1.10 2005/01/25 09:59:31 bzfpfend Exp $"
 
 /**@file   type_tree.h
  * @brief  type definitions for branch and bound tree
@@ -29,16 +29,16 @@
 
 enum NodeType
 {
-   SCIP_NODETYPE_FOCUSNODE     =  0,    /**< the focus node, whose data is stored in the tree data structure */
-   SCIP_NODETYPE_PROBINGNODE   =  1,    /**< temporary child node of the focus or refocused node used for probing */
-   SCIP_NODETYPE_SIBLING       =  2,    /**< unsolved sibling of the focus node */
-   SCIP_NODETYPE_CHILD         =  3,    /**< unsolved child of the focus node */
-   SCIP_NODETYPE_LEAF          =  4,    /**< unsolved leaf of the tree, stored in the tree's queue */
-   SCIP_NODETYPE_DEADEND       =  5,    /**< temporary type of focus node, if it was solved completely */
-   SCIP_NODETYPE_JUNCTION      =  6,    /**< fork without LP solution */
-   SCIP_NODETYPE_FORK          =  7,    /**< fork with solved LP and added rows and columns */
-   SCIP_NODETYPE_SUBROOT       =  8,    /**< fork with solved LP and arbitrarily changed rows and columns */
-   SCIP_NODETYPE_REFOCUSNODE   =  9     /**< junction, fork, or subroot that was refocused for domain propagation */
+   SCIP_NODETYPE_FOCUSNODE      =  0,   /**< the focus node, whose data is stored in the tree data structure */
+   SCIP_NODETYPE_PROBINGNODE    =  1,   /**< temporary child node of the focus or refocused node used for probing */
+   SCIP_NODETYPE_SIBLING        =  2,   /**< unsolved sibling of the focus node */
+   SCIP_NODETYPE_CHILD          =  3,   /**< unsolved child of the focus node */
+   SCIP_NODETYPE_LEAF           =  4,   /**< unsolved leaf of the tree, stored in the tree's queue */
+   SCIP_NODETYPE_DEADEND        =  5,   /**< temporary type of focus node, if it was solved completely */
+   SCIP_NODETYPE_JUNCTION       =  6,   /**< fork without LP solution */
+   SCIP_NODETYPE_FORK           =  7,   /**< fork with solved LP and added rows and columns */
+   SCIP_NODETYPE_SUBROOT        =  8,   /**< fork with solved LP and arbitrarily changed rows and columns */
+   SCIP_NODETYPE_REFOCUSNODE    =  9    /**< junction, fork, or subroot that was refocused for domain propagation */
 };
 typedef enum NodeType NODETYPE;         /**< type of node */
 

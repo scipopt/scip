@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.79 2005/01/21 09:16:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.80 2005/01/25 09:59:26 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1021,8 +1021,6 @@ RETCODE propagateCons(
    assert(redundant != NULL);
    assert(nfixedvars != NULL);
 
-   debugMessage("propagating knapsack constraint <%s>\n", SCIPconsGetName(cons));
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -1032,6 +1030,8 @@ RETCODE propagateCons(
    /* check, if constraint is already propagated */
    if( consdata->propagated )
       return SCIP_OKAY;
+
+   debugMessage("propagating knapsack constraint <%s>\n", SCIPconsGetName(cons));
 
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
    CHECK_OKAY( SCIPincConsAge(scip, cons) );
@@ -1046,6 +1046,8 @@ RETCODE propagateCons(
       /* check, if weights of fixed variables already exceeds knapsack capacity */
       if( consdata->capacity < onesweightsum )
       {
+         debugMessage(" -> cutoff - fixed weight: %lld, capacity: %lld\n", onesweightsum, consdata->capacity);
+            
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
 
@@ -1080,6 +1082,7 @@ RETCODE propagateCons(
             {
                if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
                {
+                  debugMessage(" -> fixing variable <%s> to 0\n", SCIPvarGetName(consdata->vars[i]));
                   CHECK_OKAY( SCIPresetConsAge(scip, cons) );
                   CHECK_OKAY( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
                   assert(!infeasible);
@@ -1099,7 +1102,7 @@ RETCODE propagateCons(
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
    if( consdata->weightsum - zerosweightsum <= consdata->capacity )
    {
-      debugMessage("knapsack constraint <%s> is redundant: weightsum=%lld, zerosweightsum=%lld, capacity=%lld\n",
+      debugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%lld, zerosweightsum=%lld, capacity=%lld\n",
          SCIPconsGetName(cons), consdata->weightsum, zerosweightsum, consdata->capacity);
       CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       *redundant = TRUE;
@@ -1707,7 +1710,6 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
    *result = SCIP_FEASIBLE;
 
    debugMessage("knapsack enforcement of %d/%d constraints\n", nusefulconss, nconss);
-
 
    /* get maximal number of cuts per round */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.133 2005/01/21 09:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.134 2005/01/25 09:59:32 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1027,7 +1027,6 @@ RETCODE SCIPdomchgApply(
    int i;
    int j;
 
-   assert(lp != NULL);
    assert(cutoff != NULL);
 
    *cutoff = FALSE;
@@ -1097,8 +1096,6 @@ RETCODE SCIPdomchgUndo(
 {
    int i;
 
-   assert(lp != NULL);
-
    debugMessage("undoing domain changes at %p\n", domchg);
    if( domchg == NULL )
       return SCIP_OKAY;
@@ -1114,8 +1111,7 @@ RETCODE SCIPdomchgUndo(
    /* undo bound changes */
    for( i = domchg->domchgbound.nboundchgs-1; i >= 0; --i )
    {
-      CHECK_OKAY( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], memhdr, set, stat, lp,
-                     branchcand, eventqueue) );
+      CHECK_OKAY( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], memhdr, set, stat, lp, branchcand, eventqueue) );
    }
    debugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.19 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.20 2005/01/25 09:59:30 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -116,7 +116,7 @@ struct Tree
    NODE*            root;               /**< root node of the tree */
    NODEPQ*          leaves;             /**< leaves of the tree */
    NODE**           path;               /**< array of nodes storing the active path from root to current node, which
-                                         *   is usually the focus or the probing node; in case of a cut off, the path
+                                         *   is usually the focus or a probing node; in case of a cut off, the path
                                          *   may already end earlier */
    NODE*            focusnode;          /**< focus node: the node that is stored together with its children and
                                          *   siblings in the tree data structure; the focus node is the currently
@@ -124,7 +124,7 @@ struct Tree
                                          *   may be cut off and the active path stops at the cut off node */
    NODE*            focuslpfork;        /**< LP defining fork/subroot of the focus node */
    NODE*            focussubroot;       /**< subroot of the focus node's sub tree */
-   NODE*            probingnode;        /**< temporary probing node, or NULL */
+   NODE*            probingroot;        /**< root node of the current probing path, or NULL */
    NODE**           children;           /**< array with children of the focus node */
    NODE**           siblings;           /**< array with siblings of the focus node */
    Real*            childrenprio;       /**< array with node selection priorities of children */

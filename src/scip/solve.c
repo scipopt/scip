@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.159 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.160 2005/01/25 09:59:29 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1699,24 +1699,21 @@ RETCODE solveNode(
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(prob, set, SCIPnodeGetLowerbound(focusnode)),
          pseudoobjval, SCIPprobExternObjval(prob, set, pseudoobjval));
 
-      /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
-      if( pseudoobjval >= primal->cutoffbound )
-      {
-         assert(SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound);
-         CHECK_OKAY( SCIPconflictAnalyzePseudo(conflict, memhdr, set, stat, prob, tree, lp, NULL) );
-
-         /* check, if the path was cutoff */
-         *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
-      }
-      
       /* check for infeasible node by bounding */
-      if( SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound
-         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
+      if( !(*cutoff)
+         && (SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound
+            || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))) )
       {
          debugMessage("node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
          SCIPnodeUpdateLowerbound(focusnode, stat, primal->cutoffbound);
          *cutoff = TRUE;
+
+         /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
+         if( pseudoobjval >= primal->cutoffbound )
+         {
+            CHECK_OKAY( SCIPconflictAnalyzePseudo(conflict, memhdr, set, stat, prob, tree, lp, NULL) );
+         }
       }
 
       /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */

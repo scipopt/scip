@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.108 2005/01/21 09:16:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.109 2005/01/25 09:59:25 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1487,7 +1487,7 @@ RETCODE SCIPconshdlrCreate(
 
    sprintf(paramname, "constraints/%s/propfreq", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
-         "frequency for propagating domains (-1: never, 0: only in root node)",
+         "frequency for propagating domains (-1: never, 0: only in presolving)",
          &(*conshdlr)->propfreq, propfreq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "constraints/%s/eagerfreq", name);

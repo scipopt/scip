@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.244 2005/01/21 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.245 2005/01/25 09:59:27 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3389,6 +3389,10 @@ RETCODE presolve(
    /* start presolving timer */
    SCIPclockStart(scip->stat->presolvingtime, scip->set);
 
+   /* create temporary presolving root node */
+   CHECK_OKAY( SCIPtreeCreatePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+         scip->primal, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue) );
+
    nrounds = 0;
    nfixedvars = 0;
    naggrvars = 0;
@@ -3548,6 +3552,10 @@ RETCODE presolve(
    CHECK_OKAY( SCIPprobExitPresolve(scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
          scip->branchcand, scip->eventqueue, infeasible) );
  
+   /* free temporary presolving root node */
+   CHECK_OKAY( SCIPtreeFreePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+         scip->primal, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue) );
+
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
    
@@ -8342,6 +8350,72 @@ RETCODE SCIPstartProbing(
    return SCIP_OKAY;
 }
 
+/** creates a new probing sub node, whose changes can be undone by backtracking to a higher node in the probing path
+ *  with a call to SCIPbacktrackProbing();
+ *  using a sub node for each set of probing bound changes can improve conflict analysis
+ */
+RETCODE SCIPnewProbingNode(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPnewProbingNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPtreeCreateProbingNode(scip->tree, scip->mem->solvemem, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the current probing depth, i.e. the number of probing sub nodes existing in the probing path */
+int SCIPgetProbingDepth(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetProbingDepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      abort();
+   }
+
+   return SCIPtreeGetProbingDepth(scip->tree);
+}
+
+/** undoes all changes to the problem applied in probing up to the given probing depth;
+ *  the changes of the probing node of the given probing depth are the last ones that remain active;
+ *  changes that were applied before calling SCIPnewProbingNode() cannot be undone
+ */
+RETCODE SCIPbacktrackProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPbacktrackProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /*???????????????????????????????*/
+   /* remember: reset tree->cutoffdepth and tree->repropdepth in case they are in the backtracked part of the
+    * probing path ?????????????????????????
+    */
+   errorMessage("SCIPbacktrackProbing() not implemented yet\n");
+   return SCIP_INVALIDCALL;
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /*???????????????????????????????*/
+
+   return SCIP_OKAY;
+}
+
 /** quits probing and resets bounds and constraints to the focus node's environment */
 RETCODE SCIPendProbing(
    SCIP*            scip                /**< SCIP data structure */
@@ -8362,7 +8436,7 @@ RETCODE SCIPendProbing(
    return SCIP_OKAY;
 }
 
-/** injects a change of variable's lower bound into probing node; the same can also be achieved with a call to
+/** injects a change of variable's lower bound into current probing node; the same can also be achieved with a call to
  *  SCIPchgVarLb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
  */
 RETCODE SCIPchgVarLbProbing(
@@ -8378,14 +8452,15 @@ RETCODE SCIPchgVarLbProbing(
       errorMessage("not in probing mode\n");
       return SCIP_INVALIDCALL;
    }
+   assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
-   CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+   CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
          scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, TRUE) );
 
    return SCIP_OKAY;
 }
 
-/** injects a change of variable's upper bound into probing node; the same can also be achieved with a call to
+/** injects a change of variable's upper bound into current probing node; the same can also be achieved with a call to
  *  SCIPchgVarUb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
  */
 RETCODE SCIPchgVarUbProbing(
@@ -8401,16 +8476,17 @@ RETCODE SCIPchgVarUbProbing(
       errorMessage("not in probing mode\n");
       return SCIP_INVALIDCALL;
    }
+   assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
-   CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+   CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
          scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, TRUE) );
 
    return SCIP_OKAY;
 }
 
-/** injects a change of variable's bounds into probing node to fix the variable to the specified value; the same can also
- *  be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated like deductions instead
- *  of branching decisions
+/** injects a change of variable's bounds into current probing node to fix the variable to the specified value;
+ *  the same can also be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated
+ *  like deductions instead of branching decisions
  */
 extern
 RETCODE SCIPfixVarProbing(
@@ -8429,17 +8505,18 @@ RETCODE SCIPfixVarProbing(
       errorMessage("not in probing mode\n");
       return SCIP_INVALIDCALL;
    }
+   assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    if( SCIPsetIsGT(scip->set, fixedval, lb) )
    {
-      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
             scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_LOWER, TRUE) );
    }
    if( SCIPsetIsLT(scip->set, fixedval, ub) )
    {
-      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
             scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_UPPER, TRUE) );
    }
 

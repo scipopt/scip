@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.196 2005/01/21 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.197 2005/01/25 09:59:28 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3209,13 +3209,38 @@ RETCODE SCIPstartProbing(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** creates a new probing sub node, whose changes can be undone by backtracking to a higher node in the probing path
+ *  with a call to SCIPbacktrackProbing();
+ *  using a sub node for each set of probing bound changes can improve conflict analysis
+ */
+extern
+RETCODE SCIPnewProbingNode(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the current probing depth, i.e. the number of probing sub nodes existing in the probing path */
+extern
+int SCIPgetProbingDepth(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** undoes all changes to the problem applied in probing up to the given probing depth;
+ *  the changes of the probing node of the given probing depth are the last ones that remain active;
+ *  changes that were applied before calling SCIPnewProbingNode() cannot be undone
+ */
+extern
+RETCODE SCIPbacktrackProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
+   );
+
 /** quits probing and resets bounds and constraints to the focus node's environment */
 extern
 RETCODE SCIPendProbing(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** injects a change of variable's lower bound into probing node; the same can also be achieved with a call to
+/** injects a change of variable's lower bound into current probing node; the same can also be achieved with a call to
  *  SCIPchgVarLb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
  */
 extern
@@ -3225,7 +3250,7 @@ RETCODE SCIPchgVarLbProbing(
    Real             newbound            /**< new value for bound */
    );
 
-/** injects a change of variable's upper bound into probing node; the same can also be achieved with a call to
+/** injects a change of variable's upper bound into current probing node; the same can also be achieved with a call to
  *  SCIPchgVarUb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
  */
 extern
@@ -3235,9 +3260,9 @@ RETCODE SCIPchgVarUbProbing(
    Real             newbound            /**< new value for bound */
    );
 
-/** injects a change of variable's bounds into probing node to fix the variable to the specified value; the same can also
- *  be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated like deductions instead
- *  of branching decisions
+/** injects a change of variable's bounds into current probing node to fix the variable to the specified value;
+ *  the same can also be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated
+ *  like deductions instead of branching decisions
  */
 extern
 RETCODE SCIPfixVarProbing(

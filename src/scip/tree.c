@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.129 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.130 2005/01/25 09:59:30 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -524,8 +524,8 @@ void treeRemoveChild(
    tree->nchildren--;
 }
 
-/** makes node a child of the given parent node, which must be the focus node; if the child is the probing node,
- *  the parent node can also be a refocused node
+/** makes node a child of the given parent node, which must be the focus node; if the child is a probing node,
+ *  the parent node can also be a refocused node or a probing node
  */
 static
 RETCODE nodeAssignParent(
@@ -547,9 +547,12 @@ RETCODE nodeAssignParent(
    assert(set != NULL);
    assert(tree != NULL);
    assert(SCIPtreeIsPathComplete(tree));
-   assert(tree->focusnode == parent);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] == parent);
+   assert(parent == tree->focusnode || SCIPnodeGetType(parent) == SCIP_NODETYPE_PROBINGNODE);
    assert(parent == NULL || SCIPnodeGetType(parent) == SCIP_NODETYPE_FOCUSNODE
-      || (SCIPnodeGetType(parent) == SCIP_NODETYPE_REFOCUSNODE && SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE));
+      || (SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE
+         && (SCIPnodeGetType(parent) == SCIP_NODETYPE_REFOCUSNODE
+            || SCIPnodeGetType(parent) == SCIP_NODETYPE_PROBINGNODE)));
 
    /* link node to parent */
    node->parent = parent;
@@ -588,7 +591,6 @@ RETCODE nodeReleaseParent(
    )
 {
    NODE* parent;
-   Bool hasChildren = TRUE;
 
    assert(node != NULL);
    assert(memhdr != NULL);
@@ -599,6 +601,9 @@ RETCODE nodeReleaseParent(
    parent = node->parent;
    if( parent != NULL )
    {
+      Bool freeParent;
+
+      freeParent = FALSE;
       switch( SCIPnodeGetType(parent) )
       {
       case SCIP_NODETYPE_FOCUSNODE:
@@ -606,11 +611,12 @@ RETCODE nodeReleaseParent(
          assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
          if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
             treeRemoveChild(tree, node);
-         hasChildren = TRUE; /* don't kill the focus node at this point */
+         freeParent = FALSE; /* don't kill the focus node at this point */
          break;
       case SCIP_NODETYPE_PROBINGNODE:
-         errorMessage("probing node cannot be a parent node\n");
-         return SCIP_INVALIDDATA;
+         assert(SCIPtreeProbing(tree));
+         freeParent = FALSE; /* probing nodes have to be freed individually */
+         break;
       case SCIP_NODETYPE_SIBLING:
          errorMessage("sibling cannot be a parent node\n");
          return SCIP_INVALIDDATA;
@@ -626,35 +632,36 @@ RETCODE nodeReleaseParent(
       case SCIP_NODETYPE_JUNCTION:
          assert(parent->data.junction.nchildren > 0);
          parent->data.junction.nchildren--;
-         hasChildren = (parent->data.junction.nchildren > 0);
+         freeParent = (parent->data.junction.nchildren == 0); /* free parent if it has no more children */
          break;
       case SCIP_NODETYPE_FORK:
          assert(parent->data.fork != NULL);
          assert(parent->data.fork->nchildren > 0);
          parent->data.fork->nchildren--;
-         hasChildren = (parent->data.fork->nchildren > 0);
+         freeParent = (parent->data.fork->nchildren == 0); /* free parent if it has no more children */
          break;
       case SCIP_NODETYPE_SUBROOT:
          assert(parent->data.subroot != NULL);
          assert(parent->data.subroot->nchildren > 0);
          parent->data.subroot->nchildren--;
-         hasChildren = (parent->data.subroot->nchildren > 0);
+         freeParent = (parent->data.subroot->nchildren == 0); /* free parent if it has no more children */
          break;
       case SCIP_NODETYPE_REFOCUSNODE:
-         /* the only possible child a refocused node can have in its refocus stage is the probing node;
+         /* the only possible child a refocused node can have in its refocus state is the probing root node;
           * we don't want to free the refocused node, because we first have to convert it back to its original
           * type (where it possibly has children)
           */
          assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
-         hasChildren = TRUE;
+         assert(!SCIPtreeProbing(tree));
+         freeParent = FALSE;
          break;
       default:
          errorMessage("unknown node type\n");
          return SCIP_INVALIDDATA;
       }
 
-      /* free parent, if it has no more children left and is not on the current active path */
-      if( !hasChildren && !parent->active )
+      /* free parent, if it is not on the current active path */
+      if( freeParent && !parent->active )
       {
          CHECK_OKAY( SCIPnodeFree(&node->parent, memhdr, set, tree, lp) );
       }
@@ -730,40 +737,6 @@ RETCODE SCIPnodeCreateChild(
    return SCIP_OKAY;
 }
 
-/** creates a probing child node of the focus node or the current refocused node */
-static
-RETCODE nodeCreateProbingNode(
-   NODE**           node,               /**< pointer to node data structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(node != NULL);
-   assert(memhdr != NULL);
-   assert(set != NULL);
-   assert(tree != NULL);
-   assert(SCIPtreeIsPathComplete(tree));
-   assert(tree->pathlen > 0);
-   assert(tree->focusnode != NULL);
-   assert(tree->focusnode == tree->path[tree->pathlen-1]);
-   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE
-      || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE);
-
-   /* create the node data structure */
-   CHECK_OKAY( nodeCreate(node, memhdr, set) );
-
-   /* mark node to be a probing child node */
-   (*node)->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
-
-   /* make focus node the parent of the new probing child node */
-   CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->focusnode, 0.0) );
-
-   debugMessage("created probing child node %p at depth %d\n", *node, (*node)->depth);
-
-   return SCIP_OKAY;
-}
-
 /** frees node */
 RETCODE SCIPnodeFree(
    NODE**           node,               /**< node data */
@@ -788,11 +761,13 @@ RETCODE SCIPnodeFree(
    {
    case SCIP_NODETYPE_FOCUSNODE:
       assert(tree->focusnode == *node);
-      assert(tree->probingnode == NULL);
+      assert(!SCIPtreeProbing(tree));
       errorMessage("cannot free focus node - has to be converted into a dead end first\n");
       return SCIP_INVALIDDATA;
    case SCIP_NODETYPE_PROBINGNODE:
-      assert(tree->probingnode == *node);
+      assert(SCIPtreeProbing(tree));
+      assert(SCIPnodeGetDepth(tree->probingroot) <= SCIPnodeGetDepth(*node));
+      assert(SCIPnodeGetDepth(*node) > 0);
       break;
    case SCIP_NODETYPE_SIBLING:
       assert((*node)->data.sibling.arraypos >= 0);
@@ -841,12 +816,19 @@ RETCODE SCIPnodeFree(
    }
 
    /* check, if the node to be freed is the root node */
-   isroot = ((*node)->depth == 0);
+   isroot = (SCIPnodeGetDepth(*node) == 0);
 
    /* free common data */
    CHECK_OKAY( SCIPconssetchgFree(&(*node)->conssetchg, memhdr, set) );
    CHECK_OKAY( SCIPdomchgFree(&(*node)->domchg, memhdr, set) );
    CHECK_OKAY( nodeReleaseParent(*node, memhdr, set, tree, lp) );
+
+   /* check, if the node is the current probing root */
+   if( *node == tree->probingroot )
+   {
+      assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_PROBINGNODE);
+      tree->probingroot = NULL;
+   }
 
    freeBlockMemory(memhdr, node);
 
@@ -1526,11 +1508,10 @@ void treeUpdatePathLPSize(
       switch( SCIPnodeGetType(node) )
       {
       case SCIP_NODETYPE_FOCUSNODE:
-         assert(i == tree->pathlen-1
-            || (i == tree->pathlen-2 && SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE));
+         assert(i == tree->pathlen-1 || SCIPtreeProbing(tree));
          break;
       case SCIP_NODETYPE_PROBINGNODE:
-         assert(i == tree->pathlen-1);
+         assert(SCIPtreeProbing(tree));
          break;
       case SCIP_NODETYPE_SIBLING:
          errorMessage("sibling cannot be in the active path\n");
@@ -2021,11 +2002,10 @@ void treeCheckPath(
          break;
       case SCIP_NODETYPE_FOCUSNODE:
       case SCIP_NODETYPE_REFOCUSNODE:
-         assert(d == tree->pathlen-1
-            || (d == tree->pathlen-2 && SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE));
+         assert(d == tree->pathlen-1 || SCIPtreeProbing(tree));
          break;
       case SCIP_NODETYPE_PROBINGNODE:
-         assert(d == tree->pathlen-1);
+         assert(SCIPtreeProbing(tree));
          break;
       default:
          errorMessage("node at depth %d on active path has to be of type FORK, SUBROOT, FOCUSNODE, REFOCUSNODE, or PROBINGNODE, but is %d\n",
@@ -2266,7 +2246,7 @@ RETCODE focusnodeToDeadend(
 {
    assert(memhdr != NULL);
    assert(tree != NULL);
-   assert(tree->probingnode == NULL);
+   assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode != NULL);
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren == 0);
@@ -2294,7 +2274,7 @@ RETCODE focusnodeToJunction(
    )
 {
    assert(tree != NULL);
-   assert(tree->probingnode == NULL);
+   assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode != NULL);
    assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
@@ -2333,7 +2313,7 @@ RETCODE focusnodeToFork(
 
    assert(memhdr != NULL);
    assert(tree != NULL);
-   assert(tree->probingnode == NULL);
+   assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode != NULL);
    assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
@@ -2428,7 +2408,7 @@ RETCODE focusnodeToSubroot(
 
    assert(memhdr != NULL);
    assert(tree != NULL);
-   assert(tree->probingnode == NULL);
+   assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode != NULL);
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
@@ -2621,7 +2601,7 @@ RETCODE SCIPnodeFocus(
    assert(*node == NULL || !(*node)->active);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert(tree->probingnode == NULL);
+   assert(!SCIPtreeProbing(tree));
    assert(cutoff != NULL);
 
    debugMessage("focussing node %p of type %d in depth %d\n",
@@ -2912,7 +2892,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->focussubroot = NULL;
    (*tree)->children = NULL;
    (*tree)->siblings = NULL;
-   (*tree)->probingnode = NULL;
+   (*tree)->probingroot = NULL;
    (*tree)->childrenprio = NULL;
    (*tree)->siblingsprio = NULL;
    (*tree)->pathnlpcols = NULL;
@@ -2948,7 +2928,7 @@ RETCODE SCIPtreeFree(
    assert((*tree)->nchildren == 0);
    assert((*tree)->nsiblings == 0);
    assert((*tree)->focusnode == NULL);
-   assert((*tree)->probingnode == NULL);
+   assert(!SCIPtreeProbing(*tree));
 
    debugMessage("free tree\n");
 
@@ -2981,7 +2961,7 @@ RETCODE SCIPtreeClear(
    assert(tree->nchildren == 0);
    assert(tree->nsiblings == 0);
    assert(tree->focusnode == NULL);
-   assert(tree->probingnode == NULL);
+   assert(!SCIPtreeProbing(tree));
 
    debugMessage("clearing tree\n");
 
@@ -3019,7 +2999,7 @@ RETCODE SCIPtreeCreateRoot(
    assert(tree->nsiblings == 0);
    assert(tree->root == NULL);
    assert(tree->focusnode == NULL);
-   assert(tree->probingnode == NULL);
+   assert(!SCIPtreeProbing(tree));
 
    /* create root node */
    CHECK_OKAY( SCIPnodeCreateChild(&tree->root, memhdr, set, stat, tree, 0.0) );
@@ -3044,6 +3024,78 @@ RETCODE SCIPtreeCreateRoot(
    /* move root to the queue, convert it to LEAF */
    CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->children, &tree->nchildren, NULL, 
          SCIPsetInfinity(set)) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a temporary presolving root node of the tree and installs it as focus node */
+RETCODE SCIPtreeCreatePresolvingRoot(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   Bool cutoff;
+
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
+   assert(tree->nsiblings == 0);
+   assert(tree->root == NULL);
+   assert(tree->focusnode == NULL);
+   assert(!SCIPtreeProbing(tree));
+
+   /* create temporary presolving root node */
+   CHECK_OKAY( SCIPtreeCreateRoot(tree, memhdr, set, stat, lp) );
+   assert(tree->root != NULL);
+
+   /* install the temporary root node as focus node */
+   CHECK_OKAY( SCIPnodeFocus(&tree->root, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventfilter, eventqueue,
+         &cutoff) );
+   assert(!cutoff);
+
+   return SCIP_OKAY;
+}
+
+/** frees the temporary presolving root and resets tree data structure */
+RETCODE SCIPtreeFreePresolvingRoot(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   NODE* node;
+   Bool cutoff;
+
+   assert(tree != NULL);
+   assert(tree->root != NULL);
+   assert(tree->focusnode == tree->root);
+   assert(tree->pathlen == 1);
+
+   /* unfocus the temporary root node */
+   node = NULL;
+   CHECK_OKAY( SCIPnodeFocus(&node, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventfilter, eventqueue,
+         &cutoff) );
+   assert(!cutoff);
+   assert(tree->root == NULL);
+   assert(tree->focusnode == NULL);
+   assert(tree->pathlen == 0);
+
+   /** reset tree data structure */
+   CHECK_OKAY( SCIPtreeClear(tree, memhdr, set, lp) );
 
    return SCIP_OKAY;
 }
@@ -3285,35 +3337,58 @@ RETCODE SCIPtreeBranchVar(
    return SCIP_OKAY;
 }
 
-/** switches to probing mode */
-RETCODE SCIPtreeStartProbing(
+/** creates a probing child node of the current node, which must be the focus node, the current refocused node,
+ *  or another probing node; if the current node is the focus or a refocused node, the created probing node is
+ *  installed as probing root node
+ */
+static
+RETCODE treeCreateProbingNode(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   LP*              lp                  /**< current LP data */
+   SET*             set                 /**< global SCIP settings */
    )
 {
+   NODE* currentnode;
    NODE* node;
 
    assert(tree != NULL);
-   assert(tree->probingnode == NULL);
-   assert(tree->focusnode != NULL);
-   assert(tree->pathlen >= 1);
-   assert(tree->path[tree->pathlen-1] == tree->focusnode);
-   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
-   assert(lp != NULL);
+   assert(SCIPtreeIsPathComplete(tree));
+   assert(tree->pathlen > 0);
+   assert(memhdr != NULL);
+   assert(set != NULL);
 
-   debugMessage("probing started in depth %d (LP flushed: %d, solstat: %d)\n",
-      tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));
+   /* get the current node */
+   currentnode = SCIPtreeGetCurrentNode(tree);
+   assert(SCIPnodeGetType(currentnode) == SCIP_NODETYPE_FOCUSNODE
+      || SCIPnodeGetType(currentnode) == SCIP_NODETYPE_REFOCUSNODE
+      || SCIPnodeGetType(currentnode) == SCIP_NODETYPE_PROBINGNODE);
+   assert((SCIPnodeGetType(currentnode) == SCIP_NODETYPE_PROBINGNODE) == SCIPtreeProbing(tree));
 
-   /* remember, whether the LP was flushed */
-   tree->probinglpflushed = lp->flushed;
-
-   /* create temporary node for probing */
-   CHECK_OKAY( nodeCreateProbingNode(&node, memhdr, set, tree) );
+   /* create the node data structure */
+   CHECK_OKAY( nodeCreate(&node, memhdr, set) );
    assert(node != NULL);
-   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+
+   /* mark node to be a probing node */
+   node->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
+
+   /* make the current node the parent of the new probing node */
+   CHECK_OKAY( nodeAssignParent(node, memhdr, set, tree, currentnode, 0.0) );
    assert(SCIPnodeGetDepth(node) == tree->pathlen);
+
+   /* check, if the node is the probing root node */
+   if( tree->probingroot == NULL )
+   {
+      tree->probingroot = node;
+      debugMessage("created probing root node %p at depth %d\n", node, SCIPnodeGetDepth(node));
+   }
+   else
+   {
+      assert(SCIPnodeGetType(tree->probingroot) == SCIP_NODETYPE_PROBINGNODE);
+      assert(SCIPnodeGetDepth(tree->probingroot) < SCIPnodeGetDepth(node));
+
+      debugMessage("created probing child node %p at depth %d, probing depth %d\n", 
+         node, SCIPnodeGetDepth(node), SCIPnodeGetDepth(node) - SCIPnodeGetDepth(tree->probingroot));
+   }
 
    /* create the new active path */
    CHECK_OKAY( treeEnsurePathMem(tree, set, tree->pathlen+1) );
@@ -3324,14 +3399,54 @@ RETCODE SCIPtreeStartProbing(
    /* count the new LP sizes of the path */
    treeUpdatePathLPSize(tree, tree->pathlen-1);
 
-   /* install the probing node */
-   tree->probingnode = node;
+   return SCIP_OKAY;
+}
+
+/** switches to probing mode and creates a probing root */
+RETCODE SCIPtreeStartProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(tree != NULL);
+   assert(!SCIPtreeProbing(tree));
+   assert(lp != NULL);
+
+   debugMessage("probing started in depth %d (LP flushed: %d, solstat: %d), probing root in depth %d\n",
+      tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp), tree->pathlen);
+
+   /* remember, whether the LP was flushed */
+   tree->probinglpflushed = lp->flushed;
+
+   /* create temporary probing root node */
+   CHECK_OKAY( treeCreateProbingNode(tree, memhdr, set) );
+   assert(SCIPtreeProbing(tree));
 
    return SCIP_OKAY;
 }
 
-/** switches back from probing to normal operation mode, restores bounds of all variables and restores active constraints
- *  arrays of focus node
+/** creates a new probing child node in the probing path */
+RETCODE SCIPtreeCreateProbingNode(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(SCIPtreeProbing(tree));
+
+   debugMessage("new probing child in depth %d (probing depth: %d)\n",
+      tree->pathlen, tree->pathlen-1 - SCIPnodeGetDepth(tree->probingroot));
+
+   /* create temporary probing root node */
+   CHECK_OKAY( treeCreateProbingNode(tree, memhdr, set) );
+
+   return SCIP_OKAY;
+}
+
+/** switches back from probing to normal operation mode, frees all nodes on the probing path, restores bounds of all
+ *  variables and restores active constraints arrays of focus node
  */
 RETCODE SCIPtreeEndProbing(
    TREE*            tree,               /**< branch and bound tree */
@@ -3344,26 +3459,37 @@ RETCODE SCIPtreeEndProbing(
    )
 {
    assert(tree != NULL);
-   assert(tree->probingnode != NULL);
+   assert(SCIPtreeProbing(tree));
+   assert(tree->probingroot != NULL);
    assert(tree->focusnode != NULL);
-   assert(tree->probingnode->parent == tree->focusnode);
-   assert(SCIPnodeGetDepth(tree->probingnode) == SCIPnodeGetDepth(tree->focusnode)+1);
+   assert(SCIPnodeGetType(tree->probingroot) == SCIP_NODETYPE_PROBINGNODE);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE
+      || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE);
+   assert(tree->probingroot->parent == tree->focusnode);
+   assert(SCIPnodeGetDepth(tree->probingroot) == SCIPnodeGetDepth(tree->focusnode)+1);
    assert(tree->pathlen >= 2);
-   assert(tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->path[tree->pathlen-2] == tree->focusnode);
-   assert(SCIPnodeGetType(tree->probingnode) == SCIP_NODETYPE_PROBINGNODE);
-   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
 
-   /* undo the domain and constraint set changes of the temporary probing node */
-   CHECK_OKAY( nodeDeactivate(tree->probingnode, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+   /* undo the domain and constraint set changes of the temporary probing nodes and free the probing nodes */
+   while( SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE )
+   {
+      assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
+      assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
 
-   /* remove the probing node from the active path */
-   tree->pathlen--;
-   assert(tree->pathlen == tree->focusnode->depth+1);
+      /* undo bound changes by deactivating the probing node */
+      CHECK_OKAY( nodeDeactivate(tree->path[tree->pathlen-1], memhdr, set, stat, tree, lp, branchcand, eventqueue) );
 
-   /* free the probing node */
-   CHECK_OKAY( SCIPnodeFree(&tree->probingnode, memhdr, set, tree, lp) );
-   assert(tree->probingnode == NULL);
+      /* free the probing node */
+      CHECK_OKAY( SCIPnodeFree(&tree->path[tree->pathlen-1], memhdr, set, tree, lp) );
+      tree->pathlen--;
+   }
+   assert(SCIPtreeGetCurrentNode(tree) == tree->focusnode);
+
+   /* if the highest cutoff or repropagation depth is inside the probing path, reset them to infinity */
+   if( tree->cutoffdepth >= tree->pathlen )
+      tree->cutoffdepth = INT_MAX;
+   if( tree->repropdepth >= tree->pathlen )
+      tree->repropdepth = INT_MAX;
 
    /* there are no LP changes allowed in probing (all bound changes are reset), s.t. the LP is still flushed, if
     * it was flushed before
@@ -3686,6 +3812,9 @@ Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetNSiblings
 #undef SCIPtreeGetNNodes
 #undef SCIPtreeIsPathComplete
+#undef SCIPtreeProbing
+#undef SCIPtreeGetProbingRoot
+#undef SCIPtreeGetProbingDepth
 #undef SCIPtreeGetFocusNode
 #undef SCIPtreeGetFocusDepth
 #undef SCIPtreeHasFocusNodeLP
@@ -3693,8 +3822,6 @@ Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetCurrentNode
 #undef SCIPtreeGetCurrentDepth
 #undef SCIPtreeHasCurrentNodeLP
-#undef SCIPtreeProbing
-#undef SCIPtreeGetProbingNode
 
 /** gets the type of the node */
 NODETYPE SCIPnodeGetType(
@@ -3802,15 +3929,41 @@ Bool SCIPtreeIsPathComplete(
    )
 {
    assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->focusnode != NULL || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+      || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return (tree->focusnode == NULL || tree->focusnode->depth < tree->pathlen);
+}
+
+/** returns whether the current node is a temporary probing node */
+Bool SCIPtreeProbing(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingroot == NULL || tree->probingroot->nodetype == SCIP_NODETYPE_PROBINGNODE);
+   assert(tree->probingroot == NULL || tree->pathlen > SCIPnodeGetDepth(tree->probingroot));
+   assert(tree->probingroot == NULL || tree->path[SCIPnodeGetDepth(tree->probingroot)] == tree->probingroot);
+
+   return (tree->probingroot != NULL);
+}
+
+/** returns the temporary probing root node, or NULL if the we are not in probing mode */
+NODE* SCIPtreeGetProbingRoot(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingroot == NULL || tree->probingroot->nodetype == SCIP_NODETYPE_PROBINGNODE);
+   assert(tree->probingroot == NULL || tree->pathlen > SCIPnodeGetDepth(tree->probingroot));
+   assert(tree->probingroot == NULL || tree->path[SCIPnodeGetDepth(tree->probingroot)] == tree->probingroot);
+
+   return tree->probingroot;
 }
 
 /** gets focus node of the tree */
@@ -3819,13 +3972,13 @@ NODE* SCIPtreeGetFocusNode(
    )
 {
    assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->focusnode != NULL || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+      || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->focusnode;
 }
@@ -3836,13 +3989,13 @@ int SCIPtreeGetFocusDepth(
    )
 {
    assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->focusnode != NULL || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+      || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->focusnode != NULL ? tree->focusnode->depth : -1;
 }
@@ -3874,13 +4027,13 @@ NODE* SCIPtreeGetCurrentNode(
    )
 {
    assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->focusnode != NULL || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+      || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return (tree->pathlen > 0 ? tree->path[tree->pathlen-1] : NULL);
 }
@@ -3891,13 +4044,13 @@ int SCIPtreeGetCurrentDepth(
    )
 {
    assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->focusnode != NULL || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+      || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->pathlen-1;
 }
@@ -3910,27 +4063,17 @@ Bool SCIPtreeHasCurrentNodeLP(
    assert(tree != NULL);
    assert(SCIPtreeIsPathComplete(tree));
 
-   return tree->probingnode != NULL ? FALSE : SCIPtreeHasFocusNodeLP(tree);
+   return SCIPtreeProbing(tree) ? FALSE : SCIPtreeHasFocusNodeLP(tree);
 }
 
-/** returns whether the current node is a temporary probing node */
-Bool SCIPtreeProbing(
+/** returns the current probing depth, i.e. the number of probing sub nodes existing in the probing path */
+int SCIPtreeGetProbingDepth(
    TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(tree != NULL);
-   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
+   assert(SCIPtreeProbing(tree));
 
-   return (tree->probingnode != NULL);
+   return SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth(tree->probingroot);
 }
 
-/** returns the temporary probing node, or NULL if the current node is not the probing node */
-NODE* SCIPtreeGetProbingNode(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
-
-   return tree->probingnode;
-}

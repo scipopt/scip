@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.8 2005/01/21 09:16:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.9 2005/01/25 09:59:27 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump heuristic by Fischetti, Glover and Lodi 
@@ -207,18 +207,19 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTFIND;
 
+   /* get problem variables */
+   CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
    /* calculate the maximal diving depth */
-   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
-      maxdivedepth = heurdata->depthfacnosol * nvars;
+      maxdivedepth = heurdata->depthfacnosol * (nbinvars + nintvars);
    else
-      maxdivedepth = heurdata->depthfac * nvars;
+      maxdivedepth = heurdata->depthfac * (nbinvars + nintvars);
 
    /* start diving */
    CHECK_OKAY( SCIPstartDive(scip) );
 
    /* get all variables of LP and number of fractional variables in LP solution that should be integral */
-   CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nlpcands = SCIPgetNLPBranchCands(scip);
    assert(0 <= nlpcands && nlpcands <= nbinvars + nintvars);
 
@@ -293,7 +294,7 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
                divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations, i,
                SCIPvarGetName(var), solval, orgobj, newobj);
          }
-         else if( i < nintvars )
+         else if( i < nbinvars + nintvars )
          {
             Real solval;
             Real frac;

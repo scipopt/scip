@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.5 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.6 2005/01/25 09:59:27 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -57,7 +57,65 @@ struct PropData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/** resolves a propagation by supplying the variables whose bound changes increased the pseudo objective value */
+static
+RETCODE resolvePropagation(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             infervar,           /**< variable that was deduced, or NULL for conflict analysis initialization */
+   BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
+   )
+{
+   VAR** vars;
+   VAR* var;
+   Real obj;
+   int nvars;
+   int v;
+
+   /**@todo improve pseudo objective propagator conflict resolving method:
+    *       only add bound changes up to the point, the primal bound is reached
+    */
+
+   /* the variables responsible for the propagation are the ones with
+    *  - obj > 0 and local lb > global lb
+    *  - obj < 0 and local ub < global ub
+    */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      if( var == infervar )
+         continue;
+
+      obj = SCIPvarGetObj(var);
+      if( SCIPisPositive(scip, obj) )
+      {
+         Real loclb;
+         Real glblb;
+
+         glblb = SCIPvarGetLbGlobal(var);
+         loclb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
+         if( SCIPisGT(scip, loclb, glblb) )
+         {
+            CHECK_OKAY( SCIPaddConflictLb(scip, var, bdchgidx) );
+         }
+      }
+      else if( SCIPisNegative(scip, obj) )
+      {
+         Real locub;
+         Real glbub;
+
+         glbub = SCIPvarGetUbGlobal(var);
+         locub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+         if( SCIPisLT(scip, locub, glbub) )
+         {
+            CHECK_OKAY( SCIPaddConflictUb(scip, var, bdchgidx) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -120,11 +178,21 @@ DECL_PROPEXEC(propExecPseudoobj)
       return SCIP_OKAY;
    if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
    {
+      debugMessage("pseudo objective value %g exceeds cutoff bound %g\n", pseudoobjval, cutoffbound);
+
+      /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+      CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+      CHECK_OKAY( resolvePropagation(scip, NULL, NULL) );
+
+      /* analyze the conflict */
+      CHECK_OKAY( SCIPanalyzeConflict(scip, 0, NULL) );
+      
       *result = SCIP_CUTOFF;
+
       return SCIP_OKAY;
    }
 
-   debugMessage("propagating pseudo objective function\n");
+   debugMessage("propagating pseudo objective function (pseudoobj: %g, cutoffbound: %g)\n", pseudoobjval, cutoffbound);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -188,50 +256,7 @@ DECL_PROPEXEC(propExecPseudoobj)
 static
 DECL_PROPRESPROP(propRespropPseudoobj)
 {  /*lint --e{715}*/
-   VAR** vars;
-   VAR* var;
-   Real obj;
-   int nvars;
-   int v;
-
-   /* the variables responsible for the propagation are the ones with
-    *  - obj > 0 and local lb > global lb
-    *  - obj < 0 and local ub < global ub
-    */
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-   for( v = 0; v < nvars; ++v )
-   {
-      var = vars[v];
-      if( var == infervar )
-         continue;
-
-      obj = SCIPvarGetObj(var);
-      if( SCIPisPositive(scip, obj) )
-      {
-         Real loclb;
-         Real glblb;
-
-         glblb = SCIPvarGetLbGlobal(var);
-         loclb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
-         if( SCIPisGT(scip, loclb, glblb) )
-         {
-            CHECK_OKAY( SCIPaddConflictLb(scip, var, bdchgidx) );
-         }
-      }
-      else if( SCIPisNegative(scip, obj) )
-      {
-         Real locub;
-         Real glbub;
-
-         glbub = SCIPvarGetUbGlobal(var);
-         locub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
-         if( SCIPisLT(scip, locub, glbub) )
-         {
-            CHECK_OKAY( SCIPaddConflictUb(scip, var, bdchgidx) );
-         }
-      }
-   }
+   CHECK_OKAY( resolvePropagation(scip, infervar, bdchgidx) );
 
    *result = SCIP_SUCCESS;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.7 2005/01/21 09:16:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.8 2005/01/25 09:59:27 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -36,7 +36,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      TRUE      /* call heuristic at nodes where only a pseudo solution exist? */
-#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
+#define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
 #define MAXDIVEDEPTH          100
 
@@ -90,8 +90,8 @@ RETCODE fixVariable(
    var = pseudocands[bestcand];
    solval = SCIPgetVarSol(scip, var);
    assert(SCIPisFeasIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
-   debugMessage(" -> fixed variable <%s>[%g,%g] = %g\n", 
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval);
+   debugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n", 
+      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval, npseudocands - 1);
    CHECK_OKAY( SCIPfixVarProbing(scip, var, solval) );
 
    return SCIP_OKAY;
@@ -132,15 +132,17 @@ DECL_HEUREXEC(heurExecFixandinfer)
    if( SCIPgetNContVars(scip) > 0 )
       return SCIP_OKAY;
 
+   /* get unfixed variables */
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
+   if( ncands == 0 )
+      return SCIP_OKAY;
+
+   debugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
+
    *result = SCIP_DIDNOTFIND;
 
    /* start probing */
    CHECK_OKAY( SCIPstartProbing(scip) );
-
-   /* get unfixed variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
-
-   debugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
 
    /* fix variables and propagate inferences as long as the problem is still feasible and there are 
     * unfixed integral variables
@@ -152,6 +154,9 @@ DECL_HEUREXEC(heurExecFixandinfer)
       && (divedepth < MAXDIVEDEPTH || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) )
    {
       divedepth++;
+
+      /* create next probing node */
+      CHECK_OKAY( SCIPnewProbingNode(scip) );
 
       /* fix next variable */
       CHECK_OKAY( fixVariable(scip, cands, ncands) );
@@ -167,7 +172,11 @@ DECL_HEUREXEC(heurExecFixandinfer)
    }
 
    /* check, if we are still feasible */
-   if( !cutoff && ncands == 0 )
+   if( cutoff )
+   {
+      debugMessage("propagation detected a cutoff\n");
+   }
+   else if( ncands == 0 )
    {
       Bool success;
 
@@ -188,7 +197,7 @@ DECL_HEUREXEC(heurExecFixandinfer)
    }
    else
    {
-      debugMessage("propagation detected a cutoff\n");
+      debugMessage("probing was aborted (probing depth: %d, fixed: %d/%d)", divedepth, startncands - ncands, startncands);
    }
 
    /* end probing */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.70 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.71 2005/01/25 09:59:31 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -262,6 +262,36 @@ RETCODE SCIPtreeCreateRoot(
    LP*              lp                  /**< current LP data */
    );
 
+/** creates a temporary presolving root node of the tree and installs it as focus node */
+extern
+RETCODE SCIPtreeCreatePresolvingRoot(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
+/** frees the temporary presolving root and resets tree data structure */
+extern
+RETCODE SCIPtreeFreePresolvingRoot(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
 /** returns the node selector associated with the given node priority queue */
 extern
 NODESEL* SCIPtreeGetNodesel(
@@ -314,7 +344,7 @@ RETCODE SCIPtreeBranchVar(
    VAR*             var                 /**< variable to branch on */
    );
 
-/** switches to probing mode */
+/** switches to probing mode and creates a probing root */
 extern
 RETCODE SCIPtreeStartProbing(
    TREE*            tree,               /**< branch and bound tree */
@@ -323,8 +353,16 @@ RETCODE SCIPtreeStartProbing(
    LP*              lp                  /**< current LP data */
    );
 
-/** switches back from probing to normal operation mode, restores bounds of all variables and restores active constraints
- *  arrays of focus node
+/** creates a new probing child node in the probing path */
+extern
+RETCODE SCIPtreeCreateProbingNode(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** switches back from probing to normal operation mode, frees all nodes on the probing path, restores bounds of all
+ *  variables and restores active constraints arrays of focus node
  */
 extern
 RETCODE SCIPtreeEndProbing(
@@ -374,6 +412,24 @@ Bool SCIPtreeIsPathComplete(
    TREE*            tree                /**< branch and bound tree */
    );
 
+/** returns whether the current node is a temporary probing node */
+extern
+Bool SCIPtreeProbing(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns the temporary probing root node, or NULL if the we are not in probing mode */
+extern
+NODE* SCIPtreeGetProbingRoot(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns the current probing depth, i.e. the number of probing sub nodes existing in the probing path */
+extern
+int SCIPtreeGetProbingDepth(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
 /** gets focus node of the tree */
 extern
 NODE* SCIPtreeGetFocusNode(
@@ -417,18 +473,6 @@ Bool SCIPtreeHasCurrentNodeLP(
    TREE*            tree                /**< branch and bound tree */
    );
 
-/** returns whether the current node is a temporary probing node */
-extern
-Bool SCIPtreeProbing(
-   TREE*            tree                /**< branch and bound tree */
-   );
-
-/** returns the temporary probing node, or NULL if the current node is not the probing node */
-extern
-NODE* SCIPtreeGetProbingNode(
-   TREE*            tree                /**< branch and bound tree */
-   );
-
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -441,15 +485,16 @@ NODE* SCIPtreeGetProbingNode(
 #define SCIPtreeGetNNodes(tree)         \
    (SCIPtreeGetNChildren(tree) + SCIPtreeGetNSiblings(tree) + SCIPtreeGetNLeaves(tree))
 #define SCIPtreeIsPathComplete(tree)    ((tree)->focusnode == NULL || (tree)->focusnode->depth < (tree)->pathlen)
+#define SCIPtreeProbing(tree)           ((tree)->probingroot != NULL)
+#define SCIPtreeGetProbingRoot(tree)    (tree)->probingroot
+#define SCIPtreeGetProbingDepth(tree)   (SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth((tree)->probingroot))
 #define SCIPtreeGetFocusNode(tree)      (tree)->focusnode
 #define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (tree)->focusnode->depth : -1)
 #define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
 #define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
 #define SCIPtreeGetCurrentNode(tree)    ((tree)->pathlen > 0 ? (tree)->path[(tree)->pathlen-1] : NULL)
 #define SCIPtreeGetCurrentDepth(tree)   ((tree)->pathlen-1)
-#define SCIPtreeHasCurrentNodeLP(tree)  ((tree)->probingnode != NULL ? FALSE : SCIPtreeHasFocusNodeLP(tree))
-#define SCIPtreeProbing(tree)           ((tree)->probingnode != NULL)
-#define SCIPtreeGetProbingNode(tree)    (tree)->probingnode
+#define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? FALSE : SCIPtreeHasFocusNodeLP(tree))
 
 #endif
 
