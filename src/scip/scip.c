@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.249 2005/02/02 19:34:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.250 2005/02/02 20:06:03 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2394,8 +2394,8 @@ RETCODE SCIPsetObjlimit(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      oldobjlimit = SCIPprobGetObjlim(scip->origprob);
-      assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob));
+      oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
+      assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set));
       if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->set, oldobjlimit) )
       {
          errorMessage("cannot relax objective limit from %g to %g after problem was transformed\n", oldobjlimit, objlimit);
@@ -2421,7 +2421,7 @@ Real SCIPgetObjlimit(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetObjlimit", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPprobGetObjlim(scip->origprob);
+   return SCIPprobGetObjlim(scip->origprob, scip->set);
 }
 
 /** informs SCIP, that the objective value is always integral in every feasible solution */

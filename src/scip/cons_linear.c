@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.145 2005/02/02 19:34:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.146 2005/02/02 20:06:02 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2938,7 +2938,7 @@ RETCODE propagateCons(
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
 
-   /*??????????debugMessage("propagating linear constraint <%s>\n", SCIPconsGetName(cons));*/
+   debugMessage("propagating linear constraint <%s>\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

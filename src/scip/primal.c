@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.58 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.59 2005/02/02 20:06:03 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -247,7 +247,7 @@ RETCODE SCIPprimalUpdateUpperbound(
    assert(set != NULL);
 
    /* recalculate internal objective limit */
-   upperbound = SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob));
+   upperbound = SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set));
    upperbound = MIN(upperbound, SCIPsetInfinity(set));
 
    /* resort current primal solutions */

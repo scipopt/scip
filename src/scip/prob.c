@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.65 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.66 2005/02/02 20:06:03 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1109,12 +1109,14 @@ Real SCIPprobInternObjval(
 
 /** gets limit on objective function in external space */
 Real SCIPprobGetObjlim(
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(prob != NULL);
+   assert(set != NULL);
 
-   return prob->objlim;
+   return prob->objlim == SCIP_INVALID ? (Real)(prob->objsense) * set->num_infinity : prob->objlim;
 }
 
 /** returns whether the objective value is known to be integral in every feasible solution */

@@ -64,6 +64,9 @@ fixed bugs:
 - fixed bug that after a resolve and further preprocessing, existing primal solutions may get corrupted due to
   aggregations or fixings that are possible due to the primal bound (given by the best solution)
 
+known bugs:
+- conflict analysis should be made available in presolving (for probing)
+
 
 SCIP version 0.78
 =================
