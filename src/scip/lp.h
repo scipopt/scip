@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.74 2004/04/28 14:59:01 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.75 2004/04/29 15:20:38 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -54,7 +54,7 @@ extern
 RETCODE SCIPcolCreate(
    COL**            col,                /**< pointer to column data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
@@ -68,7 +68,7 @@ extern
 RETCODE SCIPcolFree(
    COL**            col,                /**< pointer to LP column */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
 
@@ -83,7 +83,7 @@ extern
 RETCODE SCIPcolAddCoeff(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
@@ -93,7 +93,7 @@ RETCODE SCIPcolAddCoeff(
 extern
 RETCODE SCIPcolDelCoeff(
    COL*             col,                /**< column to be changed */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    ROW*             row                 /**< coefficient to be deleted */
    );
@@ -103,7 +103,7 @@ extern
 RETCODE SCIPcolChgCoeff(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
@@ -114,7 +114,7 @@ extern
 RETCODE SCIPcolIncCoeff(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
    Real             incval              /**< value to add to the coefficient */
@@ -124,7 +124,7 @@ RETCODE SCIPcolIncCoeff(
 extern
 RETCODE SCIPcolChgObj(
    COL*             col,                /**< LP column to change */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    Real             newobj              /**< new objective value */
    );
@@ -133,7 +133,7 @@ RETCODE SCIPcolChgObj(
 extern
 RETCODE SCIPcolChgLb(
    COL*             col,                /**< LP column to change */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    Real             newlb               /**< new lower bound value */
    );
@@ -142,7 +142,7 @@ RETCODE SCIPcolChgLb(
 extern
 RETCODE SCIPcolChgUb(
    COL*             col,                /**< LP column to change */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    Real             newub               /**< new upper bound value */
    );
@@ -159,7 +159,7 @@ Real SCIPcolGetRedcost(
 extern
 Real SCIPcolGetFeasibility(
    COL*             col,                /**< LP column */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp                  /**< current LP data */
    );
@@ -209,7 +209,7 @@ extern
 RETCODE SCIProwCreate(
    ROW**            row,                /**< pointer to LP row data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
@@ -227,7 +227,7 @@ extern
 RETCODE SCIProwFree(
    ROW**            row,                /**< pointer to LP row */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
 
@@ -236,7 +236,7 @@ extern
 RETCODE SCIProwEnsureSize(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    );
 
@@ -251,7 +251,7 @@ extern
 RETCODE SCIProwRelease(
    ROW**            row,                /**< pointer to LP row */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
 
@@ -271,7 +271,7 @@ void SCIProwDelaySort(
 extern
 void SCIProwForceSort(
    ROW*             row,                /**< LP row */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** adds a previously non existing coefficient to an LP row */
@@ -279,7 +279,7 @@ extern
 RETCODE SCIProwAddCoeff(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    COL*             col,                /**< LP column */
    Real             val                 /**< value of coefficient */
@@ -289,7 +289,7 @@ RETCODE SCIProwAddCoeff(
 extern
 RETCODE SCIProwDelCoeff(
    ROW*             row,                /**< row to be changed */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    COL*             col                 /**< coefficient to be deleted */
    );
@@ -299,7 +299,7 @@ extern
 RETCODE SCIProwChgCoeff(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    COL*             col,                /**< LP column */
    Real             val                 /**< value of coefficient */
@@ -310,7 +310,7 @@ extern
 RETCODE SCIProwIncCoeff(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    COL*             col,                /**< LP column */
    Real             incval              /**< value to add to the coefficient */
@@ -320,7 +320,7 @@ RETCODE SCIProwIncCoeff(
 extern
 RETCODE SCIProwChgConstant(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    Real             constant            /**< new constant value */
@@ -330,7 +330,7 @@ RETCODE SCIProwChgConstant(
 extern
 RETCODE SCIProwAddConstant(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    Real             addval              /**< constant value to add to the row */
@@ -340,7 +340,7 @@ RETCODE SCIProwAddConstant(
 extern
 RETCODE SCIProwChgLhs(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    Real             lhs                 /**< new left hand side */
    );
@@ -349,7 +349,7 @@ RETCODE SCIProwChgLhs(
 extern
 RETCODE SCIProwChgRhs(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    Real             rhs                 /**< new right hand side */
    );
@@ -358,7 +358,7 @@ RETCODE SCIProwChgRhs(
 extern
 RETCODE SCIProwMakeRational(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
@@ -400,7 +400,7 @@ Real SCIProwGetPseudoFeasibility(
 extern
 RETCODE SCIProwGetSolActivity(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    SOL*             sol,                /**< primal CIP solution */
    Real*            solactivity         /**< pointer to store the row's activity for the solution */
@@ -410,7 +410,7 @@ RETCODE SCIProwGetSolActivity(
 extern
 RETCODE SCIProwGetSolFeasibility(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    SOL*             sol,                /**< primal CIP solution */
    Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
@@ -420,7 +420,7 @@ RETCODE SCIProwGetSolFeasibility(
 extern
 Real SCIProwGetMinActivity(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics data */
    );
 
@@ -428,7 +428,7 @@ Real SCIProwGetMinActivity(
 extern
 Real SCIProwGetMaxActivity(
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics data */
    );
 
@@ -436,14 +436,14 @@ Real SCIProwGetMaxActivity(
 extern
 Real SCIProwGetMaxval(
    ROW*             row,                /**< LP row */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** gets minimal absolute value of row vector's non-zero coefficients */
 extern
 Real SCIProwGetMinval(
    ROW*             row,                /**< LP row */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 
@@ -457,7 +457,7 @@ Real SCIProwGetMinval(
 extern
 RETCODE SCIPlpCreate(
    LP**             lp,                 /**< pointer to LP data object */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< problem name */
    );
 
@@ -466,14 +466,14 @@ extern
 RETCODE SCIPlpFree(
    LP**             lp,                 /**< pointer to LP data object */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** adds a column to the LP and captures the variable */
 extern
 RETCODE SCIPlpAddCol(
    LP*              lp,                 /**< LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    COL*             col                 /**< LP column */
    );
 
@@ -481,7 +481,7 @@ RETCODE SCIPlpAddCol(
 extern
 RETCODE SCIPlpAddRow(
    LP*              lp,                 /**< LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    ROW*             row                 /**< LP row */
    );
 
@@ -497,7 +497,7 @@ extern
 RETCODE SCIPlpShrinkRows(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              newnrows            /**< new number of rows in the LP */
    );
 
@@ -506,7 +506,7 @@ extern
 RETCODE SCIPlpClear(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** remembers number of columns and rows to track the newly added ones */
@@ -553,7 +553,7 @@ RETCODE SCIPlpGetBInvARow(
 extern
 RETCODE SCIPlpSumRows(
    LP*              lp,                 /**< LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              nvars,              /**< number of active variables in the problem */
    Real*            weights,            /**< row weights in row summation */
    REALARRAY*       sumcoef,            /**< array to store sum coefficients indexed by variables' probindex */
@@ -567,7 +567,7 @@ RETCODE SCIPlpSumRows(
 extern
 RETCODE SCIPlpCalcMIR(
    LP*              lp,                 /**< LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    int              nvars,              /**< number of active variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
@@ -593,7 +593,7 @@ extern
 RETCODE SCIPlpSetState(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
@@ -601,7 +601,7 @@ RETCODE SCIPlpSetState(
 extern
 RETCODE SCIPlpSetCutoffbound(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             cutoffbound         /**< new upper objective limit */
    );
 
@@ -610,7 +610,7 @@ extern
 RETCODE SCIPlpSolve(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
@@ -622,7 +622,7 @@ extern
 RETCODE SCIPlpSolveAndEval(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
@@ -640,7 +640,7 @@ LPSOLSTAT SCIPlpGetSolstat(
 extern
 Real SCIPlpGetObjval(
    LP*              lp,                 /**< current LP data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** gets part of objective value of last solution that results from COLUMN variables only */
@@ -653,21 +653,21 @@ Real SCIPlpGetColumnObjval(
 extern
 Real SCIPlpGetLooseObjval(
    LP*              lp,                 /**< current LP data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** gets current pseudo objective value */
 extern
 Real SCIPlpGetPseudoObjval(
    LP*              lp,                 /**< current LP data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
 extern
 Real SCIPlpGetModifiedPseudoObjval(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable */
    Real             oldbound,           /**< old value for bound */
    Real             newbound,           /**< new value for bound */
@@ -680,7 +680,7 @@ Real SCIPlpGetModifiedPseudoObjval(
 extern
 Real SCIPlpGetModifiedProvedPseudoObjval(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable */
    Real             oldbound,           /**< old value for bound */
    Real             newbound,           /**< new value for bound */
@@ -691,7 +691,7 @@ Real SCIPlpGetModifiedProvedPseudoObjval(
 extern
 RETCODE SCIPlpUpdateVarObj(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
    Real             oldobj,             /**< old objective value of variable */
    Real             newobj              /**< new objective value of variable */
@@ -701,7 +701,7 @@ RETCODE SCIPlpUpdateVarObj(
 extern
 RETCODE SCIPlpUpdateVarLb(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
    Real             oldlb,              /**< old lower bound of variable */
    Real             newlb               /**< new lower bound of variable */
@@ -711,7 +711,7 @@ RETCODE SCIPlpUpdateVarLb(
 extern
 RETCODE SCIPlpUpdateVarUb(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
    Real             oldub,              /**< old upper bound of variable */
    Real             newub               /**< new upper bound of variable */
@@ -721,7 +721,7 @@ RETCODE SCIPlpUpdateVarUb(
 extern
 RETCODE SCIPlpUpdateAddVar(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var                 /**< variable that is now a LOOSE problem variable */
    );
 
@@ -729,7 +729,7 @@ RETCODE SCIPlpUpdateAddVar(
 extern
 RETCODE SCIPlpUpdateVarColumn(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
    );
 
@@ -737,7 +737,7 @@ RETCODE SCIPlpUpdateVarColumn(
 extern
 RETCODE SCIPlpUpdateVarLoose(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
    );
 
@@ -746,7 +746,7 @@ extern
 RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
@@ -757,7 +757,7 @@ extern
 RETCODE SCIPlpGetUnboundedSol(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -766,7 +766,7 @@ extern
 RETCODE SCIPlpGetDualfarkas(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -783,7 +783,7 @@ RETCODE SCIPlpGetIterations(
 extern
 RETCODE SCIPlpUpdateAges(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -792,7 +792,7 @@ extern
 RETCODE SCIPlpRemoveNewObsoletes(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -801,7 +801,7 @@ extern
 RETCODE SCIPlpRemoveAllObsoletes(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -810,7 +810,7 @@ extern
 RETCODE SCIPlpCleanupNew(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -819,7 +819,7 @@ extern
 RETCODE SCIPlpCleanupAll(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -828,7 +828,7 @@ extern
 RETCODE SCIPlpStartDive(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** quits LP diving and resets bounds and objective values of columns to the current node's values */
@@ -836,7 +836,7 @@ extern
 RETCODE SCIPlpEndDive(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    VAR**            vars,               /**< array with all active variables */
@@ -847,7 +847,7 @@ RETCODE SCIPlpEndDive(
 extern
 RETCODE SCIPlpGetProvedLowerbound(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real*            bound               /**< pointer to store proven dual bound */
    );
 
@@ -855,7 +855,7 @@ RETCODE SCIPlpGetProvedLowerbound(
 extern
 RETCODE SCIPlpIsInfeasibilityProved(
    LP*              lp,                 /**< current LP data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Bool*            proved              /**< pointer to store whether infeasibility is proven */
    );
 

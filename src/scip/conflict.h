@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.15 2004/04/27 15:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.16 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -114,7 +114,7 @@ void SCIPconflicthdlrSetPriority(
 extern
 RETCODE SCIPconflictCreate(
    CONFLICT**       conflict,           /**< pointer to conflict analysis data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** frees conflict analysis data for propagation conflicts */
@@ -134,7 +134,7 @@ extern
 RETCODE SCIPconflictAddVar(
    CONFLICT*        conflict,           /**< conflict analysis data */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR*             var                 /**< problem variable */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.23 2004/04/27 15:50:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.24 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -49,14 +49,14 @@
 /** returns whether the solving process will be / was stopped before proving optimality */
 extern
 Bool SCIPsolveIsStopped(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** outputs the reason for termination */
 extern
 void SCIPsolvePrintStopReason(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    FILE*            file                /**< output file (or NULL for standard output) */
    );

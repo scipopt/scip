@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.22 2004/03/22 16:03:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.23 2004/04/29 15:20:38 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -985,7 +985,7 @@ RETCODE SCIPrealarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 RETCODE SCIPrealarrayExtend(
    REALARRAY*       realarray,          /**< dynamic real array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
    )
@@ -1189,7 +1189,7 @@ Real SCIPrealarrayGetVal(
 /** sets value of entry in dynamic array */
 RETCODE SCIPrealarraySetVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Real             val                 /**< value to set array index to */
    )
@@ -1256,7 +1256,7 @@ RETCODE SCIPrealarraySetVal(
 /** increases value of entry in dynamic array */
 RETCODE SCIPrealarrayIncVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    Real             incval              /**< value to increase array index */
    )
@@ -1325,7 +1325,7 @@ RETCODE SCIPintarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 RETCODE SCIPintarrayExtend(
    INTARRAY*        intarray,           /**< dynamic int array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
    )
@@ -1529,7 +1529,7 @@ int SCIPintarrayGetVal(
 /** sets value of entry in dynamic array */
 RETCODE SCIPintarraySetVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    int              val                 /**< value to set array index to */
    )
@@ -1596,7 +1596,7 @@ RETCODE SCIPintarraySetVal(
 /** increases value of entry in dynamic array */
 RETCODE SCIPintarrayIncVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    int              incval              /**< value to increase array index */
    )
@@ -1666,7 +1666,7 @@ RETCODE SCIPboolarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 RETCODE SCIPboolarrayExtend(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
    )
@@ -1870,7 +1870,7 @@ Bool SCIPboolarrayGetVal(
 /** sets value of entry in dynamic array */
 RETCODE SCIPboolarraySetVal(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Bool             val                 /**< value to set array index to */
    )

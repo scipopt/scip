@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.32 2004/04/15 10:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.33 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -212,7 +212,7 @@ RETCODE SCIPheurExit(
 /** calls execution method of primal heuristic */
 RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    int              depth,              /**< depth of active node */
    int              lpforkdepth,        /**< depth of the last node with solved LP */

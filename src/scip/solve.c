@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.102 2004/04/27 15:50:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.103 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -59,7 +59,7 @@
 
 /** returns whether the solving process will be / was stopped before proving optimality */
 Bool SCIPsolveIsStopped(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
    )
 {
@@ -74,7 +74,7 @@ Bool SCIPsolveIsStopped(
 
 /** outputs the reason for termination */
 void SCIPsolvePrintStopReason(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
@@ -101,7 +101,7 @@ void SCIPsolvePrintStopReason(
 static
 RETCODE propagateDomains(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -139,7 +139,7 @@ RETCODE propagateDomains(
 static
 RETCODE redcostStrengthening(
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -307,7 +307,7 @@ RETCODE redcostStrengthening(
 static
 Bool isPseudocostUpdateValid(
    VAR*             var,                /**< problem variable */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             oldlpsolval         /**< solution value of variable in old LP */
    )
 {
@@ -350,7 +350,7 @@ enum PseudocostFlag
 /** updates the variable's pseudo cost values after the node's initial LP was solved */
 static
 RETCODE updatePseudocost(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< LP data */
@@ -456,7 +456,7 @@ RETCODE updatePseudocost(
 static
 RETCODE nodeUpdateLowerboundLP(
    NODE*            node,               /**< node to set lower bound for */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< LP data */
    )
 {
@@ -480,7 +480,7 @@ RETCODE nodeUpdateLowerboundLP(
 static
 RETCODE initRootLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -553,7 +553,7 @@ RETCODE initRootLP(
 static
 RETCODE solveNodeInitialLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -978,7 +978,7 @@ RETCODE solveNodeLP(
 static
 RETCODE enforceConstraints(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -1448,7 +1448,7 @@ RETCODE primalHeuristics(
 static
 RETCODE addCurrentSolution(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.29 2004/04/06 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.30 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -148,7 +148,7 @@ RETCODE SCIPeventhdlrExit(
 /** calls execution method of event handler */
 RETCODE SCIPeventhdlrExec(
    EVENTHDLR*       eventhdlr,          /**< event handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENT*           event,              /**< event to call event handler with */
    EVENTDATA*       eventdata           /**< user data for the issued event */
    )
@@ -227,6 +227,27 @@ RETCODE SCIPeventCreateVarAdded(
    ALLOC_OKAY( allocBlockMemory(memhdr, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_VARADDED;
    (*event)->data.eventvaradded.var = var;
+
+   return SCIP_OKAY;
+}
+
+/** creates an event for a fixing of a variable */
+RETCODE SCIPeventCreateVarFixed(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var                 /**< variable that was fixed */
+   )
+{
+   assert(event != NULL);
+   assert(memhdr != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+
+   /* create event data */
+   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_VARFIXED;
+   (*event)->data.eventvarfixed.var = var;
 
    return SCIP_OKAY;
 }
@@ -354,7 +375,7 @@ RETCODE SCIPeventChgType(
    return SCIP_OKAY;
 }
 
-/** gets variable for a variable change event (objective value or domain change) */
+/** gets variable for a variable event (var added, var fixed, objective value or domain change) */
 VAR* SCIPeventGetVar(
    EVENT*           event               /**< event */
    )
@@ -368,8 +389,8 @@ VAR* SCIPeventGetVar(
       return event->data.eventvaradded.var;
 
    case SCIP_EVENTTYPE_VARFIXED:
-      errorMessage("VARFIXED event not implemented yet\n");
-      abort();
+      assert(event->data.eventvarfixed.var != NULL);
+      return event->data.eventvarfixed.var;
 
    case SCIP_EVENTTYPE_OBJCHANGED:
       assert(event->data.eventobjchg.var != NULL);
@@ -543,10 +564,10 @@ RETCODE SCIPeventChgSol(
 /** processes event by calling the appropriate event handlers */
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< current LP data; only needed for BOUNDCHANGED events */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
-   EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for BOUNDCHANGED events */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< current LP data; only needed for variable specific events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for variable specific events */
+   EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    )
 {
    VAR* var;
@@ -559,8 +580,8 @@ RETCODE SCIPeventProcess(
    {
    case SCIP_EVENTTYPE_DISABLED:
       break;
+
    case SCIP_EVENTTYPE_VARADDED:
-   case SCIP_EVENTTYPE_VARFIXED:
    case SCIP_EVENTTYPE_NODEACTIVATED:
    case SCIP_EVENTTYPE_NODEFEASIBLE:
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
@@ -570,6 +591,14 @@ RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_POORSOLFOUND:
    case SCIP_EVENTTYPE_BESTSOLFOUND:
       CHECK_OKAY( SCIPeventfilterProcess(eventfilter, set, event) );
+      break;
+
+   case SCIP_EVENTTYPE_VARFIXED:
+      var = event->data.eventvarfixed.var;
+      assert(var != NULL);
+
+      /* process variable's event filter */
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_OBJCHANGED:
@@ -665,7 +694,7 @@ static
 RETCODE eventfilterEnsureMem(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of node slots in array */
    )
 {
@@ -714,7 +743,7 @@ RETCODE SCIPeventfilterCreate(
 RETCODE SCIPeventfilterFree(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    int i;
@@ -750,7 +779,7 @@ RETCODE SCIPeventfilterFree(
 RETCODE SCIPeventfilterAdd(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
@@ -879,7 +908,7 @@ int eventfilterSearch(
 RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
@@ -932,7 +961,7 @@ RETCODE SCIPeventfilterDel(
 /** processes the event with all event handlers with matching filter setting */
 RETCODE SCIPeventfilterProcess(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENT*           event               /**< event to process */
    )
 {
@@ -985,7 +1014,7 @@ RETCODE SCIPeventfilterProcess(
 static
 RETCODE eventqueueEnsureEventsMem(
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of node slots in array */
    )
 {
@@ -1040,7 +1069,7 @@ RETCODE SCIPeventqueueFree(
 static
 RETCODE eventqueueAppend(
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENT**          event               /**< pointer to event to append to the queue */
    )
 {
@@ -1065,10 +1094,10 @@ RETCODE eventqueueAppend(
 RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< current LP data; only needed for BOUNDCHANGED events */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
-   EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for BOUNDCHANGED events */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< current LP data; only needed for variable specific events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for variable specific events */
+   EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    )
 {
@@ -1096,6 +1125,7 @@ RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_DISABLED:
          errorMessage("cannot add a disabled event to the event queue\n");
          return SCIP_INVALIDDATA;
+
       case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARFIXED:
       case SCIP_EVENTTYPE_NODEACTIVATED:
@@ -1290,7 +1320,7 @@ RETCODE SCIPeventqueueDelay(
 RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */

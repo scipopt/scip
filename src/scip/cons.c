@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.72 2004/04/27 15:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.73 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -53,7 +53,7 @@
 static
 RETCODE conshdlrEnsureConssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -77,7 +77,7 @@ RETCODE conshdlrEnsureConssMem(
 static
 RETCODE conshdlrEnsureSepaconssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -101,7 +101,7 @@ RETCODE conshdlrEnsureSepaconssMem(
 static
 RETCODE conshdlrEnsureEnfoconssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -125,7 +125,7 @@ RETCODE conshdlrEnsureEnfoconssMem(
 static
 RETCODE conshdlrEnsureCheckconssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -149,7 +149,7 @@ RETCODE conshdlrEnsureCheckconssMem(
 static
 RETCODE conshdlrEnsurePropconssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -173,7 +173,7 @@ RETCODE conshdlrEnsurePropconssMem(
 static
 RETCODE conshdlrEnsureUpdateconssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -204,7 +204,7 @@ RETCODE conshdlrEnsureUpdateconssMem(
 static
 Bool consExceedsAgelimit(
    CONS*            cons,               /**< constraint to check */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -217,7 +217,7 @@ Bool consExceedsAgelimit(
 static
 Bool consExceedsObsoleteage(
    CONS*            cons,               /**< constraint to check */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -233,7 +233,7 @@ static
 RETCODE conshdlrMarkConsObsolete(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    CONS*            cons                /**< constraint to be marked obsolete */
    )
@@ -416,7 +416,7 @@ RETCODE conshdlrMarkConsUseful(
 static
 RETCODE conshdlrEnableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -515,7 +515,7 @@ RETCODE conshdlrEnableCons(
 static
 RETCODE conshdlrDisableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to remove */
    )
 {
@@ -624,7 +624,7 @@ RETCODE conshdlrDisableCons(
 static
 RETCODE conshdlrAddCheckconss(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -664,7 +664,7 @@ RETCODE conshdlrAddCheckconss(
 static
 RETCODE conshdlrActivateCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -716,7 +716,7 @@ RETCODE conshdlrActivateCons(
 static
 RETCODE conshdlrDeactivateCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to remove */
    )
 {
@@ -803,7 +803,7 @@ static
 RETCODE conshdlrProcessUpdates(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    )
 {
@@ -930,7 +930,7 @@ static
 RETCODE conshdlrForceUpdates(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    )
 {
@@ -950,7 +950,7 @@ RETCODE conshdlrForceUpdates(
 static
 RETCODE conshdlrAddUpdateCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -1326,7 +1326,7 @@ RETCODE SCIPconshdlrExitsol(
 RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    )
 {
@@ -1356,7 +1356,7 @@ RETCODE SCIPconshdlrInitLP(
 RETCODE SCIPconshdlrSeparate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SEPASTORE*       sepastore,          /**< separation storage */
@@ -1471,7 +1471,7 @@ RETCODE SCIPconshdlrSeparate(
 RETCODE SCIPconshdlrEnforceLPSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
@@ -1594,7 +1594,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
 RETCODE SCIPconshdlrEnforcePseudoSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
@@ -1718,7 +1718,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
 RETCODE SCIPconshdlrCheck(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
    Bool             checkintegrality,   /**< has integrality to be checked? */
@@ -1770,7 +1770,7 @@ RETCODE SCIPconshdlrCheck(
 RETCODE SCIPconshdlrPropagate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    int              depth,              /**< depth of current node; -1 if preprocessing domain propagation */
@@ -1844,7 +1844,7 @@ RETCODE SCIPconshdlrPropagate(
 RETCODE SCIPconshdlrPresolve(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
@@ -2408,7 +2408,7 @@ static
 RETCODE conssetchgRelease(
    CONSSETCHG*      conssetchg,         /**< constraint set change data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    CONS* cons;
@@ -2441,7 +2441,7 @@ RETCODE conssetchgRelease(
 RETCODE SCIPconssetchgFree(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conssetchg != NULL);
@@ -2466,7 +2466,7 @@ static
 RETCODE conssetchgEnsureAddedconssSize(
    CONSSETCHG*      conssetchg,         /**< constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
 {
@@ -2490,7 +2490,7 @@ static
 RETCODE conssetchgEnsureDisabledconssSize(
    CONSSETCHG*      conssetchg,         /**< constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
 {
@@ -2515,7 +2515,7 @@ RETCODE conssetchgEnsureDisabledconssSize(
 RETCODE SCIPconssetchgAddAddedCons(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons,               /**< added constraint */
    Bool             active              /**< is the constraint set change currently active? */
    )
@@ -2558,7 +2558,7 @@ RETCODE SCIPconssetchgAddAddedCons(
 RETCODE SCIPconssetchgAddDisabledCons(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< disabled constraint */
    )
 {
@@ -2587,7 +2587,7 @@ static
 RETCODE conssetchgDelAddedCons(
    CONSSETCHG*      conssetchg,         /**< constraint set change to delete constraint from */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              arraypos            /**< position of constraint in disabledconss array */
    )
 {
@@ -2632,7 +2632,7 @@ static
 RETCODE conssetchgDelDisabledCons(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              arraypos            /**< position of constraint in disabledconss array */
    )
 {
@@ -2661,7 +2661,7 @@ RETCODE conssetchgDelDisabledCons(
 RETCODE SCIPconssetchgApply(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    CONS* cons;
@@ -2740,7 +2740,7 @@ RETCODE SCIPconssetchgApply(
 RETCODE SCIPconssetchgUndo(
    CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    CONS* cons;
@@ -2911,7 +2911,7 @@ RETCODE SCIPconsCreate(
 RETCODE SCIPconsFreeData(
    CONS*            cons,               /**< constraint to free */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -2940,7 +2940,7 @@ RETCODE SCIPconsFreeData(
 RETCODE SCIPconsFree(
    CONS**           cons,               /**< constraint to free */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -2978,7 +2978,7 @@ void SCIPconsCapture(
 RETCODE SCIPconsRelease(
    CONS**           cons,               /**< pointer to constraint */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(memhdr != NULL);
@@ -3003,7 +3003,7 @@ RETCODE SCIPconsRelease(
 RETCODE SCIPconsDelete(
    CONS*            cons,               /**< constraint to delete */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    )
 {
@@ -3051,7 +3051,7 @@ RETCODE SCIPconsDelete(
 RETCODE SCIPconsTransform(
    CONS*            origcons,           /**< original constraint */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS**           transcons           /**< pointer to store the transformed constraint */
    )
 {
@@ -3103,7 +3103,7 @@ CONS* SCIPconsGetTransformed(
 /** activates constraint or marks constraint to be activated in next update */
 RETCODE SCIPconsActivate(
    CONS*            cons,               /**< constraint */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -3134,7 +3134,7 @@ RETCODE SCIPconsActivate(
 /** deactivates constraint or marks constraint to be deactivated in next update */
 RETCODE SCIPconsDeactivate(
    CONS*            cons,               /**< constraint */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -3161,7 +3161,7 @@ RETCODE SCIPconsDeactivate(
 /** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
 RETCODE SCIPconsEnable(
    CONS*            cons,               /**< constraint */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -3190,7 +3190,7 @@ RETCODE SCIPconsEnable(
 /** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
 RETCODE SCIPconsDisable(
    CONS*            cons,               /**< constraint */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);
@@ -3227,7 +3227,7 @@ RETCODE SCIPconsDisable(
 RETCODE SCIPconsAddAge(
    CONS*            cons,               /**< constraint */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    Real             deltaage            /**< value to add to the constraint's age */
    )
@@ -3285,7 +3285,7 @@ RETCODE SCIPconsAddAge(
 RETCODE SCIPconsIncAge(
    CONS*            cons,               /**< constraint */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    )
 {
@@ -3338,7 +3338,7 @@ RETCODE SCIPconsResetAge(
  */
 RETCODE SCIPconsResolveConflictVar(
    CONS*            cons,               /**< constraint that deduced the assignment */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< conflict variable, that was deduced by the constraint */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -3375,7 +3375,7 @@ RETCODE SCIPconsResolveConflictVar(
 /** locks rounding of variables involved in the costraint */
 RETCODE SCIPconsLockVars(
    CONS*            cons,               /**< constraint */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              nlockspos,          /**< increase in number of rounding locks for constraint */
    int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
@@ -3409,7 +3409,7 @@ RETCODE SCIPconsLockVars(
 /** unlocks rounding of variables involved in the costraint */
 RETCODE SCIPconsUnlockVars(
    CONS*            cons,               /**< constraint */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
    int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
    )
@@ -3445,7 +3445,7 @@ RETCODE SCIPconsUnlockVars(
 /** checks single constraint for feasibility of the given solution */
 RETCODE SCIPconsCheck(
    CONS*            cons,               /**< constraint to check */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    SOL*             sol,                /**< primal CIP solution */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -3478,7 +3478,7 @@ RETCODE SCIPconsCheck(
 /** marks the constraint to be essential for feasibility */
 RETCODE SCIPconsSetChecked(
    CONS*            cons,               /**< constraint */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(cons != NULL);

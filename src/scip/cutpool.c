@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.26 2004/03/22 16:03:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.27 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -136,7 +136,7 @@ DECL_HASHKEYVAL(hashKeyValCut)
 static
 RETCODE cutpoolEnsureCutsMem(
    CUTPOOL*         cutpool,            /**< cut pool */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -192,7 +192,7 @@ static
 RETCODE cutFree(
    CUT**            cut,                /**< pointer to store the cut */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    )
 {
@@ -263,7 +263,7 @@ RETCODE SCIPcutpoolCreate(
 RETCODE SCIPcutpoolFree(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    )
 {
@@ -294,7 +294,7 @@ RETCODE SCIPcutpoolFree(
 RETCODE SCIPcutpoolAddRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    ROW*             row                 /**< cutting plane to add */
    )
 {
@@ -314,7 +314,7 @@ RETCODE SCIPcutpoolAddRow(
 RETCODE SCIPcutpoolAddNewRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    ROW*             row                 /**< cutting plane to add */
    )
 {
@@ -354,7 +354,7 @@ static
 RETCODE cutpoolDelCut(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< current LP data */
    CUT*             cut                 /**< cut to remove */
@@ -404,7 +404,7 @@ RETCODE cutpoolDelCut(
 RETCODE SCIPcutpoolDelRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< current LP data */
    ROW*             row                 /**< row to remove */
@@ -433,7 +433,7 @@ RETCODE SCIPcutpoolDelRow(
 RETCODE SCIPcutpoolSeparate(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< current LP data */
    SEPASTORE*       sepastore,          /**< separation storage */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.19 2004/04/27 15:49:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.20 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -986,6 +986,15 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
       return SCIP_OKAY;
    }
    
+   /* check, if new objective limit is valid */
+   if( SCIPstage(scip) > SCIP_STAGE_PROBLEM
+      && SCIPtransformObj(scip, objlim) > SCIPtransformObj(scip, SCIPgetObjlimit(scip)) )
+   {
+      printf("\ncannot relax objective limit from %g to %g after problem was transformed\n\n",
+         SCIPgetObjlimit(scip), objlim);
+      return SCIP_OKAY;
+   }
+
    /* set new objective limit */
    CHECK_OKAY( SCIPsetObjlimit(scip, objlim) );
    printf("objective value limit set to %g\n", SCIPgetObjlimit(scip));

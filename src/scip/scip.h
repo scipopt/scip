@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.127 2004/04/28 14:59:01 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.128 2004/04/29 15:20:39 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2468,14 +2468,21 @@ RETCODE SCIPaddCut(
 
 /** if not already existing, adds row to global cut pool */
 extern
-RETCODE SCIPpoolCut(
+RETCODE SCIPaddPoolCut(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< cutting plane to add */
+   );
+
+/** removes the row from the global cut pool */
+extern
+RETCODE SCIPdelPoolCut(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< cutting plane to add */
    );
 
 /** gets current number of rows in the global cut pool */
 extern
-int SCIPgetPoolsize(
+int SCIPgetNPoolCuts(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -3251,6 +3258,20 @@ Real SCIPgetTransGap(
 /** gets number of feasible primal solutions found so far */
 extern
 Longint SCIPgetNSolsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of primal solutions stored in the solution storage */
+extern
+Longint SCIPgetNSols(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
+ *  was set from the user as objective limit
+ */
+extern
+Bool SCIPisPrimalboundSol(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.1 2004/03/22 16:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.2 2004/04/29 15:20:42 bzfpfend Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -52,14 +52,14 @@ extern
 RETCODE SCIPvbcInit(
    VBC*             vbc,                /**< VBC information */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** closes the VBC output file */
 extern
 void SCIPvbcExit(
    VBC*             vbc,                /**< VBC information */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** creates a new node entry in the VBC output file */

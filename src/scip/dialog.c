@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.11 2004/04/19 17:08:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.12 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -356,7 +356,7 @@ RETCODE SCIPdialoghdlrAddHistory(
 static
 RETCODE ensureSubdialogMem(
    DIALOG*          dialog,             /**< dialog */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal storage size for sub dialogs */
    )
 {
@@ -487,7 +487,7 @@ RETCODE SCIPdialogExec(
 /** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
 RETCODE SCIPdialogAddEntry(
    DIALOG*          dialog,             /**< dialog */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
    )
 {

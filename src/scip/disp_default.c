@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.40 2004/04/27 15:49:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.41 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -418,7 +418,7 @@ DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_POOLSIZE) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetPoolsize(scip), DISP_WIDT_POOLSIZE);
+   SCIPdispDecimal(file, (Longint)SCIPgetNPoolCuts(scip), DISP_WIDT_POOLSIZE);
 
    return SCIP_OKAY;
 }
@@ -496,7 +496,7 @@ DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
    if( SCIPisInfinity(scip, ABS(primalbound)) )
       fprintf(file, "      --      ");
    else
-      fprintf(file, "%13.6e%c", primalbound, SCIPgetNSolsFound(scip) == 0 ? '*' : ' ');
+      fprintf(file, "%13.6e%c", primalbound, SCIPisPrimalboundSol(scip) ? ' ' : '*');
 
    return SCIP_OKAY;
 }

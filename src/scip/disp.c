@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.30 2004/03/15 15:40:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.31 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -184,7 +184,7 @@ RETCODE SCIPdispExit(
 /** output display column to screen */
 RETCODE SCIPdispOutput(
    DISP*            disp,               /**< display column */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
@@ -299,7 +299,7 @@ Bool SCIPdispIsInitialized(
 
 /** prints one line of output with the active display columns */
 RETCODE SCIPdispPrintLine(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
    )
@@ -379,7 +379,7 @@ DECL_SORTPTRCOMP(dispCmp)
 
 /** activates all display lines fitting in the display w.r. to priority */
 RETCODE SCIPdispAutoActivate(
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    DISP** disps;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.37 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.38 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -40,7 +40,7 @@
 RETCODE SCIPstatCreate(
    STAT**           stat,               /**< pointer to problem statistics data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(stat != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.17 2004/04/27 15:50:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.18 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -44,7 +44,7 @@
 static
 RETCODE sepastoreEnsureCutsMem(
    SEPASTORE*       sepastore,          /**< separation storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -69,7 +69,7 @@ RETCODE sepastoreEnsureCutsMem(
 static
 RETCODE sepastoreEnsureBdchgsMem(
    SEPASTORE*       sepastore,          /**< separation storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -167,7 +167,7 @@ static
 RETCODE sepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */
@@ -244,7 +244,7 @@ RETCODE sepastoreAddCut(
 static
 RETCODE sepastoreAddBdchg(
    SEPASTORE*       sepastore,          /**< separation storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound,           /**< new bound value */
    BOUNDTYPE        boundtype           /**< type of bound to change */
@@ -272,7 +272,7 @@ RETCODE sepastoreAddBdchg(
 RETCODE SCIPsepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */
@@ -368,7 +368,7 @@ RETCODE SCIPsepastoreAddCut(
 RETCODE SCIPsepastoreApplyCuts(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
@@ -463,7 +463,7 @@ RETCODE SCIPsepastoreApplyCuts(
 RETCODE SCIPsepastoreClearCuts(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< LP data */
    )
 {

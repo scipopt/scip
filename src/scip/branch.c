@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.42 2004/04/15 10:41:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.43 2004/04/29 15:20:35 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -52,7 +52,7 @@
 static
 RETCODE ensureLpcandsSize(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
 {
@@ -77,7 +77,7 @@ RETCODE ensureLpcandsSize(
 static
 RETCODE ensurePseudocandsSize(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
 {
@@ -150,7 +150,7 @@ RETCODE SCIPbranchcandFree(
 static
 RETCODE branchcandCalcLPCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp                  /**< current LP data */
    )
@@ -287,7 +287,7 @@ RETCODE branchcandCalcLPCands(
 /** gets branching candidates for LP solution branching (fractional variables) */
 RETCODE SCIPbranchcandGetLPCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
@@ -318,7 +318,7 @@ RETCODE SCIPbranchcandGetLPCands(
 /** gets branching candidates for pseudo solution branching (nonfixed variables) */
 RETCODE SCIPbranchcandGetPseudoCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
    int*             npseudocands,       /**< pointer to store the number of pseudo branching candidates, or NULL */
@@ -642,7 +642,7 @@ void branchcandRemovePseudoCand(
 /** updates branching candidate list for a given variable */
 RETCODE SCIPbranchcandUpdateVar(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var                 /**< variable that changed its bounds */
    )
 {
@@ -854,7 +854,7 @@ RETCODE SCIPbranchruleExit(
 /** executes branching rule for fractional LP solution */
 RETCODE SCIPbranchruleExecLPSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
@@ -922,7 +922,7 @@ RETCODE SCIPbranchruleExecLPSol(
 /** executes branching rule for not completely fixed pseudo solution */
 RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -1160,7 +1160,7 @@ Bool SCIPbranchruleIsInitialized(
 
 /** calculates the branching score out of the gain predictions for a binary branching */
 Real SCIPbranchGetScore(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    Real             downgain,           /**< prediction of objective gain for rounding downwards */
    Real             upgain              /**< prediction of objective gain for rounding upwards */
@@ -1188,7 +1188,7 @@ Real SCIPbranchGetScore(
 
 /** calculates the branching score out of the gain predictions for a branching with arbitrary many children */
 Real SCIPbranchGetScoreMultiple(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    int              nchildren,          /**< number of children that the branching will create */
    Real*            gains               /**< prediction of objective gain for each child */

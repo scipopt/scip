@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.6 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.7 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   scipstruct.h
  * @brief  SCIP main data structure
@@ -65,6 +65,7 @@ struct Scip
    EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    LP*              lp;                 /**< LP data */
+   PRIMAL*          primal;             /**< primal data and solution storage */
    PROB*            transprob;          /**< transformed problem after presolve */
 
    /* SOLVING */
@@ -72,7 +73,6 @@ struct Scip
    SEPASTORE*       sepastore;          /**< storage for separated cuts */
    CUTPOOL*         cutpool;            /**< global cut pool */
    CONFLICT*        conflict;           /**< conflict analysis data */
-   PRIMAL*          primal;             /**< primal data and solution storage */
    TREE*            tree;               /**< branch and bound tree */
 
    STAGE            stage;              /**< SCIP operation stage */

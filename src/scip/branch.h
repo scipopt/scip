@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.28 2004/04/15 10:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.29 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -66,7 +66,7 @@ RETCODE SCIPbranchcandFree(
 extern
 RETCODE SCIPbranchcandGetLPCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
@@ -80,7 +80,7 @@ RETCODE SCIPbranchcandGetLPCands(
 extern
 RETCODE SCIPbranchcandGetPseudoCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
    int*             npseudocands,       /**< pointer to store the number of pseudo branching candidates, or NULL */
@@ -121,7 +121,7 @@ int SCIPbranchcandGetNPrioPseudoImpls(
 extern
 RETCODE SCIPbranchcandUpdateVar(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var                 /**< variable that changed its bounds */
    );
 
@@ -175,7 +175,7 @@ RETCODE SCIPbranchruleExit(
 extern
 RETCODE SCIPbranchruleExecLPSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
@@ -186,7 +186,7 @@ RETCODE SCIPbranchruleExecLPSol(
 extern
 RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -217,7 +217,7 @@ void SCIPbranchruleSetMaxdepth(
 /** calculates the branching score out of the gain predictions for a binary branching */
 extern
 Real SCIPbranchGetScore(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    Real             downgain,           /**< prediction of objective gain for rounding downwards */
    Real             upgain              /**< prediction of objective gain for rounding upwards */
@@ -226,7 +226,7 @@ Real SCIPbranchGetScore(
 /** calculates the branching score out of the gain predictions for a branching with arbitrary many children */
 extern
 Real SCIPbranchGetScoreMultiple(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    int              nchildren,          /**< number of children that the branching will create */
    Real*            gains               /**< prediction of objective gain for each child */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.13 2004/02/05 14:12:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.14 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -75,7 +75,7 @@ void SCIPbufferFree(
 /** allocates the next unused buffer */
 RETCODE SCIPbufferAllocMem(
    BUFFER*          buffer,             /**< memory buffer storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
    int              size                /**< minimal required size of the buffer */
    )
@@ -139,7 +139,7 @@ RETCODE SCIPbufferAllocMem(
 /** allocates the next unused buffer and copies the given memory into the buffer */
 RETCODE SCIPbufferDuplicateMem(
    BUFFER*          buffer,             /**< memory buffer storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
    void*            source,             /**< memory block to copy into the buffer */
    int              size                /**< minimal required size of the buffer */
@@ -159,7 +159,7 @@ RETCODE SCIPbufferDuplicateMem(
 /** reallocates the buffer to at least the given size */
 RETCODE SCIPbufferReallocMem(
    BUFFER*          buffer,             /**< memory buffer storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to the allocated memory buffer */
    int              size                /**< minimal required size of the buffer */
    )

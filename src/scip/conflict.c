@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.38 2004/04/27 15:49:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.39 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -125,7 +125,7 @@
 static
 RETCODE conflictEnsureConflictvarsMem(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
@@ -486,7 +486,7 @@ Real getUbLocal(
 /** creates conflict analysis data for propagation conflicts */
 RETCODE SCIPconflictCreate(
    CONFLICT**       conflict,           /**< pointer to conflict analysis data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conflict != NULL);
@@ -556,7 +556,7 @@ RETCODE SCIPconflictInit(
 RETCODE SCIPconflictAddVar(
    CONFLICT*        conflict,           /**< conflict analysis data */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR*             var                 /**< problem variable */
    )
@@ -899,7 +899,7 @@ Longint SCIPconflictGetNPropConflicts(
 /**@todo Correct hard coded 1000.0 */
 static
 RETCODE generateAltLP(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
    LPI*             alt_lpi,            /**< alternative lp on output */
    int*             alt_nrowvars,       /**< number of variables in the alt. LP on output belonging to original rows */
@@ -1918,7 +1918,8 @@ RETCODE conflictAnalyzeLP(
    if( SCIPlpiIsOptimal(lpi) )
    {
       CHECK_OKAY( SCIPlpiGetObjval(lpi, &objval) );
-      assert(objval >= lp->lpiuobjlim);
+      if( objval < lp->lpiuobjlim )
+         return SCIP_OKAY;
    }
 
    error = FALSE;

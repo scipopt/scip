@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.33 2004/04/27 15:50:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.34 2004/04/29 15:20:39 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -202,7 +202,7 @@ RETCODE SCIPsepaExit(
 /** calls execution method of separator */
 RETCODE SCIPsepaExec(
    SEPA*            sepa,               /**< separator */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    SEPASTORE*       sepastore,          /**< separation storage */
    int              depth,              /**< depth of active node */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.8 2004/02/04 17:27:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.9 2004/04/29 15:20:38 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -95,7 +95,7 @@ RETCODE SCIPpricerDeactivate(
 extern
 RETCODE SCIPpricerRedcost(
    PRICER*          pricer,             /**< variable pricer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< transformed problem */
    );
 
@@ -103,7 +103,7 @@ RETCODE SCIPpricerRedcost(
 extern
 RETCODE SCIPpricerFarkas(
    PRICER*          pricer,             /**< variable pricer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< transformed problem */
    );
 
@@ -111,7 +111,7 @@ RETCODE SCIPpricerFarkas(
 extern
 RETCODE SCIPpricerExec(
    PRICER*          pricer,             /**< variable pricer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< transformed problem */
    LP*              lp                  /**< LP data */
    );

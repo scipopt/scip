@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_event.h,v 1.2 2004/02/04 17:27:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_event.h,v 1.3 2004/04/29 15:20:39 bzfpfend Exp $"
 
 /**@file   pub_event.h
  * @brief  public methods for managing events
@@ -77,7 +77,7 @@ EVENTTYPE SCIPeventGetType(
    EVENT*           event               /**< event */
    );
 
-/** gets variable for a variable change event (objective value or domain change) */
+/** gets variable for a variable event (var added, var fixed, objective value or domain change) */
 extern
 VAR* SCIPeventGetVar(
    EVENT*           event               /**< event */

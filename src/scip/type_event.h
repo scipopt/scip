@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.5 2004/04/29 15:20:41 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -88,6 +88,7 @@ typedef struct Eventhdlr EVENTHDLR;     /**< event handler for a specific events
 typedef struct EventhdlrData EVENTHDLRDATA; /**< event handler data */
 typedef struct Event EVENT;             /**< event data structure */
 typedef struct EventVarAdded EVENTVARADDED; /**< data for variable addition events */
+typedef struct EventVarFixed EVENTVARFIXED; /**< data for variable fixing events */
 typedef struct EventObjChg EVENTOBJCHG; /**< data for objective value change events */
 typedef struct EventBdChg EVENTBDCHG;   /**< data for bound change events */
 typedef struct EventData EVENTDATA;     /**< locally defined event specific data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.155 2004/04/28 14:59:01 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.156 2004/04/29 15:20:39 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -113,12 +113,12 @@ RETCODE checkStage(
       assert(scip->eventqueue == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->lp == NULL);
+      assert(scip->primal == NULL);
       assert(scip->transprob == NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
       if( !init )
@@ -135,12 +135,12 @@ RETCODE checkStage(
       assert(scip->eventqueue == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->lp == NULL);
+      assert(scip->primal == NULL);
       assert(scip->transprob == NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
       if( !problem )
@@ -157,12 +157,12 @@ RETCODE checkStage(
       assert(scip->eventqueue != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
       if( !transforming )
@@ -179,12 +179,12 @@ RETCODE checkStage(
       assert(scip->eventqueue != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
       if( !transformed )
@@ -201,12 +201,12 @@ RETCODE checkStage(
       assert(scip->eventqueue != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
       if( !presolving )
@@ -223,12 +223,12 @@ RETCODE checkStage(
       assert(scip->eventqueue != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
       if( !presolved )
@@ -245,12 +245,12 @@ RETCODE checkStage(
       assert(scip->eventqueue != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->conflict != NULL);
-      assert(scip->primal != NULL);
       assert(scip->tree != NULL);
 
       if( !solving )
@@ -267,12 +267,12 @@ RETCODE checkStage(
       assert(scip->eventqueue != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->conflict != NULL);
-      assert(scip->primal != NULL);
       assert(scip->tree != NULL);
 
       if( !solved )
@@ -289,6 +289,7 @@ RETCODE checkStage(
       assert(scip->eventqueue != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
       assert(scip->transprob != NULL);
 
       if( !freesolve )
@@ -305,7 +306,6 @@ RETCODE checkStage(
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
       if( !freetrans )
@@ -2006,23 +2006,27 @@ RETCODE SCIPsetObjlimit(
    Real             objlimit            /**< new primal objective limit */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPsetObjlimit", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPsetObjlimit", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetExternObjlim(scip->origprob, objlimit);
       break;
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      SCIPprobSetExternObjlim(scip->transprob, SCIPprobInternObjval(scip->origprob, scip->set, objlimit));
-      objlimit = SCIPprobGetInternObjlim(scip->transprob, scip->set);
-      if( SCIPsetIsLT(scip->set, objlimit, scip->primal->upperbound) )
+      if( SCIPtransformObj(scip, objlimit) > SCIPprobGetInternObjlim(scip->transprob, scip->set) )
       {
-         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                        scip->tree, scip->lp, objlimit) );
+         errorMessage("cannot relax objective limit from %g to %g after problem was transformed\n",
+            SCIPprobGetExternObjlim(scip->origprob), objlimit);
+         return SCIP_INVALIDDATA;
       }
+      SCIPprobSetExternObjlim(scip->origprob, objlimit);
+      SCIPprobSetExternObjlim(scip->transprob, SCIPprobGetInternObjlim(scip->origprob, scip->set));
+      CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+                     scip->tree, scip->lp) );
       break;
    default:
       errorMessage("invalid SCIP stage\n");
@@ -2903,6 +2907,7 @@ RETCODE transformProb(
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
    CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
+   CHECK_OKAY( SCIPprimalCreate(&scip->primal) );
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
@@ -2913,6 +2918,10 @@ RETCODE transformProb(
 
    /* switch stage to TRANSFORMED */
    scip->stage = SCIP_STAGE_TRANSFORMED;
+
+   /* update upper bound (e.g. objective limit) in primal data */
+   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+                  scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -2957,6 +2966,10 @@ RETCODE presolve(
    assert(scip->stage == SCIP_STAGE_TRANSFORMED);
    assert(unbounded != NULL);
    assert(infeasible != NULL);
+
+   /* update upper bound (e.g. objective limit) in primal data */
+   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+                  scip->tree, scip->lp) );
 
    /* switch stage to PRESOLVING */
    scip->stage = SCIP_STAGE_PRESOLVING;
@@ -3107,9 +3120,12 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
-   CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
                   SCIPsetGetNodesel(scip->set, scip->stat)) );
+
+   /* update upper bound (e.g. objective limit) in primal data */
+   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+                  scip->tree, scip->lp) );
 
    /* increase number of branch and bound runs */
    scip->stat->nruns++;
@@ -3170,11 +3186,12 @@ RETCODE initSolve(
             else
                objbound += SCIPvarGetObj(var) * bd;
          }
-         if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->upperbound) )
+
+         /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
+         if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound + 1.0, scip->primal->upperbound) )
          {
-            /* add 1.0 to primal bound, such that solution with worst bound may be found */
-            CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                           scip->tree, scip->lp, objbound + 1.0) );
+            CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat,
+                           scip->transprob, scip->tree, scip->lp, objbound + 1.0) );
          }
       }
    }
@@ -3228,7 +3245,6 @@ RETCODE freeSolve(
    CHECK_OKAY( SCIPprobExitSolve(scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
 
    /* free solution process data structures */
-   CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
    CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
    CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
    CHECK_OKAY( SCIPsepastoreFree(&scip->sepastore) );
@@ -3264,6 +3280,7 @@ RETCODE freeTransform(
 
    /* free transformed problem data structures */
    CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
+   CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
    CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
    CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
    CHECK_OKAY( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
@@ -3935,14 +3952,14 @@ RETCODE SCIPaddVarObj(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->origprob, scip->lp,
-                     scip->branchcand, scip->eventqueue, addobj) );
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->lp,
+                     scip->branchcand, scip->primal, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->transprob, scip->lp,
-                     scip->branchcand, scip->eventqueue, addobj) );
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
+                     scip->branchcand, scip->primal, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    default:
@@ -4293,7 +4310,7 @@ RETCODE SCIPinferBinVar(
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
+                     scip->branchcand, scip->primal, scip->eventqueue, (Real)fixedval, infeasible) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -4533,7 +4550,7 @@ RETCODE SCIPfixVar(
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->eventqueue, fixedval, infeasible) );
+                     scip->branchcand, scip->primal, scip->eventqueue, fixedval, infeasible) );
       *fixed = TRUE;
       return SCIP_OKAY;
       
@@ -4632,7 +4649,8 @@ RETCODE aggregateActiveIntVars(
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->lp, scip->branchcand, scip->eventqueue, vary, (Real)(-b/a), (Real)(c/a), infeasible) );
+                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, 
+                     vary, (Real)(-b/a), (Real)(c/a), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -4641,7 +4659,8 @@ RETCODE aggregateActiveIntVars(
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->lp, scip->branchcand, scip->eventqueue, varx, (Real)(-a/b), (Real)(c/b), infeasible) );
+                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, 
+                     varx, (Real)(-a/b), (Real)(c/b), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -4697,11 +4716,13 @@ RETCODE aggregateActiveIntVars(
    CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
                   scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->lp, scip->branchcand, scip->eventqueue, aggvar, (Real)(-b), (Real)xsol, infeasible) );
+                  scip->lp, scip->branchcand, scip->primal, scip->eventqueue,
+                  aggvar, (Real)(-b), (Real)xsol, infeasible) );
    if( !(*infeasible) )
    {
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->lp, scip->branchcand, scip->eventqueue, aggvar, (Real)a, (Real)ysol, infeasible) );
+                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, 
+                     aggvar, (Real)a, (Real)ysol, infeasible) );
    }
    *aggregated = TRUE;
 
@@ -4802,7 +4823,7 @@ RETCODE aggregateActiveVars(
 
       /* aggregate the variable */
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-                        scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant, infeasible) );
+                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, vary, scalar, constant, infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -4889,7 +4910,7 @@ RETCODE SCIPaggregateVars(
       
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
       CHECK_OKAY( SCIPvarFix(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->eventqueue, rhs/scalary, infeasible) );
+                     scip->branchcand, scip->primal, scip->eventqueue, rhs/scalary, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -4900,7 +4921,7 @@ RETCODE SCIPaggregateVars(
       
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
       CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+                     scip->branchcand, scip->primal, scip->eventqueue, rhs/scalarx, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -4917,7 +4938,7 @@ RETCODE SCIPaggregateVars(
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
          CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                        scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+                        scip->branchcand, scip->primal, scip->eventqueue, rhs/scalarx, infeasible) );
          *aggregated = TRUE;
       }
       *redundant = TRUE;
@@ -4948,7 +4969,7 @@ RETCODE SCIPmultiaggregateVar(
    CHECK_OKAY( checkStage(scip, "SCIPmultiaggregateVar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                  scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
+                  scip->branchcand, scip->primal, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -6283,8 +6304,6 @@ RETCODE SCIPaddCut(
    Real             score               /**< separation score of cut (the larger, the better the cut) */
    )
 {
-   assert(cut != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(scip->tree->actnode != NULL);
@@ -6302,26 +6321,37 @@ RETCODE SCIPaddCut(
 }
 
 /** if not already existing, adds row to global cut pool */
-RETCODE SCIPpoolCut(
+RETCODE SCIPaddPoolCut(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< cutting plane to add */
    )
 {
-   assert(row != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPpoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddPoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPcutpoolAddRow(scip->cutpool, scip->mem->solvemem, scip->set, row) );
 
    return SCIP_OKAY;
 }
 
+/** removes the row from the global cut pool */
+RETCODE SCIPdelPoolCut(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< cutting plane to add */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPdelPoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPcutpoolDelRow(scip->cutpool, scip->mem->solvemem, scip->set, scip->stat, scip->lp, row) );
+
+   return SCIP_OKAY;
+}
+
 /** gets current number of rows in the global cut pool */
-int SCIPgetPoolsize(
+int SCIPgetNPoolCuts(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetPoolsize", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPoolCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPcutpoolGetNCuts(scip->cutpool);
 }
@@ -6789,12 +6819,7 @@ Real SCIPgetSolVal(
    CHECK_ABORT( checkStage(scip, "SCIPgetSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( sol != NULL )
-   {
-      Real solval;
-
-      CHECK_ABORT( SCIPsolGetVal(sol, scip->set, scip->stat, var, &solval) );
-      return solval;
-   }
+      return SCIPsolGetVal(sol, scip->set, scip->stat, var);
    else
    {
       CHECK_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -6821,9 +6846,7 @@ RETCODE SCIPgetSolVals(
    if( sol != NULL )
    {
       for( v = 0; v < nvars; ++v )
-      {
-         CHECK_OKAY( SCIPsolGetVal(sol, scip->set, scip->stat, vars[v], &vals[v]) );
-      }
+         vals[v] = SCIPsolGetVal(sol, scip->set, scip->stat, vars[v]);
    }
    else
    {
@@ -7827,9 +7850,31 @@ Longint SCIPgetNSolsFound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNSolsFound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNSolsFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->primal->nsolsfound;
+}
+
+/** gets number of primal solutions stored in the solution storage */
+Longint SCIPgetNSols(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->primal->nsols;
+}
+
+/** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
+ *  was set from the user as objective limit
+ */
+Bool SCIPisPrimalboundSol(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPisPrimalboundSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPprimalUpperboundIsSol(scip->primal);
 }
 
 static
@@ -7959,6 +8004,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
+   /**@todo add constraint statistics: how many constraints (instead of cuts) have been added? */
    fprintf(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS    Cutoffs       Cuts    DomReds   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )

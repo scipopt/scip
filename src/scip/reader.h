@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.15 2004/02/04 17:27:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.16 2004/04/29 15:20:39 bzfpfend Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -60,7 +60,7 @@ RETCODE SCIPreaderFree(
 extern
 RETCODE SCIPreaderRead(
    READER*          reader,             /**< reader */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      filename,           /**< name of the input file */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );

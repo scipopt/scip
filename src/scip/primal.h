@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.21 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.22 2004/04/29 15:20:38 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -46,12 +46,7 @@
 /** creates primal data */
 extern
 RETCODE SCIPprimalCreate(
-   PRIMAL**         primal,             /**< pointer to primal data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< problem data */
-   LP*              lp                  /**< current LP data */
+   PRIMAL**         primal              /**< pointer to primal data */
    );
 
 /** frees primal data */
@@ -66,7 +61,7 @@ extern
 RETCODE SCIPprimalSetUpperbound(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -74,12 +69,32 @@ RETCODE SCIPprimalSetUpperbound(
    Real             upperbound          /**< new upper bound */
    );
 
+/** recalculates upper bound in primal data after a change of the problem's objective offset */
+extern
+RETCODE SCIPprimalUpdateUpperbound(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
+ *  was set from the user as objective limit
+ */
+extern
+Bool SCIPprimalUpperboundIsSol(
+   PRIMAL*          primal              /**< primal data */
+   );
+
 /** adds primal solution to solution storage by copying it */
 extern
 RETCODE SCIPprimalAddSol(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -94,7 +109,7 @@ extern
 RETCODE SCIPprimalAddSolFree(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -109,7 +124,7 @@ extern
 RETCODE SCIPprimalTrySol(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -126,7 +141,7 @@ extern
 RETCODE SCIPprimalTrySolFree(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */

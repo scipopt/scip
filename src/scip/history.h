@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.7 2004/04/27 15:50:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.8 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -73,7 +73,7 @@ void SCIPhistoryUnite(
 extern
 void SCIPhistoryUpdatePseudocost(
    HISTORY*         history,            /**< branching and inference history */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
    Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
    Real             weight              /**< weight of this update in pseudo cost sum (added to pscostcount) */

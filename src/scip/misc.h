@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.12 2004/02/04 17:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.13 2004/04/29 15:20:38 bzfpfend Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -65,7 +65,7 @@ RETCODE SCIPrealarrayFree(
 extern
 RETCODE SCIPrealarrayExtend(
    REALARRAY*       realarray,          /**< dynamic real array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
    );
@@ -87,7 +87,7 @@ Real SCIPrealarrayGetVal(
 extern
 RETCODE SCIPrealarraySetVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Real             val                 /**< value to set array index to */
    );
@@ -96,7 +96,7 @@ RETCODE SCIPrealarraySetVal(
 extern
 RETCODE SCIPrealarrayIncVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    Real             incval              /**< value to increase array index */
    );
@@ -126,7 +126,7 @@ RETCODE SCIPintarrayFree(
 extern
 RETCODE SCIPintarrayExtend(
    INTARRAY*        intarray,           /**< dynamic int array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
    );
@@ -148,7 +148,7 @@ int SCIPintarrayGetVal(
 extern
 RETCODE SCIPintarraySetVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    int              val                 /**< value to set array index to */
    );
@@ -157,7 +157,7 @@ RETCODE SCIPintarraySetVal(
 extern
 RETCODE SCIPintarrayIncVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    int              incval              /**< value to increase array index */
    );
@@ -187,7 +187,7 @@ RETCODE SCIPboolarrayFree(
 extern
 RETCODE SCIPboolarrayExtend(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
    );
@@ -209,7 +209,7 @@ Bool SCIPboolarrayGetVal(
 extern
 RETCODE SCIPboolarraySetVal(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Bool             val                 /**< value to set array index to */
    );

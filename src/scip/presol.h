@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.14 2004/02/04 17:27:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.15 2004/04/29 15:20:38 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -79,7 +79,7 @@ RETCODE SCIPpresolExit(
 extern
 RETCODE SCIPpresolExec(
    PRESOL*          presol,             /**< presolver */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */

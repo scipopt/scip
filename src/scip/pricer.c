@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.6 2004/02/04 17:27:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.7 2004/04/29 15:20:38 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -249,7 +249,7 @@ Bool SCIPpricerIsActive(
 /** calls reduced cost pricing method of variable pricer */
 RETCODE SCIPpricerRedcost(
    PRICER*          pricer,             /**< variable pricer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< transformed problem */
    )
 {
@@ -284,7 +284,7 @@ RETCODE SCIPpricerRedcost(
 /** calls farkas pricing method of variable pricer */
 RETCODE SCIPpricerFarkas(
    PRICER*          pricer,             /**< variable pricer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob                /**< transformed problem */
    )
 {
@@ -322,7 +322,7 @@ RETCODE SCIPpricerFarkas(
 /** depending on the LP's solution status, calls reduced cost or farkas pricing method of variable pricer */
 RETCODE SCIPpricerExec(
    PRICER*          pricer,             /**< variable pricer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< transformed problem */
    LP*              lp                  /**< LP data */
    )

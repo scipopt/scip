@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.30 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.31 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -43,7 +43,7 @@ extern
 RETCODE SCIPstatCreate(
    STAT**           stat,               /**< pointer to problem statistics data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** frees problem statistics data */

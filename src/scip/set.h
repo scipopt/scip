@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.63 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.64 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -285,7 +285,7 @@ RETCODE SCIPsetIncludeReader(
 /** returns the file reader of the given name, or NULL if not existing */
 extern
 READER* SCIPsetFindReader(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of file reader */
    );
 
@@ -299,7 +299,7 @@ RETCODE SCIPsetIncludePricer(
 /** returns the variable pricer of the given name, or NULL if not existing */
 extern
 PRICER* SCIPsetFindPricer(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of variable pricer */
    );
 
@@ -319,7 +319,7 @@ RETCODE SCIPsetIncludeConshdlr(
 /** returns the constraint handler of the given name, or NULL if not existing */
 extern
 CONSHDLR* SCIPsetFindConshdlr(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of constraint handler */
    );
 
@@ -333,7 +333,7 @@ RETCODE SCIPsetIncludeConflicthdlr(
 /** returns the conflict handler of the given name, or NULL if not existing */
 extern
 CONFLICTHDLR* SCIPsetFindConflicthdlr(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of conflict handler */
    );
 
@@ -353,7 +353,7 @@ RETCODE SCIPsetIncludePresol(
 /** returns the presolver of the given name, or NULL if not existing */
 extern
 PRESOL* SCIPsetFindPresol(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of presolver */
    );
 
@@ -373,7 +373,7 @@ RETCODE SCIPsetIncludeSepa(
 /** returns the separator of the given name, or NULL if not existing */
 extern
 SEPA* SCIPsetFindSepa(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of separator */
    );
 
@@ -393,7 +393,7 @@ RETCODE SCIPsetIncludeHeur(
 /** returns the primal heuristic of the given name, or NULL if not existing */
 extern
 HEUR* SCIPsetFindHeur(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of primal heuristic */
    );
 
@@ -413,7 +413,7 @@ RETCODE SCIPsetIncludeEventhdlr(
 /** returns the event handler of the given name, or NULL if not existing */
 extern
 EVENTHDLR* SCIPsetFindEventhdlr(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of event handler */
    );
 
@@ -427,7 +427,7 @@ RETCODE SCIPsetIncludeNodesel(
 /** returns the node selector of the given name, or NULL if not existing */
 extern
 NODESEL* SCIPsetFindNodesel(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of event handler */
    );
 
@@ -448,7 +448,7 @@ RETCODE SCIPsetIncludeBranchrule(
 /** returns the branching rule of the given name, or NULL if not existing */
 extern
 BRANCHRULE* SCIPsetFindBranchrule(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of event handler */
    );
 
@@ -468,7 +468,7 @@ RETCODE SCIPsetIncludeDisp(
 /** returns the display column of the given name, or NULL if not existing */
 extern
 DISP* SCIPsetFindDisp(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name                /**< name of event handler */
    );
 
@@ -487,21 +487,21 @@ RETCODE SCIPsetExitCallbacks(
 /** calculate memory size for dynamically allocated arrays */
 extern
 int SCIPsetCalcMemGrowSize(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    );
 
 /** calculate memory size for tree array */
 extern
 int SCIPsetCalcTreeGrowSize(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    );
 
 /** calculate memory size for path array */
 extern
 int SCIPsetCalcPathGrowSize(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    );
 
@@ -529,14 +529,14 @@ RETCODE SCIPsetSetDualfeastol(
 /** returns the maximal number of variables priced into the LP per round */
 extern
 int SCIPsetGetMaxpricevars(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Bool             root                /**< are we at the root node? */
    );
 
 /** returns the maximal number of cuts separated per round */
 extern
 int SCIPsetGetMaxsepacuts(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Bool             root                /**< are we at the root node? */
    );
 
@@ -551,7 +551,7 @@ int SCIPsetGetMaxsepacuts(
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
 extern
 Real SCIPsetRelDiff(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -559,7 +559,7 @@ Real SCIPsetRelDiff(
 /** checks, if values are in range of epsilon */
 extern
 Bool SCIPsetIsEQ(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -567,7 +567,7 @@ Bool SCIPsetIsEQ(
 /** checks, if val1 is (more than epsilon) lower than val2 */
 extern
 Bool SCIPsetIsLT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -575,7 +575,7 @@ Bool SCIPsetIsLT(
 /** checks, if val1 is not (more than epsilon) greater than val2 */
 extern
 Bool SCIPsetIsLE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -583,7 +583,7 @@ Bool SCIPsetIsLE(
 /** checks, if val1 is (more than epsilon) greater than val2 */
 extern
 Bool SCIPsetIsGT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -591,7 +591,7 @@ Bool SCIPsetIsGT(
 /** checks, if val1 is not (more than epsilon) lower than val2 */
 extern
 Bool SCIPsetIsGE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -599,28 +599,28 @@ Bool SCIPsetIsGE(
 /** checks, if value is in range epsilon of 0.0 */
 extern
 Bool SCIPsetIsZero(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is greater than epsilon */
 extern
 Bool SCIPsetIsPositive(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -epsilon */
 extern
 Bool SCIPsetIsNegative(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if values are in range of sumepsilon */
 extern
 Bool SCIPsetIsSumEQ(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -628,7 +628,7 @@ Bool SCIPsetIsSumEQ(
 /** checks, if val1 is (more than sumepsilon) lower than val2 */
 extern
 Bool SCIPsetIsSumLT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -636,7 +636,7 @@ Bool SCIPsetIsSumLT(
 /** checks, if val1 is not (more than sumepsilon) greater than val2 */
 extern
 Bool SCIPsetIsSumLE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -644,7 +644,7 @@ Bool SCIPsetIsSumLE(
 /** checks, if val1 is (more than sumepsilon) greater than val2 */
 extern
 Bool SCIPsetIsSumGT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -652,7 +652,7 @@ Bool SCIPsetIsSumGT(
 /** checks, if val1 is not (more than sumepsilon) lower than val2 */
 extern
 Bool SCIPsetIsSumGE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -660,28 +660,28 @@ Bool SCIPsetIsSumGE(
 /** checks, if value is in range sumepsilon of 0.0 */
 extern
 Bool SCIPsetIsSumZero(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is greater than sumepsilon */
 extern
 Bool SCIPsetIsSumPositive(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -sumepsilon */
 extern
 Bool SCIPsetIsSumNegative(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if values are in range of feasibility tolerance */
 extern
 Bool SCIPsetIsFeasEQ(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -689,7 +689,7 @@ Bool SCIPsetIsFeasEQ(
 /** checks, if val1 is (more than feasibility tolerance) lower than val2 */
 extern
 Bool SCIPsetIsFeasLT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -697,7 +697,7 @@ Bool SCIPsetIsFeasLT(
 /** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
 extern
 Bool SCIPsetIsFeasLE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -705,7 +705,7 @@ Bool SCIPsetIsFeasLE(
 /** checks, if val1 is (more than feasibility tolerance) greater than val2 */
 extern
 Bool SCIPsetIsFeasGT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -713,7 +713,7 @@ Bool SCIPsetIsFeasGT(
 /** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
 extern
 Bool SCIPsetIsFeasGE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -721,28 +721,28 @@ Bool SCIPsetIsFeasGE(
 /** checks, if value is in range feasibility tolerance of 0.0 */
 extern
 Bool SCIPsetIsFeasZero(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is greater than feasibility tolerance */
 extern
 Bool SCIPsetIsFeasPositive(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -feasibility tolerance */
 extern
 Bool SCIPsetIsFeasNegative(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
 extern
 Bool SCIPsetIsLbBetter(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             lb1,                /**< first lower bound to compare */
    Real             lb2                 /**< second lower bound to compare */
    );
@@ -750,7 +750,7 @@ Bool SCIPsetIsLbBetter(
 /** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
 extern
 Bool SCIPsetIsUbBetter(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             ub1,                /**< first upper bound to compare */
    Real             ub2                 /**< second upper bound to compare */
    );
@@ -760,7 +760,7 @@ Bool SCIPsetIsUbBetter(
  */
 extern
 Bool SCIPsetIsCutViolated(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Bool             root,               /**< should the root's cutvioleps be used? */
    Real             cutactivity,        /**< activity of the cut */
    Real             cutrhs              /**< right hand side value of the cut */
@@ -769,7 +769,7 @@ Bool SCIPsetIsCutViolated(
 /** checks, if relative difference of values is in range of epsilon */
 extern
 Bool SCIPsetIsRelEQ(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -777,7 +777,7 @@ Bool SCIPsetIsRelEQ(
 /** checks, if relative difference of val1 and val2 is lower than epsilon */
 extern
 Bool SCIPsetIsRelLT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -785,7 +785,7 @@ Bool SCIPsetIsRelLT(
 /** checks, if relative difference of val1 and val2 is not greater than epsilon */
 extern
 Bool SCIPsetIsRelLE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -793,7 +793,7 @@ Bool SCIPsetIsRelLE(
 /** checks, if relative difference of val1 and val2 is greater than epsilon */
 extern
 Bool SCIPsetIsRelGT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -801,7 +801,7 @@ Bool SCIPsetIsRelGT(
 /** checks, if relative difference of val1 and val2 is not lower than -epsilon */
 extern
 Bool SCIPsetIsRelGE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -809,7 +809,7 @@ Bool SCIPsetIsRelGE(
 /** checks, if relative difference of values is in range of sumepsilon */
 extern
 Bool SCIPsetIsSumRelEQ(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -817,7 +817,7 @@ Bool SCIPsetIsSumRelEQ(
 /** checks, if relative difference of val1 and val2 is lower than sumepsilon */
 extern
 Bool SCIPsetIsSumRelLT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -825,7 +825,7 @@ Bool SCIPsetIsSumRelLT(
 /** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
 extern
 Bool SCIPsetIsSumRelLE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -833,7 +833,7 @@ Bool SCIPsetIsSumRelLE(
 /** checks, if relative difference of val1 and val2 is greater than sumepsilon */
 extern
 Bool SCIPsetIsSumRelGT(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -841,7 +841,7 @@ Bool SCIPsetIsSumRelGT(
 /** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
 extern
 Bool SCIPsetIsSumRelGE(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
@@ -849,49 +849,49 @@ Bool SCIPsetIsSumRelGE(
 /** checks, if value is (positive) infinite */
 extern
 Bool SCIPsetIsInfinity(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against infinity */
    );
 
 /** checks, if value is non-negative within the LP feasibility bounds */
 extern
 Bool SCIPsetIsFeasible(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is integral within the LP feasibility bounds */
 extern
 Bool SCIPsetIsIntegral(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if given fractional part is smaller than feastol */
 extern
 Bool SCIPsetIsFracIntegral(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** rounds value + feasibility tolerance down to the next integer */
 extern
 Real SCIPsetFloor(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** rounds value - feasibility tolerance up to the next integer */
 extern
 Real SCIPsetCeil(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** returns fractional part of value, i.e. ceil(x) - x */
 extern
 Real SCIPsetFrac(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             val                 /**< value to return fractional part for */
    );
 

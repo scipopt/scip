@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.h,v 1.6 2004/02/04 17:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.h,v 1.7 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   dialog.h
  * @brief  internal methods for user interface dialog
@@ -111,7 +111,7 @@ RETCODE SCIPdialogExec(
 extern
 RETCODE SCIPdialogAddEntry(
    DIALOG*          dialog,             /**< dialog */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
    );
 

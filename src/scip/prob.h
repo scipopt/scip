@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.32 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.33 2004/04/29 15:20:39 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -71,7 +71,7 @@ extern
 RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    );
 
@@ -80,7 +80,7 @@ extern
 RETCODE SCIPprobTransform(
    PROB*            source,             /**< problem to transform */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -108,7 +108,7 @@ extern
 RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -120,7 +120,7 @@ RETCODE SCIPprobAddVar(
 extern
 RETCODE SCIPprobChgVarType(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var,                /**< variable to add */
    VARTYPE          vartype             /**< new type of variable */
@@ -130,7 +130,7 @@ RETCODE SCIPprobChgVarType(
 extern
 RETCODE SCIPprobVarChangedStatus(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var                 /**< problem variable */
    );
@@ -141,7 +141,7 @@ RETCODE SCIPprobVarChangedStatus(
 extern
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    );
 
@@ -152,7 +152,7 @@ extern
 RETCODE SCIPprobDelCons(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to remove */
    );
 
@@ -172,11 +172,11 @@ void SCIPprobSetObjsense(
    OBJSENSE         objsense            /**< new objective sense */
    );
 
-/** increases objective offset */
+/** adds value to objective offset */
 extern
-void SCIPprobIncObjoffset(
+void SCIPprobAddObjoffset(
    PROB*            prob,               /**< problem data */
-   Real             incval              /**< value to add to objective offset */
+   Real             addval              /**< value to add to objective offset */
    );
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
@@ -190,7 +190,7 @@ void SCIPprobSetExternObjlim(
 extern
 void SCIPprobSetInternObjlim(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             objlim              /**< transformed internal objective limit */
    );
 
@@ -206,14 +206,14 @@ void SCIPprobSetObjIntegral(
 extern
 void SCIPprobCheckObjIntegral(
    PROB*            prob,               /**< problem data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes problem for branch and bound process */
 extern
 RETCODE SCIPprobInitSolve(
    PROB*            prob,               /**< problem data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes problem for branch and bound process, and converts all COLUMN variables back into LOOSE variables */
@@ -221,7 +221,7 @@ extern
 RETCODE SCIPprobExitSolve(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
 
@@ -248,7 +248,7 @@ PROBDATA* SCIPprobGetData(
 extern
 Real SCIPprobExternObjval(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             objval              /**< internal objective value */
    );
 
@@ -256,7 +256,7 @@ Real SCIPprobExternObjval(
 extern
 Real SCIPprobInternObjval(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    Real             objval              /**< external objective value */
    );
 
@@ -270,7 +270,7 @@ Real SCIPprobGetExternObjlim(
 extern
 Real SCIPprobGetInternObjlim(
    PROB*            prob,               /**< problem data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** returns whether the objective value is known to be integral in every feasible solution */
@@ -299,7 +299,7 @@ CONS* SCIPprobFindCons(
 extern
 Bool SCIPprobAllColsInLP(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
 
@@ -307,7 +307,7 @@ Bool SCIPprobAllColsInLP(
 extern
 void SCIPprobPrintPseudoSol(
    PROB*            prob,               /**< problem data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** outputs problem statistics */

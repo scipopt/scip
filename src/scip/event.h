@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.24 2004/04/06 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.25 2004/04/29 15:20:37 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -85,7 +85,7 @@ RETCODE SCIPeventhdlrExit(
 extern
 RETCODE SCIPeventhdlrExec(
    EVENTHDLR*       eventhdlr,          /**< event handler */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENT*           event,              /**< event to call event handler with */
    EVENTDATA*       eventdata           /**< user data for the issued event */
    );
@@ -103,6 +103,14 @@ RETCODE SCIPeventCreateVarAdded(
    EVENT**          event,              /**< pointer to store the event */
    MEMHDR*          memhdr,             /**< block memory */
    VAR*             var                 /**< variable that was added to the problem */
+   );
+
+/** creates an event for a fixing of a variable */
+extern
+RETCODE SCIPeventCreateVarFixed(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var                 /**< variable that was fixed */
    );
 
 /** creates an event for a change in the objective value of a variable */
@@ -167,10 +175,10 @@ RETCODE SCIPeventChgSol(
 extern
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< current LP data; only needed for BOUNDCHANGED events */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
-   EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for BOUNDCHANGED events */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< current LP data; only needed for variable specific events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for variable specific events */
+   EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    );
 
 
@@ -191,7 +199,7 @@ extern
 RETCODE SCIPeventfilterFree(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** adds element to event filter */
@@ -199,7 +207,7 @@ extern
 RETCODE SCIPeventfilterAdd(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
@@ -210,7 +218,7 @@ extern
 RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
@@ -220,7 +228,7 @@ RETCODE SCIPeventfilterDel(
 extern
 RETCODE SCIPeventfilterProcess(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    EVENT*           event               /**< event to process */
    );
 
@@ -247,10 +255,10 @@ extern
 RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< current LP data; only needed for BOUNDCHANGED events */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
-   EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for BOUNDCHANGED events */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< current LP data; only needed for variable specific events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for variable specific events */
+   EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    );
 
@@ -265,7 +273,7 @@ extern
 RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */

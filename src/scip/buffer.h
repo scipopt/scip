@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.7 2004/02/04 17:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.8 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   buffer.h
  * @brief  internal methods for memory buffers for temporary objects
@@ -49,7 +49,7 @@ void SCIPbufferFree(
 extern
 RETCODE SCIPbufferAllocMem(
    BUFFER*          buffer,             /**< memory buffer storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
    int              size                /**< minimal required size of the buffer */
    );
@@ -58,7 +58,7 @@ RETCODE SCIPbufferAllocMem(
 extern
 RETCODE SCIPbufferDuplicateMem(
    BUFFER*          buffer,             /**< memory buffer storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
    void*            source,             /**< memory block to copy into the buffer */
    int              size                /**< minimal required size of the buffer */
@@ -68,7 +68,7 @@ RETCODE SCIPbufferDuplicateMem(
 extern
 RETCODE SCIPbufferReallocMem(
    BUFFER*          buffer,             /**< memory buffer storage */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to the allocated memory buffer */
    int              size                /**< minimal required size of the buffer */
    );

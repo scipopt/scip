@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.10 2004/04/27 15:50:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.11 2004/04/29 15:20:40 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -71,7 +71,7 @@ extern
 RETCODE SCIPsepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */
@@ -83,7 +83,7 @@ extern
 RETCODE SCIPsepastoreApplyCuts(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
@@ -97,7 +97,7 @@ extern
 RETCODE SCIPsepastoreClearCuts(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< LP data */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.10 2004/04/15 10:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.11 2004/04/29 15:20:36 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -195,7 +195,7 @@ void SCIPclockSetType(
 /** starts measurement of time in the given clock */
 void SCIPclockStart(
    CLOCK*           clock,              /**< clock timer */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(clock != NULL);
@@ -246,7 +246,7 @@ void SCIPclockStart(
 /** stops measurement of time in the given clock */
 void SCIPclockStop(
    CLOCK*           clock,              /**< clock timer */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(clock != NULL);
