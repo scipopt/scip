@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 2002/10/23 14:31:34 bzfpfend Exp $
+# $Id: Makefile,v 1.2 2002/10/23 14:35:54 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*   File....: Makefile                                                      *
@@ -16,7 +16,7 @@
 # lib/libsoplex.$(BASE).a            -> itself
 #
 #
-.PHONY:		depend clean lint doc test quick miplib shortmiplib speedcplex
+.PHONY:		depend clean lint doc test testcplex
 
 ARCH            :=      $(shell uname -m | \
                         sed \
@@ -27,7 +27,7 @@ ARCH            :=      $(shell uname -m | \
 			-e s/00........../pwr4/)
 OSTYPE		:=	$(shell uname -s | tr A-Z a-z)
 
-OPT		=	std
+OPT		=	dbg
 LPS		=	cpx
 PAR		=	seq
 
@@ -158,25 +158,9 @@ test:
 		cd check; \
 		/bin/sh ./check.sh $(TEST).test $(BINARY) $(SETTINGS);
 
-quick:		
-		cd check; \
-		/bin/sh ./check.sh quick.test $(BINARY) $(SETTINGS);
-
-miplib:		
-		cd check; \
-		/bin/sh ./check.sh miplib.test $(BINARY) $(SETTINGS);
-
-shortmiplib:		
-		cd check; \
-		/bin/sh ./check.sh shortmiplib.test $(BINARY) $(SETTINGS);
-
-speedcplex:		
+testcplex:		
 		cd check; \
 		/bin/sh ./check_cplex.sh $(TEST).test $(OSTYPE).$(ARCH);
-
-mittelmann:		
-		cd check; \
-		/bin/sh ./check.sh mittelmann.test $(BINARY) $(SETTINGS);
 
 $(OBJDIR):	
 		-mkdir -p $(OBJDIR)
@@ -215,8 +199,3 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # --- EOF ---------------------------------------------------------------------
-
-
-
-
-
