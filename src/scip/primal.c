@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.50 2004/11/26 14:22:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.51 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -282,7 +282,7 @@ RETCODE primalSetUpperbound(
    assert(set != NULL);
    assert(stat != NULL);
    assert(upperbound <= SCIPsetInfinity(set));
-   assert(upperbound <= primal->upperbound || tree == NULL);
+   assert(upperbound <= primal->upperbound || SCIPtreeGetCurrentDepth(tree) == -1);
 
    debugMessage("changing upper bound from %g to %g\n", primal->upperbound, upperbound);
 
@@ -490,13 +490,13 @@ RETCODE primalAddSol(
    {
       /* update the upper bound */
       CHECK_OKAY( SCIPprimalSetUpperbound(primal, memhdr, set, stat, prob, tree, lp, obj) );
-      
-      /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
 
       /* issue BESTLPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
+      
+      /* display node information line */
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
    }
    else
    {

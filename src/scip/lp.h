@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.95 2005/01/11 14:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.96 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -34,7 +34,6 @@
 #include "memory.h"
 #include "type_set.h"
 #include "type_stat.h"
-#include "type_lpi.h"
 #include "type_misc.h"
 #include "type_lp.h"
 #include "type_var.h"
@@ -1054,6 +1053,12 @@ int SCIPlpGetNNewrows(
    LP*              lp                  /**< current LP data */
    );
 
+/** gets euclidean norm of objective function vector of column variables */
+extern
+Real SCIPlpGetObjNorm(
+   LP*              lp                  /**< LP data */
+   );
+
 /** gets the LP solver interface */
 extern
 LPI* SCIPlpGetLPI(
@@ -1092,6 +1097,7 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpGetNNewcols(lp)           ((lp)->ncols - (lp)->firstnewcol)
 #define SCIPlpGetNewrows(lp)            (&((lp)->rows[(lp)->firstnewrow]))
 #define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
+#define SCIPlpGetObjNorm(lp)            (SQRT((lp)->objsqrnorm))
 #define SCIPlpGetLPI(lp)                (lp)->lpi
 #define SCIPlpDiving(lp)                (lp)->diving
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg

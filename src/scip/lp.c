@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.167 2005/01/11 14:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.168 2005/01/13 16:20:47 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2290,6 +2290,7 @@ RETCODE SCIPcolCreate(
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
    (*col)->var_probindex = SCIPvarGetProbindex(var);
+   (*col)->basisstatus = SCIP_BASESTAT_ZERO;
    (*col)->lprowssorted = TRUE;
    (*col)->nonlprowssorted = (len <= 1);
    (*col)->objchanged = FALSE;
@@ -2543,10 +2544,6 @@ RETCODE SCIPcolChgObj(
 
       assert(lp->nchgcols > 0);
    }  
-
-   /* update squared euclidean norm and sum norm of objective function vector */
-   lp->objsqrnorm += SQR(newobj) - SQR(col->obj);
-   lp->objsumnorm += REALABS(newobj) - REALABS(col->obj);
 
    /* store new objective function value */
    col->obj = newobj;
@@ -3512,6 +3509,7 @@ RETCODE SCIProwCreate(
    (*row)->validactivitybdsdomchg = -1;
    (*row)->age = 0;
    (*row)->obsoletenode = -1;
+   (*row)->basisstatus = SCIP_BASESTAT_BASIC;
    (*row)->lpcolssorted = TRUE;
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
@@ -4855,6 +4853,7 @@ void markColDeleted(
    col->validredcostlp = -1;
    col->validfarkaslp = -1;
    col->strongbranchitlim = -1;
+   col->basisstatus = SCIP_BASESTAT_ZERO;
 }
 
 /** applies all cached column removals to the LP solver */
@@ -5072,6 +5071,7 @@ void markRowDeleted(
    row->dualsol = 0.0;
    row->activity = SCIP_INVALID;
    row->dualfarkas = 0.0;
+   row->basisstatus = SCIP_BASESTAT_BASIC;
    row->validactivitylp = -1;
 }
 
@@ -5989,10 +5989,6 @@ RETCODE SCIPlpAddCol(
    /* mark the current LP unflushed */
    lp->flushed = FALSE;
 
-   /* update squared euclidean norm and sum norm of objective function vector */
-   lp->objsqrnorm += SQR(col->obj);
-   lp->objsumnorm += REALABS(col->obj);
-
    /* update column arrays of all linked rows */
    colUpdateAddLP(col);
 
@@ -6087,12 +6083,6 @@ RETCODE SCIPlpShrinkCols(
          /* count removeable columns */
          if( col->removeable )
             lp->nremoveablecols--;
-
-         /* update squared euclidean norm and sum norm of objective function vector */
-         lp->objsqrnorm -= SQR(col->obj);
-         lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
-         lp->objsumnorm -= REALABS(col->obj);
-         lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
 
          /* update column arrays of all linked rows */
          colUpdateDelLP(col);
@@ -9183,6 +9173,12 @@ RETCODE lpUpdateVar(
    assert(lp->pseudoobjvalinf >= 0);
    assert(lp->looseobjvalinf >= 0);
 
+   /* update squared euclidean norm and sum norm of objective function vector */
+   lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
+   lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
+   lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
+   lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
+
    return SCIP_OKAY;
 }
 
@@ -9693,6 +9689,8 @@ RETCODE SCIPlpGetSol(
    Real* dualsol;
    Real* activity;
    Real* redcost;
+   int* cstat;
+   int* rstat;
    int nlpicols;
    int nlpirows;
    int lpcount;
@@ -9723,8 +9721,11 @@ RETCODE SCIPlpGetSol(
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualsol, lp->nlpirows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &activity, lp->nlpirows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &redcost, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rstat, lp->nlpirows) );
    
    CHECK_OKAY( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
+   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -9741,6 +9742,7 @@ RETCODE SCIPlpGetSol(
       if( primsol[c] > lpicols[c]->maxprimsol )
          lpicols[c]->maxprimsol = primsol[c];
       lpicols[c]->redcost = redcost[c];
+      lpicols[c]->basisstatus = cstat[c];
       lpicols[c]->validredcostlp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
@@ -9765,6 +9767,7 @@ RETCODE SCIPlpGetSol(
    {
       lpirows[r]->dualsol = dualsol[r];
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+      lpirows[r]->basisstatus = rstat[r];
       lpirows[r]->validactivitylp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
@@ -9786,6 +9789,8 @@ RETCODE SCIPlpGetSol(
    }
 
    /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &rstat);
+   SCIPsetFreeBufferArray(set, &cstat);
    SCIPsetFreeBufferArray(set, &redcost);
    SCIPsetFreeBufferArray(set, &activity);
    SCIPsetFreeBufferArray(set, &dualsol);
@@ -10180,7 +10185,6 @@ RETCODE lpRemoveObsoleteCols(
 {
    COL** cols;
    COL** lpicols;
-   int* cstat;
    int* coldstat;
    int ncols;
    int ndelcols;
@@ -10202,11 +10206,7 @@ RETCODE lpRemoveObsoleteCols(
    lpicols = lp->lpicols;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &coldstat, ncols) );
-
-   /* get columns' basis status */
-   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, NULL) );
 
    /* mark obsolete columns to be deleted */
    ndelcols = 0;
@@ -10219,7 +10219,7 @@ RETCODE lpRemoveObsoleteCols(
       if( cols[c]->removeable
          && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling) */
          && cols[c]->age > set->lp_colagelimit
-         && cstat[c] != SCIP_BASESTAT_BASIC
+         && cols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
@@ -10241,7 +10241,6 @@ RETCODE lpRemoveObsoleteCols(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &coldstat);
-   SCIPsetFreeBufferArray(set, &cstat);
       
    return SCIP_OKAY;
 }
@@ -10258,7 +10257,6 @@ RETCODE lpRemoveObsoleteRows(
 {
    ROW** rows;
    ROW** lpirows;
-   int* rstat;
    int* rowdstat;
    int nrows;
    int ndelrows;
@@ -10280,11 +10278,7 @@ RETCODE lpRemoveObsoleteRows(
    lpirows = lp->lpirows;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rstat, nrows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
-
-   /* get rows' basis status */
-   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, NULL, rstat) );
 
    /* mark obsolete rows to be deleted */
    ndelrows = 0;
@@ -10297,7 +10291,7 @@ RETCODE lpRemoveObsoleteRows(
       if( rows[r]->removeable
          && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling) */
          && rows[r]->age > set->lp_rowagelimit
-         && rstat[r] == SCIP_BASESTAT_BASIC )
+         && rows[r]->basisstatus == SCIP_BASESTAT_BASIC )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -10318,7 +10312,6 @@ RETCODE lpRemoveObsoleteRows(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &rowdstat);
-   SCIPsetFreeBufferArray(set, &rstat);
       
    return SCIP_OKAY;
 }
@@ -10334,6 +10327,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
    assert(lp != NULL);
    assert(lp->solved);
    assert(!lp->diving);
+   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(set != NULL);
 
    debugMessage("removing obsolete columns starting with %d/%d, obsolete rows starting with %d/%d\n",
@@ -10362,6 +10356,7 @@ RETCODE SCIPlpRemoveAllObsoletes(
    assert(lp != NULL);
    assert(lp->solved);
    assert(!lp->diving);
+   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(set != NULL);
 
    debugMessage("removing all obsolete columns and rows\n");
@@ -10389,7 +10384,6 @@ RETCODE lpCleanupCols(
 {
    COL** cols;
    COL** lpicols;
-   int* cstat;
    int* coldstat;
    int ncols;
    int ndelcols;
@@ -10411,11 +10405,7 @@ RETCODE lpCleanupCols(
    lpicols = lp->lpicols;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &coldstat, ncols) );
-
-   /* get columns' basis status */
-   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, NULL) );
 
    /* mark unused columns to be deleted */
    ndelcols = 0;
@@ -10426,7 +10416,7 @@ RETCODE lpCleanupCols(
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
       if( lpicols[c]->removeable
-         && cstat[c] != SCIP_BASESTAT_BASIC
+         && lpicols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && lpicols[c]->primsol == 0.0 /* non-basic columns to remove are exactly at 0.0 */
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
@@ -10446,7 +10436,6 @@ RETCODE lpCleanupCols(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &coldstat);
-   SCIPsetFreeBufferArray(set, &cstat);
       
    return SCIP_OKAY;
 }
@@ -10463,7 +10452,6 @@ RETCODE lpCleanupRows(
 {
    ROW** rows;
    ROW** lpirows;
-   int* rstat;
    int* rowdstat;
    int nrows;
    int ndelrows;
@@ -10486,11 +10474,7 @@ RETCODE lpCleanupRows(
    lpirows = lp->lpirows;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rstat, nrows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
-
-   /* get rows' basis status */
-   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, NULL, rstat) );
 
    /* mark unused rows to be deleted */
    ndelrows = 0;
@@ -10500,7 +10484,7 @@ RETCODE lpCleanupRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( lpirows[r]->removeable && rstat[r] == SCIP_BASESTAT_BASIC )
+      if( lpirows[r]->removeable && lpirows[r]->basisstatus == SCIP_BASESTAT_BASIC )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -10518,7 +10502,6 @@ RETCODE lpCleanupRows(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &rowdstat);
-   SCIPsetFreeBufferArray(set, &rstat);
 
    return SCIP_OKAY;
 }
@@ -10538,6 +10521,7 @@ RETCODE SCIPlpCleanupNew(
    assert(lp != NULL);
    assert(lp->solved);
    assert(!lp->diving);
+   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(set != NULL);
 
    /* check, if we want to clean up the columns and rows */
@@ -10574,6 +10558,7 @@ RETCODE SCIPlpCleanupAll(
    assert(lp != NULL);
    assert(lp->solved);
    assert(!lp->diving);
+   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(set != NULL);
 
    /* check, if we want to clean up the columns and rows */
@@ -10914,6 +10899,7 @@ RETCODE SCIPlpWrite(
 #undef SCIPcolGetUb
 #undef SCIPcolGetBestBound
 #undef SCIPcolGetPrimsol
+#undef SCIPcolGetBasisStatus
 #undef SCIPcolGetVar
 #undef SCIPcolIsIntegral
 #undef SCIPcolIsRemoveable
@@ -10936,6 +10922,7 @@ RETCODE SCIPlpWrite(
 #undef SCIProwGetLhs
 #undef SCIProwGetRhs
 #undef SCIProwGetDualsol
+#undef SCIProwGetBasisStatus
 #undef SCIProwGetName
 #undef SCIProwGetIndex
 #undef SCIProwIsIntegral
@@ -10953,6 +10940,7 @@ RETCODE SCIPlpWrite(
 #undef SCIPlpGetNNewcols
 #undef SCIPlpGetNewrows
 #undef SCIPlpGetNNewrows
+#undef SCIPlpGetObjNorm
 #undef SCIPlpGetLPI
 #undef SCIPlpDiving
 #undef SCIPlpDivingObjChanged
@@ -11012,6 +11000,19 @@ Real SCIPcolGetPrimsol(
       return col->primsol;
    else
       return 0.0;
+}
+
+/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
+ *  returns SCIP_BASESTAT_ZERO for columns not in the current LP
+ */
+BASESTAT SCIPcolGetBasisStatus(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert(col->lppos >= 0 || col->basisstatus == SCIP_BASESTAT_ZERO);
+
+   return col->basisstatus;
 }
 
 /** gets variable this column represents */
@@ -11251,6 +11252,19 @@ Real SCIProwGetDualsol(
       return 0.0;
 }
 
+/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
+ *  returns SCIP_BASESTAT_BASIC for rows not in the current LP
+ */
+BASESTAT SCIProwGetBasisStatus(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert(row->lppos >= 0 || row->basisstatus == SCIP_BASESTAT_BASIC);
+
+   return row->basisstatus;
+}
+
 /** returns the name of the row */
 const char* SCIProwGetName(
    ROW*             row                 /**< LP row */
@@ -11426,6 +11440,16 @@ int SCIPlpGetNNewrows(
    assert(0 <= lp->firstnewrow && lp->firstnewrow <= lp->nrows);
 
    return lp->nrows - lp->firstnewrow;
+}
+
+/** gets euclidean norm of objective function vector of column variables */
+Real SCIPlpGetObjNorm(
+   LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return SQRT(lp->objsqrnorm);
 }
 
 /** gets the LP solver interface */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.29 2005/01/12 11:45:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.30 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -27,6 +27,7 @@
 
 #include "def.h"
 #include "set.h"
+#include "stat.h"
 #include "lp.h"
 #include "var.h"
 #include "tree.h"
@@ -58,6 +59,7 @@ RETCODE sepastoreEnsureCutsMem(
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(&sepastore->cuts, newsize) );
       ALLOC_OKAY( reallocMemoryArray(&sepastore->efficacies, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&sepastore->objparallelisms, newsize) );
       ALLOC_OKAY( reallocMemoryArray(&sepastore->orthogonalities, newsize) );
       ALLOC_OKAY( reallocMemoryArray(&sepastore->scores, newsize) );
       sepastore->cutssize = newsize;
@@ -107,6 +109,7 @@ RETCODE SCIPsepastoreCreate(
    
    (*sepastore)->cuts = NULL;
    (*sepastore)->efficacies = NULL;
+   (*sepastore)->objparallelisms = NULL;
    (*sepastore)->orthogonalities = NULL;
    (*sepastore)->scores = NULL;
    (*sepastore)->bdchgvars = NULL;
@@ -137,6 +140,7 @@ RETCODE SCIPsepastoreFree(
 
    freeMemoryArrayNull(&(*sepastore)->cuts);
    freeMemoryArrayNull(&(*sepastore)->efficacies);
+   freeMemoryArrayNull(&(*sepastore)->objparallelisms);
    freeMemoryArrayNull(&(*sepastore)->orthogonalities);
    freeMemoryArrayNull(&(*sepastore)->scores);
    freeMemoryArrayNull(&(*sepastore)->bdchgvars);
@@ -227,6 +231,7 @@ RETCODE sepastoreAddCut(
 {
    Real mincutorthogonality;
    Real cutefficacy;
+   Real cutobjparallelism;
    Real cutorthogonality;
    Real cutscore;
    int maxsepacuts;
@@ -270,18 +275,20 @@ RETCODE sepastoreAddCut(
    if( maxsepacuts == 0 )
       return SCIP_OKAY;
 
-   /* calculate cut's efficacy; orthogonality starts with 1.0 and is reduced when the cut is inserted */
+   /* calculate cut's efficacy and objective hyperplane parallelism;
+    * orthogonality starts with 1.0 and is reduced when the cut is inserted
+    */
+   cutobjparallelism = SCIProwGetObjParallelism(cut, set, lp);
+   cutorthogonality = 1.0;
    if( maxsepacuts == INT_MAX )
    {
       cutefficacy = SCIPsetInfinity(set);
-      cutorthogonality = 1.0;
       cutscore = SCIPsetInfinity(set);
    }
    else
    {
       cutefficacy = -SCIProwGetLPFeasibility(cut, stat, lp) / SCIProwGetNorm(cut);
-      cutorthogonality = 1.0;
-      cutscore = cutefficacy + set->sepa_orthofac * cutorthogonality;
+      cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
    }
 
    /* check, if cut has potential to belong to the best "maxsepacuts" separation cuts */
@@ -295,9 +302,9 @@ RETCODE sepastoreAddCut(
    CHECK_OKAY( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
    assert(sepastore->ncuts < sepastore->cutssize);
 
-   debugMessage("adding cut to separation storage of size %d/%d (forcecut=%d, efficacy=%g, objparallelity=%g, score=%g)\n", 
-      sepastore->ncuts, maxsepacuts, forcecut, cutefficacy, SCIProwGetObjParallelism(cut, set, lp), cutscore);
-   /*debug(SCIProwPrint(cut, NULL));*/
+   debugMessage("adding cut to separation storage of size %d/%d (forcecut=%d, efficacy=%g, objparallelism=%g, score=%g)\n", 
+      sepastore->ncuts, maxsepacuts, forcecut, cutefficacy, cutobjparallelism, cutscore);
+   debug(SCIProwPrint(cut, NULL));
 
    /* search the correct position of the cut in the cuts array */
    for( c = 0; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
@@ -312,7 +319,7 @@ RETCODE sepastoreAddCut(
          if( thisortho < cutorthogonality )
          {
             cutorthogonality = thisortho;
-            cutscore = cutefficacy + set->sepa_orthofac * cutorthogonality;
+            cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
             
             /* check, if the cut (after regarding orthogonality) is still good enough */
             if( (sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1])
@@ -340,12 +347,14 @@ RETCODE sepastoreAddCut(
    {
       ROW* currentcut;
       Real currentefficacy;
+      Real currentobjparallelism;
       Real currentorthogonality;
       Real currentscore;
 
       /* slot i is empty; slot i-1 has to fall down to a slot in {i,...,ncuts} */
       currentcut = sepastore->cuts[i-1];
       currentefficacy = sepastore->efficacies[i-1];
+      currentobjparallelism = sepastore->objparallelisms[i-1];
       currentorthogonality = sepastore->orthogonalities[i-1];
       currentscore = sepastore->scores[i-1];
       assert(!SCIPsetIsInfinity(set, currentscore));
@@ -362,7 +371,8 @@ RETCODE sepastoreAddCut(
             if( currentorthogonality < mincutorthogonality )
                currentscore = -SCIPsetInfinity(set);
             else
-               currentscore = currentefficacy + set->sepa_orthofac * currentorthogonality;
+               currentscore = currentefficacy + set->sepa_objparalfac * currentobjparallelism
+                  + set->sepa_orthofac * currentorthogonality;
          }
       }
 
@@ -371,6 +381,7 @@ RETCODE sepastoreAddCut(
       {
          sepastore->cuts[j] = sepastore->cuts[j+1];
          sepastore->efficacies[j] = sepastore->efficacies[j+1];
+         sepastore->objparallelisms[j] = sepastore->objparallelisms[j+1];
          sepastore->orthogonalities[j] = sepastore->orthogonalities[j+1];
          sepastore->scores[j] = sepastore->scores[j+1];
 
@@ -383,17 +394,20 @@ RETCODE sepastoreAddCut(
             if( thisortho < currentorthogonality )
             {
                currentorthogonality = thisortho;
-               currentscore = currentefficacy + set->sepa_orthofac * currentorthogonality;
+               currentscore = currentefficacy + set->sepa_objparalfac * currentobjparallelism
+                  + set->sepa_orthofac * currentorthogonality;
             }
          }
       }
       sepastore->cuts[j] = currentcut;
       sepastore->efficacies[j] = currentefficacy;
+      sepastore->objparallelisms[j] = currentobjparallelism;
       sepastore->orthogonalities[j] = currentorthogonality;
       sepastore->scores[j] = currentscore;
    }
    sepastore->cuts[c] = cut;
    sepastore->efficacies[c] = cutefficacy;
+   sepastore->objparallelisms[c] = cutobjparallelism;
    sepastore->orthogonalities[c] = cutorthogonality;
    sepastore->scores[c] = cutscore;
    sepastore->ncuts++;
@@ -420,8 +434,8 @@ RETCODE sepastoreAddCut(
       sepastore->ncuts--;
    }
 
-   debugMessage(" -> cut was added at position %d/%d (efficacy=%g, orthogonality=%g, score=%g)\n",
-      c, sepastore->ncuts, cutefficacy, cutorthogonality, cutscore);
+   debugMessage(" -> cut was added at position %d/%d (efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
+      c, sepastore->ncuts, cutefficacy, cutobjparallelism, cutorthogonality, cutscore);
 
    return SCIP_OKAY;
 }
@@ -653,8 +667,9 @@ RETCODE SCIPsepastoreApplyCuts(
       /* a row could have been added twice to the separation store; add it only once! */
       if( !SCIProwIsInLP(sepastore->cuts[i]) )
       {
-         debugMessage(" -> applying cut %d/%d (efficacy=%g, orthogonality=%g, score=%g)\n",
-            i, sepastore->ncuts, sepastore->efficacies[i], sepastore->orthogonalities[i], sepastore->scores[i]);
+         debugMessage(" -> applying cut %d/%d (efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
+            i, sepastore->ncuts, sepastore->efficacies[i], sepastore->objparallelisms[i], 
+            sepastore->orthogonalities[i], sepastore->scores[i]);
          /*debug(SCIProwPrint(sepastore->cuts[i], NULL));*/
          assert(i == 0 || sepastore->scores[i] <= sepastore->scores[i-1]);
 

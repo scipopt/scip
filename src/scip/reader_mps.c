@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.48 2005/01/11 14:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.49 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -368,156 +368,6 @@ void patchField(
          buf[i] = PATCH_CHAR;
 }
 
-#if 0 /*??????????????????*/
-/* read a mps format data line and parse the fields.
- */
-static
-Bool mpsinputReadLine(
-   MPSINPUT*        mpsi
-   )
-{
-   int len;
-   int i;
-   int space;
-   char* s;
-   Bool is_marker;
-
-   do
-   {
-      mpsi->f0  = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
-      is_marker = FALSE;
-   
-      /* Read until we have a not comment line */
-      do
-      {
-         if (NULL == fgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
-            return FALSE;
-        mpsi->lineno++;
-      } 
-      while(*mpsi->buf == '*');
-
-      /* Normalize line */
-      len = (int)strlen(mpsi->buf);
-
-      for(i = 0; i < len; i++)
-         if ((mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r'))
-            mpsi->buf[i] = BLANK;
-      
-      if (len < 80)
-         clearFrom(mpsi->buf, len);
-
-      assert(strlen(mpsi->buf) >= 80);
-
-      /* Look for new section */
-      if (*mpsi->buf != BLANK)
-      {
-         mpsi->f0 = strtok(&mpsi->buf[0], " ");
-
-         assert(mpsi->f0 != 0);
-
-         mpsi->f1 = strtok(NULL, " ");
-
-         return TRUE;
-      }
-
-      /* Test for fixed format comments */
-      if ((mpsi->buf[14] == '$') && (mpsi->buf[13] == ' '))
-         clearFrom(mpsi->buf, 14);
-      else if ((mpsi->buf[39] == '$') && (mpsi->buf[38] == ' '))
-         clearFrom(mpsi->buf, 39);
-
-      /* Test for fixed format */
-      space = mpsi->buf[12] | mpsi->buf[13] 
-         | mpsi->buf[22] | mpsi->buf[23] 
-         | mpsi->buf[36] | mpsi->buf[37] | mpsi->buf[38]
-         | mpsi->buf[47] | mpsi->buf[48] 
-         | mpsi->buf[61] | mpsi->buf[62] | mpsi->buf[63];
-      
-      if (space == BLANK && len <= 64)
-      {
-         /* We assume fixed format, so we patch possible embedded spaces. */
-         patchField(mpsi->buf,  4, 12);
-         patchField(mpsi->buf, 14, 22);
-         patchField(mpsi->buf, 39, 47);
-      }
-      s = &mpsi->buf[1];
-      
-      /* At this point it is not clear if we have a indicator field.
-       * If there is none (e.g. empty) f1 will be the first name field.
-       * If there is one, f2 will be the first name field.
-       * 
-       * Initially comment marks '$' ar only allowed in the beginning
-       * of the 2nd and 3rd name field. We test all fields but the first.
-       * This makes no difference, since if the '$' is at the start of a value
-       * field, the line will be errornous anyway.
-       */
-      do
-      {
-         if (NULL == (mpsi->f1 = strtok(s, " ")))
-            break;
-         
-         if ((NULL == (mpsi->f2 = strtok(NULL, " "))) || (*mpsi->f2 == '$'))
-         {
-            mpsi->f2 = 0;
-            break;      
-         }
-         if (!strcmp(mpsi->f2, "'MARKER'"))
-            is_marker = TRUE;
-            
-         if ((NULL == (mpsi->f3 = strtok(NULL, " "))) || (*mpsi->f3 == '$'))
-         {
-            mpsi->f3 = 0;
-            break;      
-         }
-         if( is_marker )
-         {
-            if (!strcmp(mpsi->f3, "'INTORG'"))
-               mpsi->isinteger = TRUE;
-            else if (!strcmp(mpsi->f3, "'INTEND'"))
-               mpsi->isinteger = FALSE;
-            else
-               break; /* unknown marker */
-         }
-
-         if (!strcmp(mpsi->f3, "'MARKER'"))
-            is_marker = TRUE;
-
-         if ((NULL == (mpsi->f4 = strtok(NULL, " "))) || (*mpsi->f4 == '$'))
-         {
-            mpsi->f4 = 0;
-            break;      
-         }
-         if (is_marker)
-         {
-            if (!strcmp(mpsi->f4, "'INTORG'"))
-               mpsi->isinteger = TRUE;
-            else if (!strcmp(mpsi->f4, "'INTEND'"))
-               mpsi->isinteger = FALSE;
-            else
-               break; /* unknown marker */
-         }
-
-         if ((NULL == (mpsi->f5 = strtok(NULL, " "))) || (*mpsi->f5 == '$'))
-            mpsi->f5 = 0;
-      }
-      while(FALSE); /*lint !e717*/
-   }
-   while(is_marker);
-
-#if 0
-   debugMessage("-----------------------------------------------\n");
-   debugMessage("f0=%s\n", (mpsi->f0 == NULL ? "nil" : mpsi->f0));
-   debugMessage("f1=%s\n", (mpsi->f1 == NULL ? "nil" : mpsi->f1));
-   debugMessage("f2=%s\n", (mpsi->f2 == NULL ? "nil" : mpsi->f2));
-   debugMessage("f3=%s\n", (mpsi->f3 == NULL ? "nil" : mpsi->f3));
-   debugMessage("f4=%s\n", (mpsi->f4 == NULL ? "nil" : mpsi->f4));
-   debugMessage("f5=%s\n", (mpsi->f5 == NULL ? "nil" : mpsi->f5));
-   debugMessage("-----------------------------------------------\n");
-#endif
-
-   return TRUE;
-}
-#else
 /* read a mps format data line and parse the fields.
  */
 static
@@ -691,7 +541,6 @@ Bool mpsinputReadLine(
 
    return TRUE;
 }
-#endif
 
 /* Insert \p name as field 1 and shift all other fields up.
  */

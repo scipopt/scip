@@ -14,6 +14,9 @@ fixed bugs:
 - fixed bug in MPS file reader
 - fixed bugs in separation store with single coefficient cuts that are converted into bound changes
 - at least one cut per separation round is added to the LP to avoid cycling, even if the cut is redundant
+- removed bug with applying reduced cost strengthening before pricing in all necessary variables
+- negated variables must also be reset in SCIPvarInitSolve()
+- removed bug with objective norm calculation and column variables not in the LP (pricing)
 
 
 SCIP version 0.78

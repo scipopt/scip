@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.154 2005/01/11 14:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.155 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -700,7 +700,7 @@ RETCODE priceAndCutLoop(
    int nsepastallrounds;
    int maxnsepastallrounds;
    int actdepth;
-   int ncolvars;
+   int npricedcolvars;
    int h;
    int s;
 
@@ -748,7 +748,7 @@ RETCODE priceAndCutLoop(
    assert(lp->solved);
 
    /* price-and-cut loop */
-   ncolvars = prob->ncolvars;
+   npricedcolvars = prob->ncolvars;
    mustprice = TRUE;
    mustsepar = separate;
    *cutoff = FALSE;
@@ -764,7 +764,7 @@ RETCODE priceAndCutLoop(
       mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
       /* if all the variables are already in the LP, we don't need to price */
-      mustprice = mustprice && (prob->nvars > SCIPlpGetNCols(lp) || set->nactivepricers > 0);
+      mustprice = mustprice && (prob->ncolvars > SCIPlpGetNCols(lp) || set->nactivepricers > 0);
 
       /* pricing (has to be done completely to get a valid lower bound) */
       while( !(*cutoff) && !(*lperror) && mustprice )
@@ -778,7 +778,7 @@ RETCODE priceAndCutLoop(
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
          CHECK_OKAY( SCIPpricestoreAddProbVars(pricestore, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
-         ncolvars = prob->ncolvars;
+         npricedcolvars = prob->ncolvars;
 
          /* if no additional problem variables were found, call external pricers to create additional problem variables */
          if( SCIPpricestoreGetNVars(pricestore) == 0 )
@@ -804,7 +804,7 @@ RETCODE priceAndCutLoop(
          CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(!lp->flushed || lp->solved);
-         mustprice = !lp->flushed || (prob->ncolvars != ncolvars);
+         mustprice = !lp->flushed || (prob->ncolvars != npricedcolvars);
          mustsepar = mustsepar || !lp->flushed;
          
          /* after adding columns, the LP should be primal feasible such that primal simplex is applicable;
@@ -821,7 +821,7 @@ RETCODE priceAndCutLoop(
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
          assert(!lp->flushed || lp->solved);
-         mustprice = mustprice || !lp->flushed || (prob->ncolvars != ncolvars);
+         mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
          mustsepar = mustsepar || !lp->flushed;
 
          /* solve LP again after resetting bounds (with dual simplex) */
@@ -986,7 +986,7 @@ RETCODE priceAndCutLoop(
          else
          {
             /* apply reduced cost bound strengthening */
-            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && !mustprice && prob->ncolvars == npricedcolvars )
             {
                if( (set->prop_redcostfreq == 0 && root)
                   || (set->prop_redcostfreq > 0 && actdepth % set->prop_redcostfreq == 0) )
@@ -1006,7 +1006,7 @@ RETCODE priceAndCutLoop(
                   CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, cutoff) );
                }
                
-               mustprice = mustprice || !lp->flushed || prob->ncolvars != ncolvars;
+               mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
                mustsepar = !lp->flushed;
                
                if( !(*cutoff) )

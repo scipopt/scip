@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.27 2004/10/20 15:52:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.28 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -103,6 +103,7 @@ struct Col
    int              strongbranchitlim;  /**< strong branching iteration limit used to get strongbranch values, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
+   unsigned int     basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */
    unsigned int     lprowssorted:1;     /**< are the linked LP rows in the rows array sorted by non-decreasing index? */
    unsigned int     nonlprowssorted:1;  /**< are the non-LP/not linked rows sorted by non-decreasing index? */
    unsigned int     objchanged:1;       /**< has objective value changed, and has data of LP solver to be updated? */
@@ -161,6 +162,7 @@ struct Row
    int              numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int              validactivitylp;    /**< LP number for which activity value is valid */
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
+   unsigned int     basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
    unsigned int     lpcolssorted:1;     /**< are the linked LP columns in the cols array sorted by non-decreasing index? */
    unsigned int     nonlpcolssorted:1;  /**< are the non-LP/not linked columns sorted by non-decreasing index? */
    unsigned int     delaysort:1;        /**< should the row sorting be delayed and done in a lazy fashion? */
@@ -172,7 +174,7 @@ struct Row
    unsigned int     local:1;            /**< is row only valid locally? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int     removeable:1;       /**< is row removeable from the LP (due to aging or cleanup)? */
-   unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int     nlocks:19;          /**< number of sealed locks of an unmodifiable row */
 };
 
 /** current LP data */
@@ -187,8 +189,8 @@ struct Lp
    Real             lpiuobjlim;         /**< current upper objective limit in LPI */
    Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
-   Real             objsqrnorm;         /**< squared euclidean norm of objective function vector of column variables */
-   Real             objsumnorm;         /**< sum norm of objective function vector of column variables */
+   Real             objsqrnorm;         /**< squared euclidean norm of objective function vector of problem variables */
+   Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
    LPI*             lpi;                /**< LP solver interface */
    COL**            lpicols;            /**< array with columns currently stored in the LP solver */
    ROW**            lpirows;            /**< array with rows currently stored in the LP solver */

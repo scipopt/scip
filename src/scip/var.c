@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.128 2004/12/10 12:54:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.129 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2242,6 +2242,10 @@ void SCIPvarInitSolve(
 
    SCIPhistoryReset(var->historycrun);
    var->conflictsetcount = 0;
+
+   /* the negations of active problem variables can also be member of a conflict set */
+   if( var->negatedvar != NULL )
+      var->negatedvar->conflictsetcount = 0;
 }
 
 /** outputs variable information into file stream */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.38 2004/10/12 14:06:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.39 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -184,15 +184,42 @@ RETCODE SCIPnodepqFree(
    assert(*nodepq != NULL);
 
    /* free the nodes of the queue */
-   for( i = 0; i < (*nodepq)->len; ++i )
-   {
-      assert((*nodepq)->slots[i] != NULL);
-      assert(SCIPnodeGetType((*nodepq)->slots[i]) == SCIP_NODETYPE_LEAF);
-      CHECK_OKAY( SCIPnodeFree(&(*nodepq)->slots[i], memhdr, set, tree, lp) );
-   }
+   CHECK_OKAY( SCIPnodepqClear(*nodepq, memhdr, set, tree, lp) );
    
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
+
+   return SCIP_OKAY;
+}
+
+/** deletes all nodes in the node priority queue */
+RETCODE SCIPnodepqClear(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   int i;
+
+   assert(nodepq != NULL);
+
+   /* free the nodes of the queue */
+   for( i = 0; i < nodepq->len; ++i )
+   {
+      assert(nodepq->slots[i] != NULL);
+      assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
+      CHECK_OKAY( SCIPnodeFree(&nodepq->slots[i], memhdr, set, tree, lp) );
+   }
+
+   /* reset data */
+   nodepq->len = 0;
+   nodepq->lowerboundnode = NULL;
+   nodepq->lowerboundsum = 0.0;
+   nodepq->lowerbound = SCIPsetInfinity(set);
+   nodepq->nlowerbounds = 0;
+   nodepq->validlowerbound = TRUE;
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.78 2004/11/26 14:22:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.79 2005/01/13 16:20:47 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -674,7 +674,6 @@ RETCODE SCIPconflictFree(
    assert(conflict != NULL);
    assert(*conflict != NULL);
 
-
    SCIPclockFree(&(*conflict)->propanalyzetime);
    SCIPclockFree(&(*conflict)->lpanalyzetime);
    SCIPclockFree(&(*conflict)->sbanalyzetime);
@@ -687,7 +686,6 @@ RETCODE SCIPconflictFree(
    freeMemoryArrayNull(&(*conflict)->conflictvars);
    freeMemoryArrayNull(&(*conflict)->conflictvardepths);
    freeMemory(conflict);
-
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.38 2005/01/11 14:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.39 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -209,6 +209,7 @@ struct Set
    Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
+   Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
    Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
    char             sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
                                          *   'd'iscrete) */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.238 2004/12/15 19:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.239 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -121,12 +121,12 @@ RETCODE checkStage(
       assert(scip->branchcand == NULL);
       assert(scip->lp == NULL);
       assert(scip->primal == NULL);
+      assert(scip->tree == NULL);
       assert(scip->transprob == NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->tree == NULL);
 
       if( !init )
       {
@@ -143,12 +143,12 @@ RETCODE checkStage(
       assert(scip->branchcand == NULL);
       assert(scip->lp == NULL);
       assert(scip->primal == NULL);
+      assert(scip->tree == NULL);
       assert(scip->transprob == NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->tree == NULL);
 
       if( !problem )
       {
@@ -165,12 +165,12 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->tree == NULL);
 
       if( !transforming )
       {
@@ -187,12 +187,12 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->tree == NULL);
 
       if( !transformed )
       {
@@ -209,12 +209,12 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->tree == NULL);
 
       if( !presolving )
       {
@@ -231,12 +231,12 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->tree == NULL);
 
       if( !presolved )
       {
@@ -253,12 +253,12 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->conflict != NULL);
-      assert(scip->tree != NULL);
 
       if( !solving )
       {
@@ -275,12 +275,12 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->conflict != NULL);
-      assert(scip->tree != NULL);
 
       if( !solved )
       {
@@ -297,6 +297,7 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
       assert(scip->transprob != NULL);
 
       if( !freesolve )
@@ -313,7 +314,6 @@ RETCODE checkStage(
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
-      assert(scip->tree == NULL);
 
       if( !freetrans )
       {
@@ -3278,6 +3278,7 @@ RETCODE transformProb(
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
    CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
    CHECK_OKAY( SCIPprimalCreate(&scip->primal) );
+   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
@@ -3568,8 +3569,7 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->sepa_cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
-   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
-         SCIPsetGetNodesel(scip->set, scip->stat)) );
+   CHECK_OKAY( SCIPtreeCreateRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
 
    /* increase number of branch and bound runs */
    scip->stat->nruns++;
@@ -3686,10 +3686,10 @@ RETCODE freeSolve(
       CHECK_OKAY( SCIPbranchruleExitsol(scip->set->branchrules[i], scip) );
    }
 
-   /* we have to free the tree prior to the problem deinitialization, because the rows stored in the forks and
+   /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
     */
-   CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+   CHECK_OKAY( SCIPtreeClear(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
 
    /* deinitialize transformed problem */
    CHECK_OKAY( SCIPprobExitSolve(scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
@@ -3732,6 +3732,7 @@ RETCODE freeTransform(
 
    /* free transformed problem data structures */
    CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
+   CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
    CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
    CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
    CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
@@ -6081,7 +6082,8 @@ RETCODE SCIPmultiaggregateVar(
 }
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
- *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
+ *  the update is ignored, if the objective value difference is infinite
  */
 RETCODE SCIPupdateVarPseudocost(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6093,7 +6095,10 @@ RETCODE SCIPupdateVarPseudocost(
 {
    CHECK_OKAY( checkStage(scip, "SCIPupdateVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight) );
+   if( !SCIPsetIsInfinity(scip->set, 2*objdelta) ) /* differences  infinity - eps  should also be treated as infinity */
+   {
+      CHECK_OKAY( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight) );
+   }
 
    return SCIP_OKAY;
 }

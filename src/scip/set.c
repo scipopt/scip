@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.129 2005/01/11 14:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.130 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -177,6 +177,7 @@
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_OBJPARALFAC      0.20 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
@@ -712,6 +713,11 @@ RETCODE SCIPsetCreate(
          "separating/minorthoroot",
          "minimal orthogonality for a cut to enter the LP in the root node",
          &(*set)->sepa_minorthoroot, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/objparalfac",
+         "factor to scale objective parallelism of cut in separation score calculation",
+         &(*set)->sepa_objparalfac, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "separating/orthofac",

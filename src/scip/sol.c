@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.48 2004/12/10 12:54:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.49 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -203,7 +203,7 @@ static
 void solStamp(
    SOL*             sol,                /**< primal CIP solution */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch and bound tree, or NULL */
+   TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(sol != NULL);
@@ -212,7 +212,7 @@ void solStamp(
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
-   sol->depth = (tree == NULL ? -1 : SCIPtreeGetCurrentDepth(tree));
+   sol->depth = SCIPtreeGetCurrentDepth(tree);
 }
 
 /** creates primal CIP solution, initialized to zero */
@@ -222,7 +222,7 @@ RETCODE SCIPsolCreate(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree, or NULL */
+   TREE*            tree,               /**< branch and bound tree */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {

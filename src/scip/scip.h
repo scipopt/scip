@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.192 2004/12/15 19:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.193 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2049,7 +2049,8 @@ RETCODE SCIPmultiaggregateVar(
    );
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
- *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
+ *  the update is ignored, if the objective value difference is infinite
  */
 extern
 RETCODE SCIPupdateVarPseudocost(

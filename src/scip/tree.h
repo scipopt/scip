@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.67 2004/10/05 11:01:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.68 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -230,10 +230,7 @@ void SCIPnodeUpdateLowerbound(
 extern
 RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
    NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    );
 
@@ -243,6 +240,25 @@ RETCODE SCIPtreeFree(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** clears and resets tree data structure and deletes all nodes */
+extern
+RETCODE SCIPtreeClear(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** creates the root node of the tree and puts it into the leaves queue */
+extern
+RETCODE SCIPtreeCreateRoot(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp                  /**< current LP data */
    );
 

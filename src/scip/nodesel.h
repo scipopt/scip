@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.32 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.33 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -61,6 +61,16 @@ void SCIPnodepqDestroy(
 extern
 RETCODE SCIPnodepqFree(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** deletes all nodes in the node priority queue */
+extern
+RETCODE SCIPnodepqClear(
+   NODEPQ*          nodepq,             /**< node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */

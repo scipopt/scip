@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.125 2005/01/11 14:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.126 2005/01/13 16:20:49 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2895,15 +2895,11 @@ RETCODE SCIPnodeFocus(
 /** creates an initialized tree data structure */
 RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
    NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    )
 {
    assert(tree != NULL);
-   assert(set != NULL);
 
    ALLOC_OKAY( allocMemory(tree) );
 
@@ -2936,30 +2932,6 @@ RETCODE SCIPtreeCreate(
    (*tree)->focusnodehaslp = FALSE;
    (*tree)->cutoffdelayed = FALSE;
    (*tree)->probinglpflushed = FALSE;
-
-   /* create root node */
-   CHECK_OKAY( SCIPnodeCreateChild(&(*tree)->root, memhdr, set, stat, *tree, 0.0) );
-   assert((*tree)->nchildren == 1);
-
-#ifndef NDEBUG
-   /* check, if the sizes in the data structures match the maximal numbers defined here */
-   (*tree)->root->depth = MAXDEPTH;
-   (*tree)->root->repropsubtreemark = MAXREPROPMARK;
-   assert((*tree)->root->depth == MAXDEPTH);
-   assert((*tree)->root->repropsubtreemark == MAXREPROPMARK);
-   (*tree)->root->depth++;             /* this should produce an overflow and reset the value to 0 */
-   (*tree)->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
-   assert((*tree)->root->depth == 0);
-   assert((*tree)->root->nodetype == SCIP_NODETYPE_CHILD);
-   assert(!(*tree)->root->active);
-   assert(!(*tree)->root->cutoff);
-   assert(!(*tree)->root->reprop);
-   assert((*tree)->root->repropsubtreemark == 0);
-#endif
-
-   /* move root to the queue, convert it to LEAF */
-   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, stat, lp, (*tree)->children, &(*tree)->nchildren, NULL, 
-         SCIPsetInfinity(set)) );
 
    return SCIP_OKAY;
 }
@@ -2994,6 +2966,85 @@ RETCODE SCIPtreeFree(
    freeMemoryArrayNull(&(*tree)->pathnlprows);
 
    freeMemory(tree);
+
+   return SCIP_OKAY;
+}
+
+/** clears and resets tree data structure and deletes all nodes */
+RETCODE SCIPtreeClear(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
+   assert(tree->nsiblings == 0);
+   assert(tree->focusnode == NULL);
+   assert(tree->probingnode == NULL);
+
+   debugMessage("clearing tree\n");
+
+   /* clear node queue */
+   CHECK_OKAY( SCIPnodepqClear(tree->leaves, memhdr, set, tree, lp) );
+   assert(tree->root == NULL);
+   
+   /* mark working arrays to be empty and reset data */
+   tree->focuslpforklpcount = -1;
+   tree->nchildren = 0;
+   tree->nsiblings = 0;
+   tree->pathlen = 0;
+   tree->correctlpdepth = -1;
+   tree->cutoffdepth = INT_MAX;
+   tree->repropdepth = INT_MAX;
+   tree->repropsubtreecount = 0;
+   tree->focusnodehaslp = FALSE;
+   tree->cutoffdelayed = FALSE;
+   tree->probinglpflushed = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** creates the root node of the tree and puts it into the leaves queue */
+RETCODE SCIPtreeCreateRoot(
+   TREE*            tree,               /**< tree data structure */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
+   assert(tree->nsiblings == 0);
+   assert(tree->root == NULL);
+   assert(tree->focusnode == NULL);
+   assert(tree->probingnode == NULL);
+
+   /* create root node */
+   CHECK_OKAY( SCIPnodeCreateChild(&tree->root, memhdr, set, stat, tree, 0.0) );
+   assert(tree->nchildren == 1);
+
+#ifndef NDEBUG
+   /* check, if the sizes in the data structures match the maximal numbers defined here */
+   tree->root->depth = MAXDEPTH;
+   tree->root->repropsubtreemark = MAXREPROPMARK;
+   assert(tree->root->depth == MAXDEPTH);
+   assert(tree->root->repropsubtreemark == MAXREPROPMARK);
+   tree->root->depth++;             /* this should produce an overflow and reset the value to 0 */
+   tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
+   assert(tree->root->depth == 0);
+   assert(tree->root->nodetype == SCIP_NODETYPE_CHILD);
+   assert(!tree->root->active);
+   assert(!tree->root->cutoff);
+   assert(!tree->root->reprop);
+   assert(tree->root->repropsubtreemark == 0);
+#endif
+
+   /* move root to the queue, convert it to LEAF */
+   CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->children, &tree->nchildren, NULL, 
+         SCIPsetInfinity(set)) );
 
    return SCIP_OKAY;
 }

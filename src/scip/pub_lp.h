@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.17 2004/11/17 14:47:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.18 2005/01/13 16:20:48 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -33,6 +33,7 @@
 #include "memory.h"
 #include "type_set.h"
 #include "type_stat.h"
+#include "type_lpi.h"
 #include "type_lp.h"
 #include "type_var.h"
 #include "type_sol.h"
@@ -87,6 +88,14 @@ Real SCIPcolGetBestBound(
 /** gets the primal LP solution of a column */
 extern
 Real SCIPcolGetPrimsol(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
+ *  returns SCIP_BASESTAT_ZERO for columns not in the current LP
+ */
+extern
+BASESTAT SCIPcolGetBasisStatus(
    COL*             col                 /**< LP column */
    );
 
@@ -178,6 +187,7 @@ BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetUb(col)               (col)->ub
 #define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)
 #define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
+#define SCIPcolGetBasisStatus(col)      ((col)->basisstatus)
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolIsIntegral(col)          (col)->integral
 #define SCIPcolIsRemoveable(col)        (col)->removeable
@@ -316,6 +326,14 @@ Real SCIProwGetDualsol(
    ROW*             row                 /**< LP row */
    );
 
+/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
+ *  returns SCIP_BASESTAT_BASIC for rows not in the current LP
+ */
+extern
+BASESTAT SCIProwGetBasisStatus(
+   ROW*             row                 /**< LP row */
+   );
+
 /** returns the name of the row */
 extern
 const char* SCIProwGetName(
@@ -386,6 +404,7 @@ Bool SCIProwIsInLP(
 #define SCIProwGetLhs(row)              (row)->lhs
 #define SCIProwGetRhs(row)              (row)->rhs
 #define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
+#define SCIProwGetBasisStatus(row)      ((row)->basisstatus)
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
 #define SCIProwIsIntegral(row)          (row)->integral
