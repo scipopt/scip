@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.7 2004/12/08 15:43:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.8 2004/12/09 17:31:09 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -49,15 +49,16 @@ extern "C"
 /** LP interface for Clp */
 struct LPi
 {
-   ClpSimplex*      clp;                /**< Clp simiplex solver class */
-   int*             cstat;              /**< array for storing column basis status */
-   int*             rstat;              /**< array for storing row basis status */
-   int              cstatsize;          /**< size of cstat array */
-   int              rstatsize;          /**< size of rstat array */
-   bool             startscratch;       /**< start from scratch? */
-   bool             presolving;         /**< preform preprocessing? */
-   int              pricing;            /**< scip pricing setting  */
-   bool             validFactorization; /**< whether we have a valid factorization in clp */
+   ClpSimplex*      clp;                 /**< Clp simiplex solver class */
+   int*             cstat;               /**< array for storing column basis status */
+   int*             rstat;               /**< array for storing row basis status */
+   int              cstatsize;           /**< size of cstat array */
+   int              rstatsize;           /**< size of rstat array */
+   bool             startscratch;        /**< start from scratch? */
+   bool             presolving;          /**< preform preprocessing? */
+   int              pricing;             /**< scip pricing setting  */
+   bool             validFactorization;  /**< whether we have a valid factorization in clp */
+   bool	            scaledFactorization; /**< whether the last stored factorization was scaled */
 };
 
 
@@ -284,6 +285,7 @@ RETCODE SCIPlpiCreate(
    (*lpi)->startscratch = true;
    (*lpi)->pricing = SCIP_PRICING_AUTO;
    (*lpi)->validFactorization = false;
+   (*lpi)->scaledFactorization = false;
 
    // set pricing routines
 
@@ -1234,7 +1236,6 @@ RETCODE SCIPlpiGetSides(
    Real*            rhss                /**< array to store right hand side values, or 0 */
    )
 {
-   // Why are the left hand sides called lhss and not lhs like everywhere ????????
    debugMessage("calling SCIPlpiGetSides()\n");
 
    assert(lpi != 0);
@@ -1316,22 +1317,22 @@ RETCODE SCIPlpiSolvePrimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   // Call the primal Simplex without preprocessing   
+   int scaling = lpi->clp->scalingFlag();
+
    if ( lpi->startscratch )
    {
       lpi->clp->allSlackBasis(true);   // reset basis
       lpi->validFactorization = false;
-      //lpi->clp->factorize();           // ?????????????????????
+   }
+   else
+   {
+      if ( lpi->scaledFactorization != (scaling != 0) )
+	 lpi->validFactorization = false;
    }
 
-   // temorarily turn off scaling ???????????????????
-   int scaling = lpi->clp->scalingFlag();
-   lpi->clp->scaling(0);
    int status = lpi->clp->primal(0, lpi->validFactorization ? 3 : 1);
-   lpi->clp->scaling(scaling);
    lpi->validFactorization = true;
-
-   // We may need to call ClpModel::status()
+   lpi->scaledFactorization = (scaling != 0);
 
    // Unfortunately the status of Clp is hard coded ...
    // 0 - optimal
@@ -1358,27 +1359,22 @@ RETCODE SCIPlpiSolveDual(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   // Call the dual Simplex without preprocessing
+   int scaling = lpi->clp->scalingFlag();
+
    if ( lpi->startscratch )
    {
       lpi->clp->allSlackBasis(true);   // reset basis
       lpi->validFactorization = false;
-      //lpi->clp->factorize();  // ???????????????????????
+   }
+   else
+   {
+      if ( lpi->scaledFactorization != (scaling != 0) )
+	 lpi->validFactorization = false;
    }
 
-   // temorarily turn off scaling ????????????????????????
-   int scaling = lpi->clp->scalingFlag();
-   lpi->clp->scaling(0);
    int status = lpi->clp->dual(0, lpi->validFactorization ? 3 : 1);
-   lpi->clp->scaling(scaling);
    lpi->validFactorization = true;
-
-   //int status = lpi->clp->dual();
-
-   //std::cout << "Clp Status: " << status << " ( " << lpi->clp->status();
-   //std::cout << ")   Secondary: " << lpi->clp->secondaryStatus() << std::endl;
-
-   // We may need to call ClpModel::status()
+   lpi->scaledFactorization = (scaling != 0);
 
    // Unfortunately the status of Clp is hard coded ...
    // 0 - optimal
@@ -1469,11 +1465,19 @@ RETCODE SCIPlpiStrongbranch(
 
    double objval = clp->objectiveValue();
 
+   if ( lpi->scaledFactorization )
+      lpi->validFactorization = false;
+
+   int scaling = clp->scalingFlag();
+   clp->scaling(0);
    // the last three parameters are:
    // bool stopOnFirstInfeasible=true,
    // bool alwaysFinish=false);
    // int startFinishOptions
-   int retval = ((ClpSimplexDual*) clp)->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true, 1);
+   int retval = clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true, lpi->validFactorization ? 3 : 1);
+   clp->scaling(scaling);
+   lpi->scaledFactorization = false;
+   lpi->validFactorization = true;
 
    *down += objval;
    *up += objval;
@@ -1489,8 +1493,6 @@ RETCODE SCIPlpiStrongbranch(
    delete [] outputSolution[1];
    delete [] outputSolution[0];
    delete [] outputSolution;
-
-   lpi->validFactorization = false; // ???????????
 
    return SCIP_OKAY;
 }
