@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.17 2004/05/14 13:43:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.18 2004/07/12 11:14:07 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -129,8 +129,8 @@ struct Row
    Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
-   Longint          validpsactivitybdchg; /**< bound change number for which pseudo activity value is valid */
-   Longint          validactivitybdsbdchg;/**< bound change number for which activity bound values are valid */
+   Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
+   Longint          validactivitybdsdomchg;/**< domain change number for which activity bound values are valid */
    Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    char*            name;               /**< name of the row */
    COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */

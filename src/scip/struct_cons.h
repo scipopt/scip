@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.15 2004/07/07 08:58:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.16 2004/07/12 11:14:07 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -97,6 +97,8 @@ struct Conshdlr
    Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
    Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    Longint          nchildren;          /**< number of children the constraint handler created during branching */
+   Longint          lastpropdomchgcount;/**< last bound change number, where the domain propagation was called */
+   Longint          lastenfodomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    char*            name;               /**< name of constraint handler */
    char*            desc;               /**< description of constraint handler */
    DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
@@ -162,8 +164,11 @@ struct Conshdlr
    int              updateconsssize;    /**< size of updateconss array */
    int              nupdateconss;       /**< number of update constraints */
    int              nenabledconss;      /**< total number of enabled constraints of the handler */
-   int              lastnsepaconss;     /**< number of already separated constraints after last conshdlrResetSepa() call */
-   int              lastnenfoconss;     /**< number of already enforced constraints after last conshdlrResetEnfo() call */
+   int              lastsepalpcount;    /**< last LP number, where the separations was called */
+   int              lastenfolpcount;    /**< last LP number, where the LP enforcement was called */
+   int              lastnusefulpropconss;/**< number of already propagated useful constraints on current domains */
+   int              lastnusefulsepaconss;/**< number of already separated useful constraints on current solution */
+   int              lastnusefulenfoconss;/**< number of already enforced useful constraints on current solution */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
@@ -185,8 +190,6 @@ struct Conshdlr
    Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
    Bool             initialized;        /**< is constraint handler initialized? */
    Bool             delayupdates;       /**< must the updates of the constraint arrays be delayed until processUpdates()? */
-   Bool             separated;          /**< was the separation method already called at current node? */
-   Bool             enforced;           /**< was the enforcing method already called at current node? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.71 2004/07/07 08:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.72 2004/07/12 11:14:06 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -246,18 +246,6 @@ RETCODE SCIPconshdlrPresolve(
    int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
    RESULT*          result              /**< pointer to store the result of the callback method */
-   );
-
-/** resets separation to start with first constraint in the next call */
-extern
-void SCIPconshdlrResetSepa(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
-/** resets enforcement to start with first constraint in the next call */
-extern
-void SCIPconshdlrResetEnfo(
-   CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 

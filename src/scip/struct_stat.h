@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.16 2004/07/01 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.17 2004/07/12 11:14:07 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -49,11 +49,11 @@ struct Stat
    Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including active node) */
    Longint          ncreatednodes;      /**< number of nodes created */
    Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
-   Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
    Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    Longint          lastdispnode;       /**< last node for which an information line was displayed */
    Longint          lastdivenode;       /**< last node where LP diving was applied */
+   Longint          domchgcount;        /**< internal counter, where all domain changes are counted */
    Longint          nrootboundchgs;     /**< total number of bound changes generated in the root node */
    Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    Longint          nholechgs;          /**< total number of hole changes generated in the tree */
@@ -79,7 +79,7 @@ struct Stat
    int              marked_nvaridx;     /**< number of used variable indices before solving started */
    int              marked_ncolidx;     /**< number of used column indices before solving started */
    int              marked_nrowidx;     /**< number of used row indices before solving started */
-   int              lpcount;            /**< internal LP counter, where all SCIPlpSolve() calls are counted */
+   int              lpcount;            /**< internal counter, where all SCIPlpSolve() calls are counted */
    int              nlps;               /**< number of LPs solved (primal + dual) with at least 1 iteration */
    int              nprimallps;         /**< number of primal LPs solved */
    int              nduallps;           /**< number of dual LPs solved */

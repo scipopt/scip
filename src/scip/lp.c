@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.128 2004/07/09 08:11:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.129 2004/07/12 11:14:06 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1051,8 +1051,8 @@ void coefChanged(
    row->pseudoactivity = SCIP_INVALID;
    row->minactivity = SCIP_INVALID;
    row->maxactivity = SCIP_INVALID;
-   row->validpsactivitybdchg = -1;
-   row->validactivitybdsbdchg = -1;
+   row->validpsactivitydomchg = -1;
+   row->validactivitybdsdomchg = -1;
 }
 
 
@@ -3256,8 +3256,8 @@ RETCODE SCIProwCreate(
    (*row)->nummaxval = 0;
    (*row)->numminval = 0;
    (*row)->validactivitylp = -1;
-   (*row)->validpsactivitybdchg = -1;
-   (*row)->validactivitybdsbdchg = -1;
+   (*row)->validpsactivitydomchg = -1;
+   (*row)->validactivitybdsdomchg = -1;
    (*row)->age = 0;
    (*row)->obsoletenode = -1;
    (*row)->lpcolssorted = TRUE;
@@ -3582,12 +3582,12 @@ RETCODE SCIProwChgConstant(
 
    if( !SCIPsetIsEQ(set, constant, row->constant) )
    {
-      if( row->validpsactivitybdchg == stat->nboundchanges )
+      if( row->validpsactivitydomchg == stat->domchgcount )
       {
          assert(row->pseudoactivity < SCIP_INVALID);
          row->pseudoactivity += constant - row->constant;
       }
-      if( row->validactivitybdsbdchg == stat->nboundchanges )
+      if( row->validactivitybdsdomchg == stat->domchgcount )
       {
          assert(row->minactivity < SCIP_INVALID);
          assert(row->maxactivity < SCIP_INVALID);
@@ -4109,7 +4109,7 @@ void SCIProwRecalcPseudoActivity(
 
       row->pseudoactivity += SCIPcolGetBestBound(col) * row->vals[i];
    }
-   row->validpsactivitybdchg = stat->nboundchanges;
+   row->validpsactivitydomchg = stat->domchgcount;
    assert(!row->integral || EPSISINT(row->pseudoactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
 }
 
@@ -4121,12 +4121,12 @@ Real SCIProwGetPseudoActivity(
 {
    assert(row != NULL);
    assert(stat != NULL);
-   assert(row->validpsactivitybdchg <= stat->nboundchanges);
+   assert(row->validpsactivitydomchg <= stat->domchgcount);
 
    /* check, if activity bounds has to be calculated */
-   if( row->validpsactivitybdchg != stat->nboundchanges )
+   if( row->validpsactivitydomchg != stat->domchgcount )
       SCIProwRecalcPseudoActivity(row, stat);
-   assert(row->validpsactivitybdchg == stat->nboundchanges);
+   assert(row->validpsactivitydomchg == stat->domchgcount);
    assert(row->pseudoactivity < SCIP_INVALID);
 
    return row->pseudoactivity;
@@ -4251,7 +4251,7 @@ void rowCalcActivityBounds(
       row->minactivity = -set->infinity;
    if( maxinfinite )
       row->maxactivity = set->infinity;
-   row->validactivitybdsbdchg = stat->nboundchanges;
+   row->validactivitybdsdomchg = stat->domchgcount;
 
    assert(!row->integral || mininfinite || EPSISINT(row->minactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
    assert(!row->integral || maxinfinite || EPSISINT(row->maxactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
@@ -4266,12 +4266,12 @@ Real SCIProwGetMinActivity(
 {
    assert(row != NULL);
    assert(stat != NULL);
-   assert(row->validactivitybdsbdchg <= stat->nboundchanges);
+   assert(row->validactivitybdsdomchg <= stat->domchgcount);
 
    /* check, if activity bounds has to be calculated */
-   if( row->validactivitybdsbdchg != stat->nboundchanges )
+   if( row->validactivitybdsdomchg != stat->domchgcount )
       rowCalcActivityBounds(row, set, stat);
-   assert(row->validactivitybdsbdchg == stat->nboundchanges);
+   assert(row->validactivitybdsdomchg == stat->domchgcount);
    assert(row->minactivity < SCIP_INVALID);
    assert(row->maxactivity < SCIP_INVALID);
 
@@ -4287,12 +4287,12 @@ Real SCIProwGetMaxActivity(
 {
    assert(row != NULL);
    assert(stat != NULL);
-   assert(row->validactivitybdsbdchg <= stat->nboundchanges);
+   assert(row->validactivitybdsdomchg <= stat->domchgcount);
 
    /* check, if activity bounds has to be calculated */
-   if( row->validactivitybdsbdchg != stat->nboundchanges )
+   if( row->validactivitybdsdomchg != stat->domchgcount )
       rowCalcActivityBounds(row, set, stat);
-   assert(row->validactivitybdsbdchg == stat->nboundchanges);
+   assert(row->validactivitybdsdomchg == stat->domchgcount);
    assert(row->minactivity < SCIP_INVALID);
    assert(row->maxactivity < SCIP_INVALID);
 

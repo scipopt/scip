@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.103 2004/07/07 09:52:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.104 2004/07/12 11:14:07 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3990,7 +3990,7 @@ RETCODE SCIPvarChgLbLocal(
       else
       {
          assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
-         stat->nboundchanges++;
+         stat->domchgcount++;
          var->locdom.lb = newbound;
          var->infervar = infervar;
          var->infercons = infercons;
@@ -4003,7 +4003,7 @@ RETCODE SCIPvarChgLbLocal(
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
-      stat->nboundchanges++;
+      stat->domchgcount++;
       CHECK_OKAY( varProcessChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 
                      newbound, infervar, infercons, inferinfo, fixdepth, fixindex, boundchgtype) );
       break;
@@ -4112,7 +4112,7 @@ RETCODE SCIPvarChgUbLocal(
       else
       {
          assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
-         stat->nboundchanges++;
+         stat->domchgcount++;
          var->locdom.ub = newbound;
          var->infervar = infervar;
          var->infercons = infercons;
@@ -4125,7 +4125,7 @@ RETCODE SCIPvarChgUbLocal(
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
-      stat->nboundchanges++;
+      stat->domchgcount++;
       CHECK_OKAY( varProcessChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 
                      newbound, infervar, infercons, inferinfo, fixdepth, fixindex, boundchgtype) );
       break;
