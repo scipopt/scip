@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.135 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.136 2005/02/02 19:34:14 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -217,6 +217,7 @@ RETCODE varEnsureLbchginfosSize(
 {
    assert(var != NULL);
    assert(var->nlbchginfos <= var->lbchginfossize);
+   assert(SCIPvarIsTransformed(var));
 
    if( num > var->lbchginfossize )
    {
@@ -242,6 +243,7 @@ RETCODE varEnsureUbchginfosSize(
 {
    assert(var != NULL);
    assert(var->nubchginfos <= var->ubchginfossize);
+   assert(SCIPvarIsTransformed(var));
 
    if( num > var->ubchginfossize )
    {
@@ -1927,7 +1929,10 @@ RETCODE SCIPvarCreateOriginal(
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
-   (*var)->data.transvar = NULL;
+   (*var)->data.original.origdom.holelist = NULL;
+   (*var)->data.original.origdom.lb = lb;
+   (*var)->data.original.origdom.ub = ub;
+   (*var)->data.original.transvar = NULL;
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -1963,11 +1968,11 @@ RETCODE SCIPvarCreateTransformed(
    CHECK_OKAY( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removeable,
                   vardelorig, vartrans, vardeltrans, vardata) );
 
-   /* set variable status and data */
-   (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
-
    /* create event filter for transformed variable */
    CHECK_OKAY( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
+
+   /* set variable status and data */
+   (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -2044,13 +2049,15 @@ RETCODE varFreeParents(
       assert((*var)->parentvars != NULL);
       parentvar = (*var)->parentvars[i];
       assert(parentvar != NULL);
+      assert(SCIPvarIsTransformed(*var) == SCIPvarIsTransformed((*var)->parentvars[i])
+         || (*var)->parentvars[i]->nuses >= 2); /* otherwise we would use the wrong blkmem in varFree() */
 
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         assert(parentvar->data.transvar == *var);
-         assert(&parentvar->data.transvar != var);
-         parentvar->data.transvar = NULL;
+         assert(parentvar->data.original.transvar == *var);
+         assert(&parentvar->data.original.transvar != var);
+         parentvar->data.original.transvar = NULL;
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
@@ -2115,7 +2122,8 @@ RETCODE varFree(
    switch( (*var)->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert((*var)->data.transvar == NULL);  /* cannot free variable, if transformed variable is still existing */
+      assert((*var)->data.original.transvar == NULL); /* cannot free variable, if transformed variable is still existing */
+      holelistFree(&(*var)->data.original.origdom.holelist, blkmem);
       break;
    case SCIP_VARSTATUS_LOOSE:
       break;
@@ -2158,10 +2166,13 @@ RETCODE varFree(
    /* free event filter */
    if( (*var)->eventfilter != NULL )
    {
-      assert(SCIPvarGetStatus(*var) != SCIP_VARSTATUS_ORIGINAL);
       CHECK_OKAY( SCIPeventfilterFree(&(*var)->eventfilter, blkmem, set) );
    }
    assert((*var)->eventfilter == NULL);
+
+   /* free hole lists */
+   holelistFree(&(*var)->glbdom.holelist, blkmem);
+   holelistFree(&(*var)->locdom.holelist, blkmem);
 
    /* free variable bounds data structures */
    vboundsFree(&(*var)->vlbs, blkmem);
@@ -2244,6 +2255,8 @@ void SCIPvarPrint(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
+   Real lb;
+   Real ub;
    int i;
 
    assert(var != NULL);
@@ -2277,16 +2290,26 @@ void SCIPvarPrint(
    /* objective value */
    fprintf(file, " obj=%g", var->obj);
 
-   /* bounds */
+   /* bounds (global bounds for transformed variables, original bounds for original variables) */
+   if( SCIPvarIsTransformed(var) )
+   {
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+   }
+   else
+   {
+      lb = SCIPvarGetLbOriginal(var);
+      ub = SCIPvarGetUbOriginal(var);
+   }
    fprintf(file, ", bounds=");
-   if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
+   if( SCIPsetIsInfinity(set, -lb) )
       fprintf(file, "[-inf,");
    else
-      fprintf(file, "[%g,", var->glbdom.lb);
-   if( SCIPsetIsInfinity(set, var->glbdom.ub) )
+      fprintf(file, "[%g,", lb);
+   if( SCIPsetIsInfinity(set, ub) )
       fprintf(file, "+inf]");
    else
-      fprintf(file, "%g]", var->glbdom.ub);
+      fprintf(file, "%g]", ub);
 
    /* holes */
    /**@todo print holes */
@@ -2375,9 +2398,9 @@ RETCODE SCIPvarAddLocks(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
+      if( var->data.original.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarAddLocks(var->data.transvar, blkmem, set, eventqueue, addnlocksdown, addnlocksup) );
+         CHECK_OKAY( SCIPvarAddLocks(var->data.original.transvar, blkmem, set, eventqueue, addnlocksdown, addnlocksup) );
       }
       else
       {
@@ -2453,8 +2476,8 @@ int SCIPvarGetNLocksDown(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
-         return SCIPvarGetNLocksDown(var->data.transvar);
+      if( var->data.original.transvar != NULL )
+         return SCIPvarGetNLocksDown(var->data.original.transvar);
       else
          return var->nlocksdown;
 
@@ -2506,8 +2529,8 @@ int SCIPvarGetNLocksUp(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
-         return SCIPvarGetNLocksUp(var->data.transvar);
+      if( var->data.original.transvar != NULL )
+         return SCIPvarGetNLocksUp(var->data.original.transvar);
       else
          return var->nlocksup;
 
@@ -2584,9 +2607,9 @@ RETCODE SCIPvarTransform(
    assert(transvar != NULL);
 
    /* check if variable is already transformed */
-   if( origvar->data.transvar != NULL )
+   if( origvar->data.original.transvar != NULL )
    {
-      *transvar = origvar->data.transvar;
+      *transvar = origvar->data.original.transvar;
       SCIPvarCapture(*transvar);
    }
    else
@@ -2608,7 +2631,7 @@ RETCODE SCIPvarTransform(
       CHECK_OKAY( holelistDuplicate(&(*transvar)->locdom.holelist, blkmem, set, origvar->locdom.holelist) );
       
       /* link original and transformed variable */
-      origvar->data.transvar = *transvar;
+      origvar->data.original.transvar = *transvar;
       CHECK_OKAY( varAddParent(*transvar, blkmem, set, origvar) );
       
       /* copy rounding locks */
@@ -2646,15 +2669,15 @@ RETCODE SCIPvarGetTransformed(
       assert(origvar->negatedvar != NULL);
       assert(SCIPvarGetStatus(origvar->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
 
-      if( origvar->negatedvar->data.transvar == NULL )
+      if( origvar->negatedvar->data.original.transvar == NULL )
          *transvar = NULL;
       else
       {
-         CHECK_OKAY( SCIPvarNegate(origvar->negatedvar->data.transvar, blkmem, set, stat, transvar) );
+         CHECK_OKAY( SCIPvarNegate(origvar->negatedvar->data.original.transvar, blkmem, set, stat, transvar) );
       }
    }
    else
-      *transvar = origvar->data.transvar;
+      *transvar = origvar->data.original.transvar;
 
    return SCIP_OKAY;
 }
@@ -2812,12 +2835,12 @@ RETCODE SCIPvarFix(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("cannot fix an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarFix(var->data.transvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+      CHECK_OKAY( SCIPvarFix(var->data.original.transvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
             fixedval, infeasible, fixed) );
       break;
 
@@ -3396,12 +3419,12 @@ RETCODE SCIPvarMultiaggregate(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("cannot multi-aggregate an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, blkmem, set, stat, prob, primal, tree, lp,
+      CHECK_OKAY( SCIPvarMultiaggregate(var->data.original.transvar, blkmem, set, stat, prob, primal, tree, lp,
             branchcand, eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
       break;
 
@@ -3571,6 +3594,12 @@ RETCODE SCIPvarNegate(
       else
          (*negvar)->data.negate.constant = var->glbdom.lb + var->glbdom.ub;
 
+      /* create event filter for transformed variable */
+      if( SCIPvarIsTransformed(var) )
+      {
+         CHECK_OKAY( SCIPeventfilterCreate(&(*negvar)->eventfilter, blkmem) );
+      }
+
       /* set the bounds corresponding to the negation variable */
       (*negvar)->glbdom.lb = (*negvar)->data.negate.constant - var->glbdom.ub;
       (*negvar)->glbdom.ub = (*negvar)->data.negate.constant - var->glbdom.lb;
@@ -3578,12 +3607,6 @@ RETCODE SCIPvarNegate(
       (*negvar)->locdom.ub = (*negvar)->data.negate.constant - var->locdom.lb;
       /**@todo create holes in the negated variable corresponding to the holes of the negation variable */
       
-      /* create event filter, if the negated variable belongs to the transformed problem */
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
-      {
-         CHECK_OKAY( SCIPeventfilterCreate(&(*negvar)->eventfilter, blkmem) );
-      }
-
       /* link the variables together */
       var->negatedvar = *negvar;
       (*negvar)->negatedvar = var;
@@ -3663,10 +3686,11 @@ RETCODE varEventObjChanged(
    EVENT* event;
 
    assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
    assert(var->eventfilter != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldobj, newobj));
+   assert(SCIPisTransformed(set->scip));
 
    CHECK_OKAY( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
    CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
@@ -3696,9 +3720,9 @@ RETCODE SCIPvarChgObj(
       switch( SCIPvarGetStatus(var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         if( var->data.transvar != NULL )
+         if( var->data.original.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarChgObj(var->data.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
+            CHECK_OKAY( SCIPvarChgObj(var->data.original.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
          }
          else
          {
@@ -3758,9 +3782,9 @@ RETCODE SCIPvarAddObj(
       switch( SCIPvarGetStatus(var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         if( var->data.transvar != NULL )
+         if( var->data.original.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, addobj) );
+            CHECK_OKAY( SCIPvarAddObj(var->data.original.transvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, addobj) );
          }
          else
          {
@@ -3843,8 +3867,8 @@ RETCODE SCIPvarChgObjDive(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarChgObjDive(var->data.transvar, set, lp, newobj) );
+      assert(var->data.original.transvar != NULL);
+      CHECK_OKAY( SCIPvarChgObjDive(var->data.original.transvar, set, lp, newobj) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -3914,6 +3938,96 @@ void SCIPvarAdjustUb(
    *ub = adjustedUb(set, (VARTYPE)(var->vartype), *ub);
 }
 
+/** changes lower bound of original variable in original problem */
+RETCODE SCIPvarChgLbOriginal(
+   VAR*             var,                /**< problem variable to change */
+   SET*             set,                /**< global SCIP settings */
+   Real             newbound            /**< new bound for variable */
+   )
+{
+   Real oldbound;
+   int i;
+
+   assert(var != NULL);
+   assert(!SCIPvarIsTransformed(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
+
+   debugMessage("changing original lower bound of <%s> from %g to %g\n", 
+      var->name, var->data.original.origdom.lb, newbound);
+
+   if( SCIPsetIsZero(set, newbound) )
+      newbound = 0.0;
+
+   if( SCIPsetIsEQ(set, var->data.original.origdom.lb, newbound) )
+      return SCIP_OKAY;
+
+   /* change the bound */
+   oldbound = var->data.original.origdom.lb;
+   var->data.original.origdom.lb = newbound;
+
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      VAR* parentvar;
+
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+      assert(SCIPvarGetStatus(parentvar) == SCIP_VARSTATUS_NEGATED);
+      assert(parentvar->negatedvar == var);
+      assert(var->negatedvar == parentvar);
+
+      CHECK_OKAY( SCIPvarChgUbOriginal(parentvar, set, parentvar->data.negate.constant - newbound) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes upper bound of original variable in original problem */
+RETCODE SCIPvarChgUbOriginal(
+   VAR*             var,                /**< problem variable to change */
+   SET*             set,                /**< global SCIP settings */
+   Real             newbound            /**< new bound for variable */
+   )
+{
+   Real oldbound;
+   int i;
+
+   assert(var != NULL);
+   assert(!SCIPvarIsTransformed(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
+
+   debugMessage("changing original upper bound of <%s> from %g to %g\n", 
+      var->name, var->data.original.origdom.ub, newbound);
+
+   if( SCIPsetIsZero(set, newbound) )
+      newbound = 0.0;
+
+   if( SCIPsetIsEQ(set, var->data.original.origdom.ub, newbound) )
+      return SCIP_OKAY;
+
+   /* change the bound */
+   oldbound = var->data.original.origdom.ub;
+   var->data.original.origdom.ub = newbound;
+
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      VAR* parentvar;
+
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+      assert(SCIPvarGetStatus(parentvar) == SCIP_VARSTATUS_NEGATED);
+      assert(parentvar->negatedvar == var);
+      assert(var->negatedvar == parentvar);
+
+      CHECK_OKAY( SCIPvarChgLbOriginal(parentvar, set, parentvar->data.negate.constant - newbound) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 /* forward declaration, because both methods call each other recursively */
@@ -3959,7 +4073,7 @@ RETCODE varProcessChgLbGlobal(
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         /* do not change bounds across the border between transformed and original problem */
+         CHECK_OKAY( varProcessChgLbGlobal(parentvar, set, newbound) );
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -4041,7 +4155,7 @@ RETCODE varProcessChgUbGlobal(
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         /* do not change bounds across the border between transformed and original problem */
+         CHECK_OKAY( varProcessChgUbGlobal(parentvar, set, newbound) );
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -4114,9 +4228,9 @@ RETCODE SCIPvarChgLbGlobal(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
+      if( var->data.original.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarChgLbGlobal(var->data.transvar, set, newbound) );
+         CHECK_OKAY( SCIPvarChgLbGlobal(var->data.original.transvar, set, newbound) );
       }
       else
       {
@@ -4205,9 +4319,9 @@ RETCODE SCIPvarChgUbGlobal(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
+      if( var->data.original.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarChgUbGlobal(var->data.transvar, set, newbound) );
+         CHECK_OKAY( SCIPvarChgUbGlobal(var->data.original.transvar, set, newbound) );
       }
       else
       {
@@ -4307,9 +4421,10 @@ RETCODE varEventLbChanged(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
    assert(var->eventfilter != NULL);
+   assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(SCIPisTransformed(set->scip));
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
@@ -4343,9 +4458,10 @@ RETCODE varEventUbChanged(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
    assert(var->eventfilter != NULL);
+   assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(SCIPisTransformed(set->scip));
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
@@ -4410,7 +4526,7 @@ RETCODE varProcessChgLbLocal(
    var->locdom.lb = newbound;
 
    /* issue bound change event */
-   assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL) == (var->eventfilter == NULL));
+   assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( var->eventfilter != NULL )
    {
       CHECK_OKAY( varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
@@ -4425,7 +4541,7 @@ RETCODE varProcessChgLbLocal(
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         /* do not change bounds across the border between transformed and original problem */
+         CHECK_OKAY( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -4505,7 +4621,7 @@ RETCODE varProcessChgUbLocal(
    var->locdom.ub = newbound;
 
    /* issue bound change event */
-   assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL) == (var->eventfilter == NULL));
+   assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( var->eventfilter != NULL )
    {
       CHECK_OKAY( varEventUbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
@@ -4520,7 +4636,7 @@ RETCODE varProcessChgUbLocal(
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         /* do not change bounds across the border between transformed and original problem */
+         CHECK_OKAY( varProcessChgUbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -4602,15 +4718,16 @@ RETCODE SCIPvarChgLbLocal(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
+      if( var->data.original.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarChgLbLocal(var->data.transvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
+         CHECK_OKAY( SCIPvarChgLbLocal(var->data.original.transvar, blkmem, set, stat, lp, branchcand, eventqueue, 
+               newbound) );
       }
       else
       {
          assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
-         var->locdom.lb = newbound;
+         CHECK_OKAY( varProcessChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
          
@@ -4704,15 +4821,15 @@ RETCODE SCIPvarChgUbLocal(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
+      if( var->data.original.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarChgUbLocal(var->data.transvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
+         CHECK_OKAY( SCIPvarChgUbLocal(var->data.original.transvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       else
       {
          assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
-         var->locdom.ub = newbound;
+         CHECK_OKAY( varProcessChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
          
@@ -4826,8 +4943,8 @@ RETCODE SCIPvarChgLbDive(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarChgLbDive(var->data.transvar, set, lp, newbound) );
+      assert(var->data.original.transvar != NULL);
+      CHECK_OKAY( SCIPvarChgLbDive(var->data.original.transvar, set, lp, newbound) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -4908,8 +5025,8 @@ RETCODE SCIPvarChgUbDive(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarChgUbDive(var->data.transvar, set, lp, newbound) );
+      assert(var->data.original.transvar != NULL);
+      CHECK_OKAY( SCIPvarChgUbDive(var->data.original.transvar, set, lp, newbound) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -4966,7 +5083,31 @@ RETCODE SCIPvarChgUbDive(
    return SCIP_OKAY;
 }
 
-/** adds a hole to the variable's global domain and to its current local domain */
+/** adds a hole to the original variable's original domain */
+RETCODE SCIPvarAddHoleOriginal(
+   VAR*             var,                /**< problem variable */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Real             left,               /**< left bound of open interval in new hole */
+   Real             right               /**< right bound of open interval in new hole */
+   )
+{
+   assert(var != NULL);
+   assert(!SCIPvarIsTransformed(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+
+   debugMessage("adding original hole (%g,%g) to <%s>\n", left, right, var->name);
+
+   CHECK_OKAY( domAddHole(&var->data.original.origdom, blkmem, set, left, right) );
+
+   /**@todo add hole in parent and child variables (just like with bound changes);
+    *       warning! original vars' holes are in original blkmem, transformed vars' holes in transformed blkmem
+    */
+
+   return SCIP_OKAY;
+}
+
+/** adds a hole to the variable's global domain */
 RETCODE SCIPvarAddHoleGlobal(
    VAR*             var,                /**< problem variable */
    BLKMEM*          blkmem,             /**< block memory */
@@ -4980,9 +5121,10 @@ RETCODE SCIPvarAddHoleGlobal(
    debugMessage("adding global hole (%g,%g) to <%s>\n", left, right, var->name);
 
    CHECK_OKAY( domAddHole(&var->glbdom, blkmem, set, left, right) );
-   CHECK_OKAY( domAddHole(&var->locdom, blkmem, set, left, right) );
 
-   /**@todo add hole in parent and child variables (just like with bound changes) */
+   /**@todo add hole in parent and child variables (just like with bound changes);
+    *       warning! original vars' holes are in original blkmem, transformed vars' holes in transformed blkmem
+    */
 
    return SCIP_OKAY;
 }
@@ -5002,7 +5144,35 @@ RETCODE SCIPvarAddHoleLocal(
 
    CHECK_OKAY( domAddHole(&var->locdom, blkmem, set, left, right) );
 
-   /**@todo add hole in parent and child variables (just like with bound changes) */
+   /**@todo add hole in parent and child variables (just like with bound changes);
+    *       warning! original vars' holes are in original blkmem, transformed vars' holes in transformed blkmem
+    */
+
+   return SCIP_OKAY;
+}
+
+/** resets the global and local bounds of original variable to their original values */
+RETCODE SCIPvarResetBounds(
+   VAR*             var,                /**< problem variable */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarIsOriginal(var));
+   assert(!SCIPisTransformed(set->scip));
+
+   /* copy the original bounds back to the global and local bounds */
+   var->glbdom.lb = var->data.original.origdom.lb;
+   var->glbdom.ub = var->data.original.origdom.ub;
+   var->locdom.lb = var->data.original.origdom.lb;
+   var->locdom.ub = var->data.original.origdom.ub;
+
+   /* free the global and local holelists and duplicate the original ones */
+   holelistFree(&var->glbdom.holelist, blkmem);
+   holelistFree(&var->locdom.holelist, blkmem);
+   CHECK_OKAY( holelistDuplicate(&var->glbdom.holelist, blkmem, set, var->data.original.origdom.holelist) );
+   CHECK_OKAY( holelistDuplicate(&var->locdom.holelist, blkmem, set, var->data.original.origdom.holelist) );
 
    return SCIP_OKAY;
 }
@@ -5026,8 +5196,8 @@ RETCODE SCIPvarAddVlb(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddVlb(var->data.transvar, blkmem, set, vlbvar, vlbcoef, vlbconstant) );
+      assert(var->data.original.transvar != NULL);
+      CHECK_OKAY( SCIPvarAddVlb(var->data.original.transvar, blkmem, set, vlbvar, vlbcoef, vlbconstant) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5114,8 +5284,8 @@ RETCODE SCIPvarAddVub(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddVub(var->data.transvar, blkmem, set, vubvar, vubcoef, vubconstant) );
+      assert(var->data.original.transvar != NULL);
+      CHECK_OKAY( SCIPvarAddVub(var->data.original.transvar, blkmem, set, vubvar, vubcoef, vubconstant) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5204,8 +5374,8 @@ RETCODE SCIPvarAddImplic(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddImplic(var->data.transvar, blkmem, set, i, implvar, impltype, implbound, conflict) );
+      assert(var->data.original.transvar != NULL);
+      CHECK_OKAY( SCIPvarAddImplic(var->data.original.transvar, blkmem, set, i, implvar, impltype, implbound, conflict) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5446,8 +5616,8 @@ void SCIPvarChgBranchFactor(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
-         SCIPvarChgBranchFactor(var->data.transvar, set, branchfactor);
+      if( var->data.original.transvar != NULL )
+         SCIPvarChgBranchFactor(var->data.original.transvar, set, branchfactor);
       else
       {
          assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
@@ -5557,8 +5727,8 @@ void SCIPvarChgBranchPriority(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
-         SCIPvarChgBranchPriority(var->data.transvar, branchpriority);
+      if( var->data.original.transvar != NULL )
+         SCIPvarChgBranchPriority(var->data.original.transvar, branchpriority);
       else
          var->branchpriority = branchpriority;
       break;
@@ -5671,8 +5841,8 @@ void SCIPvarChgBranchDirection(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar != NULL )
-         SCIPvarChgBranchDirection(var->data.transvar, branchdirection);
+      if( var->data.original.transvar != NULL )
+         SCIPvarChgBranchDirection(var->data.original.transvar, branchdirection);
       else
          var->branchdirection = branchdirection;
       break;
@@ -5753,12 +5923,12 @@ VAR* SCIPvarGetProbvar(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("original variable has no transformed variable attached\n");
          return NULL;
       }
-      return SCIPvarGetProbvar(var->data.transvar);
+      return SCIPvarGetProbvar(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -5801,9 +5971,9 @@ RETCODE SCIPvarGetProbvarBinary(
       switch( SCIPvarGetStatus(*var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         if( (*var)->data.transvar == NULL )
+         if( (*var)->data.original.transvar == NULL )
             return SCIP_OKAY;
-         *var = (*var)->data.transvar;
+         *var = (*var)->data.original.transvar;
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -5862,12 +6032,12 @@ RETCODE SCIPvarGetProbvarBound(
    switch( SCIPvarGetStatus(*var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( (*var)->data.transvar == NULL )
+      if( (*var)->data.original.transvar == NULL )
       {
          errorMessage("original variable has no transformed variable attached\n");
          return SCIP_INVALIDDATA;
       }
-      *var = (*var)->data.transvar;
+      *var = (*var)->data.original.transvar;
       CHECK_OKAY( SCIPvarGetProbvarBound(var, bound, boundtype) );
       break;
 
@@ -5937,12 +6107,12 @@ RETCODE SCIPvarGetProbvarSum(
       switch( SCIPvarGetStatus(*var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         if( (*var)->data.transvar == NULL )
+         if( (*var)->data.original.transvar == NULL )
          {
             errorMessage("original variable has no transformed variable attached\n");
             return SCIP_INVALIDDATA;
          }
-         *var = (*var)->data.transvar;
+         *var = (*var)->data.original.transvar;
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -5998,8 +6168,8 @@ Real SCIPvarGetObjLP(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      return SCIPvarGetObjLP(var->data.transvar);
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetObjLP(var->data.original.transvar);
          
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -6042,8 +6212,8 @@ Real SCIPvarGetLbLP(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      return SCIPvarGetLbLP(var->data.transvar);
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetLbLP(var->data.original.transvar);
          
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -6101,8 +6271,8 @@ Real SCIPvarGetUbLP(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      return SCIPvarGetUbLP(var->data.transvar);
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetUbLP(var->data.original.transvar);
          
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -6212,9 +6382,9 @@ Real SCIPvarGetLPSol(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPvarGetLPSol(var->data.transvar);
+      return SCIPvarGetLPSol(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
       return SCIPvarGetBestBound(var);
@@ -6265,9 +6435,9 @@ Real SCIPvarGetPseudoSol(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPvarGetPseudoSol(var->data.transvar);
+      return SCIPvarGetPseudoSol(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6340,9 +6510,9 @@ Real SCIPvarGetRootSol(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0.0;
-      return SCIPvarGetRootSol(var->data.transvar);
+      return SCIPvarGetRootSol(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6390,9 +6560,9 @@ Real SCIPvarGetAvgSol(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0.0;
-      return SCIPvarGetAvgSol(var->data.transvar);
+      return SCIPvarGetAvgSol(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6454,12 +6624,12 @@ RETCODE SCIPvarAddToRow(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("cannot add untransformed original variable <%s> to LP row <%s>\n", var->name, row->name);
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarAddToRow(var->data.transvar, blkmem, set, stat, prob, lp, row, val) );
+      CHECK_OKAY( SCIPvarAddToRow(var->data.original.transvar, blkmem, set, stat, prob, lp, row, val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -6533,12 +6703,12 @@ RETCODE SCIPvarUpdatePseudocost(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("cannot update pseudo costs of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarUpdatePseudocost(var->data.transvar, set, stat, solvaldelta, objdelta, weight) );
+      CHECK_OKAY( SCIPvarUpdatePseudocost(var->data.original.transvar, set, stat, solvaldelta, objdelta, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -6588,10 +6758,10 @@ Real SCIPvarGetPseudocost(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIPhistoryGetPseudocost(stat->glbhistory, solvaldelta);
       else
-         return SCIPvarGetPseudocost(var->data.transvar, stat, solvaldelta);
+         return SCIPvarGetPseudocost(var->data.original.transvar, stat, solvaldelta);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6636,10 +6806,10 @@ Real SCIPvarGetPseudocostCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIPhistoryGetPseudocost(stat->glbhistorycrun, solvaldelta);
       else
-         return SCIPvarGetPseudocostCurrentRun(var->data.transvar, stat, solvaldelta);
+         return SCIPvarGetPseudocostCurrentRun(var->data.original.transvar, stat, solvaldelta);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6679,10 +6849,10 @@ Real SCIPvarGetPseudocostCount(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetPseudocostCount(var->data.transvar, dir);
+         return SCIPvarGetPseudocostCount(var->data.original.transvar, dir);
       
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6723,10 +6893,10 @@ Real SCIPvarGetPseudocostCountCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetPseudocostCountCurrentRun(var->data.transvar, dir);
+         return SCIPvarGetPseudocostCountCurrentRun(var->data.original.transvar, dir);
       
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6768,12 +6938,12 @@ RETCODE SCIPvarIncNBranchings(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("cannot update branching counter of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarIncNBranchings(var->data.transvar, stat, depth, dir) );
+      CHECK_OKAY( SCIPvarIncNBranchings(var->data.original.transvar, stat, depth, dir) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -6828,12 +6998,12 @@ RETCODE SCIPvarIncNInferences(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("cannot update branching counter of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarIncNInferences(var->data.transvar, stat, dir) );
+      CHECK_OKAY( SCIPvarIncNInferences(var->data.original.transvar, stat, dir) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -6888,12 +7058,12 @@ RETCODE SCIPvarIncNCutoffs(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
       {
          errorMessage("cannot update branching counter of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarIncNCutoffs(var->data.transvar, stat, dir) );
+      CHECK_OKAY( SCIPvarIncNCutoffs(var->data.original.transvar, stat, dir) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -6946,10 +7116,10 @@ Longint SCIPvarGetNBranchings(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNBranchings(var->data.transvar, dir);
+         return SCIPvarGetNBranchings(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -6990,10 +7160,10 @@ Longint SCIPvarGetNBranchingsCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNBranchingsCurrentRun(var->data.transvar, dir);
+         return SCIPvarGetNBranchingsCurrentRun(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7032,10 +7202,10 @@ Real SCIPvarGetAvgBranchdepth(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetAvgBranchdepth(var->data.transvar, dir);
+         return SCIPvarGetAvgBranchdepth(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7076,10 +7246,10 @@ Real SCIPvarGetAvgBranchdepthCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetAvgBranchdepthCurrentRun(var->data.transvar, dir);
+         return SCIPvarGetAvgBranchdepthCurrentRun(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7118,10 +7288,10 @@ Longint SCIPvarGetNInferences(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNInferences(var->data.transvar, dir);
+         return SCIPvarGetNInferences(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7162,10 +7332,10 @@ Longint SCIPvarGetNInferencesCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNInferencesCurrentRun(var->data.transvar, dir);
+         return SCIPvarGetNInferencesCurrentRun(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7206,10 +7376,10 @@ Real SCIPvarGetAvgInferences(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIPhistoryGetAvgInferences(stat->glbhistory, dir);
       else
-         return SCIPvarGetAvgInferences(var->data.transvar, stat, dir);
+         return SCIPvarGetAvgInferences(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7254,10 +7424,10 @@ Real SCIPvarGetAvgInferencesCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIPhistoryGetAvgInferences(stat->glbhistorycrun, dir);
       else
-         return SCIPvarGetAvgInferencesCurrentRun(var->data.transvar, stat, dir);
+         return SCIPvarGetAvgInferencesCurrentRun(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7298,10 +7468,10 @@ Longint SCIPvarGetNCutoffs(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNCutoffs(var->data.transvar, dir);
+         return SCIPvarGetNCutoffs(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7340,10 +7510,10 @@ Longint SCIPvarGetNCutoffsCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNCutoffsCurrentRun(var->data.transvar, dir);
+         return SCIPvarGetNCutoffsCurrentRun(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7384,10 +7554,10 @@ Real SCIPvarGetAvgCutoffs(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIPhistoryGetAvgCutoffs(stat->glbhistory, dir);
       else
-         return SCIPvarGetAvgCutoffs(var->data.transvar, stat, dir);
+         return SCIPvarGetAvgCutoffs(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7430,10 +7600,10 @@ Real SCIPvarGetAvgCutoffsCurrentRun(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
+      if( var->data.original.transvar == NULL )
          return SCIPhistoryGetAvgCutoffs(stat->glbhistorycrun, dir);
       else
-         return SCIPvarGetAvgCutoffsCurrentRun(var->data.transvar, stat, dir);
+         return SCIPvarGetAvgCutoffsCurrentRun(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7588,8 +7758,8 @@ Real SCIPvarGetLbAtIndex(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      return SCIPvarGetLbAtIndex(var->data.transvar, bdchgidx, after);
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetLbAtIndex(var->data.original.transvar, bdchgidx, after);
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
@@ -7661,8 +7831,8 @@ Real SCIPvarGetUbAtIndex(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.transvar != NULL);
-      return SCIPvarGetUbAtIndex(var->data.transvar, bdchgidx, after);
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetUbAtIndex(var->data.original.transvar, bdchgidx, after);
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
@@ -7908,6 +8078,8 @@ DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetNegationVar
 #undef SCIPvarGetNegationConstant
 #undef SCIPvarGetObj
+#undef SCIPvarGetLbOriginal
+#undef SCIPvarGetUbOriginal
 #undef SCIPvarGetLbGlobal
 #undef SCIPvarGetUbGlobal
 #undef SCIPvarGetLbLocal
@@ -8088,7 +8260,7 @@ VAR* SCIPvarGetTransVar(
    assert(var != NULL);
    assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
 
-   return var->data.transvar;
+   return var->data.original.transvar;
 }
 
 /** gets column of COLUMN variable */
@@ -8231,6 +8403,46 @@ Real SCIPvarGetObj(
    return var->obj;
 }
    
+/** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
+Real SCIPvarGetLbOriginal(
+   VAR*             var                 /**< original problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarIsOriginal(var));
+
+   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      return var->data.original.origdom.lb;
+   else
+   {
+      assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
+
+      return var->data.negate.constant - var->negatedvar->data.original.origdom.ub;
+   }
+}
+
+/** gets original upper bound of original problem variable (i.e. the bound set in problem creation) */
+Real SCIPvarGetUbOriginal(
+   VAR*             var                 /**< original problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarIsOriginal(var));
+
+   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      return var->data.original.origdom.ub;
+   else
+   {
+      assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
+
+      return var->data.negate.constant - var->negatedvar->data.original.origdom.lb;
+   }
+}
+
 /** gets global lower bound of variable */
 Real SCIPvarGetLbGlobal(
    VAR*             var                 /**< problem variable */
@@ -8240,7 +8452,7 @@ Real SCIPvarGetLbGlobal(
 
    return var->glbdom.lb;
 }
-   
+
 /** gets global upper bound of variable */
 Real SCIPvarGetUbGlobal(
    VAR*             var                 /**< problem variable */
@@ -8450,10 +8662,11 @@ RETCODE SCIPvarCatchEvent(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
    assert(var->eventfilter != NULL);
    assert((eventtype & ~SCIP_EVENTTYPE_VARCHANGED) == 0);
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
+   assert(SCIPisTransformed(set->scip));
+   assert(SCIPvarIsTransformed(var));
 
    debugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
       eventtype, var->name, eventhdlr, eventdata);
@@ -8475,8 +8688,9 @@ RETCODE SCIPvarDropEvent(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
    assert(var->eventfilter != NULL);
+   assert(SCIPvarIsTransformed(var));
+   assert(SCIPisTransformed(set->scip));
 
    debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
 

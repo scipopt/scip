@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.42 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.43 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -88,6 +88,14 @@ RETCODE SCIPprobTransform(
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    PROB**           target              /**< pointer to target problem data structure */
+   );
+
+/** resets the global and local bounds of original variables in original problem to their original values */
+extern
+RETCODE SCIPprobResetBounds(
+   PROB*            prob,               /**< original problem data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
    );
 
 
@@ -184,17 +192,9 @@ void SCIPprobAddObjoffset(
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 extern
-void SCIPprobSetExternObjlim(
+void SCIPprobSetObjlim(
    PROB*            prob,               /**< problem data */
    Real             objlim              /**< external objective limit */
-   );
-
-/** sets limit on objective function as transformed internal objective value */
-extern
-void SCIPprobSetInternObjlim(
-   PROB*            prob,               /**< problem data */
-   SET*             set,                /**< global SCIP settings */
-   Real             objlim              /**< transformed internal objective limit */
    );
 
 /** informs the problem, that its objective value is always integral in every feasible solution */
@@ -285,15 +285,8 @@ Real SCIPprobInternObjval(
 
 /** gets limit on objective function in external space */
 extern
-Real SCIPprobGetExternObjlim(
+Real SCIPprobGetObjlim(
    PROB*            prob                /**< problem data */
-   );
-
-/** gets limit on objective function as transformed internal objective value */
-extern
-Real SCIPprobGetInternObjlim(
-   PROB*            prob,               /**< problem data */
-   SET*             set                 /**< global SCIP settings */
    );
 
 /** returns whether the objective value is known to be integral in every feasible solution */

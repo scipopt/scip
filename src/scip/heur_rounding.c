@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.35 2005/01/21 09:16:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.36 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -532,7 +532,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    CHECK_OKAY( SCIPlinkLPSol(scip, sol) );
 
    /* calculate the minimal objective value possible after rounding fractional variables */
-   minobj = SCIPsolGetObj(sol);
+   minobj = SCIPgetSolTransObj(scip, sol);
    assert(minobj < SCIPgetUpperbound(scip));
    for( c = 0; c < nlpcands; ++c )
    {
@@ -549,7 +549,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       Real newsolval;
          
       debugMessage("rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
-         nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
+         nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
 
       assert(minobj < SCIPgetUpperbound(scip)); /* otherwise, the rounding variable selection should have returned NULL */
 
@@ -613,7 +613,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
          minobj -= obj;
 
       debugMessage("rounding heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
-         nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
+         nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
    }
 
    /* check, if the new solution is feasible */
@@ -626,7 +626,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
        * done in the rounding heuristic itself; however, be better check feasibility of LP rows,
        * because of numerical problems with activity updating
        */
-      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, TRUE, &stored) );
+      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );
 
       if( stored )
       {

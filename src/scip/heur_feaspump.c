@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.14 2005/01/31 15:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.15 2005/02/02 19:34:11 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -376,7 +376,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       /* if the rounded solution is feasible and better, add it to SCIP */ 
       if( success )
       {
-         CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+         CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
          if( success )
             *result = SCIP_FOUNDSOL; 
       }
@@ -506,7 +506,7 @@ DECL_HEUREXEC(heurExecFeaspump)
    if( nfracs == 0 && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->sol) );
-      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
    }

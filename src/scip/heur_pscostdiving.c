@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.16 2005/01/31 15:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.17 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -421,7 +421,7 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
             debugMessage("pscostdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
          
             /* try to add solution to SCIP */
-            CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+            CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
             
             /* check, if solution was feasible and good enough */
             if( success )
@@ -513,7 +513,7 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
       debugMessage("pscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )

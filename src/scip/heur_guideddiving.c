@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.5 2005/01/21 09:16:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.6 2005/02/02 19:34:11 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
@@ -397,7 +397,7 @@ DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
             debugMessage("guideddiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
          
             /* try to add solution to SCIP */
-            CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+            CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
             
             /* check, if solution was feasible and good enough */
             if( success )
@@ -488,7 +488,7 @@ DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
       debugMessage("guideddiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )

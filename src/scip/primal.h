@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.28 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.29 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -87,7 +87,9 @@ RETCODE SCIPprimalUpdateUpperbound(
  */
 extern
 Bool SCIPprimalUpperboundIsSol(
-   PRIMAL*          primal              /**< primal data */
+   PRIMAL*          primal,              /**< primal data */
+   SET*             set,                /**< global SCIP settings */
+   PROB*            prob                /**< transformed problem after presolve */
    );
 
 /** adds primal solution to solution storage by copying it */
@@ -147,6 +149,7 @@ RETCODE SCIPprimalTrySol(
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
+   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
@@ -164,6 +167,7 @@ RETCODE SCIPprimalTrySolFree(
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
@@ -208,6 +212,15 @@ void SCIPprimalUpdateVarObj(
    VAR*             var,                /**< problem variable */
    Real             oldobj,             /**< old objective value */
    Real             newobj              /**< new objective value */
+   );
+
+/** retransforms all existing solutions to original problem space */
+extern
+RETCODE SCIPprimalRetransformSolutions(
+   PRIMAL*          primal,             /**< primal data */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            origprob            /**< original problem */
    );
 
 

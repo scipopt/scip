@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.42 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.43 2005/02/02 19:34:11 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -691,7 +691,14 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    printf("\n");
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
-      CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
+      if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+      {
+         printf("best solution exists only in original problem space\n");
+      }
+      else
+      {
+         CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
+      }
    }
    else
       printf("no solution available\n");

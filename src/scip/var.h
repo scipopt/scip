@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.86 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.87 2005/02/02 19:34:14 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -420,6 +420,22 @@ void SCIPvarAdjustUb(
    Real*            ub                  /**< pointer to upper bound to adjust */
    );
 
+/** changes lower bound of original variable in original problem */
+extern
+RETCODE SCIPvarChgLbOriginal(
+   VAR*             var,                /**< problem variable to change */
+   SET*             set,                /**< global SCIP settings */
+   Real             newbound            /**< new bound for variable */
+   );
+
+/** changes upper bound of original variable in original problem */
+extern
+RETCODE SCIPvarChgUbOriginal(
+   VAR*             var,                /**< problem variable to change */
+   SET*             set,                /**< global SCIP settings */
+   Real             newbound            /**< new bound for variable */
+   );
+
 /** changes global lower bound of variable; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgLbGlobal(
@@ -509,7 +525,17 @@ RETCODE SCIPvarChgUbDive(
    Real             newbound            /**< new bound for variable */
    );
 
-/** adds a hole to the variable's global domain and to its current local domain */
+/** adds a hole to the original variable's original domain */
+extern
+RETCODE SCIPvarAddHoleOriginal(
+   VAR*             var,                /**< problem variable */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Real             left,               /**< left bound of open interval in new hole */
+   Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** adds a hole to the variable's global domain */
 extern
 RETCODE SCIPvarAddHoleGlobal(
    VAR*             var,                /**< problem variable */
@@ -527,6 +553,14 @@ RETCODE SCIPvarAddHoleLocal(
    SET*             set,                /**< global SCIP settings */
    Real             left,               /**< left bound of open interval in new hole */
    Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** resets the global and local bounds of original variable to their original values */
+extern
+RETCODE SCIPvarResetBounds(
+   VAR*             var,                /**< problem variable */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
@@ -768,6 +802,7 @@ void SCIPvarPrint(
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -804,10 +839,10 @@ RETCODE SCIPvarDropEvent(
  * speed up the algorithms.
  */
 
-#define SCIPvarCatchEvent(var,blkmem,set,eventtype,eventhdlr,eventdata,filterpos) \
-   SCIPeventfilterAdd((var)->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
-#define SCIPvarDropEvent(var,blkmem,set,eventtype,eventhdlr,eventdata,filterpos) \
-   SCIPeventfilterDel((var)->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
+#define SCIPvarCatchEvent(var, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) \
+   SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
+#define SCIPvarDropEvent(var, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) \
+   SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
 
 #endif
 

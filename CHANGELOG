@@ -13,6 +13,12 @@ interface:
 - changed memory interface (see memory.h), MEMHDR is now called BLKMEM
 - additional parameter "aggregated" in SCIPmultiaggregateVars()
 - new method SCIPgetObjNorm()
+- new methods SCIPvarGetLbOriginal() and SCIPvarGetUbOriginal() for original problem variables
+- methods SCIPvarGetLbGlobal(), SCIPvarGetUbGlobal(), SCIPvarGetLbLocal(), and SCIPvarGetUbLocal() now return the
+  corresponding values of the transformed problem or current subproblem  even for original problem variables
+- removed method SCIPsolGetObj() - use SCIPgetSolOrigObj() or SCIPgetSolTransObj() instead
+- additional parameter "checkbounds" for SCIPtrySol(), SCIPtrySolFree(), SCIPcheckSol()
+- new method SCIPcreateOrigSol()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -36,6 +42,7 @@ features:
 - probing is now also possible in presolving stage
 - it is now possible to create subnodes in probing and use backtracking to undo probing changes
 - it is now possible to interrupt and continue presolving
+- bounds of variables are included in the feasibility checks for solutions
 
 fixed bugs:
 - fixed bug in MPS file reader
@@ -54,10 +61,8 @@ fixed bugs:
 - fixed bug that presolving time is not counted to solving time, if presolving is called explicitly with SCIPpresolve()
 - fixed bug where presolving fixings are counted even if the variable was already fixed
 - fixed bug that CONSLOCK method of constraint handlers that don't need constraints is not called
-
-known bugs:
-- after a resolve and further preprocessing, existing primal solutions may get corrupted due to aggregations or
-  fixings that are possible due to the primal bound (given by the best solution)
+- fixed bug that after a resolve and further preprocessing, existing primal solutions may get corrupted due to
+  aggregations or fixings that are possible due to the primal bound (given by the best solution)
 
 
 SCIP version 0.78

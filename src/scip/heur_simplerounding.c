@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.12 2005/01/21 09:16:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.13 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -188,7 +188,7 @@ DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
        * neither integrality nor feasibility of LP rows has to be checked, because all fractional
        * variables were already moved in feasible direction to the next integer
        */
-      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, FALSE, &stored) );
+      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &stored) );
 
       if( stored )
       {

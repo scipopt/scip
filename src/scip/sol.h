@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.36 2005/01/31 12:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.37 2005/02/02 19:34:13 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -55,6 +55,18 @@ RETCODE SCIPsolCreate(
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree, or NULL */
+   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates primal CIP solution in original problem space, initialized to zero */
+extern
+RETCODE SCIPsolCreateOriginal(
+   SOL**            sol,                /**< pointer to primal CIP solution */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -165,7 +177,7 @@ extern
 RETCODE SCIPsolUnlink(
    SOL*             sol,                /**< primal CIP solution */
    SET*             set,                /**< global SCIP settings */
-   PROB*            prob                /**< problem data */
+   PROB*            prob                /**< transformed problem data */
    );
 
 /** sets value of variable in primal CIP solution */
@@ -198,6 +210,14 @@ Real SCIPsolGetVal(
    VAR*             var                 /**< variable to get value for */
    );
 
+/** gets objective value of primal CIP solution in transformed problem */
+extern
+Real SCIPsolGetObj(
+   SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
+   PROB*            prob                /**< transformed problem data */
+   );
+
 /** updates primal solutions after a change in a variable's objective value */
 extern
 void SCIPsolUpdateVarObj(
@@ -214,7 +234,8 @@ RETCODE SCIPsolCheck(
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< problem data */
+   PROB*            prob,               /**< transformed problem data */
+   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether solution is feasible */
@@ -226,7 +247,7 @@ RETCODE SCIPsolRound(
    SOL*             sol,                /**< primal solution */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< problem data */
+   PROB*            prob,               /**< transformed problem data */
    TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether rounding was successful */
    );
@@ -238,6 +259,15 @@ void SCIPsolUpdateVarsum(
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem data */
    Real             weight              /**< weight of solution in weighted average */
+   );
+
+/** retransforms solution to original problem space */
+extern
+RETCODE SCIPsolRetransform(
+   SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            origprob            /**< original problem */
    );
 
 /** outputs non-zero elements of solution to file stream */

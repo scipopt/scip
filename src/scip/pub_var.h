@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.35 2005/01/21 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.36 2005/02/02 19:34:13 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -342,6 +342,18 @@ Real SCIPvarGetObj(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
+extern
+Real SCIPvarGetLbOriginal(
+   VAR*             var                 /**< original problem variable */
+   );
+
+/** gets original upper bound of original problem variable (i.e. the bound set in problem creation) */
+extern
+Real SCIPvarGetUbOriginal(
+   VAR*             var                 /**< original problem variable */
+   );
+
 /** gets global lower bound of variable */
 extern
 Real SCIPvarGetLbGlobal(
@@ -490,7 +502,7 @@ Real* SCIPvarGetImplbounds(
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex
-#define SCIPvarGetTransVar(var)         (var)->data.transvar
+#define SCIPvarGetTransVar(var)         (var)->data.original.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
 #define SCIPvarIsInLP(var)              ((var)->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP((var)->data.col))
 #define SCIPvarGetAggrVar(var)          (var)->data.aggregate.var
@@ -504,6 +516,12 @@ Real* SCIPvarGetImplbounds(
 #define SCIPvarGetNegationVar(var)      (var)->negatedvar
 #define SCIPvarGetNegationConstant(var) (var)->data.negate.constant
 #define SCIPvarGetObj(var)              (var)->obj
+#define SCIPvarGetLbOriginal(var)       ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
+      ? (var)->data.original.origdom.lb                                 \
+      : (var)->data.negate.constant - (var)->negatedvar->data.original.origdom.ub)
+#define SCIPvarGetUbOriginal(var)       ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
+      ? (var)->data.original.origdom.ub                                 \
+      : (var)->data.negate.constant - (var)->negatedvar->data.original.origdom.lb)
 #define SCIPvarGetLbGlobal(var)         (var)->glbdom.lb
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
 #define SCIPvarGetLbLocal(var)          (var)->locdom.lb

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.162 2005/01/31 12:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.163 2005/02/02 19:34:13 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1988,7 +1988,7 @@ RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          CHECK_OKAY( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol,
-               TRUE, TRUE, &foundsol) );
+               TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
@@ -2011,7 +2011,7 @@ RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          CHECK_OKAY( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol,
-               TRUE, TRUE, &foundsol) );
+               TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {

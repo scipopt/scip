@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.37 2005/01/31 12:57:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.38 2005/02/02 19:34:11 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -135,7 +135,7 @@ DECL_CONSCHECK(consCheckIntegral)
 
    debugMessage("Check method of integrality constraint\n");
 
-   CHECK_OKAY( SCIPgetVarsData(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
+   CHECK_OKAY( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
    *result = SCIP_FEASIBLE;
 

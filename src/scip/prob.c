@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.64 2005/01/31 15:34:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.65 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -294,10 +294,11 @@ RETCODE SCIPprobTransform(
    sprintf(transname, "t_%s", source->name);
    CHECK_OKAY( SCIPprobCreate(target, blkmem, transname, NULL, NULL, source->probdeltrans, 
                   source->probinitsol, source->probexitsol, NULL, TRUE) );
+   SCIPprobSetObjsense(*target, source->objsense);
 
    /* transform objective limit */
    if( source->objlim < SCIP_INVALID )
-      SCIPprobSetExternObjlim(*target, SCIPprobGetInternObjlim(source, set));
+      SCIPprobSetObjlim(*target, source->objlim);
 
    /* transform and copy all variables to target problem */
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
@@ -336,6 +337,27 @@ RETCODE SCIPprobTransform(
 
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
+
+   return SCIP_OKAY;
+}
+
+/** resets the global and local bounds of original variables in original problem to their original values */
+RETCODE SCIPprobResetBounds(
+   PROB*            prob,               /**< original problem data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   int v;
+
+   assert(prob != NULL);
+   assert(!prob->transformed);
+   assert(prob->nfixedvars == 0);
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      CHECK_OKAY( SCIPvarResetBounds(prob->vars[v], blkmem, set) );
+   }
 
    return SCIP_OKAY;
 }
@@ -815,7 +837,6 @@ void SCIPprobSetObjsense(
    )
 {
    assert(prob != NULL);
-   assert(!prob->transformed);
    assert(prob->objsense == SCIP_OBJSENSE_MAXIMIZE || prob->objsense == SCIP_OBJSENSE_MINIMIZE);
    assert(objsense == SCIP_OBJSENSE_MAXIMIZE || objsense == SCIP_OBJSENSE_MINIMIZE);
 
@@ -836,7 +857,7 @@ void SCIPprobAddObjoffset(
 }
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
-void SCIPprobSetExternObjlim(
+void SCIPprobSetObjlim(
    PROB*            prob,               /**< problem data */
    Real             objlim              /**< external objective limit */
    )
@@ -844,18 +865,6 @@ void SCIPprobSetExternObjlim(
    assert(prob != NULL);
 
    prob->objlim = objlim;
-}
-
-/** sets limit on objective function as transformed internal objective value */
-void SCIPprobSetInternObjlim(
-   PROB*            prob,               /**< problem data */
-   SET*             set,                /**< global SCIP settings */
-   Real             objlim              /**< transformed internal objective limit */
-   )
-{
-   assert(prob != NULL);
-
-   prob->objlim = SCIPprobExternObjval(prob, set, objlim);
 }
 
 /** informs the problem, that its objective value is always integral in every feasible solution */
@@ -1070,6 +1079,7 @@ Real SCIPprobExternObjval(
    )
 {
    assert(prob != NULL);
+   assert(prob->transformed);
 
    if( SCIPsetIsInfinity(set, objval) )
       return (Real)prob->objsense * SCIPsetInfinity(set);
@@ -1087,6 +1097,7 @@ Real SCIPprobInternObjval(
    )
 {
    assert(prob != NULL);
+   assert(prob->transformed);
 
    if( SCIPsetIsInfinity(set, objval) )
       return (Real)prob->objsense * SCIPsetInfinity(set);
@@ -1097,24 +1108,13 @@ Real SCIPprobInternObjval(
 }
 
 /** gets limit on objective function in external space */
-Real SCIPprobGetExternObjlim(
+Real SCIPprobGetObjlim(
    PROB*            prob                /**< problem data */
    )
 {
    assert(prob != NULL);
 
    return prob->objlim;
-}
-
-/** gets limit on objective function as transformed internal objective value */
-Real SCIPprobGetInternObjlim(
-   PROB*            prob,               /**< problem data */
-   SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(prob != NULL);
-
-   return SCIPprobInternObjval(prob, set, prob->objlim);
 }
 
 /** returns whether the objective value is known to be integral in every feasible solution */

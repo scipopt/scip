@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sol.h,v 1.5 2005/01/21 09:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sol.h,v 1.6 2005/02/02 19:34:14 bzfpfend Exp $"
 
 /**@file   type_sol.h
  * @brief  type definitions for storing primal CIP solutions
@@ -30,9 +30,10 @@
 /** origin of solution: where to retrieve uncached elements */
 enum SolOrigin
 {
-   SCIP_SOLORIGIN_ZERO      = 0,        /**< all non-cached elements in solution are equal to zero */
-   SCIP_SOLORIGIN_LPSOL     = 1,        /**< all non-cached elements in solution are equal to current LP solution */
-   SCIP_SOLORIGIN_PSEUDOSOL = 2         /**< all non-cached elements in solution are equal to current pseudo solution */
+   SCIP_SOLORIGIN_ORIGINAL  = 0,        /**< solution describes original variables; non-chached elements are zero */
+   SCIP_SOLORIGIN_ZERO      = 1,        /**< all non-cached elements in solution are equal to zero */
+   SCIP_SOLORIGIN_LPSOL     = 2,        /**< all non-cached elements in solution are equal to current LP solution */
+   SCIP_SOLORIGIN_PSEUDOSOL = 3         /**< all non-cached elements in solution are equal to current pseudo solution */
 };
 typedef enum SolOrigin SOLORIGIN;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.26 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.27 2005/02/02 19:34:14 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -181,6 +181,13 @@ struct Implics
    int              nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */
 };
 
+/** original variable information */
+struct Original
+{
+   DOM              origdom;            /**< domain of variable in original problem */
+   VAR*             transvar;           /**< pointer to representing transformed variable */
+};
+
 /** aggregation information: x = a*y + c */
 struct Aggregate
 {
@@ -216,7 +223,7 @@ struct Var
    DOM              locdom;             /**< domain of variable in current subproblem */
    union
    {
-      VAR*          transvar;           /**< pointer to representing transformed variable (for original variables) */
+      ORIGINAL      original;           /**< original variable information */
       COL*          col;                /**< LP column (for column variables) */
       AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
       MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */

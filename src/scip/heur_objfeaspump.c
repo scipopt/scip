@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.2 2005/01/31 15:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.3 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -233,7 +233,7 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
          debugMessage("objfeaspump found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
          
          /* try to add solution to SCIP */
-         CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+         CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
             
          /* check, if solution was feasible and good enough */
          if( success )
@@ -350,7 +350,7 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
       debugMessage("objfeaspump found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )

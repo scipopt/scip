@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.200 2005/02/02 10:26:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.201 2005/02/02 19:34:13 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1323,6 +1323,23 @@ int SCIPgetNOrigImplVars(
 extern
 int SCIPgetNOrigContVars(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets variables of the original or transformed problem along with the numbers of different variable types;
+ *  the returned problem space (original or transformed) corresponds to the given solution;
+ *  data may become invalid after calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and 
+ *  SCIPmultiaggregateVar()
+ */
+extern
+RETCODE SCIPgetSolVarsData(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution that selects the problem space, NULL for current solution */
+   VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
+   int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
+   int*             nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
 /** returns variable of given name in the problem, or NULL if not existing */
@@ -3472,6 +3489,17 @@ RETCODE SCIPcreateCurrentSol(
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates a primal solution living in the original problem space, initialized to zero;
+ *  a solution in original space allows to set original variables to values, that would be invalid in the
+ *  transformed problem due to preprocessing fixings or aggregations
+ */
+extern
+RETCODE SCIPcreateOrigSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol,                /**< pointer to store the solution */
+   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** frees primal CIP solution */
 extern
 RETCODE SCIPfreeSol(
@@ -3701,6 +3729,7 @@ extern
 RETCODE SCIPtrySol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal CIP solution */
+   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
@@ -3711,6 +3740,7 @@ extern
 RETCODE SCIPtrySolFree(
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
@@ -3731,6 +3761,7 @@ extern
 RETCODE SCIPcheckSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal CIP solution */
+   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether given solution is feasible */
@@ -3760,7 +3791,13 @@ RETCODE SCIPcheckSolOrig(
  * event methods
  */
 
-/**@name Event Methods */
+/**@name Event Methods
+ *
+ * Events can only be catched during the operation on the transformed problem.
+ * Events on variables can only be catched for transformed variables.
+ * If you want to catch an event for an original variable, you have to get the corresponding transformed variable
+ * with a call to SCIPgetTransformedVar() and catch the event on the transformed variable.
+ */
 /**@{ */
 
 /** catches a global (not variable dependent) event */
@@ -3783,22 +3820,22 @@ RETCODE SCIPdropEvent(
    int              filterpos           /**< position of event filter entry returned by SCIPcatchEvent(), or -1 */
    );
 
-/** catches an objective value or domain change event on the given variable */
+/** catches an objective value or domain change event on the given transformed variable */
 extern
 RETCODE SCIPcatchVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to catch event for */
+   VAR*             var,                /**< transformed variable to catch event for */
    EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
    int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
    );
 
-/** drops an objective value or domain change event (stops to track event) on the given variable */
+/** drops an objective value or domain change event (stops to track event) on the given transformed variable */
 extern
 RETCODE SCIPdropVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to drop event for */
+   VAR*             var,                /**< transformed variable to drop event for */
    EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */

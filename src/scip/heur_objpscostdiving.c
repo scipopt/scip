@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.13 2005/01/21 09:16:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.14 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -412,7 +412,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
                SCIPgetSolOrigObj(scip, heurdata->sol));
          
             /* try to add solution to SCIP */
-            CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+            CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
             
             /* check, if solution was feasible and good enough */
             if( success )
@@ -511,7 +511,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       debugMessage("objpscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
+      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )

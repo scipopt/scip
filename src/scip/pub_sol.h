@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.5 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.6 2005/02/02 19:34:12 bzfpfend Exp $"
 
 /**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
@@ -42,9 +42,9 @@
  * type validity.
  */
 
-/** gets objective value of primal CIP solution in transformed problem */
+/** gets origin of solution */
 extern
-Real SCIPsolGetObj(
+SOLORIGIN SCIPsolGetOrigin(
    SOL*             sol                 /**< primal CIP solution */
    );
 
@@ -84,7 +84,7 @@ HEUR* SCIPsolGetHeur(
  * speed up the algorithms.
  */
 
-#define SCIPsolGetObj(sol)              (sol)->obj
+#define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
 #define SCIPsolGetRunnum(sol)           (sol)->runnum
