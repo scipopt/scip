@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.30 2004/07/20 14:34:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.31 2004/08/04 15:29:31 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -283,7 +283,7 @@ RETCODE SCIPcutpoolFree(
    /* free cuts */
    for( i = 0; i < (*cutpool)->ncuts; ++i )
    {
-      CHECK_OKAY( SCIProwUnlock((*cutpool)->cuts[i]->row) );
+      SCIProwUnlock((*cutpool)->cuts[i]->row);
       CHECK_OKAY( cutFree(&(*cutpool)->cuts[i], memhdr, set, lp) );
    }
    freeMemoryArrayNull(&(*cutpool)->cuts);
@@ -347,7 +347,7 @@ RETCODE SCIPcutpoolAddNewRow(
    CHECK_OKAY( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
 
    /* lock the row */
-   CHECK_OKAY( SCIProwLock(row) );
+   SCIProwLock(row);
 
    return SCIP_OKAY;
 }
@@ -378,7 +378,7 @@ RETCODE cutpoolDelCut(
    assert(cutpool->cuts[pos] == cut);
 
    /* unlock the row */
-   CHECK_OKAY( SCIProwUnlock(cut->row) );
+   SCIProwUnlock(cut->row);
 
    /* remove the cut from the hash table */
    CHECK_OKAY( SCIPhashtableRemove(cutpool->hashtable, (void*)cut) );

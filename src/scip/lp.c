@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.133 2004/08/03 16:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.134 2004/08/04 15:29:31 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3205,6 +3205,12 @@ RETCODE rowScale(
    COL* col;
    Real val;
    Real newval;
+   Real intval;
+   Real mindelta;
+   Real maxdelta;
+   Real absscaleval;
+   Real lb;
+   Real ub;
    int pos;
    int c;
 
@@ -3216,7 +3222,20 @@ RETCODE rowScale(
 
    debugMessage("scale row <%s> with %g (tolerance=%g)\n", row->name, scaleval, roundtol);
 
-   /* scale the row coefficients, thereby recalculating whether the row's activity is always integral */
+   /* use scaled or unscaled rounding tolerance, whichever is less tight */
+   absscaleval = ABS(scaleval);
+   if( absscaleval > 1.0 )
+   {
+      roundtol *= absscaleval;
+      roundtol = MIN(roundtol, 1e-03);
+   }
+
+   /* scale the row coefficients, thereby recalculating whether the row's activity is always integral;
+    * if the row coefficients are rounded to the nearest integer value, calculate the maximal activity difference,
+    * this rounding can lead to
+    */
+   mindelta = 0.0;
+   maxdelta = 0.0;
    row->integral = TRUE;
    for( c = 0; c < row->len; ++c )
    {
@@ -3224,9 +3243,35 @@ RETCODE rowScale(
       val = row->vals[c];
       assert(!SCIPsetIsZero(set, val));
 
+      /* get local or global bounds for column, depending on the local or global feasibility of the row */
+      if( row->local )
+      {
+         lb = col->lb;
+         ub = col->ub;
+      }
+      else
+      {
+         lb = SCIPvarGetLbGlobal(col->var);
+         ub = SCIPvarGetUbGlobal(col->var);
+      }
+
+      /* calculate scaled coefficient */
       newval = val * scaleval;
       if( EPSISINT(newval, roundtol) )
-         newval = EPSFLOOR(newval, roundtol);
+      {
+         intval = EPSFLOOR(newval, roundtol);
+         if( intval < newval )
+         {
+            mindelta += (intval - newval)*ub;
+            maxdelta += (intval - newval)*lb;
+         }
+         else
+         {
+            mindelta += (intval - newval)*lb;
+            maxdelta += (intval - newval)*ub;
+         }
+         newval = intval;
+      }
       assert(!SCIPsetIsZero(set, newval));
 
       row->vals[c] = newval;
@@ -3251,18 +3296,20 @@ RETCODE rowScale(
       coefChanged(row, col, lp);
    }
 
-   /* scale the row sides, and move the constant to the sides */
+   /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
+    * to not destroy feasibility due to rounding
+    */
    if( !SCIPsetIsInfinity(set, -row->lhs) )
    {
-      newval = (row->lhs - row->constant) * scaleval;
-      if( EPSISINT(newval, roundtol) )
-         newval = EPSFLOOR(newval, roundtol);
+      newval = (row->lhs - row->constant) * scaleval + mindelta;
+      if( EPSISINT(newval, roundtol) || (row->integral && !row->modifiable) )
+         newval = EPSCEIL(newval, roundtol);
       CHECK_OKAY( SCIProwChgLhs(row, set, lp, newval) );
    }
    if( !SCIPsetIsInfinity(set, row->rhs) )
    {
-      newval = (row->rhs - row->constant) * scaleval;
-      if( EPSISINT(newval, roundtol) )
+      newval = (row->rhs - row->constant) * scaleval + maxdelta;
+      if( EPSISINT(newval, roundtol) || (row->integral && !row->modifiable) )
          newval = EPSFLOOR(newval, roundtol);
       CHECK_OKAY( SCIProwChgRhs(row, set, lp, newval) );
    }
@@ -3448,53 +3495,35 @@ RETCODE SCIProwRelease(
    return SCIP_OKAY;
 }
 
-/** locks an unmodifiable row, which forbids further changes */
-RETCODE SCIProwLock(
+/** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
+void SCIProwLock(
    ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
 
-   debugMessage("lock row <%s> with nuses=%d and nlocks=%d\n", row->name, row->nuses, row->nlocks);
-
    /* check, if row is modifiable */
-   if( row->modifiable )
+   if( !row->modifiable )
    {
-      errorMessage("cannot lock the modifiable row <%s>\n", row->name);
-      return SCIP_INVALIDDATA;
+      debugMessage("lock row <%s> with nuses=%d and nlocks=%d\n", row->name, row->nuses, row->nlocks);
+      row->nlocks++;
    }
-   
-   row->nlocks++;
-
-   return SCIP_OKAY;
 }
 
-/** unlocks a lock of a row; a row with no sealed lock may be modified */
-RETCODE SCIProwUnlock(
+/** unlocks a lock of an unmodifiable row; a row with no sealed lock may be modified; has no effect on modifiable rows */
+void SCIProwUnlock(
    ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
 
-   debugMessage("unlock row <%s> with nuses=%d and nlocks=%d\n", row->name, row->nuses, row->nlocks);
-
    /* check, if row is modifiable */
-   if( row->modifiable )
+   if( !row->modifiable )
    {
-      errorMessage("cannot unlock the modifiable row <%s>\n", row->name);
-      return SCIP_INVALIDDATA;
+      debugMessage("unlock row <%s> with nuses=%d and nlocks=%d\n", row->name, row->nuses, row->nlocks);
+      assert(row->nlocks > 0);
+      row->nlocks--;
    }
-   
-   /* check, if row is locked */
-   if( row->nlocks == 0 )
-   {
-      errorMessage("row <%s> has no sealed lock\n", row->name);
-      return SCIP_INVALIDDATA;
-   }
-
-   row->nlocks--;
-
-   return SCIP_OKAY;
 }
 
 /** adds a previously non existing coefficient to an LP row */
@@ -3776,7 +3805,6 @@ RETCODE SCIProwChgRhs(
 
    return SCIP_OKAY;
 }
-
 
 
 #define DIVTOL      (1e+06*set->epsilon)
@@ -5601,6 +5629,7 @@ RETCODE SCIPlpAddRow(
    assert(row->lppos == -1);
 
    SCIProwCapture(row);
+   SCIProwLock(row);
 
    debugMessage("adding row <%s> to LP (%d rows, %d cols)\n", row->name, lp->nrows, lp->ncols);
 #ifdef DEBUG
@@ -5731,6 +5760,7 @@ RETCODE SCIPlpShrinkRows(
          /* update row arrays of all linked columns */
          rowUpdateDelLP(row);
 
+         SCIProwUnlock(lp->rows[r]);
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
       }
       assert(lp->nrows == newnrows);
@@ -8550,6 +8580,7 @@ RETCODE lpDelRowset(
          rowUpdateDelLP(row);
 
          CHECK_OKAY( SCIProwRelease(&lp->lpirows[r], memhdr, set, lp) );
+         SCIProwUnlock(lp->rows[r]);
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
          assert(lp->lpirows[r] == NULL);
          assert(lp->rows[r] == NULL);

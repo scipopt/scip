@@ -510,13 +510,13 @@ nodeselection/bfs/stdpriority = 100000
 # [type: int, range: [-2147483648,2147483647], default: 0]
 nodeselection/bfs/memsavepriority = 0
 
-# minimal plunging depth, before new best node may be selected
-# [type: int, range: [0,2147483647], default: 0]
-nodeselection/bfs/minplungedepth = 0
+# minimal plunging depth, before new best node may be selected (-1 for dynamic setting)
+# [type: int, range: [-1,2147483647], default: -1]
+nodeselection/bfs/minplungedepth = -1
 
-# maximal plunging depth, before new best node is forced to be selected
-# [type: int, range: [0,2147483647], default: 25]
-nodeselection/bfs/maxplungedepth = 25
+# maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)
+# [type: int, range: [-1,2147483647], default: -1]
+nodeselection/bfs/maxplungedepth = -1
 
 # maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where plunging is performed
 # [type: real, range: [0,1.79769313486232e+308], default: 0.25]

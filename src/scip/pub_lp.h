@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.10 2004/05/05 12:47:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.11 2004/08/04 15:29:32 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -186,15 +186,15 @@ Longint SCIPcolGetStrongbranchNode(
  * Row methods
  */
 
-/** locks an unmodifiable row, which forbids further changes */
+/** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
 extern
-RETCODE SCIProwLock(
+void SCIProwLock(
    ROW*             row                 /**< LP row */
    );
 
-/** unlocks a lock of a row; a row with no sealed lock may be modified */
+/** unlocks a lock of an unmodifiable row; a row with no sealed lock may be modified; has no effect on modifiable rows */
 extern
-RETCODE SCIProwUnlock(
+void SCIProwUnlock(
    ROW*             row                 /**< LP row */
    );
 

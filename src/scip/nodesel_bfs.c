@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.31 2004/08/03 16:02:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.32 2004/08/04 15:29:32 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -42,8 +42,8 @@
  * Default parameter settings
  */
 
-#define MINPLUNGEDEPTH                0 /**< minimal plunging depth, before new best node may be selected */
-#define MAXPLUNGEDEPTH               25 /**< maximal plunging depth, before new best node is forced to be selected */
+#define MINPLUNGEDEPTH               -1 /**< minimal plunging depth, before new best node may be selected (-1 for dynamic setting) */
+#define MAXPLUNGEDEPTH               -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
 #define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
                                          *   where plunging is performed */
 
@@ -54,8 +54,10 @@ struct NodeselData
 {
    Real             maxplungequot;      /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
                                          *   where plunging is performed */
-   int              maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected */
-   int              minplungedepth;     /**< minimal plunging depth, before new best node may be selected */
+   int              minplungedepth;     /**< minimal plunging depth, before new best node may be selected
+                                         *   (-1 for dynamic setting) */
+   int              maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected
+                                         *   (-1 for dynamic setting) */
 };
 
 
@@ -90,6 +92,9 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    Real lowerbound;
    Real upperbound;
    Real maxplungequot;
+   int minplungedepth;
+   int maxplungedepth;
+   int logdepth;
    int plungedepth;
 
    assert(nodesel != NULL);
@@ -112,11 +117,27 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    if( SCIPgetNSolsFound(scip) == 0 )
       upperbound = lowerbound + 0.2 * (upperbound - lowerbound);
 
+   /* calculate minimal and maximal plunging depth */
+   minplungedepth = nodeseldata->minplungedepth;
+   maxplungedepth = nodeseldata->maxplungedepth;
+   if( minplungedepth == -1 || maxplungedepth == -1 )
+   {
+      Longint nnodes;
+
+      logdepth = 0;
+      for( nnodes = SCIPgetNNodes(scip); nnodes > 0; nnodes >>= 1 )
+         logdepth++;
+      if( minplungedepth == -1 )
+         minplungedepth = logdepth/2;
+      if( maxplungedepth == -1 )
+         maxplungedepth = logdepth*2;
+   }
+
    /* check, if we want to plunge once more */
    plungedepth = SCIPgetPlungeDepth(scip);
    maxplungequot = nodeseldata->maxplungequot;
-   if( plungedepth < nodeseldata->minplungedepth
-      || (plungedepth < nodeseldata->maxplungedepth
+   if( plungedepth < minplungedepth
+      || (plungedepth < maxplungedepth
          && curlowerbound - lowerbound < maxplungequot * (upperbound - lowerbound)) )
    {
       /* we want to plunge again: prefer children over siblings, and siblings over leaves;
@@ -207,8 +228,8 @@ RETCODE SCIPincludeNodeselBfs(
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
    nodeseldata->maxplungequot = MAXPLUNGEQUOT;
-   nodeseldata->maxplungedepth = MAXPLUNGEDEPTH;
    nodeseldata->minplungedepth = MINPLUNGEDEPTH;
+   nodeseldata->maxplungedepth = MAXPLUNGEDEPTH;
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
@@ -219,12 +240,12 @@ RETCODE SCIPincludeNodeselBfs(
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "nodeselection/bfs/minplungedepth",
-                  "minimal plunging depth, before new best node may be selected",
-                  &nodeseldata->minplungedepth, MINPLUNGEDEPTH, 0, INT_MAX, NULL, NULL) );
+                  "minimal plunging depth, before new best node may be selected (-1 for dynamic setting)",
+                  &nodeseldata->minplungedepth, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "nodeselection/bfs/maxplungedepth",
-                  "maximal plunging depth, before new best node is forced to be selected",
-                  &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, 0, INT_MAX, NULL, NULL) );
+                  "maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)",
+                  &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "nodeselection/bfs/maxplungequot",
                   "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where plunging is performed",
