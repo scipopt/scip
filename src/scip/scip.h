@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.215 2005/02/22 19:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.216 2005/02/24 11:02:57 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4504,6 +4504,12 @@ Real SCIPdualfeastol(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** returns convergence tolerance used in barrier algorithm */
+extern
+Real SCIPbarrierconvtol(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** sets the feasibility tolerance for constraints */
 extern
 RETCODE SCIPchgFeastol(
@@ -4516,6 +4522,13 @@ extern
 RETCODE SCIPchgDualfeastol(
    SCIP*            scip,               /**< SCIP data structure */
    Real             dualfeastol         /**< new feasibility tolerance for reduced costs */
+   );
+
+/** sets the convergence tolerance used in barrier algorithm */
+extern
+RETCODE SCIPchgBarrierconvtol(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
    );
 
 #ifndef NDEBUG

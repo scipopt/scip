@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.33 2005/02/22 19:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.34 2005/02/24 11:02:57 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -193,6 +193,7 @@ struct Lp
    Real             lpiuobjlim;         /**< current upper objective limit in LPI */
    Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
+   Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
    Real             objsqrnorm;         /**< squared euclidean norm of objective function vector of problem variables */
    Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
    LPI*             lpi;                /**< LP solver interface */
@@ -247,6 +248,7 @@ struct Lp
    Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
    Bool             lpihasfeastol;      /**< does the LPI support the FEASTOL parameter? */
    Bool             lpihasdualfeastol;  /**< does the LPI support the DUALFEASTOL parameter? */
+   Bool             lpihasbarrierconvtol;/**< does the LPI support the BARRIERCONVTOL parameter? */
    Bool             lpihasfastmip;      /**< does the LPI support the FASTMIP parameter? */
    Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */

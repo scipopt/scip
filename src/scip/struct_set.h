@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.45 2005/02/22 19:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.46 2005/02/24 11:02:57 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -186,6 +186,7 @@ struct Set
    Real             num_sumepsilon;     /**< absolute values of sums smaller than this are considered zero */
    Real             num_feastol;        /**< feasibility tolerance for constraints */
    Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
+   Real             num_barrierconvtol; /**< convergence tolerance used in barrier algorithm */
    Real             num_boundstreps;    /**< minimal improve for strengthening bounds */
    Real             num_pseudocosteps;  /**< minimal variable distance value to use for pseudo cost updates */
    Real             num_pseudocostdelta;/**< minimal objective distance value to use for pseudo cost updates */

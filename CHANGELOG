@@ -69,6 +69,7 @@ parameters:
 - changed default priority of strong CG cut separator to -2000
 - changed default priority of cmir cut separator to -3000
 - new parameters lp/initalgorithm and lp/resolvealgorithm for switching between simplex and barrier algorithm
+- new parameter numerics/barrierconvtol to set the convergence tolerance in the barrier algorithm
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.84 2005/02/24 10:38:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.85 2005/02/24 11:02:56 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -3021,6 +3021,9 @@ RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = getDblParam(lpi, CPX_PARAM_EPOPT);
       break;
+   case SCIP_LPPAR_BARRIERCONVTOL:
+      *dval = getDblParam(lpi, CPX_PARAM_BAREPCOMP);
+      break;
    case SCIP_LPPAR_LOBJLIM:
       *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
       break;
@@ -3054,10 +3057,12 @@ RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
-      setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval*1e-03);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);
+      break;
+   case SCIP_LPPAR_BARRIERCONVTOL:
+      setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
    case SCIP_LPPAR_LOBJLIM:
       setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);

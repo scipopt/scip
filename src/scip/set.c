@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.142 2005/02/22 19:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.143 2005/02/24 11:02:57 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -264,6 +264,20 @@ DECL_PARAMCHGD(paramChgdDualfeastol)
    
    /* change the dualfeastol through the SCIP call in order to mark the LP unsolved */
    CHECK_OKAY( SCIPchgDualfeastol(scip, newdualfeastol) );
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of barrierconvtol */
+static
+DECL_PARAMCHGD(paramChgdBarrierconvtol)
+{  /*lint --e{715}*/
+   Real newbarrierconvtol;
+
+   newbarrierconvtol = SCIPparamGetReal(param);
+   
+   /* change the barrierconvtol through the SCIP call in order to mark the LP unsolved */
+   CHECK_OKAY( SCIPchgBarrierconvtol(scip, newbarrierconvtol) );
 
    return SCIP_OKAY;
 }
@@ -646,6 +660,11 @@ RETCODE SCIPsetCreate(
          "LP feasibility tolerance for reduced costs",
          &(*set)->num_dualfeastol, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdDualfeastol, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+         "numerics/barrierconvtol",
+         "LP convergence tolerance used in barrier algorithm",
+         &(*set)->num_barrierconvtol, SCIP_DEFAULT_BARRIERCONVTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         paramChgdBarrierconvtol, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
          "numerics/boundstreps",
          "minimal improve for strengthening bounds",
@@ -2521,6 +2540,19 @@ RETCODE SCIPsetSetDualfeastol(
    return SCIP_OKAY;
 }
 
+/** sets LP convergence tolerance used in barrier algorithm */
+RETCODE SCIPsetSetBarrierconvtol(
+   SET*             set,                /**< global SCIP settings */
+   Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+   )
+{
+   assert(set != NULL);
+
+   set->num_barrierconvtol = barrierconvtol;
+
+   return SCIP_OKAY;
+}
+
 /** returns the maximal number of variables priced into the LP per round */
 int SCIPsetGetPriceMaxvars(
    SET*             set,                /**< global SCIP settings */
@@ -2566,6 +2598,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetSumepsilon
 #undef SCIPsetFeastol
 #undef SCIPsetDualfeastol
+#undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
 #undef SCIPsetPseudocostdelta
 #undef SCIPsetIsEQ
@@ -2656,6 +2689,16 @@ Real SCIPsetDualfeastol(
    assert(set != NULL);
 
    return set->num_dualfeastol;
+}
+
+/** returns convergence tolerance used in barrier algorithm */
+Real SCIPsetBarrierconvtol(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_barrierconvtol;
 }
 
 /** returns minimal variable distance value to use for pseudo cost updates */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.181 2005/02/24 10:38:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.182 2005/02/24 11:02:56 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2037,7 +2037,7 @@ RETCODE lpSetFeastol(
 
 /** sets the reduced costs feasibility tolerance of the LP solver */
 static
-RETCODE lpSetDualFeastol(
+RETCODE lpSetDualfeastol(
    LP*              lp,                 /**< current LP data */
    Real             dualfeastol,        /**< new reduced costs feasibility tolerance */
    Bool*            success             /**< pointer to store whether the parameter was successfully changed */
@@ -2063,6 +2063,43 @@ RETCODE lpSetDualFeastol(
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
          lp->lpidualfeastol = dualfeastol;
+      }
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sets the convergence tolerance used in barrier algorithm of the LP solver */
+static
+RETCODE lpSetBarrierconvtol(
+   LP*              lp,                 /**< current LP data */
+   Real             barrierconvtol,     /**< new convergence tolerance used in barrier algorithm */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(barrierconvtol >= 0.0);
+   assert(success != NULL);
+
+   CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_BARRIERCONVTOL, lp->lpibarrierconvtol) );
+
+   if( barrierconvtol != lp->lpibarrierconvtol ) /*lint !e777*/
+   {
+      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_BARRIERCONVTOL, barrierconvtol, success) );
+      if( *success )
+      {
+         if( lp->nrows > 0 && barrierconvtol < lp->lpibarrierconvtol
+            && (lp->lastlpalgo == SCIP_LPALGO_BARRIER || lp->lastlpalgo == SCIP_LPALGO_BARRIERCROSSOVER) )
+         {
+            /* mark the current solution invalid */
+            lp->solved = FALSE;
+            lp->dualfeasible = FALSE;
+            lp->lpobjval = SCIP_INVALID;
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
+         lp->lpibarrierconvtol = barrierconvtol;
       }
    }
    else
@@ -5911,6 +5948,7 @@ RETCODE SCIPlpCreate(
    (*lp)->lpiuobjlim = SCIPsetInfinity(set);
    (*lp)->lpifeastol = SCIPsetFeastol(set);
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
+   (*lp)->lpibarrierconvtol = SCIPsetBarrierconvtol(set);
    (*lp)->lpifromscratch = FALSE;
    (*lp)->lpifastmip = TRUE;
    (*lp)->lpiscaling = TRUE;
@@ -5941,6 +5979,14 @@ RETCODE SCIPlpCreate(
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: dual feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
+         SCIPlpiGetSolverName());
+   }
+   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_BARRIERCONVTOL, (*lp)->lpibarrierconvtol, &success) );
+   (*lp)->lpihasbarrierconvtol = success;
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: barrier convergence tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetBoolpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch, &success) );
@@ -8582,8 +8628,8 @@ RETCODE lpBarrier(
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
+      printf("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, convtol=%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
@@ -8737,8 +8783,10 @@ RETCODE lpSolveStable(
    /* solve with given settings (usually fast but unprecise) */
    CHECK_OKAY( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
    CHECK_OKAY( lpSetFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetFeastol(set) : SCIPsetFeastol(set), &success) );
-   CHECK_OKAY( lpSetDualFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetDualfeastol(set) : SCIPsetDualfeastol(set), 
+   CHECK_OKAY( lpSetDualfeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetDualfeastol(set) : SCIPsetDualfeastol(set), 
          &success) );
+   CHECK_OKAY( lpSetBarrierconvtol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set)
+         : SCIPsetBarrierconvtol(set), &success) );
    CHECK_OKAY( lpSetFromscratch(lp, fromscratch, &success) );
    CHECK_OKAY( lpSetFastmip(lp, fastmip, &success) );
    CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
@@ -8807,7 +8855,8 @@ RETCODE lpSolveStable(
    if( !tightfeastol )
    {
       CHECK_OKAY( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetFeastol(set), &success) );
-      CHECK_OKAY( lpSetDualFeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
+      CHECK_OKAY( lpSetDualfeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
+      CHECK_OKAY( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success2) );
       if( success || success2 )
       {
          infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -8821,7 +8870,8 @@ RETCODE lpSolveStable(
 
          /* reset feasibility tolerance */
          CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
-         CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set), &success) );
+         CHECK_OKAY( lpSetDualfeastol(lp, SCIPsetDualfeastol(set), &success) );
+         CHECK_OKAY( lpSetBarrierconvtol(lp, SCIPsetBarrierconvtol(set), &success) );
       }
    }
 
@@ -8895,7 +8945,8 @@ RETCODE lpSolveStable(
       if( !tightfeastol )
       {
          CHECK_OKAY( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetFeastol(set), &success) );
-         CHECK_OKAY( lpSetDualFeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
+         CHECK_OKAY( lpSetDualfeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
+         CHECK_OKAY( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success2) );
          if( success || success2 )
          {
             infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -8909,7 +8960,8 @@ RETCODE lpSolveStable(
          
             /* reset feasibility tolerance */
             CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
-            CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set), &success) );
+            CHECK_OKAY( lpSetDualfeastol(lp, SCIPsetDualfeastol(set), &success) );
+            CHECK_OKAY( lpSetBarrierconvtol(lp, SCIPsetBarrierconvtol(set), &success) );
          }
       }
    }

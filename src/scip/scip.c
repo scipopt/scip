@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.273 2005/02/22 19:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.274 2005/02/24 11:02:57 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11949,6 +11949,17 @@ Real SCIPdualfeastol(
    return SCIPsetDualfeastol(scip->set);
 }
 
+/** returns convergence tolerance used in barrier algorithm */
+Real SCIPbarrierconvtol(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+ 
+   return SCIPsetBarrierconvtol(scip->set);
+}
+
 /** sets the feasibility tolerance for constraints */
 RETCODE SCIPchgFeastol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -11981,6 +11992,25 @@ RETCODE SCIPchgDualfeastol(
 
    /* change the settings */
    CHECK_OKAY( SCIPsetSetDualfeastol(scip->set, dualfeastol) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the convergence tolerance used in barrier algorithm */
+RETCODE SCIPchgBarrierconvtol(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgBarrierconvtol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   /* mark the LP unsolved, if the convergence tolerance was tightened, and the LP was solved with the barrier algorithm */
+   if( scip->lp != NULL && barrierconvtol < SCIPsetBarrierconvtol(scip->set)
+      && (scip->lp->lastlpalgo == SCIP_LPALGO_BARRIER || scip->lp->lastlpalgo == SCIP_LPALGO_BARRIERCROSSOVER) )
+      scip->lp->solved = FALSE;
+
+   /* change the settings */
+   CHECK_OKAY( SCIPsetSetBarrierconvtol(scip->set, barrierconvtol) );
 
    return SCIP_OKAY;
 }

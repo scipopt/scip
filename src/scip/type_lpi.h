@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.10 2005/01/21 09:17:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.11 2005/02/24 11:02:58 bzfpfend Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -38,18 +38,19 @@ typedef enum ObjSen OBJSEN;
 /** LP solver parameters */
 enum LPParam
 {
-   SCIP_LPPAR_FROMSCRATCH =  0,         /**< solver should start from scratch at next call? */
-   SCIP_LPPAR_FASTMIP     =  1,         /**< fast mip setting of LP solver */
-   SCIP_LPPAR_SCALING     =  2,         /**< should LP solver use scaling? */
-   SCIP_LPPAR_PRESOLVING  =  3,         /**< should LP solver use presolving? */
-   SCIP_LPPAR_PRICING     =  4,         /**< pricing strategy */
-   SCIP_LPPAR_LPINFO      =  5,         /**< should LP solver output information to the screen? */
-   SCIP_LPPAR_FEASTOL     =  6,         /**< feasibility tolerance for primal variables and slacks */
-   SCIP_LPPAR_DUALFEASTOL =  7,         /**< feasibility tolerance for dual variables and reduced costs */
-   SCIP_LPPAR_LOBJLIM     =  8,         /**< lower objective limit */
-   SCIP_LPPAR_UOBJLIM     =  9,         /**< upper objective limit */
-   SCIP_LPPAR_LPITLIM     = 10,         /**< LP iteration limit */
-   SCIP_LPPAR_LPTILIM     = 11          /**< LP time limit */
+   SCIP_LPPAR_FROMSCRATCH    =  0,      /**< solver should start from scratch at next call? */
+   SCIP_LPPAR_FASTMIP        =  1,      /**< fast mip setting of LP solver */
+   SCIP_LPPAR_SCALING        =  2,      /**< should LP solver use scaling? */
+   SCIP_LPPAR_PRESOLVING     =  3,      /**< should LP solver use presolving? */
+   SCIP_LPPAR_PRICING        =  4,      /**< pricing strategy */
+   SCIP_LPPAR_LPINFO         =  5,      /**< should LP solver output information to the screen? */
+   SCIP_LPPAR_FEASTOL        =  6,      /**< feasibility tolerance for primal variables and slacks */
+   SCIP_LPPAR_DUALFEASTOL    =  7,      /**< feasibility tolerance for dual variables and reduced costs */
+   SCIP_LPPAR_BARRIERCONVTOL =  8,      /**< convergence tolerance used in barrier algorithm */
+   SCIP_LPPAR_LOBJLIM        =  9,      /**< lower objective limit */
+   SCIP_LPPAR_UOBJLIM        = 10,      /**< upper objective limit */
+   SCIP_LPPAR_LPITLIM        = 11,      /**< LP iteration limit */
+   SCIP_LPPAR_LPTILIM        = 12       /**< LP time limit */
 };
 typedef enum LPParam LPPARAM;
 

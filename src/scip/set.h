@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.82 2005/02/14 13:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.83 2005/02/24 11:02:57 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -601,6 +601,13 @@ RETCODE SCIPsetSetDualfeastol(
    Real             dualfeastol         /**< new reduced costs feasibility tolerance */
    );
 
+/** sets LP convergence tolerance used in barrier algorithm */
+extern
+RETCODE SCIPsetSetBarrierconvtol(
+   SET*             set,                /**< global SCIP settings */
+   Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+   );
+
 /** returns the maximal number of variables priced into the LP per round */
 extern
 int SCIPsetGetPriceMaxvars(
@@ -650,6 +657,12 @@ Real SCIPsetFeastol(
 /** returns feasibility tolerance for reduced costs */
 extern
 Real SCIPsetDualfeastol(
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns convergence tolerance used in barrier algorithm */
+extern
+Real SCIPsetBarrierconvtol(
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -1048,6 +1061,7 @@ Bool SCIPsetIsSumRelGE(
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
+#define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )

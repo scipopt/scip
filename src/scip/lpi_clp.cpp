@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.15 2005/02/23 16:40:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.16 2005/02/24 11:02:56 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -2448,6 +2448,9 @@ RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->clp->dualTolerance();
       break;
+   case SCIP_LPPAR_BARRIERCONVTOL:
+      /**@todo add BARRIERCONVTOL parameter */
+      return SCIP_PARAMETERUNKNOWN; // ?????????????????
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
 	 *dval = lpi->clp->dualObjectiveLimit();
@@ -2490,6 +2493,9 @@ RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       lpi->clp->setDualTolerance(dval);
       break;
+   case SCIP_LPPAR_BARRIERCONVTOL:
+      /**@todo add BARRIERCONVTOL parameter */
+      return SCIP_PARAMETERUNKNOWN; // ?????????????????
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
 	 lpi->clp->setDualObjectiveLimit(dval);

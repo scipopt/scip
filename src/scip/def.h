@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.72 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.73 2005/02/24 11:02:56 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -126,6 +126,7 @@
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-09  /**< default feasibility tolerance for reduced costs */
+#define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
 #define SCIP_DEFAULT_BOUNDSTREPS      1e-04  /**< default minimal improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
 #define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04  /**< default minimal objective distance value to use for pseudo cost updates */
