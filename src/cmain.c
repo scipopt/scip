@@ -71,7 +71,6 @@ RETCODE runSCIP(
     * Parameters *
     **************/
 
-   /*CHECK_OKAY( SCIPwriteParams(scip, "scip.set", TRUE) );*/
    if( argc >= 3 )
    {
       if( SCIPfileExists(argv[2]) )
@@ -87,6 +86,7 @@ RETCODE runSCIP(
       printf("reading parameter file <scip.set>\n");
       CHECK_OKAY( SCIPreadParams(scip, "scip.set") );
    }
+   /*CHECK_OKAY( SCIPwriteParams(scip, "scip.set", TRUE) );*/
 
 
 

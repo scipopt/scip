@@ -191,8 +191,8 @@ void SCIPnodeCaptureLPIState(
    assert(node != NULL);
 
    debugMessage("capture %d times node's LPI state at depth %d\n", nuses, node->depth);
-   switch( SCIPnodeGetType(node) ) /*lint --e{788}*/
-   {
+   switch( SCIPnodeGetType(node) )
+   {  /*lint --e{788}*/
    case SCIP_NODETYPE_FORK:
       forkCaptureLPIState(node->data.fork, nuses);
       break;
@@ -215,8 +215,8 @@ RETCODE SCIPnodeReleaseLPIState(
    assert(node != NULL);
 
    debugMessage("release node's LPI state at depth %d\n", node->depth);
-   switch( SCIPnodeGetType(node) ) /*lint --e{788}*/
-   {
+   switch( SCIPnodeGetType(node) )
+   {  /*lint --e{788}*/
    case SCIP_NODETYPE_FORK:
       return forkReleaseLPIState(node->data.fork, memhdr, lp);
    case SCIP_NODETYPE_SUBROOT:
@@ -1398,8 +1398,8 @@ void treeCheckPath(
       node = tree->path[d];
       assert(node != NULL);
       assert((int)(node->depth) == d);
-      switch( SCIPnodeGetType(node) ) /*lint --e{788}*/
-      {
+      switch( SCIPnodeGetType(node) )
+      {  /*lint --e{788}*/
       case SCIP_NODETYPE_JUNCTION:
          break;
       case SCIP_NODETYPE_FORK:
@@ -1945,8 +1945,8 @@ RETCODE SCIPnodeActivate(
    }
    else
    {
-      switch( SCIPnodeGetType(node) ) /*lint --e{788}*/
-      {
+      switch( SCIPnodeGetType(node) )
+      {  /*lint --e{788}*/
       case SCIP_NODETYPE_SIBLING:
          /* move children to the queue, make them LEAFs */
          CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );

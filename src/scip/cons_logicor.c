@@ -530,7 +530,6 @@ RETCODE analyseConflict(
    CONSDATA*        consdata            /**< logic or constraint to be analysed */
    )
 {
-   int maxsize;
    int v;
 
    assert(consdata != NULL);
@@ -543,9 +542,7 @@ RETCODE analyseConflict(
    }
 
    /* analyse the conflict */
-   maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
-   maxsize = MAX(maxsize, 12); /*???????????????????*/
-   CHECK_OKAY( SCIPanalyseConflict(scip, maxsize, NULL) );
+   CHECK_OKAY( SCIPanalyseConflict(scip, NULL) );
 
    return SCIP_OKAY;
 }
@@ -736,8 +733,11 @@ RETCODE processWatchedVars(
          *addcut = TRUE;
       else
       {
-         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-         CHECK_OKAY( analyseConflict(scip, consdata) );
+         if( SCIPconsIsGlobal(cons) )
+         {
+            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            CHECK_OKAY( analyseConflict(scip, consdata) );
+         }
 
          /* mark the node to be cut off */
          *cutoff = TRUE;
@@ -803,6 +803,8 @@ RETCODE processWatchedVars(
       consdata->watchedvar1 = watchedvar1;
       consdata->watchedvar2 = watchedvar2;
       consdata->changed = FALSE;
+
+      CHECK_OKAY( SCIPincConsAge(scip, cons) );
    }
 
    return SCIP_OKAY;
@@ -957,12 +959,6 @@ RETCODE separateCons(
       }
       else
          addcut = !checkCons(scip, consdata, NULL);
-
-      if( !addcut )
-      {
-         /* constraint was feasible -> increase age */
-         CHECK_OKAY( SCIPincConsAge(scip, cons) );
-      }
    }
 
    if( addcut )
@@ -971,6 +967,11 @@ RETCODE separateCons(
       CHECK_OKAY( addCut(scip, cons, 1.0) );
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
+   }
+   else
+   {
+      /* constraint was feasible -> increase age */
+      CHECK_OKAY( SCIPincConsAge(scip, cons) );
    }
 
    return SCIP_OKAY;
@@ -1024,14 +1025,17 @@ RETCODE enforcePseudo(
          *infeasible = TRUE;
       }
    }
-
-   if( addcut )
+   else if( addcut )
    {
       /* a cut must be added to the LP -> we have to solve the LP immediately */
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *solvelp = TRUE;
    }
-
+   else
+   {
+      /* constraint was feasible -> increase age */
+      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+   }
    return SCIP_OKAY;
 }
 
@@ -1655,16 +1659,17 @@ DECL_CONSCHECK(consCheckLogicor)
       assert(consdata != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         if( !checkCons(scip, consdata, sol) )
+         if( checkCons(scip, consdata, sol) )
+         {
+            /* constraint was feasible -> increase age */
+            CHECK_OKAY( SCIPincConsAge(scip, cons) );
+         }
+         else
          {
             /* constraint is violated */
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
             return SCIP_OKAY;
-         }
-         else
-         {
-            CHECK_OKAY( SCIPincConsAge(scip, cons) );
          }
       }
    }

@@ -118,7 +118,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          }
       }
 
-      score = SCIPgetBranchScore(scip, down - lowerbound, up - lowerbound);
+      score = SCIPgetBranchScore(scip, down - lowerbound, up - lowerbound) + 0.001;
+      score *= SCIPvarGetBranchingPriority(lpcands[i]);
+
       if( score > bestscore )
       {
          bestcand = i;
@@ -136,8 +138,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       assert(*result == SCIP_DIDNOTRUN);
 
       /* perform the branching */
-      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
-         nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestdown, bestup, bestscore);
+      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
+         nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestdown, bestup, 
+         SCIPvarGetBranchingPriority(lpcands[bestcand]), bestscore);
 
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", lpcands[bestcand]->name, SCIPfloor(scip, lpcandssol[bestcand]));

@@ -104,7 +104,6 @@ typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure fo
 extern
 RETCODE SCIPconflicthdlrCreate(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
-   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
    int              priority,           /**< priority of the conflict handler */
@@ -221,7 +220,7 @@ extern
 RETCODE SCIPconflictAnalyse(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   PROB*            prob,               /**< problem data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -254,8 +253,7 @@ Longint SCIPconflictGetNConflicts(
 /** creates conflict analysis data for infeasible LP conflicts */
 extern
 RETCODE SCIPlpconflictCreate(
-   LPCONFLICT**     lpconflict,         /**< pointer to LP conflict analysis data */
-   const SET*       set                 /**< global SCIP settings */
+   LPCONFLICT**     lpconflict          /**< pointer to LP conflict analysis data */
    );
 
 /** frees conflict analysis data for infeasible LP conflicts */
@@ -271,8 +269,8 @@ extern
 RETCODE SCIPlpconflictAnalyse(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
    Bool*            success             /**< pointer to store whether a conflict constraint was created */
    );
 

@@ -3,8 +3,8 @@
 global/display/verblevel = 4 # ??? 2
 
 # maximal number of characters in a node information line
-# [type: int, range: [0,2147483647], default: 138]
-global/display/dispwidth = 138
+# [type: int, range: [0,2147483647], default: 139]
+global/display/dispwidth = 139
 
 # frequency for displaying node information lines
 # [type: int, range: [-1,2147483647], default: 1000]
@@ -340,7 +340,7 @@ nodesel/restartdfs/selectbestfreq = 1000
 
 # priority of branching rule <fullstrong>
 # [type: int, range: [-2147483648,2147483647], default: 200]
-branchrule/fullstrong/priority = 0 # ??? 200
+branchrule/fullstrong/priority = 200
 
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]

@@ -95,6 +95,11 @@
 #define SCIP_DEFAULT_CONSAGELIMIT      128 /**< maximum age an unnecessary constraint can reach before it is deleted */
 
 
+/* Conflict Analysis */
+#define SCIP_DEFAULT_MAXCONFVARSFAC   0.02 /**< maximal fraction of binary variables involved in a conflict clause */
+#define SCIP_DEFAULT_MINMAXCONFVARS     20 /**< minimal absolute maximum of variables involved in a conflict clause */
+
+
 /* Primal Solutions */
 
 #define SCIP_DEFAULT_GAPLIMIT          0.0 /**< solving stops, if the gap is below the given value */
@@ -109,7 +114,7 @@
 
 /* Display */
 
-#define SCIP_DEFAULT_DISPWIDTH         138 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPWIDTH         139 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
@@ -425,6 +430,16 @@ RETCODE SCIPsetCreate(
                   "global/constraints/consagelimit",
                   "maximum age an unnecessary constraint can reach before it is deleted",
                   &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT, 1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/pricing/maxconfvarsfac",
+                  "maximal fraction of binary variables involved in a conflict clause",
+                  &(*set)->maxconfvarsfac, SCIP_DEFAULT_MAXCONFVARSFAC, 0.0, REAL_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global/solutions/minmaxconfvars",
+                  "minimal absolute maximum of variables involved in a conflict clause",
+                  &(*set)->minmaxconfvars, SCIP_DEFAULT_MINMAXCONFVARS, 0, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "global/solutions/maxsol",

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.46 2003/10/15 13:09:25 bzfpfend Exp $
+# $Id: Makefile,v 1.47 2003/11/03 14:18:58 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -112,23 +112,23 @@ OBJDEP		=	src/depend.obj
 
 ifeq ($(LPS),cpx)
 CPPFLAGS	+=	-I$(LIBDIR)/cpxinc
-MAINOBJ		=	cmain.o
 LPSLIB		=	cplex.$(OSTYPE).$(ARCH)
 LPIOBJ		=	lpi_cpx.o bitencode.o
+LPISRC  	=	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.c))
 endif
 
 ifeq ($(LPS),spx)
 CPPFLAGS	+=	-I$(LIBDIR)/spxinc 
-MAINOBJ		=	cppmain.o
-LPSLIB		=	soplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT)
+LPSLIB		=	soplex.$(OSTYPE).$(ARCH)
 LPIOBJ		=	lpi_spx.o bitencode.o
+LPISRC  	=	lpi_spx.cpp bitencode.c
 endif
 
 LPILIB		=	$(LPS)lp.$(BASE)
 LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).a
 LPIXXX		=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
-LPISRC  	=	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.c))
 LPIDEP		=	src/depend.$(LPS)
+MAINOBJ		=	cmain.o
 MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 

@@ -451,7 +451,7 @@ RETCODE solveNodeLP(
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
       || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
    {
-      CHECK_OKAY( SCIPlpconflictAnalyse(lpconflict, set, lp, INT_MAX, NULL) );
+      CHECK_OKAY( SCIPlpconflictAnalyse(lpconflict, set, prob, lp, NULL) );
    }
 
    return SCIP_OKAY;
@@ -675,8 +675,8 @@ RETCODE enforceConstraints(
          assert(set->buffer->firstfree == 0);
          debugMessage("enforcing of <%s> returned result %d\n", SCIPconshdlrGetName(conshdlrs_enfo[h]), result);
 
-         switch( result ) /*lint --e{788}*/
-         {
+         switch( result )
+         {  /*lint --e{788}*/
          case SCIP_DIDNOTRUN:
             assert(tree->nchildren == 0);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -787,8 +787,8 @@ RETCODE enforceConstraints(
       CHECK_OKAY( SCIPbranchPseudo(set->scip, &result) );
       assert(set->buffer->firstfree == 0);
 
-      switch( result ) /*lint --e{788}*/
-      {
+      switch( result )
+      {  /*lint --e{788}*/
       case SCIP_CUTOFF:
          assert(tree->nchildren == 0);
          resolved = TRUE;
@@ -1126,6 +1126,7 @@ RETCODE SCIPsolveCIP(
                if( solveagain && stat->nboundchanges != oldnboundchanges )
                {
                   CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, &cutoff) );
+                  solveagain = !cutoff;
                }
             }
             assert(!solveagain || !cutoff);

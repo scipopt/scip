@@ -81,6 +81,10 @@ RETCODE SCIPbufferCapture(
    assert(set != NULL);
    assert(ptr != NULL);
    assert(size >= 0);
+   
+   /* allocate minimal 1 byte */
+   if( size == 0 )
+      size = 1;
 
    /* check, if we need additional buffers */
    if( buffer->firstfree == buffer->ndata )

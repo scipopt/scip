@@ -1823,6 +1823,7 @@ RETCODE SCIPcolGetStrongbranch(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(col->primsol < SCIP_INVALID);
+   assert(!SCIPsetIsIntegral(set, col->primsol));
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
    assert(set != NULL);
@@ -1837,7 +1838,8 @@ RETCODE SCIPcolGetStrongbranch(
 
    if( col->validstronglp != stat->lpcount || itlim > col->strongitlim )
    {
-      debugMessage("calling strong branching for variable <%s> with %d iterations\n", SCIPvarGetName(col->var), itlim);
+      debugMessage("calling strong branching for variable <%s>(%g) with %d iterations\n", 
+         SCIPvarGetName(col->var), col->primsol, itlim);
 
       /* start timing */
       SCIPclockStart(stat->strongbranchtime, set);
@@ -1846,7 +1848,7 @@ RETCODE SCIPcolGetStrongbranch(
       stat->nstrongbranch++;
       col->validstronglp = stat->lpcount;
       col->strongitlim = itlim;
-      CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, 1, itlim, &col->strongdown, &col->strongup) );
+      CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim, &col->strongdown, &col->strongup) );
       col->strongdown = MIN(col->strongdown, upperbound);
       col->strongup = MIN(col->strongup, upperbound);
       
@@ -3979,6 +3981,9 @@ RETCODE SCIPlpCreate(
    (*lp)->dualfeasible = TRUE;
    (*lp)->diving = FALSE;
 
+   /* set objective sense */
+   CHECK_OKAY( SCIPlpiChgObjsen((*lp)->lpi, SCIP_OBJSEN_MINIMIZE) );
+
    /* set default parameters in LP solver */
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
@@ -4904,9 +4909,6 @@ RETCODE lpSolvePrimal(
    debugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", 
       stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
-   /* flush changes to the LP solver */
-   CHECK_OKAY( lpFlush(lp, memhdr, set) );
-
    /* start timing */
    SCIPclockStart(stat->primallptime, set);
 
@@ -5037,15 +5039,13 @@ RETCODE lpSolveDual(
    Bool dualfeasible;
 
    assert(lp != NULL);
+   assert(lp->flushed);
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(stat != NULL);
 
    debugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", 
       stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
-
-   /* flush changes to the LP solver */
-   CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
    /* start timing */
    SCIPclockStart(stat->duallptime, set);
@@ -5174,6 +5174,19 @@ RETCODE SCIPlpSolve(
 {
    assert(lp != NULL);
 
+   /* flush changes to the LP solver */
+   CHECK_OKAY( lpFlush(lp, memhdr, set) );
+
+#if 0
+   if( stat->nnodes <= 10 )
+   { /*???????????????????????*/
+      char fname[MAXSTRLEN];
+      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
+      CHECK_OKAY( SCIPlpWrite(lp, fname) );
+   }
+#endif
+
+   /* select simplex method */
    if( lp->dualfeasible || !lp->primalfeasible )
    {
       debugMessage("solving dual LP\n");

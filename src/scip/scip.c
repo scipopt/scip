@@ -802,8 +802,7 @@ RETCODE SCIPincludeConflictHdlr(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeConflictHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, scip->set,
-                  name, desc, priority, 
+   CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, name, desc, priority, 
                   conflictfree, conflictinit, conflictexit, conflictexec,
                   conflicthdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConflictHdlr(scip->set, conflicthdlr) );
@@ -1157,7 +1156,7 @@ DISP* SCIPfindDisp(
  * global problem methods
  */
 
-/** creates empty problem and initializes all solving data structures */
+/** creates empty problem and initializes all solving data structures; the objective sense is set to MINIMIZE */
 RETCODE SCIPcreateProb(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< problem name */
@@ -1197,8 +1196,8 @@ RETCODE SCIPreadProb(
       CHECK_OKAY( SCIPreaderRead(scip->set->readers[i], scip->set, filename, &result) );
    }
 
-   switch( result ) /*lint --e{788}*/
-   {
+   switch( result )
+   {  /*lint --e{788}*/
    case SCIP_DIDNOTRUN:
       failureMessage("No reader for input file <%s> available\n", filename);
       return SCIP_READERROR;
@@ -1257,8 +1256,8 @@ PROBDATA* SCIPgetProbData(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetProbData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return SCIPprobGetData(scip->origprob);
 
@@ -1283,8 +1282,8 @@ RETCODE SCIPsetProbData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetProbData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetData(scip->origprob, probdata);
       return SCIP_OKAY;
@@ -1330,8 +1329,8 @@ RETCODE SCIPsetObjlimit(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetObjlimit", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetExternObjlim(scip->origprob, objlimit);
       break;
@@ -1375,8 +1374,8 @@ RETCODE SCIPaddVar(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
       {
@@ -1421,8 +1420,8 @@ RETCODE SCIPgetVarsData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetVarsData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       if( vars != NULL )
          *vars = scip->origprob->vars;
@@ -1470,8 +1469,8 @@ VAR** SCIPgetVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->vars;
 
@@ -1493,8 +1492,8 @@ int SCIPgetNVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nvars;
 
@@ -1516,8 +1515,8 @@ int SCIPgetNBinVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNBinVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nbin;
 
@@ -1539,8 +1538,8 @@ int SCIPgetNIntVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNIntVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nint;
 
@@ -1562,8 +1561,8 @@ int SCIPgetNImplVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nimpl;
 
@@ -1585,8 +1584,8 @@ int SCIPgetNContVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNContVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->ncont;
 
@@ -1705,8 +1704,8 @@ VAR* SCIPfindVar(
 
    CHECK_ABORT( checkStage(scip, "SCIPfindVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return SCIPprobFindVar(scip->origprob, name);
 
@@ -1752,8 +1751,8 @@ RETCODE SCIPaddCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->mem->probmem, scip->set, cons) );
       return SCIP_OKAY;
@@ -1791,8 +1790,8 @@ RETCODE SCIPdelCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       assert(cons->addconssetchg == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
@@ -1823,8 +1822,8 @@ CONS* SCIPfindCons(
 
    CHECK_ABORT( checkStage(scip, "SCIPfindCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       return SCIPprobFindCons(scip->origprob, name);
 
@@ -1899,8 +1898,8 @@ RETCODE SCIPdisableConsLocal(
 
    CHECK_OKAY( checkStage(scip, "SCIPdisableConsLocal", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       assert(cons->addconssetchg == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
@@ -2103,7 +2102,7 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
-   CHECK_OKAY( SCIPlpconflictCreate(&scip->lpconflict, scip->set) );
+   CHECK_OKAY( SCIPlpconflictCreate(&scip->lpconflict) );
    CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
@@ -2206,8 +2205,8 @@ RETCODE SCIPsolve(
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       /* presolve problem and set up data structures */
       CHECK_OKAY( SCIPpresolve(scip) );
@@ -2277,8 +2276,8 @@ RETCODE SCIPfreeSolve(
 {
    CHECK_OKAY( checkStage(scip, "SCIPfreeSolve", TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
       return SCIP_OKAY;
@@ -2358,8 +2357,8 @@ RETCODE SCIPcreateVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->stat, 
                      name, lb, ub, obj, vartype, removeable) );
@@ -2402,8 +2401,8 @@ RETCODE SCIPreleaseVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPreleaseVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarRelease(var, scip->mem->probmem, scip->set, scip->lp) );
       return SCIP_OKAY;
@@ -2614,8 +2613,8 @@ RETCODE SCIPchgVarObj(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->tree, scip->lp, scip->branchcand,
@@ -2643,8 +2642,8 @@ RETCODE SCIPaddVarObj(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->origprob, scip->tree, scip->lp,
@@ -2664,7 +2663,7 @@ RETCODE SCIPaddVarObj(
 }
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that this change is treated like a branching decision
  */
 RETCODE SCIPchgVarLb(
@@ -2677,8 +2676,8 @@ RETCODE SCIPchgVarLb(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->tree, scip->lp,
                      scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
@@ -2704,7 +2703,7 @@ RETCODE SCIPchgVarLb(
 }
 
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that this change is treated like a branching decision
  */
 RETCODE SCIPchgVarUb(
@@ -2717,8 +2716,8 @@ RETCODE SCIPchgVarUb(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->tree, scip->lp,
                      scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
@@ -2783,6 +2782,134 @@ RETCODE SCIPchgVarUbNode(
    return SCIP_OKAY;
 }
 
+/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter than the
+ *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
+ *  bound change, such that this change is treated like a branching decision
+ */
+RETCODE SCIPtightenVarLb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   Real lb;
+   Real ub;
+
+   assert(infeasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPtightenVarLb", FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   
+   if( SCIPsetIsFeasLE(scip->set, newbound, lb) )
+   {
+      if( tightened != NULL )
+         *tightened = FALSE;
+      return SCIP_OKAY;
+   }
+
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   switch( scip->stage )
+   {  /*lint --e{788}*/
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_SOLVING:
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
+      break;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter than the
+ *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
+ *  bound change, such that this change is treated like a branching decision
+ */
+RETCODE SCIPtightenVarUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   Real lb;
+   Real ub;
+
+   assert(infeasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPtightenVarUb", FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   
+   if( SCIPsetIsFeasGE(scip->set, newbound, ub) )
+   {
+      if( tightened != NULL )
+         *tightened = FALSE;
+      return SCIP_OKAY;
+   }
+
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   switch( scip->stage )
+   {  /*lint --e{788}*/
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_SOLVING:
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL) );
+      break;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** fixes binary variable to given value; in problem creation or preprocessing stage, the variable is converted
  *  into a fixed variable, and the given inference constraint is ignored; in solving stage, the variable is fixed
  *  locally at the given node, and the given inference constraint is stored, such that the conflict analysis is
@@ -2801,8 +2928,8 @@ RETCODE SCIPinferBinVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPinferBinVar", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       if( fixedval == TRUE )
@@ -2840,6 +2967,22 @@ RETCODE SCIPinferBinVar(
    }
 }
 
+/** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+ */
+RETCODE SCIPchgVarBranchingPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchingPriority", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIPvarChgBranchingPriority(var, scip->set, branchingpriority);
+
+   return SCIP_OKAY;
+}
+
 /** changes type of variable in the problem; this changes the vars array returned from
  *  SCIPgetVars() and SCIPgetVarsData()
  */
@@ -2853,8 +2996,8 @@ RETCODE SCIPchgVarType(
 
    CHECK_OKAY( checkStage(scip, "SCIPchgVarType", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       if( SCIPvarGetProbIndex(var) >= 0 )
@@ -2919,8 +3062,8 @@ RETCODE SCIPfixVar(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_SOLVING:
       *infeasible = FALSE;
@@ -3375,7 +3518,7 @@ RETCODE SCIPinitConflictAnalysis(
 /** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
  *  one of the following two cases:
  *   1. Before calling the SCIPanalyseConflict() method, SCIPaddConflictVar() should be called for each variable,
- *      whose current assignment lead to the conflict (i.e. the infeasibility of a constraint).
+ *      whose current assignment lead to the conflict (i.e. the infeasibility of a globally valid constraint).
  *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
  *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
  */
@@ -3392,17 +3535,18 @@ RETCODE SCIPaddConflictVar(
 }
 
 /** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set; the conflict analysis
+ *  should only be called if a globally valid constraint was violated -- otherwise, the resulting conflict
+ *  constraint wouldn't be globally valid
  */
 RETCODE SCIPanalyseConflict(
    SCIP*            scip,               /**< SCIP data structure */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPanalyseConflict", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAnalyse(scip->conflict, scip->set, maxsize, success) );
+   CHECK_OKAY( SCIPconflictAnalyse(scip->conflict, scip->set, scip->transprob, success) );
    
    return SCIP_OKAY;
 }
@@ -3442,8 +3586,8 @@ RETCODE SCIPcreateCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, 
                      initial, separate, enforce, check, propagate, local, modifiable, removeable, TRUE) );
@@ -3486,8 +3630,8 @@ RETCODE SCIPreleaseCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPreleaseCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPconsRelease(cons, scip->mem->probmem, scip->set) );
       return SCIP_OKAY;
@@ -4732,8 +4876,26 @@ RETCODE SCIPbranchLP(
 
    if( *result == SCIP_DIDNOTRUN )
    {
-      /* no branching method succeeded in choosing a branching: just branch on the first fractional variable */
-      CHECK_OKAY( SCIPbranchVar(scip, lpcands[0]) );
+      Real priority;
+      Real bestpriority;
+      int bestcand;
+
+      /* no branching method succeeded in choosing a branching: just branch on the first fractional variable with maximal
+       * priority
+       */
+      bestcand = -1;
+      bestpriority = REAL_MIN;
+      for( i = 0; i < nlpcands; ++i )
+      {
+         priority = SCIPvarGetBranchingPriority(lpcands[i]);
+         if( priority > bestpriority )
+         {
+            bestcand = i;
+            bestpriority = priority;
+         }
+      }
+      assert(0 <= bestcand && bestcand < nlpcands);
+      CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand]) );
       *result = SCIP_BRANCHED;
    }
 
@@ -4772,8 +4934,26 @@ RETCODE SCIPbranchPseudo(
 
    if( *result == SCIP_DIDNOTRUN )
    {
-      /* no branching method succeeded in choosing a branching: just branch on the first unfixed variable */
-      CHECK_OKAY( SCIPbranchVar(scip, pseudocands[0]) );
+      Real priority;
+      Real bestpriority;
+      int bestcand;
+
+      /* no branching method succeeded in choosing a branching: just branch on the first unfixed variable with maximal
+       * priority
+       */
+      bestcand = -1;
+      bestpriority = REAL_MIN;
+      for( i = 0; i < npseudocands; ++i )
+      {
+         priority = SCIPvarGetBranchingPriority(pseudocands[i]);
+         if( priority > bestpriority )
+         {
+            bestcand = i;
+            bestpriority = priority;
+         }
+      }
+      assert(0 <= bestcand && bestcand < npseudocands);
+      CHECK_OKAY( SCIPbranchVar(scip, pseudocands[bestcand]) );
       *result = SCIP_BRANCHED;
    }
 
@@ -5657,6 +5837,16 @@ int SCIPgetNCutsApplied(
    return SCIPsepastoreGetNCutsApplied(scip->sepastore);
 }
 
+/** get total number of conflict constraints found */
+Longint SCIPgetNConflictsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNConflictsFound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPconflictGetNConflicts(scip->conflict) + SCIPlpconflictGetNConflicts(scip->lpconflict);
+}
+
 /** gets depth of active node, or -1 if no active node exists */
 int SCIPgetActDepth(
    SCIP*            scip                /**< SCIP data structure */
@@ -6287,8 +6477,8 @@ RETCODE SCIPprintStatus(
    if( file == NULL )
       file = stdout;
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_INIT:
       fprintf(file, "initialization");
       break;
@@ -6339,8 +6529,8 @@ RETCODE SCIPprintStatistics(
    if( file == NULL )
       file = stdout;
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_INIT:
       fprintf(file, "SCIP Status        : initialization\n");
       fprintf(file, "Original Problem   : no problem exists.\n");
@@ -7175,8 +7365,8 @@ MEMHDR* SCIPmemhdr(
    assert(scip->set != NULL);
    assert(scip->mem != NULL);
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
       return scip->mem->probmem;
@@ -7201,8 +7391,8 @@ Longint SCIPgetMemUsed(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetMemUsed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage ) /*lint --e{788}*/
-   {
+   switch( scip->stage )
+   {  /*lint --e{788}*/
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
       return getBlockMemoryUsed(scip->mem->probmem);

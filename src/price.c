@@ -328,8 +328,8 @@ RETCODE priceProbVars(
          /* A loose variable is a pricing candidate, if it can contribute negatively to the objective function.
           * In addition, we have to add all variables, where zero violates the bounds.
           */
-         /*debugMessage("price loose variable <%s> in bounds [%g,%g]\n",
-           SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));*/
+         debugMessage("price loose variable <%s> in bounds [%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          if( SCIPsetIsNegative(set, SCIPvarGetLbLocal(var)) )
          {
             if( SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)) )
@@ -368,8 +368,8 @@ RETCODE priceProbVars(
          assert((col->lppos == -1) == (col->lpipos == -1));
          assert(col->len >= 0);
             
-         /*debugMessage("price column variable <%s> in bounds [%g,%g], col->lppos=%d\n", 
-           SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), col->lppos);*/
+         debugMessage("price column variable <%s> in bounds [%g,%g], col->lppos=%d\n", 
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), col->lppos);
          if( col->lppos == -1 )
          {
             Real feasibility;

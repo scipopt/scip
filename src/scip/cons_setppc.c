@@ -616,7 +616,6 @@ RETCODE analyseConflictZero(
    CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
 {
-   int maxsize;
    int v;
 
    assert(consdata != NULL);
@@ -631,9 +630,7 @@ RETCODE analyseConflictZero(
    }
 
    /* analyse the conflict */
-   maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
-   maxsize = MAX(maxsize, 12); /*???????????????????*/
-   CHECK_OKAY( SCIPanalyseConflict(scip, maxsize, NULL) );
+   CHECK_OKAY( SCIPanalyseConflict(scip, NULL) );
 
    return SCIP_OKAY;
 }
@@ -647,7 +644,6 @@ RETCODE analyseConflictOne(
    CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
 {
-   int maxsize;
    int v;
    int n;
 
@@ -669,9 +665,7 @@ RETCODE analyseConflictOne(
    assert(n == 2);
 
    /* analyse the conflict */
-   maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
-   maxsize = MAX(maxsize, 12); /*???????????????????*/
-   CHECK_OKAY( SCIPanalyseConflict(scip, maxsize, NULL) );
+   CHECK_OKAY( SCIPanalyseConflict(scip, NULL) );
 
    return SCIP_OKAY;
 }
@@ -719,7 +713,11 @@ RETCODE processFixings(
       else
       {
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-         CHECK_OKAY( analyseConflictOne(scip, consdata) );
+         if( SCIPconsIsGlobal(cons) )
+         {
+            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            CHECK_OKAY( analyseConflictOne(scip, consdata) );
+         }
          *cutoff = TRUE;
       }
    }
@@ -805,7 +803,11 @@ RETCODE processFixings(
             *addcut = TRUE;
          else
          {
-            CHECK_OKAY( analyseConflictZero(scip, consdata) );
+            if( SCIPconsIsGlobal(cons) )
+            {
+               /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+               CHECK_OKAY( analyseConflictZero(scip, consdata) );
+            }
             *cutoff = TRUE;
          }
       }
@@ -2029,7 +2031,7 @@ DECL_CONSRESCVAR(consRescvarSetppc)
 
       /* the inference variable was infered to 0.0:
        * the inference constraint has to be a set partitioning or packing constraint, and the reason for
-       * the deduction is the assignment to 1.0 of a single different variable;
+       * the deduction is the assignment to 1.0 of a single different variable
        */
       assert(SCIPvarGetUbLocal(infervar) < 0.5);
       reasonvarfound = FALSE;

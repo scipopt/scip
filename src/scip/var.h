@@ -212,6 +212,7 @@ struct Var
    DOM              glbdom;             /**< domain of variable in global problem */
    DOM              actdom;             /**< domain of variable in actual subproblem */
    Real             obj;                /**< objective function value of variable */
+   Real             branchingpriority;  /**< priority of the variable to choose as branching variable */
    int              index;              /**< consecutively numbered variable identifier */
    int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
@@ -785,6 +786,16 @@ RETCODE SCIPvarAddHoleLocal(
    Real             right               /**< right bound of open interval in new hole */
    );
 
+/** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+ */
+extern
+void SCIPvarChgBranchingPriority(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   );
+
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
  *  variable index; returns 0 if both indices are equal, which means both variables are equal
  */
@@ -999,6 +1010,14 @@ int SCIPvarGetInferNum(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets the branching priority of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+ */
+extern
+Real SCIPvarGetBranchingPriority(
+   VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1036,6 +1055,7 @@ int SCIPvarGetInferNum(
 #define SCIPvarGetInferVar(var)         (var)->infervar
 #define SCIPvarGetInferDepth(var)       ((int)((var)->inferdepth))
 #define SCIPvarGetInferNum(var)         ((int)((var)->infernum))
+#define SCIPvarGetBranchingPriority(var) ((var)->branchingpriority)
 
 #endif
 

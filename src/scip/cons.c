@@ -3438,6 +3438,26 @@ Bool SCIPconsIsEnabled(
    return cons->updateenable || (cons->enabled && !cons->updatedisable);
 }
 
+/** returns TRUE iff constraint is marked obsolete */
+Bool SCIPconsIsObsolete(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updateobsolete || cons->obsolete;
+}
+
+/** gets age of constraint */
+int SCIPconsGetAge(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->age;
+}
+
 /** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
 Bool SCIPconsIsInitial(
    CONS*            cons                /**< constraint */

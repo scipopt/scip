@@ -225,7 +225,7 @@ RETCODE SCIPlpiClear(
 extern 
 RETCODE SCIPlpiChgBounds(
    LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of columns to change bounds for */
+   int              ncols,              /**< number of columns to change bounds for */
    const int*       ind,                /**< column indices */
    const Real*      lb,                 /**< values for the new lower bounds */
    const Real*      ub                  /**< values for the new upper bounds */
@@ -235,7 +235,7 @@ RETCODE SCIPlpiChgBounds(
 extern 
 RETCODE SCIPlpiChgSides(
    LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of rows to change sides for */
+   int              nrows,              /**< number of rows to change sides for */
    const int*       ind,                /**< row indices */
    const Real*      lhs,                /**< new values for left hand sides */
    const Real*      rhs                 /**< new values for right hand sides */
@@ -262,8 +262,8 @@ extern
 RETCODE SCIPlpiChgObj(
    LPI*             lpi,                /**< LP interface structure */
    int              ncols,              /**< number of columns to change objective value for */
-   int*             cols,               /**< column indices to change objective value for */
-   Real*            vals                /**< new objective values for columns */
+   int*             ind,                /**< column indices to change objective value for */
+   Real*            obj                 /**< new objective values for columns */
    );
 
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
@@ -404,6 +404,7 @@ extern
 RETCODE SCIPlpiStrongbranch(
    LPI*             lpi,                /**< LP interface structure */
    const int*       cand,               /**< candidate list */
+   Real*            psol,               /**< array with current primal solution values of candidates */
    int              ncand,              /**< size of candidate list */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching candidate down */
@@ -563,7 +564,7 @@ RETCODE SCIPlpiGetBInvRow(
 extern 
 RETCODE SCIPlpiGetBInvARow(
    LPI*             lpi,                /**< LP interface structure */
-   int              i,                  /**< row number */
+   int              r,                  /**< row number */
    const Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    Real*            val                 /**< vector to return coefficients */
    );

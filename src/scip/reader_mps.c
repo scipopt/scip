@@ -1148,9 +1148,17 @@ RETCODE readBounds(
             switch(mpsinputField1(mpsi)[0])
             {
             case 'L':
+               if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
+               {
+                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+               }
                CHECK_OKAY( SCIPchgVarLb(scip, var, val) );
                break;
             case 'U':
+               if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
+               {
+                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+               }
                CHECK_OKAY( SCIPchgVarUb(scip, var, val) );
                break;
             case 'F':

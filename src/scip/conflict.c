@@ -33,7 +33,10 @@
  *
  *  1. Put all the given variables to a priority queue, which is ordered,
  *     such that the variable that was fixed last due to branching or deduction
- *     is at the top of the queue. Create an empty conflict set.
+ *     is at the top of the queue. The variables in the queue are represented
+ *     by themselves or their negation in order to have all variable's representants
+ *     currently fixed to FALSE.
+ *     Create an empty conflict set.
  *  2. Remove the top variable v from the priority queue.
  *  3. (a) If the remaining queue is non-empty, and variable w (the one that is now
  *         on the top of the queue) was fixed at the same depth level as v, and if
@@ -44,12 +47,14 @@
  *            current values lead to the deduction of v on the priority queue.
  *            Note that these variables have at most the same inference depth
  *            level as variable v, and were deduced earlier than v.
+ *            If the variable's current assignment is TRUE, it is automatically
+ *            replaced by its negation in the priority queue.
  *     (b) Otherwise, the assignment to variable v was a branching decision or
  *         a deduction with missing inference reason.
- *          - Put v in the conflict set.
+ *          - Put v into the conflict set.
  *            Note that if v was a branching variable, all deduced variables remaining
  *            in the priority queue have smaller inference depth level than v, since
- *            deductions are allways applied after the branching decisions. However,
+ *            deductions are always applied after the branching decisions. However,
  *            there is the possibility, that v was a deduced variable, where the
  *            inference reason was not given. With this lack of information, we must
  *            treat the deduced variable like a branching variable, and there may
@@ -77,8 +82,8 @@
  *    a different binary variable, the constraint handler should call
  *    SCIPinferBinVar(), thus providing the constraint that infered the
  *    assignment to SCIP.
- *  - If an (with the current assignment) infeasible constraint is detected,
- *    the constraint handler should
+ *  - If an (with the current assignment) infeasible globally valid constraint
+ *    is detected, the constraint handler should
  *     1. call SCIPinitConflictAnalysis() to initialize the conflict queue,
  *     2. call SCIPaddConflictVar() for each variable in the infeasible
  *        constraint,
@@ -201,7 +206,6 @@ RETCODE lpconflictEnsureConflictvarsMem(
 /** creates a conflict handler */
 RETCODE SCIPconflicthdlrCreate(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
-   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
    int              priority,           /**< priority of the conflict handler */
@@ -531,7 +535,7 @@ static
 RETCODE conflictAnalyse(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   int              maxsize,            /**< maximal size of conflict set */
    Bool*            success             /**< pointer to store whether the conflict set is valid */
    )
 {
@@ -553,9 +557,6 @@ RETCODE conflictAnalyse(
       errorMessage("no conflict variables to analyse");
       return SCIP_INVALIDDATA;
    }
-
-   if( maxsize == -1 )
-      maxsize = INT_MAX;
 
    /* clear the conflict set */
    conflict->nconflictvars = 0;
@@ -611,7 +612,9 @@ RETCODE conflictAnalyse(
          {
             assert(nextvar == NULL || infercons == NULL || SCIPvarGetInferDepth(var) > SCIPvarGetInferDepth(nextvar));
             assert(nextvar == NULL || SCIPvarGetInferDepth(var) >= SCIPvarGetInferDepth(nextvar));
-            
+            assert(SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+            assert(SCIPsetIsFeasZero(set, SCIPvarGetLbLocal(var)));
+
             debugMessage("putting variable <%s> to conflict set\n", SCIPvarGetName(var));
 
             /* put variable in the conflict set */
@@ -636,20 +639,28 @@ RETCODE conflictAnalyse(
 RETCODE SCIPconflictAnalyse(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   PROB*            prob,               /**< problem data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
    Bool valid;
+   int maxsize;
 
    assert(conflict != NULL);
    assert(set != NULL);
+   assert(prob != NULL);
 
    if( success != NULL )
       *success = FALSE;
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* calculate the maximal size of the conflict set */
+   maxsize = (int)(set->maxconfvarsfac * prob->nbin);
+   maxsize = MAX(maxsize, set->minmaxconfvars);
+   if( maxsize < 2 )
       return SCIP_OKAY;
 
    /* start timing */
@@ -739,8 +750,7 @@ Longint SCIPconflictGetNConflicts(
 
 /** creates conflict analysis data for infeasible LP conflicts */
 RETCODE SCIPlpconflictCreate(
-   LPCONFLICT**     lpconflict,         /**< pointer to LP conflict analysis data */
-   const SET*       set                 /**< global SCIP settings */
+   LPCONFLICT**     lpconflict          /**< pointer to LP conflict analysis data */
    )
 {
    assert(lpconflict != NULL);
@@ -789,7 +799,8 @@ RETCODE lpconflictAnalyse(
 
    *success = FALSE;
 
-   /* ????? MARC: Hier kommen Deine wesentlichen Methoden!
+   /*lint --e{715}
+    * ????? MARC: Hier kommen Deine wesentlichen Methoden!
     *             Diese sollten das LP analysieren (Zugriff ueber Methoden aus lp.h) und
     *             als Output sollten Sie das lpconflict->conflictvars array fuellen, und zwar
     *             mit der Bedeutung, dass das Setzen aller Variablen in dem Array auf FALSE zu
@@ -815,12 +826,13 @@ RETCODE lpconflictAnalyse(
 RETCODE SCIPlpconflictAnalyse(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
    Bool valid;
+   int maxsize;
 
    assert(lpconflict != NULL);
    assert(set != NULL);
@@ -830,6 +842,12 @@ RETCODE SCIPlpconflictAnalyse(
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* calculate the maximal size of the conflict set */
+   maxsize = (int)(set->maxconfvarsfac * prob->nbin);
+   maxsize = MAX(maxsize, set->minmaxconfvars);
+   if( maxsize < 2 )
       return SCIP_OKAY;
 
    /* start timing */

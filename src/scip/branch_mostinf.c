@@ -45,7 +45,10 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
    Real* lpcandsfrac;
    int nlpcands;
    Real infeasibility;
-   Real maxinfeasibility;
+   Real score;
+   Real obj;
+   Real bestscore;
+   Real bestobj;
    int bestcand;
    int i;
 
@@ -61,7 +64,8 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
    assert(nlpcands > 0);
 
    /* search the most infeasible candidate */
-   maxinfeasibility = 0.0;
+   bestscore = REAL_MIN;
+   bestobj = 0.0;
    bestcand = -1;
    for( i = 0; i < nlpcands; ++i )
    {
@@ -69,16 +73,23 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
 
       infeasibility = lpcandsfrac[i];
       infeasibility = MIN(infeasibility, 1.0-infeasibility);
-      if( infeasibility > maxinfeasibility )
+      score = infeasibility;
+      score *= SCIPvarGetBranchingPriority(lpcands[i]);
+      obj = SCIPvarGetObj(lpcands[i]);
+      obj = ABS(obj);
+      if( SCIPisGT(scip, score, bestscore)
+         || (SCIPisGE(scip, score, bestscore) && obj > bestobj) )
       {
-         maxinfeasibility = infeasibility;
+         bestscore = score;
+         bestobj = obj;
          bestcand = i;
       }
    }
    assert(bestcand >= 0);
 
-   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, infeasibility=%g)\n",
-      nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand], maxinfeasibility);
+   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, prio=%g, score=%g)\n",
+      nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand], bestobj,
+      SCIPvarGetBranchingPriority(lpcands[bestcand]), bestscore);
 
    /* perform the branching */
    CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand]) );

@@ -98,7 +98,7 @@
  * Boolean values
  */
 
-typedef unsigned int Bool;              /**< type used for boolean values */
+#define Bool unsigned int               /**< type used for boolean values */
 #ifndef TRUE
 #define TRUE  1                         /**< boolean value TRUE */
 #define FALSE 0                         /**< boolean value FALSE */
@@ -114,7 +114,7 @@ typedef unsigned int Bool;              /**< type used for boolean values */
 #define LLONG_MIN	(-LLONG_MAX - 1LL)
 #endif
 
-typedef long long Longint;              /**< type used for long integer values */
+#define Longint long long               /**< type used for long integer values */
 #define LONGINT_MAX          LLONG_MAX
 #define LONGINT_MIN          LLONG_MIN
 #define LONGINT_FORMAT          "%lld"
@@ -124,7 +124,7 @@ typedef long long Longint;              /**< type used for long integer values *
  * Floating point values
  */
 
-typedef double Real;                    /**< type used for floating point values */
+#define Real double                     /**< type used for floating point values */
 #define REAL_MAX         (Real)DBL_MAX
 #define REAL_MIN        -(Real)DBL_MAX
 #define REAL_FORMAT              "%lf"

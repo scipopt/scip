@@ -1237,6 +1237,18 @@ Bool SCIPconsIsEnabled(
    CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint is marked obsolete */
+extern
+Bool SCIPconsIsObsolete(
+   CONS*            cons                /**< constraint */
+   );
+
+/** gets age of constraint */
+extern
+int SCIPconsGetAge(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
 extern
 Bool SCIPconsIsInitial(
@@ -1338,6 +1350,8 @@ Bool SCIPconsIsLocked(
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
+#define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
+#define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce

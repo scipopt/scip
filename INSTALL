@@ -60,10 +60,9 @@ Here is what you have to do to get SCIP running:
          (e.g. "ln -s /cplex/libcplex.a lib/libcplex.linux.x86.a")
    (b) to use SOPLEX (not yet implemented!)
        - ln -s <path to SOPLEX' *.h files> lib/spxinc
-       - ln -s <file libsoplex.*.a> lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT)
-         for each operating system, architecture, compiler and optimization level
-         to use
-         (e.g. "ln -s /soplex/libsoplex.linux.x86.gnu.dbg.a lib/libsoplex.linux.x86.gnu.dbg.a")
+       - ln -s <file libsoplex.[...].a> lib/libsoplex.$(OSTYPE).$(ARCH).a
+         for each operating system and architecture to use
+         (e.g. "ln -s /soplex/libsoplex.linux.x86.gnu.dbg.a lib/libsoplex.linux.x86.a")
 
 2. Compile the library and the solver program:
    In your SCIP main directory, enter "gmake OPT=<...> LPS=<...> COMP=<...>" with

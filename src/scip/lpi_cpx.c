@@ -693,7 +693,7 @@ RETCODE SCIPlpiCreate(
    assert(cpxenv != NULL);
 
    /* create LP */
-   allocMemory(lpi);
+   ALLOC_OKAY( allocMemory(lpi) );
    (*lpi)->larray = NULL;
    (*lpi)->uarray = NULL;
    (*lpi)->senarray = NULL;
@@ -977,7 +977,7 @@ RETCODE SCIPlpiClear(
 /** changes lower and upper bounds of columns */
 RETCODE SCIPlpiChgBounds(
    LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of columns to change bounds for */
+   int              ncols,              /**< number of columns to change bounds for */
    const int*       ind,                /**< column indices */
    const Real*      lb,                 /**< values for the new lower bounds */
    const Real*      ub                  /**< values for the new upper bounds */
@@ -989,10 +989,10 @@ RETCODE SCIPlpiChgBounds(
 
    invalidateSolution(lpi);
 
-   CHECK_OKAY( ensureBoundchgMem(lpi, n) );
+   CHECK_OKAY( ensureBoundchgMem(lpi, ncols) );
 
-   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->larray, (Real*)lb) );
-   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->uarray, (Real*)ub) );
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, ncols, ind, lpi->larray, (Real*)lb) );
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, ncols, ind, lpi->uarray, (Real*)ub) );
 
    return SCIP_OKAY;
 }
@@ -1000,7 +1000,7 @@ RETCODE SCIPlpiChgBounds(
 /** changes left and right hand sides of rows */
 RETCODE SCIPlpiChgSides(
    LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of rows to change sides for */
+   int              nrows,              /**< number of rows to change sides for */
    const int*       ind,                /**< row indices */
    const Real*      lhs,                /**< new values for left hand sides */
    const Real*      rhs                 /**< new values for right hand sides */
@@ -1015,20 +1015,20 @@ RETCODE SCIPlpiChgSides(
 
    invalidateSolution(lpi);
 
-   CHECK_OKAY( ensureSidechgMem(lpi, n) );
+   CHECK_OKAY( ensureSidechgMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
-   convertSides(lpi, n, lhs, rhs, 0, &rngcount);
+   convertSides(lpi, nrows, lhs, rhs, 0, &rngcount);
 
    /* change row sides */
-   CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, n, ind, lpi->senarray) );
-   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, lpi->rhsarray) );
+   CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, nrows, ind, lpi->senarray) );
+   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, nrows, ind, lpi->rhsarray) );
    if( rngcount > 0 )
    {
       /* adjust the range count indices to the correct row indices */
       for( i = 0; i < rngcount; ++i )
       {
-         assert(0 <= lpi->rngindarray[i] && lpi->rngindarray[i] < n);
+         assert(0 <= lpi->rngindarray[i] && lpi->rngindarray[i] < nrows);
          assert(lpi->senarray[i] == 'R');
          lpi->rngindarray[i] = ind[lpi->rngindarray[i]];
       }
@@ -1080,17 +1080,15 @@ RETCODE SCIPlpiChgObjsen(
 RETCODE SCIPlpiChgObj(
    LPI*             lpi,                /**< LP interface structure */
    int              ncols,              /**< number of columns to change objective value for */
-   int*             cols,               /**< column indices to change objective value for */
-   Real*            vals                /**< new objective values for columns */
+   int*             ind,                /**< column indices to change objective value for */
+   Real*            obj                 /**< new objective values for columns */
    )
 {
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-   assert(ncols == 0 || cols != NULL);
-   assert(ncols == 0 || vals != NULL);
 
-   CHECK_ZERO( CPXchgobj(cpxenv, lpi->cpxlp, ncols, cols, vals) );
+   CHECK_ZERO( CPXchgobj(cpxenv, lpi->cpxlp, ncols, ind, obj) );
 
    return SCIP_OKAY;
 }
@@ -1129,8 +1127,12 @@ RETCODE SCIPlpiScaleRow(
    /* scale row sides */
    if( lhs > -CPX_INFBOUND )
       lhs *= scaleval;
+   else if( scaleval < 0.0 )
+      lhs = CPX_INFBOUND;
    if( rhs < CPX_INFBOUND )
       rhs *= scaleval;
+   else if( scaleval < 0.0 )
+      rhs = -CPX_INFBOUND;
    if( scaleval > 0.0 )
    {
       CHECK_OKAY( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );
@@ -1187,8 +1189,12 @@ RETCODE SCIPlpiScaleCol(
    /* scale column bounds */
    if( lb > -CPX_INFBOUND )
       lb /= scaleval;
+   else if( scaleval < 0.0 )
+      lb = CPX_INFBOUND;
    if( ub < CPX_INFBOUND )
       ub /= scaleval;
+   else if( scaleval < 0.0 )
+      ub = -CPX_INFBOUND;
    if( scaleval > 0.0 )
    {
       CHECK_OKAY( SCIPlpiChgBounds(lpi, 1, &col, &lb, &ub) );
@@ -1632,6 +1638,7 @@ RETCODE SCIPlpiSolveBarrier(
 RETCODE SCIPlpiStrongbranch(
    LPI*             lpi,                /**< LP interface structure */
    const int*       cand,               /**< candidate list */
+   Real*            psol,               /**< array with current primal solution values of candidates */
    int              ncand,              /**< size of candidate list */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching candidate down */
@@ -1981,7 +1988,7 @@ RETCODE SCIPlpiGetBInvRow(
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
 RETCODE SCIPlpiGetBInvARow(
    LPI*             lpi,                /**< LP interface structure */
-   int              i,                  /**< row number */
+   int              r,                  /**< row number */
    const Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    Real*            val                 /**< vector to return coefficients */
    )
@@ -1990,7 +1997,7 @@ RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   CHECK_ZERO( CPXbinvarow(cpxenv, lpi->cpxlp, i, val) );
+   CHECK_ZERO( CPXbinvarow(cpxenv, lpi->cpxlp, r, val) );
 
    return SCIP_OKAY;
 }
@@ -2014,8 +2021,8 @@ RETCODE SCIPlpiGetState(
    LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
-   int  ncols;
-   int  nrows;
+   int ncols;
+   int nrows;
 
    assert(memhdr != NULL);
    assert(cpxenv != NULL);
@@ -2099,7 +2106,6 @@ RETCODE SCIPlpiFreeState(
 {
    assert(lpi != NULL);
 
-   debugMessage("freeing LPI state\n");
    lpistateFree(lpistate, memhdr);
 
    return SCIP_OKAY;

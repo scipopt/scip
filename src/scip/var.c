@@ -758,6 +758,7 @@ RETCODE varCreate(
    (*var)->actdom.lb = lb;
    (*var)->actdom.ub = ub;
    (*var)->obj = obj;
+   (*var)->branchingpriority = 1.0;
    (*var)->index = stat->nvaridx++;
    (*var)->probindex = -1;
    (*var)->pseudocandindex = -1;
@@ -908,8 +909,8 @@ RETCODE varFreeParents(
       parentvar = (*var)->parentvars[i];
       assert(parentvar != NULL);
 
-      switch( SCIPvarGetStatus(parentvar) ) /*lint --e{788}*/
-      {
+      switch( SCIPvarGetStatus(parentvar) )
+      {  /*lint --e{788}*/
       case SCIP_VARSTATUS_ORIGINAL:
          assert(parentvar->data.transvar == *var);
          assert(&parentvar->data.transvar != var);
@@ -1464,6 +1465,9 @@ RETCODE SCIPvarTransform(
                      name, origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
                      vartype, origvar->removeable) );
       
+      /* copy the branching priority */
+      (*transvar)->branchingpriority = origvar->branchingpriority;
+
       /* duplicate hole lists */
       CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, memhdr, set, origvar->glbdom.holelist) );
       CHECK_OKAY( holelistDuplicate(&(*transvar)->actdom.holelist, memhdr, set, origvar->actdom.holelist) );
@@ -1844,6 +1848,7 @@ RETCODE SCIPvarAggregate(
    )
 {
    Real obj;
+   Real branchingpriority;
    int nlocksdown;
    int nlocksup;
 
@@ -1908,6 +1913,10 @@ RETCODE SCIPvarAggregate(
    /* update flags of aggregation variable */
    aggvar->removeable &= var->removeable;
 
+   /* update branching priorities of both variables to be the maximum of both variables */
+   branchingpriority = MAX(aggvar->branchingpriority, var->branchingpriority);
+   SCIPvarChgBranchingPriority(var, set, branchingpriority);
+
    return SCIP_OKAY;
 }
 
@@ -1930,6 +1939,7 @@ RETCODE SCIPvarMultiaggregate(
    )
 {
    Real obj;
+   Real branchingpriority;
    int nlocksdown;
    int nlocksup;
    int v;
@@ -1996,9 +2006,15 @@ RETCODE SCIPvarMultiaggregate(
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
       varAddRoundLocks(var, nlocksdown, nlocksup);
 
-      /* update flags of aggregation variables */
+      /* update flags and branching priorities of aggregation variables */
+      branchingpriority = var->branchingpriority;
       for( v = 0; v < naggvars; ++v )
+      {
          aggvars[v]->removeable &= var->removeable;
+         branchingpriority = MAX(aggvars[v]->branchingpriority, branchingpriority);
+      }
+      SCIPvarChgBranchingPriority(var, set, branchingpriority);
+
       break;
 
    case SCIP_VARSTATUS_COLUMN:
@@ -2106,6 +2122,9 @@ RETCODE SCIPvarNegate(
       /* link the variables together */
       var->negatedvar = *negvar;
       (*negvar)->negatedvar = var;
+
+      /* copy the branching priority */
+      (*negvar)->branchingpriority = var->branchingpriority;
 
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
       CHECK_OKAY( varAddParent(var, memhdr, set, *negvar) );
@@ -3483,6 +3502,121 @@ RETCODE SCIPvarAddHoleLocal(
    return SCIP_OKAY;
 }
 
+/** actually changes the branching priority of the variable and of all parent variables */
+static
+void varProcessChgBranchingPriority(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   )
+{
+   VAR* parentvar;
+   int i;
+
+   assert(var != NULL);
+
+   debugMessage("process changing branching priority of <%s> from %f to %f\n", 
+      var->name, var->branchingpriority, branchingpriority);
+
+   if( SCIPsetIsEQ(set, branchingpriority, var->branchingpriority) )
+      return;
+
+   /* change the priority */
+   var->branchingpriority = branchingpriority;
+
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+
+      switch( SCIPvarGetStatus(parentvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         /* do not change priorities across the border between transformed and original problem */
+         break;
+         
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable");
+         abort();
+      
+      case SCIP_VARSTATUS_AGGREGATED:
+      case SCIP_VARSTATUS_NEGATED:
+         varProcessChgBranchingPriority(parentvar, set, branchingpriority);
+         break;
+
+      default:
+         errorMessage("unknown variable status");
+         abort();
+      }
+   }
+}
+
+/** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+ */
+void SCIPvarChgBranchingPriority(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   )
+{
+   int v;
+
+   assert(var != NULL);
+   assert(branchingpriority >= 0.0);
+
+   debugMessage("changing branching priority of <%s> from %g to %g\n", 
+      var->name, var->branchingpriority, branchingpriority);
+
+   if( SCIPsetIsEQ(set, var->branchingpriority, branchingpriority) )
+      return;
+
+   /* change priorities of attached variables */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         SCIPvarChgBranchingPriority(var->data.transvar, set, branchingpriority);
+      else
+      {
+         assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+         var->branchingpriority = branchingpriority;
+      }
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+      varProcessChgBranchingPriority(var, set, branchingpriority);
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert(var->data.aggregate.var != NULL);
+      SCIPvarChgBranchingPriority(var->data.aggregate.var, set, branchingpriority);
+      break;
+         
+   case SCIP_VARSTATUS_MULTAGGR:
+      for( v = 0; v < var->data.multaggr.nvars; ++v )
+         SCIPvarChgBranchingPriority(var->data.multaggr.vars[v], set, branchingpriority);
+      break;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      SCIPvarChgBranchingPriority(var->negatedvar, set, branchingpriority);
+      break;
+         
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
+}
+
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
  *  variable index; returns 0 if both indices are equal, which means both variables are equal
  */
@@ -3998,6 +4132,18 @@ int SCIPvarGetInferNum(
    assert(var != NULL);
 
    return var->infernum;
+}
+
+/** gets the branching priority of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+ */
+Real SCIPvarGetBranchingPriority(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->branchingpriority;
 }
 
 #endif

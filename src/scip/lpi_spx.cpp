@@ -15,21 +15,26 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lp_spx.cpp
- * @brief  LP interface for SOPLEX
+/**@file   lpi_spx.c
+ * @brief  LP interface for SOPLEX 1.2.1
  * @author Tobias Achterberg
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
-#if 0 /* ??? TODO */
-
-
-#include <fstream>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <fstream>
+
+/* SOPLEX defines it's own DEBUG, so we have to check it before including SOPLEX stuff */
+#ifdef DEBUG
+#define ___DEBUG
+#endif
+
+/* always include SOPLEX in optimized mode */
+#ifndef NDEBUG
+#define ___NO_NDEBUG
+#define NDEBUG
+#endif
 
 #include "spxdefines.h"
 #include "soplex.h"
@@ -40,339 +45,1225 @@
 #include "nameset.h"
 #include "didxset.h"
 
-/* set DEBUGGING to 3 if you want to be informed of every LP interface call */
-#define DEBUGGING 0
-/* set DEBUG_FILEOUTPUT if you want to get LP files dumped */
-/*#define DEBUG_FILEOUTPUT  1*/
+#ifdef ___NO_NDEBUG
+#undef NDEBUG
+#undef ___NO_NDEBUG
+#endif
 
+#ifndef ___DEBUG
+#undef DEBUG
+#endif
+#undef ___DEBUG
 
 extern "C" 
 {
-#include "func.h"
-#include "lp.h"
-#include "def.h"
-#include "struct.h"
-#include "misc.h"
+#include "lpi.h"
+#include "bitencode.h"
+#include "message.h"
 }
 
-/* SOPLEX doesn't have an environment.
- * All information is stored in the SOPLEX object.
- */
-static int dummy_environment;
 
 using namespace soplex;
 
-#if DEBUGGING >= 2
-extern "C" void print_base(
-   char dir, int cols, int rows, int* cstat, int* rstat)
+
+typedef DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
+#define COLS_PER_PACKET DUALPACKETSIZE
+typedef DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
+#define ROWS_PER_PACKET DUALPACKETSIZE
+
+
+/** SCIP's SoPlex class */
+class SPxSCIP : public SoPlex
 {
-   static char ctext[] = { 'L', 'B', 'U', 'F' };
-   static char rtext[] = { 'l', 'b', 'u', 'f' };
-
-   int i;
-
-   std::cerr << "\nC " << dir << " ";
-   if (cstat != 0)
-      for(i = 0; i < cols; i++)
-         std::cerr << ctext[cstat[i]];
-   std::cerr << "\nR " << dir << " ";
-   if (rstat != 0)
-      for(i = 0; i < rows; i++)
-         std::cerr << rtext[rstat[i]];
-   std::cerr << "\n";
-}
-#endif /*DEBUGGING >= 2*/
-
-class SPxSIP : public SoPlex
-{
-   SLUFactor    m_slu;
-   SPxSteepPR   m_price;
-   SPxFastRT    m_ratio;
-   char*        m_probname;
-   bool         m_fromscratch;  /**< use old basis indicator */
-   double       m_objLoLimit;
-   double       m_objUpLimit;
-   Status       m_stat;
-   NameSet      m_colnames;
-   NameSet      m_rownames;
+   SLUFactor        m_slu;              /**< sparse LU factorization */
+   SPxSteepPR       m_price;            /**< steepest edge pricer */
+   SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
+   char*            m_probname;         /**< problem name */
+   bool             m_fromscratch;      /**< use old basis indicator */
+   bool             m_fastmip;          /**< FASTMIP setting (not used) */
+   Real             m_objLoLimit;       /**< lower objective limit */
+   Real             m_objUpLimit;       /**< upper objective limit */
+   Status           m_stat;             /**< solving status */
 
 public:
-   static SPxSIP* fromSIPLP(SIPLP lp);
-
-   bool getFromScratch() const
-   {
-      return m_fromscratch;
-   }
-   /**@todo If m_fromscratch is true, a new (slack/starter) basis
-    *       should be generated.
-    */
-   void setFromScratch(bool fs)
-   {
-      m_fromscratch = fs;
-   }
-
-   /* Was macht das? Brauchen wir das?
-    * void splitLP()
-    * {
-    *   subcovectors.reSize( 1 ) ;
-    * }
-    */
-
-   SPxSIP() 
-      : SoPlex(LEAVE, COLUMN)
-      , m_probname(0)
-      , m_fromscratch(false)
-      , m_objLoLimit(-SIP_INFINITY)
-      , m_objUpLimit(SIP_INFINITY)
-      , m_stat(NO_PROBLEM)
+   SPxSCIP(const char* probname) 
+      : SoPlex(LEAVE, COLUMN),
+        m_probname(0),
+        m_fromscratch(false),
+        m_fastmip(false),
+        m_objLoLimit(-soplex::infinity),
+        m_objUpLimit(soplex::infinity),
+        m_stat(NO_PROBLEM)
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
       setPricer(&m_price);
       /* no starter, no simplifier */
 
-      Param::setVerbose(0);
       m_slu.setUtype(SLUFactor::ETA);
+
+      if( probname != NULL )
+         setProbname(probname);
    }
-   virtual ~SPxSIP()
+
+   virtual ~SPxSCIP()
    {
-      if (m_probname != NULL)
+      if( m_probname != NULL )
          spx_free(m_probname);  /*lint !e1551*/
    }
+
+   bool getFromScratch() const
+   {
+      return m_fromscratch;
+   }
+
+   void setFromScratch(bool fs)
+   {
+      m_fromscratch = fs;
+   }
+
+   bool getFastMip() const
+   {
+      return m_fastmip;
+   }
+
+   void setFastMip(bool fm)
+   {
+      m_fastmip = fm;
+   }
+
    void setProbname(const char* probname)
    {
       assert(probname != NULL);
-      if (m_probname != NULL)
+      if( m_probname != NULL )
          spx_free(m_probname);
       spx_alloc(m_probname, strlen(probname) + 1);
       strcpy(m_probname, probname);
    }
-   void setObjLoLimit(double limit)
+
+   Real getObjLoLimit() const
+   {
+      return m_objLoLimit;
+   }
+
+   void setObjLoLimit(Real limit)
    {
       m_objLoLimit = limit;
    }
-   void setObjUpLimit(double limit)
+
+   Real getObjUpLimit() const
+   {
+      return m_objUpLimit;
+   }
+
+   void setObjUpLimit(Real limit)
    {
       m_objUpLimit = limit;
    }
+
    virtual Status solve()
    {
       if( getFromScratch() )
       {
          SoPlex::reLoad();
-         setFromScratch( false );
+         setFromScratch(false);
       }
       m_stat = SoPlex::solve();
 
       assert(rep() == COLUMN);
 
-      if (m_stat == OPTIMAL)
+      if( m_stat == OPTIMAL )
       {
-         double objval = value();
+         Real objval = value();
 
-         if ((objval > m_objUpLimit) || (objval < m_objLoLimit))
+         if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
             m_stat = ABORT_VALUE;
       }
       return m_stat;
    }
+
    Status getStatus() const
    {
       return m_stat;
    }
 
-   /* Problem, es ist nicht moeglich bei einem NameSet sowohl den
-    * Namen als auch den DataKey zu uebergeben. Das waere aber die
-    * korrekte Implementierung zumal die LPxLP::addRows usw. 
-    * jeweils auch eine Variante haben, die die neuen ID's 
-    * zurueckliefert.
-    * Dafuer brauchen wir aber erst eine neue NameSet Implementierung.
-    * Das hier unten klappt nicht, weil nach removeRows aus irgendweinem
-    * dummen Grund die ID's fuer das NameSet anders vergeben werden als 
-    * fuer das RowSet.
-    */
-   void addRowsWithNames(const LPRowSet& rset, const NameSet& rnames)
+   virtual void clear()
    {
-      assert(m_rownames.num() == nRows());
-      assert(rnames.num() == rset.num());
-
-#if 0
-      std::cerr << "[AR " << m_rownames.num() << " " 
-                << nRows() << " + "
-                << rnames.num() << std::endl;
-
-      int i; 
-
-      for(i = 0; i < rset.num(); i++)
-      {
-         if (m_rownames.has(rnames[i]))
-         {
-            std::cerr << "*** Doublicate " << rnames[i] << std::endl
-                      << m_rownames;
-            abort();
-         }
-      }
-      SPxRowId* newIdsR = new SPxRowId[rset.num()];
-      SPxRowId* newIdsN = new SPxRowId[rset.num()];
-      addRows(newIdsR, rset);
-      m_rownames.add(newIdsN, rnames);
-
-      for(i = 0; i < rset.num(); i++)
-         std::cerr << "AR " << newIdsR[i].getIdx() << " "
-                   << newIdsN[i].getIdx() << " "
-                   << rnames[i] << " / "
-                   << m_rownames[newIdsN[i]] 
-                   << std::endl;
-
-      for(i = 0; i < rset.num(); i++)
-         assert(newIdsR[i].getIdx() ==  newIdsN[i].getIdx());
-
-      delete [] newIdsR;
-      delete [] newIdsN;
-
-      std::cerr << "]AR " << m_rownames.num() << " " 
-                << nRows() << " + "
-                << rnames.num() << std::endl;
-#endif
-
-#ifndef NDEBUG      
-      for(int i = 0; i < rset.num(); i++)
-         if (m_rownames.has(rnames[i]))
-            std::cerr << "*** Doublicate rowname " << rnames[i] << std::endl << m_rownames;
-#endif /*NDEBUG*/
-      addRows(rset);
-      m_rownames.add(rnames);
-
-      assert(m_rownames.num() == nRows());
-   }
-   void addColsWithNames(const LPColSet& cset, const NameSet& cnames)
-   {
-      assert(m_colnames.num() == nCols());
-      assert(cnames.num() == cset.num());
-
-      addCols(cset);
-      m_colnames.add(cnames);
-
-      assert(m_colnames.num() == nCols());
-   }
-   virtual void removeRowsWithNames(int dstat[])
-   {
-#if 0
-      int count = 0;
-#endif
-      assert(m_rownames.num() == nRows());
-
-      /* SOPLEX marks rows to be deleted with a value < 0,
-       * while CPLEX marks them with dstat[i] == 1 
-       */
-      for(int i = 0; i < nRows(); i++)
-      {
-         if (dstat[i] != 0)
-         {
-            dstat[i] = -1;
-#if 0
-            count++;
-            std::cerr << "-RR " << rId(i).getIdx() << std::endl;
-#endif
-         }
-      }
-      removeRows( dstat );
-      m_rownames.remove( dstat );
-#if 0
-      std::cerr << m_rownames;
-
-      std::cerr << "*RR " << m_rownames.num() << " " 
-                << nRows() << " - "
-                << count << std::endl;
-#endif
-      assert(m_rownames.num() == nRows());
-   }
-   virtual void clearWithNames()
-   {
-      clear();
-      m_rownames.clear();
-      m_colnames.clear();
-
-      if (m_probname != NULL)
-         spx_free(m_probname);  /*lint !e1551*/
+      SoPlex::clear();
 
       m_stat = NO_PROBLEM;
    }
-   void dumpBasis(const char* filename)
-   {
-      std::ofstream file(filename);
-
-      if (file.good())
-         writeBasis(file, m_rownames, m_colnames);
-   }
-   bool isConsistent() const
-   {
-      if( m_rownames.num() != nRows() )
-         return MSGinconsistent("SPxSIP");
-
-      if( m_colnames.num() != nCols() )
-         return MSGinconsistent("SPxSIP");      
-
-      return SoPlex::isConsistent();
-   }
 };
 
-SPxSIP* SPxSIP::fromSIPLP(SIPLP lptr)
+
+
+/** LP interface */
+struct LPi
 {
-   SPxSIP* spx = reinterpret_cast<SPxSIP*>(lptr); /*lint !e740*/
+   SPxSCIP*         spx;                /**< SoPlex solver class */
+   int*             cstat;              /**< array for storing column basis status */
+   int*             rstat;              /**< array for storing row basis status */
+   int              cstatsize;          /**< size of cstat array */
+   int              rstatsize;          /**< size of rstat array */
+};
 
-   assert(spx->isConsistent());
+/** LPi state stores basis information */
+struct LPiState
+{
+   int              ncols;              /**< number of LP columns */
+   int              nrows;              /**< number of LP rows */
+   COLPACKET*       packcstat;          /**< column basis status in compressed form */
+   ROWPACKET*       packrstat;          /**< row basis status in compressed form */
+};
 
-   return spx;
+
+
+
+/*
+ * dynamic memory arrays
+ */
+
+/** resizes cstat array to have at least num entries */
+static
+RETCODE ensureCstatMem(
+   LPI*             lpi,                /**< LP interface structure */
+   int              num                 /**< minimal number of entries in array */
+   )
+{
+   assert(lpi != NULL);
+
+   if( num > lpi->cstatsize )
+   {
+      int newsize;
+
+      newsize = MAX(2*lpi->cstatsize, num);
+      ALLOC_OKAY( reallocMemoryArray(&lpi->cstat, newsize) );
+      lpi->cstatsize = newsize;
+   }
+   assert(num <= lpi->cstatsize);
+
+   return SCIP_OKAY;
 }
 
-extern "C" int SIPstrongbranch(
-   FILE*     ferr, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   double*   psol,
-   int*      cand, 
-   int       ncand,
-   double*   down, 
-   double*   up, 
-   int       itlim)
+/** resizes rstat array to have at least num entries */
+static
+RETCODE ensureRstatMem(
+   LPI*             lpi,                /**< LP interface structure */
+   int              num                 /**< minimal number of entries in array */
+   )
 {
-   METHOD("SIPstrongbranch");
+   assert(lpi != NULL);
 
-   assert(ferr   != NULL);
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(psol   != NULL);
-   assert(cand   != NULL);
-   assert(ncand  >  0);
-   assert(down   != NULL);
-   assert(up     != NULL);
-   assert(itlim  >  0);
+   if( num > lpi->rstatsize )
+   {
+      int newsize;
 
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
+      newsize = MAX(2*lpi->rstatsize, num);
+      ALLOC_OKAY( reallocMemoryArray(&lpi->rstat, newsize) );
+      lpi->rstatsize = newsize;
+   }
+   assert(num <= lpi->rstatsize);
 
-   SoPlex::VarStatus* rowstat  = new SoPlex::VarStatus[spx->nRows()];
-   SoPlex::VarStatus* colstat  = new SoPlex::VarStatus[spx->nCols()];
-   double             oldBound;
-   int                oldItlim = spx->terminationIter();
-   int                c;
-   SoPlex::Status     status = SoPlex::UNKNOWN;
-   bool               error = false;
+   return SCIP_OKAY;
+}
 
-   spx->getBasis( rowstat, colstat );
-   spx->setTerminationIter( itlim );
-   spx->setType( SoPlex::LEAVE );
+
+
+
+/*
+ * LPi state methods
+ */
+
+/** returns the number of packets needed to store column packet information */
+static 
+int colpacketNum(
+   int              ncols               /**< number of columns to store */
+   )
+{
+   return (ncols+COLS_PER_PACKET-1)/COLS_PER_PACKET;
+}
+
+/** returns the number of packets needed to store row packet information */
+static 
+int rowpacketNum(
+   int              nrows               /**< number of rows to store */
+   )
+{
+   return (nrows+ROWS_PER_PACKET-1)/ROWS_PER_PACKET;
+}
+
+/** store row and column basis status in a packed LPi state object */
+static
+void lpistatePack(
+   LPISTATE*       lpistate,            /**< pointer to LPi state data */
+   const int*      cstat,               /**< basis status of columns in unpacked format */
+   const int*      rstat                /**< basis status of rows in unpacked format */
+   )
+{
+   assert(lpistate != NULL);
+   assert(lpistate->packcstat != NULL);
+   assert(lpistate->packrstat != NULL);
+
+   SCIPencodeDualBit(cstat, lpistate->packcstat, lpistate->ncols);
+   SCIPencodeDualBit(rstat, lpistate->packrstat, lpistate->nrows);
+}
+
+/** unpacks row and column basis status from a packed LPi state object */
+static
+void lpistateUnpack(
+   const LPISTATE* lpistate,            /**< pointer to LPi state data */
+   int*            cstat,               /**< buffer for storing basis status of columns in unpacked format */
+   int*            rstat                /**< buffer for storing basis status of rows in unpacked format */
+   )
+{
+   assert(lpistate != NULL);
+   assert(lpistate->packcstat != NULL);
+   assert(lpistate->packrstat != NULL);
+
+   SCIPdecodeDualBit(lpistate->packcstat, cstat, lpistate->ncols);
+   SCIPdecodeDualBit(lpistate->packrstat, rstat, lpistate->nrows);
+}
+
+/** creates LPi state information object */
+static
+RETCODE lpistateCreate(
+   LPISTATE**       lpistate,           /**< pointer to LPi state */
+   MEMHDR*          memhdr,             /**< block memory */
+   int              ncols,              /**< number of columns to store */
+   int              nrows               /**< number of rows to store */
+   )
+{
+   assert(lpistate != NULL);
+   assert(memhdr != NULL);
+   assert(ncols >= 0);
+   assert(nrows >= 0);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, lpistate) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->packcstat, colpacketNum(ncols)) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->packrstat, rowpacketNum(nrows)) );
+
+   return SCIP_OKAY;
+}
+
+/** frees LPi state information */
+static
+void lpistateFree(
+   LPISTATE**       lpistate,           /**< pointer to LPi state information (like basis information) */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(memhdr != NULL);
+   assert(lpistate != NULL);
+   assert(*lpistate != NULL);
+
+   freeBlockMemoryArray(memhdr, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols));
+   freeBlockMemoryArray(memhdr, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrows));
+   freeBlockMemory(memhdr, lpistate);
+}
+
+
+
+
+/*
+ * local methods
+ */
+
+/** converts SCIP's objective sense into SOPLEX's objective sense */
+static
+SPxLP::SPxSense spxObjsen(
+   OBJSEN           objsen              /**< SCIP's objective sense value */
+   )
+{
+   switch( objsen )
+   {
+   case SCIP_OBJSEN_MAXIMIZE:
+      return SPxLP::MAXIMIZE;
+   case SCIP_OBJSEN_MINIMIZE:
+      return SPxLP::MINIMIZE;
+   default:
+      errorMessage("invalid objective sense");
+      abort();
+   }
+}
+
+
+
+
+/*
+ * LP Interface Methods
+ */
+
+
+/*
+ * Miscellaneous Methods
+ */
+
+static char spxname[MAXSTRLEN];
+
+/**@name Miscellaneous Methods */
+/**@{ */
+
+/** gets name and version of LP solver */
+const char* SCIPlpiGetSolverName(
+   void
+   )
+{
+   SPxSCIP spx("tmp");
+   int version;
+
+   version = spx.version();
+   sprintf(spxname, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   return spxname;
+}
+
+/**@} */
+
+
+
+
+/*
+ * LPI Creation and Destruction Methods
+ */
+
+/**@name LPI Creation and Destruction Methods */
+/**@{ */
+
+/** creates an LP problem object */
+RETCODE SCIPlpiCreate(
+   LPI**            lpi,                /**< pointer to an LP interface structure */
+   const char*      name                /**< problem name */
+   )
+{
+   assert(lpi != NULL);
+
+   /* create SoPlex object */
+   ALLOC_OKAY( allocMemory(lpi) );
+   ALLOC_OKAY( (*lpi)->spx = new SPxSCIP(name) );
+   (*lpi)->cstat = NULL;
+   (*lpi)->rstat = NULL;
+   (*lpi)->cstatsize = 0;
+   (*lpi)->rstatsize = 0;
+
+   return SCIP_OKAY;
+}
+
+/** deletes an LP problem object */
+RETCODE SCIPlpiFree(
+   LPI**            lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+   assert(*lpi != NULL);
+   assert((*lpi)->spx != NULL);
+
+   /* free LP */
+   delete (*lpi)->spx;
+
+   /* free memory */
+   freeMemoryArrayNull(&(*lpi)->cstat);
+   freeMemoryArrayNull(&(*lpi)->rstat);
+   freeMemory(lpi);
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Modification Methods
+ */
+
+/**@name Modification Methods */
+/**@{ */
+
+/** copies LP data with column matrix into LP solver */
+RETCODE SCIPlpiLoadColLP(
+   LPI*             lpi,                /**< LP interface structure */
+   OBJSEN           objsen,             /**< objective sense */
+   int              ncols,              /**< number of columns */
+   const Real*      obj,                /**< objective function values of columns */
+   const Real*      lb,                 /**< lower bounds of columns */
+   const Real*      ub,                 /**< upper bounds of columns */
+   char**           colnames,           /**< column names, or NULL */
+   int              nrows,              /**< number of rows */
+   const Real*      lhs,                /**< left hand sides of rows */
+   const Real*      rhs,                /**< right hand sides of rows */
+   char**           rownames,           /**< row names, or NULL */
+   int              nnonz,              /**< number of nonzero elements in the constraint matrix */
+   const int*       beg,                /**< start index of each column in ind- and val-array */
+   const int*       ind,                /**< row indices of constraint matrix entries */
+   const Real*      val                 /**< values of constraint matrix entries */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+
+   SPxSCIP* spx = lpi->spx;
+   LPRowSet rows(nrows);
+   DSVector emptyVector(0);
+   int i;
+
+   spx->clear();
+
+   /* set objective sense */
+   spx->changeSense(spxObjsen(objsen));
+
+   /* create empty rows with given sides */
+   for( i = 0; i < nrows; ++i )
+      rows.add(lhs[i], emptyVector, rhs[i]);
+   spx->addRows(rows);
+   
+   /* create column vectors with coefficients and bounds */
+   CHECK_OKAY( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
+
+   return SCIP_OKAY;
+}
+
+/** adds columns to the LP */
+RETCODE SCIPlpiAddCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncols,              /**< number of columns to be added */
+   const Real*      obj,                /**< objective function values of new columns */
+   const Real*      lb,                 /**< lower bounds of new columns */
+   const Real*      ub,                 /**< upper bounds of new columns */
+   char**           colnames,           /**< column names, or NULL */
+   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   const int*       beg,                /**< start index of each column in ind- and val-array */
+   const int*       ind,                /**< row indices of constraint matrix entries */
+   const Real*      val                 /**< values of constraint matrix entries */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(beg != NULL);
+   assert(ind != NULL);
+   assert(val != NULL);
+
+   SPxSCIP* spx = lpi->spx;
+   LPColSet cols(ncols);
+   DSVector colVector(ncols);
+   int last;
+   int i;
+   int j;
+
+   /* create column vectors with coefficients and bounds */
+   for( i = 0; i < ncols; ++i )
+   {
+      colVector.clear();
+      
+      last = (i == ncols-1 ? nnonz : beg[i+1]);
+      for( j = beg[i]; j < last; ++j )
+         colVector.add(ind[j], val[j]);
+      
+      cols.add(obj[i], lb[i], colVector, ub[i]);
+   }
+   spx->addCols(cols);
+
+   return SCIP_OKAY;
+}
+
+/** deletes all columns in the given range from LP */
+RETCODE SCIPlpiDelCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to be deleted */
+   int              lastcol             /**< last column to be deleted */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+
+   lpi->spx->removeColRange(firstcol, lastcol);
+
+   return SCIP_OKAY;   
+}
+
+/** deletes columns from LP; the new position of a column must not be greater that its old position */
+RETCODE SCIPlpiDelColset(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of columns
+                                         *   input:  1 if column should be deleted, 0 if not
+                                         *   output: new position of column, -1 if column was deleted */
+   )
+{
+   int ncols;
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   ncols = lpi->spx->nCols();
+
+   /* SOPLEX' removeCols() method deletes the columns with dstat[i] < 0, so we have to negate the values */
+   for( i = 0; i < ncols; ++i )
+      dstat[i] *= -1;
+
+   lpi->spx->removeCols(dstat);
+
+   return SCIP_OKAY;   
+}
+
+/** adds rows to the LP */
+RETCODE SCIPlpiAddRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int              nrows,              /**< number of rows to be added */
+   const Real*      lhs,                /**< left hand sides of new rows */
+   const Real*      rhs,                /**< right hand sides of new rows */
+   char**           rownames,           /**< row names, or NULL */
+   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   const int*       beg,                /**< start index of each row in ind- and val-array */
+   const int*       ind,                /**< column indices of constraint matrix entries */
+   const Real*      val                 /**< values of constraint matrix entries */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(beg != NULL);
+   assert(ind != NULL);
+   assert(val != NULL);
+
+   SPxSCIP* spx = lpi->spx;
+   LPRowSet rows(nrows);
+   DSVector rowVector(nrows);
+   int last;
+   int i;
+   int j;
+
+   /* create row vectors with given sides */
+   for( i = 0; i < nrows; ++i )
+   {
+      rowVector.clear();
+      
+      last = (i == nrows-1 ? nnonz : beg[i+1]);
+      for( j = beg[i]; j < last; ++j )
+         rowVector.add(ind[j], val[j]);
+      
+      rows.add(lhs[i], rowVector, rhs[i]);
+   }
+   spx->addRows(rows);
+
+   return SCIP_OKAY;
+}
+
+/** deletes all rows in the given range from LP */
+RETCODE SCIPlpiDelRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstrow,           /**< first row to be deleted */
+   int              lastrow             /**< last row to be deleted */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+
+   lpi->spx->removeRowRange(firstrow, lastrow);
+
+   return SCIP_OKAY;   
+}
+
+/** deletes rows from LP; the new position of a row must not be greater that its old position */
+RETCODE SCIPlpiDelRowset(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of rows
+                                         *   input:  1 if row should be deleted, 0 if not
+                                         *   output: new position of row, -1 if row was deleted */
+   )
+{
+   int nrows;
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   nrows = lpi->spx->nRows();
+
+   /* SOPLEX' removeRows() method deletes the rows with dstat[i] < 0, so we have to negate the values */
+   for( i = 0; i < nrows; ++i )
+      dstat[i] *= -1;
+
+   lpi->spx->removeRows(dstat);
+
+   return SCIP_OKAY;   
+}
+
+/** clears the whole LP */
+RETCODE SCIPlpiClear(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   lpi->spx->clear();
+
+   return SCIP_OKAY;
+}
+
+/** changes lower and upper bounds of columns */
+RETCODE SCIPlpiChgBounds(
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncols,              /**< number of columns to change bounds for */
+   const int*       ind,                /**< column indices */
+   const Real*      lb,                 /**< values for the new lower bounds */
+   const Real*      ub                  /**< values for the new upper bounds */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ind != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+
+   for( i = 0; i < ncols; ++i )
+   {
+      assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+      lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes left and right hand sides of rows */
+RETCODE SCIPlpiChgSides(
+   LPI*             lpi,                /**< LP interface structure */
+   int              nrows,              /**< number of rows to change sides for */
+   const int*       ind,                /**< row indices */
+   const Real*      lhs,                /**< new values for left hand sides */
+   const Real*      rhs                 /**< new values for right hand sides */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ind != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+
+   for( i = 0; i < nrows; ++i )
+   {
+      assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
+      lpi->spx->changeRange(ind[i], lhs[i], rhs[i]);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes a single coefficient */
+RETCODE SCIPlpiChgCoef(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number of coefficient to change */
+   int              col,                /**< column number of coefficient to change */
+   Real             newval              /**< new value of coefficient */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= row && row < lpi->spx->nRows());
+   assert(0 <= col && col < lpi->spx->nCols());
+
+   lpi->spx->changeElement(row, col, newval);
+
+   return SCIP_OKAY;
+}
+
+/** changes the objective sense */
+RETCODE SCIPlpiChgObjsen(
+   LPI*             lpi,                /**< LP interface structure */
+   OBJSEN           objsen              /**< new objective sense */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   lpi->spx->changeSense(spxObjsen(objsen));
+
+   return SCIP_OKAY;
+}
+
+/** changes objective values of columns in the LP */
+RETCODE SCIPlpiChgObj(
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncols,              /**< number of columns to change objective value for */
+   int*             ind,                /**< column indices to change objective value for */
+   Real*            obj                 /**< new objective values for columns */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
+
+   for( i = 0; i < ncols; ++i )
+   {
+      assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+      lpi->spx->changeObj(ind[i], obj[i]);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
+RETCODE SCIPlpiScaleRow(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number to scale */
+   Real             scaleval            /**< scaling multiplier */
+   )
+{
+   Real lhs;
+   Real rhs;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(scaleval != 0.0);
+
+   /* get the row vector and the row's sides */
+   SVector rowvec = lpi->spx->rowVector(row);
+   lhs = lpi->spx->lhs(row);
+   rhs = lpi->spx->rhs(row);
+
+   /* scale the row vector */
+   rowvec *= scaleval;
+
+   /* adjust the sides */
+   if( lhs > -soplex::infinity )
+      lhs *= scaleval;
+   else if( scaleval < 0.0 )
+      lhs = soplex::infinity;
+   if( rhs < soplex::infinity )
+      rhs *= scaleval;
+   else if( scaleval < 0.0 )
+      rhs = -soplex::infinity;
+   if( scaleval < 0.0 )
+   {
+      Real oldlhs = lhs;
+      lhs = rhs;
+      rhs = oldlhs;
+   }
+
+   /* create the new row */
+   LPRow lprow(lhs, rowvec, rhs);
+   
+   /* change the row in the LP */
+   lpi->spx->changeRow(row, lprow);
+
+   return SCIP_OKAY;
+}
+
+/** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
+ *  are divided by the scalar; for negative scalars, the column's bounds are switched
+ */
+RETCODE SCIPlpiScaleCol(
+   LPI*             lpi,                /**< LP interface structure */
+   int              col,                /**< column number to scale */
+   Real             scaleval            /**< scaling multiplier */
+   )
+{
+   Real obj;
+   Real lb;
+   Real ub;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(scaleval != 0.0);
+
+   /* get the col vector and the col's bounds and objective value */
+   SVector colvec = lpi->spx->colVector(col);
+   obj = lpi->spx->obj(col);
+   lb = lpi->spx->lower(col);
+   ub = lpi->spx->upper(col);
+
+   /* scale the col vector */
+   colvec *= scaleval;
+
+   /* scale the objective value */
+   obj *= scaleval;
+
+   /* adjust the bounds */
+   if( lb > -soplex::infinity )
+      lb /= scaleval;
+   else if( scaleval < 0.0 )
+      lb = soplex::infinity;
+   if( ub < soplex::infinity )
+      ub /= scaleval;
+   else if( scaleval < 0.0 )
+      ub = -soplex::infinity;
+   if( scaleval < 0.0 )
+   {
+      Real oldlb = lb;
+      lb = ub;
+      ub = oldlb;
+   }
+
+   /* create the new col (in LPCol's constructor, the upper bound is given first!) */
+   LPCol lpcol(obj, colvec, ub, lb);
+   
+   /* change the col in the LP */
+   lpi->spx->changeCol(col, lpcol);
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Data Accessing Methods
+ */
+
+/**@name Data Accessing Methods */
+/**@{ */
+
+/** gets the number of rows in the LP */
+RETCODE SCIPlpiGetNRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nrows               /**< pointer to store the number of rows */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(nrows != NULL);
+
+   *nrows = lpi->spx->nRows();
+
+   return SCIP_OKAY;
+}
+
+/** gets the number of columns in the LP */
+RETCODE SCIPlpiGetNCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             ncols               /**< pointer to store the number of cols */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ncols != NULL);
+
+   *ncols = lpi->spx->nCols();
+
+   return SCIP_OKAY;
+}
+
+/** gets the number of nonzero elements in the LP constraint matrix */
+RETCODE SCIPlpiGetNNonz(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nnonz               /**< pointer to store the number of nonzeros */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(nnonz != NULL);
+
+   /* SOPLEX has no direct method to return the number of nonzeros, so we have to count them manually */
+   *nnonz = 0;
+   if( lpi->spx->nRows() < lpi->spx->nCols() )
+   {
+      for( i = 0; i < lpi->spx->nRows(); ++i )
+         (*nnonz) += lpi->spx->rowVector(i).size();
+   }
+   else
+   {
+      for( i = 0; i < lpi->spx->nCols(); ++i )
+         (*nnonz) += lpi->spx->colVector(i).size();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets columns from LP problem object; the arrays have to be large enough to store all values
+ *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+RETCODE SCIPlpiGetCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get from LP */
+   int              lastcol,            /**< last column to get from LP */
+   Real*            lb,                 /**< buffer to store the lower bound vector, or NULL */
+   Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
+   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*             beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
+   int*             ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   )
+{
+   int i;
+   int j;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+
+   if( lb != NULL )
+   {
+      assert(ub != NULL);
+
+      const Vector& lbvec = lpi->spx->lower();
+      const Vector& ubvec = lpi->spx->upper();
+      for( i = firstcol; i <= lastcol; ++i )
+      {
+         lb[i-firstcol] = lbvec[i];
+         ub[i-firstcol] = ubvec[i];
+      }
+   }
+   else
+      assert(ub == NULL);
+
+   if( nnonz != NULL )
+   {
+      *nnonz = 0;
+      for( i = firstcol; i <= lastcol; ++i )
+      {
+         beg[i-firstcol] = *nnonz;
+         const SVector& cvec = lpi->spx->colVector(i);
+         for( j = 0; j < cvec.size(); ++j )
+         {
+            ind[*nnonz] = cvec.index(j);
+            val[*nnonz] = cvec.value(j);
+            (*nnonz)++;
+         }
+      }
+   }
+   else
+   {
+      assert(beg == NULL);
+      assert(ind == NULL);
+      assert(val == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets rows from LP problem object; the arrays have to be large enough to store all values.
+ *  Either both, lhs and rhs, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+RETCODE SCIPlpiGetRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstrow,           /**< first row to get from LP */
+   int              lastrow,            /**< last row to get from LP */
+   Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
+   Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
+   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*             beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
+   int*             ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   )
+{
+   int i;
+   int j;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+
+   if( lhs != NULL )
+   {
+      assert(rhs != NULL);
+
+      const Vector& lhsvec = lpi->spx->lhs();
+      const Vector& rhsvec = lpi->spx->rhs();
+      for( i = firstrow; i <= lastrow; ++i )
+      {
+         lhs[i-firstrow] = lhsvec[i];
+         rhs[i-firstrow] = rhsvec[i];
+      }
+   }
+   else
+      assert(rhs == NULL);
+
+   if( nnonz != NULL )
+   {
+      *nnonz = 0;
+      for( i = firstrow; i <= lastrow; ++i )
+      {
+         beg[i-firstrow] = *nnonz;
+         const SVector& rvec = lpi->spx->rowVector(i);
+         for( j = 0; j < rvec.size(); ++j )
+         {
+            ind[*nnonz] = rvec.index(j);
+            val[*nnonz] = rvec.value(j);
+            (*nnonz)++;
+         }
+      }
+   }
+   else
+   {
+      assert(beg == NULL);
+      assert(ind == NULL);
+      assert(val == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets objective values from LP problem object */
+RETCODE SCIPlpiGetObj(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get objective value for */
+   int              lastcol,            /**< last column to get objective value for */
+   Real*            vals                /**< array to store objective values */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+   assert(vals != NULL);
+   
+   for( i = firstcol; i <= lastcol; ++i )
+      vals[i-firstcol] = lpi->spx->obj(i);
+
+   return SCIP_OKAY;
+}
+
+/** gets a single coefficient */
+RETCODE SCIPlpiGetCoef(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number of coefficient */
+   int              col,                /**< column number of coefficient */
+   Real*            val                 /**< pointer to store the value of the coefficient */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= col && col < lpi->spx->nCols());
+   assert(0 <= row && row < lpi->spx->nRows());
+   assert(val != NULL);
+
+   *val = lpi->spx->colVector(col)[row];
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Solving Methods
+ */
+
+/**@name Solving Methods */
+/**@{ */
+
+/** solves LP -- used for both, primal and dual simplex, because SOPLEX doesn't distinct the two cases */
+static
+RETCODE spxSolve(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   debugMessage("calling SOPLEX simplex: %d cols, %d rows\n", lpi->spx->nCols(), lpi->spx->nRows());
+
+   SoPlex::Status status = lpi->spx->solve();
+
+   switch( status )
+   {
+   case SoPlex::ABORT_TIME:
+   case SoPlex::ABORT_ITER:
+   case SoPlex::ABORT_VALUE:
+   case SoPlex::SINGULAR:
+   case SoPlex::REGULAR:
+   case SoPlex::UNKNOWN:
+   case SoPlex::OPTIMAL:
+   case SoPlex::UNBOUNDED:
+   case SoPlex::INFEASIBLE:
+      return SCIP_OKAY;
+   case SoPlex::NO_PROBLEM:
+   case SoPlex::RUNNING:
+   case SoPlex::ERROR:
+   default:
+      return SCIP_LPERROR;
+   }
+}
+
+/** calls primal simplex to solve the LP */
+RETCODE SCIPlpiSolvePrimal(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   return spxSolve(lpi);
+}
+
+/** calls dual simplex to solve the LP */
+RETCODE SCIPlpiSolveDual(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   return spxSolve(lpi);
+}
+
+/** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
+RETCODE SCIPlpiSolveBarrier(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   return spxSolve(lpi);
+}
+
+/** performs strong branching iterations on all candidates */
+RETCODE SCIPlpiStrongbranch(
+   LPI*             lpi,                /**< LP interface structure */
+   const int*       cand,               /**< candidate list */
+   Real*            psol,               /**< array with current primal solution values of candidates */
+   int              ncand,              /**< size of candidate list */
+   int              itlim,              /**< iteration limit for strong branchings */
+   Real*            down,               /**< stores dual bound after branching candidate down */
+   Real*            up                  /**< stores dual bound after branching candidate up */
+   )
+{
+   SPxSCIP* spx;
+   SoPlex::VarStatus* rowstat;
+   SoPlex::VarStatus* colstat;
+   SoPlex::Status status;
+   Real oldBound;
+   bool error;
+   int oldItlim;
+   int c;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(cand != NULL);
+
+   spx = lpi->spx;
+   rowstat = new SoPlex::VarStatus[spx->nRows()];
+   colstat = new SoPlex::VarStatus[spx->nCols()]; 
+   oldItlim = spx->terminationIter();             
+   status = SoPlex::UNKNOWN;                      
+   error = false;                                 
+
+   spx->getBasis(rowstat, colstat);    
+   spx->setTerminationIter(itlim);
+   spx->setType(SoPlex::LEAVE);        
    
    for( c = 0; c < ncand && !error; ++c )
    {
-      assert( SIP_FRAC( psol[cand[c]] ) );
-
       /* down branch */
-      oldBound = spx->upper( cand[c] );
-      spx->changeUpper( cand[c], SIP_DOWN( psol[cand[c]] ) );
-
-#ifdef DEBUG_FILEOUTPUT
-      spx->dumpFile( "strongdownLP.lp" );
-#endif
+      debugMessage("strong branching down on x%d (%g) with %d iterations\n", cand[c], psol[c], itlim);
+      oldBound = spx->upper(cand[c]);
+      spx->changeUpper(cand[c], floor(psol[c]));
 
       status = spx->solve();
       switch( status )
@@ -390,1433 +1281,846 @@ extern "C" int SIPstrongbranch(
          error = true;
          break;
       }
-      spx->changeUpper( cand[c], oldBound );
-      spx->setBasis( rowstat, colstat );
+      spx->changeUpper(cand[c], oldBound);
+      spx->setBasis(rowstat, colstat);
 
-      if( !error )
+      if( error )
+         continue;
+
+      /* up branch */
+      debugMessage("strong branching  up  on x%d (%g) with %d iterations\n", cand[c], psol[c], itlim);
+      oldBound = spx->lower(cand[c]);
+      spx->changeLower(cand[c], ceil(psol[c]));
+      
+      status = spx->solve();
+      switch( status )
       {
-         /* up branch */
-         oldBound = spx->lower( cand[c] );
-         spx->changeLower( cand[c], SIP_CEIL( psol[cand[c]] ) );
-
-#ifdef DEBUG_FILEOUTPUT
-      spx->dumpFile( "strongupLP.lp" );
-#endif
-
-         status = spx->solve();
-         switch( status )
-         {
-         case SoPlex::ABORT_TIME:
-         case SoPlex::ABORT_ITER:
-         case SoPlex::OPTIMAL:
-            up[c] = spx->value();
-            break;
-         case SoPlex::ABORT_VALUE:
-         case SoPlex::INFEASIBLE:
-            up[c] = spx->terminationValue();
-            break;
-         case SoPlex::UNBOUNDED:
-         default:
-            error = true;
-            break;
-         }
-         spx->changeLower( cand[c], oldBound );
-         spx->setBasis( rowstat, colstat );
+      case SoPlex::ABORT_TIME:
+      case SoPlex::ABORT_ITER:
+      case SoPlex::OPTIMAL:
+         up[c] = spx->value();
+         break;
+      case SoPlex::ABORT_VALUE:
+      case SoPlex::INFEASIBLE:
+         up[c] = spx->terminationValue();
+         break;
+      case SoPlex::UNBOUNDED:
+      default:
+         error = true;
+         break;
       }
+      spx->changeLower(cand[c], oldBound);
+      spx->setBasis(rowstat, colstat);
    }
 
-   spx->setTerminationIter( oldItlim );
-
+   spx->setTerminationIter(oldItlim);
+   
    delete [] rowstat;
    delete [] colstat;
 
    if( error )
    {
-      fprintf( ferr, "Error in SIPstrongbranch():" );
-      fprintf( ferr, " SOPLEX status = %d\n", int(status) );
-      return SIP_LPERROR;
+      char msg[MAXSTRLEN];
+      sprintf(msg, "SOPLEX status %d returned SCIPlpiStrongbranch()", int(status));
+      errorMessage(msg);
+      return SCIP_LPERROR;
    }
-   return SIP_OKAY;
+
+   return SCIP_OKAY;
 }
 
-extern "C" int SIPoptLP(
-   SIPInfaLP infaLP, 
-   SIPLP     lptr)
+/**@} */
+
+
+
+
+/*
+ * Solution Information Methods
+ */
+
+/**@name Solution Information Methods */
+/**@{ */
+
+/** gets information about primal and dual feasibility of the LP basis */
+RETCODE SCIPlpiGetBasisFeasibility(
+   LPI*             lpi,                /**< LP interface structure */
+   Bool*            primalfeasible,     /**< stores primal feasibility status */
+   Bool*            dualfeasible        /**< stores dual feasibility status */
+   )
 {
-   METHOD("SIPoptLP");
+   SPxBasis::SPxStatus basestatus;
 
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(primalfeasible != NULL);
+   assert(dualfeasible != NULL);
 
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
+   basestatus = lpi->spx->basis().status();
+   *primalfeasible = (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL);
+   *dualfeasible = (basestatus == SPxBasis::DUAL || basestatus == SPxBasis::OPTIMAL);
 
-   /* spx->setType(SoPlex::LEAVE); */
-   
-#if defined(DEBUG_FILEOUTPUT)
-   spx->dumpFile( "subproblemLP.lp" );
-#endif
-
-   SoPlex::Status status = spx->solve();
-
-   switch( status )
-      {
-      case SoPlex::ABORT_TIME:
-      case SoPlex::ABORT_ITER:
-      case SoPlex::ABORT_VALUE:
-      case SoPlex::SINGULAR:
-      case SoPlex::REGULAR:
-      case SoPlex::UNKNOWN:
-      case SoPlex::OPTIMAL:
-      case SoPlex::UNBOUNDED:
-      case SoPlex::INFEASIBLE:
-         return SIP_OKAY;
-      case SoPlex::NO_PROBLEM:
-      case SoPlex::RUNNING:
-      case SoPlex::ERROR:
-      default:
-         return SIP_LPERROR;
-      }
-}
-
-extern "C" int SIPoptLPPrimal(
-   SIPInfaLP infaLP, 
-   SIPLP     lptr)
-{
-   METHOD("SIPoptLPPrimal");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   /* spx->setType(SoPlex::ENTER); */
-   
-#ifdef DEBUG_FILEOUTPUT
-   spx->dumpFile( "subproblemLP.lp" );
-#endif
-
-   SoPlex::Status status = spx->solve();
-
-   switch( status )
-      {
-      case SoPlex::ABORT_TIME:
-      case SoPlex::ABORT_ITER:
-      case SoPlex::ABORT_VALUE:
-      case SoPlex::SINGULAR:
-      case SoPlex::REGULAR:
-      case SoPlex::UNKNOWN:
-      case SoPlex::OPTIMAL:
-      case SoPlex::UNBOUNDED:
-      case SoPlex::INFEASIBLE:
-         return SIP_OKAY;
-      case SoPlex::NO_PROBLEM:
-      case SoPlex::RUNNING:
-      case SoPlex::ERROR:
-      default:
-         return SIP_LPERROR;
-      }
-}
-
-extern "C" int SIPgetLPStatus(
-   SIPInfaLP infaLP,
-   SIPLP     lptr,
-   int       *solstat)
-{
-   METHOD("SIPgetLPStatus");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   *solstat = int(spx->getStatus());
-   return SIP_OKAY;
-}
-
-
-/** returns TRUE iff error occured during LP solve */
-extern "C" int SIPerrorLP(
-   SIPLP lptr,
-   int solstat)
-{
-   METHOD("SIPerrorLP");
-
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::ERROR))
-      ||  (solstat == int(SoPlex::NO_PROBLEM))
-      ||  (solstat == int(SoPlex::RUNNING))
-      ||  (solstat == int(SoPlex::UNKNOWN));
-}
-
-/** returns TRUE iff LP solution is stable, ie no numerical troubles occured */
-extern "C" int SIPisStable(
-   SIPLP lptr,
-   int solstat)
-{
-   METHOD("SIPisStable");
-
-   assert(lptr != NULL);
-
-   return (solstat != int(SoPlex::SINGULAR));
-}
-
-/** returns TRUE iff LP is primal infeasible */
-extern "C" int SIPisPrimalInfeasible(
-   SIPLP lptr,
-   int solstat)
-{
-   METHOD("SIPisPrimalInfeasible");
-
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::INFEASIBLE));
+   return SCIP_OKAY;
 }
 
 /** returns TRUE iff LP is primal unbounded */
-extern "C" int SIPisPrimalUnbounded(
-   SIPLP lptr,
-   int solstat)
+Bool SCIPlpiIsPrimalUnbounded(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPisPrimalUnbounded");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::UNBOUNDED));
+   return (lpi->spx->getStatus() == SoPlex::UNBOUNDED && lpi->spx->basis().status() == SPxBasis::PRIMAL);
 }
 
-/** returns TRUE iff LP is solved to optimality */
-extern "C" int SIPisOptimal(
-   SIPLP lptr,
-   int solstat)
+/** returns TRUE iff LP is primal infeasible */
+Bool SCIPlpiIsPrimalInfeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPisOptimal");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::OPTIMAL));
+   return (lpi->spx->getStatus() == SoPlex::INFEASIBLE);
 }
 
-/** returns TRUE iff a dual feasible solution has been found */
-extern "C" int SIPisDualValid(
-   SIPLP lptr,
-   int solstat)
+/** returns TRUE iff LP is dual unbounded */
+Bool SCIPlpiIsDualUnbounded(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPisDualValid");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::OPTIMAL));
+   return (lpi->spx->getStatus() == SoPlex::INFEASIBLE && lpi->spx->basis().status() == SPxBasis::DUAL);
 }
 
-/** returns TRUE iff objective limit is exceeded */
-extern "C" int SIPexObjlim(
-   SIPLP lptr,
-   int solstat)
+/** returns TRUE iff LP is dual infeasible */
+Bool SCIPlpiIsDualInfeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPexObjlim");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::UNBOUNDED))
-      ||  (solstat == int(SoPlex::ABORT_VALUE));
+   return (lpi->spx->getStatus() == SoPlex::UNBOUNDED);
 }
 
-/** TRUE iff iteration limit has been exceeded */
-extern "C" int SIPiterlim(
-   SIPLP lptr,
-   int solstat)
+/** returns TRUE iff LP was solved to optimality */
+Bool SCIPlpiIsOptimal(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPiterlim");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::ABORT_ITER));
+   return (lpi->spx->getStatus() == SoPlex::OPTIMAL);
 }
 
-/** TRUE iff time limit has been exceeded */
-extern "C" int SIPtimelim(
-   SIPLP lptr,
-   int solstat)
+/** returns TRUE iff actual LP basis is stable */
+Bool SCIPlpiIsStable(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPtimelim");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(lptr != NULL);
-
-   return (solstat == int(SoPlex::ABORT_TIME));
+   return (lpi->spx->getStatus() != SoPlex::ERROR && lpi->spx->getStatus() != SoPlex::SINGULAR);
 }
 
-
-extern "C" int SIPopenInfa(
-   FILE*      /*ferr*/, 
-   SIPInfaLP* infaLP)
+/** returns TRUE iff the objective limit was reached */
+Bool SCIPlpiIsObjlimExc(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPopenInfa");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(infaLP != NULL);
-
-   *infaLP = reinterpret_cast<SIPInfaLP>(&dummy_environment); /*lint !e740*/
-   
-   return SIP_OKAY;
-      
+   return (lpi->spx->getStatus() == SoPlex::ABORT_VALUE);
 }
 
-extern "C" int SIPfreeInfa(
-   FILE*      /*ferr*/, 
-   SIPInfaLP* infaLP)
+/** returns TRUE iff the iteration limit was reached */
+Bool SCIPlpiIsIterlimExc(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPfreeInfa");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(infaLP  != NULL);
-   assert(*infaLP != NULL);
-
-   *infaLP = NULL;
-
-   return SIP_OKAY;
-   
+   return (lpi->spx->getStatus() == SoPlex::ABORT_ITER);
 }
 
-extern "C" int SIPopenLP(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP*    lptr, 
-   char*     name)
+/** returns TRUE iff the time limit was reached */
+Bool SCIPlpiIsTimelimExc(
+   LPI*             lpi                 /**< LP interface structure */
+   )
 {
-   METHOD("SIPopenLP");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-
-   SPxSIP* spx = new SPxSIP;
-   
-   if (name != NULL)
-      spx->setProbname(name);
-
-   *lptr = reinterpret_cast<SIPLP>(spx);  /*lint !e740*/
-
-   return SIP_OKAY;
-
+   return (lpi->spx->getStatus() == SoPlex::ABORT_TIME);
 }
 
-extern "C" int SIPfreeLP(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP*    lptr)
+/** gets objective value of solution */
+RETCODE SCIPlpiGetObjval(
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            objval              /**< stores the objective value */
+   )
 {
-   METHOD("SIPfreeLP");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(objval != NULL);
 
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   
-   if (*lptr != NULL)
+   *objval = lpi->spx->value();
+
+   return SCIP_OKAY;
+}
+
+/** gets primal and dual solution vectors */
+RETCODE SCIPlpiGetSol(
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            objval,             /**< stores the objective value, may be NULL if not needed */
+   Real*            primsol,            /**< primal solution vector, may be NULL if not needed */
+   Real*            dualsol,            /**< dual solution vector, may be NULL if not needed */
+   Real*            activity,           /**< row activity vector, may be NULL if not needed */
+   Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
+   )
+{
+   int dummy;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   if( objval != NULL )
+      *objval = lpi->spx->value();
+
+   if( primsol != NULL )
    {
-      delete SPxSIP::fromSIPLP(*lptr);  /*lint !e740*/
-      *lptr = NULL;
+      Vector tmp(lpi->spx->nCols(), primsol);
+      lpi->spx->getPrimal(tmp);
+   }
+   if( dualsol != NULL )
+   {
+      Vector tmp(lpi->spx->nRows(), dualsol);
+      lpi->spx->getDual(tmp);
+   }
+   if( activity != NULL )
+   {
+      Vector tmp(lpi->spx->nRows(), activity);
+      lpi->spx->getSlacks(tmp);  /* in SOPLEX, the activities are called "slacks" */
+   }
+   if( redcost != NULL )
+   {
+      Vector tmp(lpi->spx->nCols(), redcost);
+      lpi->spx->getRdCost(tmp);
    }
 
-   return SIP_OKAY;
-   
+   return SCIP_OKAY;
 }
 
-extern "C" int SIPcopyLP(
-   FILE*     ferr, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   int       ncol, 
-   int       nrow,
-   int       objsen, 
-   double*   obj, 
-   double*   rhs, 
-   char*     sen, 
-   int*      beg,
-   int*      cnt, 
-   int*      ind, 
-   double*   val, 
-   double*   lb, 
-   double*   ub,
-   char**    cname, 
-   char**    rname)
+/** gets primal ray for unbounded LPs */
+RETCODE SCIPlpiGetPrimalRay(
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            ray                 /**< primal ray */
+   )
 {
-   char      defname[128];
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   METHOD("SIPcopyLP");
-
-   assert(ferr   != NULL);
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(ncol   >  0);
-   assert(nrow   >  0);
-   assert(objsen == -1 || objsen == +1);
-   assert(obj    != NULL);
-   assert(rhs    != NULL);
-   assert(sen    != NULL);
-   assert(beg    != NULL);
-   assert(cnt    != NULL);
-   assert(ind    != NULL);
-   assert(val    != NULL);
-   assert(lb     != NULL);
-   assert(ub     != NULL);
-   /*   assert(cname  != NULL);*/
-   /*   assert(rname  != NULL);*/
- 
-   SPxSIP*   spx = SPxSIP::fromSIPLP(lptr);
-   LPColSet  cols(ncol);
-   LPRowSet  rows(nrow);
-   NameSet   colnames(ncol);
-   NameSet   rownames(nrow);
-   DSVector  colVector(nrow);
-   DSVector  emptyVector(0);
-   int       i;
-
-   spx->clearWithNames();
-
-   for(i = 0; i < nrow; i++)
-   {
-      switch(sen[i])
-      {
-      case 'L':
-         rows.add(-soplex::infinity, emptyVector, rhs[i]);
-         break;
-      case 'G':
-         rows.add(rhs[i], emptyVector, soplex::infinity);
-         break;
-      case 'E':
-         rows.add(rhs[i], emptyVector, rhs[i]);
-         break;
-      case 'R':
-#if 0
-         assert(rng != NULL);
-         if (rng[i] > 0)
-            rows.add(rhs[i], emptyVector, rhs[i] + rng[i]);
-         else
-            rows.add(rhs[i] + rng[i], emptyVector, rhs[i]);
-         break;
-#else
-         std::cout << "Ranges are not supported!" << std::endl;
-         abort();
-#endif
-      default:
-         abort();
-      }
-      if( rname != NULL )
-         rownames.add(rname[i]);
-      else
-      {
-         sprintf( defname, "r%d", i );
-         rownames.add( defname );
-      }
-   }
-   spx->addRowsWithNames(rows, rownames);
-
-   for(i = 0; i < ncol; i++)
-   {
-      colVector.clear();
-
-      for(int j = 0; j < cnt[i]; j++)
-         colVector.add(ind[beg[i] + j], val[beg[i] + j]);
-
-      cols.add(obj[i], lb[i], colVector, ub[i]);
-      if( cname != NULL )
-         colnames.add(cname[i]);
-      else
-      {
-         sprintf( defname, "x%d", i );
-         colnames.add( defname );
-      }
-   }
-   spx->changeSense(objsen == 1 ? SPxLP::MINIMIZE : SPxLP::MAXIMIZE);
-   spx->addColsWithNames(cols, colnames);
+   errorMessage("SCIPlpiGetPrimalRay() not supported by SOPLEX");
    
-   /* we do not use the names for now. They where only needed for the
-    * output routines, and those should be part of SIP anyway.
-    */
-
-#if DEBUGGING >= 1
-   std::cerr << *spx;
-#endif
-#if defined(DEBUG_FILEOUTPUT)
-   spx->dumpFile( "copiedLP.lp" );
-#endif
-
-   return SIP_OKAY;
-   
+   return SCIP_LPERROR;
 }
 
-extern "C" int SIPsetbase(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   double*   /*dnorm*/,
-   int*      cstat, 
-   int*      rstat, 
-   int       /*pricing*/)
+/** gets dual farkas proof for infeasibility */
+RETCODE SCIPlpiGetDualfarkas(
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            dualfarkas          /**< dual farkas row multipliers */
+   )
 {
-   METHOD("SIPsetbase");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
+   errorMessage("SCIPlpiGetDualfarkas() not supported by SOPLEX");
+   
+   return SCIP_LPERROR;
+}
+
+/**@} */
+
+
+
+
+/*
+ * LP Basis Methods
+ */
+
+/**@name LP Basis Methods */
+/**@{ */
+
+/** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
+RETCODE SCIPlpiGetBase(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             cstat,              /**< array to store column basis status, or NULL */
+   int*             rstat               /**< array to store row basis status, or NULL */
+   )
+{
    int i;
 
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(cstat  != NULL);
-   assert(rstat  != NULL);
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr); 
-   SoPlex::VarStatus* spxcstat = new SoPlex::VarStatus[spx->nCols()];
-   SoPlex::VarStatus* spxrstat = new SoPlex::VarStatus[spx->nRows()];
-
-#if DEBUGGING >= 2
-   print_base('<', spx->nCols(), spx->nRows(), cstat, rstat);
-#endif
-
-   for(i = 0; i < spx->nRows(); i++)
+   if( rstat != NULL )
    {
-      switch(rstat[i])
+      for( i = 0; i < lpi->spx->nRows(); ++i )
       {
-      case BASE_AT_LOWER:
+         switch( lpi->spx->getBasisRowStatus(i) )
+         {
+         case SoPlex::BASIC:
+            rstat[i] = SCIP_BASESTAT_BASIC;
+            break;	  
+         case SoPlex::FIXED:
+         case SoPlex::ON_LOWER:
+            rstat[i] = SCIP_BASESTAT_LOWER;
+            break;
+         case SoPlex::ON_UPPER:
+            rstat[i] = SCIP_BASESTAT_UPPER;
+            break;
+         case SoPlex::ZERO:
+            errorMessage("slack variable has basis status ZERO (should not occur)");
+            return SCIP_LPERROR;
+         default:
+            errorMessage("invalid basis status");
+            abort();
+         }
+      }
+   }
+
+   if( cstat != NULL )
+   {
+      for( i = 0; i < lpi->spx->nCols(); ++i )
+      {
+         switch( lpi->spx->getBasisColStatus(i) )
+         {
+         case SoPlex::BASIC:
+            cstat[i] = SCIP_BASESTAT_BASIC;
+            break;	  
+         case SoPlex::FIXED:
+            assert(lpi->spx->rep() == SoPlex::COLUMN);
+            if( lpi->spx->pVec()[i] - lpi->spx->maxObj()[i] < 0.0 )  /* reduced costs < 0 => UPPER  else => LOWER */
+               cstat[i] = SCIP_BASESTAT_UPPER;
+            else
+               cstat[i] = SCIP_BASESTAT_LOWER;
+            break;
+         case SoPlex::ON_LOWER:
+            cstat[i] = SCIP_BASESTAT_LOWER;
+            break;
+         case SoPlex::ON_UPPER:
+            cstat[i] = SCIP_BASESTAT_UPPER;
+            break;
+         case SoPlex::ZERO:
+            errorMessage("variable has basis status ZERO (should not occur)");
+            return SCIP_LPERROR;
+         default:
+            errorMessage("invalid basis status");
+            abort();
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets actual basis status for columns and rows */
+RETCODE SCIPlpiSetBase(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             cstat,              /**< array with column basis status */
+   int*             rstat               /**< array with row basis status */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(cstat != NULL);
+   assert(rstat != NULL);
+
+   SoPlex::VarStatus* spxcstat = new SoPlex::VarStatus[lpi->spx->nCols()];
+   SoPlex::VarStatus* spxrstat = new SoPlex::VarStatus[lpi->spx->nRows()];
+
+   for( i = 0; i < lpi->spx->nRows(); ++i )
+   {
+      switch( rstat[i] )
+      {
+      case SCIP_BASESTAT_LOWER:
          spxrstat[i] = SoPlex::ON_LOWER;
          break;
-      case BASE_IS_BASIC:
+      case SCIP_BASESTAT_BASIC:
          spxrstat[i] = SoPlex::BASIC;
          break;
-      case BASE_AT_UPPER:
+      case SCIP_BASESTAT_UPPER:
          spxrstat[i] = SoPlex::ON_UPPER;
          break;
-      case BASE_IS_FREE:
-         spxrstat[i] = SoPlex::ZERO;
-         break;
       default:
+         errorMessage("invalid basis status");
          abort();
       }
    }
 
-   for(i = 0; i < spx->nCols(); i++)
+   for( i = 0; i < lpi->spx->nCols(); ++i )
    {
-      switch(cstat[i])
+      switch( cstat[i] )
       {
-      case BASE_AT_LOWER:
+      case SCIP_BASESTAT_LOWER:
          spxcstat[i] = SoPlex::ON_LOWER;
          break;
-      case BASE_IS_BASIC:
+      case SCIP_BASESTAT_BASIC:
          spxcstat[i] = SoPlex::BASIC;
          break;
-      case BASE_AT_UPPER:
+      case SCIP_BASESTAT_UPPER:
          spxcstat[i] = SoPlex::ON_UPPER;
          break;
-      case BASE_IS_FREE:
-         spxcstat[i] = SoPlex::ZERO;
-         break;
       default:
+         errorMessage("invalid basis status");
          abort();
       }
    }
-   spx->setBasis(spxrstat, spxcstat);
+   lpi->spx->setBasis(spxrstat, spxcstat);
 
    delete[] spxcstat;
    delete[] spxrstat;
    
-   return SIP_OKAY;
+   return SCIP_OKAY;
 }
 
-extern "C" int SIPgetbase(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   double*   /*dnorm*/, 
-   int*      cstat, 
-   int*      rstat)
+/** returns the indices of the basic columns and rows */
+RETCODE SCIPlpiGetBasisInd(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
+   )
 {
-   METHOD("SIPgetbase");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   if (rstat != NULL)
-   {
-      for(int i = 0; i < spx->nRows(); i++)
-      {
-         switch(spx->getBasisRowStatus(i))
-         {
-         case SoPlex::BASIC:
-            rstat[i] = BASE_IS_BASIC;
-            break;	  
-         case SoPlex::FIXED:
-         case SoPlex::ON_LOWER:
-            rstat[i] = BASE_AT_LOWER;
-            break;
-         case SoPlex::ON_UPPER:
-            rstat[i] = BASE_AT_UPPER;
-            break;
-         case SoPlex::ZERO:
-            rstat[i] = BASE_IS_FREE;
-            break;
-         default:
-            abort();
-         }
-      }
-   }
-
-   if (cstat != NULL)
-   {
-      for(int i = 0; i < spx->nCols(); i++)
-      {
-         switch(spx->getBasisColStatus(i))
-         {
-         case SoPlex::BASIC:
-            cstat[i] = BASE_IS_BASIC;
-            break;	  
-         case SoPlex::FIXED:
-         case SoPlex::ON_LOWER:
-            cstat[i] = BASE_AT_LOWER;
-            break;
-         case SoPlex::ON_UPPER:
-            cstat[i] = BASE_AT_UPPER;
-            break;
-         case SoPlex::ZERO:
-            cstat[i] = BASE_IS_FREE;
-            break;
-         default:
-            abort();
-         }
-      }
-   }
-#if DEBUGGING >= 2
-   print_base('>', spx->nCols(), spx->nRows(), cstat, rstat);
-#endif
-
-   return SIP_OKAY;
-}
-
-extern "C" int SIPgetsol(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   double*   objval,
-   double*   psol, 
-   double*   pi, 
-   double*   slck, 
-   double*   redcost)
-{
-   METHOD("SIPgetsol");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-    
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   if (objval != NULL)
-      *objval = spx->value();
-
-   if (psol != NULL)
-   {
-      Vector tmp(spx->nCols(), psol);
-      spx->getPrimal(tmp);
-   }
-   if (redcost != NULL)
-   {
-      Vector tmp(spx->nCols(), redcost);
-      spx->getRdCost(tmp);
-   }
-   if ((slck != NULL) || (pi != NULL))
-   {
-      int     rows  = spx->nRows() ;
-      DVector tmp(rows);
-
-      if (slck != NULL)
-      {
-         spx->getSlacks(tmp);  /* returns  tmp = Ax */
-
-         for(int i = 0; i < rows; i++)
-         {
-            double lhs = spx->lhs(i);  /* SOPLEX: lhs <= act(x) <= rhs */
-            double rhs = spx->rhs(i);
-            double act = tmp[i];
-            
-            if( lhs <= -soplex::infinity || /*  <= row  -> slack(x) = rhs - act(x)  in  [0,inf] */
-               lhs == rhs               )   /*  == row  -> slack(x) = rhs - act(x)  in  [0,0] */
-               slck[i] = rhs - act;
-            else                            /*  >= row  -> slack(x) = act(x) - lhs  in  [0,inf] */
-               slck[i] = act - lhs;         /* RNG row  -> slack(x) = act(x) - lhs  in  [0,rng] */
-         }
-      }
-      if (pi != NULL)
-      {
-         spx->getDual(tmp);
-         for(int i = 1; i < rows; i++)
-            pi[i - 1] = tmp[i];
-      }
-   }
-   return SIP_OKAY;
-
-}
-
-extern "C" void SIPsetintparLP(
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       type, 
-   int       ival)
-{
-   METHOD("SIPsetintparLP");
-#if DEBUGGING >= 3
-   std::cerr << "Type " << type << " " << ival << std::endl;
-#endif
-
-   assert(infaLP != NULL);
-   assert(lptr != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   switch(type) 
-   {
-   case SIP_FROMSCRATCH:
-      spx->setFromScratch(ival == SIP_ON);
-      break;
-   case SIP_LPITLIM:
-      spx->setTerminationIter(ival);
-      break;
-   case SIP_FASTMIP:
-      break;
-   case SIP_PRICING:
-      break;
-   case SIP_LPINFO:
-      break;
-   default:
-      abort();
-   }
-}
-
-extern "C" void SIPsetdblparLP(
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       type, 
-   double    dval)
-{
-   METHOD("SIPsetdblparLP");
-#if DEBUGGING >= 3
-   std::cerr << "Type " << type << " " << dval << std::endl;
-#endif
-
-   assert(infaLP != NULL);
-   assert(lptr != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   switch(type) 
-   {
-   case SIP_FEASTOL:
-      spx->setDelta(dval);
-      break;
-   case SIP_LOBJLIM:
-      spx->setObjLoLimit(dval);
-      break;
-   case SIP_UOBJLIM:
-      spx->setObjUpLimit(dval);
-      /* if (dval == SIP_INFINITY)
-       *    spx->setTerminationValue(SoPlex::infinity);
-       * else
-       *    spx->setTerminationValue(dval);
-       */
-      break;
-   case SIP_LPTILIM:
-      spx->setTerminationTime(dval);
-      break;
-   default:
-      abort();
-   }
-}
-
-extern "C" int SIPgetintparLP(
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       type, 
-   int*      ival)
-{
-   METHOD("SIPgetintparLP");
-
-   assert(infaLP != NULL);
-   assert(lptr != NULL);
-   assert(ival != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-   int restat  = SIP_OKAY;
-
-   switch(type) 
-   {
-   case SIP_FROMSCRATCH:
-      *ival = spx->getFromScratch() ? SIP_ON : SIP_OFF;
-      break;
-   case SIP_LPNROW:      
-      *ival = spx->nRows();
-      break;
-   case SIP_LPIT:
-      *ival = spx->basis().iteration();
-      break;
-   case SIP_LPIT1:
-      /* There is no phase I in SoPlex */
-      *ival = 0;
-      break;
-   default:
-      restat = SIP_LPERROR;
-      break;
-   }
-   return restat;
-}
-
-extern "C" int SIPgetdblparLP(
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       type, 
-   double*   dval)
-{
-   METHOD("SIPgetdblparLP");
-
-   assert(infaLP != NULL);
-   assert(lptr != NULL);
-   assert(dval != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-   int restat  = SIP_OKAY;
-
-   switch(type)
-   {
-   case SIP_FEASTOL:
-      *dval = spx->delta();
-      break;
-   default:
-      restat = SIP_LPERROR;
-      break;
-   }
-   return restat;
-}
-
-extern "C" int SIPgetDefaultLPFeastol(
-   SIPInfaLP infaLP,
-   double* LPFeastol)
-{
-   assert(infaLP != NULL);
-   *LPFeastol = DEFAULT_BND_VIOL;
-   return SIP_OKAY;
-}
-
-
-extern "C" int SIPwriteLP(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   char*     fname)
-{
-   METHOD("SIPwriteLP");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(fname  != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   spx->dumpFile(fname);
-
-   return SIP_OKAY;
-}
-
-extern "C" int SIPwriteB(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   char*     fname)
-{
-   METHOD("SIPwriteB");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(fname  != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   spx->dumpBasis(fname);
-
-   return SIP_OKAY;
-}
-
-
-extern "C" int SIPgetlb(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   double*   lb, 
-   int       beg, 
-   int       end)
-{
-   METHOD("SIPgetlb");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(lb     != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   assert(beg    >= 0);
-   assert(end    >= beg);
-   assert(end    <  spx->nCols());
-
-   for(int i = beg; i <= end; i++)
-      lb[i - beg] = spx->lower(i);
-
-   return SIP_OKAY; 
-}
-
-extern "C" int SIPgetub(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   double*   ub, 
-   int       beg, 
-   int       end)
-{
-   METHOD("SIPgetub");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(ub     != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   assert(beg    >= 0);
-   assert(end    >= beg);
-   assert(end    <  spx->nCols());
- 
-   for(int i = beg; i <= end; i++)
-      ub[i - beg] = spx->upper(i);
-
-   return SIP_OKAY;
-}
-
-extern "C" int SIPchgbds(
-   FILE*     ferr, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       cnt, 
-   int*      idx, 
-   char*     lu, 
-   double*   bd)
-{
-   METHOD("SIPchgbds");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(cnt    >  0);
-   assert(idx    != NULL);
-   assert(lu     != NULL);
-   assert(bd     != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   for(int i = 0; i < cnt; i++)
-   {
-      assert(idx[i] >= 0);
-      assert(idx[i] <  spx->nCols());
-
-      switch( lu[i] )
-      {
-      case 'U':
-         spx->changeUpper(idx[i], bd[i]);
-         break ;
-      case 'L':
-         spx->changeLower(idx[i], bd[i]);
-         break ;
-      case 'B':
-         spx->changeUpper(idx[i], bd[i]);
-         spx->changeLower(idx[i], bd[i]);
-         break ;
-      default:
-         fprintf( ferr, "Error in SIPchgbds(): " );
-         fprintf( ferr, "Unknown bound symbol <%c>.\n", lu[i] );
-         abort();
-      }
-   }
-   return SIP_OKAY;
-}
-
-extern "C" int SIPchgrhs(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       cnt, 
-   int*      idx, 
-   double*   rhs)
-{
-   METHOD("SIPchgbds");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(cnt    >  0);
-   assert(idx    != NULL);
-   assert(rhs    != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   for(int i = 0; i < cnt; i++)
-   {
-      assert(idx[i] >= 0);
-      assert(idx[i] <  spx->nRows());
-      spx->changeRhs(idx[i], rhs[i]);
-   }
-   return SIP_OKAY;
-}
-
-extern "C" void SIPchgobjsen(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   int       objsen)
-{
-   METHOD("SIPchgobjsen");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(objsen == -1 || objsen == +1);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   spx->changeSense(objsen == 1 ? SoPlex::MINIMIZE : SoPlex::MAXIMIZE);
-}
-
-extern "C" int SIPdelrows(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   int*      dstat)
-{
-   METHOD("SIPdelrows");
-
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(dstat  != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   spx->removeRowsWithNames( dstat );
-
-   return SIP_OKAY;
-}
-
-
-/* returns the indices of the basis variables.
- * head[b] < 0 => basis variable b is the slack variable
-                  belonging to row -head[b]-1.
- */
-extern "C" int SIPgetBind(
-   FILE*     /*ferr*/, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int*      head )
-{
-   METHOD("SIPgetBind");
-
-   assert(infaLP != NULL);
-   assert(head != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
    int i;
 
-   for( i = 0; i < spx->nRows(); ++i )
-      {
-         SPxId id = spx->basis().baseId( i );
-         if( spx->isId( id ) ) /* column id? */
-            head[i] = spx->number( id );
-         else                  /* row id?    */
-            head[i] = - spx->number( id ) - 1;
-      }
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
 
-   return SIP_OKAY;
-}
-
-/* returns a row of the constraint matrix A */
-extern "C" int SIPgetrow(
-   FILE*     ferr, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       i, 
-   double*   val, 
-   int*      ind, 
-   int*      nnonz)
-{
-   METHOD("SIPgetrow");
-
-   assert(ferr   != NULL);
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(val    != NULL);
-   assert(ind    != NULL);
-   assert(nnonz  != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   assert(i     >= 0);
-   assert(i     <  spx->nRows());
-
-   /* needed because of creation of Svector */
+   for( i = 0; i < lpi->spx->nRows(); ++i )
    {
-      DSVector  row( spx->rowVector(i) );
-      int       cnt = 0;     
-      
-      /* sort row vector, because the pool ieqs are sorted, and
-         SIPcheckpoollp fails if SIPgetrow returns an unsorted
-         row vector */
-      row.sort();
-
-      assert(*nnonz >= row.size());
-      
-      for(int j = 0; j < row.size(); j++)
-         {
-            ind[cnt] = row.index(j);
-            val[cnt] = row.value(j);
-            cnt++;
-         }
-      *nnonz = cnt;
-   }
-   return SIP_OKAY;
-}
-
-/** returns a row of the inverse B^-1 of the basis matrix B */
-extern "C" int SIPgetrowBinv(
-   FILE*     ferr, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       i, 
-   double*   val )
-{
-   METHOD("SIPgetrowBinv");
-
-   assert(ferr   != NULL);
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(val    != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   assert(i     >= 0);
-   assert(i     <  spx->nRows());
-      
-   /* solve system "x = e_i^T * B^-1" to get i'th row of B^-1 */
-   soplex::Vector x( spx->nRows(), val );
-   spx->basis().coSolve( x, spx->unitVector( i ) );
-
-   return SIP_OKAY;
-}
-
-
-/** returns a row of B^-1 * A */
-extern "C" int SIPgetrowBinvA(
-   FILE*     ferr, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr,
-   int       i, 
-   double*   binv,
-   double*   val )
-{
-   int restat = SIP_OKAY;
-   int freebinv = FALSE;
-   int col;
-
-   METHOD("SIPgetrowBinvA");
-
-   assert(ferr   != NULL);
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(val    != NULL);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   assert(i >= 0);
-   assert(i <  spx->nRows());
-
-   if( binv == NULL )
-   {
-      ALLOC_OKAY( binv = static_cast<double*>(allocMemoryArrayCPP(spx->nRows(), sizeof(*binv))) );
-      freebinv = TRUE;
-      restat = SIPgetrowBinv( ferr, infaLP, lptr, i, binv );
-      if( restat != SIP_OKAY )
-         goto TERMINATE;
+      SPxId id = lpi->spx->basis().baseId(i);
+      if( lpi->spx->isId(id) ) /* column id? */
+         bind[i] = lpi->spx->number(id);
+      else                     /* row id?    */
+         bind[i] = -1 - lpi->spx->number(id);
    }
 
-   assert( binv != NULL );      
+   return SCIP_OKAY;
+}
 
+/** get dense row of inverse basis matrix B^-1 */
+RETCODE SCIPlpiGetBInvRow(
+   LPI*             lpi,                /**< LP interface structure */
+   int              r,                  /**< row number */
+   Real*            coef                /**< pointer to store the coefficients of the row */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   Vector x(lpi->spx->nRows(), coef);
+
+   /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
+   lpi->spx->basis().coSolve(x, lpi->spx->unitVector(r));
+
+   return SCIP_OKAY;
+}
+
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+RETCODE SCIPlpiGetBInvARow(
+   LPI*             lpi,                /**< LP interface structure */
+   int              r,                  /**< row number */
+   const Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
+   Real*            val                 /**< vector to return coefficients */
+   )
+{
+   Real* buf;
+   Real* binv;
+   int nrows;
+   int ncols;
+   int c;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   nrows = lpi->spx->nRows();
+   nrows = lpi->spx->nCols();
+
+   /* get (or calculate) the row in B^-1 */
+   if( binvrow == NULL )
    {
-      soplex::Vector binvvec( spx->nRows(), binv );
-      
-      for( col = 0; col < spx->nCols(); ++col )
-         val[col] = binvvec * spx->colVector( col );  /* scalar product */
+      ALLOC_OKAY( allocMemoryArray(&buf, nrows) );
+      CHECK_OKAY( SCIPlpiGetBInvRow(lpi, r, buf) );
+      binv = buf;
    }
-
- TERMINATE:   
-   if( freebinv )
-      freeMemoryArray( binv );
-
-   return restat;
-}
-
-
-extern "C" int SIPaddrow(
-   FILE*     ferr, 
-   SIPInfaLP infaLP, 
-   SIPLP     lptr, 
-   int       rcnt, 
-   int       nzcnt,
-   double*   rhs, 
-   char*     sns, 
-   int*      beg, 
-   int*      ind, 
-   double*   val,
-   char**    name)
-{
-   METHOD("SIPaddrow");
-
-   assert(ferr   != NULL);
-   assert(infaLP != NULL);
-   assert(lptr   != NULL);
-   assert(rhs    != NULL);
-   assert(sns    != NULL);
-   assert(beg    != NULL);
-   assert(ind    != NULL);
-   assert(val    != NULL);
-   assert(name   != NULL);
-   assert(rcnt   >= 0);
-   assert(nzcnt  >= 0);
-
-   SPxSIP* spx = SPxSIP::fromSIPLP(lptr);
-
-   DSVector rowvec(spx->nCols());
-   LPRowSet rset(rcnt, nzcnt);
-   NameSet  rownames(rcnt);
-
-   for(int i = 0; i < rcnt; i++)
+   else
    {
-      rowvec.clear();
+      buf = NULL;
+      binv = (Real*)binvrow;
+   }
+   assert(binv != NULL);
 
-      int end = (i < rcnt - 1) ? beg[i + 1] : nzcnt;
-      
-      for(int k = beg[i]; k < end; k++)
-         rowvec.add(ind[k], val[k]);
+   /* calculate the scalar product of the row in B^-1 and A */
+   soplex::Vector binvvec(nrows, binv);
+   for( c = 0; c < ncols; ++c )
+      val[c] = binvvec * lpi->spx->colVector(c);  /* scalar product */
 
-      switch(sns[i])
-      {
-      case 'L':
-         rset.add(-soplex::infinity, rowvec, rhs[i]);
-         rownames.add(name[i]);
-         break;
-      case 'G':
-         rset.add(rhs[i], rowvec, soplex::infinity);
-         rownames.add(name[i]);
-         break;
-      case 'E':
-         rset.add(rhs[i], rowvec, rhs[i]);
-         rownames.add(name[i]);
-         break;
-      case 'R':
-         /* ranged rows not supported */
-      default:
-         abort();
-      }
-   }   
-   spx->addRowsWithNames(rset, rownames);
+   /* free memory if it was temporarily allocated */
+   freeMemoryArrayNull(&buf);
 
-   return SIP_OKAY;
+   return SCIP_OKAY;
 }
 
-extern "C" int SIPreadFile(
-   SET *set,
-   MIP *mip,
-   const char *filename)
+/**@} */
+
+
+
+
+/*
+ * LP State Methods
+ */
+
+/**@name LP State Methods */
+/**@{ */
+
+/** stores LPi state (like basis information) into lpistate object */
+RETCODE SCIPlpiGetState(
+   LPI*             lpi,                /**< LP interface structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
+   )
 {
-   SPxLP         lp;
-   NameSet       colnames;
-   NameSet       rownames;
-   DIdxSet       intvars;
-   int           i;
-   int           k;
+   int ncols;
+   int nrows;
+
+   assert(memhdr != NULL);
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lpistate != NULL);
+
+   ncols = lpi->spx->nCols();
+   nrows = lpi->spx->nRows();
+   assert(ncols >= 0);
+   assert(nrows >= 0);
    
-   METHOD("SIPreadFile");
+   /* allocate lpistate data */
+   CHECK_OKAY( lpistateCreate(lpistate, memhdr, ncols, nrows) );
 
-   assert( set != NULL );
-   assert( mip != NULL );
-   assert( filename != NULL );
-   
-   /* check filename */
-   if( strlen(filename) == 0 )
-   {
-      fprintf (stderr, "No file specified\n");
-      return SIP_NOFILE;
-   }
+   /* allocate enough memory for storing uncompressed basis information */
+   CHECK_OKAY( ensureCstatMem(lpi, ncols) );
+   CHECK_OKAY( ensureRstatMem(lpi, nrows) );
 
-   /* store filename in MIP structure */
-   ALLOC_OKAY( mip->name = static_cast<char*>(allocMemoryArrayCPP(strlen(filename)+1, sizeof(*mip->name))) );
-   strcpy( mip->name, filename );
+   /* get unpacked basis information */
+   CHECK_OKAY( SCIPlpiGetBase(lpi, lpi->cstat, lpi->rstat) );
 
-   /* read file into SPxLP object */
-   std::ifstream file(filename);
+   /* pack LPi state data */
+   (*lpistate)->ncols = ncols;
+   (*lpistate)->nrows = nrows;
+   lpistatePack(*lpistate, lpi->cstat, lpi->rstat);
 
-   if (!file || !lp.read(file, &rownames, &colnames, &intvars))
-   {
-      fprintf( stderr, "Could not read file %s\n", filename);
-      return SIP_NOFILE;
-   }
-   rownames.memPack();
-   colnames.memPack();
-
-#if DEBUGGING >= 1
-   std::cerr << "As read by SoPlex::spxlpfread" << std::endl;
-   std::cerr << lp;
-#endif
-
-   /* get matrix size */
-   int numnz = 0;
-   for(i = 0; i < lp.nCols(); i++)
-      numnz += lp.colVector(i).size();
-
-   /* get number of columns */
-   mip->ncol   = lp.nCols();
-
-   /* get matrix in column form */
-   ALLOC_OKAY( mip->col = static_cast<MAT*>(allocMemoryCPP(sizeof(*mip->col))) );
-   ALLOC_OKAY( mip->col->pnt = static_cast<int*>(allocMemoryArrayCPP(mip->ncol+1, sizeof(*mip->col->pnt))) );
-   ALLOC_OKAY( mip->col->ind = static_cast<int*>(allocMemoryArrayCPP(numnz, sizeof(*mip->col->ind))) );
-   ALLOC_OKAY( mip->col->val = static_cast<double*>(allocMemoryArrayCPP(numnz, sizeof(*mip->col->val))) );
-
-   for(k = 0, i = 0; i < mip->ncol; i++)
-   {
-      SVector col = lp.colVector(i);
-      
-      mip->col->pnt[i] = k;
-
-      for(int j = 0; j < col.size(); j++)
-      {
-         mip->col->ind[k] = col.index(j);
-         mip->col->val[k] = col.value(j);
-         k++;
-      }
-   }
-   mip->col->pnt[mip->ncol] = numnz;
-
-   assert(k == numnz);
-
-   /* get objective function */
-   ALLOC_OKAY( mip->obj = static_cast<double*>(allocMemoryArrayCPP(mip->ncol, sizeof(*mip->obj))) );
-
-   /* assign memory position to tmpobj vector */
-   Vector tmpobj(mip->ncol, mip->obj);  
-   /* get objective function */
-   lp.getObj( tmpobj );                 
-
-   /* get variable bounds */
-   ALLOC_OKAY( mip->lb = static_cast<double*>(allocMemoryArrayCPP(mip->ncol, sizeof(*mip->lb))) );
-   ALLOC_OKAY( mip->ub = static_cast<double*>(allocMemoryArrayCPP(mip->ncol, sizeof(*mip->ub))) );
-
-   for(i = 0; i < mip->ncol; i++)
-   {
-      mip->lb[i] = lp.lower(i);
-      mip->ub[i] = lp.upper(i);
-   }
-
-   /* get column type */
-   ALLOC_OKAY( mip->ctype = static_cast<char*>(allocMemoryArrayCPP(mip->ncol, sizeof(*mip->ctype))) );
-
-   for(i = 0; i < mip->ncol; i++)
-      mip->ctype[i] = 'C';
-
-   for(i = 0; i < intvars.size(); i++)
-   {
-      int idx = intvars.index(i);
-
-      mip->ctype[idx] = 
-         (lp.lower(idx) == 0.0 && lp.upper(idx) == 1.0) ? 'B' : 'I';
-   }
-
-   /* get column names */
-   assert(colnames.num() == mip->ncol);
-
-   mip->cstoresz = colnames.memSize();
-
-   ALLOC_OKAY( mip->cstore = static_cast<char*>(allocMemoryArrayCPP(mip->cstoresz, sizeof(*mip->cstore))) );
-   ALLOC_OKAY( mip->cname = static_cast<char**>(allocMemoryArrayCPP(mip->cstoresz, sizeof(*mip->cname))) );
-
-   k = 0;
-
-   for(i = 0; i < mip->ncol; i++)
-   {
-      mip->cname[i] = &(mip->cstore[k]);
-      strcpy(mip->cname[i], colnames[i]);
-      k += (int)strlen(colnames[i]) + 1;
-      assert(k <= mip->cstoresz);
-   }
-
-   /* get number of rows */
-   mip->nrow = lp.nRows();
-
-   /* get matrix in row form */
-   mip->row = NULL;  /* The unpresolved matrix is not needed in row form */
-
-   /* get objective sense */
-   mip->objsen = lp.spxSense() == SPxLP::MAXIMIZE ? -1 : 1;  
-
-   /* get row rhs, range, and sense */
-   ALLOC_OKAY( mip->rhs = static_cast<double*>(allocMemoryArrayCPP(mip->nrow, sizeof(*mip->rhs))) );
-   ALLOC_OKAY( mip->rngval = static_cast<double*>(allocMemoryArrayCPP(mip->nrow, sizeof(*mip->rngval))) );
-   ALLOC_OKAY( mip->sen = static_cast<char*>(allocMemoryArrayCPP(mip->nrow, sizeof(*mip->sen))) );
-
-   for( i = 0; i < mip->nrow; i++ )
-   {
-      switch(lp.rowType(i))
-      {
-      case LPRow::LESS_EQUAL :
-         mip->sen   [i] = 'L';
-         mip->rhs   [i] = lp.rhs(i);
-         mip->rngval[i] = 0.0;
-         break; 
-      case LPRow::EQUAL :
-         mip->sen   [i] = 'E';
-         mip->rhs   [i] = lp.rhs(i);
-         mip->rngval[i] = 0.0;
-         break; 
-      case LPRow::GREATER_EQUAL :
-         mip->sen   [i] = 'G';
-         mip->rhs   [i] = lp.lhs(i);
-         mip->rngval[i] = 0.0;
-         break; 
-      case LPRow::RANGE :
-         mip->sen   [i] = 'R';
-         mip->rhs   [i] = lp.lhs(i);
-         mip->rngval[i] = lp.rhs(i) - lp.lhs(i);
-         break; 
-      default :
-         abort();
-      }
-   }   
-   /* get row names */
-   assert(rownames.num() == mip->nrow);
-
-   mip->rstoresz = rownames.memSize();
-   mip->rstoresz = rownames.memSize();
-   ALLOC_OKAY( mip->rstore = static_cast<char*>(allocMemoryArrayCPP(mip->rstoresz, sizeof(*mip->rstore))) );
-   ALLOC_OKAY( mip->rname = static_cast<char**>(allocMemoryArrayCPP(mip->rstoresz, sizeof(*mip->rname))) );
-
-   k = 0;
-
-   for(i = 0; i < mip->nrow; i++)
-   {
-      mip->rname[i] = &(mip->rstore[k]);
-      strcpy(mip->rname[i], rownames[i]);
-      k += (int)strlen(rownames[i]) + 1;
-      assert(k <= mip->rstoresz);
-   }
-
-#if defined(DEBUG_FILEOUTPUT)
-   SIPwriteIP( set, mip, "originalIP.lp", true );
-#endif
-
-   return SIP_OKAY;
+   return SCIP_OKAY;
 }
 
+/** loads LPi state (like basis information) into solver */
+RETCODE SCIPlpiSetState(
+   LPI*             lpi,                /**< LP interface structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   )
+{
+   assert(memhdr != NULL);
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lpistate != NULL);
+   assert(lpistate->ncols == lpi->spx->nCols());
+   assert(lpistate->nrows == lpi->spx->nRows());
 
-#endif
+   /* allocate enough memory for storing uncompressed basis information */
+   CHECK_OKAY( ensureCstatMem(lpi, lpistate->ncols) );
+   CHECK_OKAY( ensureRstatMem(lpi, lpistate->nrows) );
+
+   /* unpack LPi state data */
+   lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
+
+   /* load basis information */
+   CHECK_OKAY( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
+
+   return SCIP_OKAY;
+}
+
+/** frees LPi state information */
+RETCODE SCIPlpiFreeState(
+   LPI*             lpi,                /**< LP interface structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
+   )
+{
+   assert(lpi != NULL);
+
+   lpistateFree(lpistate, memhdr);
+
+   return SCIP_OKAY;
+}
+
+/** reads LP state (like basis information from a file */
+RETCODE SCIPlpiReadState(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   errorMessage("SCIPlpiReadState() not implemented yet in SOPLEX interface");
+   abort();
+}
+
+/** writes LP state (like basis information) to a file */
+RETCODE SCIPlpiWriteState(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   errorMessage("SCIPlpiWriteState() not implemented yet in SOPLEX interface");
+   abort();
+}
+
+/**@} */
+
+
+
+
+/*
+ * Parameter Methods
+ */
+
+/**@name Parameter Methods */
+/**@{ */
+
+/** gets integer parameter of LP */
+RETCODE SCIPlpiGetIntpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   int*             ival                /**< buffer to store the parameter value */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ival != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FROMSCRATCH:
+      *ival = lpi->spx->getFromScratch();
+      break;
+   case SCIP_LPPAR_FASTMIP:
+      *ival = lpi->spx->getFastMip();
+      break;
+   case SCIP_LPPAR_PRICING:
+      *ival = SCIP_PRICING_AUTO;
+      break;
+   case SCIP_LPPAR_LPINFO:
+      *ival = (Param::verbose() > 0 ? TRUE : FALSE);
+      break;
+   case SCIP_LPPAR_LPITLIM:
+      *ival = lpi->spx->terminationIter();
+      break;
+   case SCIP_LPPAR_LPITER:
+      *ival = lpi->spx->iterations();
+      break;
+   default:
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets integer parameter of LP */
+RETCODE SCIPlpiSetIntpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   int              ival                /**< parameter value */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FROMSCRATCH:
+      assert(ival == TRUE || ival == FALSE);
+      lpi->spx->setFromScratch(bool(ival));
+      break;
+   case SCIP_LPPAR_FASTMIP:
+      assert(ival == TRUE || ival == FALSE);
+      lpi->spx->setFastMip(bool(ival));
+      break;
+   case SCIP_LPPAR_PRICING:
+      break;
+   case SCIP_LPPAR_LPINFO:
+      assert(ival == TRUE || ival == FALSE);
+      if( ival )
+         Param::setVerbose(3);
+      else 
+         Param::setVerbose(0);
+      break;
+   case SCIP_LPPAR_LPITLIM:
+      lpi->spx->setTerminationIter(ival);
+      break;
+   default:
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets floating point parameter of LP */
+RETCODE SCIPlpiGetRealpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   Real*            dval                /**< buffer to store the parameter value */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(dval != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FEASTOL:
+      *dval = lpi->spx->delta();
+      break;
+   case SCIP_LPPAR_LOBJLIM:
+      *dval = lpi->spx->getObjLoLimit();
+      break;
+   case SCIP_LPPAR_UOBJLIM:
+      *dval = lpi->spx->getObjUpLimit();
+      break;
+   case SCIP_LPPAR_LPTILIM:
+      *dval = lpi->spx->terminationTime();
+      break;
+   default:
+      return SCIP_LPERROR;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** sets floating point parameter of LP */
+RETCODE SCIPlpiSetRealpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   Real             dval                /**< parameter value */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FEASTOL:
+      lpi->spx->setDelta(dval);
+      break;
+   case SCIP_LPPAR_LOBJLIM:
+      lpi->spx->setObjLoLimit(dval);
+      break;
+   case SCIP_LPPAR_UOBJLIM:
+      lpi->spx->setObjUpLimit(dval);
+      break;
+   case SCIP_LPPAR_LPTILIM:
+      lpi->spx->setTerminationTime(dval);
+      break;
+   default:
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Numerical Methods
+ */
+
+/**@name Numerical Methods */
+/**@{ */
+
+/** returns value treated as infinity in the LP solver */
+Real SCIPlpiInfinity(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   return soplex::infinity;
+}
+
+/** checks if given value is treated as infinity in the LP solver */
+Bool SCIPlpiIsInfinity(
+   LPI*             lpi,                /**< LP interface structure */
+   Real             val
+   )
+{
+   return (val >= soplex::infinity);
+}
+
+/**@} */
+
+
+
+
+/*
+ * File Interface Methods
+ */
+
+/**@name File Interface Methods */
+/**@{ */
+
+/** reads LP from a file */
+RETCODE SCIPlpiReadLP(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   std::ifstream file(fname);
+   if( !file )
+      return SCIP_NOFILE;
+
+   if( !lpi->spx->read(file) )
+      return SCIP_READERROR;
+   
+   return SCIP_OKAY;
+}
+
+/** writes LP to a file */
+RETCODE SCIPlpiWriteLP(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   lpi->spx->dumpFile(fname);
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+

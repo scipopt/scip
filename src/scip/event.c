@@ -365,8 +365,8 @@ VAR* SCIPeventGetVar(
 {
    assert(event != NULL);
 
-   switch( event->eventtype ) /*lint --e{788}*/
-   {
+   switch( event->eventtype )
+   {  /*lint --e{788}*/
    case SCIP_EVENTTYPE_VARCREATED:
       errorMessage("VARCREATED event not implemented yet");
       abort();
@@ -438,8 +438,8 @@ Real SCIPeventGetOldbound(
 {
    assert(event != NULL);
 
-   switch( event->eventtype ) /*lint --e{788}*/
-   {
+   switch( event->eventtype )
+   {  /*lint --e{788}*/
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -459,8 +459,8 @@ Real SCIPeventGetNewbound(
 {
    assert(event != NULL);
 
-   switch( event->eventtype ) /*lint --e{788}*/
-   {
+   switch( event->eventtype )
+   {  /*lint --e{788}*/
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:

@@ -644,7 +644,7 @@ DISP* SCIPfindDisp(
 /**@name Global Problem Methods */
 /**@{ */
 
-/** creates empty problem and initializes all solving data structures */
+/** creates empty problem and initializes all solving data structures; the objective sense is set to MINIMIZE */
 extern
 RETCODE SCIPcreateProb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1050,7 +1050,7 @@ RETCODE SCIPaddVarObj(
    );
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that this change is treated like a branching decision
  */
 extern
@@ -1061,7 +1061,7 @@ RETCODE SCIPchgVarLb(
    );
 
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that this change is treated like a branching decision
  */
 extern
@@ -1093,6 +1093,32 @@ RETCODE SCIPchgVarUbNode(
    Real             newbound            /**< new value for bound */
    );
 
+/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter than the
+ *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
+ *  bound change, such that this change is treated like a branching decision
+ */
+extern
+RETCODE SCIPtightenVarLb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter than the
+ *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
+ *  bound change, such that this change is treated like a branching decision
+ */
+extern
+RETCODE SCIPtightenVarUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
 /** fixes binary variable to given value; in problem creation or preprocessing stage, the variable is converted
  *  into a fixed variable, and the given inference constraint is ignored; in solving stage, the variable is fixed
  *  locally at the given node, and the given inference constraint is stored, such that the conflict analysis is
@@ -1104,6 +1130,16 @@ RETCODE SCIPinferBinVar(
    VAR*             var,                /**< binary variable, that is deduced to a fixed value */
    Bool             fixedval,           /**< value to fix binary variable to */
    CONS*            infercons           /**< constraint that deduced the fixing */
+   );
+
+/** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+ */
+extern
+RETCODE SCIPchgVarBranchingPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
    );
 
 /** changes type of variable in the problem; this changes the vars array returned from
@@ -1194,7 +1230,7 @@ RETCODE SCIPinitConflictAnalysis(
 /** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
  *  one of the following two cases:
  *   1. Before calling the SCIPanalyseConflict() method, SCIPaddConflictVar() should be called for each variable,
- *      whose current assignment lead to the conflict (i.e. the infeasibility of a constraint).
+ *      whose current assignment lead to the conflict (i.e. the infeasibility of a globally valid constraint).
  *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
  *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
  */
@@ -1205,12 +1241,13 @@ RETCODE SCIPaddConflictVar(
    );
 
 /** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set; the conflict analysis
+ *  should only be called if a globally valid constraint was violated -- otherwise, the resulting conflict
+ *  constraint wouldn't be globally valid
  */
 extern
 RETCODE SCIPanalyseConflict(
    SCIP*            scip,               /**< SCIP data structure */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -2333,6 +2370,12 @@ int SCIPgetNCutsFound(
 /** get total number of cuts applied to the LPs */
 extern
 int SCIPgetNCutsApplied(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get total number of conflict constraints found */
+extern
+Longint SCIPgetNConflictsFound(
    SCIP*            scip                /**< SCIP data structure */
    );
 

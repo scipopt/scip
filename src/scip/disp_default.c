@@ -148,6 +148,14 @@
 #define DISP_POSI_POOLSIZE      3600
 #define DISP_STRI_POOLSIZE      TRUE
 
+#define DISP_NAME_CONFLICTS     "conflicts"
+#define DISP_DESC_CONFLICTS     "total number of conflicts found in conflict analysis"
+#define DISP_HEAD_CONFLICTS     "confs"
+#define DISP_WIDT_CONFLICTS     5
+#define DISP_PRIO_CONFLICTS     80
+#define DISP_POSI_CONFLICTS     4000
+#define DISP_STRI_CONFLICTS     TRUE
+
 #define DISP_NAME_ACTDUALBOUND  "actdualbound"
 #define DISP_DESC_ACTDUALBOUND  "dual bound of actual node"
 #define DISP_HEAD_ACTDUALBOUND  "actdualbound"
@@ -386,6 +394,18 @@ DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
 }
 
 static
+DECL_DISPOUTPUT(SCIPdispOutputConflicts)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
+   assert(scip != NULL);
+
+   SCIPdispDecimal(file, SCIPgetNConflictsFound(scip), DISP_WIDT_CONFLICTS);
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_DISPOUTPUT(SCIPdispOutputActdualbound)
 {  /*lint --e{715}*/
    assert(disp != NULL);
@@ -516,6 +536,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_POOLSIZE, DISP_DESC_POOLSIZE, DISP_HEAD_POOLSIZE,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputPoolsize, NULL, 
                   DISP_WIDT_POOLSIZE, DISP_PRIO_POOLSIZE, DISP_POSI_POOLSIZE, DISP_STRI_POOLSIZE) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CONFLICTS, DISP_DESC_CONFLICTS, DISP_HEAD_CONFLICTS,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputConflicts, NULL, 
+                  DISP_WIDT_CONFLICTS, DISP_PRIO_CONFLICTS, DISP_POSI_CONFLICTS, DISP_STRI_CONFLICTS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDUALBOUND, DISP_DESC_ACTDUALBOUND, DISP_HEAD_ACTDUALBOUND,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActdualbound, NULL, 
                   DISP_WIDT_ACTDUALBOUND, DISP_PRIO_ACTDUALBOUND, DISP_POSI_ACTDUALBOUND, DISP_STRI_ACTDUALBOUND) );
