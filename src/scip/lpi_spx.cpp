@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.21 2004/08/10 14:19:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.22 2004/09/28 10:50:29 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -226,7 +226,6 @@ extern "C"
 #include "lpi.h"
 #include "bitencode.h"
 #include "message.h"
-#include "pub_misc.h"
 }
 
 
@@ -2340,6 +2339,23 @@ Bool SCIPlpiIsInfinity(
 /**@name File Interface Methods */
 /**@{ */
 
+/** returns, whether the given file exists */
+static
+Bool fileExists(
+   const char*      filename            /**< file name */
+   )
+{
+   FILE* f;
+
+   f = fopen(filename, "r");
+   if( f == NULL )
+      return FALSE;
+
+   fclose(f);
+
+   return TRUE;
+}
+
 /** reads LP from a file */
 RETCODE SCIPlpiReadLP(
    LPI*             lpi,                /**< LP interface structure */
@@ -2351,7 +2367,7 @@ RETCODE SCIPlpiReadLP(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   if( !SCIPfileExists(fname) )
+   if( !fileExists(fname) )
       return SCIP_NOFILE;
 
    if( !lpi->spx->readFile(fname) )

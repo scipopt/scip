@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.2 2004/09/02 09:19:41 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.3 2004/09/28 10:50:29 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -56,9 +56,9 @@ BEGIN {
     fail     = 0;
     pass     = 0;
 
-    printf("------------------+-------+------+-------+--------------+------+------+-------\n");
-    printf("Name              | Conss | Vars | Nodes |   Upperbound |  Gap | Time |\n");
-    printf("------------------+-------+------+-------+--------------+------+------+-------\n");
+    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
+    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound |  Gap | Time |\n");
+    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum
 #
@@ -76,6 +76,8 @@ BEGIN {
     vars       = 0;
     cons       = 0;
     timeout    = 0;
+    opti       = 0;
+    cuts       = 0;
     pb         = 0.0;
     db         = 0.0;
     bbnodes    = 0;
@@ -109,12 +111,15 @@ BEGIN {
 }
 /^Time/  {
     pb = ($4 == "no") ? 1e+75 : $8;
+    timeout = 1;
 }
 /^Node/ {
     pb = ($4 == "no") ? 1e+75 : $8;
+    timeout = 1;
 }
 /^Tree/  {
     pb = ($4 == "no") ? 1e+75 : $8;
+    timeout = 1;
 }
 /^Error/  {
     pb = ($3 == "no") ? 1e+75 : $7;
@@ -163,8 +168,8 @@ BEGIN {
 
 	printf ("%-12s & %7d & %5d & %14.10g & %14.10g & %6.1f & %7.3f \\\\\n", pprob, bbnodes, cuts, db, pb, tottime, gap) >TEXFILE;
     }
-    printf("%-19s %6d %6d %7d %14.9g %6.1f %6.1f ",
-       prob, cons, vars, bbnodes, pb, gap, tottime);
+    printf("%-19s %6d %6d %7d %14.9g %14.9g %6.1f %6.1f ",
+       prob, cons, vars, bbnodes, db, pb, gap, tottime);
 
    if (sol[prob] == "")
       printf("unknown\n");
@@ -202,7 +207,7 @@ END {
     printf("\\end{table}\n") >TEXFILE;
     printf("\\end{document}") >TEXFILE;
 
-    printf("------------------+-------+------+-------+--------------+------+------+-------\n");
+    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
     
     printf("\n----------------------------------------------------------------\n");
     printf("  Cnt  Pass  Fail  kNodes FailTime  TotTime  NodeGeom  TimeGeom\n");
