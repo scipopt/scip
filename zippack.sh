@@ -1,5 +1,5 @@
 #!/bin/sh
-VERSION="0.78i"
+VERSION="0.78j"
 NAME="scip-$VERSION"
 cd ..
 ln -s scip $NAME
