@@ -36,6 +36,27 @@
  *  anymore, it is automatically relased.
  */
 
+/** Adding additional user parameters.
+ *
+ *  The user may add own parameters to SCIP with a call to SCIPaddXxxParam(). Using
+ *  these methods, he has two possibilities where to store the actual parameter value:
+ *   - if the given valueptr is NULL, SCIP stores the parameter value internally, and
+ *     the user can access the value only with the SCIPgetXxxParam() and
+ *     SCIPsetXxxParam();
+ *   - if the given valueptr is not NULL, SCIP stores the parameter value at the given
+ *     address, and the user can directly manipulate the value at this address.
+ *     He has to be careful with memory management in string parameters: when the
+ *     SCIPaddStringParam() method is called, the given address must hold a char*
+ *     pointer with value NULL. The default value is then copied into this pointer,
+ *     allocating memory with malloc(). If the parameter is changed, the old string
+ *     is free()'d and the new one is copied to a new memory area allocated with
+ *     malloc(). When the parameter is freed, the memory is freed with free().
+ *     The user should not interfere with this internal memory management. Accessing
+ *     the string parameter through the given valueptr is okay as long it does not
+ *     involve reallocating memory for the string.
+ */
+
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_H__
