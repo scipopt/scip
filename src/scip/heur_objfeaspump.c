@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.9 2005/03/02 19:04:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.10 2005/03/16 09:30:33 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -32,7 +32,7 @@
 #define HEUR_DESC             "variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account"
 #define HEUR_DISPCHAR         'O'
 #define HEUR_PRIORITY         -1008000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             20
 #define HEUR_FREQOFS          8
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /** call heuristic at nodes where only a pseudo solution exist? */

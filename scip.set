@@ -975,8 +975,8 @@ heuristics/coefdiving/maxdiveavgquotnosol = 8
 heuristics/feaspump/priority = -1000000
 
 # frequency for calling primal heuristic <feaspump> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-heuristics/feaspump/freq = 10
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/feaspump/freq = 20
 
 # frequency offset for calling primal heuristic <feaspump>
 # [type: int, range: [0,2147483647], default: 0]
@@ -1171,8 +1171,8 @@ heuristics/linesearchdiving/maxdiveavgquotnosol = 8
 heuristics/objfeaspump/priority = -1008000
 
 # frequency for calling primal heuristic <objfeaspump> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-heuristics/objfeaspump/freq = 10
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/objfeaspump/freq = 20
 
 # frequency offset for calling primal heuristic <objfeaspump>
 # [type: int, range: [0,2147483647], default: 8]
@@ -1207,8 +1207,8 @@ heuristics/objfeaspump/depthfacnosol = 2
 heuristics/objpscostdiving/priority = -1004000
 
 # frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-heuristics/objpscostdiving/freq = 10
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/objpscostdiving/freq = 20
 
 # frequency offset for calling primal heuristic <objpscostdiving>
 # [type: int, range: [0,2147483647], default: 4]
@@ -1287,8 +1287,8 @@ heuristics/pscostdiving/maxdiveavgquotnosol = 8
 heuristics/rootsoldiving/priority = -1005000
 
 # frequency for calling primal heuristic <rootsoldiving> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-heuristics/rootsoldiving/freq = 10
+# [type: int, range: [-1,2147483647], default: 20]
+heuristics/rootsoldiving/freq = 20
 
 # frequency offset for calling primal heuristic <rootsoldiving>
 # [type: int, range: [0,2147483647], default: 5]

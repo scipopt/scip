@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.19 2005/03/02 19:04:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.20 2005/03/16 09:30:33 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -33,7 +33,7 @@
 #define HEUR_DESC             "LP diving heuristic that changes variable's objective values instead of bounds, using pseudo costs as guide"
 #define HEUR_DISPCHAR         'o'
 #define HEUR_PRIORITY         -1004000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             20
 #define HEUR_FREQOFS          4
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */

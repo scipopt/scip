@@ -91,6 +91,10 @@ parameters:
 - default parameter heuristics/guideddiving/maxlpiterquot changed to 0.05
 - default parameter heuristics/linesearchdiving/maxlpiterquot changed to 0.05
 - default parameter heuristics/pscostdiving/maxlpiterquot changed to 0.05
+- default parameter heuristics/feaspump/freq changed to 20
+- default parameter heuristics/objfeaspump/freq changed to 20
+- default parameter heuristics/objpscostdiving/freq changed to 20
+- default parameter heuristics/rootsoldiving/freq changed to 20
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
