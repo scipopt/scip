@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.99 2004/07/06 11:55:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.100 2004/07/09 08:11:34 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -30,7 +30,6 @@
 #include "set.h"
 #include "stat.h"
 #include "vbc.h"
-#include "lpi.h"
 #include "lp.h"
 #include "var.h"
 #include "tree.h"
@@ -149,7 +148,9 @@ RETCODE forkReleaseLPIState(
 
    fork->nlpistateref--;
    if( fork->nlpistateref == 0 )
-      CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, &(fork->lpistate)) );
+   {
+      CHECK_OKAY( SCIPlpFreeState(lp, memhdr, &(fork->lpistate)) );
+   }
 
    debugMessage("released fork's LPI state -> new nlpistateref=%d\n", fork->nlpistateref);
    return SCIP_OKAY;
@@ -187,7 +188,9 @@ RETCODE subrootReleaseLPIState(
 
    subroot->nlpistateref--;
    if( subroot->nlpistateref == 0 )
-      CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, &(subroot->lpistate)) );
+   {
+      CHECK_OKAY( SCIPlpFreeState(lp, memhdr, &(subroot->lpistate)) );
+   }
    
    debugMessage("released subroot's LPI state -> new nlpistateref=%d\n", subroot->nlpistateref);
    return SCIP_OKAY;
@@ -272,7 +275,6 @@ RETCODE forkCreate(
    assert(fork != NULL);
    assert(memhdr != NULL);
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
    assert(tree != NULL);
@@ -361,7 +363,6 @@ RETCODE subrootCreate(
    assert(subroot != NULL);
    assert(memhdr != NULL);
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
    assert(tree != NULL);
@@ -1835,13 +1836,14 @@ RETCODE actnodeToFork(
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
       CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat) );
-      
+
       /* resolve LP after cleaning up */
-      if( !lp->solved )
+      if( !lp->solved || !lp->flushed )
       {
          CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
       }
    }
+   assert(lp->flushed);
    assert(lp->solved || lperror);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:
@@ -1926,7 +1928,6 @@ RETCODE actnodeToSubroot(
    assert(tree->actnode->active);
    assert(tree->nchildren > 0);
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
@@ -1951,11 +1952,12 @@ RETCODE actnodeToSubroot(
       }
 
       /* resolve LP after cleaning up */
-      if( !lp->solved )
+      if( !lp->solved || !lp->flushed )
       {
          CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
       }
    }
+   assert(lp->flushed);
    assert(lp->solved || lperror);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:

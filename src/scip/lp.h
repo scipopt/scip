@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.80 2004/06/02 07:39:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.81 2004/07/09 08:11:34 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -613,6 +613,14 @@ RETCODE SCIPlpSetState(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   );
+
+/** frees LP state information */
+extern
+RETCODE SCIPlpFreeState(
+   LP*              lp,                 /**< LP data */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
 /** sets the upper objective limit of the LP solver */

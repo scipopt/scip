@@ -344,7 +344,7 @@ constraints/knapsack/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/knapsack/propfreq = 1
+constraints/knapsack/propfreq = 10
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]

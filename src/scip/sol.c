@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.36 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.37 2004/07/09 08:11:34 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -287,7 +287,6 @@ RETCODE SCIPsolCreateLPSol(
 {
    assert(sol != NULL);
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(lp->solved);
 
    CHECK_OKAY( SCIPsolCreate(sol, memhdr, set, stat, primal, tree, heur) );
@@ -376,7 +375,6 @@ RETCODE SCIPsolLinkLPSol(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(lp->solved);
    assert(lp->diving || !lp->divingobjchg);
 

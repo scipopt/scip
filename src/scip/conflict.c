@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.45 2004/06/30 14:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.46 2004/07/09 08:11:33 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -496,7 +496,9 @@ RETCODE SCIPconflictCreate(
    CHECK_OKAY( SCIPclockCreate(&(*conflict)->lpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+#if 0
    CHECK_OKAY( SCIPlpiCreate(&(*conflict)->lpi, "LPconflict") );
+#endif
    CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->varqueue, set->memgrowinit, set->memgrowfac, conflictVarComp) );
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvarssize = 0;
@@ -529,7 +531,9 @@ RETCODE SCIPconflictFree(
    SCIPclockFree(&(*conflict)->lpanalyzetime);
    SCIPclockFree(&(*conflict)->sbanalyzetime);
    SCIPclockFree(&(*conflict)->pseudoanalyzetime);
+#if 0
    CHECK_OKAY( SCIPlpiFree(&(*conflict)->lpi) );
+#endif
    SCIPpqueueFree(&(*conflict)->varqueue);
    freeMemoryArrayNull(&(*conflict)->conflictvars);
    freeMemory(conflict);
@@ -918,6 +922,7 @@ Longint SCIPconflictGetNPropConflicts(
  * Infeasible LP Conflict Analysis
  */
 
+#if 0
 /** Generate the alternative lp from the current lp */
 /**@todo Correct hard coded 1000.0 */
 static
@@ -957,7 +962,7 @@ RETCODE generateAltLP(
    assert(alt_ncolvars != NULL);
    assert(alt_islower != NULL);
 
-   lpi_infinity = SCIPlpiInfinity(lp->lpi);
+   lpi_infinity = SCIPlpiInfinity(alt_lpi);
    sum_rhs = 0.0;
    *alt_nrowvars = 0;
    *alt_ncolvars = 0;
@@ -1316,6 +1321,7 @@ RETCODE conflictAnalyzeLPAltpoly(
   
    return SCIP_OKAY;
 }
+#endif
 
 /** analyzes an infeasible LP trying to create a conflict set in the LP conflict analysis data structure */
 static
@@ -2137,6 +2143,7 @@ RETCODE SCIPconflictAnalyzeLP(
 
    assert(conflict != NULL);
    assert(set != NULL);
+   assert(lp != NULL);
 
    if( success != NULL )
       *success = FALSE;
@@ -2239,6 +2246,8 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    int iterations;
 
    assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
    assert(col != NULL);
    assert((col->strongbranchdown >= lp->cutoffbound && SCIPsetCeil(set, col->primsol-1.0) >= col->lb - 0.5)
       || (col->strongbranchup >= lp->cutoffbound && SCIPsetFloor(set, col->primsol+1.0) <= col->ub + 0.5));

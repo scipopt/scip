@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.127 2004/07/08 13:01:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.128 2004/07/09 08:11:33 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1038,12 +1038,14 @@ void coefChanged(
          col->coefchanged = TRUE;
          lp->lpifirstchgcol = col->lpipos;
       }
-      lp->flushed = FALSE;
+
+      /* mark the current solution invalid */
       lp->solved = FALSE;
-      lp->dualfeasible = FALSE;
       lp->primalfeasible = FALSE;
+      lp->dualfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->flushed = FALSE;
    }
 
    row->pseudoactivity = SCIP_INVALID;
@@ -1564,12 +1566,13 @@ RETCODE rowSideChanged(
          errorMessage("Unknown row side type\n");
          abort();
       }
-      
-      lp->flushed = FALSE;
+
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->flushed = FALSE;
 
       assert(lp->nchgrows > 0);
    }
@@ -1868,9 +1871,12 @@ RETCODE lpSetUobjlim(
    if( uobjlim != lp->lpiuobjlim )
    {
       CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_UOBJLIM, uobjlim) );
+
+      /* mark the current solution invalid */
       lp->solved = FALSE;
-      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lp->primalfeasible = FALSE;
+      lp->lpobjval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lp->lpiuobjlim = uobjlim;
    }
 
@@ -1894,9 +1900,11 @@ RETCODE lpSetFeastol(
       CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_FEASTOL, feastol) );
       if( lp->nrows > 0 && feastol < lp->lpifeastol )
       {
+         /* mark the current solution invalid */
          lp->solved = FALSE;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          lp->primalfeasible = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       }
       lp->lpifeastol = feastol;
    }
@@ -1921,9 +1929,11 @@ RETCODE lpSetDualFeastol(
       CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, dualfeastol) );
       if( lp->nrows > 0 && dualfeastol < lp->lpidualfeastol )
       {
+         /* mark the current solution invalid */
          lp->solved = FALSE;
+         lp->dualfeasible = FALSE;
+         lp->lpobjval = SCIP_INVALID;
          lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-         lp->primalfeasible = FALSE;
       }
       lp->lpidualfeastol = dualfeastol;
    }
@@ -2009,7 +2019,12 @@ RETCODE lpSetIterationLimit(
    if( itlim != lp->lpiitlim )
    {
       if( itlim > lp->lpiitlim )
+      {
+         /* mark the current solution invalid */
          lp->solved = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      }
 
       CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPITLIM, itlim) );
       lp->lpiitlim = itlim;
@@ -2345,12 +2360,12 @@ RETCODE SCIPcolChgObj(
       /* mark objective value change in the column */
       col->objchanged = TRUE;
       
-      /* invalidate LP solution */
-      lp->flushed = FALSE;
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->flushed = FALSE;
 
       assert(lp->nchgcols > 0);
    }  
@@ -2389,12 +2404,12 @@ RETCODE SCIPcolChgLb(
       /* mark bound change in the column */
       col->lbchanged = TRUE;
       
-      /* invalidate LP solution */
-      lp->flushed = FALSE;
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->flushed = FALSE;
 
       assert(lp->nchgcols > 0);
    }  
@@ -2433,12 +2448,12 @@ RETCODE SCIPcolChgUb(
       /* mark bound change in the column */
       col->ubchanged = TRUE;
       
-      /* invalidate LP solution */
-      lp->flushed = FALSE;
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->flushed = FALSE;
 
       assert(lp->nchgcols > 0);
    }  
@@ -2678,8 +2693,11 @@ RETCODE colStrongbranch(
    assert(col != NULL);
    assert(SCIPcolIsIntegral(col));
    assert(SCIPvarIsIntegral(col->var));
+   assert(set != NULL);
    assert(stat != NULL);
    assert(lp != NULL);
+   assert(lp->solved);
+   assert(lp->flushed);
    assert(lperror != NULL);
 
    debugMessage("performing strong branching on variable <%s>(%g) with %d iterations\n", 
@@ -2693,7 +2711,7 @@ RETCODE colStrongbranch(
    col->strongbranchitlim = itlim;
    retcode = SCIPlpiStrongbranch(lp->lpi, col->lpipos, col->primsol, itlim,
       &strongbranchdown, &strongbranchup, &iter);
-
+   
    /* check return code for errors */
    if( retcode == SCIP_LPERROR )
    {
@@ -2706,7 +2724,9 @@ RETCODE colStrongbranch(
    }
    else
    {
+      *lperror = FALSE;
       CHECK_OKAY( retcode );
+
       col->strongbranchdown = MIN(strongbranchdown + lp->looseobjval, lp->cutoffbound);
       col->strongbranchup = MIN(strongbranchup + lp->looseobjval, lp->cutoffbound);
             
@@ -4946,7 +4966,6 @@ RETCODE lpFlushAddRows(
 static
 RETCODE lpFlushChgCols(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -4962,7 +4981,6 @@ RETCODE lpFlushChgCols(
    int i;
 
    assert(lp != NULL);
-   assert(memhdr != NULL);
 
    if( lp->nchgcols == 0 )
       return SCIP_OKAY;
@@ -5047,7 +5065,6 @@ RETCODE lpFlushChgCols(
 static
 RETCODE lpFlushChgRows(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -5060,7 +5077,6 @@ RETCODE lpFlushChgRows(
    int nchg;
 
    assert(lp != NULL);
-   assert(memhdr != NULL);
 
    if( lp->nchgrows == 0 )
       return SCIP_OKAY;
@@ -5143,9 +5159,9 @@ RETCODE SCIPlpFlush(
 
       return SCIP_OKAY;
    }
-   
-   assert(!lp->solved);
 
+   assert(!lp->solved);
+   
    lp->flushdeletedcols = FALSE;
    lp->flushaddedcols = FALSE;
    lp->flushdeletedrows = FALSE;
@@ -5153,8 +5169,8 @@ RETCODE SCIPlpFlush(
 
    CHECK_OKAY( lpFlushDelCols(lp) );
    CHECK_OKAY( lpFlushDelRows(lp, memhdr, set) );
-   CHECK_OKAY( lpFlushChgCols(lp, memhdr, set) );
-   CHECK_OKAY( lpFlushChgRows(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushChgCols(lp, set) );
+   CHECK_OKAY( lpFlushChgRows(lp, set) );
    CHECK_OKAY( lpFlushAddCols(lp, memhdr, set) );
    CHECK_OKAY( lpFlushAddRows(lp, memhdr, set) );
 
@@ -5442,11 +5458,13 @@ RETCODE SCIPlpAddCol(
    lp->ncols++;
    if( col->removeable )
       lp->nremoveablecols++;
-   lp->flushed = FALSE;
+
+   /* mark the current solution invalid */
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   lp->flushed = FALSE;
 
    /* update column arrays of all linked rows */
    colUpdateAddLP(col);
@@ -5477,11 +5495,13 @@ RETCODE SCIPlpAddRow(
    lp->nrows++;
    if( row->removeable )
       lp->nremoveablerows++;
-   lp->flushed = FALSE;
+
+   /* mark the current solution invalid */
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   lp->flushed = FALSE;
 
    /* update row arrays of all linked columns */
    rowUpdateAddLP(row);
@@ -5530,11 +5550,13 @@ RETCODE SCIPlpShrinkCols(
       }
       assert(lp->ncols == newncols);
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
-      lp->flushed = FALSE;
+
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->flushed = FALSE;
    }
    assert(lp->nremoveablecols <= lp->ncols);
 
@@ -5582,11 +5604,13 @@ RETCODE SCIPlpShrinkRows(
       }
       assert(lp->nrows == newnrows);
       lp->lpifirstchgrow = MIN(lp->lpifirstchgrow, newnrows);
-      lp->flushed = FALSE;
+
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->flushed = FALSE;
    }
    assert(lp->nremoveablerows <= lp->nrows);
 
@@ -5629,6 +5653,8 @@ RETCODE SCIPlpGetBasisInd(
    )
 {
    assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
    assert(basisind != NULL);
 
    CHECK_OKAY( SCIPlpiGetBasisInd(lp->lpi, basisind) );
@@ -5644,6 +5670,8 @@ RETCODE SCIPlpGetBase(
    )
 {
    assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
 
    CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
 
@@ -6463,7 +6491,6 @@ RETCODE SCIPlpCalcMIR(
    Bool freevariable;
 
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(lp->solved);
    assert(vars != NULL);
    assert(weights != NULL);
@@ -6590,11 +6617,28 @@ RETCODE SCIPlpSetState(
    assert(memhdr != NULL);
    assert(lpistate != NULL);
 
+   /* flush changes to the LP solver */
    CHECK_OKAY( SCIPlpFlush(lp, memhdr, set) );
+   assert(lp->flushed);
 
+   /* set LPI state in the LP solver */
    CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, lpistate) );
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** frees LP state information */
+RETCODE SCIPlpFreeState(
+   LP*              lp,                 /**< LP data */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   )
+{
+   assert(lp != NULL);
+
+   CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, lpistate) );
 
    return SCIP_OKAY;
 }
@@ -6614,7 +6658,12 @@ RETCODE SCIPlpSetCutoffbound(
     * if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit
     */
    if( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT && cutoffbound > lp->cutoffbound )
+   {
+      /* mark the current solution invalid */
       lp->solved = FALSE;
+      lp->lpobjval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
    else if( lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetObjval(lp, set) >= cutoffbound )
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
 
@@ -6634,6 +6683,7 @@ RETCODE lpPrimalSimplex(
    int iterations;
 
    assert(lp != NULL);
+   assert(lp->flushed);
    assert(set != NULL);
    assert(stat != NULL);
 
@@ -6770,6 +6820,7 @@ RETCODE lpSimplex(
    )
 {
    assert(lp != NULL);
+   assert(lp->flushed);
 
    /* call appropriate simplex */
    if( useprimal )
@@ -8318,8 +8369,11 @@ RETCODE lpDelColset(
    {
       assert(lp->ncols == lp->nlpicols);
       assert(lp->nchgcols == 0);
-      assert(lp->flushed == TRUE);
+      assert(lp->flushed);
+
       lp->lpifirstchgcol = lp->nlpicols;
+
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
@@ -8394,8 +8448,11 @@ RETCODE lpDelRowset(
    {
       assert(lp->nrows == lp->nlpirows);
       assert(lp->nchgrows == 0);
-      assert(lp->flushed == TRUE);
+      assert(lp->flushed);
+
       lp->lpifirstchgrow = lp->nlpirows;
+
+      /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
@@ -8795,8 +8852,11 @@ RETCODE SCIPlpStartDive(
    )
 {
    assert(lp != NULL);
+   assert(lp->solved);
+   assert(lp->flushed);
    assert(!lp->diving);
    assert(lp->divelpistate == NULL);
+   assert(set != NULL);
 
 #ifndef NDEBUG
    {
@@ -8857,8 +8917,8 @@ RETCODE SCIPlpEndDive(
    }
 
    /* reload LPI state saved at start of diving, free LPI state afterwards */
-   CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, lp->divelpistate) );
-   CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, &lp->divelpistate) );
+   CHECK_OKAY( SCIPlpSetState(lp, memhdr, set, lp->divelpistate) );
+   CHECK_OKAY( SCIPlpFreeState(lp, memhdr, &lp->divelpistate) );
    assert(lp->divelpistate == NULL);
 
    /**@todo Get rid of resolving after diving: use separate data fields in columns to store all diving
@@ -8925,7 +8985,6 @@ RETCODE provedBound(
    int j;
 
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(lp->solved);
    assert(set != NULL);
    assert(bound != NULL);
