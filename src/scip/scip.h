@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.219 2005/03/21 11:37:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.220 2005/03/21 16:42:39 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4373,6 +4373,70 @@ Longint SCIPgetNSolsFound(
 extern
 Longint SCIPgetNBestSolsFound(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets the average pseudo cost value for the given direction over all variables */
+extern
+Real SCIPgetAvgPseudocost(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the average pseudo cost value for the given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPgetAvgPseudocostCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the average number of pseudo cost updates for the given direction over all variables */
+extern
+Real SCIPgetAvgPseudocostCount(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** gets the average number of pseudo cost updates for the given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPgetAvgPseudocostCountCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the average number of inferences found after branching in given direction over all variables */
+extern
+Real SCIPgetAvgInferences(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the average number of inferences found after branching in given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPgetAvgInferencesCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the average number of cutoffs found after branching in given direction over all variables */
+extern
+Real SCIPgetAvgCutoffs(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the average number of cutoffs found after branching in given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPgetAvgCutoffsCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** outputs original problem to file stream */

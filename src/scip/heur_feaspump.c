@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.25 2005/03/21 11:37:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.26 2005/03/21 16:42:39 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -42,7 +42,9 @@
 #define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved? */
 
 #define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
-#define DEFAULT_MAXLPITEROFS    10000   /**< additional number of allowed LP iterations */
+#define DEFAULT_MAXLPITEROFS     1000   /**< additional number of allowed LP iterations */
+#define DEFAULT_MAXSOLS             5   /**< total number of feasible solutions found up to which heuristic is called
+                                         *   (-1: no limit) */
 #define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
@@ -59,6 +61,8 @@ struct HeurData
    Longint          nlpiterations;      /**< number of LP iterations used in this heuristic */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
    int              maxlpiterofs;       /**< additional number of allowed LP iterations */
+   int              maxsols;            /**< total number of feasible solutions found up to which heuristic is called
+                                         *   (-1: no limit) */
    Real             objfactor;          /**< factor by which the regard of the objective is decreased in each round, 
                                          *   1.0 for dynamic, depending on solutions already found */
    int              maxloops;           /**< maximum number of loops (-1: no limit) */ 
@@ -184,7 +188,7 @@ RETCODE handleCycle(
       flipprob = -0.3 + ((Real)(rand_r(&heurdata->randseed) % 1000000))/1000000.0 ;
 
       /* flip, iff the sum of the randomized number and the fractionality is big enough */
-      if( MIN(frac,1.0-frac)+MAX(flipprob,0.0) > 0.5 )
+      if( MIN(frac, 1.0-frac) + MAX(flipprob, 0.0) > 0.5 )
       {
          if( frac > 0.5 )
          {
@@ -328,9 +332,7 @@ DECL_HEUREXEC(heurExecFeaspump)
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
 
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
+   *result = SCIP_DELAYED;
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -338,6 +340,20 @@ DECL_HEUREXEC(heurExecFeaspump)
 
    /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
    if( !SCIPisLPSolBasic(scip) )
+      return SCIP_OKAY;
+
+   /* don't dive two times at the same node */
+   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* only apply heuristic, if only a few solutions have been found */
+   if( heurdata->maxsols >= 0 && SCIPgetNSolsFound(scip) >= heurdata->maxsols )
       return SCIP_OKAY;
 
    /* get all variables of LP and number of fractional variables in LP solution that should be integral */
@@ -354,12 +370,6 @@ DECL_HEUREXEC(heurExecFeaspump)
    maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations;
    maxnlpiterations += heurdata->maxlpiterofs;
   
-   /* initialize some heuristic data */
-   maxflips = 3*heurdata->minflips;
-   maxloops = heurdata->maxloops;
-   if( maxloops == -1 )
-      maxloops = INT_MAX;
-
    /* don't try to dive, if we took too many LP iterations during diving */
    if( heurdata->nlpiterations >= maxnlpiterations )
       return SCIP_OKAY;
@@ -367,6 +377,12 @@ DECL_HEUREXEC(heurExecFeaspump)
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
    
+   /* calculate maximal number of flips and loops */
+   maxflips = 3*heurdata->minflips;
+   maxloops = heurdata->maxloops;
+   if( maxloops == -1 )
+      maxloops = INT_MAX;
+
    debugMessage("executing feasibility pump heuristic, maxnlpit:%lld, maxflips:%d \n", maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
@@ -443,10 +459,15 @@ DECL_HEUREXEC(heurExecFeaspump)
             /* variables which are already integral, are treated separately */
             if( SCIPisFeasZero(scip,frac) )
             {
+               Real lb;
+               Real ub;
+
                /* variables at their bounds should be kept there */
-               if( SCIPisFeasEQ(scip, solval, SCIPvarGetLbLocal(var)) )
+               lb = SCIPvarGetLbLocal(var);
+               ub = SCIPvarGetUbLocal(var);
+               if( SCIPisFeasEQ(scip, solval, lb) )
                   newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
-               else if( SCIPisFeasEQ(scip, solval, SCIPvarGetUbLocal(var)) )
+               else if( SCIPisFeasEQ(scip, solval, ub) )
                   newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
                else
                   newobjcoeff = alpha * orgobjcoeff;
@@ -597,6 +618,10 @@ RETCODE SCIPincludeHeurFeaspump(
          "heuristics/feaspump/maxlpiterofs", 
          "additional number of allowed LP iterations",
          &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "heuristics/feaspump/maxsols", 
+         "total number of feasible solutions found up to which heuristic is called (-1: no limit)",
+         &heurdata->maxsols, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/feaspump/objfactor", 
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",

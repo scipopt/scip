@@ -57,6 +57,9 @@ interface:
 - new method SCIPconsIsSeparationEnabled()
 - added new parameter "dynamic" to SCIPcreateCons() and all plugin methods SCIPcreateCons...()
 - callback method CONFLICTEXEC of conflict handlers receive additional parameters "dynamic" and "removeable"
+- new methods SCIPgetAvgPseudocost(), SCIPgetAvgPseudocostCurrentRun(), SCIPgetAvgPseudocostCount(),
+  SCIPgetAvgPseudocostCountCurrentRun(), SCIPgetAvgInferences(), SCIPgetAvgInferencesCurrentRun(),
+  SCIPgetAvgCutoffs(), SCIPgetAvgCutoffsCurrentRun(), 
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -118,6 +121,10 @@ parameters:
 - new parameter heuristics/objpscostdiving/maxlpiterofs
 - new parameter heuristics/pscostdiving/maxlpiterofs
 - new parameter heuristics/rootsoldiving/maxlpiterofs
+- new parameter heuristics/feaspump/maxsols
+- new parameter heuristics/objfeaspump/maxsols
+- new parameter heuristics/objpscostdiving/maxsols
+- new parameter heuristics/rootsoldiving/maxsols
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex

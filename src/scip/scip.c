@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.280 2005/03/21 11:37:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.281 2005/03/21 16:42:39 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10957,6 +10957,102 @@ Longint SCIPgetNBestSolsFound(
    CHECK_ABORT( checkStage(scip, "SCIPgetNBestSolsFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->primal->nbestsolsfound;
+}
+
+/** gets the average pseudo cost value for the given direction over all variables */
+Real SCIPgetAvgPseudocost(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetPseudocost(scip->stat->glbhistory, solvaldelta);
+}
+
+/** gets the average pseudo cost value for the given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPgetAvgPseudocostCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgPseudocostCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, solvaldelta);
+}
+
+/** gets the average number of pseudo cost updates for the given direction over all variables */
+Real SCIPgetAvgPseudocostCount(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetPseudocostCount(scip->stat->glbhistory, dir) / MAX(scip->transprob->nvars, 1);
+}
+
+/** gets the average number of pseudo cost updates for the given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPgetAvgPseudocostCountCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetPseudocostCount(scip->stat->glbhistorycrun, dir) / MAX(scip->transprob->nvars, 1);
+}
+
+/** returns the average number of inferences found after branching in given direction over all variables */
+Real SCIPgetAvgInferences(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgInferences", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetAvgInferences(scip->stat->glbhistory, dir);
+}
+
+/** returns the average number of inferences found after branching in given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPgetAvgInferencesCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgInferencesCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, dir);
+}
+
+/** returns the average number of cutoffs found after branching in given direction over all variables */
+Real SCIPgetAvgCutoffs(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgCutoffs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetAvgCutoffs(scip->stat->glbhistory, dir);
+}
+
+/** returns the average number of cutoffs found after branching in given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPgetAvgCutoffsCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgCutoffsCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPhistoryGetAvgCutoffs(scip->stat->glbhistorycrun, dir);
 }
 
 /** outputs original problem to file stream */

@@ -971,8 +971,8 @@ heuristics/coefdiving/maxreldepth = 1
 heuristics/coefdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/coefdiving/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/coefdiving/maxlpiterofs = 1000
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1011,8 +1011,12 @@ heuristics/feaspump/maxdepth = -1
 heuristics/feaspump/maxlpiterquot = 0.01
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/feaspump/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/feaspump/maxlpiterofs = 1000
+
+# total number of feasible solutions found up to which heuristic is called (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 5]
+heuristics/feaspump/maxsols = 5
 
 # factor by which the regard of the objective is decreased in each round, 1.0 for dynamic
 # [type: real, range: [0,1], default: 1]
@@ -1087,8 +1091,8 @@ heuristics/fracdiving/maxreldepth = 1
 heuristics/fracdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/fracdiving/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/fracdiving/maxlpiterofs = 1000
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1135,8 +1139,8 @@ heuristics/guideddiving/maxreldepth = 1
 heuristics/guideddiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/guideddiving/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/guideddiving/maxlpiterofs = 1000
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1183,8 +1187,8 @@ heuristics/linesearchdiving/maxreldepth = 1
 heuristics/linesearchdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/linesearchdiving/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/linesearchdiving/maxlpiterofs = 1000
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1231,8 +1235,12 @@ heuristics/objfeaspump/maxreldepth = 1
 heuristics/objfeaspump/maxlpiterquot = 0.01
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/objfeaspump/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/objfeaspump/maxlpiterofs = 1000
+
+# total number of feasible solutions found up to which heuristic is called (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 5]
+heuristics/objfeaspump/maxsols = 5
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -1271,8 +1279,12 @@ heuristics/objpscostdiving/maxreldepth = 1
 heuristics/objpscostdiving/maxlpiterquot = 0.01
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/objpscostdiving/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/objpscostdiving/maxlpiterofs = 1000
+
+# total number of feasible solutions found up to which heuristic is called (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 5]
+heuristics/objpscostdiving/maxsols = 5
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -1311,8 +1323,8 @@ heuristics/pscostdiving/maxreldepth = 1
 heuristics/pscostdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/pscostdiving/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/pscostdiving/maxlpiterofs = 1000
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1359,8 +1371,12 @@ heuristics/rootsoldiving/maxreldepth = 1
 heuristics/rootsoldiving/maxlpiterquot = 0.01
 
 # additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-heuristics/rootsoldiving/maxlpiterofs = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/rootsoldiving/maxlpiterofs = 1000
+
+# total number of feasible solutions found up to which heuristic is called (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 5]
+heuristics/rootsoldiving/maxsols = 5
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]

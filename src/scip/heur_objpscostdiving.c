@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.21 2005/03/21 11:37:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.22 2005/03/21 16:42:39 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -46,12 +46,14 @@
  * Default parameter settings
  */
 
-#define DEFAULT_MINRELDEPTH        0.0  /**< minimal relative depth to start diving */
-#define DEFAULT_MAXRELDEPTH        1.0  /**< maximal relative depth to start diving */
+#define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
+#define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT      0.01 /**< maximal fraction of diving LP iterations compared to total iteration number */
-#define DEFAULT_MAXLPITEROFS    10000    /**< additional number of allowed LP iterations */
-#define DEFAULT_DEPTHFAC           0.5  /**< maximal diving depth: number of binary/integer variables times depthfac */
-#define DEFAULT_DEPTHFACNOSOL      2.0  /**< maximal diving depth factor if no feasible solution was found yet */
+#define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
+#define DEFAULT_MAXSOLS               5 /**< total number of feasible solutions found up to which heuristic is called
+                                         *   (-1: no limit) */
+#define DEFAULT_DEPTHFAC            0.5 /**< maximal diving depth: number of binary/integer variables times depthfac */
+#define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
 
 
 /* locally defined heuristic data */
@@ -62,6 +64,8 @@ struct HeurData
    Real             maxreldepth;        /**< maximal relative depth to start diving */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
    int              maxlpiterofs;       /**< additional number of allowed LP iterations */
+   int              maxsols;            /**< total number of feasible solutions found up to which heuristic is called
+                                         *   (-1: no limit) */
    Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */
    Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
    Longint          nlpiterations;      /**< LP iterations used in this heuristic */
@@ -272,6 +276,10 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* only apply heuristic, if only a few solutions have been found */
+   if( heurdata->maxsols >= 0 && SCIPgetNSolsFound(scip) >= heurdata->maxsols )
+      return SCIP_OKAY;
 
    /* only try to dive, if we are in the correct part of the tree, given by minreldepth and maxreldepth */
    depth = SCIPgetDepth(scip);
@@ -589,6 +597,10 @@ RETCODE SCIPincludeHeurObjpscostdiving(
          "heuristics/objpscostdiving/maxlpiterofs", 
          "additional number of allowed LP iterations",
          &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "heuristics/objpscostdiving/maxsols", 
+         "total number of feasible solutions found up to which heuristic is called (-1: no limit)",
+         &heurdata->maxsols, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/objpscostdiving/depthfac",
          "maximal diving depth: number of binary/integer variables times depthfac",
