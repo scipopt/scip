@@ -1,6 +1,9 @@
 # verbosity level of output [default: 2]
 global_VerbLevel = 4
 
+# should the CTRL-C interrupt be catched by SCIP? [default: TRUE]
+global_CatchCtrlC = TRUE
+
 # values larger than this are considered infinity [default: 1.000000000000000e+20]
 global_Infinity = 1.000000000000000e+20
 
@@ -84,6 +87,9 @@ global_MaxSol = 256
 
 # maximal number of nodes to process (-1: no limit) [default: -1]
 global_NodeLimit = -1
+
+# maximal time in seconds to run [default: 1.000000000000000e+20]
+global_TimeLimit = 1.000000000000000e+20
 
 # frequency for solving LP at the nodes (-1: never; 0: only root LP) [default: 4]
 global_LpSolveFreq = 4

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.32 2003/07/02 13:49:11 bzfpfend Exp $
+# $Id: Makefile,v 1.33 2003/07/03 12:47:37 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -105,6 +105,7 @@ LIBOBJ		=	branch.o \
 			heur.o \
 			heur_diving.o \
 			heur_rounding.o \
+			interrupt.o \
 			lp.o \
 			mem.o \
 			memory.o \

@@ -40,6 +40,11 @@
 #define SCIP_DEFAULT_VERBLEVEL    SCIP_VERBLEVEL_NORMAL
 
 
+/* CTRL-C interrupt */
+
+#define SCIP_DEFAULT_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be catched by SCIP? */
+
+
 /* Dynamic Memory */
 
 #define SCIP_DEFAULT_MEMGROWFAC        1.2
@@ -111,6 +116,7 @@
 
 #define SCIP_DEFAULT_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
 #define SCIP_DEFAULT_CLOCKSENABLED    TRUE /**< is timing enabled? */
+#define SCIP_DEFAULT_TIMELIMIT       1e+20 /**< maximal time in seconds to run */
 
 
 
@@ -211,6 +217,10 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "global_VerbLevel", "verbosity level of output",
                   &(*set)->verblevel, SCIP_DEFAULT_VERBLEVEL, SCIP_VERBLEVEL_NONE, SCIP_VERBLEVEL_FULL,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "global_CatchCtrlC", "should the CTRL-C interrupt be catched by SCIP?",
+                  &(*set)->catchctrlc, SCIP_DEFAULT_CATCHCTRLC,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "global_Infinity", "values larger than this are considered infinity",
@@ -324,6 +334,10 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
                   "global_NodeLimit", "maximal number of nodes to process (-1: no limit)",
                   &(*set)->nodelimit, SCIP_DEFAULT_NODELIMIT, -1, LONGINT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_TimeLimit", "maximal time in seconds to run",
+                  &(*set)->timelimit, SCIP_DEFAULT_TIMELIMIT, 0.0, REAL_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "global_LpSolveFreq", "frequency for solving LP at the nodes (-1: never; 0: only root LP)",

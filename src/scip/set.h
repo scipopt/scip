@@ -100,6 +100,7 @@ struct Set
    int              dispssize;          /**< size of disps array */
 
    int              verblevel;          /**< verbosity level of output */
+   Bool             catchctrlc;         /**< should the CTRL-C interrupt be catched by SCIP? */
    Real             infinity;           /**< values larger than this are considered infinity */
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
    Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
@@ -128,6 +129,7 @@ struct Set
    int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
+   Real             timelimit;          /**< maximal time in seconds to run */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */

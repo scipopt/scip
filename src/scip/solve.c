@@ -28,7 +28,38 @@
 #include "var.h"
 #include "disp.h"
 #include "solve.h"
+#include "clock.h"
+#include "interrupt.h"
 
+
+/** returns whether the solving process will be / was stopped before proving optimality */
+Bool SCIPsolveIsStopped(
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
+   )
+{
+   return (SCIPinterrupted()
+      || (set->nodelimit >= 0 && stat->nnodes >= set->nodelimit)
+      || SCIPclockGetTime(stat->solvingtime) >= set->timelimit);
+}
+
+/** outputs the reason for termination */
+void SCIPsolvePrintStopReason(
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   if( file == NULL )
+      file = stdout;
+
+   if( SCIPinterrupted() )
+      fprintf(file, "user interrupt");
+   else if( set->nodelimit >= 0 && stat->nnodes >= set->nodelimit )
+      fprintf(file, "node limit reached");
+   else if( SCIPclockGetTime(stat->solvingtime) >= set->timelimit )
+      fprintf(file, "time limit reached");
+}
 
 /** constructs the LP of the root node */
 static
@@ -670,7 +701,7 @@ RETCODE SCIPsolveCIP(
    SCIPbsortPtr((void**)conshdlrs_sepa, set->nconshdlrs, SCIPconshdlrCompSepa);
    SCIPbsortPtr((void**)conshdlrs_enfo, set->nconshdlrs, SCIPconshdlrCompEnfo);
 
-   while( set->nodelimit == -1 || stat->nnodes < set->nodelimit )
+   while( !SCIPsolveIsStopped(set, stat) )
    {
       assert(set->buffer->firstfree == 0);
 

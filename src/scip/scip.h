@@ -2062,6 +2062,13 @@ int SCIPgetNSolsFound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** outputs SCIP status */
+extern
+RETCODE SCIPprintStatus(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
 /** outputs solving statistics */
 extern
 RETCODE SCIPprintStatistics(

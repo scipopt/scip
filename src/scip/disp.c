@@ -443,14 +443,16 @@ void SCIPdispTime(
          maxval *= 10;
       if( val < 0.0 )
          maxval /= 10;
-      maxval--; /* for safety against rounding errors */
       timepower = 0;
-      while( ABS(val) > maxval && timepower < MAXTIMEPOWER )
+      while( ABS(val) + 0.5 >= maxval && timepower < MAXTIMEPOWER )
       {
          timepower++;
          val /= timepowerval[timepower];
       }
-      sprintf(format, "%%%d.0f%c", width-1, timepowerchar[timepower]);
+      if( ABS(val) + 0.05 < maxval/100 )
+         sprintf(format, "%%%d.1f%c", width-1, timepowerchar[timepower]);
+      else
+         sprintf(format, "%%%d.0f%c", width-1, timepowerchar[timepower]);
 
       if( width == 2 && val < 0.0 )
          fprintf(file, "-%c", timepowerchar[timepower]);

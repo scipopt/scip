@@ -40,6 +40,21 @@
 #include "primal.h"
 
 
+/** returns whether the solving process will be / was stopped before proving optimality */
+extern
+Bool SCIPsolveIsStopped(
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
+   );
+
+/** outputs the reason for termination */
+extern
+void SCIPsolvePrintStopReason(
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
 /** main solving loop */
 extern
 RETCODE SCIPsolveCIP(

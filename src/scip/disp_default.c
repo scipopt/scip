@@ -224,7 +224,7 @@ DECL_DISPOUTPUT(SCIPdispOutputTime)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_TIME) == 0);
    assert(scip != NULL);
 
-   SCIPdispTime(file, SCIPgetSolvingTime(scip), DISP_WIDT_TIME); /*????????????????*/
+   SCIPdispTime(file, SCIPgetSolvingTime(scip), DISP_WIDT_TIME);
 
    return SCIP_OKAY;
 }

@@ -27,6 +27,7 @@
 #include "scip.h"
 #include "set.h"
 #include "mem.h"
+#include "interrupt.h"
 #include "prob.h"
 #include "stat.h"
 #include "solve.h"
@@ -39,6 +40,7 @@ struct Scip
    STAGE            stage;              /**< SCIP operation stage */
    SET*             set;                /**< global SCIP settings */
    MEM*             mem;                /**< block memory buffers */
+   INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
    CLOCK*           totaltime;          /**< total SCIP running time */
    PROB*            origprob;           /**< original problem data */
    PROB*            transprob;          /**< transformed problem after presolve */
@@ -75,6 +77,7 @@ RETCODE checkStage(
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(scip->mem != NULL);
+   assert(scip->interrupt != NULL);
    assert(method != NULL);
 
    debugMessage("called method <%s> at stage %d ------------------------------------------------\n", method, scip->stage);
@@ -290,6 +293,7 @@ RETCODE SCIPcreate(
 
    CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
    CHECK_OKAY( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
+   CHECK_OKAY( SCIPinterruptCreate(&(*scip)->interrupt) );
    CHECK_OKAY( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->origprob = NULL;
@@ -320,8 +324,10 @@ RETCODE SCIPfree(
    CHECK_OKAY( SCIPfreeProb(*scip) );
    assert((*scip)->stage == SCIP_STAGE_INIT);
 
-   SCIPclockFree(&(*scip)->totaltime);
    CHECK_OKAY( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
+
+   SCIPclockFree(&(*scip)->totaltime);
+   SCIPinterruptFree(&(*scip)->interrupt);
    CHECK_OKAY( SCIPmemFree(&(*scip)->mem) );
 
    freeMemory(scip);
@@ -2044,6 +2050,9 @@ RETCODE SCIPsolve(
 
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
+   /* capture the CTRL-C interrupt */
+   SCIPinterruptCapture(scip->interrupt, scip->set);
+
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
 
@@ -2104,6 +2113,9 @@ RETCODE SCIPsolve(
 
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
+
+   /* release the CTRL-C interrupt */
+   SCIPinterruptRelease(scip->interrupt, scip->set);
 
    return SCIP_OKAY;
 }
@@ -5074,6 +5086,52 @@ void printSolutionStatistics(
       fprintf(file, "  Gap              : %10.4f %%\n", 100.0 * gap);
 }
 
+/** outputs SCIP status */
+RETCODE SCIPprintStatus(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( file == NULL )
+      file = stdout;
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_INIT:
+      fprintf(file, "initialization");
+      break;
+   case SCIP_STAGE_PROBLEM:
+      fprintf(file, "problem creation");
+      break;
+   case SCIP_STAGE_INITSOLVE:
+      fprintf(file, "solving process initialization");
+      break;
+   case SCIP_STAGE_PRESOLVING:
+      fprintf(file, "presolving is running");
+      break;
+   case SCIP_STAGE_SOLVING:
+      if( SCIPsolveIsStopped(scip->set, scip->stat) )
+      {
+         fprintf(file, "solving was interrupted [");
+         SCIPsolvePrintStopReason(scip->set, scip->stat, file);
+         fprintf(file, "]\n");
+      }
+      else
+         fprintf(file, "solving process is running");
+      break;
+   case SCIP_STAGE_SOLVED:
+      fprintf(file, "problem is solved");
+      break;
+   case SCIP_STAGE_FREESOLVE:
+      fprintf(file, "solving process deinitialization");
+      break;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs solving statistics */
 RETCODE SCIPprintStatistics(
    SCIP*            scip,               /**< SCIP data structure */
@@ -5099,24 +5157,9 @@ RETCODE SCIPprintStatistics(
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
-      fprintf(file, "SCIP Status        : problem solving\n");
-      fprintf(file, "Solving Time       : %12.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
-      fprintf(file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, file);
-      fprintf(file, "Transformed Problem:\n");
-      SCIPprobPrintStatistics(scip->transprob, file);
-      printPresolverStatistics(scip, file);
-      printConstraintStatistics(scip, file);
-      printSeparatorStatistics(scip, file);
-      printPricerStatistics(scip, file);
-      printHeuristicStatistics(scip, file);
-      printLPStatistics(scip, file);
-      printTreeStatistics(scip, file);
-      printSolutionStatistics(scip, file);
-      return SCIP_OKAY;
-
    case SCIP_STAGE_SOLVED:
-      fprintf(file, "SCIP Status        : problem is solved\n");
+      fprintf(file, "SCIP Status        : ");
+      CHECK_OKAY( SCIPprintStatus(scip, file) );
       fprintf(file, "Solving Time       : %12.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
