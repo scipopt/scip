@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.3 2004/04/06 15:21:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.4 2004/04/06 15:53:36 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -101,6 +101,36 @@ Bool SCIPhistoryIsPseudocostEmpty(
    int              dir                 /**< direction: downwards (0), or upwards (1) */
    );
 
+/** increases the number of branchings counter */
+extern
+void SCIPhistoryIncNBranchings(
+   HISTORY*         history             /**< branching and inference history */
+   );
+
+/** increases the number of inferences counter */
+extern
+void SCIPhistoryIncNInferences(
+   HISTORY*         history             /**< branching and inference history */
+   );
+
+/** get number of branchings counter */
+extern
+Longint SCIPhistoryGetNBranchings(
+   HISTORY*         history             /**< branching and inference history */
+   );
+
+/** get number of branchings counter */
+extern
+Longint SCIPhistoryGetNInferences(
+   HISTORY*         history             /**< branching and inference history */
+   );
+
+/** get number of branchings counter */
+extern
+Real SCIPhistoryGetAvgInferences(
+   HISTORY*         history             /**< branching and inference history */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -114,7 +144,12 @@ Bool SCIPhistoryIsPseudocostEmpty(
                             ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
-
+#define SCIPhistoryIncNBranchings(history)         (history)->nbranchings++;
+#define SCIPhistoryIncNInferences(history)         (history)->ninferences++;
+#define SCIPhistoryGetNBranchings(history)         ((history)->nbranchings)
+#define SCIPhistoryGetNInferences(history)         ((history)->ninferences)
+#define SCIPhistoryGetAvgInferences(history)       ((history)->nbranchings > 0 \
+                                                   ? (Real)(history)->ninferences/(Real)(history)->nbranchings : 0)
 #endif
 
 

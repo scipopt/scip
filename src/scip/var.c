@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.76 2004/04/06 15:21:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.77 2004/04/06 15:53:37 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -764,12 +764,6 @@ RETCODE SCIPdomchgAddBoundchg(
 
    /* capture branching and inference data associated with the bound changes */
    CHECK_OKAY( boundchgCaptureData(boundchg) );
-
-   /* update the inference history */
-   if( boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE && stat->lastbranchvar != NULL )
-   {
-      /*abort();*/ /*????????????????????*/
-   }
 
    stat->nboundchgs++;
 
@@ -5192,6 +5186,46 @@ Real SCIPvarGetPseudocostCount(
    assert(dir == 0 || dir == 1);
 
    return SCIPhistoryGetPseudocostCount(var->history, dir);
+}
+
+/** increases the number of branchings counter of the variable */
+void SCIPvarIncNBranchings(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   SCIPhistoryIncNBranchings(var->history);
+   SCIPhistoryIncNBranchings(stat->glbhistory);
+}
+
+/** increases the number of inferences counter of the variable */
+void SCIPvarIncNInferences(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   SCIPhistoryIncNInferences(var->history);
+   SCIPhistoryIncNInferences(stat->glbhistory);
+}
+
+/** returns the average number of inferences found after branching on the variable */
+Real SCIPvarGetAvgInferences(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   return SCIPhistoryGetNBranchings(var->history) > 0
+      ? SCIPhistoryGetAvgInferences(var->history)
+      : SCIPhistoryGetAvgInferences(stat->glbhistory);
 }
 
 

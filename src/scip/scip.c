@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.142 2004/04/06 15:21:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.143 2004/04/06 15:53:36 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6796,6 +6796,17 @@ Real SCIPgetVarPseudocostScore(
    pscostup = SCIPvarGetPseudocost(var, scip->stat, 1.0-frac);
 
    return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
+}
+
+/** returns the average number of inferences found after branching on the variable */
+Real SCIPgetVarAvgInferences(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferences", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPvarGetAvgInferences(var, scip->stat);
 }
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.87 2004/04/05 15:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.88 2004/04/06 15:53:37 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -967,6 +967,9 @@ RETCODE SCIPnodeAddBoundinfer(
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, newpseudoobjval);
+
+      /* update the inference history */
+      SCIPvarIncNBranchings(var, stat);
    }
    else
    {
@@ -974,6 +977,10 @@ RETCODE SCIPnodeAddBoundinfer(
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
                      var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, 
                      0.0, infervar, infercons, inferinfo) );
+
+      /* update the inference history */
+      if( stat->lastbranchvar != NULL )
+         SCIPvarIncNInferences(stat->lastbranchvar, stat);
    }
 
    assert(node->domchg != NULL);

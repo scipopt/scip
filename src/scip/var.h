@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.56 2004/04/06 15:21:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.57 2004/04/06 15:53:37 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -632,6 +632,27 @@ extern
 Real SCIPvarGetPseudocostCount(
    VAR*             var,                /**< problem variable */
    int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   );
+
+/** increases the number of branchings counter of the variable */
+extern
+void SCIPvarIncNBranchings(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat                /**< problem statistics */
+   );
+
+/** increases the number of inferences counter of the variable */
+extern
+void SCIPvarIncNInferences(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat                /**< problem statistics */
+   );
+
+/** returns the average number of inferences found after branching on the variable */
+extern
+Real SCIPvarGetAvgInferences(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat                /**< problem statistics */
    );
 
 

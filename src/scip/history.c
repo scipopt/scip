@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.4 2004/04/06 15:21:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.5 2004/04/06 15:53:36 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -184,6 +184,56 @@ Bool SCIPhistoryIsPseudocostEmpty(
    assert(dir == 0 || dir == 1);
    
    return (history->pscostcount[dir] == 0.0);
+}
+
+/** increases the number of branchings counter */
+void SCIPhistoryIncNBranchings(
+   HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   history->nbranchings++;
+}
+
+/** increases the number of inferences counter */
+void SCIPhistoryIncNInferences(
+   HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   history->ninferences++;
+}
+
+/** get number of branchings counter */
+Longint SCIPhistoryGetNBranchings(
+   HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   return history->nbranchings;
+}
+
+/** get number of branchings counter */
+Longint SCIPhistoryGetNInferences(
+   HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   return history->ninferences;
+}
+
+/** get number of branchings counter */
+Real SCIPhistoryGetAvgInferences(
+   HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   return history->nbranchings > 0 ? (Real)history->ninferences/(Real)history->nbranchings : 0;
 }
 
 #endif
