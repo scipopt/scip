@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.3 2004/10/14 16:53:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.4 2004/10/21 20:56:59 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -54,7 +54,7 @@ struct LPi
    int              cstatsize;          /**< size of cstat array */
    int              rstatsize;          /**< size of rstat array */
    bool             startscratch;       /**< start from scratch? */
-   bool             fastmip;            /**< FASTMIP setting */
+   bool             presolving;         /**< preform preprocessing? */
    int              pricing;            /**< scip pricing setting  */
    bool             haveFactorization;  /**< whether we have a factorization in clp */
 };
@@ -1297,21 +1297,26 @@ RETCODE SCIPlpiSolvePrimal(
    assert(lpi->clp != 0);
 
    // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   /*
    if (lpi->haveFactorization)
    {
       lpi->clp->finish();
       lpi->haveFactorization = false;
    }
+   */
 
    // Call the primal Simplex without preprocessing   
-   int status = -1;
    if ( lpi->startscratch )
-   {
       lpi->clp->allSlackBasis(true);   // reset basis
-      status = lpi->clp->primal();
-   }
-   else
-      status = lpi->clp->primal();
+
+   // temorarily turn off scaling ???????????????????
+   int scaling = lpi->clp->scalingFlag();
+   lpi->clp->scaling(0);
+   int status = lpi->clp->primal(0, 1);
+   lpi->clp->scaling(scaling);
+
+   //int status = lpi->clp->primal();
+
 
    // We may need to call ClpModel::status()
 
@@ -1341,21 +1346,25 @@ RETCODE SCIPlpiSolveDual(
    assert(lpi->clp != 0);
 
    // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   /*
    if (lpi->haveFactorization)
    {
       lpi->clp->finish();
       lpi->haveFactorization = false;
    }
+   */
 
    // Call the dual Simplex without preprocessing
-   int status = -1;
    if ( lpi->startscratch )
-   {
       lpi->clp->allSlackBasis(true);   // reset basis
-      status = lpi->clp->dual();
-   }
-   else
-      status = lpi->clp->dual();
+
+   // temorarily turn off scaling ????????????????????????
+   int scaling = lpi->clp->scalingFlag();
+   lpi->clp->scaling(0);
+   int status = lpi->clp->dual(0, 1);
+   lpi->clp->scaling(scaling);
+
+   //int status = lpi->clp->dual();
 
    //std::cout << "Clp Status: " << status << " ( " << lpi->clp->status();
    //std::cout << ")   Secondary: " << lpi->clp->secondaryStatus() << std::endl;
@@ -1389,8 +1398,10 @@ RETCODE SCIPlpiSolveBarrier(
    assert(lpi->clp != 0);
 
    // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   /*
    if (lpi->haveFactorization)
       lpi->clp->finish();
+   */
 
    // Call barrier
    int status = lpi->clp->barrier(crossover);
@@ -1433,11 +1444,13 @@ RETCODE SCIPlpiStrongbranch(
    ClpSimplex* clp = lpi->clp;
 
    // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   /*
    if (lpi->haveFactorization)
    {
       lpi->clp->finish();
       lpi->haveFactorization = false;
    }
+   */
 
    /*
    clp->writeMps("strongbranch.mps", 0, 2, clp->optimizationDirection());
@@ -1468,7 +1481,6 @@ RETCODE SCIPlpiStrongbranch(
    // bool stopOnFirstInfeasible=true,
    // bool alwaysFinish=false);
    int retval = lpi->clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true);
-   // std::cout << objval << "  down: " << *down << "   up: " << *up << "   status[0]: " << outputStatus[0] << "  status[1]: " << outputStatus[1] << std::endl;
 
    *down += objval;
    *up += objval;
@@ -1838,6 +1850,22 @@ RETCODE SCIPlpiGetDualfarkas(
    return SCIP_LPERROR;
 }
 
+
+/** gets the number of LP iterations of the last solve call */
+extern
+RETCODE SCIPlpiGetIterations(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             iterations          /**< pointer to store the number of iterations of the last solve call */
+   )
+{
+   assert(lpi != 0);
+   assert(iterations != 0);
+
+   *iterations = lpi->clp->numberIterations();
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -2072,6 +2100,7 @@ RETCODE SCIPlpiGetBInvRow(
    ClpSimplex* clp = lpi->clp;
 
    // Check whether we have a factorization and the arrays below (if not produce one!)
+   /*
    if (! lpi->haveFactorization)
    {
       int returnCode = clp->startup(0);
@@ -2089,6 +2118,11 @@ RETCODE SCIPlpiGetBInvRow(
    factorization->updateColumnTranspose(rowArray0, rowArray1);
    memcpy(coef, rowArray1->denseVector(), clp->numberRows() * sizeof(double));
    rowArray1->clear();
+   */
+
+   clp->getBInvRow(r, coef);
+
+
 
    return SCIP_OKAY;
 }
@@ -2115,6 +2149,7 @@ RETCODE SCIPlpiGetBInvARow(
    ClpSimplex* clp = lpi->clp;
 
    // Check whether we have a factorization and the arrays below (if not produce one!)
+   /*
    if (! lpi->haveFactorization)
    {
       int returnCode = clp->startup(0);
@@ -2143,7 +2178,10 @@ RETCODE SCIPlpiGetBInvARow(
    rowArray1->clear();
    columnArray0->clear();
    columnArray1->clear();
+   */
 
+   clp->getBInvARow(r, val, 0);
+  
    return SCIP_OKAY;
 }
 
@@ -2301,11 +2339,8 @@ RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_FROMSCRATCH:
       *ival = lpi->startscratch;
       break;
-   case SCIP_LPPAR_FASTMIP:
-      *ival = lpi->fastmip;
-      break;
    case SCIP_LPPAR_SCALING:
-      if( lpi->clp->scalingFlag() > 0 )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+      if( lpi->clp->scalingFlag() != 0 )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
 	 *ival = TRUE;
       else
 	 *ival = FALSE;
@@ -2326,9 +2361,6 @@ RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->clp->maximumIterations();
-      break;
-   case SCIP_LPPAR_LPITER:
-      *ival = lpi->clp->numberIterations();
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -2386,11 +2418,9 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FROMSCRATCH:
       lpi->startscratch = ival;
       break;
-   case SCIP_LPPAR_FASTMIP:
-      lpi->fastmip = ival;
-      break;
    case SCIP_LPPAR_SCALING:
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
+      std::cerr << "Set scaling: " << lpi->clp->scalingFlag() << std::endl;
       break;
    case SCIP_LPPAR_PRICING:
       abort();
