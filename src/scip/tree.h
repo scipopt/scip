@@ -123,7 +123,7 @@ struct Node
    } data;
    NODE*            parent;             /**< parent node in the tree */
    CONSLIST*        addedconss;         /**< list of constraints created at this node */
-   CONSLIST*        deletedconss;       /**< list of constraints disabled at this node (e.g. due to redundancy) */
+   CONSLIST*        disabledconss;      /**< list of constraints disabled at this node (e.g. due to redundancy) */
    DOMCHG*          domchg;             /**< domain changes at this node or NULL */
    Real             lowerbound;         /**< lower (dual) LP bound of subtree */
    unsigned int     depth:16;           /**< depth in the tree */

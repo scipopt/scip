@@ -573,7 +573,7 @@ RETCODE SCIPnodeCreate(
    ALLOC_OKAY( allocBlockMemory(memhdr, node) );
    (*node)->parent = NULL;
    (*node)->addedconss = NULL;
-   (*node)->deletedconss = NULL;
+   (*node)->disabledconss = NULL;
    (*node)->domchg = NULL;
    (*node)->lowerbound = -set->infinity;
    (*node)->depth = 0;
@@ -732,7 +732,7 @@ RETCODE SCIPnodeFree(
 
    /* free common data */
    SCIPconslistFree(&((*node)->addedconss), memhdr, set);
-   SCIPconslistFree(&((*node)->deletedconss), memhdr, set);
+   SCIPconslistFree(&((*node)->disabledconss), memhdr, set);
    SCIPdomchgFree(&((*node)->domchg), memhdr);
    CHECK_OKAY( nodeReleaseParent(*node, memhdr, set, tree, lp) );
 

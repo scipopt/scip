@@ -205,14 +205,14 @@ void SCIPrealarrayClear(
 
 /** gets value of entry in dynamic array */
 extern
-Real SCIPrealarrayGet(
+Real SCIPrealarrayGetVal(
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPrealarraySet(
+RETCODE SCIPrealarraySetVal(
    REALARRAY*       realarray,          /**< dynamic real array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -222,7 +222,7 @@ RETCODE SCIPrealarraySet(
 
 /** increases value of entry in dynamic array */
 extern
-RETCODE SCIPrealarrayInc(
+RETCODE SCIPrealarrayIncVal(
    REALARRAY*       realarray,          /**< dynamic real array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -270,14 +270,14 @@ void SCIPintarrayClear(
 
 /** gets value of entry in dynamic array */
 extern
-int SCIPintarrayGet(
+int SCIPintarrayGetVal(
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPintarraySet(
+RETCODE SCIPintarraySetVal(
    INTARRAY*        intarray,           /**< dynamic int array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -287,7 +287,7 @@ RETCODE SCIPintarraySet(
 
 /** increases value of entry in dynamic array */
 extern
-RETCODE SCIPintarrayInc(
+RETCODE SCIPintarrayIncVal(
    INTARRAY*        intarray,           /**< dynamic int array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -335,14 +335,14 @@ void SCIPboolarrayClear(
 
 /** gets value of entry in dynamic array */
 extern
-Bool SCIPboolarrayGet(
+Bool SCIPboolarrayGetVal(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    int              idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPboolarraySet(
+RETCODE SCIPboolarraySetVal(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */

@@ -91,6 +91,9 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
  * miscellaneous methods
  */
 
+/**@name Miscellaneos Methods */
+/**@{ */
+
 /** returns scip version number */
 extern
 Real SCIPversion(
@@ -110,12 +113,17 @@ void SCIPerror(
    RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
+/**@} */
+
 
 
 
 /*
  * general SCIP methods
  */
+
+/**@name General SCIP Methods */
+/**@{ */
 
 /** creates and initializes SCIP data structures */
 extern
@@ -148,12 +156,17 @@ STAGE SCIPstage(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/**@} */
+
 
 
 
 /*
  * SCIP user functionality methods: managing plugins
  */
+
+/**@name SCIP User Functionality Methods: Managing Plugins */
+/**@{ */
 
 /** creates a reader and includes it in SCIP */
 extern
@@ -293,12 +306,17 @@ RETCODE SCIPincludeDisp(
    Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
    );
 
+/**@} */
+
 
 
 
 /*
  * global problem methods
  */
+
+/**@name Global Problem Methods */
+/**@{ */
 
 /** creates empty problem and initializes all solving data structures */
 extern
@@ -369,12 +387,17 @@ RETCODE SCIPfindCons(
    CONS**           cons                /**< pointer to store the constraint, returns NULL if not found */
    );
 
+/**@} */
+
 
 
 
 /*
  * local subproblem methods
  */
+
+/**@name Local Subproblem Methods */
+/**@{ */
 
 /** adds local constraint to the given node (and all of its subnodes) */
 extern
@@ -384,12 +407,17 @@ RETCODE SCIPaddConsNode(
    CONS*            cons                /**< constraint to add */
    );
 
+/**@} */
+
 
 
 
 /*
  * solve methods
  */
+
+/**@name Solve Methods */
+/**@{ */
 
 /** solves problem */
 extern
@@ -403,12 +431,17 @@ RETCODE SCIPfreeSolve(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/**@} */
+
 
 
 
 /*
  * variable methods
  */
+
+/**@name Variable Methods */
+/**@{ */
 
 /** create and capture problem variable */
 extern
@@ -490,12 +523,17 @@ RETCODE SCIPchgVarType(
    VARTYPE          vartype             /**< new type of variable */
    );
 
+/**@} */
+
 
 
 
 /*
  * constraint methods
  */
+
+/**@name Constraint Methods */
+/**@{ */
 
 /** creates and captures a constraint of the given constraint handler
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
@@ -530,12 +568,17 @@ RETCODE SCIPreleaseCons(
    CONS**           cons                /**< pointer to constraint */
    );
 
+/**@} */
+
 
 
 
 /*
  * LP methods
  */
+
+/**@name LP Methods */
+/**@{ */
 
 /** checks, whether the LP was solved in the active node */
 extern
@@ -567,12 +610,17 @@ RETCODE SCIPgetLPRows(
    int*             nrows               /**< pointer to store the number of LP rows, or NULL */
    );
 
+/**@} */
+
 
 
 
 /*
  * LP row methods
  */
+
+/**@name LP Row Methods */
+/**@{ */
 
 /** creates and captures an LP row */
 extern
@@ -727,12 +775,17 @@ RETCODE SCIPprintRow(
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
+/**@} */
+
 
 
 
 /*
  * cutting plane methods
  */
+
+/**@name Cutting Plane Methods */
+/**@{ */
 
 /** adds cut to separation storage */
 extern
@@ -756,12 +809,17 @@ RETCODE SCIPgetPoolsize(
    int*             poolsize            /**< pointer to store the number of rows in the global cut pool */
    );
 
+/**@} */
+
 
 
 
 /*
  * branching methods
  */
+
+/**@name Branching Methods */
+/**@{ */
 
 /** gets branching candidates for LP solution branching (fractional variables) */
 extern
@@ -805,12 +863,17 @@ RETCODE SCIPbranchLP(
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
+/**@} */
+
 
 
 
 /*
  * primal solutions
  */
+
+/**@name Primal Solution Methods */
+/**@{ */
 
 /** creates a primal solution, initialized to zero */
 extern
@@ -1009,12 +1072,17 @@ RETCODE SCIPtrySolCopy(
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
+/**@} */
+
 
 
 
 /*
  * event methods
  */
+
+/**@name Event Methods */
+/**@{ */
 
 /** catches a global (not variable dependent) event */
 extern
@@ -1052,12 +1120,17 @@ RETCODE SCIPdropVarEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    );
 
+/**@} */
+
 
 
 
 /*
  * tree methods
  */
+
+/**@name Tree Methods */
+/**@{ */
 
 /** gets children of active node */
 extern
@@ -1103,12 +1176,17 @@ RETCODE SCIPgetBestNode(
    NODE**           bestnode            /**< pointer to store best leaf */
    );
 
+/**@} */
+
 
 
 
 /*
  * statistic methods
  */
+
+/**@name Statistic Methods */
+/**@{ */
 
 /** gets number of processed nodes, including the active node */
 extern
@@ -1208,12 +1286,17 @@ RETCODE SCIPgetTransPrimalBound(
    Real*            primalbound         /**< pointer to store the primal bound */
    );
 
+/**@} */
+
 
 
 
 /*
  * numeric values and comparisons
  */
+
+/**@name Numerical Methods */
+/**@{ */
 
 /** returns value treated as infinity */
 extern
@@ -1531,11 +1614,17 @@ Bool SCIPisFeasible(
    Real             val                 /**< value to be compared against zero */
    );
 
+/**@} */
+
+
 
 
 /*
  * memory management
  */
+
+/**@name Memory Management */
+/**@{ */
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (allocBlockMemory(SCIPmemhdr(scip), (ptr)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -1598,12 +1687,17 @@ RETCODE SCIPreleaseBuffer(
    int              dummysize           /**< used to get a safer define for SCIPreleaseBufferSize/Array */
    );
 
+/**@} */
+
 
 
 
 /*
  * dynamic arrays
  */
+
+/**@name Dynamic Arrays */
+/**@{ */
 
 /** creates a dynamic array of real values */
 extern
@@ -1637,7 +1731,7 @@ RETCODE SCIPclearRealarray(
 
 /** gets value of entry in dynamic array */
 extern
-Real SCIPgetRealarray(
+Real SCIPgetRealarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx                 /**< array index to get value for */
@@ -1645,7 +1739,7 @@ Real SCIPgetRealarray(
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPsetRealarray(
+RETCODE SCIPsetRealarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx,                /**< array index to set value for */
@@ -1654,7 +1748,7 @@ RETCODE SCIPsetRealarray(
 
 /** increases value of entry in dynamic array */
 extern
-RETCODE SCIPincRealarray(
+RETCODE SCIPincRealarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx,                /**< array index to increase value for */
@@ -1693,7 +1787,7 @@ RETCODE SCIPclearIntarray(
 
 /** gets value of entry in dynamic array */
 extern
-int SCIPgetIntarray(
+int SCIPgetIntarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx                 /**< array index to get value for */
@@ -1701,7 +1795,7 @@ int SCIPgetIntarray(
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPsetIntarray(
+RETCODE SCIPsetIntarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx,                /**< array index to set value for */
@@ -1710,7 +1804,7 @@ RETCODE SCIPsetIntarray(
 
 /** increases value of entry in dynamic array */
 extern
-RETCODE SCIPincIntarray(
+RETCODE SCIPincIntarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx,                /**< array index to increase value for */
@@ -1749,7 +1843,7 @@ RETCODE SCIPclearBoolarray(
 
 /** gets value of entry in dynamic array */
 extern
-Bool SCIPgetBoolarray(
+Bool SCIPgetBoolarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    int              idx                 /**< array index to get value for */
@@ -1757,21 +1851,26 @@ Bool SCIPgetBoolarray(
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPsetBoolarray(
+RETCODE SCIPsetBoolarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    int              idx,                /**< array index to set value for */
    Bool             val                 /**< value to set array index to */
    );
 
+/**@} */
 
 
+
+
+#ifndef NDEBUG
 
 /*
  * debugging methods
  */
 
-#ifndef NDEBUG
+/**@name Debugging Methods */
+/**@{ */
 
 /** prints output about used memory */
 extern
@@ -1779,7 +1878,11 @@ void SCIPdebugMemory(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/**@} */
+
 #endif
+
+
 
 
 #endif

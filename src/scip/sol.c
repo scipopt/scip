@@ -336,21 +336,21 @@ RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       /*debugMessage("completing variable <%s> in LP solution %p\n", var->name, sol);*/
-      if( !SCIPboolarrayGet(sol->valid, var->index) )
+      if( !SCIPboolarrayGetVal(sol->valid, var->index) )
       {
-         assert(SCIPrealarrayGet(sol->vals, var->index) == 0.0);
-         CHECK_OKAY( SCIPrealarraySet(sol->vals, memhdr, set, var->index, SCIPvarGetLPSol(var)) );
-         CHECK_OKAY( SCIPboolarraySet(sol->valid, memhdr, set, var->index, TRUE) );
+         assert(SCIPrealarrayGetVal(sol->vals, var->index) == 0.0);
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, memhdr, set, var->index, SCIPvarGetLPSol(var)) );
+         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, memhdr, set, var->index, TRUE) );
       }
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
       /*debugMessage("completing variable <%s> in pseudo solution %p\n", var->name, sol);*/
-      if( !SCIPboolarrayGet(sol->valid, var->index) )
+      if( !SCIPboolarrayGetVal(sol->valid, var->index) )
       {
-         assert(SCIPrealarrayGet(sol->vals, var->index) == 0.0);
-         CHECK_OKAY( SCIPrealarraySet(sol->vals, memhdr, set, var->index, SCIPvarGetPseudoSol(var)) );
-         CHECK_OKAY( SCIPboolarraySet(sol->valid, memhdr, set, var->index, TRUE) );
+         assert(SCIPrealarrayGetVal(sol->vals, var->index) == 0.0);
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, memhdr, set, var->index, SCIPvarGetPseudoSol(var)) );
+         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, memhdr, set, var->index, TRUE) );
       }
       return SCIP_OKAY;
 
@@ -420,7 +420,7 @@ RETCODE SCIPsolSetVal(
       CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, var, &oldval) );
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         CHECK_OKAY( SCIPrealarraySet(sol->vals, memhdr, set, var->index, val) );
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, memhdr, set, var->index, val) );
          sol->obj += var->obj * (val - oldval);
          sol->nodenum = stat->nnodes;
       }
@@ -474,7 +474,7 @@ RETCODE SCIPsolIncVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       CHECK_OKAY( solUnlinkVar(sol, memhdr, set, var) );
-      CHECK_OKAY( SCIPrealarrayInc(sol->vals, memhdr, set, var->index, incval) );
+      CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, memhdr, set, var->index, incval) );
       sol->obj += var->obj * incval;
       sol->nodenum = stat->nnodes;
       return SCIP_OKAY;
@@ -529,7 +529,7 @@ RETCODE SCIPsolGetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       CHECK_OKAY( solUnlinkVar(sol, memhdr, set, var) );
-      *solval = SCIPrealarrayGet(sol->vals, var->index);
+      *solval = SCIPrealarrayGetVal(sol->vals, var->index);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:

@@ -24,17 +24,12 @@
 
 #include <assert.h>
 
+#include "scip.h"
 #include "set.h"
 #include "mem.h"
 #include "prob.h"
-#include "tree.h"
 #include "stat.h"
-#include "scip.h"
 #include "solve.h"
-#include "price.h"
-#include "sepa.h"
-#include "cutpool.h"
-#include "primal.h"
 #include "lpi.h"
 
 
@@ -3578,7 +3573,7 @@ RETCODE SCIPclearRealarray(
 }
 
 /** gets value of entry in dynamic array */
-Real SCIPgetRealarray(
+Real SCIPgetRealarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx                 /**< array index to get value for */
@@ -3586,13 +3581,13 @@ Real SCIPgetRealarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   return SCIPrealarrayGet(realarray, idx);
+   return SCIPrealarrayGetVal(realarray, idx);
    
    return SCIP_OKAY;
 }
 
 /** sets value of entry in dynamic array */
-RETCODE SCIPsetRealarray(
+RETCODE SCIPsetRealarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx,                /**< array index to set value for */
@@ -3601,13 +3596,13 @@ RETCODE SCIPsetRealarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPrealarraySet(realarray, SCIPmemhdr(scip), scip->set, idx, val) );
+   CHECK_OKAY( SCIPrealarraySetVal(realarray, SCIPmemhdr(scip), scip->set, idx, val) );
    
    return SCIP_OKAY;
 }
 
 /** increases value of entry in dynamic array */
-RETCODE SCIPincRealarray(
+RETCODE SCIPincRealarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx,                /**< array index to increase value for */
@@ -3616,7 +3611,7 @@ RETCODE SCIPincRealarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPincRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPrealarrayInc(realarray, SCIPmemhdr(scip), scip->set, idx, incval) );
+   CHECK_OKAY( SCIPrealarrayIncVal(realarray, SCIPmemhdr(scip), scip->set, idx, incval) );
    
    return SCIP_OKAY;
 }
@@ -3676,7 +3671,7 @@ RETCODE SCIPclearIntarray(
 }
 
 /** gets value of entry in dynamic array */
-int SCIPgetIntarray(
+int SCIPgetIntarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx                 /**< array index to get value for */
@@ -3684,13 +3679,13 @@ int SCIPgetIntarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   return SCIPintarrayGet(intarray, idx);
+   return SCIPintarrayGetVal(intarray, idx);
    
    return SCIP_OKAY;
 }
 
 /** sets value of entry in dynamic array */
-RETCODE SCIPsetIntarray(
+RETCODE SCIPsetIntarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx,                /**< array index to set value for */
@@ -3699,13 +3694,13 @@ RETCODE SCIPsetIntarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPintarraySet(intarray, SCIPmemhdr(scip), scip->set, idx, val) );
+   CHECK_OKAY( SCIPintarraySetVal(intarray, SCIPmemhdr(scip), scip->set, idx, val) );
    
    return SCIP_OKAY;
 }
 
 /** increases value of entry in dynamic array */
-RETCODE SCIPincIntarray(
+RETCODE SCIPincIntarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx,                /**< array index to increase value for */
@@ -3714,7 +3709,7 @@ RETCODE SCIPincIntarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPincIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPintarrayInc(intarray, SCIPmemhdr(scip), scip->set, idx, incval) );
+   CHECK_OKAY( SCIPintarrayIncVal(intarray, SCIPmemhdr(scip), scip->set, idx, incval) );
    
    return SCIP_OKAY;
 }
@@ -3774,7 +3769,7 @@ RETCODE SCIPclearBoolarray(
 }
 
 /** gets value of entry in dynamic array */
-Bool SCIPgetBoolarray(
+Bool SCIPgetBoolarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    int              idx                 /**< array index to get value for */
@@ -3782,13 +3777,13 @@ Bool SCIPgetBoolarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   return SCIPboolarrayGet(boolarray, idx);
+   return SCIPboolarrayGetVal(boolarray, idx);
    
    return SCIP_OKAY;
 }
 
 /** sets value of entry in dynamic array */
-RETCODE SCIPsetBoolarray(
+RETCODE SCIPsetBoolarrayVal(
    SCIP*            scip,               /**< SCIP data structure */
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    int              idx,                /**< array index to set value for */
@@ -3797,7 +3792,7 @@ RETCODE SCIPsetBoolarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPboolarraySet(boolarray, SCIPmemhdr(scip), scip->set, idx, val) );
+   CHECK_OKAY( SCIPboolarraySetVal(boolarray, SCIPmemhdr(scip), scip->set, idx, val) );
    
    return SCIP_OKAY;
 }
