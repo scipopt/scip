@@ -206,6 +206,7 @@ struct Lp
    unsigned int     solved:1;           /**< is current LP solved? */
    unsigned int     primalfeasible:1;   /**< is actual LP basis primal feasible? */
    unsigned int     dualfeasible:1;     /**< is actual LP basis dual feasible? */
+   unsigned int     diving:1;           /**< LP is used for diving: col bounds and obj don't corresond to variables */
 };
 
 
@@ -220,7 +221,6 @@ RETCODE SCIPcolCreate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
@@ -310,6 +310,18 @@ RETCODE SCIPcolChgUb(
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    Real             newub               /**< new upper bound value */
+   );
+
+/** gets lower bound of column */
+extern
+Real SCIPcolGetLb(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets upper bound of column */
+extern
+Real SCIPcolGetUb(
+   COL*             col                 /**< LP column */
    );
 
 /** gets variable this column represents */
@@ -413,7 +425,6 @@ RETCODE SCIProwCreate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
@@ -873,6 +884,15 @@ RETCODE SCIPlpSolveDual(
    STAT*            stat                /**< problem statistics */
    );
 
+/** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */
+extern
+RETCODE SCIPlpSolve(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
+   );
+
 /** gets solution status of last solve call */
 extern
 LPSOLSTAT SCIPlpGetSolstat(
@@ -959,6 +979,21 @@ RETCODE SCIPlpCleanupAll(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** initiates LP diving */
+extern
+void SCIPlpStartDive(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** quits LP diving and resets bounds and objective values of columns to the actual node's values */
+extern
+RETCODE SCIPlpEndDive(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR**            vars,               /**< array with all active variables */
+   int              nvars               /**< number of active variables */
    );
 
 #endif

@@ -28,11 +28,12 @@
 #include "heur_rounding.h"
 
 
-#define HEUR_NAME       "rounding"
-#define HEUR_DESC       "simple LP rounding heuristic"
-#define HEUR_DISPCHAR   'r'
-#define HEUR_PRIORITY   0
-#define HEUR_FREQ       1
+#define HEUR_NAME         "rounding"
+#define HEUR_DESC         "simple LP rounding heuristic"
+#define HEUR_DISPCHAR     'r'
+#define HEUR_PRIORITY     0
+#define HEUR_FREQ         1
+#define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
 /* locally defined heuristic data */
@@ -41,46 +42,12 @@ struct HeurData
    SOL*             sol;                /**< working solution */
 };
 
+
+
+
 /*
- * Callback methods
+ * local methods
  */
-
-static
-DECL_HEURINIT(SCIPheurInitRounding)
-{
-   HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(SCIPheurGetData(heur) == NULL);
-   assert(scip != NULL);
-
-   /* create heuristic data */
-   CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
-   CHECK_OKAY( SCIPcreateSol(scip, &heurdata->sol, heur) );
-   SCIPheurSetData(heur, heurdata);
-
-   return SCIP_OKAY;
-}
-
-static
-DECL_HEUREXIT(SCIPheurExitRounding)
-{
-   HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-
-   /* free heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-   CHECK_OKAY( SCIPfreeSol(scip, &heurdata->sol) );
-   SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
 
 /** update row activities after a variable's solution value changed */
 static
@@ -332,6 +299,50 @@ RETCODE selectEssentialRounding(
    return SCIP_OKAY;
 }
 
+
+
+
+/*
+ * Callback methods
+ */
+
+static
+DECL_HEURINIT(SCIPheurInitRounding)
+{
+   HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(SCIPheurGetData(heur) == NULL);
+   assert(scip != NULL);
+
+   /* create heuristic data */
+   CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
+   CHECK_OKAY( SCIPcreateSol(scip, &heurdata->sol, heur) );
+   SCIPheurSetData(heur, heurdata);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_HEUREXIT(SCIPheurExitRounding)
+{
+   HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   CHECK_OKAY( SCIPfreeSol(scip, &heurdata->sol) );
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
 static
 DECL_HEUREXEC(SCIPheurExecRounding)
 {
@@ -356,24 +367,21 @@ DECL_HEUREXEC(SCIPheurExecRounding)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+   assert(SCIPhasActnodeLP(scip));
+
+   *result = SCIP_DIDNOTRUN;
 
    /* only call heuristic, if an optimal LP solution is at hand */
-   if( !SCIPhasActnodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      *result = SCIP_DIDNOTRUN;
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
-   }
 
    /* get fractional variables, that should be integral */
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands) );
    nfrac = nlpcands;
 
-   /* only call heuristic, if LP solution is infeasible */
+   /* only call heuristic, if LP solution is fractional */
    if( nfrac == 0 )
-   {
-      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
-   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -557,7 +565,6 @@ DECL_HEUREXEC(SCIPheurExecRounding)
 
 
 
-
 /*
  * heuristic specific interface methods
  */
@@ -567,10 +574,8 @@ RETCODE SCIPincludeHeurRounding(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   HEURDATA* heurdata;
-
-   /* include node selector */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ,
+   /* include heuristic */
+   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_PSEUDONODES,
                   NULL, SCIPheurInitRounding, SCIPheurExitRounding, SCIPheurExecRounding,
                   NULL) );
 

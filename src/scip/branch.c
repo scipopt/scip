@@ -186,6 +186,7 @@ RETCODE SCIPbranchcandGetLPCands(
    assert(lp != NULL);
    assert(lp->solved);
    assert(lp->flushed);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    debugMessage("getting LP branching candidates: validlp=%d, nlp=%d\n", branchcand->validlpcandslp, stat->nlp);
 

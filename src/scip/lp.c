@@ -335,6 +335,7 @@ void coefChanged(
    assert(row != NULL);
    assert(col != NULL);
    assert(lp != NULL);
+   assert(!lp->diving);
 
    if( row->lpipos >= 0 && col->lpipos >= 0 )
    {
@@ -1055,7 +1056,6 @@ RETCODE SCIPcolCreate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
@@ -1068,7 +1068,6 @@ RETCODE SCIPcolCreate(
    assert(col != NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
-   assert(lp != NULL);
    assert(stat != NULL);
    assert(var != NULL);
    assert(len >= 0);
@@ -1196,6 +1195,9 @@ RETCODE SCIPcolAddCoeff(
    Real             val                 /**< value of coefficient */
    )
 {
+   assert(lp != NULL);
+   assert(!lp->diving);
+
    CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, val, -1, NULL) );
 
    checkLinks(lp);
@@ -1215,6 +1217,8 @@ RETCODE SCIPcolDelCoeff(
 
    assert(col != NULL);
    assert(col->var != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
    assert(row != NULL);
 
    /* search the position of the row in the column's row vector */
@@ -1260,6 +1264,8 @@ RETCODE SCIPcolChgCoeff(
    int pos;
 
    assert(col != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
    assert(row != NULL);
 
    /* search the position of the row in the column's row vector */
@@ -1309,6 +1315,8 @@ RETCODE SCIPcolIncCoeff(
    int pos;
 
    assert(col != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
    assert(row != NULL);
 
    if( SCIPsetIsZero(set, incval) )
@@ -1478,6 +1486,26 @@ RETCODE SCIPcolChgUb(
    col->ub = newub;
 
    return SCIP_OKAY;
+}
+
+/** gets lower bound of column */
+Real SCIPcolGetLb(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->lb;
+}
+
+/** gets upper bound of column */
+Real SCIPcolGetUb(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->ub;
 }
 
 /** gets best bound of column with respect to the objective function */
@@ -1788,7 +1816,6 @@ RETCODE SCIProwCreate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
@@ -2090,6 +2117,9 @@ RETCODE SCIProwAddCoeff(
    Real             val                 /**< value of coefficient */
    )
 {
+   assert(lp != NULL);
+   assert(!lp->diving);
+
    CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, val, -1, NULL) );
 
    checkLinks(lp);
@@ -2108,6 +2138,8 @@ RETCODE SCIProwDelCoeff(
    int pos;
 
    assert(row != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
    assert(col != NULL);
    assert(col->var != NULL);
 
@@ -2153,8 +2185,10 @@ RETCODE SCIProwChgCoeff(
 {
    int pos;
 
-   assert(col != NULL);
    assert(row != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
+   assert(col != NULL);
 
    /* search the position of the column in the row's col vector */
    pos = rowSearchCoeff(row, col);
@@ -2202,8 +2236,10 @@ RETCODE SCIProwIncCoeff(
 {
    int pos;
 
-   assert(col != NULL);
    assert(row != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
+   assert(col != NULL);
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
@@ -2255,6 +2291,8 @@ RETCODE SCIProwAddConst(
    assert(row->lhs <= row->rhs);
    assert(!SCIPsetIsInfinity(set, ABS(constant)));
    assert(stat != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
 
    if( !SCIPsetIsZero(set, constant) )
    {
@@ -2587,6 +2625,8 @@ RETCODE SCIProwChgLhs(
    )
 {
    assert(row != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
 
    if( !SCIPsetIsEQ(set, row->lhs, lhs) )
    {
@@ -2606,6 +2646,8 @@ RETCODE SCIProwChgRhs(
    )
 {
    assert(row != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
 
    if( !SCIPsetIsEQ(set, row->rhs, rhs) )
    {
@@ -2780,6 +2822,7 @@ void SCIProwPrint(
 
 
 
+
 /*
  * LP solver data update
  */
@@ -2828,6 +2871,7 @@ RETCODE lpFlushDelCols(
    {
       int i;
 
+      assert(!lp->diving);
       debugMessage("flushing col deletions: shrink LP from %d to %d colums\n", lp->nlpicols, lp->lpifirstchgcol);
       CHECK_OKAY( SCIPlpiDelCols(lp->lpi, lp->lpifirstchgcol, lp->nlpicols-1) );
       for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
@@ -2876,6 +2920,7 @@ RETCODE lpFlushAddCols(
       return SCIP_OKAY;
 
    /* add the additional columns */
+   assert(!lp->diving);
    assert(lp->ncols > lp->nlpicols);
    CHECK_OKAY( ensureLpicolsSize(lp, set, lp->ncols) );
 
@@ -3016,6 +3061,7 @@ RETCODE lpFlushDelRows(
    {
       int i;
 
+      assert(!lp->diving);
       debugMessage("flushing row deletions: shrink LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
       CHECK_OKAY( SCIPlpiDelRows(lp->lpi, lp->lpifirstchgrow, lp->nlpirows-1) );
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
@@ -3062,6 +3108,7 @@ RETCODE lpFlushAddRows(
       return SCIP_OKAY;
 
    /* add the additional rows */
+   assert(!lp->diving);
    assert(lp->nrows > lp->nlpirows);
    CHECK_OKAY( ensureLpirowsSize(lp, set, lp->nrows) );
 
@@ -3154,7 +3201,7 @@ RETCODE lpFlushAddRows(
    return SCIP_OKAY;
 }
 
-/** applies all cached column changes to the LP */
+/** applies all cached column bound and objective changes to the LP */
 static
 RETCODE lpFlushChgCols(
    LP*              lp,                 /**< actual LP data */
@@ -3255,7 +3302,7 @@ RETCODE lpFlushChgCols(
    return SCIP_OKAY;
 }
 
-/** applies all cached row changes to the LP */
+/** applies all cached row side changes to the LP */
 static
 RETCODE lpFlushChgRows(
    LP*              lp,                 /**< actual LP data */
@@ -3276,6 +3323,8 @@ RETCODE lpFlushChgRows(
 
    if( lp->nchgrows == 0 )
       return SCIP_OKAY;
+
+   assert(!lp->diving);
 
    /* get the solver's infinity value */
    infinity = SCIPlpiInfinity(lp->lpi);
@@ -3420,6 +3469,7 @@ RETCODE SCIPlpCreate(
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
+   (*lp)->diving = FALSE;
 
    /* set default parameters in LP solver */
    CHECK_OKAY( SCIPlpSetFeastol(*lp, set->feastol) );
@@ -3462,6 +3512,7 @@ RETCODE SCIPlpAddCol(
    )
 {
    assert(lp != NULL);
+   assert(!lp->diving);
    assert(col != NULL);
    assert(col->lppos == -1);
    assert(col->var != NULL);
@@ -3491,6 +3542,7 @@ RETCODE SCIPlpAddRow(
    )
 {
    assert(lp != NULL);
+   assert(!lp->diving);
    assert(row != NULL);
    assert(row->lppos == -1);
 
@@ -3526,6 +3578,8 @@ RETCODE SCIPlpShrinkCols(
 
    if( newncols < lp->ncols )
    {
+      assert(!lp->diving);
+
       for( c = newncols; c < lp->ncols; ++c )
       {
          assert(lp->cols[c]->var != NULL);
@@ -3563,6 +3617,8 @@ RETCODE SCIPlpShrinkRows(
    debugMessage("shrinking LP from %d to %d rows\n", lp->nrows, newnrows);
    if( newnrows < lp->nrows )
    {
+      assert(!lp->diving);
+
       for( r = newnrows; r < lp->nrows; ++r )
       {
          assert(lp->rows[r]->lppos == r);
@@ -3589,6 +3645,7 @@ RETCODE SCIPlpClear(
    )
 {
    assert(lp != NULL);
+   assert(!lp->diving);
 
    debugMessage("clearing LP\n");
    CHECK_OKAY( SCIPlpShrinkCols(lp, 0) );
@@ -3603,6 +3660,8 @@ void SCIPlpMarkSize(
    )
 {
    assert(lp != NULL);
+   assert(!lp->diving);
+
    lp->firstnewcol = lp->ncols;
    lp->firstnewrow = lp->nrows;
 }
@@ -3893,6 +3952,30 @@ RETCODE SCIPlpSolveDual(
    return SCIP_OKAY;
 }
 
+/** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */
+RETCODE SCIPlpSolve(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(lp != NULL);
+
+   if( lp->dualfeasible || !lp->primalfeasible )
+   {
+      debugMessage("solving dual LP\n");
+      CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+   }
+   else
+   {
+      debugMessage("solving primal LP\n");
+      CHECK_OKAY( SCIPlpSolvePrimal(lp, memhdr, set, stat) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets solution status of last solve call */
 LPSOLSTAT SCIPlpGetSolstat(
    LP*              lp                  /**< actual LP data */
@@ -4175,6 +4258,7 @@ RETCODE lpDelColset(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
+   assert(!lp->diving);
    assert(coldstat != NULL);
 
    ncols = lp->ncols;
@@ -4241,6 +4325,7 @@ RETCODE lpDelRowset(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->nrows == lp->nlpirows);
+   assert(!lp->diving);
    assert(rowdstat != NULL);
 
    nrows = lp->nrows;
@@ -4313,6 +4398,7 @@ RETCODE lpRemoveObsoleteCols(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
+   assert(!lp->diving);
    assert(set != NULL);
    assert(set->usepricing);
    assert(stat != NULL);
@@ -4380,6 +4466,7 @@ RETCODE lpRemoveObsoleteRows(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->nrows == lp->nlpirows);
+   assert(!lp->diving);
    assert(set != NULL);
    assert(stat != NULL);
 
@@ -4434,6 +4521,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
    )
 {
    assert(lp != NULL);
+   assert(!lp->diving);
    assert(set != NULL);
 
    debugMessage("removing obsolete columns starting with %d/%d, obsolete rows starting with %d/%d\n",
@@ -4460,6 +4548,7 @@ RETCODE SCIPlpRemoveAllObsoletes(
    )
 {
    assert(lp != NULL);
+   assert(!lp->diving);
    assert(set != NULL);
 
    debugMessage("removing all obsolete columns and rows\n");
@@ -4495,6 +4584,7 @@ RETCODE lpCleanupCols(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
+   assert(!lp->diving);
    assert(set != NULL);
    assert(set->usepricing);
    assert(0 <= firstcol && firstcol < lp->ncols);
@@ -4558,6 +4648,7 @@ RETCODE lpCleanupRows(
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
    assert(lp->nrows == lp->nlpirows);
+   assert(!lp->diving);
    assert(0 <= firstrow && firstrow < lp->nrows);
 
    nrows = lp->nrows;
@@ -4608,6 +4699,7 @@ RETCODE SCIPlpCleanupNew(
 {
    assert(lp != NULL);
    assert(lp->solved);
+   assert(!lp->diving);
    assert(set != NULL);
 
    debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d)\n",
@@ -4634,6 +4726,7 @@ RETCODE SCIPlpCleanupAll(
 {
    assert(lp != NULL);
    assert(lp->solved);
+   assert(!lp->diving);
    assert(set != NULL);
 
    debugMessage("removing all unused columns and rows\n");
@@ -4650,3 +4743,77 @@ RETCODE SCIPlpCleanupAll(
    return SCIP_OKAY;
 }
 
+/** initiates LP diving */
+void SCIPlpStartDive(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(!lp->diving);
+
+#ifndef NDEBUG
+   {
+      int c;
+      for( c = 0; c < lp->ncols; ++c )
+      {
+         assert(lp->cols[c] != NULL);
+         assert(lp->cols[c]->var != NULL);
+         assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+         assert(lp->cols[c]->var->data.col == lp->cols[c]);
+         assert(lp->cols[c]->var->obj == lp->cols[c]->obj);
+         assert(lp->cols[c]->var->dom.lb == lp->cols[c]->lb);
+         assert(lp->cols[c]->var->dom.ub == lp->cols[c]->ub);
+      }
+   }
+#endif
+
+   lp->diving = TRUE;
+}
+
+/** quits LP diving and resets bounds and objective values of columns to the actual node's values */
+RETCODE SCIPlpEndDive(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR**            vars,               /**< array with all active variables */
+   int              nvars               /**< number of active variables */
+   )
+{
+   VAR* var;
+   int v;
+
+   assert(lp != NULL);
+   assert(lp->diving);
+   assert(nvars == 0 || vars != NULL);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+      if( var->varstatus == SCIP_VARSTATUS_COLUMN )
+      {
+         CHECK_OKAY( SCIPcolChgObj(var->data.col, set, lp, var->obj) );
+         CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, var->dom.lb) );
+         CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, var->dom.ub) );
+      }
+   }
+
+   lp->diving = FALSE;
+
+#ifndef NDEBUG
+   {
+      int c;
+      for( c = 0; c < lp->ncols; ++c )
+      {
+         assert(lp->cols[c] != NULL);
+         assert(lp->cols[c]->var != NULL);
+         assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+         assert(lp->cols[c]->var->data.col == lp->cols[c]);
+         assert(lp->cols[c]->var->obj == lp->cols[c]->obj);
+         assert(lp->cols[c]->var->dom.lb == lp->cols[c]->lb);
+         assert(lp->cols[c]->var->dom.ub == lp->cols[c]->ub);
+      }
+   }
+#endif
+
+   return SCIP_OKAY;
+}

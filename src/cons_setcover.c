@@ -689,10 +689,7 @@ RETCODE branchLP(
 #ifdef DEBUG
       debugMessage("set covering branching: nselcands=%d/%d, weight(S)=%g, A={", nselcands, nlpcands, branchweight);
       for( i = 0; i < nselcands; ++i )
-      {
-         CHECK_OKAY( SCIPgetSolVal(scip, NULL, sortcands[i], &solval) );
-         printf(" %s[%g]", SCIPvarGetName(sortcands[i]), solval);
-      }
+         printf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
       printf(" }\n");
 #endif
    }

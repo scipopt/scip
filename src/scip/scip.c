@@ -443,6 +443,7 @@ RETCODE SCIPincludeHeur(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
+   Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
@@ -454,7 +455,7 @@ RETCODE SCIPincludeHeur(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPheurCreate(&heur, name, desc, dispchar, priority, freq,
+   CHECK_OKAY( SCIPheurCreate(&heur, name, desc, dispchar, priority, freq, pseudonodes,
                   heurfree, heurinit, heurexit, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
@@ -1914,6 +1915,18 @@ LPSOLSTAT SCIPgetLPSolstat(
    return SCIPlpGetSolstat(scip->lp);
 }
 
+/** gets objective value of actual LP, or SCIP_INVALID if LP is not solved yet */
+Real SCIPgetLPObjval(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLPObjval", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   assert((!scip->lp->solved) ^ (scip->lp->objval < SCIP_INVALID));
+
+   return SCIPlpGetObjval(scip->lp);
+}
+
 /** gets actual LP columns along with the actual number of LP columns */
 RETCODE SCIPgetLPColsData(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2038,6 +2051,167 @@ Bool SCIPallVarsInLP(
 
 
 /*
+ * LP diving methods
+ */
+
+/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available */
+RETCODE SCIPstartDive(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( scip->lp->diving )
+   {
+      errorMessage("already in diving mode");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( !scip->tree->actnodehaslp )
+   {
+      errorMessage("cannot start diving at a pseudo node");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIPlpStartDive(scip->lp);
+
+   return SCIP_OKAY;
+}
+
+/** quits LP diving and resets bounds and objective values of columns to the actual node's values */
+RETCODE SCIPendDive(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPendDive", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->set, scip->transprob->vars, scip->transprob->nvars) );
+
+   return SCIP_OKAY;
+}
+
+/** changes variable's objective value in current dive */
+RETCODE SCIPchgVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the objective value for */
+   Real             newobj              /**< new objective value */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarObjDive", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode");
+      return SCIP_INVALIDCALL;
+   }
+
+   todoMessage("implement SCIPchgVarObjDive()");
+   errorMessage("not implemented yet");
+   abort();
+}
+
+/** changes variable's lower bound in current dive */
+RETCODE SCIPchgVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarLbDive", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPvarChgLbDive(var, scip->set, scip->lp, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** changes variable's upper bound in current dive */
+RETCODE SCIPchgVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarUbDive", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPvarChgUbDive(var, scip->set, scip->lp, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** gets variable's lower bound in current dive */
+Real SCIPgetVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarLbDive", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode");
+      abort();
+   }
+
+   return SCIPvarGetLbDive(var, scip->set);
+}
+
+/** gets variable's upper bound in current dive */
+Real SCIPgetVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarUbDive", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode");
+      abort();
+   }
+
+   return SCIPvarGetUbDive(var, scip->set);
+}
+
+/** solves the LP of the current dive */
+RETCODE SCIPsolveDiveLP(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsolveDiveLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPsolveLP(scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * LP row methods
  */
 
@@ -2058,7 +2232,7 @@ RETCODE SCIPcreateRow(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+   CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
                   name, len, col, val, lhs, rhs, local, modifiable, removeable) );
 
    return SCIP_OKAY;
@@ -2396,6 +2570,12 @@ RETCODE SCIPgetLPBranchCands(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
+   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      errorMessage("LP not solved to optimality");
+      return SCIP_INVALIDDATA;
+   }
+
    CHECK_OKAY( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
                   lpcands, lpcandssol, lpcandsfrac, nlpcands) );
    
@@ -2410,6 +2590,12 @@ int SCIPgetNLPBranchCands(
    int nlpcands;
 
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      errorMessage("LP not solved to optimality");
+      abort();
+   }
 
    CHECK_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
                    NULL, NULL, NULL, &nlpcands) );
@@ -2793,6 +2979,17 @@ Real SCIPgetSolTransObj(
    }
 }
 
+/** maps transformed objective value into original space */
+Real SCIPretransformObj(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             obj                 /**< transformed objective value to retransform in original space */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPretransformObj", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, obj));
+}
+
 /** gets node number, where this solution was found */
 Longint SCIPgetSolNodenum(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2947,7 +3144,7 @@ RETCODE SCIPtrySolFree(
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
-   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );

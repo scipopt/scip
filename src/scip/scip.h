@@ -223,6 +223,7 @@ RETCODE SCIPincludeHeur(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
+   Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
@@ -737,6 +738,12 @@ LPSOLSTAT SCIPgetLPSolstat(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets objective value of actual LP, or SCIP_INVALID if LP is not solved yet */
+extern
+Real SCIPgetLPObjval(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets actual LP columns along with the actual number of LP columns */
 extern
 RETCODE SCIPgetLPColsData(
@@ -782,6 +789,74 @@ int SCIPgetNLPRows(
  */
 extern
 Bool SCIPallVarsInLP(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * LP diving methods
+ */
+
+/**@name LP Diving Methods */
+/**@{ */
+
+/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available */
+extern
+RETCODE SCIPstartDive(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** quits LP diving and resets bounds and objective values of columns to the actual node's values */
+extern
+RETCODE SCIPendDive(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** changes variable's objective value in current dive */
+extern
+RETCODE SCIPchgVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the objective value for */
+   Real             newobj              /**< new objective value */
+   );
+
+/** changes variable's lower bound in current dive */
+extern
+RETCODE SCIPchgVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+/** changes variable's upper bound in current dive */
+extern
+RETCODE SCIPchgVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+/** gets variable's lower bound in current dive */
+extern
+Real SCIPgetVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   );
+
+/** gets variable's upper bound in current dive */
+extern
+Real SCIPgetVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   );
+
+/** solves the LP of the current dive */
+extern
+RETCODE SCIPsolveDiveLP(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -1181,6 +1256,13 @@ Real SCIPgetSolTransObj(
    SOL*             sol                 /**< primal solution, or NULL for actual LP/pseudo objective value */
    );
 
+/** maps transformed objective value into original space */
+extern
+Real SCIPretransformObj(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             obj                 /**< transformed objective value to retransform in original space */
+   );
+
 /** gets node number, where this solution was found */
 extern
 Longint SCIPgetSolNodenum(
@@ -1255,7 +1337,7 @@ RETCODE SCIPtrySolFree(
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
-   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    );
 
 /**@} */

@@ -486,7 +486,7 @@ RETCODE SCIPpriceVars(
       if( var->varstatus == SCIP_VARSTATUS_LOOSE )
       {
          /* transform loose variable into column variable */
-         CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
+         CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat) );
       }
       assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
 
@@ -517,7 +517,7 @@ RETCODE SCIPpriceVars(
       /* transform variable into column variable, if needed */
       if( var->varstatus == SCIP_VARSTATUS_LOOSE )
       {
-         CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
+         CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat) );
       }
       assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
 

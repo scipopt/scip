@@ -1162,7 +1162,9 @@ RETCODE SCIPlpiGetRows(
       {
          CHECK_ZERO( retcode );
       }
-      
+      else
+         clearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
+
       /* convert sen/rhs/range into lhs/rhs tuples */
       reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
    }

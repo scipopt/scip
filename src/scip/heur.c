@@ -41,6 +41,7 @@ struct Heur
    DECL_HEUREXIT    ((*heurexit));      /**< deinitialise primal heuristic */
    DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    HEURDATA*        heurdata;           /**< primal heuristics local data */
+   unsigned int     pseudonodes:1;      /**< call heuristic at nodes where only a pseudo solution exist? */
    unsigned int     initialized:1;      /**< is primal heuristic initialized? */
 };
 
@@ -54,6 +55,7 @@ RETCODE SCIPheurCreate(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
+   Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
@@ -64,7 +66,7 @@ RETCODE SCIPheurCreate(
    assert(heur != NULL);
    assert(name != NULL);
    assert(desc != NULL);
-   assert(freq > 0);
+   assert(freq >= -1);
    assert(heurexec != NULL);
 
    ALLOC_OKAY( allocMemory(heur) );
@@ -73,6 +75,7 @@ RETCODE SCIPheurCreate(
    (*heur)->dispchar = dispchar;
    (*heur)->priority = priority;
    (*heur)->freq = freq;
+   (*heur)->pseudonodes = pseudonodes;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
    (*heur)->heurexit = heurexit;
@@ -164,18 +167,36 @@ RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
    const SET*       set,                /**< global SCIP settings */
    int              actdepth,           /**< depth of active node */
+   Bool             actnodehaslp,       /**< is LP being processed in the active node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
+   Bool execute;
+
    assert(heur != NULL);
    assert(heur->heurexec != NULL);
-   assert(heur->freq > 0);
+   assert(heur->freq >= -1);
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(actdepth >= 0);
    assert(result != NULL);
 
-   if( actdepth % heur->freq == 0 )
+   if( heur->pseudonodes )
+   {
+      /* heuristic may be executed on every node: check, if the actual depth matches the execution frequency */
+      execute = (actdepth == 0 && heur->freq == 0) || (heur->freq > 0 && actdepth % heur->freq == 0);
+   }
+   else
+   {
+      /* heuristic may only be executed on LP nodes: check, if the node is an LP node and a node matching the
+       * execution frequency lies between the current node and the last LP node of the path
+       */
+      execute = actnodehaslp;
+      execute &= (actdepth == 0 && heur->freq == 0)
+         || (heur->freq > 0 && actdepth % heur->freq != (actdepth-set->lpsolvefreq) % heur->freq);
+   }
+
+   if( execute )
    {
       debugMessage("executing primal heuristic <%s>\n", heur->name);
       CHECK_OKAY( heur->heurexec(set->scip, heur, result) );

@@ -1027,7 +1027,6 @@ RETCODE SCIPvarColumn(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat                /**< problem statistics */
    )
 {
@@ -1036,7 +1035,7 @@ RETCODE SCIPvarColumn(
 
    var->varstatus = SCIP_VARSTATUS_COLUMN;
 
-   CHECK_OKAY( SCIPcolCreate(&var->data.col, memhdr, set, stat, lp, var, 0, NULL, NULL, var->removeable) );
+   CHECK_OKAY( SCIPcolCreate(&var->data.col, memhdr, set, stat, var, 0, NULL, NULL, var->removeable) );
 
    return SCIP_OKAY;
 }
@@ -1462,6 +1461,27 @@ Bool SCIPvarMayRoundUp(
    )
 {
    return (SCIPvarGetNLocksUp(var) == 0);
+}
+
+/** changes objective value of variable */
+RETCODE SCIPvarChgObj(
+   VAR*             var,                /**< variable to change, must not be member of the problem */
+   Real             newobj              /**< new objective value for variable */
+   )
+{
+   assert(var != NULL);
+
+   debugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
+
+   if( var->probindex >= 0 )
+   {
+      errorMessage("cannot change the objective value of a variable already in the problem");
+      return SCIP_INVALIDDATA;
+   }
+   
+   var->obj = newobj;
+      
+   return SCIP_OKAY;
 }
 
 /** appends LBTIGHTENED or LBRELAXED event to the event queue */
@@ -1929,24 +1949,143 @@ void SCIPvarAdjustUb(
    }
 }
 
-/** changes objective value of variable */
-RETCODE SCIPvarChgObj(
-   VAR*             var,                /**< variable to change, must not be member of the problem */
-   Real             newobj              /**< new objective value for variable */
+/** changes lower bound of variable in current dive */
+RETCODE SCIPvarChgLbDive(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newbound            /**< new bound for variable */
    )
 {
    assert(var != NULL);
 
-   debugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
+   debugMessage("changing lower bound of <%s> to %g in current dive\n", var->name, newbound);
 
-   if( var->probindex >= 0 )
+   if( SCIPsetIsZero(set, newbound) )
+      newbound = 0.0;
+
+   /* change bounds of attached variables */
+   switch( var->varstatus )
    {
-      errorMessage("cannot change the objective value of a variable already in the problem");
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      CHECK_OKAY( SCIPvarChgLbDive(var->data.transvar, set, lp, newbound) );
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, newbound) );
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+      errorMessage("cannot change variable's bounds in dive for LOOSE variables");
       return SCIP_INVALIDDATA;
-   }
-   
-   var->obj = newobj;
       
+   case SCIP_VARSTATUS_FIXED:
+      errorMessage("cannot change the bounds of a fixed variable");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> change lower bound of y */
+         CHECK_OKAY( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, 
+                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> change upper bound of y */
+         CHECK_OKAY( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, 
+                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      todoMessage("change the sides of the corresponding linear constraint");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      abort();
+      
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes upper bound of variable in current dive */
+RETCODE SCIPvarChgUbDive(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newbound            /**< new bound for variable */
+   )
+{
+   assert(var != NULL);
+
+   debugMessage("changing upper bound of <%s> to %g in current dive\n", var->name, newbound);
+
+   if( SCIPsetIsZero(set, newbound) )
+      newbound = 0.0;
+
+   /* change bounds of attached variables */
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      CHECK_OKAY( SCIPvarChgUbDive(var->data.transvar, set, lp, newbound) );
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, newbound) );
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+      errorMessage("cannot change variable's bounds in dive for LOOSE variables");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_FIXED:
+      errorMessage("cannot change the bounds of a fixed variable");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> change upper bound of y */
+         CHECK_OKAY( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, 
+                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> change lower bound of y */
+         CHECK_OKAY( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, 
+                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      todoMessage("change the sides of the corresponding linear constraint");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      abort();
+      
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2050,6 +2189,110 @@ Real SCIPvarGetUb(
    assert(var != NULL);
 
    return var->dom.ub;
+}
+
+/** gets lower bound of variable in current dive */
+Real SCIPvarGetLbDive(
+   VAR*             var,                /**< problem variable */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(var != NULL);
+
+   /* get bounds of attached variables */
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      return SCIPvarGetLbDive(var->data.transvar, set);
+         
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      return SCIPcolGetLb(var->data.col);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+      return var->dom.lb;
+      
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> get lower bound of y */
+         return var->data.aggregate.scalar * SCIPvarGetLbDive(var->data.aggregate.var, set) + var->data.aggregate.constant;
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> get upper bound of y */
+         return var->data.aggregate.scalar * SCIPvarGetUbDive(var->data.aggregate.var, set) + var->data.aggregate.constant;
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation");
+         abort();
+      }
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      todoMessage("get the sides of the corresponding linear constraint");
+      errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
+      abort();
+      
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
+}
+
+/** gets upper bound of variable in current dive */
+Real SCIPvarGetUbDive(
+   VAR*             var,                /**< problem variable */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(var != NULL);
+
+   /* get bounds of attached variables */
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      return SCIPvarGetUbDive(var->data.transvar, set);
+         
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      return SCIPcolGetUb(var->data.col);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+      return var->dom.ub;
+      
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> get upper bound of y */
+         return var->data.aggregate.scalar * SCIPvarGetUbDive(var->data.aggregate.var, set) + var->data.aggregate.constant;
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> get lower bound of y */
+         return var->data.aggregate.scalar * SCIPvarGetLbDive(var->data.aggregate.var, set) + var->data.aggregate.constant;
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation");
+         abort();
+      }
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      todoMessage("get the sides of the corresponding linear constraint");
+      errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
+      abort();
+      
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
 }
 
 /** gets best bound of variable with respect to the objective function */
@@ -2218,7 +2461,7 @@ RETCODE SCIPvarAddToRow(
 
    case SCIP_VARSTATUS_LOOSE:
       /* convert loose variable into column */
-      CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
+      CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat) );
       assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
       /* fallthrough */
 

@@ -322,7 +322,6 @@ RETCODE SCIPvarColumn(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -421,6 +420,13 @@ Bool SCIPvarMayRoundUp(
    VAR*             var                 /**< problem variable */
    );
 
+/** changes objective value of variable */
+extern
+RETCODE SCIPvarChgObj(
+   VAR*             var,                /**< variable to change, must not be member of the problem */
+   Real             newobj              /**< new objective value for variable */
+   );
+
 /** changes lower bound of variable */
 extern
 RETCODE SCIPvarChgLb(
@@ -480,11 +486,22 @@ void SCIPvarAdjustUb(
    Real*            ub                  /**< pointer to upper bound to adjust */
    );
 
-/** changes objective value of variable */
+/** changes lower bound of variable in current dive */
 extern
-RETCODE SCIPvarChgObj(
-   VAR*             var,                /**< variable to change, must not be member of the problem */
-   Real             newobj              /**< new objective value for variable */
+RETCODE SCIPvarChgLbDive(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newbound            /**< new bound for variable */
+   );
+
+/** changes upper bound of variable in current dive */
+extern
+RETCODE SCIPvarChgUbDive(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newbound            /**< new bound for variable */
    );
 
 /** get name of variable */
@@ -545,6 +562,20 @@ Real SCIPvarGetLb(
 extern
 Real SCIPvarGetUb(
    VAR*             var                 /**< problem variable */
+   );
+
+/** gets lower bound of variable in current dive */
+extern
+Real SCIPvarGetLbDive(
+   VAR*             var,                /**< problem variable */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets upper bound of variable in current dive */
+extern
+Real SCIPvarGetUbDive(
+   VAR*             var,                /**< problem variable */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** gets best bound of variable with respect to the objective function */

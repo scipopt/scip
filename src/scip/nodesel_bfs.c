@@ -36,7 +36,7 @@
  * Default parameter settings
  */
 
-#define SCIP_DEFAULT_MAXPLUNGEQUOT       1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+#define SCIP_DEFAULT_MAXPLUNGEAVGQUOT    1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                               *   where plunging is performed */
 #define SCIP_DEFAULT_MAXPLUNGEDEPTH      100 /**< maximal plunging depth, before new best node is forced to be selected */
 #define SCIP_DEFAULT_MINPLUNGEDEPTH       10 /**< minimal plunging depth, before new best node may be selected */
@@ -197,7 +197,7 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* allocate and initialise node selector data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
-   nodeseldata->maxplungequot = SCIP_DEFAULT_MAXPLUNGEQUOT;
+   nodeseldata->maxplungequot = SCIP_DEFAULT_MAXPLUNGEAVGQUOT;
    nodeseldata->maxplungedepth = SCIP_DEFAULT_MAXPLUNGEDEPTH;
    nodeseldata->minplungedepth = SCIP_DEFAULT_MINPLUNGEDEPTH;
 

@@ -385,7 +385,7 @@ RETCODE SCIPprimalTrySolFree(
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
-   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    )
 {
    Bool feasible;

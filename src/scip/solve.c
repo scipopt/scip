@@ -57,7 +57,7 @@ RETCODE initRootLP(
          /* transform variable into column variable, if needed */
          if( var->varstatus == SCIP_VARSTATUS_LOOSE )
          {
-            CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
+            CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat) );
          }
          assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
          
@@ -73,13 +73,12 @@ RETCODE initRootLP(
    return SCIP_OKAY;
 }
 
-/** solves the LP with simplex algorithm */
-static
-RETCODE solveLP(
+/** solves the LP with simplex algorithm, and copy the solution into the column's data */
+RETCODE SCIPsolveLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< LP data */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< LP data */
    )
 {
    assert(lp != NULL);
@@ -88,36 +87,30 @@ RETCODE solveLP(
       lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
    if( !lp->solved )
    {
-      if( lp->dualfeasible || !lp->primalfeasible )
-      {
-         debugMessage("solving dual LP\n");
-         CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
-      }
-      else
-      {
-         debugMessage("solving primal LP\n");
-         CHECK_OKAY( SCIPlpSolvePrimal(lp, memhdr, set, stat) );
-      }
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
 
       switch( SCIPlpGetSolstat(lp) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
          CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
 
-         /* update ages and remove obsolete columns and rows from LP */
-         CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
-         CHECK_OKAY( SCIPlpRemoveNewObsoletes(lp, memhdr, set, stat) );
-         
-         if( !lp->solved )
+         if( !lp->diving )
          {
-            /* resolve LP after removing obsolete columns and rows */
-            debugMessage("remove obsoletes: resolve LP again\n");
-            debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
-               lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
-            CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
-            assert(lp->solved);
-            assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
-            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+            /* update ages and remove obsolete columns and rows from LP */
+            CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
+            CHECK_OKAY( SCIPlpRemoveNewObsoletes(lp, memhdr, set, stat) );
+            
+            if( !lp->solved )
+            {
+               /* resolve LP after removing obsolete columns and rows */
+               debugMessage("remove obsoletes: resolve LP again\n");
+               debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
+                  lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
+               CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+               assert(lp->solved);
+               assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
+               CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+            }
          }
 
          debugMessage(" -> LP objective value: %g\n", lp->objval);
@@ -196,7 +189,7 @@ RETCODE solveNodeInitialLP(
     * -> dual simplex is applicable as first solver
     */
    debugMessage("node: solve initial LP\n");
-   CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+   CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
    assert(lp->solved);
 
    /* issue FIRSTLPSOLVED event */
@@ -250,7 +243,7 @@ RETCODE solveNodeLP(
    root = (tree->actnode->depth == 0);
 
    debugMessage("node: solve LP with price and cut\n");
-   CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+   CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
    assert(lp->solved);
 
    /* price-and-cut loop */
@@ -279,7 +272,7 @@ RETCODE solveNodeLP(
           * if LP was infeasible, we have to use dual simplex
           */
          debugMessage("pricing: solve LP\n");
-         CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+         CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
          assert(lp->solved);
 
          /* reset bounds temporarily set by pricer to their original values */
@@ -290,7 +283,7 @@ RETCODE solveNodeLP(
 
          /* solve LP (with dual simplex) */
          debugMessage("reset bounds: solve LP\n");
-         CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+         CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
          assert(lp->solved);
 
          /* if the LP is unbounded, we can stop pricing */
@@ -362,7 +355,7 @@ RETCODE solveNodeLP(
 
             /* solve LP (with dual simplex) */
             debugMessage("separation: solve LP\n");
-            CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+            CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
          }
          assert(lp->solved);
       }
@@ -889,7 +882,7 @@ RETCODE SCIPsolveCIP(
       /* call primal heuristics */
       for( h = 0; h < set->nheurs; ++h )
       {
-         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, actnode->depth, &result) );
+         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, actnode->depth, stat->plungedepth, &result) );
       }
       
       /* display node information line */
