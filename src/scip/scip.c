@@ -1326,6 +1326,165 @@ RETCODE SCIPchgVarType(                 /**< changes type of variable in the pro
 
 
 
+/*
+ * constraint methods
+ */
+
+RETCODE SCIPcreateCons(                 /**< creates and captures a constraint of the given constraint handler */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons,               /**< pointer to constraint */
+   const char*      name,               /**< name of constraint */
+   CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
+   CONSDATA*        consdata,           /**< data for this specific constraint */
+   Bool             model               /**< is constraint necessary for feasibility? */
+   )
+{
+   assert(cons != NULL);
+   assert(name != NULL);
+   assert(conshdlr != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, model, TRUE) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata, model, FALSE) );
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+}
+
+RETCODE SCIPcaptureCons(                /**< increases usage counter of constraint */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to capture */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcaptureCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIPconsCapture(cons);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPreleaseCons(                /**< decreases usage counter of constraint, and frees memory if necessary */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons                /**< pointer to constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(*cons != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPreleaseCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIPconsRelease(cons, scip->mem->probmem, scip->set);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      if( SCIPconsIsOriginal(*cons) )
+      {
+         errorMessage("cannot release original constraint while solving the problem");
+         return SCIP_INVALIDCALL;
+      }
+      SCIPconsRelease(cons, scip->mem->solvemem, scip->set);
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+}
+
+
+
+
+/*
+ * LP methods
+ */
+
+RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved in the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            actnodehaslp        /**< pointer to store whether the active node has LP information */
+   )
+{
+   assert(actnodehaslp != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPhasActnodeLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *actnodehaslp = scip->tree->actnodehaslp;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
+   SCIP*            scip,               /**< SCIP data structure */
+   COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
+   int*             ncols               /**< pointer to store the number of LP columns, or NULL */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
+
+   if( scip->tree->actnodehaslp )
+   {
+      if( cols != NULL )
+         *cols = scip->lp->cols;
+      if( ncols != NULL )
+         *ncols = scip->lp->ncols;
+   }
+   else
+   {
+      if( cols != NULL )
+         *cols = NULL;
+      if( ncols != NULL )
+         *ncols = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetLPRows(                  /**< gets actual LP rows */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
+   int*             nrows               /**< pointer to store the number of LP rows, or NULL */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
+
+   if( scip->tree->actnodehaslp )
+   {
+      if( rows != NULL )
+         *rows = scip->lp->rows;
+      if( nrows != NULL )
+         *nrows = scip->lp->nrows;
+   }
+   else
+   {
+      if( rows != NULL )
+         *rows = NULL;
+      if( nrows != NULL )
+         *nrows = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
 
 /*
  * LP row methods
@@ -1577,79 +1736,6 @@ RETCODE SCIPprintRow(                   /**< output row to file stream */
 
 
 /*
- * LP methods
- */
-
-RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved in the active node */
-   SCIP*            scip,               /**< SCIP data structure */
-   Bool*            actnodehaslp        /**< pointer to store whether the active node has LP information */
-   )
-{
-   assert(actnodehaslp != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPhasActnodeLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-
-   *actnodehaslp = scip->tree->actnodehaslp;
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
-   SCIP*            scip,               /**< SCIP data structure */
-   COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
-   int*             ncols               /**< pointer to store the number of LP columns, or NULL */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
-
-   if( scip->tree->actnodehaslp )
-   {
-      if( cols != NULL )
-         *cols = scip->lp->cols;
-      if( ncols != NULL )
-         *ncols = scip->lp->ncols;
-   }
-   else
-   {
-      if( cols != NULL )
-         *cols = NULL;
-      if( ncols != NULL )
-         *ncols = 0;
-   }
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPgetLPRows(                  /**< gets actual LP rows */
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
-   int*             nrows               /**< pointer to store the number of LP rows, or NULL */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
-
-   if( scip->tree->actnodehaslp )
-   {
-      if( rows != NULL )
-         *rows = scip->lp->rows;
-      if( nrows != NULL )
-         *nrows = scip->lp->nrows;
-   }
-   else
-   {
-      if( rows != NULL )
-         *rows = NULL;
-      if( nrows != NULL )
-         *nrows = 0;
-   }
-
-   return SCIP_OKAY;
-}
-
-
-
-
-/*
  * cutting plane methods
  */
 
@@ -1821,92 +1907,6 @@ RETCODE SCIPbranchLP(                   /**< calls branching rules to branch on 
    return SCIP_OKAY;
 }
 
-
-
-
-/*
- * constraint methods
- */
-
-RETCODE SCIPcreateCons(                 /**< creates and captures a constraint of the given constraint handler */
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to constraint */
-   const char*      name,               /**< name of constraint */
-   CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
-   CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             model               /**< is constraint necessary for feasibility? */
-   )
-{
-   assert(cons != NULL);
-   assert(name != NULL);
-   assert(conshdlr != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-
-   switch( scip->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, model, TRUE) );
-      return SCIP_OKAY;
-
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata, model, FALSE) );
-      return SCIP_OKAY;
-
-   default:
-      errorMessage("invalid SCIP stage");
-      return SCIP_ERROR;
-   }
-}
-
-RETCODE SCIPcaptureCons(                /**< increases usage counter of constraint */
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to capture */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPcaptureCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   SCIPconsCapture(cons);
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPreleaseCons(                /**< decreases usage counter of constraint, and frees memory if necessary */
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons                /**< pointer to constraint */
-   )
-{
-   assert(cons != NULL);
-   assert(*cons != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPreleaseCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   switch( scip->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      SCIPconsRelease(cons, scip->mem->probmem, scip->set);
-      return SCIP_OKAY;
-
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_FREESOLVE:
-      if( SCIPconsIsOriginal(*cons) )
-      {
-         errorMessage("cannot release original constraint while solving the problem");
-         return SCIP_INVALIDCALL;
-      }
-      SCIPconsRelease(cons, scip->mem->solvemem, scip->set);
-      return SCIP_OKAY;
-
-   default:
-      errorMessage("invalid SCIP stage");
-      return SCIP_ERROR;
-   }
-}
 
 
 

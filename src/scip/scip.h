@@ -466,6 +466,62 @@ RETCODE SCIPchgVarType(                 /**< changes type of variable in the pro
 
 
 /*
+ * constraint methods
+ */
+
+extern
+RETCODE SCIPcreateCons(                 /**< creates and captures a constraint of the given constraint handler */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons,               /**< pointer to constraint */
+   const char*      name,               /**< name of constraint */
+   CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
+   CONSDATA*        consdata,           /**< data for this specific constraint */
+   Bool             model               /**< is constraint necessary for feasibility? */
+   );
+
+extern
+RETCODE SCIPcaptureCons(                /**< increases usage counter of constraint */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to capture */
+   );
+
+extern
+RETCODE SCIPreleaseCons(                /**< decreases usage counter of constraint, and frees memory if necessary */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons                /**< pointer to constraint */
+   );
+
+
+
+
+/*
+ * LP methods
+ */
+
+extern
+RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved in the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            actnodehaslp        /**< pointer to store whether the active node has LP information */
+   );
+
+extern
+RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
+   SCIP*            scip,               /**< SCIP data structure */
+   COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
+   int*             ncols               /**< pointer to store the number of LP columns, or NULL */
+   );
+
+extern
+RETCODE SCIPgetLPRows(                  /**< gets actual LP rows */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
+   int*             nrows               /**< pointer to store the number of LP rows, or NULL */
+   );
+
+
+
+
+/*
  * LP row methods
  */
 
@@ -585,33 +641,6 @@ RETCODE SCIPprintRow(                   /**< output row to file stream */
 
 
 /*
- * LP methods
- */
-
-extern
-RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved in the active node */
-   SCIP*            scip,               /**< SCIP data structure */
-   Bool*            actnodehaslp        /**< pointer to store whether the active node has LP information */
-   );
-
-extern
-RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
-   SCIP*            scip,               /**< SCIP data structure */
-   COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
-   int*             ncols               /**< pointer to store the number of LP columns, or NULL */
-   );
-
-extern
-RETCODE SCIPgetLPRows(                  /**< gets actual LP rows */
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
-   int*             nrows               /**< pointer to store the number of LP rows, or NULL */
-   );
-
-
-
-
-/*
  * cutting plane methods
  */
 
@@ -675,35 +704,6 @@ extern
 RETCODE SCIPbranchLP(                   /**< calls branching rules to branch on an LP solution */
    SCIP*            scip,               /**< SCIP data structure */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
-   );
-
-
-
-
-/*
- * constraint methods
- */
-
-extern
-RETCODE SCIPcreateCons(                 /**< creates and captures a constraint of the given constraint handler */
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to constraint */
-   const char*      name,               /**< name of constraint */
-   CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
-   CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             model               /**< is constraint necessary for feasibility? */
-   );
-
-extern
-RETCODE SCIPcaptureCons(                /**< increases usage counter of constraint */
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to capture */
-   );
-
-extern
-RETCODE SCIPreleaseCons(                /**< decreases usage counter of constraint, and frees memory if necessary */
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons                /**< pointer to constraint */
    );
 
 
