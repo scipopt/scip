@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.42 2004/05/24 17:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.43 2004/06/01 16:40:14 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1499,7 +1499,7 @@ RETCODE branchPseudo(
        */
 
       /* create child with x_0 = ... = x_n-1 = 0 */
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)nbranchcands) );
       for( i = 0; i < nbranchcands; ++i )
       {
          CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
@@ -1508,7 +1508,7 @@ RETCODE branchPseudo(
       /* create children with x_0 = ... = x_i-1 = 0, x_i = 1, i = n-1,...,0 */
       for( i = nbranchcands-1; i >= 0; --i )
       {            
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)i) );
          for( j = 0; j < i; ++j )
          {
             CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );

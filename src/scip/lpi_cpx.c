@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.63 2004/05/14 13:43:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.64 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1554,6 +1554,35 @@ RETCODE SCIPlpiGetObj(
    debugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
    CHECK_ZERO( CPXgetobj(cpxenv, lpi->cpxlp, vals, firstcol, lastcol) );
+
+   return SCIP_OKAY;
+}
+
+/** gets current bounds from LP problem object */
+RETCODE SCIPlpiGetBounds(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get objective value for */
+   int              lastcol,            /**< last column to get objective value for */
+   Real*            lbs,                /**< array to store lower bound values, or NULL */
+   Real*            ubs                 /**< array to store upper bound values, or NULL */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(firstcol <= lastcol);
+   
+   debugMessage("getting bounds %d to %d\n", firstcol, lastcol);
+
+   if( lbs != NULL )
+   {
+      CHECK_ZERO( CPXgetlb(cpxenv, lpi->cpxlp, lbs, firstcol, lastcol) );
+   }
+
+   if( ubs != NULL )
+   {
+      CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, ubs, firstcol, lastcol) );
+   }
 
    return SCIP_OKAY;
 }

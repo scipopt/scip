@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.37 2004/04/15 10:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.38 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -310,6 +310,16 @@ RETCODE SCIPlpiGetObj(
    int              firstcol,           /**< first column to get objective value for */
    int              lastcol,            /**< last column to get objective value for */
    Real*            vals                /**< array to store objective values */
+   );
+
+/** gets current bounds from LP problem object */
+extern
+RETCODE SCIPlpiGetBounds(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get objective value for */
+   int              lastcol,            /**< last column to get objective value for */
+   Real*            lbs,                /**< array to store lower bound values, or NULL */
+   Real*            ubs                 /**< array to store upper bound values, or NULL */
    );
 
 /** gets a single coefficient */

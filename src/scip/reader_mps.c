@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.43 2004/05/03 13:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.44 2004/06/01 16:40:16 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -429,7 +429,7 @@ Bool mpsinputReadLine(
          | mpsi->buf[47] | mpsi->buf[48] 
          | mpsi->buf[61] | mpsi->buf[62] | mpsi->buf[63];
       
-      if (space == BLANK)
+      if (space == BLANK && len <= 64)
       {
          /* We assume fixed format, so we patch possible embedded spaces. */
          patchField(mpsi->buf,  4, 12);

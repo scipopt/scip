@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.3 2004/04/27 15:49:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.4 2004/06/01 16:40:13 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -425,6 +425,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
    {
       NODE* node;
+      Real rootsolval;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nlpcands);
@@ -435,10 +436,12 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestsbdown, bestsbup, 
          bestisstrongbranch);
 
+      rootsolval = SCIPvarGetRootSol(lpcands[bestcand]);
+
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",
          SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPcreateChild(scip, &node, rootsolval - lpcandssol[bestcand]) );
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve && bestisstrongbranch )
       {
@@ -450,7 +453,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", 
          SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPcreateChild(scip, &node, lpcandssol[bestcand] - rootsolval) );
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve && bestisstrongbranch )
       {

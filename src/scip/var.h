@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.67 2004/05/24 17:46:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.68 2004/06/01 16:40:18 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -625,6 +625,13 @@ extern
 Real SCIPvarGetUbDive(
    VAR*             var,                /**< problem variable */
    SET*             set                 /**< global SCIP settings */
+   );
+
+/** remembers the current solution as root solution in the problem variables */
+extern
+void SCIPvarStoreRootSol(
+   VAR*             var,                /**< problem variable */
+   Bool             roothaslp           /**< is the root solution from LP? */
    );
 
 /** resolves variable to columns and adds them with the coefficient to the row */

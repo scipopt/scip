@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.19 2004/04/15 10:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.20 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1213,6 +1213,34 @@ RETCODE SCIPlpiGetObj(
    
    for( i = firstcol; i <= lastcol; ++i )
       vals[i-firstcol] = lpi->spx->obj(i);
+
+   return SCIP_OKAY;
+}
+
+/** gets current bounds from LP problem object */
+RETCODE SCIPlpiGetBounds(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get objective value for */
+   int              lastcol,            /**< last column to get objective value for */
+   Real*            lbs,                /**< array to store lower bound values, or NULL */
+   Real*            ubs                 /**< array to store upper bound values, or NULL */
+   )
+{
+   int i;
+
+   debugMessage("calling SCIPlpiGetBounds()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+   
+   for( i = firstcol; i <= lastcol; ++i )
+   {
+      if( lbs != NULL )
+         lbs[i-firstcol] = lpi->spx->lower(i);
+      if( ubs != NULL )
+         ubs[i-firstcol] = lpi->spx->upper(i);
+   }
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.43 2004/05/21 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.44 2004/06/01 16:40:14 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1621,7 +1621,7 @@ RETCODE branchPseudo(
       for( i = 0; i < nbranchcands; ++i )
       {            
          /* create child with x_0 = ... = x_i-1 = 0, x_i = 1 */
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)nbranchcands) );
          for( j = 0; j < i; ++j )
          {
             CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );
@@ -1629,7 +1629,7 @@ RETCODE branchPseudo(
          CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[i], 1.0) );
       }
       /* create child with x_0 = ... = x_n = 0 */
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)i) );
       for( i = 0; i < nbranchcands; ++i )
       {
          CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );

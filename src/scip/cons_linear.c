@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.98 2004/05/28 09:18:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.99 2004/06/01 16:40:14 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1850,8 +1850,8 @@ RETCODE scaleCons(
          consdata->vals[i] = SCIPfloor(scip, consdata->vals[i]);
       if( SCIPisZero(scip, consdata->vals[i]) )
       {
-         warningMessage("coefficient of variable <%s> in linear constraint scaled to zero\n", 
-            SCIPvarGetName(consdata->vars[i]));
+         warningMessage("coefficient of variable <%s> in linear constraint <%s> scaled to zero (scale: %g)\n", 
+            SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons), scalar);
          consdata->vals[i] = oldval;
          CHECK_OKAY( delCoefPos(scip, cons, i) );
          --i;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.23 2004/04/27 15:49:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.24 2004/06/01 16:40:13 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -233,6 +233,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
    {
       NODE* node;
+      Real rootsolval;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestlpcand && bestlpcand < nlpcands);
@@ -241,10 +242,12 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
          nlpcands, bestlpcand, SCIPvarGetName(lpcands[bestlpcand]), lpcandssol[bestlpcand], bestdown, bestup, bestscore);
 
+      rootsolval = SCIPvarGetRootSol(lpcands[bestlpcand]);
+
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",
          SCIPvarGetName(lpcands[bestlpcand]), SCIPfloor(scip, lpcandssol[bestlpcand]));
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPcreateChild(scip, &node, rootsolval - lpcandssol[bestlpcand]) );
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestlpcand], SCIPfloor(scip, lpcandssol[bestlpcand])) );
       if( allcolsinlp )
       {
@@ -255,7 +258,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", 
          SCIPvarGetName(lpcands[bestlpcand]), SCIPceil(scip, lpcandssol[bestlpcand]));
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPcreateChild(scip, &node, lpcandssol[bestlpcand] - rootsolval) );
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestlpcand], SCIPceil(scip, lpcandssol[bestlpcand])) );
       if( allcolsinlp )
       {

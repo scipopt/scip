@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.49 2004/05/21 20:03:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.50 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -888,6 +888,21 @@ void SCIPprobCheckObjIntegral(
 
    /* objective value is integral, if the variable loop scanned all variables */
    prob->objisintegral = (v == prob->nvars);
+}
+
+/** remembers the current solution as root solution in the problem variables */
+void SCIPprobStoreRootSol(
+   PROB*            prob,               /**< problem data */
+   Bool             roothaslp           /**< is the root solution from LP? */
+   )
+{
+   int v;
+
+   assert(prob != NULL);
+   assert(prob->transformed);
+
+   for( v = 0; v < prob->nvars; ++v )
+      SCIPvarStoreRootSol(prob->vars[v], roothaslp);
 }
 
 /** informs problem, that the presolving process was finished, and updates all internal data structures */

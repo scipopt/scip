@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.94 2004/05/24 17:46:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.95 2004/06/01 16:40:17 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -62,6 +62,7 @@ RETCODE treeEnsureChildrenMem(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(&tree->children, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->childrenprio, newsize) );
       tree->childrensize = newsize;
    }
    assert(num <= tree->childrensize);
@@ -437,7 +438,8 @@ RETCODE nodeAssignParent(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
-   NODE*            parent              /**< parent (= active) node (or NULL, if node is root) */
+   NODE*            parent,             /**< parent (= active) node (or NULL, if node is root) */
+   Real             nodeselprio         /**< node selection priority of child node */
    )
 {
    assert(node != NULL);
@@ -470,6 +472,7 @@ RETCODE nodeAssignParent(
    /* register node in the childlist of the active (the parent) node */
    CHECK_OKAY( treeEnsureChildrenMem(tree, set, tree->nchildren+1) );
    tree->children[tree->nchildren] = node;
+   tree->childrenprio[tree->nchildren] = nodeselprio;
    node->data.child.arraypos = tree->nchildren;
 
    tree->nchildren++;
@@ -556,7 +559,8 @@ RETCODE SCIPnodeCreate(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree                /**< branch and bound tree */
+   TREE*            tree,               /**< branch and bound tree */
+   Real             nodeselprio         /**< node selection priority of new node */
    )
 {
    assert(node != NULL);
@@ -581,13 +585,13 @@ RETCODE SCIPnodeCreate(
    if( tree->pathlen > 0 )
    {
       assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_ACTNODE);
-      CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->path[tree->pathlen-1]) );
+      CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->path[tree->pathlen-1], nodeselprio) );
    }
    else
    {
       /* we created the root node */
       assert(tree->actnode == NULL);
-      CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, NULL) );
+      CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, NULL, nodeselprio) );
    }
 
    /* output node creation to VBC file */
@@ -643,6 +647,7 @@ void treeRemoveChild(
 
    /* move last child in array to position of removed child */
    tree->children[delpos] = tree->children[tree->nchildren-1];
+   tree->childrenprio[delpos] = tree->childrenprio[tree->nchildren-1];
    tree->children[delpos]->data.child.arraypos = delpos;
    child->data.child.arraypos = -1;
    tree->nchildren--;
@@ -2021,6 +2026,7 @@ void treeChildrenToSiblings(
    )
 {
    NODE** tmpnodes;
+   Real* tmpprios;
    int tmpnodessize;
    int i;
 
@@ -2028,13 +2034,16 @@ void treeChildrenToSiblings(
    assert(tree->nsiblings == 0);
 
    tmpnodes = tree->siblings;
+   tmpprios = tree->siblingsprio;
    tmpnodessize = tree->siblingssize;
 
    tree->siblings = tree->children;
+   tree->siblingsprio = tree->childrenprio;
    tree->nsiblings = tree->nchildren;
    tree->siblingssize = tree->childrensize;
 
    tree->children = tmpnodes;
+   tree->childrenprio = tmpprios;
    tree->nchildren = 0;
    tree->childrensize = tmpnodessize;
    
@@ -2225,6 +2234,8 @@ RETCODE SCIPtreeCreate(
    (*tree)->actsubroot = NULL;
    (*tree)->children = NULL;
    (*tree)->siblings = NULL;
+   (*tree)->childrenprio = NULL;
+   (*tree)->siblingsprio = NULL;
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
    (*tree)->pathlen = 0;
@@ -2238,7 +2249,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->cutoffdelayed = FALSE;
 
    /* create root node */
-   CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, stat, *tree) );
+   CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, stat, *tree, 0.0) );
    assert((*tree)->nchildren == 1);
 
    /* move root to the queue, convert it to LEAF */
@@ -2269,7 +2280,9 @@ RETCODE SCIPtreeFree(
    /* free pointer arrays */
    freeMemoryArrayNull(&(*tree)->path);
    freeMemoryArrayNull(&(*tree)->children);
-   freeMemoryArrayNull(&(*tree)->siblings);   
+   freeMemoryArrayNull(&(*tree)->siblings);
+   freeMemoryArrayNull(&(*tree)->childrenprio);
+   freeMemoryArrayNull(&(*tree)->siblingsprio);
    freeMemoryArrayNull(&(*tree)->pathnlpcols);
    freeMemoryArrayNull(&(*tree)->pathnlprows);
 
@@ -2389,7 +2402,10 @@ RETCODE SCIPtreeBranchVar(
 {
    NODE* node;
    Real solval;
+   Real rootsolval;
 
+   assert(tree != NULL);
+   assert(set != NULL);
    assert(var != NULL);
 
    /* get the corresponding active problem variable */
@@ -2410,7 +2426,8 @@ RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-   solval = tree->actnodehaslp ? SCIPvarGetLPSol(var) : SCIPvarGetPseudoSol(var);
+   solval = SCIPvarGetSol(var, tree->actnodehaslp);
+   rootsolval = SCIPvarGetRootSol(var);
    assert(SCIPsetIsGE(set, solval, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsLE(set, solval, SCIPvarGetUbLocal(var)));
    
@@ -2418,7 +2435,10 @@ RETCODE SCIPtreeBranchVar(
    {
       Real fixval;
 
-      /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
+      /* create child nodes with x <= x'-1, x = x', and x >= x'+1;
+       * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
+       * as the deviation from the variable's root solution; evaluate x = x' first in any way
+       */
       fixval = SCIPsetCeil(set, solval);
       assert(SCIPsetIsEQ(set, SCIPsetCeil(set, solval), SCIPsetFloor(set, solval)));
       
@@ -2429,7 +2449,7 @@ RETCODE SCIPtreeBranchVar(
       if( SCIPsetIsGE(set, fixval-1, SCIPvarGetLbLocal(var)) )
       {
          debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), fixval-1);
-         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
+         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, rootsolval - solval) );
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         var, fixval-1, SCIP_BOUNDTYPE_UPPER) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -2437,7 +2457,7 @@ RETCODE SCIPtreeBranchVar(
                   
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), fixval);
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, set->infinity) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
@@ -2454,7 +2474,7 @@ RETCODE SCIPtreeBranchVar(
       if( SCIPsetIsLE(set, fixval+1, SCIPvarGetUbLocal(var)) )
       {
          debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), fixval+1);
-         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
+         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, solval - rootsolval) );
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         var, fixval+1, SCIP_BOUNDTYPE_LOWER) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -2462,19 +2482,23 @@ RETCODE SCIPtreeBranchVar(
    }
    else
    {   
+      /* create child nodes with x <= floor(x'), and x >= ceil(x');
+       * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
+       * as the deviation from the variable's root solution
+       */
       debugMessage("LP branch on variable <%s> with value %g, priority %d\n", 
          SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var));
       
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFloor(set, solval));
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, rootsolval - solval) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                      var, SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), SCIPsetCeil(set, solval));
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, solval - rootsolval) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                      var, SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -2503,7 +2527,55 @@ int SCIPtreeGetNNodes(
    return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree);
 }
 
-/** gets the best child of the active node */
+/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+NODE* SCIPtreeGetPrioChild(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   NODE* bestnode;
+   Real bestprio;
+   int i;
+
+   assert(tree != NULL);
+
+   bestnode = NULL;
+   for( i = 0; i < tree->nchildren; ++i )
+   {
+      if( bestnode == NULL || tree->childrenprio[i] > bestprio )
+      {
+         bestnode = tree->children[i];
+         bestprio = tree->childrenprio[i];
+      }
+   }
+
+   return bestnode;
+}
+
+/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+NODE* SCIPtreeGetPrioSibling(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   NODE* bestnode;
+   Real bestprio;
+   int i;
+
+   assert(tree != NULL);
+
+   bestnode = NULL;
+   for( i = 0; i < tree->nsiblings; ++i )
+   {
+      if( bestnode == NULL || tree->siblingsprio[i] > bestprio )
+      {
+         bestnode = tree->siblings[i];
+         bestprio = tree->siblingsprio[i];
+      }
+   }
+
+   return bestnode;
+}
+
+/** gets the best child of the active node w.r.t. the node selection strategy */
 NODE* SCIPtreeGetBestChild(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */
@@ -2530,7 +2602,7 @@ NODE* SCIPtreeGetBestChild(
    return bestnode;
 }
 
-/** gets the best sibling of the active node */
+/** gets the best sibling of the active node w.r.t. the node selection strategy */
 NODE* SCIPtreeGetBestSibling(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */
@@ -2557,7 +2629,7 @@ NODE* SCIPtreeGetBestSibling(
    return bestnode;
 }
 
-/** gets the best leaf from the node queue */
+/** gets the best leaf from the node queue w.r.t. the node selection strategy */
 NODE* SCIPtreeGetBestLeaf(
    TREE*            tree                /**< branch and bound tree */
    )
@@ -2567,7 +2639,7 @@ NODE* SCIPtreeGetBestLeaf(
    return SCIPnodepqFirst(tree->leaves);
 }
 
-/** gets the best node from the tree (child, sibling, or leaf) */
+/** gets the best node from the tree (child, sibling, or leaf) w.r.t. the node selection strategy */
 NODE* SCIPtreeGetBestNode(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */

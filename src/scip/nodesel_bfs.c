@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.27 2004/04/19 17:08:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.28 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -112,12 +112,13 @@ DECL_NODESELSELECT(nodeselSelectBfs)
          && (SCIPisEQ(scip, avglowerbound, lowerbound)
             || (curlowerbound - lowerbound)/(avglowerbound - lowerbound) < nodeseldata->maxplungequot)) )
    {
-      /* we want to plunge again: prefer children over siblings, and siblings over leaves */
-      /**@todo create a better node selection rule for child nodes (to find primal solutions quickly) */
-      *selnode = SCIPgetBestChild(scip);
+      /* we want to plunge again: prefer children over siblings, and siblings over leaves;
+       * use the node selection priority assigned by the branching rule to compare children and siblings
+       */
+      *selnode = SCIPgetPrioChild(scip);
       if( *selnode == NULL )
       {
-         *selnode = SCIPgetBestSibling(scip);
+         *selnode = SCIPgetPrioSibling(scip);
          if( *selnode == NULL )
          {
             *selnode = SCIPgetBestLeaf(scip);

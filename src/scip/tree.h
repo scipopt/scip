@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.58 2004/05/03 09:21:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.59 2004/06/01 16:40:17 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -55,7 +55,8 @@ RETCODE SCIPnodeCreate(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree                /**< branch and bound tree */
+   TREE*            tree,               /**< branch and bound tree */
+   Real             nodeselprio         /**< node selection priority of new node */
    );
 
 /** frees node */
@@ -273,27 +274,39 @@ int SCIPtreeGetNNodes(
    TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets the best child of the active node */
+/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+extern
+NODE* SCIPtreeGetPrioChild(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+extern
+NODE* SCIPtreeGetPrioSibling(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets the best child of the active node w.r.t. the node selection strategy */
 extern
 NODE* SCIPtreeGetBestChild(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */
    );
 
-/** gets the best sibling of the active node */
+/** gets the best sibling of the active node w.r.t. the node selection strategy */
 extern
 NODE* SCIPtreeGetBestSibling(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */
    );
 
-/** gets the best leaf from the node queue */
+/** gets the best leaf from the node queue w.r.t. the node selection strategy */
 extern
 NODE* SCIPtreeGetBestLeaf(
    TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets the best node from the tree (child, sibling, or leaf) */
+/** gets the best node from the tree (child, sibling, or leaf) w.r.t. the node selection strategy */
 extern
 NODE* SCIPtreeGetBestNode(
    TREE*            tree,               /**< branch and bound tree */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.9 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.10 2004/06/01 16:40:17 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -117,6 +117,8 @@ struct Tree
    NODE*            actsubroot;         /**< root of the active subtree */
    NODE**           children;           /**< array with children of the active node */
    NODE**           siblings;           /**< array with siblings of the active node */
+   Real*            childrenprio;       /**< array with node selection priorities of children */
+   Real*            siblingsprio;       /**< array with node selection priorities of children */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
    int              actlpforklpcount;   /**< LP number of last solved LP in current LP fork, or -1 if unknown */

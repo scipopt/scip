@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.18 2004/05/24 17:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.19 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -645,5 +645,12 @@ Real SCIPvarGetSol(
    Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
+/** returns the solution of the variable in the root node's relaxation, returns SCIP_INVALID if the root relaxation
+ *  is not yet completely solved
+ */
+extern
+Real SCIPvarGetRootSol(
+   VAR*             var                 /**< problem variable */
+   );
 
 #endif

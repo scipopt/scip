@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.2 2004/05/03 11:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.3 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -33,6 +33,7 @@
 
 
 #ifdef ROUNDING_FE
+#define ROUNDING
 /*
  * Linux rounding operations
  */
@@ -71,6 +72,7 @@ ROUNDMODE getRoundingMode(
 
 
 #ifdef ROUNDING_FP
+#define ROUNDING
 /*
  * OSF rounding operations
  */
@@ -104,6 +106,40 @@ ROUNDMODE getRoundingMode(
 {
    return read_rnd();
 }
+#endif
+
+
+
+#ifndef ROUNDING
+/*
+ * rouding operations not available
+ */
+enum RoundMode
+{
+   SCIP_ROUND_DOWNWARDS = 0,            /**< round always down */
+   SCIP_ROUND_UPWARDS   = 1             /**< round always up */
+};
+typedef enum RoundMode ROUNDMODE;
+
+/** sets rounding mode of floating point operations */
+static
+void setRoundingMode(
+   ROUNDMODE        roundmode           /**< rounding mode to activate */
+   )
+{
+   warningMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
+}
+
+/** gets current rounding mode of floating point operations */
+static
+ROUNDMODE getRoundingMode(
+   void
+   )
+{
+   return SCIP_ROUND_DOWNWARDS;
+}
+#else
+#undef ROUNDING
 #endif
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.93 2004/05/24 17:46:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.94 2004/06/01 16:40:17 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1057,6 +1057,7 @@ RETCODE varCreate(
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->branchpriority = 0;
+   (*var)->rootsol = SCIP_INVALID;
    (*var)->index = stat->nvaridx++;
    (*var)->probindex = -1;
    (*var)->pseudocandindex = -1;
@@ -5628,6 +5629,69 @@ Real SCIPvarGetSol(
       return SCIPvarGetLPSol(var);
    else
       return SCIPvarGetPseudoSol(var);
+}
+
+/** remembers the current solution as root solution in the problem variables */
+void SCIPvarStoreRootSol(
+   VAR*             var,                /**< problem variable */
+   Bool             roothaslp           /**< is the root solution from LP? */
+   )
+{
+   assert(var != NULL);
+
+   var->rootsol = SCIPvarGetSol(var, roothaslp);
+}
+
+/** returns the solution of the variable in the root node's relaxation, returns SCIP_INVALID if the root relaxation
+ *  is not yet completely solved
+ */
+Real SCIPvarGetRootSol(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   Real rootsol;
+   int i;
+
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return SCIP_INVALID;
+      return SCIPvarGetRootSol(var->data.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return var->rootsol;
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
+      return var->locdom.lb;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert(var->data.aggregate.var != NULL);
+      return var->data.aggregate.scalar * SCIPvarGetRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert(var->data.multaggr.vars != NULL);
+      assert(var->data.multaggr.scalars != NULL);
+      assert(var->data.multaggr.nvars >= 2);
+      rootsol = var->data.multaggr.constant;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+         rootsol += var->data.multaggr.scalars[i] * SCIPvarGetRootSol(var->data.multaggr.vars[i]);
+      return rootsol;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPvarGetRootSol(var->negatedvar);
+      
+   default:
+      errorMessage("Unknown variable status\n");
+      abort();
+   }
 }
 
 /** resolves variable to columns and adds them with the coefficient to the row */

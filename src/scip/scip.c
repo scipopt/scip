@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.169 2004/05/24 17:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.170 2004/06/01 16:40:16 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6628,14 +6628,15 @@ Real SCIPgetBranchScoreMultiple(
 /** creates a child node of the active node */
 RETCODE SCIPcreateChild(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE**           node                /**< pointer to node data structure */
+   NODE**           node,               /**< pointer to node data structure */
+   Real             nodeselprio         /**< node selection priority of new node */
    )
 {
    assert(node != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateChild", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeCreate(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree) );
+   CHECK_OKAY( SCIPnodeCreate(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, nodeselprio) );
    
    return SCIP_OKAY;
 }
@@ -7453,7 +7454,27 @@ int SCIPgetNLeaves(
    return SCIPnodepqLen(scip->tree->leaves);
 }
 
-/** gets the best child of the active node */
+/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+NODE* SCIPgetPrioChild(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPrioChild", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeGetPrioChild(scip->tree);
+}
+
+/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+NODE* SCIPgetPrioSibling(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPrioSibling", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeGetPrioSibling(scip->tree);
+}
+
+/** gets the best child of the active node w.r.t. the node selection strategy */
 NODE* SCIPgetBestChild(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -7463,7 +7484,7 @@ NODE* SCIPgetBestChild(
    return SCIPtreeGetBestChild(scip->tree, scip->set);
 }
 
-/** gets the best sibling of the active node */
+/** gets the best sibling of the active node w.r.t. the node selection strategy */
 NODE* SCIPgetBestSibling(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -7473,7 +7494,7 @@ NODE* SCIPgetBestSibling(
    return SCIPtreeGetBestSibling(scip->tree, scip->set);
 }
 
-/** gets the best leaf from the node queue */
+/** gets the best leaf from the node queue w.r.t. the node selection strategy */
 NODE* SCIPgetBestLeaf(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -7483,7 +7504,7 @@ NODE* SCIPgetBestLeaf(
    return SCIPtreeGetBestLeaf(scip->tree);
 }
 
-/** gets the best node from the tree (child, sibling, or leaf) */
+/** gets the best node from the tree (child, sibling, or leaf) w.r.t. the node selection strategy */
 NODE* SCIPgetBestNode(
    SCIP*            scip                /**< SCIP data structure */
    )

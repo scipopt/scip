@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.42 2004/05/24 17:46:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.43 2004/06/01 16:40:13 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1605,6 +1605,8 @@ RETCODE conflictAnalyzeLPDualsol(
    ROW* row;
    COL* col;
    VAR* var;
+   Real* lbs;
+   Real* ubs;
    Real* primsols;
    Real* dualsols;
    Real* redcosts;
@@ -1645,10 +1647,15 @@ RETCODE conflictAnalyzeLPDualsol(
    assert(ncols == lp->nlpicols);
 
    /* get temporary memory */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &lbs, ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ubs, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsols, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualsols, nrows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &redcosts, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualcoef, prob->nvars) );
+
+   /* get current bounds from LPI */
+   CHECK_OKAY( SCIPlpiGetBounds(lpi, 0, ncols-1, lbs, ubs) );
 
    /* get solution from LPI */
    CHECK_OKAY( SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts) );
@@ -1736,14 +1743,15 @@ RETCODE conflictAnalyzeLPDualsol(
          continue;
 
       /* check dual feasibility */
-      if( (SCIPsetIsGT(set, primsols[c], col->lb) && SCIPsetIsFeasPositive(set, redcosts[c]))
-         || (SCIPsetIsLT(set, primsols[c], col->ub) && SCIPsetIsFeasNegative(set, redcosts[c])) )
+      if( (SCIPsetIsGT(set, primsols[c], lbs[c]) && SCIPsetIsFeasPositive(set, redcosts[c]))
+         || (SCIPsetIsLT(set, primsols[c], ubs[c]) && SCIPsetIsFeasNegative(set, redcosts[c])) )
       {
          debugMessage("infeasible reduced costs %g in col <%s>: lb=%g, ub=%g\n",
-            redcosts[c], SCIPvarGetName(var), col->lb, col->ub);
+            redcosts[c], SCIPvarGetName(var), lbs[c], ubs[c]);
          goto TERMINATE;
       }
 
+#if 0 /*??????????????????*/
       /* add column's bound to dual row lhs: redcost > 0 -> lb, redcost < 0 -> ub */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
@@ -1773,11 +1781,29 @@ RETCODE conflictAnalyzeLPDualsol(
                goto TERMINATE;
          }
       }
+#else
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lbs[c], SCIPvarGetLbGlobal(var)));
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ubs[c], SCIPvarGetUbGlobal(var)));
+
+      /* add column's bound to dual row lhs: redcost > 0 -> lb, redcost < 0 -> ub */
+      if( redcosts[c] > 0.0 )
+      {
+         bd = lbs[c];
+         if( SCIPsetIsInfinity(set, -bd) )
+            goto TERMINATE;
+      }
+      else
+      {
+         bd = ubs[c];
+         if( SCIPsetIsInfinity(set, bd) )
+            goto TERMINATE;
+      }
+#endif
 
       duallhs += redcosts[c] * bd;
-      debugMessage(" col <%s>: loc=[%g,%g], glb=[%g,%g], redcost=%g -> %g\n", 
-         SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), 
-         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), redcosts[c], duallhs);
+      debugMessage(" col <%s>: loc=[%g,%g], glb=[%g,%g], used=[%g,%g], redcost=%g -> %g\n", 
+         SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+         lbs[c], ubs[c], redcosts[c], duallhs);
    }
    debugMessage("duallhs=%g, localrows=%d\n", duallhs, havelocal);
 
@@ -1958,6 +1984,8 @@ RETCODE conflictAnalyzeLPDualsol(
    SCIPsetFreeBufferArray(set, &redcosts);
    SCIPsetFreeBufferArray(set, &dualsols);
    SCIPsetFreeBufferArray(set, &primsols);
+   SCIPsetFreeBufferArray(set, &lbs);
+   SCIPsetFreeBufferArray(set, &ubs);
 
    return SCIP_OKAY;
 }
@@ -1977,10 +2005,24 @@ RETCODE conflictAnalyzeLP(
    )
 {
    LPI* lpi;
+   COL** cols;
+   VAR* var;
+   int* inds;
+   Real* loclbs;
+   Real* locubs;
+   Real* glblbs;
+   Real* glbubs;
+   Real loclb;
+   Real locub;
+   Real glblb;
+   Real glbub;
    Real objval;
    Bool valid;
    Bool error;
+   int ncols;
+   int nbdchgs;
    int maxsize;
+   int c;
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -2010,38 +2052,66 @@ RETCODE conflictAnalyzeLP(
          return SCIP_OKAY;
    }
 
-   error = FALSE;
+   /* get LP columns */
+   cols = SCIPlpGetCols(lp);
+   ncols = SCIPlpGetNCols(lp);
 
+   /* get temporary memory for remembering current bounds */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &inds, ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &loclbs, ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &locubs, ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &glblbs, ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &glbubs, ncols) );
+
+   /* compare local and global bounds of non-binary variables and remember differences */
+   nbdchgs = 0;
+   for( c = 0; c < ncols; ++c )
+   {
+      var = SCIPcolGetVar(cols[c]);
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+      {
+         loclb = SCIPcolGetLb(cols[c]);
+         locub = SCIPcolGetUb(cols[c]);
+         glblb = SCIPvarGetLbGlobal(var);
+         glbub = SCIPvarGetUbGlobal(var);
+
+         if( !SCIPsetIsEQ(set, loclb, glblb) || !SCIPsetIsEQ(set, locub, glbub) )
+         {
+            inds[nbdchgs] = c;
+            loclbs[nbdchgs] = loclb;
+            locubs[nbdchgs] = locub;
+            glblbs[nbdchgs] = glblb;
+            glbubs[nbdchgs] = glbub;
+            nbdchgs++;
+         }
+      }
+   }
+
+   /* temporarily set non-binary variables to global bounds */
+   CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs, inds, glblbs, glbubs) );
+   
+   /* temporarily remove objective limit in LP solver */
+   CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, set->infinity) );
+
+   /* resolve LP */
+   CHECK_OKAY( SCIPlpiSolveDual(lpi) );
+   
+   /* evaluate result */
+   if( SCIPlpiIsOptimal(lpi) )
+   {
+      CHECK_OKAY( SCIPlpiGetObjval(lpi, &objval) );
+      error = (objval < lp->lpiuobjlim);
+   }
+   else
+      error = !SCIPlpiIsPrimalInfeasible(lpi);
+   
+   /* count number of LP iterations */
+   CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, iterations) );
+   
 #if 0
    /* analyze conflict with alternative polyhedron */
    CHECK_OKAY( conflictAnalyzeLPAltpoly(conflict, memhdr, set, stat, tree, lp, maxsize, iterations, &valid) );
 #else
-   /* if objective limit was reachted, solve LP to the optimum to get a better dual starting bound */
-   if( SCIPlpiIsObjlimExc(lpi) || (SCIPlpiIsOptimal(lpi) && objval >= lp->lpiuobjlim) )
-   {
-      int iter;
-
-      /* temporarily remove objective limit in LP solver, and continue solving LP */
-      CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, set->infinity) );
-      CHECK_OKAY( SCIPlpiSolveDual(lpi) );
-
-      /* evaluate result */
-      if( SCIPlpiIsOptimal(lpi) )
-      {
-         CHECK_OKAY( SCIPlpiGetObjval(lpi, &objval) );
-         error = (objval < lp->lpiuobjlim);
-      }
-      else
-         error = !SCIPlpiIsPrimalInfeasible(lpi);
-
-      /* count number of LP iterations */
-      CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, &iter) );
-      (*iterations) += iter;
-
-      /* reset objective limit in LP solver */
-      CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
-   }
-
    if( !error )
    {
       /* analyze conflict with dual farkas or dual solution */
@@ -2057,10 +2127,23 @@ RETCODE conflictAnalyzeLP(
    }
 #endif
       
+   /* reset objective limit in LP solver */
+   CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
+
+   /* reset non-binary variables to local bounds */
+   CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs, inds, loclbs, locubs) );
+   
    /* check, if a valid conflict was found */
    if( !error && valid )
       *success = TRUE;
    
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &glbubs);
+   SCIPsetFreeBufferArray(set, &glblbs);
+   SCIPsetFreeBufferArray(set, &locubs);
+   SCIPsetFreeBufferArray(set, &loclbs);
+   SCIPsetFreeBufferArray(set, &inds);
+
    return SCIP_OKAY;
 }
 

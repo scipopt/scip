@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.134 2004/05/24 17:46:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.135 2004/06/01 16:40:16 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2650,7 +2650,8 @@ Real SCIPgetBranchScoreMultiple(
 extern
 RETCODE SCIPcreateChild(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE**           node                /**< pointer to node data structure */
+   NODE**           node,               /**< pointer to node data structure */
+   Real             nodeselprio         /**< node selection priority of new node */
    );
 
 /** branches on a variable; if solution value x' is fractional, two child nodes are created
@@ -3052,25 +3053,37 @@ int SCIPgetNLeaves(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best child of the active node */
+/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+extern
+NODE* SCIPgetPrioChild(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+extern
+NODE* SCIPgetPrioSibling(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets the best child of the active node w.r.t. the node selection strategy */
 extern
 NODE* SCIPgetBestChild(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best sibling of the active node */
+/** gets the best sibling of the active node w.r.t. the node selection strategy */
 extern
 NODE* SCIPgetBestSibling(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best leaf from the node queue */
+/** gets the best leaf from the node queue w.r.t. the node selection strategy */
 extern
 NODE* SCIPgetBestLeaf(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best node from the tree (child, sibling, or leaf) */
+/** gets the best node from the tree (child, sibling, or leaf) w.r.t. the node selection strategy */
 extern
 NODE* SCIPgetBestNode(
    SCIP*            scip                /**< SCIP data structure */

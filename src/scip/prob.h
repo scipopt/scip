@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.36 2004/05/21 20:03:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.37 2004/06/01 16:40:15 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -210,6 +210,13 @@ extern
 void SCIPprobCheckObjIntegral(
    PROB*            prob,               /**< problem data */
    SET*             set                 /**< global SCIP settings */
+   );
+
+/** remembers the current solution as root solution in the problem variables */
+extern
+void SCIPprobStoreRootSol(
+   PROB*            prob,               /**< problem data */
+   Bool             roothaslp           /**< is the root solution from LP? */
    );
 
 /** informs problem, that the presolving process was finished, and updates all internal data structures */
