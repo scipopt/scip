@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.22 2004/03/12 10:39:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.23 2004/03/12 14:15:14 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -39,8 +39,11 @@
 #define CONSHDLR_ENFOPRIORITY   +600000
 #define CONSHDLR_CHECKPRIORITY  -850000
 #define CONSHDLR_SEPAFREQ             5
-#define CONSHDLR_PROPFREQ            -1
+#define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
+
+#define EVENTHDLR_NAME         "knapsack"
+#define EVENTHDLR_DESC         "bound change event handler for knapsack constraints"
 
 #define LINCONSUPGD_PRIORITY    +100000
 
@@ -51,15 +54,143 @@
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/** constraint data for knapsack constraints */
 struct ConsData
 {
    int              nvars;              /**< number of variables in knapsack */
    VAR**            vars;               /**< variables in knapsack */
+   EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    Real*            weights;            /**< weights of knapsack items */
    Real             capacity;           /**< capacity of knapsack */
    ROW*             row;                /**< corresponding LP row */
+   Real             onesweight;         /**< sum of weights of variables fixed to one */
+   unsigned int     sorted:1;           /**< are the knapsack items sorted by weight? */
+   unsigned int     propagated:1;       /**< is the knapsack constraint already propagated? */
 };
+
+/** event data for bound changes events */
+struct EventData
+{
+   CONSDATA*        consdata;           /**< knapsack constraint data to process the bound change for */
+   Real             weight;             /**< weight of variable */
+};
+
+/** creates event data */
+static
+RETCODE eventdataCreate(
+   SCIP*            scip,               /**< SCIP data structure */
+   EVENTDATA**      eventdata,          /**< pointer to store event data */
+   CONSDATA*        consdata,           /**< constraint data */
+   Real             weight              /**< weight of variable */
+   )
+{
+   assert(eventdata != NULL);
+
+   CHECK_OKAY( SCIPallocBlockMemory(scip, eventdata) );
+   (*eventdata)->consdata = consdata;
+   (*eventdata)->weight = weight;
+
+   return SCIP_OKAY;
+}  
+
+/** frees event data */
+static
+RETCODE eventdataFree(
+   SCIP*            scip,               /**< SCIP data structure */
+   EVENTDATA**      eventdata           /**< pointer to event data */
+   )
+{
+   assert(eventdata != NULL);
+
+   SCIPfreeBlockMemory(scip, eventdata);
+
+   return SCIP_OKAY;
+}
+
+/** sorts items in knapsack with nondecreasing weights */
+static 
+void sortItems(
+  CONSDATA*        consdata            /**< constraint data */
+  )
+{
+   int i;
+   int j;
+   VAR* var;
+   Real weight;
+   EVENTDATA* eventdata;
+
+   assert(consdata != NULL);
+   
+   if( !consdata->sorted )
+   {
+     for( i = 0; i < consdata->nvars; i++)
+     {
+        var = consdata->vars[i];
+        weight = consdata->weights[i];
+        eventdata = consdata->eventdatas[i];
+        
+        for( j = i; j > 0 && weight < consdata->weights[j-1]; j--)
+        {
+           consdata->weights[j] = consdata->weights[j-1];
+           consdata->vars[j] = consdata->vars[j-1];
+           consdata->eventdatas[j] = consdata->eventdatas[j-1];
+        }
+        consdata->weights[j] = weight;
+        consdata->vars[j] = var;
+        consdata->eventdatas[j] = eventdata;
+     }
+     consdata->sorted = TRUE;
+   } 
+}
+
+/** catches bound change events for variables in knapsack */
+static
+RETCODE catchEvents(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   int i;
+   EVENTHDLR* eventhdlr;
+   
+   assert(consdata != NULL);
+
+   eventhdlr = SCIPfindEventhdlr (scip, EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
+
+   for( i = 0; i < consdata->nvars; i++)
+   {
+      CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
+                     consdata->eventdatas[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drops bound change events for variables in knapsack */
+static
+RETCODE dropEvents(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   int i;
+   EVENTHDLR* eventhdlr;
+   
+   assert(consdata != NULL);
+
+   eventhdlr = SCIPfindEventhdlr (scip, EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
+
+   for( i = 0; i < consdata->nvars; i++)
+   {
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, consdata->eventdatas[i]) );
+      CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[i]) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** creates knapsack constraint data */
 static
@@ -82,11 +213,18 @@ RETCODE consdataCreate(
    CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
    (*consdata)->capacity = capacity;
    (*consdata)->row = NULL;
+   (*consdata)->eventdatas = NULL;
+   (*consdata)->onesweight = 0.0;
+   (*consdata)->sorted = FALSE;
+   (*consdata)->propagated = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
    {
       CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+      CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, nvars) );
+      /* catch events for variables */
+      CHECK_OKAY( catchEvents(scip, *consdata) );
    } 
         
    return SCIP_OKAY;
@@ -105,6 +243,11 @@ RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+   if( (*consdata)->eventdatas != NULL )
+   {
+      CHECK_OKAY( dropEvents(scip, *consdata) );
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->nvars);
    }
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->nvars);
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->nvars);
@@ -524,8 +667,50 @@ RETCODE separateCovers(
    return SCIP_OKAY;
 }
 
+/** propagation methode for knapsack constraint */
+static
+RETCODE propagateCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*             nfixedvars          /**< pointer to count number of fixings */
+   )
+{
+   CONSDATA* consdata;
+   Bool infeasible;
+   Bool tightened;
+   int i;
 
+   assert(cutoff != NULL);
+   assert(nfixedvars != NULL);
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   if( consdata->propagated )
+      return SCIP_OKAY;
+
+   sortItems(consdata);
+   for( i = consdata->nvars - 1; i >= 0; i--)
+   {
+      if(consdata->weights[i] > consdata->capacity - consdata->onesweight)
+      {
+         if(SCIPvarGetLbLocal(consdata->vars[i]) < 0.5)
+         {
+            /**@todo provide cons for conflict analysis */
+            CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, /*cons*/NULL, 0, &infeasible, &tightened) );
+            assert(!infeasible);
+            if(tightened)
+               (*nfixedvars)++;
+         }
+      }
+      else
+         break;
+   }
+   consdata->propagated = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -725,19 +910,30 @@ DECL_CONSCHECK(consCheckKnapsack)
 
 
 /** domain propagation method of constraint handler */
-#if 0
 static
 DECL_CONSPROP(consPropKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   Bool cutoff;
+   int nfixedvars;
+   int i;
+
+   cutoff = FALSE;
+   nfixedvars = 0;
+
+   for( i = 0; i < nusefulconss && !cutoff; i++ )
+   {
+      CHECK_OKAY( propagateCons(scip, conss[i], &cutoff, &nfixedvars) );
+   } 
+
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( nfixedvars > 0 )
+      *result = SCIP_REDUCEDDOM;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
-#else
-#define consPropKnapsack NULL
-#endif
-
 
 /** presolving method of constraint handler */
 #if 0
@@ -906,8 +1102,29 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
 }
 #endif
 
+/** execution methode of bound change event handler */
+static
+DECL_EVENTEXEC(eventExecKnapsack)
+{
+   assert(eventdata != NULL);
+   assert(eventdata->consdata != NULL);
+   
+   switch( SCIPeventGetType(event) )
+   {
+   case SCIP_EVENTTYPE_LBTIGHTENED:
+      eventdata->consdata->onesweight += eventdata->weight;
+      eventdata->consdata->propagated = FALSE;
+      break;
+   case SCIP_EVENTTYPE_LBRELAXED:
+      eventdata->consdata->onesweight -= eventdata->weight;
+      break;
+   default:
+      errorMessage("Invalid event type %x\n", SCIPeventGetType(event));
+      return SCIP_INVALIDDATA;
+   }
 
-
+   return SCIP_OKAY;
+}
 
 /*
  * constraint specific interface methods
@@ -919,6 +1136,7 @@ RETCODE SCIPincludeConshdlrKnapsack(
    )
 {
    CONSHDLRDATA* conshdlrdata;
+   EVENTHDLRDATA* eventhdlrdata;
 
    /* create knapsack constraint handler data */
    conshdlrdata = NULL;
@@ -935,6 +1153,12 @@ RETCODE SCIPincludeConshdlrKnapsack(
                   consActiveKnapsack, consDeactiveKnapsack, 
                   consEnableKnapsack, consDisableKnapsack,
                   conshdlrdata) );
+  
+   /* include event handler for bound change events */
+   eventhdlrdata = NULL;
+   CHECK_OKAY( SCIPincludeEventhdlr (scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+                  NULL, NULL, NULL, NULL, eventExecKnapsack,
+                  eventhdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
