@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.28 2005/02/14 13:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.29 2005/02/25 14:27:09 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -131,7 +131,7 @@ struct Conshdlr
    DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
    DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
    CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
-   CONS**           conss;              /**< array with all active constraints */
+   CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative ones */
    CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
    CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
    CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
@@ -151,9 +151,10 @@ struct Conshdlr
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds;       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    int              consssize;          /**< size of conss array */
-   int              nconss;             /**< total number of active constraints */
-   int              maxnconss;          /**< maximal number of active constraints existing at the same time */
-   int              startnconss;        /**< number of active constraints existing when problem solving started */
+   int              nconss;             /**< total number of constraints */
+   int              nactiveconss;       /**< total number of active constraints */
+   int              maxnactiveconss;    /**< maximal number of active constraints existing at the same time */
+   int              startnactiveconss;  /**< number of active constraints existing when problem solving started */
    int              sepaconsssize;      /**< size of sepaconss array */
    int              nsepaconss;         /**< number of active constraints that may be separated during LP processing */
    int              nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */

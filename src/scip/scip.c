@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.275 2005/02/25 11:09:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.276 2005/02/25 14:27:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3437,13 +3437,13 @@ RETCODE transformProb(
    
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
-      int nconss;
+      int nactiveconss;
       
-      nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
-      if( nconss > 0 )
+      nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[h]);
+      if( nactiveconss > 0 )
       {
          infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "%7d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
+            "%7d constraints of type <%s>\n", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
       }
    }
    infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
@@ -4125,13 +4125,13 @@ RETCODE SCIPpresolve(
          
             for( h = 0; h < scip->set->nconshdlrs; ++h )
             {
-               int nconss;
+               int nactiveconss;
             
-               nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
-               if( nconss > 0 )
+               nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[h]);
+               if( nactiveconss > 0 )
                {
                   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                     "%7d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
+                     "%7d constraints of type <%s>\n", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
                }
             }
 
@@ -7109,7 +7109,7 @@ RETCODE SCIPcreateCons(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, 
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, scip->set, name, conshdlr, consdata, 
             initial, separate, enforce, check, propagate, local, modifiable, removeable, TRUE) );
       return SCIP_OKAY;
 
@@ -7117,7 +7117,7 @@ RETCODE SCIPcreateCons(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata,
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, scip->set, name, conshdlr, consdata,
             initial, separate, enforce, check, propagate, local, modifiable, removeable, FALSE) );
       return SCIP_OKAY;
 
@@ -10945,12 +10945,12 @@ void printPresolverStatistics(
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CONSHDLR* conshdlr;
-      int maxnconss;
+      int maxnactiveconss;
       
       conshdlr = scip->set->conshdlrs[i];
-      maxnconss = SCIPconshdlrGetMaxNConss(conshdlr);
+      maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
       if( SCIPconshdlrDoesPresolve(conshdlr)
-         && (maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr)
+         && (maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr)
             || SCIPconshdlrGetNFixedVars(conshdlr) > 0
             || SCIPconshdlrGetNAggrVars(conshdlr) > 0
             || SCIPconshdlrGetNChgBds(conshdlr) > 0
@@ -11018,18 +11018,18 @@ void printConstraintStatistics(
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CONSHDLR* conshdlr;
-      int startnconss;
-      int maxnconss;
+      int startnactiveconss;
+      int maxnactiveconss;
 
       conshdlr = scip->set->conshdlrs[i];
-      startnconss = SCIPconshdlrGetStartNConss(conshdlr);
-      maxnconss = SCIPconshdlrGetMaxNConss(conshdlr);
-      if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
+      startnactiveconss = SCIPconshdlrGetStartNActiveConss(conshdlr);
+      maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
+      if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          fprintf(file, " %10d%c%10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld\n",
-            startnconss,
-            maxnconss > startnconss ? '+' : ' ',
+            startnactiveconss,
+            maxnactiveconss > startnactiveconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr), 
             SCIPconshdlrGetNPropCalls(conshdlr), 
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
@@ -11060,11 +11060,11 @@ void printConstraintTimingStatistics(
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CONSHDLR* conshdlr;
-      int maxnconss;
+      int maxnactiveconss;
       
       conshdlr = scip->set->conshdlrs[i];
-      maxnconss = SCIPconshdlrGetMaxNConss(conshdlr);
-      if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
+      maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
+      if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          fprintf(file, " %10.2f %10.2f %10.2f %10.2f %10.2f\n",

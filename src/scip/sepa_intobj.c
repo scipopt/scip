@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.15 2005/02/14 13:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.16 2005/02/25 14:27:09 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -91,25 +91,6 @@ RETCODE sepadataFree(
    return SCIP_OKAY;
 }
 
-/** releases objective row and objective variable */
-static
-RETCODE sepadataRelease(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPADATA*        sepadata            /**< separator data */
-   )
-{
-   assert(sepadata != NULL);
-   assert((sepadata->objrow == NULL) == (sepadata->objvar == NULL));
-
-   if( sepadata->objrow != NULL )
-   {
-      CHECK_OKAY( SCIPreleaseRow(scip, &sepadata->objrow) );
-      CHECK_OKAY( SCIPreleaseVar(scip, &sepadata->objvar) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** creates the objective value equality and the objective value variable, if not yet existing */
 static
 RETCODE createObjRow(
@@ -126,14 +107,18 @@ RETCODE createObjRow(
       int nvars;
       int v;
 
-      /* get problem variables */
-      vars = SCIPgetVars(scip);
-      nvars = SCIPgetNVars(scip);
-
       /* create and add objective value variable */
-      CHECK_OKAY( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-                     SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL) );
-      CHECK_OKAY( SCIPaddVar(scip, sepadata->objvar) );
+      if( sepadata->objvar == NULL )
+      {
+         CHECK_OKAY( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+               SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL) );
+         CHECK_OKAY( SCIPaddVar(scip, sepadata->objvar) );
+         CHECK_OKAY( SCIPaddVarLocks(scip, sepadata->objvar, +1, +1) );
+      }
+
+      /* get problem variables */
+      vars = SCIPgetOrigVars(scip);
+      nvars = SCIPgetNOrigVars(scip);
 
       /* create objective value equality */
       CHECK_OKAY( SCIPcreateEmptyRow(scip, &sepadata->objrow, "objrow", 0.0, 0.0,
@@ -196,8 +181,11 @@ DECL_SEPAEXIT(sepaExitIntobj)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   /* release objective row and objective variable */
-   CHECK_OKAY( sepadataRelease(scip, sepadata) );
+   /* release objective variable */
+   if( sepadata->objvar != NULL )
+   {
+      CHECK_OKAY( SCIPreleaseVar(scip, &sepadata->objvar) );
+   }
 
    return SCIP_OKAY;
 }
@@ -208,7 +196,22 @@ DECL_SEPAEXIT(sepaExitIntobj)
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolIntobj NULL
+static
+DECL_SEPAEXITSOL(sepaExitsolIntobj)
+{  /*lint --e{715}*/
+   SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* release objective row */
+   if( sepadata->objrow != NULL )
+   {
+      CHECK_OKAY( SCIPreleaseRow(scip, &sepadata->objrow) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** execution method of separator */
@@ -233,6 +236,7 @@ DECL_SEPAEXEC(sepaExecIntobj)
 
    /* if the current objective value is integral, there is no integral objective value cut */
    objval = SCIPgetLPObjval(scip);
+   objval = SCIPretransformObj(scip, objval);
    if( SCIPisFeasIntegral(scip, objval) )
       return SCIP_OKAY;
 
@@ -242,11 +246,21 @@ DECL_SEPAEXEC(sepaExecIntobj)
    /* the objective value is fractional: create the objective value equality, if not yet existing */
    CHECK_OKAY( createObjRow(scip, sepadata) );
 
-   /* adjust the lower bound of the objective value variable */
-   intobjval = SCIPceil(scip, objval);
-   CHECK_OKAY( SCIPtightenVarLb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
-   debugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
-      SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
+   /* adjust the bounds of the objective value variable */
+   if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+   {
+      intobjval = SCIPceil(scip, objval);
+      CHECK_OKAY( SCIPtightenVarLb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
+      debugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
+         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
+   }
+   else
+   {
+      intobjval = SCIPfloor(scip, objval);
+      CHECK_OKAY( SCIPtightenVarUb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
+      debugMessage("new objective variable upper bound: <%s>[%g,%g]\n", 
+         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
+   }
 
    /* add the objective value equality as a cut to the LP */
    if( infeasible )

@@ -43,6 +43,10 @@ interface:
 - new method SCIPisLPSolBasic() to check, whether the current LP solution is basic (i.e. due to a simplex algorithm
   or barrier with crossover)
 - event handlers are now available as C++ wrapper class
+- method SCIPconshdlrGetNConss() is replaced by SCIPconshdlrGetNActiveConss() (returning the number of active constraints);
+  method SCIPconshdlrGetNConss() does now return the total number of existing constraints, active and inactive
+- method SCIPconshdlrGetStartNConss() is now called SCIPconshdlrGetStartNActiveConss()
+- method SCIPconshdlrGetMaxNConss() is now called SCIPconshdlrGetMaxNActiveConss()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -116,6 +120,8 @@ fixed bugs:
 - fixed bug in SCIPisObjIntegral()
 - LP error on forced LP resolve (due to 0 unfixed integers) now leads to an error (instead of accepting the pseudo solution as feasible)
 - fixed bug in SCIPprintError() with file == NULL
+- fixed bug with globally deleting constraints, that have attached rows which are therefore not released in exitsol methods
+- fixed bugs in intobj separator
 
 
 SCIP version 0.78

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.88 2005/02/14 13:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.89 2005/02/25 14:27:08 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -151,7 +151,7 @@ RETCODE SCIPconshdlrExitsol(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** calls LP initialization method of constraint handler to separate all initial constraints */
+/** calls LP initialization method of constraint handler to separate all initial active constraints */
 extern
 RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -331,7 +331,7 @@ RETCODE SCIPconssetchgUndo(
  * Constraint methods
  */
 
-/** creates and captures a constraint
+/** creates and captures a constraint, and inserts it into the conss array of its constraint handler
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
@@ -341,6 +341,7 @@ extern
 RETCODE SCIPconsCreate(
    CONS**           cons,               /**< pointer to constraint */
    BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
@@ -365,7 +366,7 @@ RETCODE SCIPconsFreeData(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** frees a constraint */
+/** frees a constraint and removes it from the conss array of its constraint handler */
 extern
 RETCODE SCIPconsFree(
    CONS**           cons,               /**< constraint to free */
