@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.83 2004/04/21 12:11:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.84 2004/04/21 13:33:00 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1851,7 +1851,7 @@ RETCODE SCIPvarFix(
    assert(SCIPsetIsLE(set, fixedval, var->glbdom.ub));
    assert(infeasible != NULL);
    
-   printf/*???????????????debugMessage*/("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
+   debugMessage("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
 
    if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
@@ -2167,7 +2167,7 @@ RETCODE SCIPvarAggregate(
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
 
-   printf/*??????????????debugMessage*/("aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
+   debugMessage("aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
       scalar, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub, constant);
 
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
