@@ -8,9 +8,12 @@ parameters:
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
   iterations
+- calling SCIPaddCut() with forcecut=TRUE will add the cut to the LP even if it is redundant
 
 fixed bugs:
 - fixed bug in MPS file reader
+- fixed bugs in separation store with single coefficient cuts that are converted into bound changes
+- at least one cut per separation round is added to the LP to avoid cycling, even if the cut is redundant
 
 
 SCIP version 0.78

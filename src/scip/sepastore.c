@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.28 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.29 2005/01/12 11:45:40 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -133,6 +133,7 @@ RETCODE SCIPsepastoreFree(
    assert(sepastore != NULL);
    assert(*sepastore != NULL);
    assert((*sepastore)->ncuts == 0);
+   assert((*sepastore)->nbdchgs == 0);
 
    freeMemoryArrayNull(&(*sepastore)->cuts);
    freeMemoryArrayNull(&(*sepastore)->efficacies);
@@ -154,6 +155,7 @@ void SCIPsepastoreStartInitialLP(
    assert(sepastore != NULL);
    assert(!sepastore->initiallp);
    assert(sepastore->ncuts == 0);
+   assert(sepastore->nbdchgs == 0);
 
    sepastore->initiallp = TRUE;
 }
@@ -166,6 +168,7 @@ void SCIPsepastoreEndInitialLP(
    assert(sepastore != NULL);
    assert(sepastore->initiallp);
    assert(sepastore->ncuts == 0);
+   assert(sepastore->nbdchgs == 0);
 
    sepastore->initiallp = FALSE;
 }
@@ -198,7 +201,8 @@ Bool sepastoreIsCutRedundant(
    maxactivity = SCIProwGetMaxActivity(cut, set, stat);
    if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
    {
-      debugMessage("ignoring activity redundant cut <%s>\n", SCIProwGetName(cut));
+      debugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g]\n",
+         SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
       debug(SCIProwPrint(cut, NULL));
       return TRUE;
    }
@@ -236,9 +240,21 @@ RETCODE sepastoreAddCut(
    assert(!SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
-   /* check cut for redundancy */
-   if( sepastoreIsCutRedundant(sepastore, set, stat, cut) )
+   /* check cut for redundancy
+    * in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling
+    */
+   if( !forcecut && sepastore->ncuts + sepastore->nbdchgs > 0 && sepastoreIsCutRedundant(sepastore, set, stat, cut) )
       return SCIP_OKAY;
+
+   /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
+    * again, because now a non redundant cut enters the store
+    */
+   if( sepastore->ncuts == 1 && sepastore->nbdchgs == 0
+      && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
+   {
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[0], memhdr, set, lp) );
+      sepastore->ncuts--;
+   }
 
    /* get maximum of separated cuts at this node:
     *  - for initial LP, use all cuts
@@ -274,7 +290,7 @@ RETCODE sepastoreAddCut(
 
    /* calculate minimal cut orthogonality */
    mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
-      
+
    /* get enough memory to store the cut */
    CHECK_OKAY( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
    assert(sepastore->ncuts < sepastore->cutssize);
@@ -414,7 +430,10 @@ RETCODE sepastoreAddCut(
 static
 RETCODE sepastoreAddBdchg(
    SEPASTORE*       sepastore,          /**< separation storage */
+   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp,                 /**< LP data */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound,           /**< new bound value */
    BOUNDTYPE        boundtype           /**< type of bound to change */
@@ -422,6 +441,16 @@ RETCODE sepastoreAddBdchg(
 {
    debugMessage("adding bound change to separation storage: variable <%s>, new %s bound: %g\n",
       SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
+
+   /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
+    * again, because now a non redundant cut enters the store
+    */
+   if( sepastore->ncuts == 1 && sepastore->nbdchgs == 0
+      && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
+   {
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[0], memhdr, set, lp) );
+      sepastore->ncuts--;
+   }
 
    /* get enough memory to store the cut */
    CHECK_OKAY( sepastoreEnsureBdchgsMem(sepastore, set, sepastore->nbdchgs+1) );
@@ -432,6 +461,9 @@ RETCODE sepastoreAddBdchg(
    sepastore->bdchgvals[sepastore->nbdchgs] = newbound;
    sepastore->bdchgtypes[sepastore->nbdchgs] = boundtype;
    sepastore->nbdchgs++;
+
+   /* count the bound change as stored cut (bound changes are always good enough to keep) */
+   sepastore->ncutsstored++;
 
    return SCIP_OKAY;
 }
@@ -491,7 +523,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = lhs/vals[0];
             if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_LOWER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
             }
          }
          else
@@ -500,7 +532,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = lhs/vals[0];
             if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_UPPER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
             }
          }
       }
@@ -516,7 +548,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = rhs/vals[0];
             if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_UPPER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
             }
          }
          else
@@ -525,7 +557,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = rhs/vals[0];
             if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_LOWER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
             }
          }
       }
@@ -668,6 +700,7 @@ RETCODE SCIPsepastoreClearCuts(
 
    /* clear the separation storage */
    sepastore->ncuts = 0;
+   sepastore->nbdchgs = 0;
    sepastore->ncutsfoundround = 0;
    sepastore->ncutsstored = 0;
 
@@ -681,7 +714,7 @@ int SCIPsepastoreGetNCuts(
 {
    assert(sepastore != NULL);
 
-   return sepastore->ncuts;
+   return sepastore->ncuts + sepastore->nbdchgs;
 }
 
 /** get total number of cuts found so far */
