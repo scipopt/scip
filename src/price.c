@@ -47,6 +47,7 @@ struct Price
    int              nvars;              /**< number of priced variables (max. is set->maxpricevars) */
    int              bdviolvarssize;     /**< size of bdviolvars, bdviolvarslb, and bdviolvarsub arrays */
    int              nbdviolvars;        /**< number of variables, where zero violates the bounds */
+   int              naddedbdviolvars;   /**< number of bound violated variables already added to the LP */
 };
 
 
@@ -121,6 +122,7 @@ RETCODE SCIPpriceCreate(                /**< creates pricing storage */
    (*price)->nvars = 0;
    (*price)->bdviolvarssize = 0;
    (*price)->nbdviolvars = 0;
+   (*price)->naddedbdviolvars = 0;
 
    return SCIP_OKAY;
 }
@@ -191,6 +193,7 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    assert(set != NULL);
    assert(var != NULL);
    assert(SCIPsetIsPos(set, var->dom.lb) || SCIPsetIsNeg(set, var->dom.ub));
+   assert(price->naddedbdviolvars <= price->nbdviolvars);
 
    debugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", var->name, var->dom.lb, var->dom.ub);
 
@@ -244,6 +247,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    assert(lp->flushed);
    assert(lp->solved);
    assert(price->nvars == 0);
+   assert(price->naddedbdviolvars == price->nbdviolvars);
 
    /* call external pricer algorithms */
    todoMessage("external pricing");
@@ -317,6 +321,27 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       }
    }
 
+   /* add the variables with violated bounds to LP */
+   for( v = price->naddedbdviolvars; v < price->nbdviolvars; ++v )
+   {
+      var = price->bdviolvars[v];
+      assert(var->varstatus == SCIP_VARSTATUS_LOOSE);
+      
+      /* transform loose variable into column variable */
+      CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
+
+      assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+
+      col = var->data.col;
+      assert(col != NULL);
+      assert(!col->inLP);
+      assert(col->lpipos == -1);
+      debugMessage("adding bound violated variable <%s> (lb=%g, ub=%g)\n", var->name, 
+         price->bdviolvarslb[v], price->bdviolvarsub[v]);
+      CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
+   }
+   price->naddedbdviolvars = price->nbdviolvars;
+
    /* add the selected pricing variables to LP */
    for( v = 0; v < price->nvars; ++v )
    {
@@ -332,7 +357,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       assert(col != NULL);
       assert(!col->inLP);
       assert(col->lpipos == -1);
-      debugMessage("pricing in variable <%s> (score=%g)\n", var->name, price->score[v]);
+      debugMessage("adding priced variable <%s> (score=%g)\n", var->name, price->score[v]);
       CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
    }
    price->nvars = 0;
@@ -353,12 +378,15 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(price->nvars == 0);
+   assert(price->naddedbdviolvars == price->nbdviolvars);
 
    for( v = 0; v < price->nbdviolvars; ++v )
    {
       CHECK_OKAY( SCIPvarChgLb(price->bdviolvars[v], set, lp, price->bdviolvarslb[v]) );
       CHECK_OKAY( SCIPvarChgUb(price->bdviolvars[v], set, lp, price->bdviolvarsub[v]) );
    }
+   price->naddedbdviolvars = 0;
    price->nbdviolvars = 0;
 
    return SCIP_OKAY;

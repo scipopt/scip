@@ -36,13 +36,13 @@ static const int   nrows = 2;
 static const int   nvars = 2;
 
 static const char* var_name[] = { "x1"    , "x2"     };
-static const Real  var_obj [] = { -1.0    , -1.0     };
-static const Real  var_lb  [] = {  0.0    ,  0.0     };
-static const Real  var_ub  [] = { 10.0    ,  5.0     };
+static const Real  var_obj [] = { -1.0    , -1.0     };     /* min  -x1 -x2 */
+static const Real  var_lb  [] = {  1.0    ,  0.0     };     /*   0 <= x1 <= 10 integer */
+static const Real  var_ub  [] = { 10.0    ,  5.0     };     /*   0 <= x2 <= 5  integer */
 
-static const char* row_name[] = { "lin1"  , "lin2"   };
-static const int   row_len [] = {        2,        2 };
-static const int   row_idx [] = {   0,   1,   0,   1 };
+static const char* row_name[] = { "lin1"  , "lin2"   };     /* such that */
+static const int   row_len [] = {        2,        2 };     /*   lin1: +2x1 + x2 <= 2 */
+static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2: + x1 +2x2 <= 2 */
 static const Real  row_val [] = { 2.0, 1.0, 1.0, 2.0 };
 static const Real  row_rhs [] = {      2.0,      2.0 };
 
