@@ -98,7 +98,7 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         138 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ       100000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 

@@ -334,7 +334,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetpack(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetpart(scip) );
-   /*CHECK_OKAY( SCIPincludeNodeselBfs(scip) );*/
+   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    /*CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );*/
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
