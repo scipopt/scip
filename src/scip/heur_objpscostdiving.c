@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.4 2004/06/02 07:39:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.5 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -29,14 +29,15 @@
 #include "heur_objpscostdiving.h"
 
 
-#define HEUR_NAME         "objpscostdiving"
-#define HEUR_DESC         "LP diving heuristic that changes variable's objective values instead of bounds, using pseudo costs as guide"
-#define HEUR_DISPCHAR     'o'
-#define HEUR_PRIORITY     -1003000
-#define HEUR_FREQ         10
-#define HEUR_FREQOFS      6
-#define HEUR_MAXDEPTH     -1
-#define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_NAME             "objpscostdiving"
+#define HEUR_DESC             "LP diving heuristic that changes variable's objective values instead of bounds, using pseudo costs as guide"
+#define HEUR_DISPCHAR         'o'
+#define HEUR_PRIORITY         -1003000
+#define HEUR_FREQ             10
+#define HEUR_FREQOFS          6
+#define HEUR_MAXDEPTH         -1
+#define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
 
 
@@ -44,7 +45,8 @@
  * Default parameter settings
  */
 
-#define DEFAULT_DIVESTARTDEPTH      0.5 /**< minimal relative depth to start diving */
+#define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
+#define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT       0.1 /**< maximal fraction of diving LP iterations compared to total iteration number */
 #define DEFAULT_DEPTHFAC            0.5 /**< maximal diving depth: number of binary/integer variables times depthfac */
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
@@ -54,7 +56,8 @@
 struct HeurData
 {
    SOL*             sol;                /**< working solution */
-   Real             divestartdepth;     /**< minimal relative depth to start diving */
+   Real             minreldepth;        /**< minimal relative depth to start diving */
+   Real             maxreldepth;        /**< maximal relative depth to start diving */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
    Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */
    Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
@@ -72,6 +75,7 @@ static
 void calcPscostQuot(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
+   Real             primsol,            /**< primal solution of variable */
    Real             frac,               /**< fractionality of variable */
    int              rounddir,           /**< -1: round down, +1: round up, 0: select due to pseudo cost values */
    Real*            pscostquot,         /**< pointer to store pseudo cost quotient */
@@ -101,6 +105,10 @@ void calcPscostQuot(
    else if( frac < 0.3 )
       *roundup = FALSE;
    else if( frac > 0.7 )
+      *roundup = TRUE;
+   else if( primsol < SCIPvarGetRootSol(var) - 0.4 )
+      *roundup = FALSE;
+   else if( primsol > SCIPvarGetRootSol(var) + 0.4 )
       *roundup = TRUE;
    else if( pscostdown < pscostup )
       *roundup = FALSE;
@@ -198,6 +206,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    VAR** lpcands;
    Real* lpcandssol;
    Real* lpcandsfrac;
+   Real primsol;
    Real frac;
    Real pscostquot;
    Real bestpscostquot;
@@ -211,6 +220,8 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    Bool mayroundup;
    Bool roundup;
    Bool lperror;
+   Longint ncalls;
+   Longint nsolsfound;
    Longint nlpiterations;
    Longint maxnlpiterations;
    int* roundings;
@@ -245,23 +256,28 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* don't try to dive, if we are in the higher fraction of the tree, given by divestartdepth */
+   /* only try to dive, if we are in the correct part of the tree, given by minreldepth and maxreldepth */
    depth = SCIPgetDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
    maxdepth = MAX(maxdepth, 30);
-   if( depth < heurdata->divestartdepth*maxdepth )
+   if( depth < heurdata->minreldepth*maxdepth || depth > heurdata->maxreldepth*maxdepth )
       return SCIP_OKAY;
-
-   /* don't try to dive, if we took too many LP iterations during diving */
-   nlpiterations = SCIPgetNLPIterations(scip);
-   if( heurdata->nlpiterations > heurdata->maxlpiterquot*nlpiterations + 1000 )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
 
    /* calculate the maximal number of LP iterations until heuristic is aborted */
-   maxnlpiterations = heurdata->maxlpiterquot*nlpiterations - heurdata->nlpiterations;
-   maxnlpiterations = MAX(maxnlpiterations, 10000);
+   nlpiterations = SCIPgetNLPIterations(scip);
+   ncalls = SCIPheurGetNCalls(heur);
+   nsolsfound = SCIPheurGetNSolsFound(heur);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * MAX(nlpiterations, 1000);
+
+   /* don't try to dive, if we took too many LP iterations during diving */
+   if( heurdata->nlpiterations >= maxnlpiterations )
+      return SCIP_OKAY;
+
+   /* allow at least a certain number of LP iterations in this dive */
+   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
+
+
+   *result = SCIP_DIDNOTFIND;
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
@@ -318,6 +334,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          var = lpcands[c];
          mayrounddown = SCIPvarMayRoundDown(var);
          mayroundup = SCIPvarMayRoundUp(var);
+         primsol = lpcandssol[c];
          frac = lpcandsfrac[c];
          if( mayrounddown || mayroundup )
          {
@@ -331,11 +348,11 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
                 */
                roundup = FALSE;
                if( mayrounddown && mayroundup )
-                  calcPscostQuot(scip, var, frac, 0, &pscostquot, &roundup);
+                  calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
                else if( mayrounddown )
-                  calcPscostQuot(scip, var, frac, +1, &pscostquot, &roundup);
+                  calcPscostQuot(scip, var, primsol, frac, +1, &pscostquot, &roundup);
                else
-                  calcPscostQuot(scip, var, frac, -1, &pscostquot, &roundup);
+                  calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup);
 
                /* prefer variables, that have already been softrounded but failed to get integral */
                varidx = SCIPvarGetProbindex(var);
@@ -357,7 +374,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          else
          {
             /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
-            calcPscostQuot(scip, var, frac, 0, &pscostquot, &roundup);
+            calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
 
             /* prefer variables, that have already been softrounded but failed to get integral */
             varidx = SCIPvarGetProbindex(var);
@@ -532,15 +549,19 @@ RETCODE SCIPincludeHeurObjpscostdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES,
+                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
                   heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving, heurExecObjpscostdiving,
                   heurdata) );
 
    /* objpscostdiving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/objpscostdiving/divestartdepth", 
+                  "heuristics/objpscostdiving/minreldepth", 
                   "minimal relative depth to start diving",
-                  &heurdata->divestartdepth, DEFAULT_DIVESTARTDEPTH, 0.0, 1.0, NULL, NULL) );
+                  &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristics/objpscostdiving/maxreldepth", 
+                  "maximal relative depth to start diving",
+                  &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "heuristics/objpscostdiving/maxlpiterquot", 
                   "maximal fraction of diving LP iterations compared to total iteration number",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.14 2004/06/01 18:04:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.15 2004/06/08 20:55:28 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -60,6 +60,7 @@ struct Stat
    CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    CLOCK*           primallptime;       /**< primal LP solution time */
    CLOCK*           duallptime;         /**< dual LP solution time */
+   CLOCK*           divinglptime;       /**< diving LP solution time (primal + dual) */
    CLOCK*           strongbranchtime;   /**< strong branching time */
    CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */

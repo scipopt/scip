@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.173 2004/06/02 11:05:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.174 2004/06/08 20:55:27 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1310,6 +1310,7 @@ RETCODE SCIPincludeHeur(
    int              freqofs,            /**< frequency offset for calling primal heuristic */
    int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
+   Bool             duringplunging,     /**< call heuristic during plunging? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -1322,7 +1323,7 @@ RETCODE SCIPincludeHeur(
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
-                  name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes,
+                  name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes, duringplunging,
                   heurfree, heurinit, heurexit, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
@@ -8370,6 +8371,8 @@ void printHeuristicStatistics(
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
 
+   SCIPsetSortHeurs(scip->set);
+
    for( i = 0; i < scip->set->nheurs; ++i )
       fprintf(file, "  %-17.17s: %10.2f %10lld %10lld\n",
          SCIPheurGetName(scip->set->heurs[i]),
@@ -8408,6 +8411,16 @@ void printLPStatistics(
       scip->stat->nduallps > 0 ? (Real)scip->stat->nduallpiterations/(Real)scip->stat->nduallps : 0.0);
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
       fprintf(file, " %10.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
+   else
+      fprintf(file, "          -\n");
+
+   fprintf(file, "  diving LP        : %10.2f %10d %10lld %10.2f",
+      SCIPclockGetTime(scip->stat->divinglptime),
+      scip->stat->ndivinglps, 
+      scip->stat->ndivinglpiterations,
+      scip->stat->ndivinglps > 0 ? (Real)scip->stat->ndivinglpiterations/(Real)scip->stat->ndivinglps : 0.0);
+   if( SCIPclockGetTime(scip->stat->divinglptime) >= 0.01 )
+      fprintf(file, " %10.2f\n", (Real)scip->stat->ndivinglpiterations/SCIPclockGetTime(scip->stat->divinglptime));
    else
       fprintf(file, "          -\n");
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.96 2004/06/02 13:48:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.97 2004/06/08 20:55:28 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -909,6 +909,7 @@ RETCODE vboundsAdd(
    assert(vbounds != NULL);
    assert(var != NULL);
    assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
+   assert(var->vartype != SCIP_VARTYPE_CONTINUOUS);
 
    CHECK_OKAY( vboundsEnsureSize(vbounds, memhdr, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
    assert(*vbounds != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.6 2004/04/27 15:50:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.7 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -28,14 +28,15 @@
 #include "heur_xxx.h"
 
 
-#define HEUR_NAME         "xxx"
-#define HEUR_DESC         "primal heuristic template"
-#define HEUR_DISPCHAR     '?'
-#define HEUR_PRIORITY     0
-#define HEUR_FREQ         1
-#define HEUR_FREQOFS      0
-#define HEUR_MAXDEPTH     -1
-#define HEUR_PSEUDONODES  TRUE          /** call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_NAME             "xxx"
+#define HEUR_DESC             "primal heuristic template"
+#define HEUR_DISPCHAR         '?'
+#define HEUR_PRIORITY         0
+#define HEUR_FREQ             1
+#define HEUR_FREQOFS          0
+#define HEUR_MAXDEPTH         -1
+#define HEUR_PSEUDONODES      TRUE      /* call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
 
 
@@ -145,7 +146,7 @@ RETCODE SCIPincludeHeurXxx(
 
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES,
+                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
                   heurFreeXxx, heurInitXxx, heurExitXxx, heurExecXxx,
                   heurdata) );
 

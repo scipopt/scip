@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.41 2004/06/01 18:04:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.42 2004/06/08 20:55:27 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -52,6 +52,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -83,6 +84,7 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->presolvingtime);
    SCIPclockFree(&(*stat)->primallptime);
    SCIPclockFree(&(*stat)->duallptime);
+   SCIPclockFree(&(*stat)->divinglptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
@@ -130,6 +132,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->presolvingtime);
    SCIPclockReset(stat->primallptime);
    SCIPclockReset(stat->duallptime);
+   SCIPclockReset(stat->divinglptime);
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);

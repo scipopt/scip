@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.113 2004/06/01 18:04:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.114 2004/06/08 20:55:27 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1431,10 +1431,13 @@ RETCODE primalHeuristics(
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
+   NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
    Bool*            foundsol            /**< pointer to store whether a solution has been found */
    )
 {
    RESULT result;
+   Bool plunging;
+   int ndelayedheurs;
    int depth;
    int lpforkdepth;
    int h;
@@ -1442,24 +1445,35 @@ RETCODE primalHeuristics(
    assert(set != NULL);
    assert(tree != NULL);
    assert(tree->actnode != NULL);
+   assert((nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
    assert(foundsol != NULL);
 
    *foundsol = FALSE;
 
-   if( SCIPtreeGetNNodes(tree) > 0 )
-   {
-      /* sort heuristics by priority */
-      SCIPsetSortHeurs(set);
+   /* nothing to do, if no heuristics are available, or if the branch-and-bound process is finished */
+   if( set->nheurs == 0 || nextnode == NULL )
+      return SCIP_OKAY;
 
-      /* call heuristics */
-      depth = SCIPnodeGetDepth(tree->actnode);
-      lpforkdepth = tree->actlpfork != NULL ? SCIPnodeGetDepth(tree->actlpfork) : -1;
-      for( h = 0; h < set->nheurs; ++h )
-      {
-         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, tree->actnodehaslp, &result) );
-         *foundsol = *foundsol || (result == SCIP_FOUNDSOL);
-      }
+   /* sort heuristics by priority, but move the delayed heuristics to the front */
+   SCIPsetSortHeurs(set);
+
+   /* we are in plunging mode iff the next node is a sibling or a child, and no leaf */
+   assert(SCIPnodeGetType(nextnode) == SCIP_NODETYPE_SIBLING
+      || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_CHILD
+      || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
+   plunging = (SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
+   depth = SCIPnodeGetDepth(tree->actnode);
+   lpforkdepth = tree->actlpfork != NULL ? SCIPnodeGetDepth(tree->actlpfork) : -1;
+
+   /* call heuristics */
+   ndelayedheurs = 0;
+   for( h = 0; h < set->nheurs; ++h )
+   {
+      CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, tree->actnodehaslp, plunging,
+                     &ndelayedheurs, &result) );
+      *foundsol = *foundsol || (result == SCIP_FOUNDSOL);
    }
+   assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
 
    return SCIP_OKAY;
 }
@@ -1556,7 +1570,9 @@ RETCODE SCIPsolveCIP(
    CONSHDLR** conshdlrs_enfo;
    NODESEL* nodesel;
    NODE* actnode;
+   NODE* nextnode;
    EVENT event;
+   int nnodes;
    Bool cutoff;
    Bool infeasible;
    Bool foundsol;
@@ -1581,6 +1597,8 @@ RETCODE SCIPsolveCIP(
    SCIPbsortPtr((void**)conshdlrs_sepa, set->nconshdlrs, SCIPconshdlrCompSepa);
    SCIPbsortPtr((void**)conshdlrs_enfo, set->nconshdlrs, SCIPconshdlrCompEnfo);
 
+   nextnode = NULL;
+
    while( !SCIPsolveIsStopped(set, stat) )
    {
       /* update the memory saving flag, switch algorithms respectively */
@@ -1592,8 +1610,18 @@ RETCODE SCIPsolveCIP(
       /* inform tree about the current node selector */
       CHECK_OKAY( SCIPtreeSetNodesel(tree, set, stat, nodesel) );
 
-      /* select next node to process */
-      CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &actnode) );
+      /* the next node was usually already selected in the previous solving loop before the primal heuristics were
+       * called, because they need to know, if the next node will be a child/sibling (plunging) or not;
+       * if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
+       * again, because the selected next node may be invalid due to cut off
+       */
+      if( nextnode == NULL )
+      {
+         /* select next node to process */
+         CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &nextnode) );
+      }
+      actnode = nextnode;
+      nextnode = NULL;
 
       if( actnode != NULL )
       {
@@ -1741,8 +1769,21 @@ RETCODE SCIPsolveCIP(
          while( result == SCIP_REDUCEDDOM );
       }
 
+      /* select node to process in next solving loop; the primal heuristics need to know whether a child/sibling
+       * (plunging) will be selected as next node or not
+       */
+      CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &nextnode) );
+
       /* call primal heuristics */
-      CHECK_OKAY( primalHeuristics(set, primal, tree, &foundsol) );
+      nnodes = SCIPtreeGetNNodes(tree);
+      CHECK_OKAY( primalHeuristics(set, primal, tree, nextnode, &foundsol) );
+
+      /* if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
+       * again, because the selected next node may be invalid due to cut off
+       */
+      assert(!tree->cutoffdelayed);
+      if( nnodes != SCIPtreeGetNNodes(tree) )
+         nextnode = NULL;
 
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, (SCIPnodeGetDepth(actnode) == 0) && infeasible && !foundsol) );

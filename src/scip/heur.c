@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.33 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.34 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -39,10 +39,27 @@
 
 
 
-/** compares two heuristics w. r. to their priority */
+/** compares two heuristics w. r. to their delay positions and their priority */
 DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
-   return ((HEUR*)elem2)->priority - ((HEUR*)elem1)->priority;
+   HEUR* heur1 = (HEUR*)elem1;
+   HEUR* heur2 = (HEUR*)elem2;
+
+   assert(heur1 != NULL);
+   assert(heur2 != NULL);
+
+   if( heur1->delaypos == heur2->delaypos )
+   {
+      assert(heur1->delaypos == -1);
+      assert(heur2->delaypos == -1);
+      return heur2->priority - heur1->priority; /* prefer higher priorities */
+   }
+   else if( heur1->delaypos == -1 )
+      return +1;                                /* prefer delayed heuristics */
+   else if( heur2->delaypos == -1 )
+      return -1;                                /* prefer delayed heuristics */
+   else
+      return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
 }
 
 /** method to call, when the priority of a heuristic was changed */
@@ -73,6 +90,7 @@ RETCODE SCIPheurCreate(
    int              freqofs,            /**< frequency offset for calling primal heuristic */
    int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
+   Bool             duringplunging,     /**< call heuristic during plunging? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -98,7 +116,9 @@ RETCODE SCIPheurCreate(
    (*heur)->freq = freq;
    (*heur)->freqofs = freqofs;
    (*heur)->maxdepth = maxdepth;
+   (*heur)->delaypos = -1;
    (*heur)->pseudonodes = pseudonodes;
+   (*heur)->duringplunging = duringplunging;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
    (*heur)->heurexit = heurexit;
@@ -217,6 +237,8 @@ RETCODE SCIPheurExec(
    int              depth,              /**< depth of active node */
    int              lpforkdepth,        /**< depth of the last node with solved LP */
    Bool             actnodehaslp,       /**< is LP being processed in the active node? */
+   Bool             plunging,           /**< is the next node to be processed a child or sibling? */
+   int*             ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -231,61 +253,89 @@ RETCODE SCIPheurExec(
    assert(set->scip != NULL);
    assert(primal != NULL);
    assert(depth >= 0);
+   assert(ndelayedheurs != NULL);
    assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    if( heur->pseudonodes )
    {
       /* heuristic may be executed on every node: check, if the current depth matches the execution frequency and offset */
-      execute = (depth == 0 && heur->freq == 0) || (heur->freq > 0 && (depth - heur->freqofs) % heur->freq == 0);
+      execute = (heur->freq > 0 && (depth - heur->freqofs) % heur->freq == 0);
    }
    else
    {
-      /* heuristic may only be executed on LP nodes: check, if the node is an LP node and a node matching the
-       * execution frequency lies between the current node and the last LP node of the path
+      /* heuristic may only be executed on LP nodes: check, if a node matching the execution frequency lies between the
+       * current node and the last LP node of the path
        */
-      execute = actnodehaslp
-         && ((depth == 0 && heur->freq >= 0)
-            || (heur->freq > 0
-               && ((depth + heur->freq - heur->freqofs) / heur->freq
-                  != (lpforkdepth + heur->freq - heur->freqofs) / heur->freq)));
+      execute = (heur->freq > 0
+         && ((depth + heur->freq - heur->freqofs) / heur->freq
+            != (lpforkdepth + heur->freq - heur->freqofs) / heur->freq));
    }
+
+   /* if frequency is zero, execute heuristic at root node */
+   execute = execute || (depth == 0 && heur->freq == 0);
 
    /* compare current depth against heuristic's maximal depth level */
    execute = execute && (heur->maxdepth == -1 || depth <= heur->maxdepth);
+   
+   /* if the heuristic was delayed, execute it anywas */
+   execute = execute || (heur->delaypos >= 0);
+   
+   /* execute LP heuristics only at LP nodes */
+   execute = execute && (heur->pseudonodes || actnodehaslp);
 
    if( execute )
    {
-      Longint oldnsolsfound;
-
-      debugMessage("executing primal heuristic <%s>\n", heur->name);
-
-      oldnsolsfound = primal->nsolsfound;
-
-      /* start timing */
-      SCIPclockStart(heur->clock, set);
-
-      /* call external method */
-      CHECK_OKAY( heur->heurexec(set->scip, heur, result) );
-
-      /* stop timing */
-      SCIPclockStop(heur->clock, set);
-
-      /* evaluate result */
-      if( *result != SCIP_FOUNDSOL
-         && *result != SCIP_DIDNOTFIND
-         && *result != SCIP_DIDNOTRUN )
+      if( plunging && !heur->duringplunging && depth > 0 )
       {
-         errorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
-            heur->name, *result);
-         return SCIP_INVALIDRESULT;
+         /* the heuristic should be delayed until plunging is finished */
+         debugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d)\n", 
+            heur->name, depth, *ndelayedheurs);
+         if( heur->delaypos != *ndelayedheurs )
+         {
+            heur->delaypos = *ndelayedheurs;
+            set->heurssorted = FALSE;
+         }
+         (*ndelayedheurs)++;
       }
-      if( *result != SCIP_DIDNOTRUN )
-         heur->ncalls++;
+      else
+      {
+         Longint oldnsolsfound;
+         
+         debugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
 
-      heur->nsolsfound += primal->nsolsfound - oldnsolsfound;
+         oldnsolsfound = primal->nsolsfound;
+
+         /* start timing */
+         SCIPclockStart(heur->clock, set);
+
+         /* call external method */
+         CHECK_OKAY( heur->heurexec(set->scip, heur, result) );
+
+         /* stop timing */
+         SCIPclockStop(heur->clock, set);
+
+         /* evaluate result */
+         if( *result != SCIP_FOUNDSOL
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN )
+         {
+            errorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
+               heur->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+         if( *result != SCIP_DIDNOTRUN )
+            heur->ncalls++;
+
+         heur->nsolsfound += primal->nsolsfound - oldnsolsfound;
+         if( heur->delaypos != -1 )
+         {
+            heur->delaypos = -1;
+            set->heurssorted = FALSE;
+         }
+      }
    }
-   else
-      *result = SCIP_DIDNOTRUN;
    
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.34 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.35 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -597,6 +597,7 @@ RETCODE SCIPnodepqBound(
       {
          debugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
+
          /* cut off node; because we looped from back to front, the existing children of the node must have a smaller
           * lower bound than the cut off value
           */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.27 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.28 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -53,6 +53,7 @@ RETCODE SCIPheurCreate(
    int              freqofs,            /**< frequency offset for calling primal heuristic */
    int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
+   Bool             duringplunging,     /**< call heuristic during plunging? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -90,6 +91,8 @@ RETCODE SCIPheurExec(
    int              depth,              /**< depth of active node */
    int              lpforkdepth,        /**< depth of the last node with solved LP */
    Bool             actnodehaslp,       /**< is LP being processed in the active node? */
+   Bool             plunging,           /**< is the next node to be processed a child or sibling? */
+   int*             ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

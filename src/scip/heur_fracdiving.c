@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.12 2004/06/02 07:39:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.13 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -29,14 +29,15 @@
 #include "heur_fracdiving.h"
 
 
-#define HEUR_NAME         "fracdiving"
-#define HEUR_DESC         "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR     'f'
-#define HEUR_PRIORITY     -1000000
-#define HEUR_FREQ         10
-#define HEUR_FREQOFS      0
-#define HEUR_MAXDEPTH     -1
-#define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_NAME             "fracdiving"
+#define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
+#define HEUR_DISPCHAR         'f'
+#define HEUR_PRIORITY         -1000000
+#define HEUR_FREQ             10
+#define HEUR_FREQOFS          0
+#define HEUR_MAXDEPTH         -1
+#define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
 
 
@@ -44,7 +45,8 @@
  * Default parameter settings
  */
 
-#define DEFAULT_DIVESTARTDEPTH      0.5 /**< minimal relative depth to start diving */
+#define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
+#define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT       0.1 /**< maximal fraction of diving LP iterations compared to total iteration number */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
                                          *   where diving is performed */
@@ -59,7 +61,8 @@
 struct HeurData
 {
    SOL*             sol;                /**< working solution */
-   Real             divestartdepth;     /**< minimal relative depth to start diving */
+   Real             minreldepth;        /**< minimal relative depth to start diving */
+   Real             maxreldepth;        /**< maximal relative depth to start diving */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
    Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
                                          *   where diving is performed */
@@ -175,9 +178,10 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    Bool mayroundup;
    Bool roundup;
    Bool lperror;
+   Longint ncalls;
+   Longint nsolsfound;
    Longint nlpiterations;
    Longint maxnlpiterations;
-   Longint nsolsfound;
    int nlpcands;
    int startnlpcands;
    int depth;
@@ -207,27 +211,31 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* don't try to dive, if we are in the higher fraction of the tree, given by divestartdepth */
+   /* only try to dive, if we are in the correct part of the tree, given by minreldepth and maxreldepth */
    depth = SCIPgetDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
    maxdepth = MAX(maxdepth, 30);
-   if( depth < heurdata->divestartdepth*maxdepth )
+   if( depth < heurdata->minreldepth*maxdepth || depth > heurdata->maxreldepth*maxdepth )
       return SCIP_OKAY;
 
-   /* don't try to dive, if we took too many LP iterations during diving */
+   /* calculate the maximal number of LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNLPIterations(scip);
-   if( heurdata->nlpiterations > heurdata->maxlpiterquot*nlpiterations + 1000 )
+   ncalls = SCIPheurGetNCalls(heur);
+   nsolsfound = SCIPheurGetNSolsFound(heur);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * MAX(nlpiterations, 1000);
+
+   /* don't try to dive, if we took too many LP iterations during diving */
+   if( heurdata->nlpiterations >= maxnlpiterations )
       return SCIP_OKAY;
+
+   /* allow at least a certain number of LP iterations in this dive */
+   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
+
 
    *result = SCIP_DIDNOTFIND;
 
-   /* calculate the maximal number of LP iterations until heuristic is aborted */
-   maxnlpiterations = heurdata->maxlpiterquot*nlpiterations - heurdata->nlpiterations;
-   maxnlpiterations = MAX(maxnlpiterations, 10000);
-
    /* calculate the objective search bound */
-   nsolsfound = SCIPgetNSolsFound(scip);
-   if( nsolsfound == 0 )
+   if( SCIPgetNSolsFound(scip) == 0 )
    {
       searchubbound = SCIPgetLowerbound(scip)
          + heurdata->maxdiveubquotnosol * (SCIPgetUpperbound(scip) - SCIPgetLowerbound(scip));
@@ -512,15 +520,19 @@ RETCODE SCIPincludeHeurFracdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES,
+                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
                   heurFreeFracdiving, heurInitFracdiving, heurExitFracdiving, heurExecFracdiving,
                   heurdata) );
 
    /* fracdiving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/divestartdepth", 
+                  "heuristics/fracdiving/minreldepth", 
                   "minimal relative depth to start diving",
-                  &heurdata->divestartdepth, DEFAULT_DIVESTARTDEPTH, 0.0, 1.0, NULL, NULL) );
+                  &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristics/fracdiving/maxreldepth", 
+                  "maximal relative depth to start diving",
+                  &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "heuristics/fracdiving/maxlpiterquot", 
                   "maximal fraction of diving LP iterations compared to total iteration number",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.6 2004/04/27 15:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.7 2004/06/08 20:55:27 bzfpfend Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -147,7 +147,7 @@ RETCODE SCIPincludeObjHeur(
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
                   objheur->scip_priority_, objheur->scip_freq_, objheur->scip_freqofs_, objheur->scip_maxdepth_,
-                  objheur->scip_pseudonodes_,
+                  objheur->scip_pseudonodes_, objheur->scip_duringplunging_,
                   heurFreeObj, heurInitObj, heurExitObj, heurExecObj,
                   heurdata) );
 

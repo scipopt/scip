@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.122 2004/06/03 09:42:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.123 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5804,7 +5804,7 @@ void sumMIRRow(
       assert(row->len == 0 || row->vals != NULL);
 
       /* modifiable rows cannot be part of a MIR row summation; close to zero weights are ignored */
-      if( !row->modifiable && !SCIPsetIsFeasZero(set, weights[r]) )
+      if( !row->modifiable && !SCIPsetIsFeasZero(set, scale * weights[r]) )
       {
          /* Decide, if we want to use the left or the right hand side of the row in the summation.
           * If the current row activity is closer to the left hand side, we use the  lhs <= a*x  part of the row,
@@ -5864,15 +5864,15 @@ void sumMIRRow(
  *  and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
  *
  *  Transform variables (vlb or vub):
- *  x'_j := x_j - (b_j * z_j + d_j),   trans  x_j <- x'_j + (b_j * z_j + d_j),      if x_j is closer to vlb
- *  x'_j := (b_j * z_j + d_j) - x_j,   trans  x_j <- (b_j * z_j + d_j) - x'_j,      if x_j is closer to vub
+ *    x'_j := x_j - (b_j * z_j + d_j),   trans  x_j <- x'_j + (b_j * z_j + d_j),      if x_j is closer to vlb
+ *    x'_j := (b_j * z_j + d_j) - x_j,   trans  x_j <- (b_j * z_j + d_j) - x'_j,      if x_j is closer to vub
  *  and change
- *  a'_j :=  a_j,    if x_j is closer to vlb
- *  a'_j := -a_j,    if x_j is closer to vub
- *  mircoef[z_j] += a_j * b_j (of vlb),     if x_j is closer to vlb
- *  mircoef[z_j] += a_j * b_j (of vub),     if x_j is closer to vub
- *  mirrhs -= a_j * d_j (of vlb),     if x_j is closer to vlb
- *  mirrhs -= a_j * d_j (of vub),     if x_j is closer to vub.
+ *    a'_j :=  a_j,                           if x_j is closer to vlb
+ *    a'_j := -a_j,                           if x_j is closer to vub
+ *    mircoef[z_j] += a_j * b_j (of vlb),     if x_j is closer to vlb
+ *    mircoef[z_j] += a_j * b_j (of vub),     if x_j is closer to vub
+ *    mirrhs -= a_j * d_j (of vlb),           if x_j is closer to vlb
+ *    mirrhs -= a_j * d_j (of vub),           if x_j is closer to vub.
  */
 static
 void transformMIRRow(
@@ -5888,6 +5888,7 @@ void transformMIRRow(
    )
 {
    VAR* var;
+   VARTYPE vartype;
    Real varsol;
    Real lb;
    Real ub;
@@ -5922,12 +5923,14 @@ void transformMIRRow(
 
    *freevariable = FALSE;
    
-   /* substitute continuous variables with best bound (vlb, vub, lb or ub) */
-   for( v = 0; v < nvars; ++v )
+   /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
+    * substitute integral variables with best standard bound (lb, ub);
+    * start with continuous variables, because using variable bounds can affect the untransformed integral
+    * variables, and these changes have to be incorporated in the transformation of the integral variables
+    */
+   for( v = nvars-1; v >= 0; --v )
    {
       var = vars[v];
-      assert(var != NULL);
-
       idx = SCIPvarGetProbindex(var);
       assert(0 <= idx && idx < nvars);
 
@@ -5938,16 +5941,17 @@ void transformMIRRow(
          continue;
       }
 
+      vartype = SCIPvarGetType(var);
       varsol = SCIPvarGetLPSol(var);
 
-      /* find closest lower bound in standard lower bound and variable lower bounds */
+      /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
       lb = SCIPvarGetLbLocal(var);
       bestlbdist = varsol - lb;
       bestlbsol = lb;
       bestlbtype = -1;
-      nvlb = SCIPvarGetNVlbs(var);
-      if( nvlb > 0 )
+      if( vartype == SCIP_VARTYPE_CONTINUOUS )
       {
+         nvlb = SCIPvarGetNVlbs(var);
          zvlb = SCIPvarGetVlbVars(var);
          bvlb = SCIPvarGetVlbCoefs(var);
          dvlb = SCIPvarGetVlbConstants(var);
@@ -5968,14 +5972,14 @@ void transformMIRRow(
          }
       }
 
-      /* find closest upper bound in standard upper bound and variable upper bounds */
+      /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
       ub = SCIPvarGetUbLocal(var);
       bestubdist = ub - varsol;
       bestubsol = ub;
       bestubtype = -1;
-      nvub = SCIPvarGetNVubs(var);
-      if( nvub > 0 )
+      if( vartype == SCIP_VARTYPE_CONTINUOUS )
       {   
+         nvub = SCIPvarGetNVubs(var);
          zvub = SCIPvarGetVubVars(var);
          bvub = SCIPvarGetVubCoefs(var);
          dvub = SCIPvarGetVubConstants(var);
@@ -6045,6 +6049,15 @@ void transformMIRRow(
             mircoef[zidx] += mircoef[idx] * bvub[bestubtype];
          }
       }
+
+      debugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g (vlb: %g<%s>%+g, vub: %g<%s>%+g)\n", 
+         SCIPvarGetName(var), varsign[idx], boundtype[idx], mircoef[idx],
+         bestlbtype == -1 ? 0.0 : bvlb[bestlbtype],
+         bestlbtype == -1 ? "-" : SCIPvarGetName(zvlb[bestlbtype]),
+         bestlbtype == -1 ? 0.0 : dvlb[bestlbtype],
+         bestubtype == -1 ? 0.0 : bvub[bestubtype],
+         bestubtype == -1 ? "-" : SCIPvarGetName(zvub[bestubtype]),
+         bestubtype == -1 ? 0.0 : dvub[bestubtype]);
    }
 }
 
@@ -6448,6 +6461,8 @@ RETCODE SCIPlpCalcMIR(
    assert(cutactivity != NULL);
    assert(success != NULL);
 
+   debugMessage("calculating MIR cut (scale: %g)\n", scale);
+
    /**@todo test, if a column based summation is faster */
 
    *success = FALSE;
@@ -6613,14 +6628,20 @@ RETCODE lpPrimalSimplex(
 #endif
 
    /* start timing */
-   SCIPclockStart(stat->primallptime, set);
+   if( lp->diving )
+      SCIPclockStart(stat->divinglptime, set);
+   else
+      SCIPclockStart(stat->primallptime, set);
 
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
    lp->lastwasprimal = TRUE;
 
    /* stop timing */
-   SCIPclockStop(stat->primallptime, set);
+   if( lp->diving )
+      SCIPclockStop(stat->divinglptime, set);
+   else
+      SCIPclockStop(stat->primallptime, set);
 
    /* count number of iterations */
    stat->lpcount++;
@@ -6628,13 +6649,16 @@ RETCODE lpPrimalSimplex(
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
       stat->nlps++;
-      stat->nprimallps++;
       stat->nlpiterations += iterations;
-      stat->nprimallpiterations += iterations;
       if( lp->diving )
       {
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+      }
+      else
+      {
+         stat->nprimallps++;
+         stat->nprimallpiterations += iterations;
       }
    }
 
@@ -6673,14 +6697,20 @@ RETCODE lpDualSimplex(
 #endif
 
    /* start timing */
-   SCIPclockStart(stat->duallptime, set);
+   if( lp->diving )
+      SCIPclockStart(stat->divinglptime, set);
+   else
+      SCIPclockStart(stat->duallptime, set);
 
    /* call dual simplex */
    CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
    lp->lastwasprimal = FALSE;
 
    /* stop timing */
-   SCIPclockStop(stat->duallptime, set);
+   if( lp->diving )
+      SCIPclockStop(stat->divinglptime, set);
+   else
+      SCIPclockStop(stat->duallptime, set);
 
    /* count number of iterations */
    stat->lpcount++;
@@ -6688,13 +6718,16 @@ RETCODE lpDualSimplex(
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
       stat->nlps++;
-      stat->nduallps++;
       stat->nlpiterations += iterations;
-      stat->nduallpiterations += iterations;
       if( lp->diving )
       {
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+      }
+      else
+      {
+         stat->nduallps++;
+         stat->nduallpiterations += iterations;
       }
    }
 

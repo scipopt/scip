@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.11 2004/04/30 11:58:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.12 2004/06/08 20:55:26 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -45,7 +45,7 @@ RETCODE SCIPcreateConsKnapsack(
    int              nvars,              /**< number of items in the knapsack */
    VAR**            vars,               /**< array with item variables */
    Longint*         weights,            /**< array with item weights */
-   Longint          capacity,           /**< capacity of knapsack */
+   Longint          capacity,           /**< capacity of knapsack (right hand side of inequality) */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
@@ -62,6 +62,40 @@ void SCIPprintConsKnapsack(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< knapsack constraint */
    FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/** solves knapsack problem with dynamic programming;
+ *  if needed, one can provide arrays to store all selected items and all not selected items
+ */
+extern
+RETCODE SCIPsolveKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nitems,             /**< number of available items */
+   Longint*         weights,            /**< item weights */
+   Real*            profits,            /**< item profits */
+   Longint          capacity,           /**< capacity of knapsack */
+   int*             items,              /**< item numbers, or NULL */
+   int*             solitems,           /**< array to store items in solution, or NULL */
+   int*             nonsolitems,        /**< array to store items not in solution, or NULL */
+   int*             nsolitems,          /**< pointer to store number of items in solution, or NULL */
+   int*             nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
+   Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   );
+
+/** lifts given cardinality inequality sum(x_i) <= c */
+extern
+RETCODE SCIPliftCardinality(
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             liftcoefs,          /**< to store lifting coefficient of non-set elements */
+   Real*            solvals,            /**< LP solution values of variables */
+   Longint*         weights,            /**< item weights */
+   Longint          capacity,           /**< capacity of knapsack */
+   int*             setvars,            /**< set elements */
+   int*             nonsetvars,         /**< non-set elements */
+   int              nsetvars,           /**< number of set elements */
+   int              nnonsetvars,        /**< number of non-set elements */
+   int              maxcardinality,     /**< maximal cardinality of selected subset in given set */ 
+   Real*            liftlpval           /**< pointer to store LP solution value of lifted elements */  
    );
 
 #endif
