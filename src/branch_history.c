@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.1 2004/01/07 13:14:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.2 2004/01/13 11:58:29 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -33,7 +33,7 @@
 #define BRANCHRULE_DESC          "history branching"
 #define BRANCHRULE_PRIORITY      10000
 
-#define DEFAULT_RELIABLE         8.0    /**< minimum history size to regard history value as reliable */
+#define DEFAULT_RELIABLE         4.0    /**< minimum history size to regard history value as reliable */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_STRONGBRANCHCAND 100    /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_STRONGBRANCHITER 0      /**< iteration limit for strong branching init of history entries (0: auto) */
@@ -91,6 +91,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    Real* sbcandscores;
    int nsbcands;
    int maxnsbcands;
+   Real upperbound;
    Real lowerbound;
    Real downsize;
    Real upsize;
@@ -121,8 +122,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* get current lower objective bound of the local sub problem */
+   /* get current lower objective bound of the local sub problem and global upper bound */
    lowerbound = SCIPgetLocalLowerbound(scip);
+   upperbound = SCIPgetUpperbound(scip);
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -145,7 +147,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       assert(lpcands[c] != NULL);
 
       /* get history score of candidate */
-      score = SCIPgetVarLPHistoryScore(scip, lpcands[c]);
+      score = SCIPgetVarLPHistoryScore(scip, lpcands[c], lpcandssol[c]);
       score *= SCIPvarGetBranchingPriority(lpcands[c]);
       if( score > bestscore )
       {
@@ -210,12 +212,10 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       /* check for possible fixings */
       if( allcolsinlp )
       {
-         Real upperbound;
          Bool downinf;
          Bool upinf;
 
          /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-         upperbound = SCIPgetUpperbound(scip);
          downinf = SCIPisGE(scip, down, upperbound);
          upinf = SCIPisGE(scip, up, upperbound);
 

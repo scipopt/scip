@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.89 2003/12/15 17:45:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.90 2004/01/13 11:58:29 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1866,7 +1866,7 @@ RETCODE SCIPcolGetStrongbranch(
          SCIPclockStart(stat->strongbranchtime, set);
       
          /* call LPI strong branching */
-         stat->nstrongbranch++;
+         stat->nstrongbranchs++;
          col->strongitlim = itlim;
          CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim, &strongdown, &strongup, &iter) );
          col->strongdown = MIN(strongdown + lp->looseobjval, lp->upperbound);
@@ -5175,7 +5175,10 @@ RETCODE lpPrimalSimplex(
       stat->nlpiterations += iterations;
       stat->nprimallpiterations += iterations;
       if( lp->diving )
+      {
+         stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+      }
    }
 
    debugMessage("solved primal LP in %d iterations\n", iterations);
@@ -5232,7 +5235,10 @@ RETCODE lpDualSimplex(
       stat->nlpiterations += iterations;
       stat->nduallpiterations += iterations;
       if( lp->diving )
+      {
+         stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+      }
    }
 
    debugMessage("solved dual LP in %d iterations\n", iterations);

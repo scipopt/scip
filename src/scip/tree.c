@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.72 2004/01/07 13:14:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.73 2004/01/13 11:58:31 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -199,7 +199,8 @@ void SCIPnodeCaptureLPIState(
 {
    assert(node != NULL);
 
-   debugMessage("capture %d times node's LPI state at depth %d\n", nuses, node->depth);
+   debugMessage("capture %d times LPI state of node %p at depth %d (current: %d)\n", nuses, node, node->depth, 
+      SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
    switch( SCIPnodeGetType(node) )
    {  
    case SCIP_NODETYPE_FORK:
@@ -223,7 +224,8 @@ RETCODE SCIPnodeReleaseLPIState(
 {
    assert(node != NULL);
 
-   debugMessage("release node's LPI state at depth %d\n", node->depth);
+   debugMessage("release LPI state of node %p at depth %d (current: %d)\n", node, node->depth,
+      SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
    switch( SCIPnodeGetType(node) )
    {  
    case SCIP_NODETYPE_FORK:
@@ -1586,18 +1588,23 @@ RETCODE SCIPtreeLoadLP(
  * Node Conversion
  */
 
-/** converts node into LEAF and puts it in the array on the node queue */
+/** converts node into LEAF and moves it into the array of the node queue
+ *  if node's lower bound is greater or equal than the given upper bound, the node is deleted;
+ *  otherwise, it is moved to the node queue; anyways, the given pointer is NULL after the call
+ */
 static
 RETCODE nodeToLeaf(
-   NODE*            node,               /**< child or sibling node to convert */
+   NODE**           node,               /**< pointer to child or sibling node to convert */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   NODE*            lpfork              /**< LP fork of the node */
+   LP*              lp,                 /**< actual LP data */
+   NODE*            lpfork,             /**< LP fork of the node */
+   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    )
 {
-   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD);
-   assert(lpfork == NULL || lpfork->depth < node->depth);
+   assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
+   assert(lpfork == NULL || lpfork->depth < (*node)->depth);
    assert(lpfork == NULL || lpfork->active);
    assert(lpfork == NULL
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK
@@ -1605,15 +1612,28 @@ RETCODE nodeToLeaf(
 
    /* convert node into leaf */
    debugMessage("convert node %p at depth %d to leaf with lpfork %p at depth %d\n",
-      node, node->depth, lpfork, lpfork == NULL ? -1 : (int)(lpfork->depth));
-   node->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
-   node->data.leaf.lpfork = lpfork;
+      *node, (*node)->depth, lpfork, lpfork == NULL ? -1 : (int)(lpfork->depth));
+   (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
+   (*node)->data.leaf.lpfork = lpfork;
 
-   /* insert leaf in node queue */
-   CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, node) );
+   /* if node is good enough to keep, put it on the node queue */
+   if( SCIPsetIsLT(set, (*node)->lowerbound, upperbound) )
+   {
+      /* insert leaf in node queue */
+      CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, *node) );
+      
+      /* make the domain change data static to save memory */
+      CHECK_OKAY( SCIPdomchgMakeStatic(&(*node)->domchg, memhdr, set) );
 
-   /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&node->domchg, memhdr, set) );
+      /* node is now member of the node queue: delete the pointer to forbid further access */
+      *node = NULL;
+   }
+   else
+   {
+      /* delete node due to bound cut off */
+      CHECK_OKAY( SCIPnodeFree(node, memhdr, set, tree, lp) );
+   }
+   assert(*node == NULL);
 
    return SCIP_OKAY;
 }
@@ -1867,9 +1887,11 @@ RETCODE treeNodesToQueue(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
    NODE**           nodes,              /**< array of nodes to put on the queue */
    int*             nnodes,             /**< pointer to number of nodes in the array */
-   NODE*            lpfork              /**< LP fork of the nodes */
+   NODE*            lpfork,             /**< LP fork of the nodes */
+   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    )
 {
    int i;
@@ -1881,8 +1903,9 @@ RETCODE treeNodesToQueue(
 
    for( i = 0; i < *nnodes; ++i )
    {
-      /* convert node to LEAF and put it into leaves queue */
-      CHECK_OKAY( nodeToLeaf(nodes[i], memhdr, set, tree, lpfork) );
+      /* convert node to LEAF and put it into leaves queue, or delete it if it's lower bound exceeds the upper bound */
+      CHECK_OKAY( nodeToLeaf(&nodes[i], memhdr, set, tree, lp, lpfork, upperbound) );
+      assert(nodes[i] == NULL);
    }
    *nnodes = 0;
 
@@ -1932,7 +1955,8 @@ RETCODE SCIPnodeActivate(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    )
 {
    NODE* oldlpfork;
@@ -1995,10 +2019,10 @@ RETCODE SCIPnodeActivate(
    if( node == NULL )
    {
       /* move siblings to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, &tree->nsiblings, oldlpfork) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, upperbound) );
 
       /* move children to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, upperbound) );
    }
    else
    {
@@ -2006,7 +2030,7 @@ RETCODE SCIPnodeActivate(
       {  
       case SCIP_NODETYPE_SIBLING:
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, upperbound) );
 
          /* remove selected sibling from the siblings array */
          treeRemoveSibling(tree, node);
@@ -2025,7 +2049,7 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_CHILD:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, &tree->nsiblings, oldlpfork) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, upperbound) );
 
          /* remove selected child from the children array */      
          treeRemoveChild(tree, node);
@@ -2037,10 +2061,10 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_LEAF:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, &tree->nsiblings, oldlpfork) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, upperbound) );
          
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, upperbound) );
 
          /* remove node from the queue */
          CHECK_OKAY( SCIPnodepqRemove(tree->leaves, set, node) );
@@ -2078,6 +2102,7 @@ RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
    NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    )
 {
@@ -2114,7 +2139,7 @@ RETCODE SCIPtreeCreate(
    assert((*tree)->nchildren == 1);
 
    /* move root to the queue, convert it to LEAF */
-   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, (*tree)->children, &(*tree)->nchildren, NULL) );
+   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, lp, (*tree)->children, &(*tree)->nchildren, NULL, set->infinity) );
 
    return SCIP_OKAY;
 }

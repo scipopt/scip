@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.79 2004/01/07 13:14:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.80 2004/01/13 11:58:30 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1188,7 +1188,7 @@ RETCODE SCIPsolveCIP(
       CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
 
       /* activate selected node */
-      CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+      CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue, primal->upperbound) );
       assert(tree->actnode == actnode);
 
       /* process the delayed events */

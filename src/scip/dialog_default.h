@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.8 2003/12/15 17:45:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.9 2004/01/13 11:58:29 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -122,6 +122,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam);
 /** dialog description method for the set parameter command */
 extern
 DECL_DIALOGDESC(SCIPdialogDescSetParam);
+
+/** dialog execution method for the set limits objective command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
 
 #ifndef NDEBUG
 /** dialog execution method for the debug memory command */

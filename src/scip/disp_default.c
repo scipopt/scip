@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.32 2003/12/15 17:45:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.33 2004/01/13 11:58:29 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -156,6 +156,14 @@
 #define DISP_PRIO_CONFLICTS     80
 #define DISP_POSI_CONFLICTS     4000
 #define DISP_STRI_CONFLICTS     TRUE
+
+#define DISP_NAME_STRONGBRANCHS "strongbranchs"
+#define DISP_DESC_STRONGBRANCHS "total number of strong branching calls"
+#define DISP_HEAD_STRONGBRANCHS "strbr"
+#define DISP_WIDT_STRONGBRANCHS 5
+#define DISP_PRIO_STRONGBRANCHS 85
+#define DISP_POSI_STRONGBRANCHS 5000
+#define DISP_STRI_STRONGBRANCHS TRUE
 
 #define DISP_NAME_ACTDUALBOUND  "actdualbound"
 #define DISP_DESC_ACTDUALBOUND  "dual bound of actual node"
@@ -407,6 +415,18 @@ DECL_DISPOUTPUT(SCIPdispOutputConflicts)
 }
 
 static
+DECL_DISPOUTPUT(SCIPdispOutputStrongbranchs)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_STRONGBRANCHS) == 0);
+   assert(scip != NULL);
+
+   SCIPdispDecimal(file, SCIPgetNStrongbranchs(scip), DISP_WIDT_STRONGBRANCHS);
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_DISPOUTPUT(SCIPdispOutputActdualbound)
 {  /*lint --e{715}*/
    assert(disp != NULL);
@@ -541,6 +561,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CONFLICTS, DISP_DESC_CONFLICTS, DISP_HEAD_CONFLICTS,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputConflicts, NULL, 
                   DISP_WIDT_CONFLICTS, DISP_PRIO_CONFLICTS, DISP_POSI_CONFLICTS, DISP_STRI_CONFLICTS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_STRONGBRANCHS, DISP_DESC_STRONGBRANCHS, DISP_HEAD_STRONGBRANCHS,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputStrongbranchs, NULL, 
+                  DISP_WIDT_STRONGBRANCHS, DISP_PRIO_STRONGBRANCHS, DISP_POSI_STRONGBRANCHS, DISP_STRI_STRONGBRANCHS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDUALBOUND, DISP_DESC_ACTDUALBOUND, DISP_HEAD_ACTDUALBOUND,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActdualbound, NULL, 
                   DISP_WIDT_ACTDUALBOUND, DISP_PRIO_ACTDUALBOUND, DISP_POSI_ACTDUALBOUND, DISP_STRI_ACTDUALBOUND) );

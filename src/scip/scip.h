@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.97 2004/01/07 13:14:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.98 2004/01/13 11:58:30 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1005,6 +1005,12 @@ extern
 RETCODE SCIPsetObjlimit(
    SCIP*            scip,               /**< SCIP data structure */
    Real             objlimit            /**< new primal objective limit */
+   );
+
+/** gets current limit on objective function */
+extern
+Real SCIPgetObjlimit(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** adds variable to the problem */
@@ -2609,11 +2615,12 @@ Real SCIPgetVarLPHistoryCount(
    int              dir                 /**< branching direction: 0 (down), or 1 (up) */
    );
 
-/** gets the variable's history score value at it's current LP solution */
+/** gets the variable's history score value for the given LP solution value */
 extern
 Real SCIPgetVarLPHistoryScore(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   Real             solval              /**< variable's LP solution value */
    );
 
 /**@} */
@@ -2743,9 +2750,21 @@ Longint SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets total number of LPs solved so far during diving */
+extern
+int SCIPgetNDivingLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets total number of simplex iterations used so far during diving */
 extern
 Longint SCIPgetNDivingLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of times, strong branching was called (each call represents solving two LPs) */
+extern
+int SCIPgetNStrongbranchs(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.47 2004/01/07 13:14:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.48 2004/01/13 11:58:31 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -97,7 +97,8 @@ RETCODE SCIPnodeActivate(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    );
 
 /** adds constraint locally to the node and captures it; activates constraint, if node is active;
@@ -161,6 +162,7 @@ RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
    NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    );
 

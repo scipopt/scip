@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.11 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.12 2004/01/13 11:58:30 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory Cuts
@@ -38,6 +38,7 @@
 #define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node */
 #define DEFAULT_MAXSEPACUTS          32 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     128 /**< maximal number of gomory cuts separated per separation round in root node */
+#define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 
 /** separator data */
@@ -47,6 +48,7 @@ struct SepaData
    int              maxroundsroot;      /**< maximal number of gomory separation rounds in the root node */
    int              maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
+   Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
 
@@ -241,7 +243,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      /* create the cut */
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
-                                 TRUE, FALSE, TRUE) );
+                                 TRUE, FALSE, sepadata->dynamiccuts) );
                      /*debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f, norm=%f\n",
                        cutname, cutact, cutrhs, cutnorm);*/
 
@@ -335,6 +337,10 @@ RETCODE SCIPincludeSepaGomory(
                   "separating/gomory/maxsepacutsroot",
                   "maximal number of gomory cuts separated per separation round in the root node",
                   &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddBoolParam(scip,
+                  "separating/gomory/dynamiccuts",
+                  "should generated cuts be removed from the LP if they are no longer tight?",
+                  &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

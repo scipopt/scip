@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.116 2004/01/07 13:14:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.117 2004/01/13 11:58:29 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1936,7 +1936,17 @@ RETCODE SCIPsetObjlimit(
 
    return SCIP_OKAY;
 }
-   
+
+/** gets current limit on objective function */
+Real SCIPgetObjlimit(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetObjlimit", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPprobGetExternObjlim(scip->origprob);
+}
+
 /** adds variable to the problem */
 RETCODE SCIPaddVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2828,8 +2838,9 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
-   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, SCIPsetGetActNodesel(scip->set, scip->stat)) );
    CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
+   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->lp, 
+                  SCIPsetGetActNodesel(scip->set, scip->stat)) );
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
@@ -2930,7 +2941,7 @@ RETCODE SCIPpresolve(
          else
             objbound += SCIPvarGetObj(var) * bd;
       }
-      if( !SCIPsetIsInfinity(scip->set, objbound) )
+      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->upperbound) )
       {
          /* add 1.0 to primal bound, such that solution with worst bound may be found */
          CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->tree, scip->lp,
@@ -3054,7 +3065,7 @@ RETCODE SCIPfreeSolve(
 
       /* deactivate the active node */
       CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                     scip->branchcand, scip->eventqueue) );
+                     scip->branchcand, scip->eventqueue, scip->primal->upperbound) );
 
       /* exit callback methods */
       CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
@@ -6426,21 +6437,20 @@ Real SCIPgetVarLPHistoryCount(
    return SCIPvarGetLPHistoryCount(var, dir);
 }
 
-/** gets the variable's history score value at it's current LP solution */
+/** gets the variable's history score value for the given LP solution value */
 Real SCIPgetVarLPHistoryScore(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   Real             solval              /**< variable's LP solution value */
    )
 {
-   Real lpsolval;
    Real frac;
    Real histdown;
    Real histup;
 
    CHECK_ABORT( checkStage(scip, "SCIPgetVarLPHistoryScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   lpsolval = SCIPvarGetLPSol(var);
-   frac = lpsolval - SCIPsetFloor(scip->set, lpsolval);
+   frac = solval - SCIPsetFloor(scip->set, solval);
    histdown = SCIPvarGetLPHistory(var, scip->stat, -frac);
    histup = SCIPvarGetLPHistory(var, scip->stat, 1.0-frac);
 
@@ -6632,6 +6642,16 @@ Longint SCIPgetNLPIterations(
    return scip->stat->nlpiterations;
 }
 
+/** gets total number of LPs solved so far during diving */
+int SCIPgetNDivingLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNDivingLPs", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->ndivinglps;
+}
+
 /** gets total number of simplex iterations used so far during diving */
 Longint SCIPgetNDivingLPIterations(
    SCIP*            scip                /**< SCIP data structure */
@@ -6640,6 +6660,16 @@ Longint SCIPgetNDivingLPIterations(
    CHECK_ABORT( checkStage(scip, "SCIPgetNDivingLPIterations", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->ndivinglpiterations;
+}
+
+/** gets total number of times, strong branching was called (each call represents solving two LPs) */
+int SCIPgetNStrongbranchs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNStrongbranchs", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nstrongbranchs;
 }
 
 /** gets total number of simplex iterations used so far in strong branching */
@@ -7275,9 +7305,9 @@ void printLPStatistics(
    /*fprintf(file, "  strong branching : %12.2f %12d            -            -            -\n",*/
    fprintf(file, "  strong branching : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->strongbranchtime),
-      scip->stat->nstrongbranch,
+      scip->stat->nstrongbranchs,
       scip->stat->nsblpiterations,
-      scip->stat->nstrongbranch > 0 ? (Real)scip->stat->nsblpiterations/(Real)scip->stat->nstrongbranch : 0.0);
+      scip->stat->nstrongbranchs > 0 ? (Real)scip->stat->nsblpiterations/(Real)scip->stat->nstrongbranchs : 0.0);
    if( SCIPclockGetTime(scip->stat->strongbranchtime) >= 0.01 )
       fprintf(file, " %12.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else

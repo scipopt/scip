@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.2 2004/01/07 13:14:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.3 2004/01/13 11:58:31 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -68,7 +68,8 @@ struct Stat
    int              nlps;               /**< number of LPs solved (primal + dual) with at least 1 iteration */
    int              nprimallps;         /**< number of primal LPs solved */
    int              nduallps;           /**< number of dual LPs solved */
-   int              nstrongbranch;      /**< number of strong branching calls */
+   int              ndivinglps;         /**< number of LPs solved during diving */
+   int              nstrongbranchs;     /**< number of strong branching calls */
    int              npricerounds;       /**< number of pricing rounds performed in actual node */
    int              nseparounds;        /**< number of separation rounds performed in actual node */
    int              ndisplines;         /**< number of displayed information lines */

@@ -38,6 +38,10 @@ numerics/cutvioleps = 0.05
 # [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
+# minimal distance value to use for branching history updates
+# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
+numerics/historyeps = 0.1
+
 # fraction of maximal memory usage resulting in switch to memory saving mode
 # [type: real, range: [0,1], default: 0.8]
 memory/memsavefac = 0.8
@@ -139,12 +143,20 @@ limits/sollimit = -1
 limits/maxsol = 256
 
 # frequency for solving LP at the nodes (-1: never; 0: only root LP)
-# [type: int, range: [-1,2147483647], default: 4]
+# [type: int, range: [-1,2147483647], default: 1]
 lp/lpsolvefreq = 4
 
 # maximal depth for solving LP at the nodes (-1: no depth limit)
 # [type: int, range: [-1,2147483647], default: -1]
 lp/lpsolvedepth = -1
+
+# should FASTMIP setting of LP solver be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/fastmip = TRUE
+
+# should scaling of LP solver be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/scaling = TRUE
 
 # should new non-basic columns be removed after LP solving?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -190,6 +202,10 @@ constraints/integral/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
 
+# priority of conflict handler <linear>
+# [type: int, range: [-2147483648,2147483647], default: -1000000]
+conflict/linear/priority = -1000000
+
 # frequency for separating cuts of constraint handler <linear> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 4]
 constraints/linear/sepafreq = 4
@@ -205,6 +221,10 @@ constraints/linear/tightenboundsfreq = 5
 # maximal allowed relative gain in maximum norm for constraint aggregation
 # [type: real, range: [0,1.79769313486232e+308], default: 4]
 constraints/linear/maxaggrnormscale = 4
+
+# priority of conflict handler <logicor>
+# [type: int, range: [-2147483648,2147483647], default: 800000]
+conflict/logicor/priority = 800000
 
 # frequency for separating cuts of constraint handler <logicor> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 4]
@@ -225,6 +245,10 @@ constraints/logicor/maxvarusefac = 1
 # branching factor to weigh minimum of positive and negative variable uses
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: -0.2]
 constraints/logicor/minvarusefac = -0.2
+
+# priority of conflict handler <setppc>
+# [type: int, range: [-2147483648,2147483647], default: 700000]
+conflict/setppc/priority = 700000
 
 # frequency for separating cuts of constraint handler <setppc> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 4]
@@ -254,6 +278,22 @@ reading/mpsreader/dynamiccols = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 reading/mpsreader/dynamicrows = FALSE
 
+# priority of presolver <dualfix>
+# [type: int, range: [-2147483648,2147483647], default: 100000]
+presolving/dualfix/priority = 100000
+
+# priority of presolver <trivial>
+# [type: int, range: [-2147483648,2147483647], default: 9000000]
+presolving/trivial/priority = 9000000
+
+# priority of branching rule <bfs> in standard mode
+# [type: int, range: [-2147483648,2147483647], default: 100000]
+nodeselection/bfs/stdpriority = 100000
+
+# priority of branching rule <bfs> in memory saving mode
+# [type: int, range: [-2147483648,2147483647], default: 0]
+nodeselection/bfs/memsavepriority = 0
+
 # minimal plunging depth, before new best node may be selected
 # [type: int, range: [0,2147483647], default: 10]
 nodeselection/bfs/minplungedepth = 10
@@ -266,13 +306,49 @@ nodeselection/bfs/maxplungedepth = 25
 # [type: real, range: [0,1.79769313486232e+308], default: 1.5]
 nodeselection/bfs/maxplungequot = 1.5
 
+# priority of branching rule <dfs> in standard mode
+# [type: int, range: [-2147483648,2147483647], default: 0]
+nodeselection/dfs/stdpriority = 0
+
+# priority of branching rule <dfs> in memory saving mode
+# [type: int, range: [-2147483648,2147483647], default: 100000]
+nodeselection/dfs/memsavepriority = 100000
+
+# priority of branching rule <restartdfs> in standard mode
+# [type: int, range: [-2147483648,2147483647], default: 50000]
+nodeselection/restartdfs/stdpriority = 50000
+
+# priority of branching rule <restartdfs> in memory saving mode
+# [type: int, range: [-2147483648,2147483647], default: 50000]
+nodeselection/restartdfs/memsavepriority = 50000
+
 # frequency for selecting the best node instead of the deepest one (0: never)
 # [type: int, range: [0,2147483647], default: 1000]
 nodeselection/restartdfs/selectbestfreq = 1000
 
 # priority of branching rule <fullstrong>
-# [type: int, range: [-2147483648,2147483647], default: 200]
+# [type: int, range: [-2147483648,2147483647], default: 1000]
 branching/fullstrong/priority = 200
+
+# priority of branching rule <history>
+# [type: int, range: [-2147483648,2147483647], default: 10000]
+branching/history/priority = 10000
+
+# minimum history size to regard history value as reliable
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
+branching/history/reliable = 4
+
+# maximal number of further variables evaluated without better score
+# [type: int, range: [1,2147483647], default: 8]
+branching/history/maxlookahead = 8
+
+# maximal number of candidates initialized with strong branching per node
+# [type: int, range: [0,2147483647], default: 100]
+branching/history/strongbranchcand = 100
+
+# iteration limit for strong branching initializations of history entries (0: auto)
+# [type: int, range: [0,2147483647], default: 0]
+branching/history/strongbranchiter = 0
 
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]
@@ -281,6 +357,10 @@ branching/mostinf/priority = 100
 # priority of branching rule <leastinf>
 # [type: int, range: [-2147483648,2147483647], default: 50]
 branching/leastinf/priority = 50
+
+# priority of heuristic <diving>
+# [type: int, range: [-2147483648,2147483647], default: -1000000]
+heuristics/diving/priority = -1000000
 
 # frequency for calling primal heuristic <diving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
@@ -310,13 +390,25 @@ heuristics/diving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1e+99], default: 8]
 heuristics/diving/maxdiveavgquotnosol = 8
 
+# priority of heuristic <rounding>
+# [type: int, range: [-2147483648,2147483647], default: -1000]
+heuristics/rounding/priority = -1000
+
 # frequency for calling primal heuristic <rounding> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 heuristics/rounding/freq = 5
 
+# priority of heuristic <simplerounding>
+# [type: int, range: [-2147483648,2147483647], default: 0]
+heuristics/simplerounding/priority = 0
+
 # frequency for calling primal heuristic <simplerounding> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 heuristics/simplerounding/freq = 1
+
+# priority of separator <gomory>
+# [type: int, range: [-2147483648,2147483647], default: 0]
+separating/gomory/priority = 0
 
 # frequency for calling separator <gomory> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 8]
@@ -337,6 +429,10 @@ separating/gomory/maxsepacuts = 32
 # maximal number of gomory cuts separated per separation round in the root node
 # [type: int, range: [0,2147483647], default: 128]
 separating/gomory/maxsepacutsroot = 128
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/gomory/dynamiccuts = FALSE
 
 # display activation status of display column <solfound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
@@ -401,6 +497,10 @@ display/poolsize/active = 1
 # display activation status of display column <conflicts> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
 display/conflicts/active = 1
+
+# display activation status of display column <strongbranchs> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/strongbranchs/active = 1
 
 # display activation status of display column <actdualbound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

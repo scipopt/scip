@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.10 2003/12/15 17:45:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.11 2004/01/13 11:58:29 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -862,6 +862,42 @@ DECL_DIALOGDESC(SCIPdialogDescSetParam)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set limits objective command */
+DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
+{  /*lint --e{715}*/
+   char prompt[MAXSTRLEN];
+   const char* valuestr;
+   Real objlim;
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* objective limit cannot be set, if no problem was created */
+   if( SCIPstage(scip) == SCIP_STAGE_INIT )
+   {
+      printf("cannot set objective limit before problem was created\n");
+      return SCIP_OKAY;
+   }
+
+   /* get new objective limit from user */
+   snprintf(prompt, MAXSTRLEN, "current value: %g, new value: ", SCIPgetObjlimit(scip));
+   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   if( sscanf(valuestr, REAL_FORMAT, &objlim) != 1 )
+   {
+      printf("\ninvalid input <%s>\n\n", valuestr);
+      return SCIP_OKAY;
+   }
+   
+   /* set new objective limit */
+   CHECK_OKAY( SCIPsetObjlimit(scip, objlim) );
+   printf("objective value limit set to %g\n", SCIPgetObjlimit(scip));
+
+   return SCIP_OKAY;
+}
+
 #ifndef NDEBUG
 /** dialog execution method for the debug memory command */
 DECL_DIALOGEXEC(SCIPdialogExecDebugMemory)
@@ -1310,8 +1346,14 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "limits") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "limits", "change parameters for time, memory, and other limits", TRUE, NULL) );
+                     "limits", "change parameters for time, memory, objective value, and other limits", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetLimitsObjective, NULL,
+                     "objective", "set limit on objective value", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+      
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
 
