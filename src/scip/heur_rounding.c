@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.39 2005/02/14 13:35:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.40 2005/03/02 19:04:56 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -38,6 +38,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
+#define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved? */
 
 
 /* locally defined heuristic data */
@@ -668,7 +669,7 @@ RETCODE SCIPincludeHeurRounding(
 {
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_AFTERNODE,
          heurFreeRounding, heurInitRounding, heurExitRounding, 
          heurInitsolRounding, heurExitsolRounding, heurExecRounding,
          NULL) );

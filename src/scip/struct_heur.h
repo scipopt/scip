@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.11 2005/02/14 13:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.12 2005/03/02 19:04:56 bzfpfend Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -54,6 +54,7 @@ struct Heur
    int              delaypos;           /**< position in the delayed heuristics queue, or -1 if not delayed */
    Bool             pseudonodes;        /**< call heuristic at nodes where only a pseudo solution exist? */
    Bool             duringplunging;     /**< call heuristic during plunging? */
+   Bool             afternode;          /**< call heuristic after or before the current node was solved? */
    Bool             initialized;        /**< is primal heuristic initialized? */
    char             dispchar;           /**< display character of primal heuristic */
 };

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.14 2005/02/14 13:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.15 2005/03/02 19:04:55 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -67,6 +67,9 @@ public:
    /** call heuristic during plunging? */
    const Bool scip_duringplunging_;
 
+   /** call heuristic after or before the current node was solved? */
+   const Bool scip_afternode_;
+
    /** default constructor */
    ObjHeur(
       const char*   name,               /**< name of primal heuristic */
@@ -77,7 +80,8 @@ public:
       int           freqofs,            /**< frequency offset for calling primal heuristic */
       int           maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
       Bool          pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
-      Bool          duringplunging      /**< call heuristic during plunging? */
+      Bool          duringplunging,     /**< call heuristic during plunging? */
+      Bool          afternode           /**< call heuristic after or before the current node was solved? */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -87,7 +91,8 @@ public:
         scip_freqofs_(freqofs),
         scip_maxdepth_(maxdepth),
         scip_pseudonodes_(pseudonodes),
-        scip_duringplunging_(duringplunging)
+        scip_duringplunging_(duringplunging),
+        scip_afternode_(afternode)
    {
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.44 2005/02/16 17:46:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.45 2005/03/02 19:04:55 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -95,6 +95,7 @@ RETCODE SCIPheurCreate(
    int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    Bool             duringplunging,     /**< call heuristic during plunging? */
+   Bool             afternode,          /**< call heuristic after or before the current node was solved? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -125,6 +126,7 @@ RETCODE SCIPheurCreate(
    (*heur)->delaypos = -1;
    (*heur)->pseudonodes = pseudonodes;
    (*heur)->duringplunging = duringplunging;
+   (*heur)->afternode = afternode;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
    (*heur)->heurexit = heurexit;
@@ -288,6 +290,7 @@ RETCODE SCIPheurExec(
    int              lpforkdepth,        /**< depth of the last node with solved LP */
    Bool             currentnodehaslp,   /**< is LP being processed in the current node? */
    Bool             plunging,           /**< is the next node to be processed a child or sibling? */
+   Bool             nodesolved,         /**< is the current node already solved? */
    int*             ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -334,6 +337,9 @@ RETCODE SCIPheurExec(
    
    /* execute LP heuristics only at LP nodes */
    execute = execute && (heur->pseudonodes || currentnodehaslp);
+
+   /* execute heuristic, depending on its "afternode" flag */
+   execute = execute && (heur->afternode == nodesolved);
 
    if( execute )
    {

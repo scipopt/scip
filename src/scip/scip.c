@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.277 2005/02/28 13:26:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.278 2005/03/02 19:04:56 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1669,6 +1669,7 @@ RETCODE SCIPincludeHeur(
    int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    Bool             duringplunging,     /**< call heuristic during plunging? */
+   Bool             afternode,          /**< call heuristic after or before the current node was solved? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -1683,7 +1684,7 @@ RETCODE SCIPincludeHeur(
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
-         name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes, duringplunging,
+         name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes, duringplunging, afternode,
          heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    

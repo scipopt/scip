@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.174 2005/02/28 13:26:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.175 2005/03/02 19:04:56 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2079,6 +2079,7 @@ RETCODE primalHeuristics(
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
+   Bool             nodesolved,         /**< is the current node already solved? */
    Bool*            foundsol            /**< pointer to store whether a solution has been found */
    )
 {
@@ -2091,23 +2092,24 @@ RETCODE primalHeuristics(
 
    assert(set != NULL);
    assert(tree != NULL);
-   assert((nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
+   assert(!nodesolved || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
    assert(foundsol != NULL);
 
    *foundsol = FALSE;
 
    /* nothing to do, if no heuristics are available, or if the branch-and-bound process is finished */
-   if( set->nheurs == 0 || nextnode == NULL )
+   if( set->nheurs == 0 || (nodesolved && nextnode == NULL) )
       return SCIP_OKAY;
 
    /* sort heuristics by priority, but move the delayed heuristics to the front */
    SCIPsetSortHeurs(set);
 
    /* we are in plunging mode iff the next node is a sibling or a child, and no leaf */
-   assert(SCIPnodeGetType(nextnode) == SCIP_NODETYPE_SIBLING
+   assert(!nodesolved
+      || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_SIBLING
       || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_CHILD
       || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
-   plunging = (SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
+   plunging = (!nodesolved || SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
    depth = SCIPtreeGetFocusDepth(tree);
    lpforkdepth = tree->focuslpfork != NULL ? SCIPnodeGetDepth(tree->focuslpfork) : -1;
 
@@ -2115,8 +2117,8 @@ RETCODE primalHeuristics(
    ndelayedheurs = 0;
    for( h = 0; h < set->nheurs; ++h )
    {
-      CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, SCIPtreeHasFocusNodeLP(tree), plunging,
-            &ndelayedheurs, &result) );
+      CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, SCIPtreeHasFocusNodeLP(tree), 
+            plunging, nodesolved, &ndelayedheurs, &result) );
       *foundsol = *foundsol || (result == SCIP_FOUNDSOL);
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
@@ -2325,6 +2327,10 @@ RETCODE SCIPsolveCIP(
       CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
       CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
+      /* call primal heuristics that should be applied before the node was solved */
+      CHECK_OKAY( primalHeuristics(set, primal, tree, nextnode, FALSE, &foundsol) );
+      assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
       /* solve focus node */
       CHECK_OKAY( solveNode(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,
             conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo,
@@ -2420,9 +2426,9 @@ RETCODE SCIPsolveCIP(
          CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &nextnode) );
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-         /* call primal heuristics */
+         /* call primal heuristics that should be applied after the relaxation was solved */
          nnodes = SCIPtreeGetNNodes(tree);
-         CHECK_OKAY( primalHeuristics(set, primal, tree, nextnode, &foundsol) );
+         CHECK_OKAY( primalHeuristics(set, primal, tree, nextnode, TRUE, &foundsol) );
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called

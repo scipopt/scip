@@ -47,6 +47,7 @@ interface:
   method SCIPconshdlrGetNConss() does now return the total number of existing constraints, active and inactive
 - method SCIPconshdlrGetStartNConss() is now called SCIPconshdlrGetStartNActiveConss()
 - method SCIPconshdlrGetMaxNConss() is now called SCIPconshdlrGetMaxNActiveConss()
+- new flag "afterrelaxation" for primal heuristics
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
