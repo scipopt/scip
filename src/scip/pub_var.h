@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.26 2004/09/23 15:46:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.27 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -700,6 +700,12 @@ Real SCIPvarGetSol(
  */
 extern
 Real SCIPvarGetRootSol(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns a weighted average solution value of the variable in all feasible primal solutions found so far */
+extern
+Real SCIPvarGetAvgSol(
    VAR*             var                 /**< problem variable */
    );
 

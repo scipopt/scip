@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.34 2004/09/09 13:59:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.35 2004/10/05 11:01:36 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -269,26 +269,43 @@ RETCODE SCIPcutpoolFree(
    LP*              lp                  /**< current LP data */
    )
 {
-   int i;
-
    assert(cutpool != NULL);
    assert(*cutpool != NULL);
+
+   /* remove all cuts from the pool */
+   CHECK_OKAY( SCIPcutpoolClear(*cutpool, memhdr, set, lp) );
 
    /* free clock */
    SCIPclockFree(&(*cutpool)->clock);
 
    /* free hash table */
    SCIPhashtableFree(&(*cutpool)->hashtable);
+   
+   freeMemoryArrayNull(&(*cutpool)->cuts);
+   freeMemory(cutpool);
+
+   return SCIP_OKAY;
+}
+
+/** removes all rows from the cut pool */
+RETCODE SCIPcutpoolClear(
+   CUTPOOL*         cutpool,            /**< cut pool */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   int i;
+
+   assert(cutpool != NULL);
 
    /* free cuts */
-   for( i = 0; i < (*cutpool)->ncuts; ++i )
+   for( i = 0; i < cutpool->ncuts; ++i )
    {
-      SCIProwUnlock((*cutpool)->cuts[i]->row);
-      CHECK_OKAY( cutFree(&(*cutpool)->cuts[i], memhdr, set, lp) );
+      SCIProwUnlock(cutpool->cuts[i]->row);
+      CHECK_OKAY( cutFree(&cutpool->cuts[i], memhdr, set, lp) );
    }
-   freeMemoryArrayNull(&(*cutpool)->cuts);
-   
-   freeMemory(cutpool);
+   cutpool->ncuts = 0;
 
    return SCIP_OKAY;
 }
@@ -326,10 +343,15 @@ RETCODE SCIPcutpoolAddNewRow(
    assert(cutpool != NULL);
    assert(row != NULL);
 
-   /* check, if row is modifiable */
-   if( row->modifiable )
+   /* check, if row is modifiable or local */
+   if( SCIProwIsModifiable(row) )
    {
-      errorMessage("cannot store a modifiable row in a cut pool\n");
+      errorMessage("cannot store modifiable row <%s> in a cut pool\n", SCIProwGetName(row));
+      return SCIP_INVALIDDATA;
+   }
+   if( SCIProwIsLocal(row) )
+   {
+      errorMessage("cannot store locally valid row <%s> in a cut pool\n", SCIProwGetName(row));
       return SCIP_INVALIDDATA;
    }
 
@@ -455,13 +477,16 @@ RETCODE SCIPcutpoolSeparate(
    assert(cutpool->firstunprocessed <= cutpool->ncuts);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   /* don't separate cut pool in the root node */
+   if( root )
+      return SCIP_OKAY;
+
    if( cutpool->processedlp < stat->lpcount )
       cutpool->firstunprocessed = 0;
    if( cutpool->firstunprocessed == cutpool->ncuts )
-   {
-      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
-   }
 
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
@@ -491,17 +516,13 @@ RETCODE SCIPcutpoolSeparate(
          cut->processedlp = stat->lpcount;
          row = cut->row;
 
-         debugMessage("separating cut <%s> from the cut pool\n", SCIProwGetName(row));
-         
          if( !SCIProwIsInLP(row) )
          {         
-            Real feasibility;
-            
-            feasibility = SCIProwGetLPFeasibility(row, stat, lp);
-            debugMessage("  cut feasibility = %g\n", feasibility);
-            if( !SCIPsetIsFeasible(set, feasibility) )
+            if( SCIProwIsEfficacious(row, set, stat, lp, root) )
             {
                /* insert cut in separation storage */
+               debugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
+                  SCIProwGetName(row), SCIProwGetLPFeasibility(row, stat, lp));
                CHECK_OKAY( SCIPsepastoreAddCut(sepastore, memhdr, set, stat, lp, row, 1.0, root) );
                found = TRUE;
             }

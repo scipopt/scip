@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.146 2004/09/29 19:55:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.147 2004/10/05 11:01:36 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6458,10 +6458,12 @@ void sumMIRRow(
    LP*              lp,                 /**< LP data */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
+   Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size prob->nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*             slacksign,          /**< stores the sign of the row's slack variable in summation */
-   Bool*            emptyrow            /**< pointer to store whether the returned row is empty */
+   Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
+   Bool*            localrowsused       /**< pointer to store whether local rows were used in summation */
    )
 {
    ROW* row;
@@ -6478,10 +6480,12 @@ void sumMIRRow(
    assert(mirrhs != NULL);
    assert(slacksign != NULL);
    assert(emptyrow != NULL);
+   assert(localrowsused != NULL);
 
    clearMemoryArray(mircoef, prob->nvars);
    *mirrhs = 0.0;
    *emptyrow = TRUE;
+   *localrowsused = FALSE;
    for( r = 0; r < lp->nrows; ++r )
    {
       row = lp->rows[r];
@@ -6490,8 +6494,11 @@ void sumMIRRow(
       assert(row->len == 0 || row->cols_index != NULL);
       assert(row->len == 0 || row->vals != NULL);
 
-      /* modifiable rows cannot be part of a MIR row summation; close to zero weights are ignored */
-      if( !row->modifiable && !SCIPsetIsFeasZero(set, scale * weights[r]) )
+      /* modifiable rows cannot be part of a MIR row summation;
+       * local rows are only included, if the allowlocal flag is set;
+       * close to zero weights are ignored
+       */
+      if( !row->modifiable && (allowlocal || !row->local) && !SCIPsetIsFeasZero(set, scale * weights[r]) )
       {
          /* Decide, if we want to use the left or the right hand side of the row in the summation.
           * If the current row activity is closer to the left hand side, we use the  lhs <= a*x  part of the row,
@@ -6500,6 +6507,7 @@ void sumMIRRow(
           * has.
           */
          *emptyrow = FALSE;
+         *localrowsused = *localrowsused || row->local;
          rowactivity = SCIProwGetLPActivity(row, stat, lp);
          assert(SCIPsetIsFeasGE(set, rowactivity, row->lhs));
          assert(SCIPsetIsFeasLE(set, rowactivity, row->rhs));
@@ -6647,11 +6655,14 @@ void transformMIRRow(
    PROB*            prob,               /**< problem data */
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*             varsign,            /**< stores the sign of the transformed variable in summation */
-   int*             boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
-   Bool*            freevariable        /**< stores whether a free variable was found in MIR row -> invalid summation */
+   int*             boundtype,          /**< stores the bound used for transformed variable:
+                                         *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
+   Bool*            freevariable,       /**< stores whether a free variable was found in MIR row -> invalid summation */
+   Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
    )
 {
    VAR* var;
@@ -6669,8 +6680,10 @@ void transformMIRRow(
    assert(varsign != NULL);
    assert(boundtype != NULL);
    assert(freevariable != NULL);
+   assert(localbdsused != NULL);
 
    *freevariable = FALSE;
+   *localbdsused = FALSE;
    
    /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
     * substitute integral variables with best standard bound (lb, ub);
@@ -6687,19 +6700,33 @@ void transformMIRRow(
       if( SCIPsetIsZero(set, mircoef[idx]) )
       {
          varsign[idx] = +1;
+         boundtype[idx] = -2;
          continue;
       }
 
       /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-      bestlb = SCIPvarGetLbLocal(var);
+      bestlb = SCIPvarGetLbGlobal(var);
       bestlbtype = -1;
+      if( allowlocal )
+      {
+         Real loclb;
+
+         loclb = SCIPvarGetLbLocal(var);
+         if( SCIPsetIsGT(set, loclb, bestlb) )
+         {
+            bestlb = loclb;
+            bestlbtype = -2;
+         }
+      }
       if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          Real bestvlb;
          int bestvlbidx;
 
          getClosestVlb(var, &bestvlb, &bestvlbidx);
-         if( bestvlbidx >= 0 && bestvlb > bestlb )
+         if( bestvlbidx >= 0
+            && (bestvlb > bestlb
+               || (bestlbtype == -2 && SCIPsetIsGE(set, bestvlb, bestlb))) )
          {
             bestlb = bestvlb;
             bestlbtype = bestvlbidx;
@@ -6707,15 +6734,28 @@ void transformMIRRow(
       }
 
       /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-      bestub = SCIPvarGetUbLocal(var);
+      bestub = SCIPvarGetUbGlobal(var);
       bestubtype = -1;
+      if( allowlocal )
+      {
+         Real locub;
+
+         locub = SCIPvarGetUbLocal(var);
+         if( SCIPsetIsLT(set, locub, bestub) )
+         {
+            bestub = locub;
+            bestubtype = -2;
+         }
+      }
       if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          Real bestvub;
          int bestvubidx;
 
          getClosestVub(var, &bestvub, &bestvubidx);
-         if( bestvubidx >= 0 && bestvub < bestub )
+         if( bestvubidx >= 0
+            && (bestvub < bestub
+               || (bestubtype == -2 && SCIPsetIsLE(set, bestvub, bestub))) )
          {
             bestub = bestvub;
             bestubtype = bestvubidx;
@@ -6740,9 +6780,12 @@ void transformMIRRow(
          varsign[idx] = +1;
          boundtype[idx] = bestlbtype;
     
-         /* standard (bestlbtype == -1) or variable (bestlbtype >= 0) lower bound? */
-         if( bestlbtype == -1 )
+         /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
+         if( bestlbtype < 0 )
+         {
             (*mirrhs) -= mircoef[idx] * bestlb;
+            *localbdsused = *localbdsused || (bestlbtype == -2);
+         }
          else
          {
             VAR** vlbvars = SCIPvarGetVlbVars(var);
@@ -6764,9 +6807,12 @@ void transformMIRRow(
          varsign[idx] = -1;
          boundtype[idx] = bestubtype;
          
-         /* standard (bestubtype == -1) or variable (bestubtype >= 0) upper bound? */
-         if( bestubtype == -1 )
+         /* standard (bestubtype < 0) or variable (bestubtype >= 0) upper bound? */
+         if( bestubtype < 0 )
+         {
             (*mirrhs) -= mircoef[idx] * bestub;
+            *localbdsused = *localbdsused || (bestubtype == -2);
+         }
          else
          {
             VAR** vubvars = SCIPvarGetVubVars(var);
@@ -6868,6 +6914,7 @@ void roundMIRRow(
       assert(SCIPvarIsIntegral(var));
       idx = SCIPvarGetProbindex(var);
       assert(0 <= idx && idx < prob->nvars);
+      assert(boundtype[idx] == -1 || boundtype[idx] == -2);
 
       /* calculate the coefficient in the retransformed cut */
       aj = varsign[idx] * mircoef[idx];
@@ -6889,13 +6936,31 @@ void roundMIRRow(
          /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
          if( varsign[idx] == +1 )
          {
-            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
+            /* lower bound was used */
+            if( boundtype[idx] == -1 )
+            {
+               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
+            }
+            else
+            {
+               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
+            }
          }
          else
          {
-            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
+            /* upper bound was used */
+            if( boundtype[idx] == -1 )
+            {
+               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
+            }
+            else
+            {
+               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
+            }
          }
       }
    }
@@ -6924,7 +6989,7 @@ void roundMIRRow(
       }
 
       /* check for variable bound use */
-      if( boundtype[idx] == -1 )
+      if( boundtype[idx] < 0 )
       {
          /* standard bound */
          mircoef[idx] = cutaj;
@@ -6934,14 +6999,30 @@ void roundMIRRow(
          if( varsign[idx] == +1 )
          {
             /* lower bound was used */
-            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
+            if( boundtype[idx] == -1 )
+            {
+               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
+            }
+            else
+            {
+               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
+            }
          }
          else
          {
             /* upper bound was used */
-            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
+            if( boundtype[idx] == -1 )
+            {
+               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
+            }
+            else
+            {
+               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+               (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
+            }
          }
       }
       else
@@ -6951,7 +7032,7 @@ void roundMIRRow(
          mircoef[idx] = cutaj;
          (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
          
-         /* change mirrhs & cutaj of integer variable z_j of variable bound */
+         /* change mirrhs and cutaj of integer variable z_j of variable bound */
          if( varsign[idx] == +1 )
          {
             VAR* z;
@@ -6960,6 +7041,7 @@ void roundMIRRow(
 
             /* variable lower bound was used */
             j = boundtype[idx];
+            assert(0 <= j && j < SCIPvarGetNVlbs(var));
             zvlb = SCIPvarGetVlbVars(var);
             z = zvlb[j];
             zidx =  SCIPvarGetProbindex(z);
@@ -6978,6 +7060,7 @@ void roundMIRRow(
 
             /* variable upper bound was used */
             j = boundtype[idx];
+            assert(0 <= j && j < SCIPvarGetNVubs(var));
             zvub = SCIPvarGetVubVars(var);
             z = zvub[j];
             zidx =  SCIPvarGetProbindex(z);
@@ -7162,13 +7245,15 @@ RETCODE SCIPlpCalcMIR(
    PROB*            prob,               /**< problem data */
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
-   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    )
 {
    int* slacksign;
@@ -7179,6 +7264,8 @@ RETCODE SCIPlpCalcMIR(
    Real f0;
    Bool emptyrow;
    Bool freevariable;
+   Bool localrowsused;
+   Bool localbdsused;
 
    assert(lp != NULL);
    assert(lp->solved);
@@ -7189,12 +7276,14 @@ RETCODE SCIPlpCalcMIR(
    assert(mirrhs != NULL);
    assert(cutactivity != NULL);
    assert(success != NULL);
+   assert(cutislocal != NULL);
 
    debugMessage("calculating MIR cut (scale: %g)\n", scale);
 
    /**@todo test, if a column based summation is faster */
 
    *success = FALSE;
+   *cutislocal = FALSE;
 
    /* allocate temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &slacksign, lp->nrows) );
@@ -7202,7 +7291,9 @@ RETCODE SCIPlpCalcMIR(
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
    
    /* calculate the row summation */
-   sumMIRRow(set, stat, prob, lp, weights, scale, mircoef, &rhs, slacksign, &emptyrow);
+   sumMIRRow(set, stat, prob, lp, weights, scale, allowlocal, mircoef, &rhs, slacksign, &emptyrow, &localrowsused);
+   assert(allowlocal || !localrowsused);
+   *cutislocal = *cutislocal || localrowsused;
    if( emptyrow )
       goto TERMINATE;
 
@@ -7215,7 +7306,10 @@ RETCODE SCIPlpCalcMIR(
     *   x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
     * and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
     */
-   transformMIRRow(set, prob, boundswitch, usevbds, mircoef, &rhs, varsign, boundtype, &freevariable);
+   transformMIRRow(set, prob, boundswitch, usevbds, allowlocal, 
+      mircoef, &rhs, varsign, boundtype, &freevariable, &localbdsused);
+   assert(allowlocal || !localbdsused);
+   *cutislocal = *cutislocal || localbdsused;
    if( freevariable )
       goto TERMINATE;
 

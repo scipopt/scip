@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.11 2004/09/23 15:46:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.12 2004/10/05 11:01:35 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -33,6 +33,7 @@
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
 #define BRANCHRULE_PRIORITY      10000
 #define BRANCHRULE_MAXDEPTH      -1
+#define BRANCHRULE_MAXBOUNDDIST  1.0
 
 #define DEFAULT_MINRELIABLE      8.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
@@ -178,7 +179,6 @@ DECL_BRANCHFREE(branchFreeRelpscost)
 #define MINMAXDEPTH   20
 #define MAXMAXDEPTH  100
 #define MAXSIZE     5000
-#define FRACSCORE   1e-3
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpRelpscost)
@@ -655,7 +655,8 @@ RETCODE SCIPincludeBranchruleRelpscost(
    CHECK_OKAY( SCIPallocMemory(scip, &branchruledata) );
    
    /* include branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, 
          branchExeclpRelpscost, branchExecpsRelpscost,
          branchruledata) );

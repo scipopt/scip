@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.71 2004/09/29 19:17:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.72 2004/10/05 11:01:37 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1929,7 +1929,8 @@ RETCODE SCIPlpiSolveDual(
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 RETCODE SCIPlpiSolveBarrier(
-   LPI*             lpi                 /**< LP interface structure */
+   LPI*             lpi,                /**< LP interface structure */
+   Bool             crossover            /**< perform crossover */
    )
 {
    int retval;
@@ -1946,7 +1947,7 @@ RETCODE SCIPlpiSolveBarrier(
    setParameterValues(&(lpi->cpxparam));
 
    debugMessage("calling CPXhybaropt()\n");
-   retval = CPXhybbaropt(cpxenv, lpi->cpxlp, 0);
+   retval = CPXhybbaropt(cpxenv, lpi->cpxlp, crossover ? 0 : CPX_ALG_NONE);
    switch( retval  )
    {
    case 0:
@@ -1969,7 +1970,7 @@ RETCODE SCIPlpiSolveBarrier(
       setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
       CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
 
-      retval = CPXhybbaropt(cpxenv, lpi->cpxlp, 0);
+      retval = CPXhybbaropt(cpxenv, lpi->cpxlp, crossover ? 0 : CPX_ALG_NONE);
       switch( retval  )
       {
       case 0:

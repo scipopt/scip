@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.50 2004/09/23 15:46:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.51 2004/10/05 11:01:35 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -721,6 +721,9 @@ RETCODE SCIPbranchruleCreate(
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
    int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying branching rule
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -741,6 +744,7 @@ RETCODE SCIPbranchruleCreate(
    ALLOC_OKAY( duplicateMemoryArray(&(*branchrule)->desc, desc, strlen(desc)+1) );
    (*branchrule)->priority = priority;
    (*branchrule)->maxdepth = maxdepth;
+   (*branchrule)->maxbounddist = maxbounddist;
    (*branchrule)->branchfree = branchfree;
    (*branchrule)->branchinit = branchinit;
    (*branchrule)->branchexit = branchexit;
@@ -761,13 +765,18 @@ RETCODE SCIPbranchruleCreate(
    sprintf(paramname, "branching/%s/priority", name);
    sprintf(paramdesc, "priority of branching rule <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
-                  paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) ); /*lint !e740*/
+         &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
+         paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) ); /*lint !e740*/
    sprintf(paramname, "branching/%s/maxdepth", name);
    sprintf(paramdesc, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*branchrule)->maxdepth, maxdepth, -1, INT_MAX, 
-                  NULL, NULL) ); /*lint !e740*/
+         &(*branchrule)->maxdepth, maxdepth, -1, INT_MAX, 
+         NULL, NULL) ); /*lint !e740*/
+   sprintf(paramname, "branching/%s/maxbounddist", name);
+   sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
+   CHECK_OKAY( SCIPsetAddRealParam(set, memhdr, paramname, paramdesc,
+         &(*branchrule)->maxbounddist, maxbounddist, 0.0, 1.0, 
+         NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -861,6 +870,7 @@ RETCODE SCIPbranchruleExecLPSol(
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -868,6 +878,7 @@ RETCODE SCIPbranchruleExecLPSol(
    assert(branchrule != NULL);
    assert(set != NULL);
    assert(tree != NULL);
+   assert(tree->focusnode != NULL);
    assert(tree->nchildren == 0);
    assert(result != NULL);
 
@@ -875,58 +886,66 @@ RETCODE SCIPbranchruleExecLPSol(
    if( branchrule->branchexeclp != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
    {
-      Longint oldndomchgs;
-      int oldncutsstored;
-      int oldnactiveconss;
+      Real loclowerbound;
+      Real glblowerbound;
 
-      debugMessage("executing LP branching rule <%s>\n", branchrule->name);
+      loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
+      glblowerbound = SCIPtreeGetLowerbound(tree, set);
+      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (upperbound - glblowerbound)) )
+      {
+         Longint oldndomchgs;
+         int oldncutsstored;
+         int oldnactiveconss;
 
-      oldndomchgs = stat->nboundchgs + stat->nholechgs;
-      oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
-      oldnactiveconss = stat->nactiveconss;
+         debugMessage("executing LP branching rule <%s>\n", branchrule->name);
 
-      /* start timing */
-      SCIPclockStart(branchrule->clock, set);
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+         oldnactiveconss = stat->nactiveconss;
+
+         /* start timing */
+         SCIPclockStart(branchrule->clock, set);
    
-      /* call external method */
-      CHECK_OKAY( branchrule->branchexeclp(set->scip, branchrule, allowaddcons, result) );
+         /* call external method */
+         CHECK_OKAY( branchrule->branchexeclp(set->scip, branchrule, allowaddcons, result) );
 
-      /* stop timing */
-      SCIPclockStop(branchrule->clock, set);
+         /* stop timing */
+         SCIPclockStop(branchrule->clock, set);
       
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_BRANCHED
-         && *result != SCIP_REDUCEDDOM
-         && *result != SCIP_SEPARATED
-         && *result != SCIP_CONSADDED
-         && *result != SCIP_DIDNOTRUN )
-      {
-         errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
-            branchrule->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
-      if( *result == SCIP_CONSADDED && !allowaddcons )
-      {
-         errorMessage("branching rule <%s> added a constraint in LP solution branching without permission\n",
-            branchrule->name);
-         return SCIP_INVALIDRESULT;
-      }
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_BRANCHED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_DIDNOTRUN )
+         {
+            errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
+               branchrule->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+         if( *result == SCIP_CONSADDED && !allowaddcons )
+         {
+            errorMessage("branching rule <%s> added a constraint in LP solution branching without permission\n",
+               branchrule->name);
+            return SCIP_INVALIDRESULT;
+         }
 
-      /* update statistics */
-      if( *result != SCIP_DIDNOTRUN )
-         branchrule->nlpcalls++;
-      if( *result == SCIP_CUTOFF )
-         branchrule->ncutoffs++;
-      if( *result != SCIP_BRANCHED )
-      {
-         assert(tree->nchildren == 0);
-         branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-         branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
-         branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN )
+            branchrule->nlpcalls++;
+         if( *result == SCIP_CUTOFF )
+            branchrule->ncutoffs++;
+         if( *result != SCIP_BRANCHED )
+         {
+            assert(tree->nchildren == 0);
+            branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
+            branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
+         }
+         else
+            branchrule->nchildren += tree->nchildren;
       }
-      else
-         branchrule->nchildren += tree->nchildren;
    }
 
    return SCIP_OKAY;
@@ -938,6 +957,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -952,54 +972,62 @@ RETCODE SCIPbranchruleExecPseudoSol(
    if( branchrule->branchexecps != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
    {
-      Longint oldndomchgs;
-      Longint oldnactiveconss;
+      Real loclowerbound;
+      Real glblowerbound;
 
-      debugMessage("executing pseudo branching rule <%s>\n", branchrule->name);
+      loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
+      glblowerbound = SCIPtreeGetLowerbound(tree, set);
+      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (upperbound - glblowerbound)) )
+      {
+         Longint oldndomchgs;
+         Longint oldnactiveconss;
 
-      oldndomchgs = stat->nboundchgs + stat->nholechgs;
-      oldnactiveconss = stat->nactiveconss;
+         debugMessage("executing pseudo branching rule <%s>\n", branchrule->name);
 
-      /* start timing */
-      SCIPclockStart(branchrule->clock, set);
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnactiveconss = stat->nactiveconss;
+
+         /* start timing */
+         SCIPclockStart(branchrule->clock, set);
    
-      /* call external method */
-      CHECK_OKAY( branchrule->branchexecps(set->scip, branchrule, allowaddcons, result) );
+         /* call external method */
+         CHECK_OKAY( branchrule->branchexecps(set->scip, branchrule, allowaddcons, result) );
 
-      /* stop timing */
-      SCIPclockStop(branchrule->clock, set);
+         /* stop timing */
+         SCIPclockStop(branchrule->clock, set);
       
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_BRANCHED
-         && *result != SCIP_REDUCEDDOM
-         && *result != SCIP_CONSADDED
-         && *result != SCIP_DIDNOTRUN )
-      {
-         errorMessage("branching rule <%s> returned invalid result code <%d> from pseudo solution branching\n",
-            branchrule->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
-      if( *result == SCIP_CONSADDED && !allowaddcons )
-      {
-         errorMessage("branching rule <%s> added a constraint in pseudo solution branching without permission\n",
-            branchrule->name);
-         return SCIP_INVALIDRESULT;
-      }
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_BRANCHED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_DIDNOTRUN )
+         {
+            errorMessage("branching rule <%s> returned invalid result code <%d> from pseudo solution branching\n",
+               branchrule->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+         if( *result == SCIP_CONSADDED && !allowaddcons )
+         {
+            errorMessage("branching rule <%s> added a constraint in pseudo solution branching without permission\n",
+               branchrule->name);
+            return SCIP_INVALIDRESULT;
+         }
 
-      /* update statistics */
-      if( *result != SCIP_DIDNOTRUN )
-         branchrule->npseudocalls++;
-      if( *result == SCIP_CUTOFF )
-         branchrule->ncutoffs++;
-      if( *result != SCIP_BRANCHED )
-      {
-         assert(tree->nchildren == 0);
-         branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-         branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN )
+            branchrule->npseudocalls++;
+         if( *result == SCIP_CUTOFF )
+            branchrule->ncutoffs++;
+         if( *result != SCIP_BRANCHED )
+         {
+            assert(tree->nchildren == 0);
+            branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
+         }
+         else
+            branchrule->nchildren += tree->nchildren;
       }
-      else
-         branchrule->nchildren += tree->nchildren;
    }
 
    return SCIP_OKAY;
@@ -1083,15 +1111,35 @@ int SCIPbranchruleGetMaxdepth(
 /** sets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
 void SCIPbranchruleSetMaxdepth(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SET*             set,                /**< global SCIP settings */
    int              maxdepth            /**< new maxdepth of the branching rule */
    )
 {
    assert(branchrule != NULL);
-   assert(set != NULL);
    assert(maxdepth >= -1);
 
    branchrule->maxdepth = maxdepth;
+}
+
+/** gets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
+Real SCIPbranchruleGetMaxbounddist(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->maxbounddist;
+}
+
+/** sets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
+void SCIPbranchruleSetMaxbounddist(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   Real             maxbounddist        /**< new maxbounddist of the branching rule */
+   )
+{
+   assert(branchrule != NULL);
+   assert(maxbounddist >= -1);
+
+   branchrule->maxbounddist = maxbounddist;
 }
 
 /** gets time in seconds used in this branching rule */
@@ -1263,6 +1311,7 @@ RETCODE SCIPbranchExecLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
@@ -1291,7 +1340,8 @@ RETCODE SCIPbranchExecLP(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, allowaddcons, result) );
+      CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, upperbound, allowaddcons,
+            result) );
       assert(*result != SCIP_DIDNOTRUN);
       return SCIP_OKAY;
    }
@@ -1302,7 +1352,8 @@ RETCODE SCIPbranchExecLP(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, allowaddcons, result) );
+      CHECK_OKAY( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, upperbound, allowaddcons, 
+            result) );
    }
 
    if( *result == SCIP_DIDNOTRUN )
@@ -1354,6 +1405,7 @@ RETCODE SCIPbranchExecPseudo(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
@@ -1377,7 +1429,7 @@ RETCODE SCIPbranchExecPseudo(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, allowaddcons, result) );
+      CHECK_OKAY( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, upperbound, allowaddcons, result) );
    }
 
    if( *result == SCIP_DIDNOTRUN )

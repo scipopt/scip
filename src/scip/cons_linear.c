@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.119 2004/09/23 15:46:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.120 2004/10/05 11:01:36 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -71,8 +71,8 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating linear constraints"
 #define CONFLICTHDLR_PRIORITY  -1000000
 
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node */
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
 #define DEFAULT_MAXPRESOLAGGRROUNDS  -1 /**< maximal number of presolving aggregation rounds (-1: no limit) */
@@ -123,8 +123,8 @@ struct ConshdlrData
    int              linconsupgradessize;/**< size of linconsupgrade array */
    int              nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int              tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
-   int              maxrounds;          /**< maximal number of separation rounds per node */
-   int              maxroundsroot;      /**< maximal number of separation rounds in the root node */
+   int              maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
+   int              maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
    int              maxpresolaggrrounds;/**< maximal number of presolving aggregation rounds (-1: no limit) */
@@ -2792,20 +2792,23 @@ RETCODE propagateCons(
       }
       
       /* check constraint for infeasibility and redundancy */
-      consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-      
-      if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
+      if( !(*cutoff) )
       {
-         debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
-            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-         *cutoff = TRUE;
-      }
-      else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
-      {
-         debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
+         
+         if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            *cutoff = TRUE;
+         }
+         else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
+         {
+            debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         }
       }
    }
 
@@ -3115,8 +3118,8 @@ DECL_CONSSEPA(consSepaLinear)
    *result = SCIP_DIDNOTRUN;
 
    /* only call the separator a given number of times at each node */
-   if( (depth == 0 && nrounds >= conshdlrdata->maxroundsroot)
-      || (depth > 0 && nrounds >= conshdlrdata->maxrounds) )
+   if( (depth == 0 && conshdlrdata->maxroundsroot >= 0 && nrounds >= conshdlrdata->maxroundsroot)
+      || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
       return SCIP_OKAY;
 
    /* get the maximal number of cuts allowed in a separation round */
@@ -5107,12 +5110,12 @@ RETCODE SCIPincludeConshdlrLinear(
          &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "constraints/linear/maxrounds",
-         "maximal number of separation rounds per node",
-         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+         "maximal number of separation rounds per node (-1: unlimited)",
+         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "constraints/linear/maxroundsroot",
-         "maximal number of separation rounds per node in the root node",
-         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
+         "maximal number of separation rounds per node in the root node (-1: unlimited)",
+         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "constraints/linear/maxsepacuts",
          "maximal number of cuts separated per separation round",

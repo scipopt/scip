@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.27 2004/09/23 15:46:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.28 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -28,6 +28,7 @@
 #include "branch_inference.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
+#include "branch_pscost.h"
 #include "branch_relpscost.h"
 #include "cons_and.h"
 #include "cons_binpack.h"
@@ -48,6 +49,7 @@
 #include "heur_feaspump.h"
 #include "heur_fixandinfer.h"
 #include "heur_fracdiving.h"
+#include "heur_guideddiving.h"
 #include "heur_linesearchdiving.h"
 #include "heur_objpscostdiving.h"
 #include "heur_pscostdiving.h"
@@ -104,11 +106,13 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeBranchruleInference(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
+   CHECK_OKAY( SCIPincludeBranchrulePscost(scip) );
    CHECK_OKAY( SCIPincludeBranchruleRelpscost(scip) );
    CHECK_OKAY( SCIPincludeHeurCoefdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurFeaspump(scip) );
    CHECK_OKAY( SCIPincludeHeurFixandinfer(scip) );
    CHECK_OKAY( SCIPincludeHeurFracdiving(scip) );
+   CHECK_OKAY( SCIPincludeHeurGuideddiving(scip) );
    CHECK_OKAY( SCIPincludeHeurLinesearchdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurObjpscostdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurPscostdiving(scip) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.19 2004/09/23 15:46:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.20 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -206,6 +206,7 @@ struct Var
    Real             obj;                /**< objective function value of variable */
    Real             branchfactor;       /**< factor to weigh variable's branching score with */
    Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
+   Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    DOM              glbdom;             /**< domain of variable in global problem */
    DOM              locdom;             /**< domain of variable in current subproblem */
    union

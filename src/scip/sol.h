@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.31 2004/09/23 15:46:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.32 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -232,6 +232,16 @@ RETCODE SCIPsolRound(
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether rounding was successful */
+   );
+
+/** updates the solution value sums in variables by adding the value in the given solution */
+extern
+void SCIPsolUpdateVarsum(
+   SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem data */
+   Real             weight              /**< weight of solution in weighted average */
    );
 
 /** outputs non-zero elements of solution to file stream */

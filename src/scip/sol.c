@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.43 2004/09/23 15:46:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.44 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -816,6 +816,30 @@ RETCODE SCIPsolRound(
    *success = (v == nvars);
 
    return SCIP_OKAY;
+}
+
+/** updates the solution value sums in variables by adding the value in the given solution */
+void SCIPsolUpdateVarsum(
+   SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem data */
+   Real             weight              /**< weight of solution in weighted average */
+   )
+{
+   Real solval;
+   int v;
+
+   assert(sol != NULL);
+   assert(0.0 <= weight && weight <= 1.0);
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      assert(prob->vars[v] != NULL);
+      solval = SCIPsolGetVal(sol, stat, prob->vars[v]);
+      prob->vars[v]->primsolavg *= (1.0-weight);
+      prob->vars[v]->primsolavg += weight*solval;
+   }
 }
 
 /** outputs non-zero elements of solution to file stream */

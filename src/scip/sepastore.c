@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.25 2004/09/21 12:08:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.26 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -131,6 +131,8 @@ RETCODE SCIPsepastoreFree(
    )
 {
    assert(sepastore != NULL);
+   assert(*sepastore != NULL);
+   assert((*sepastore)->ncuts == 0);
 
    freeMemoryArrayNull(&(*sepastore)->cuts);
    freeMemoryArrayNull(&(*sepastore)->efficacies);

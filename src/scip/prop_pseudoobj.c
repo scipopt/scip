@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.1 2004/09/23 15:46:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.2 2004/10/05 11:01:37 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -33,6 +33,9 @@
 #define PROP_PRIORITY                 0
 #define PROP_FREQ                     1
 
+#define DEFAULT_MAXCANDS            100 /**< maximal number of variables to look at in a single propagation round
+                                         *   (-1: process all variables) */
+
 
 
 
@@ -40,11 +43,11 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary propagator data */
-
 /** propagator data */
 struct PropData
 {
+   int              maxcands;           /**< maximal number of variables to look at in a single propagation round */
+   int              lastvarnum;         /**< last variable number that was looked at */
 };
 
 
@@ -64,7 +67,18 @@ struct PropData
  */
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
-#define propFreePseudoobj NULL
+static
+DECL_PROPFREE(propFreePseudoobj)
+{  /*lint --e{715}*/
+   PROPDATA* propdata;
+
+   /* free branching rule data */
+   propdata = SCIPpropGetData(prop);
+   SCIPfreeMemory(scip, &propdata);
+   SCIPpropSetData(prop, NULL);
+
+   return SCIP_OKAY;
+}
 
 
 /** initialization method of propagator (called after problem was transformed) */
@@ -79,6 +93,7 @@ struct PropData
 static
 DECL_PROPEXEC(propExecPseudoobj)
 {  /*lint --e{715}*/
+   PROPDATA* propdata;
    VAR** vars;
    VAR* var;
    Real pseudoobjval;
@@ -86,10 +101,15 @@ DECL_PROPEXEC(propExecPseudoobj)
    Real obj;
    Real lb;
    Real ub;
+   int ncands;
    int nvars;
+   int c;
    int v;
 
    *result = SCIP_DIDNOTRUN;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
 
    /* get current pseudo objective value and cutoff bound */
    pseudoobjval = SCIPgetPseudoObjval(scip);
@@ -111,8 +131,13 @@ DECL_PROPEXEC(propExecPseudoobj)
    /* tighten domains, if they would increase the pseudo objective value above the upper bound */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   for( v = 0; v < nvars; ++v )
+   ncands = (propdata->maxcands >= 0 ? MIN(propdata->maxcands, nvars) : nvars);
+   v = propdata->lastvarnum;
+   for( c = 0; c < ncands; ++c )
    {
+      v++;
+      if( v >= nvars )
+         v = 0;
       var = vars[v];
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
@@ -153,6 +178,7 @@ DECL_PROPEXEC(propExecPseudoobj)
          }
       }
    }
+   propdata->lastvarnum = v;
 
    return SCIP_OKAY;
 }
@@ -227,8 +253,8 @@ RETCODE SCIPincludePropPseudoobj(
    PROPDATA* propdata;
 
    /* create pseudoobj propagator data */
-   propdata = NULL;
-   /* TODO: (optional) create propagator specific data here */
+   CHECK_OKAY( SCIPallocMemory(scip, &propdata) );
+   propdata->lastvarnum = -1;
 
    /* include propagator */
    CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ,
@@ -236,7 +262,10 @@ RETCODE SCIPincludePropPseudoobj(
          propdata) );
 
    /* add pseudoobj propagator parameters */
-   /* TODO: (optional) add propagator specific parameters with SCIPaddTypeParam() here */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "propagation/pseudoobj/maxcands", 
+         "maximal number of variables to look at in a single propagation round (-1: process all variables)",
+         &propdata->maxcands, DEFAULT_MAXCANDS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

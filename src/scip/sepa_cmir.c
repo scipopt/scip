@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.20 2004/09/21 12:08:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.21 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -32,24 +32,32 @@
 #define SEPA_NAME              "cmir"
 #define SEPA_DESC              "complemented mixed integer rounding cuts separator (Marchand's version)"
 #define SEPA_PRIORITY             -1000
-#define SEPA_FREQ                    25
+#define SEPA_FREQ                    20
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXTRIES            100 /**< maximal number of rows to start aggregation with per separation round
+                                         *   (-1: unlimited) */
+#define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
+                                         *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              4 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          8 /**< maximal number of aggreagtions for each row per round in the root node */
-#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_MAXSLACK            0.1 /**< max. slack of rows to be used */
+#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
+#define DEFAULT_MAXSLACKROOT        0.1 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_SLACKSCORE         1e-3 /**< weight of slack in the aggregation scoring of the rows */
-#define DEFAULT_MAXROWFAC          1e+4 /**< max. row aggregation factor */
-#define DEFAULT_MINROWFAC         -1e+4 /**< min. row aggregation factor */
-#define DEFAULT_MAXTESTDELTA        100	/**< max. number of different deltas to try */
-#define DEFAULT_MAXCONTS             10 /**< max. number of active continuous variables in aggregated row */
+#define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
+#define DEFAULT_MINROWFAC         -1e+4 /**< minimal row aggregation factor */
+#define DEFAULT_MAXTESTDELTA         20	/**< maximal number of different deltas to try */
+#define DEFAULT_MAXTESTDELTAROOT    100 /**< maximal number of different deltas to try in the root node */
+#define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
+#define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 #define BOUNDSWITCH                 0.5
 #define USEVBDS                    TRUE
+#define ALLOWLOCAL                 TRUE
 
 
 /*
@@ -59,19 +67,26 @@
 /** separator data */
 struct SepaData
 {
+   Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
+   Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
+   Real             slackscore;         /**< weight of slack in the aggregation scoring of the rows */
    int              maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
    int              maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
+   int              maxtries;           /**< maximal number of rows to start aggregation with per separation round
+                                         *   (-1: unlimited) */
+   int              maxtriesroot;       /**< maximal number of rows to start aggregation with per round in the root node
+                                         *   (-1: unlimited) */
+   int              maxaggrs;           /**< maximal number of aggregations for each row per separation round */
+   int              maxaggrsroot;       /**< maximal number of aggreagtions for each row per round in the root node */
    int              maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
-   int              maxaggrs;           /**< maximal number of aggregations for each row per separation round */
-   int              maxaggrsroot;       /**< maximal number of aggreagtions for each row per sepa. r. in the root node */
-   Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
-   Real             maxslack;         	/**< maximal slack of rows to be used as startrow */
-   Real             slackscore;         /**< weight of slack in the aggregation scoring of the rows */
    int              maxrowfac;          /**< maximal row aggregation factor */
    int              minrowfac;          /**< minimal row aggregation factor */
    int              maxtestdelta;	/**< maximal number of different deltas to try */
+   int              maxtestdeltaroot;   /**< maximal number of different deltas to try in the root node */
    int              maxconts;	        /**< maximal number of active continuous variables in aggregated row */
+   int              maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
+   Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
 
@@ -89,6 +104,7 @@ RETCODE addCut(
    Real*            varsolvals,         /**< solution values of active variables */
    Real*            cutcoefs,           /**< coefficients of active variables in cut */
    Real             cutrhs,             /**< right hand side of cut */
+   Bool             cutislocal,         /**< is the cut only locally valid? */
    int*             ncuts               /**< pointer to count the number of added cuts */
    )
 {
@@ -145,7 +161,7 @@ RETCODE addCut(
       /* create the cut */
       sprintf(cutname, "cmir%d_%d", SCIPgetNLPs(scip), *ncuts);
       CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
-            (SCIPgetDepth(scip) > 0), FALSE, sepadata->dynamiccuts) );
+            cutislocal, FALSE, sepadata->dynamiccuts) );
 
       debugMessage(" -> found potential c-mir cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
@@ -172,6 +188,10 @@ RETCODE addCut(
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
          debug(SCIPprintRow(scip, cut, NULL));
          CHECK_OKAY( SCIPaddCut(scip, cut, FALSE) );
+         if( !cutislocal )
+         {
+            CHECK_OKAY( SCIPaddPoolCut(scip, cut) );
+         }
          (*ncuts)++;
       }
       
@@ -246,6 +266,9 @@ RETCODE aggregation(
    Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int              startrow,           /**< index of row to start aggregation */ 
    int              maxaggrs,           /**< maximal number of aggregations */
+   Real             maxslack,           /**< maximal slack of rows to be used in aggregation */
+   int              maxtestdelta,	/**< maximal number of different deltas to try */
+   int              maxconts,	        /**< maximal number of active continuous variables in aggregated row */
    int*             ncuts               /**< pointer to count the number of generated cuts */
    )
 {
@@ -261,6 +284,7 @@ RETCODE aggregation(
    Real* cutcoefs;         /* coefficients of variables in cut */
    Real cutrhs;            /* right hand side of the cut */
    Bool success;
+   Bool cutislocal;
 
    int naggrs;
    int nconts;
@@ -339,7 +363,7 @@ RETCODE aggregation(
     * in order to get rid of a continuous variable
     */
    naggrs = 0;
-   while( nactiveconts <= sepadata->maxconts && naggrs <= maxaggrs )
+   while( nactiveconts <= maxconts && naggrs <= maxaggrs )
    {
       Real bestdelta;
       Real bestviolation; 
@@ -374,7 +398,7 @@ RETCODE aggregation(
       ntesteddeltas = 0;
       bestdelta = 0.0;
       bestviolation = 0.0;
-      for( c = 0; c < ncols && ntesteddeltas < sepadata->maxtestdelta; c++ )
+      for( c = 0; c < ncols && ntesteddeltas < maxtestdelta; c++ )
       {
          VAR* var;
          Real primsol;
@@ -421,8 +445,9 @@ RETCODE aggregation(
          ntesteddeltas++;
          
          /* create a MIR cut out of the weighted LP rows */
-         CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, delta, 
-               cutcoefs, &cutrhs, &cutact, &success) );
+         CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, 0.05, rowweights, delta, 
+               cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+         assert(ALLOWLOCAL || !cutislocal);
          debugMessage("delta = %g -> success: %d\n", delta, success);
 
          /* delta generates cut which is more violated */
@@ -463,8 +488,9 @@ RETCODE aggregation(
                continue;
 
             /* create a MIR cut out of the weighted LP rows */
-            CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, delta, 
-                  cutcoefs, &cutrhs, &cutact, &success) );
+            CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, 0.05, rowweights, delta, 
+                  cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+            assert(ALLOWLOCAL || !cutislocal);
             debugMessage("delta = %g -> success: %d\n", delta, success);
             if( success )
             {
@@ -479,9 +505,10 @@ RETCODE aggregation(
          
          /* generate cut with bestdelta */
          oldncuts = *ncuts;
-         CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, bestdelta, 
-               cutcoefs, &cutrhs, &cutact, &success) );
-         CHECK_OKAY( addCut(scip, sepadata, varsolvals, cutcoefs, cutrhs, ncuts) );
+         CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, 0.05, rowweights, bestdelta, 
+               cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+         assert(ALLOWLOCAL || !cutislocal);
+         CHECK_OKAY( addCut(scip, sepadata, varsolvals, cutcoefs, cutrhs, cutislocal, ncuts) );
 
          /* if the cut was successfully added, abort the aggregation of further rows */
          if( *ncuts > oldncuts )
@@ -579,8 +606,8 @@ RETCODE aggregation(
 
                /* check, if the row's slack multiplied with the aggregation factor is too large */
                activity = SCIPgetRowLPActivity(scip, nonzrows[r]);
-               if( (fact < 0.0 && SCIPisGT(scip, fact * (SCIProwGetLhs(nonzrows[r]) - activity), sepadata->maxslack))
-                  || (fact > 0.0 && SCIPisGT(scip, fact * (SCIProwGetRhs(nonzrows[r]) - activity), sepadata->maxslack)) )
+               if( (fact < 0.0 && SCIPisGT(scip, fact * (SCIProwGetLhs(nonzrows[r]) - activity), maxslack))
+                  || (fact > 0.0 && SCIPisGT(scip, fact * (SCIProwGetRhs(nonzrows[r]) - activity), maxslack)) )
                   continue;
 
                /* choose row with best aggregation score */
@@ -644,7 +671,7 @@ RETCODE aggregation(
       naggrs++;
 
       debugMessage(" -> %d continuous variables left (%d/%d active), %d/%d aggregations\n", 
-         nconts, nactiveconts, sepadata->maxconts, naggrs, maxaggrs);
+         nconts, nactiveconts, maxconts, naggrs, maxaggrs);
    }
 
    /* free datastructures */
@@ -661,8 +688,6 @@ RETCODE aggregation(
 /*
  * Callback methods of separator
  */
-
-/* TODO: Implement all necessary separator methods. The methods with an #if 0 ... #else #define ... are optional */
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
@@ -684,33 +709,11 @@ DECL_SEPAFREE(sepaFreeCmir)
 
 
 /** initialization method of separator (called when problem solving starts) */
-#if 0
-static
-DECL_SEPAINIT(sepaInitCmir)
-{  /*lint --e{715}*/
-   errorMessage("method of cmir separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define sepaInitCmir NULL
-#endif
 
 
 /** deinitialization method of separator (called when problem solving exits) */
-#if 0
-static
-DECL_SEPAEXIT(sepaExitCmir)
-{  /*lint --e{715}*/
-   errorMessage("method of cmir separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define sepaExitCmir NULL
-#endif
 
 
 /** execution method of separator */
@@ -718,19 +721,24 @@ static
 DECL_SEPAEXEC(sepaExecCmir)
 {  /*lint --e{715}*/
    SEPADATA* sepadata;
-   int nrows;
-   ROW** rows;     
-   int nvars;
    VAR** vars;
+   Real* varsolvals;
+   ROW** rows;     
    Real* rowlhsscores;
    Real* rowrhsscores;
    Real* rowscores;
    int* roworder;
-   Real* varsolvals;
+   Real maxslack;
+   int nvars;
+   int nrows;
+   int ntries;
    int depth;
    int ncalls;
-   int maxsepacuts;
+   int maxtries;
    int maxaggrs;
+   int maxsepacuts;
+   int maxtestdelta;
+   int maxconts;
    int ncuts;
    int r;
 
@@ -776,13 +784,21 @@ DECL_SEPAEXEC(sepaExecCmir)
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
    {
-      maxsepacuts = sepadata->maxsepacutsroot;
+      maxtries = sepadata->maxtriesroot;
       maxaggrs = sepadata->maxaggrsroot;
+      maxsepacuts = sepadata->maxsepacutsroot;
+      maxslack = sepadata->maxslackroot;
+      maxtestdelta = sepadata->maxtestdeltaroot;
+      maxconts = sepadata->maxcontsroot;
    }   
    else
    {
-      maxsepacuts = sepadata->maxsepacuts;
+      maxtries = sepadata->maxtries;
       maxaggrs = sepadata->maxaggrs;
+      maxsepacuts = sepadata->maxsepacuts;
+      maxslack = sepadata->maxslack;
+      maxtestdelta = sepadata->maxtestdelta;
+      maxconts = sepadata->maxconts;
    }
 
    /* calculate aggregation scores for both sides of all rows, and sort rows by nonincreasing maximal score */
@@ -807,13 +823,15 @@ DECL_SEPAEXEC(sepaExecCmir)
       assert(SCIPisPositive(scip, rownorm));
 
       slack = (activity - lhs)/rownorm;
-      if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, sepadata->maxslack) )
+      if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
+         && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) )
          rowlhsscores[r] = -lencoef - sepadata->slackscore * slack;
       else
          rowlhsscores[r] = -SCIPinfinity(scip);
 
       slack = (rhs - activity)/rownorm;
-      if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, sepadata->maxslack) )
+      if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
+         && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) )
          rowrhsscores[r] = -lencoef - sepadata->slackscore * slack;
       else
          rowrhsscores[r] = -SCIPinfinity(scip);
@@ -827,9 +845,11 @@ DECL_SEPAEXEC(sepaExecCmir)
  
    /* start aggregation heuristic for each row in the LP */
    ncuts = 0;
-   for( r = 0; r < nrows && ncuts < maxsepacuts && !SCIPisInfinity(scip, -rowscores[roworder[r]]); r++ )
+   ntries = (maxtries >= 0 ? MIN(maxtries, nrows) : nrows);
+   for( r = 0; r < ntries && ncuts < maxsepacuts && !SCIPisInfinity(scip, -rowscores[roworder[r]]); r++ )
    {
-      CHECK_OKAY( aggregation(scip, sepadata, varsolvals, rowlhsscores, rowrhsscores, roworder[r], maxaggrs, &ncuts) );
+      CHECK_OKAY( aggregation(scip, sepadata, varsolvals, rowlhsscores, rowrhsscores, roworder[r], 
+            maxaggrs, maxslack, maxtestdelta, maxconts, &ncuts) );
    }
 
    /* free data structure */
@@ -843,9 +863,7 @@ DECL_SEPAEXEC(sepaExecCmir)
       *result = SCIP_SEPARATED;
     
    return SCIP_OKAY;
-
 }
-
 
 
 
@@ -864,15 +882,12 @@ RETCODE SCIPincludeSepaCmir(
    /* create cmir separator data */
    CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
 
-   /* TODO: (optional) create separator specific data here */
-
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
          sepaFreeCmir, sepaInitCmir, sepaExitCmir, sepaExecCmir,
          sepadata) );
 
    /* add cmir separator parameters */
-   /* TODO: (optional) add separator specific parameters with SCIPaddTypeParam() here */
    CHECK_OKAY( SCIPaddIntParam(scip,
          "separating/cmir/maxrounds",
          "maximal number of cmir separation rounds per node (-1: unlimited)",
@@ -882,13 +897,13 @@ RETCODE SCIPincludeSepaCmir(
          "maximal number of cmir separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-         "separating/cmir/maxsepacuts",
-         "maximal number of cmir cuts separated per separation round",
-         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         "separating/cmir/maxtries",
+         "maximal number of rows to start aggregation with per separation round (-1: unlimited)",
+         &sepadata->maxtries, DEFAULT_MAXTRIES, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-         "separating/cmir/maxsepacutsroot",
-         "maximal number of cmir cuts separated per separation round in the root node",
-         &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         "separating/cmir/maxtriesroot",
+         "maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)",
+         &sepadata->maxtriesroot, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "separating/cmir/maxaggrs",
          "maximal number of aggregations for each row per separation round",
@@ -897,14 +912,22 @@ RETCODE SCIPincludeSepaCmir(
          "separating/cmir/maxaggrsroot",
          "maximal number of aggregations for each row per separation round in the root node",
          &sepadata->maxaggrsroot, DEFAULT_MAXAGGRSROOT, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
-         "separating/cmir/dynamiccuts",
-         "should generated cuts be removed from the LP if they are no longer tight?",
-         &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "separating/cmir/maxsepacuts",
+         "maximal number of cmir cuts separated per separation round",
+         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "separating/cmir/maxsepacutsroot",
+         "maximal number of cmir cuts separated per separation round in the root node",
+         &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "separating/cmir/maxslack",
-         "maximal slack of rows to be used",
+         "maximal slack of rows to be used in aggregation",
          &sepadata->maxslack, DEFAULT_MAXSLACK, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+         "separating/cmir/maxslackroot",
+         "maximal slack of rows to be used in aggregation in the root node",
+         &sepadata->maxslackroot, DEFAULT_MAXSLACKROOT, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "separating/cmir/slackscore",
          "weight of slack in the aggregation scoring of the rows",
@@ -919,11 +942,24 @@ RETCODE SCIPincludeSepaCmir(
          &sepadata->minrowfac, DEFAULT_MINROWFAC, INT_MIN, 0, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "separating/cmir/maxtestdelta",
-         "maximal number of different deltas tested",
+         "maximal number of different deltas to try",
          &sepadata->maxtestdelta, DEFAULT_MAXTESTDELTA, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "separating/cmir/maxtestdeltaroot",
+         "maximal number of different deltas to try in the root node",
+         &sepadata->maxtestdeltaroot, DEFAULT_MAXTESTDELTAROOT, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "separating/cmir/maxconts",
          "maximal number of active continuous variables in aggregated row", 
          &sepadata->maxconts, DEFAULT_MAXCONTS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "separating/cmir/maxcontsroot",
+         "maximal number of active continuous variables in aggregated row in the root node", 
+         &sepadata->maxcontsroot, DEFAULT_MAXCONTSROOT, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddBoolParam(scip,
+         "separating/cmir/dynamiccuts",
+         "should generated cuts be removed from the LP if they are no longer tight?",
+         &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+
    return SCIP_OKAY;
 }

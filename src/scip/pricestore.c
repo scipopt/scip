@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.19 2004/09/07 18:22:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.20 2004/10/05 11:01:37 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -130,6 +130,9 @@ RETCODE SCIPpricestoreFree(
    )
 {
    assert(pricestore != NULL);
+   assert(*pricestore != NULL);
+   assert((*pricestore)->nvars == 0);
+   assert((*pricestore)->nbdviolvars == 0);
 
    SCIPclockFree(&(*pricestore)->probpricingtime);
    freeMemoryArrayNull(&(*pricestore)->vars);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.14 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.15 2004/10/05 11:01:36 bzfpfend Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -52,6 +52,15 @@ RETCODE SCIPcutpoolCreate(
 extern
 RETCODE SCIPcutpoolFree(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** removes all rows from the cut pool */
+extern
+RETCODE SCIPcutpoolClear(
+   CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */

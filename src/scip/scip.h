@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.168 2004/09/23 15:46:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.169 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -876,6 +876,9 @@ RETCODE SCIPincludeBranchrule(
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
    int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying branching rule
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -917,6 +920,14 @@ RETCODE SCIPsetBranchruleMaxdepth(
    SCIP*            scip,               /**< SCIP data structure */
    BRANCHRULE*      branchrule,         /**< branching rule */
    int              maxdepth            /**< new maxdepth of the branching rule */
+   );
+
+/** sets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
+extern
+RETCODE SCIPsetBranchruleMaxbounddist(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   Real             maxbounddist        /**< new maxbounddist of the branching rule */
    );
 
 /** creates a display column and includes it in SCIP */
@@ -2527,13 +2538,15 @@ RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
-   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    );
 
 /** writes current LP to a file */

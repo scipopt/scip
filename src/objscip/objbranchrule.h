@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.10 2004/09/21 12:14:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.11 2004/10/05 11:01:37 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -54,17 +54,27 @@ public:
    /** default maximal depth for applying the branching rule */
    const int scip_maxdepth_;
 
+   /** default maximal relative distance from current node's dual bound to primal bound
+    *  compared to best node's dual bound for applying branching rule
+    *  (0.0: only on current best node, 1.0: on all nodes)
+    */
+   const Real scip_maxbounddist_;
+
    /** default constructor */
    ObjBranchrule(
       const char*   name,               /**< name of branching rule */
       const char*   desc,               /**< description of branching rule */
       int           priority,           /**< priority of the branching rule */
-      int           maxdepth            /**< maximal depth level, up to which this branching rule should be used (or -1) */
+      int           maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+      Real          maxbounddist        /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying branching rule
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
       )
       : scip_name_(name),
         scip_desc_(desc),
         scip_priority_(priority),
-        scip_maxdepth_(maxdepth)
+        scip_maxdepth_(maxdepth),
+        scip_maxbounddist_(maxbounddist)
    {
    }
 

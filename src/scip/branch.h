@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.30 2004/09/21 12:07:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.31 2004/10/05 11:01:35 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -142,6 +142,9 @@ RETCODE SCIPbranchruleCreate(
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
    int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying branching rule
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -179,6 +182,7 @@ RETCODE SCIPbranchruleExecLPSol(
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -190,6 +194,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -206,8 +211,14 @@ void SCIPbranchruleSetPriority(
 extern
 void SCIPbranchruleSetMaxdepth(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SET*             set,                /**< global SCIP settings */
    int              maxdepth            /**< new maxdepth of the branching rule */
+   );
+
+/** sets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
+extern
+void SCIPbranchruleSetMaxbounddist(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   Real             maxbounddist        /**< new maxbounddist of the branching rule */
    );
 
 
@@ -248,6 +259,7 @@ RETCODE SCIPbranchExecLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
@@ -262,6 +274,7 @@ RETCODE SCIPbranchExecPseudo(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             upperbound,         /**< global upper bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );

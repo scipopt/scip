@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.64 2004/09/23 15:46:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.65 2004/10/05 11:01:35 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -52,8 +52,8 @@
 #define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
 
 #define DEFAULT_SEPACARDFREQ         10 /**< multiplier on separation frequency, how often cardinality cuts are separated */
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node */
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in the root node */
 
@@ -68,8 +68,8 @@
 struct ConshdlrData
 {
    int              sepacardfreq;       /**< multiplier on separation frequency, how often cardinality cuts are separated */
-   int              maxrounds;          /**< maximal number of separation rounds per node */
-   int              maxroundsroot;      /**< maximal number of separation rounds in the root node */
+   int              maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
+   int              maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
 };
@@ -1420,8 +1420,8 @@ DECL_CONSSEPA(consSepaKnapsack)
 		nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
 
    /* only call the separator a given number of times at each node */
-   if( (depth == 0 && nrounds >= conshdlrdata->maxroundsroot)
-      || (depth > 0 && nrounds >= conshdlrdata->maxrounds) )
+   if( (depth == 0 && conshdlrdata->maxroundsroot >= 0 && nrounds >= conshdlrdata->maxroundsroot)
+      || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
       return SCIP_OKAY;
 
    /* check, if we should additionally separate cardinality cuts */
@@ -1941,12 +1941,12 @@ RETCODE SCIPincludeConshdlrKnapsack(
          &conshdlrdata->sepacardfreq, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "constraints/knapsack/maxrounds",
-         "maximal number of separation rounds per node",
-         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+         "maximal number of separation rounds per node (-1: unlimited)",
+         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "constraints/knapsack/maxroundsroot",
-         "maximal number of separation rounds per node in the root node",
-         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
+         "maximal number of separation rounds per node in the root node (-1: unlimited)",
+         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "constraints/knapsack/maxsepacuts",
          "maximal number of cuts separated per separation round",

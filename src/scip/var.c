@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.112 2004/09/23 15:46:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.113 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1643,6 +1643,7 @@ RETCODE varCreate(
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->rootsol = 0.0;
+   (*var)->primsolavg = 0.5 * (lb + ub);
    (*var)->glbdom.holelist = NULL;
    (*var)->glbdom.lb = lb;
    (*var)->glbdom.ub = ub;
@@ -6655,6 +6656,57 @@ Real SCIPvarGetRootSol(
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPvarGetRootSol(var->negatedvar);
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
+/** returns a weighted average solution value of the variable in all feasible primal solutions found so far */
+Real SCIPvarGetAvgSol(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   Real avgsol;
+   int i;
+
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return 0.0;
+      return SCIPvarGetAvgSol(var->data.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return var->primsolavg;
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
+      return var->locdom.lb;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert(var->data.aggregate.var != NULL);
+      return var->data.aggregate.scalar * SCIPvarGetAvgSol(var->data.aggregate.var)
+         + var->data.aggregate.constant;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert(var->data.multaggr.vars != NULL);
+      assert(var->data.multaggr.scalars != NULL);
+      assert(var->data.multaggr.nvars >= 2);
+      avgsol = var->data.multaggr.constant;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+         avgsol += var->data.multaggr.scalars[i] * SCIPvarGetAvgSol(var->data.multaggr.vars[i]);
+      return avgsol;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPvarGetAvgSol(var->negatedvar);
       
    default:
       errorMessage("unknown variable status\n");

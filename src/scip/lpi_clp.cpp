@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.1 2004/10/05 09:00:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.2 2004/10/05 11:01:37 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -53,6 +53,7 @@ struct LPi
    int              cstatsize;          /**< size of cstat array */
    int              rstatsize;          /**< size of rstat array */
    bool             startscratch;       /**< start from scratch? */
+   bool             fastmip;            /**< FASTMIP setting */
    int              pricing;            /**< scip pricing setting  */
 };
 
@@ -438,7 +439,6 @@ RETCODE SCIPlpiAddCols(
    delete [] mybeg;
 
    // We do not copy column names (Clp does not support this well)
-   assert( colnames == 0 );
 
    return SCIP_OKAY;
 }
@@ -558,7 +558,6 @@ RETCODE SCIPlpiAddRows(
    }
 
    // we do not copy rownames (Clp does not support this well)
-   assert( rownames == 0 );
 
    return SCIP_OKAY;
 }
@@ -2182,13 +2181,14 @@ RETCODE SCIPlpiGetIntpar(
       *ival = lpi->startscratch;
       break;
    case SCIP_LPPAR_FASTMIP:
-      *ival = FALSE;
+      *ival = lpi->fastmip;
       break;
    case SCIP_LPPAR_SCALING:
-      if ( lpi->clp->scalingFlag() )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+      if( lpi->clp->scalingFlag() > 0 )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
 	 *ival = TRUE;
       else
 	 *ival = FALSE;
+      break;
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;          // store pricing method in LPI struct
       break;
@@ -2247,10 +2247,10 @@ RETCODE SCIPlpiSetIntpar(
       int dualmode = 0;
       switch (ival)
       {
-      SCIP_PRICING_AUTO: primalmode = 3; dualmode = 3; break;
-      SCIP_PRICING_FULL: primalmode = 0; dualmode = 1; break;
-      SCIP_PRICING_STEEP: primalmode = 1; dualmode = 0; break;
-      SCIP_PRICING_STEEPQSTART: primalmode = 1; dualmode = 2; break;
+      case SCIP_PRICING_AUTO: primalmode = 3; dualmode = 3; break;
+      case SCIP_PRICING_FULL: primalmode = 0; dualmode = 1; break;
+      case SCIP_PRICING_STEEP: primalmode = 1; dualmode = 0; break;
+      case SCIP_PRICING_STEEPQSTART: primalmode = 1; dualmode = 2; break;
       default: errorMessage("unkown pricing parameter!\n"); abort();
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
@@ -2266,6 +2266,7 @@ RETCODE SCIPlpiSetIntpar(
       lpi->startscratch = ival;
       break;
    case SCIP_LPPAR_FASTMIP:
+      lpi->fastmip = ival;
       break;
    case SCIP_LPPAR_SCALING:
       lpi->clp->scaling(ival == TRUE ? 3 : 0);      // could use 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));

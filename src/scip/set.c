@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.112 2004/09/28 09:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.113 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -127,6 +127,7 @@
 #define SCIP_DEFAULT_MINCUTORTHOROOT    0.5 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_CUTORTHOFAC        1.0 /**< factor to scale orthogonality of cut in separation score calculation */
 #define SCIP_DEFAULT_CUTAGELIMIT        100 /**< maximum age a cut can reach before it is deleted from global pool, or -1 */
+#define SCIP_DEFAULT_POOLFREQ             5 /**< separation frequency for the global cut pool */
 #define SCIP_DEFAULT_CLEANUPROWS       TRUE /**< should new basic rows be removed after LP solving? */
 
 
@@ -507,6 +508,11 @@ RETCODE SCIPsetCreate(
          "separating/cutagelimit",
          "maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts",
          &(*set)->cutagelimit, SCIP_DEFAULT_CUTAGELIMIT, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/poolfreq",
+         "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
+         &(*set)->poolfreq, SCIP_DEFAULT_POOLFREQ, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "constraints/consagelimit",

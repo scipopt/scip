@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.4 2004/05/24 17:46:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.5 2004/10/05 11:01:35 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -33,6 +33,7 @@
 #define BRANCHRULE_DESC          "inference history branching"
 #define BRANCHRULE_PRIORITY      1000
 #define BRANCHRULE_MAXDEPTH      -1
+#define BRANCHRULE_MAXBOUNDDIST  1.0
 
 #define DEFAULT_CUTOFFWEIGHT     1.0    /**< factor to weigh average number of cutoffs in branching score */
 
@@ -180,16 +181,17 @@ RETCODE SCIPincludeBranchruleInference(
    CHECK_OKAY( SCIPallocMemory(scip, &branchruledata) );
    
    /* include branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                  branchFreeInference, branchInitInference, branchExitInference, 
-                  branchExeclpInference, branchExecpsInference,
-                  branchruledata) );
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchFreeInference, branchInitInference, branchExitInference, 
+         branchExeclpInference, branchExecpsInference,
+         branchruledata) );
 
    /* inference branching rule parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/inference/cutoffweight", 
-                  "factor to weigh average number of cutoffs in branching score",
-                  &branchruledata->cutoffweight, DEFAULT_CUTOFFWEIGHT, 0.0, REAL_MAX, NULL, NULL) );
+         "branching/inference/cutoffweight", 
+         "factor to weigh average number of cutoffs in branching score",
+         &branchruledata->cutoffweight, DEFAULT_CUTOFFWEIGHT, 0.0, REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

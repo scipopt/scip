@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.113 2004/09/28 09:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.114 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1242,6 +1242,8 @@ RETCODE SCIPnodeAddBoundinfer(
 {
    VAR* infervar;
    BOUNDTYPE inferboundtype;
+   Real oldlb;
+   Real oldub;
    Real oldbound;
 
    assert(node != NULL);
@@ -1266,13 +1268,18 @@ RETCODE SCIPnodeAddBoundinfer(
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
+   oldlb = SCIPvarGetLbLocal(var);
+   oldub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLT(set, oldlb, oldub));
+
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       /* adjust the new lower bound */
       SCIPvarAdjustLb(var, set, &newbound);
-      oldbound = SCIPvarGetLbLocal(var);
-      assert(SCIPsetIsGT(set, newbound, oldbound));
-      assert(SCIPsetIsLE(set, newbound, SCIPvarGetUbLocal(var)));
+      assert(SCIPsetIsGT(set, newbound, oldlb));
+      assert(SCIPsetIsLE(set, newbound, oldub));
+      oldbound = oldlb;
+      newbound = MIN(newbound, oldub);
    }
    else
    {
@@ -1280,9 +1287,10 @@ RETCODE SCIPnodeAddBoundinfer(
 
       /* adjust the new upper bound */
       SCIPvarAdjustUb(var, set, &newbound);
-      oldbound = SCIPvarGetUbLocal(var);
-      assert(SCIPsetIsLT(set, newbound, oldbound));
-      assert(SCIPsetIsGE(set, newbound, SCIPvarGetLbLocal(var)));
+      assert(SCIPsetIsLT(set, newbound, oldub));
+      assert(SCIPsetIsGE(set, newbound, oldlb));
+      oldbound = oldub;
+      newbound = MAX(newbound, oldlb);
    }
    
    debugMessage(" -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
@@ -2651,6 +2659,9 @@ RETCODE SCIPnodeFocus(
    assert(tree->probingnode == NULL);
    assert(cutoff != NULL);
 
+   debugMessage("focussing node %p of type %d in depth %d\n",
+      *node, *node != NULL ? SCIPnodeGetType(*node) : 0, *node != NULL ? SCIPnodeGetDepth(*node) : 0);
+
    /* remember old cutoff depth in order to know, whether the children and siblings can be deleted */
    oldcutoffdepth = tree->cutoffdepth;
 
@@ -2856,7 +2867,8 @@ RETCODE SCIPnodeFocus(
          CHECK_OKAY( SCIPnodepqRemove(tree->leaves, set, *node) );
 
          stat->plungedepth = 0;
-         stat->nbacktracks++;
+         if( SCIPnodeGetDepth(*node) > 0 )
+            stat->nbacktracks++;
          debugMessage("selected leaf node, lowerbound=%g, plungedepth=%d\n", (*node)->lowerbound, stat->plungedepth);
          break;
 
@@ -3329,6 +3341,26 @@ RETCODE SCIPtreeEndProbing(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** gets number of children */
+int SCIPtreeGetNChildren(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nchildren;
+}
+
+/** gets number of siblings */
+int SCIPtreeGetNSiblings(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nsiblings;
+}
 
 /** gets number of leaves */
 int SCIPtreeGetNLeaves(

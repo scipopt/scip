@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.136 2004/09/23 15:46:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.137 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -868,11 +868,14 @@ RETCODE priceAndCutLoop(
          /* global cut pool separation */
          if( !enoughcuts )
          {
-            debugMessage("global cut pool separation\n");
-            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-            CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepastore, root, &result) );
-            *cutoff = *cutoff || (result == SCIP_CUTOFF);
-            enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetMaxsepacuts(set, root));
+            if( (set->poolfreq == 0 && actdepth == 0) || (set->poolfreq > 0 && actdepth % set->poolfreq == 0) )
+            {
+               debugMessage("global cut pool separation\n");
+               assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+               CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepastore, root, &result) );
+               *cutoff = *cutoff || (result == SCIP_CUTOFF);
+               enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetMaxsepacuts(set, root));
+            }
          }
          assert(lp->flushed);
          assert(lp->solved);
@@ -1516,7 +1519,8 @@ RETCODE solveNode(
             /* branch on LP solution */
             debugMessage("infeasibility in depth %d was not resolved: branch on LP solution with %d fractionals\n",
                SCIPnodeGetDepth(focusnode), nlpcands);
-            CHECK_OKAY( SCIPbranchExecLP(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, TRUE, &result) );
+            CHECK_OKAY( SCIPbranchExecLP(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
+                  primal->upperbound, TRUE, &result) );
             assert(result != SCIP_DIDNOTRUN);
          }
          else
@@ -1524,7 +1528,8 @@ RETCODE solveNode(
             /* branch on pseudo solution */
             debugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
                SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
-            CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, TRUE, &result) );
+            CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+                  primal->upperbound, TRUE, &result) );
          }
 
          switch( result )
@@ -1838,7 +1843,10 @@ RETCODE SCIPsolveCIP(
 
       /* if no more node was selected, we finished optimization */
       if( focusnode == NULL )
+      {
+         assert(SCIPtreeGetNNodes(tree) == 0);
          break;
+      }
 
       /* update maxdepth and node count statistics */
       depth = SCIPnodeGetDepth(focusnode);
@@ -1931,7 +1939,8 @@ RETCODE SCIPsolveCIP(
                }
                else
                {
-                  CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, FALSE, &result) );
+                  CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+                        primal->upperbound, FALSE, &result) );
                   assert(result != SCIP_DIDNOTRUN);
                }
             }
@@ -1967,7 +1976,7 @@ RETCODE SCIPsolveCIP(
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-   debugMessage("Problem solving finished\n");
+   debugMessage("Problem solving finished (stopped=%d, restart=%d)\n", SCIPsolveIsStopped(set, stat), *restart);
 
    /* free sorted constraint handler arrays */
    freeMemoryArrayNull(&conshdlrs_sepa);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.9 2004/09/21 12:07:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.10 2004/10/05 11:01:35 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -33,6 +33,7 @@
 #define BRANCHRULE_DESC          "all variables full strong branching"
 #define BRANCHRULE_PRIORITY      -1000
 #define BRANCHRULE_MAXDEPTH      -1
+#define BRANCHRULE_MAXBOUNDDIST  1.0
 
 
 /** branching rule data */
@@ -458,10 +459,11 @@ RETCODE SCIPincludeBranchruleAllfullstrong(
    branchruledata->lastcand = 0;
 
    /* include allfullstrong branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                  branchFreeAllfullstrong, branchInitAllfullstrong, branchExitAllfullstrong, 
-                  branchExeclpAllfullstrong, branchExecpsAllfullstrong,
-                  branchruledata) );
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchFreeAllfullstrong, branchInitAllfullstrong, branchExitAllfullstrong, 
+         branchExeclpAllfullstrong, branchExecpsAllfullstrong,
+         branchruledata) );
 
    return SCIP_OKAY;
 }

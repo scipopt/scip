@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.31 2004/09/13 15:11:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.32 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -45,6 +45,7 @@
 
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
+#define ALLOWLOCAL                 TRUE
 
 
 /** separator data */
@@ -110,6 +111,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    int c;
    int i;
    Bool success;
+   Bool cutislocal;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -214,8 +216,9 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                CHECK_OKAY( SCIPgetLPBInvRow(scip, i, binvrow) );
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, binvrow, 1.0,
-                     cutcoef, &cutrhs, &cutact, &success) );
+               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, 0.05, binvrow, 1.0,
+                     cutcoef, &cutrhs, &cutact, &success, &cutislocal) );
+               assert(ALLOWLOCAL || !cutislocal);
                debugMessage("  -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
                /* if successful, convert dense cut into sparse row, and add the row as a cut */
@@ -272,7 +275,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      /* create the cut */
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
-                                    (depth > 0), FALSE, sepadata->dynamiccuts) );
+                           cutislocal, FALSE, sepadata->dynamiccuts) );
 
                      /* try to scale the cut to integral values */
                      CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, maxdnom, maxscale, &success) );
@@ -291,6 +294,10 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
                         debug(SCIPprintRow(scip, cut, NULL));
                         CHECK_OKAY( SCIPaddCut(scip, cut, 1.0) );
+                        if( !cutislocal )
+                        {
+                           CHECK_OKAY( SCIPaddPoolCut(scip, cut) );
+                        }
                         *result = SCIP_SEPARATED;
                         ncuts++;
                      }

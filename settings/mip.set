@@ -154,6 +154,10 @@ separating/cutorthofac = 1
 # [type: int, range: [-1,2147483647], default: 100]
 separating/cutagelimit = 100
 
+# separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/poolfreq = -1
+
 # maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
 # [type: int, range: [-1,2147483647], default: 200]
 constraints/consagelimit = 200
@@ -318,13 +322,13 @@ constraints/linear/tightenboundsfreq = 1
 # [type: real, range: [0,1.79769313486232e+308], default: 5]
 constraints/linear/maxaggrnormscale = 5
 
-# maximal number of separation rounds per node
-# [type: int, range: [0,2147483647], default: 5]
+# maximal number of separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/maxrounds = 5
 
-# maximal number of separation rounds per node in the root node
-# [type: int, range: [0,2147483647], default: 10]
-constraints/linear/maxroundsroot = 10
+# maximal number of separation rounds per node in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/linear/maxroundsroot = -1
 
 # maximal number of cuts separated per separation round
 # [type: int, range: [0,2147483647], default: 50]
@@ -406,13 +410,13 @@ constraints/knapsack/maxprerounds = -1
 # [type: int, range: [-1,2147483647], default: 10]
 constraints/knapsack/sepacardfreq = 0
 
-# maximal number of separation rounds per node
-# [type: int, range: [0,2147483647], default: 5]
+# maximal number of separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
 constraints/knapsack/maxrounds = 5
 
-# maximal number of separation rounds per node in the root node
-# [type: int, range: [0,2147483647], default: 10]
-constraints/knapsack/maxroundsroot = 10
+# maximal number of separation rounds per node in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/knapsack/maxroundsroot = -1
 
 # maximal number of cuts separated per separation round
 # [type: int, range: [0,2147483647], default: 50]
@@ -606,6 +610,10 @@ branching/allfullstrong/priority = -1000
 # [type: int, range: [-1,2147483647], default: -1]
 branching/allfullstrong/maxdepth = -1
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+branching/allfullstrong/maxbounddist = 1
+
 # priority of branching rule <fullstrong>
 # [type: int, range: [-2147483648,2147483647], default: 0]
 branching/fullstrong/priority = 0
@@ -614,6 +622,10 @@ branching/fullstrong/priority = 0
 # [type: int, range: [-1,2147483647], default: -1]
 branching/fullstrong/maxdepth = -1
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+branching/fullstrong/maxbounddist = 1
+
 # priority of branching rule <inference>
 # [type: int, range: [-2147483648,2147483647], default: 1000]
 branching/inference/priority = 1000
@@ -621,6 +633,10 @@ branching/inference/priority = 1000
 # maximal depth level, up to which branching rule <inference> should be used (-1 for no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 branching/inference/maxdepth = -1
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+branching/inference/maxbounddist = 1
 
 # factor to weigh average number of cutoffs in branching score
 # [type: real, range: [0,1.79769313486232e+308], default: 1]
@@ -634,6 +650,10 @@ branching/mostinf/priority = 100
 # [type: int, range: [-1,2147483647], default: -1]
 branching/mostinf/maxdepth = -1
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+branching/mostinf/maxbounddist = 1
+
 # priority of branching rule <leastinf>
 # [type: int, range: [-2147483648,2147483647], default: 50]
 branching/leastinf/priority = 50
@@ -642,6 +662,22 @@ branching/leastinf/priority = 50
 # [type: int, range: [-1,2147483647], default: -1]
 branching/leastinf/maxdepth = -1
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+branching/leastinf/maxbounddist = 1
+
+# priority of branching rule <pscost>
+# [type: int, range: [-2147483648,2147483647], default: 2000]
+branching/pscost/priority = 2000
+
+# maximal depth level, up to which branching rule <pscost> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/pscost/maxdepth = -1
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+branching/pscost/maxbounddist = 1
+
 # priority of branching rule <relpscost>
 # [type: int, range: [-2147483648,2147483647], default: 10000]
 branching/relpscost/priority = 10000
@@ -649,6 +685,10 @@ branching/relpscost/priority = 10000
 # maximal depth level, up to which branching rule <relpscost> should be used (-1 for no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 branching/relpscost/maxdepth = -1
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+branching/relpscost/maxbounddist = 1
 
 # minimal value for minimum pseudo cost size to regard pseudo cost value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 8]
@@ -768,7 +808,7 @@ heuristics/fixandinfer/priority = -500000
 
 # frequency for calling primal heuristic <fixandinfer> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
-heuristics/fixandinfer/freq = 5
+heuristics/fixandinfer/freq = 0
 
 # frequency offset for calling primal heuristic <fixandinfer>
 # [type: int, range: [0,2147483647], default: 0]
@@ -821,6 +861,50 @@ heuristics/fracdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet
 # [type: real, range: [0,1.79769313486232e+308], default: 8]
 heuristics/fracdiving/maxdiveavgquotnosol = 8
+
+# priority of heuristic <guideddiving>
+# [type: int, range: [-2147483648,2147483647], default: -1007000]
+heuristics/guideddiving/priority = -1007000
+
+# frequency for calling primal heuristic <guideddiving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/guideddiving/freq = 10
+
+# frequency offset for calling primal heuristic <guideddiving>
+# [type: int, range: [0,2147483647], default: 7]
+heuristics/guideddiving/freqofs = 7
+
+# maximal depth level to call primal heuristic <guideddiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/guideddiving/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0]
+heuristics/guideddiving/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/guideddiving/maxreldepth = 1
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.02]
+heuristics/guideddiving/maxlpiterquot = 0.02
+
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristics/guideddiving/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
+heuristics/guideddiving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristics/guideddiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
+heuristics/guideddiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <linesearchdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1006000]
@@ -1022,12 +1106,16 @@ propagation/pseudoobj/priority = 0
 # [type: int, range: [-1,2147483647], default: 1]
 propagation/pseudoobj/freq = 1
 
+# maximal number of variables to look at in a single propagation round (-1: process all variables)
+# [type: int, range: [-1,2147483647], default: 100]
+propagation/pseudoobj/maxcands = 100
+
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -1000]
 separating/cmir/priority = -1000
 
 # frequency for calling separator <cmir> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 25]
+# [type: int, range: [-1,2147483647], default: 20]
 separating/cmir/freq = 0
 
 # maximal number of cmir separation rounds per node (-1: unlimited)
@@ -1038,13 +1126,13 @@ separating/cmir/maxrounds = 3
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cmir/maxroundsroot = -1
 
-# maximal number of cmir cuts separated per separation round
-# [type: int, range: [0,2147483647], default: 50]
-separating/cmir/maxsepacuts = 50
+# maximal number of rows to start aggregation with per separation round (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 100]
+separating/cmir/maxtries = 100
 
-# maximal number of cmir cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 500]
-separating/cmir/maxsepacutsroot = 500
+# maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/cmir/maxtriesroot = -1
 
 # maximal number of aggregations for each row per separation round
 # [type: int, range: [0,2147483647], default: 4]
@@ -1054,13 +1142,21 @@ separating/cmir/maxaggrs = 4
 # [type: int, range: [0,2147483647], default: 8]
 separating/cmir/maxaggrsroot = 8
 
-# should generated cuts be removed from the LP if they are no longer tight?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cmir/dynamiccuts = TRUE
+# maximal number of cmir cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 50]
+separating/cmir/maxsepacuts = 50
 
-# maximal slack of rows to be used
+# maximal number of cmir cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 500]
+separating/cmir/maxsepacutsroot = 500
+
+# maximal slack of rows to be used in aggregation
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+separating/cmir/maxslack = 0
+
+# maximal slack of rows to be used in aggregation in the root node
 # [type: real, range: [0,1.79769313486232e+308], default: 0.1]
-separating/cmir/maxslack = 0.1
+separating/cmir/maxslackroot = 0.1
 
 # weight of slack in the aggregation scoring of the rows
 # [type: real, range: [0,1.79769313486232e+308], default: 0.001]
@@ -1074,13 +1170,25 @@ separating/cmir/maxrowfac = 10000
 # [type: int, range: [-2147483648,0], default: -10000]
 separating/cmir/minrowfac = -10000
 
-# maximal number of different deltas tested
+# maximal number of different deltas to try
+# [type: int, range: [0,2147483647], default: 20]
+separating/cmir/maxtestdelta = 20
+
+# maximal number of different deltas to try in the root node
 # [type: int, range: [0,2147483647], default: 100]
-separating/cmir/maxtestdelta = 100
+separating/cmir/maxtestdeltaroot = 100
 
 # maximal number of active continuous variables in aggregated row
 # [type: int, range: [0,2147483647], default: 10]
 separating/cmir/maxconts = 10
+
+# maximal number of active continuous variables in aggregated row in the root node
+# [type: int, range: [0,2147483647], default: 10]
+separating/cmir/maxcontsroot = 10
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cmir/dynamiccuts = TRUE
 
 # priority of separator <gomory>
 # [type: int, range: [-2147483648,2147483647], default: 0]

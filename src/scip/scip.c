@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.211 2004/09/23 15:46:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.212 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1636,6 +1636,9 @@ RETCODE SCIPincludeBranchrule(
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
    int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying branching rule
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -1648,8 +1651,8 @@ RETCODE SCIPincludeBranchrule(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth,
-         branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
+   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth, 
+         maxbounddist, branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
    CHECK_OKAY( SCIPsetIncludeBranchrule(scip->set, branchrule) );
    
    return SCIP_OKAY;
@@ -1713,7 +1716,21 @@ RETCODE SCIPsetBranchruleMaxdepth(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetBranchruleMaxdepth", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIPbranchruleSetMaxdepth(branchrule, scip->set, maxdepth);
+   SCIPbranchruleSetMaxdepth(branchrule, maxdepth);
+
+   return SCIP_OKAY;
+}
+
+/** sets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
+RETCODE SCIPsetBranchruleMaxbounddist(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   Real             maxbounddist        /**< new maxbounddist of the branching rule */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetBranchruleMaxbounddist", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPbranchruleSetMaxbounddist(branchrule, maxbounddist);
 
    return SCIP_OKAY;
 }
@@ -3390,6 +3407,9 @@ RETCODE freeSolve(
    /* clear the LP, and flush the changes to clear the LP of the solver */
    CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
    CHECK_OKAY( SCIPlpFlush(scip->lp, scip->mem->solvemem, scip->set) );
+   
+   /* clear all row references in internal data structures */
+   CHECK_OKAY( SCIPcutpoolClear(scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
 
    /* deinitialize constraint handlers */
    for( h = 0; h < scip->set->nconshdlrs; ++h )
@@ -6720,19 +6740,21 @@ RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
-   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
-         boundswitch, usevbds, minfrac, weights, scale, mircoef, mirrhs, cutactivity, success) );
+         boundswitch, usevbds, allowlocal, minfrac, weights, scale, mircoef, mirrhs, cutactivity, success, cutislocal) );
 
    return SCIP_OKAY;
 }
@@ -7985,7 +8007,7 @@ RETCODE SCIPbranchLP(
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecLP(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->sepastore, scip->branchcand, scip->eventqueue, TRUE, result) );
+         scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->upperbound, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -7999,7 +8021,7 @@ RETCODE SCIPbranchPseudo(
    CHECK_OKAY( checkStage(scip, "SCIPbranchPseudo", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecPseudo(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->branchcand, scip->eventqueue, TRUE, result) );
+         scip->branchcand, scip->eventqueue, scip->primal->upperbound, TRUE, result) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.26 2004/09/29 19:17:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.27 2004/10/05 11:01:37 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1373,7 +1373,8 @@ RETCODE SCIPlpiSolveDual(
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 RETCODE SCIPlpiSolveBarrier(
-   LPI*             lpi                 /**< LP interface structure */
+   LPI*             lpi,                /**< LP interface structure */
+   Bool             crossover            /**< perform crossover */
    )
 {
    debugMessage("calling SCIPlpiSolveBarrier()\n");

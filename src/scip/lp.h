@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.88 2004/09/23 15:46:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.89 2004/10/05 11:01:37 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -648,13 +648,15 @@ RETCODE SCIPlpCalcMIR(
    PROB*            prob,               /**< problem data */
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
-   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    );
 
 /** stores LP state (like basis information) into LP state object */

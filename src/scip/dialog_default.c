@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.30 2004/09/23 15:46:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.31 2004/10/05 11:01:36 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -177,14 +177,15 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
 
    /* display sorted list of branching rules */
    printf("\n");
-   printf(" branching rule       priority maxdepth  description\n");
-   printf(" --------------       -------- --------  -----------\n");
+   printf(" branching rule       priority maxdepth maxbddist  description\n");
+   printf(" --------------       -------- -------- ---------  -----------\n");
    for( i = 0; i < nbranchrules; ++i )
    {
       printf(" %-20s ", SCIPbranchruleGetName(sorted[i]));
       if( strlen(SCIPbranchruleGetName(sorted[i])) > 20 )
          printf("\n %20s ", "-->");
-      printf("%8d %8d  ", SCIPbranchruleGetPriority(sorted[i]), SCIPbranchruleGetMaxdepth(sorted[i]));
+      printf("%8d %8d %8.1f%%  ", SCIPbranchruleGetPriority(sorted[i]), SCIPbranchruleGetMaxdepth(sorted[i]),
+         100.0 * SCIPbranchruleGetMaxbounddist(sorted[i]));
       printf(SCIPbranchruleGetDesc(sorted[i]));
       printf("\n");
    }

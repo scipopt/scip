@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.9 2004/09/21 12:08:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.10 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -55,6 +55,9 @@ struct BranchCand
 /** branching rule */
 struct Branchrule
 {
+   Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying branching rule
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
    Longint          nlpcalls;           /**< number of times, this branching rule was called on an LP solution */
    Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
    Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.41 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.42 2004/10/05 11:01:36 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -450,11 +450,17 @@ DECL_DISPOUTPUT(SCIPdispOutputStrongbranchs)
 static
 DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
 {  /*lint --e{715}*/
+   Real curdualbound;
+
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURDUALBOUND) == 0);
    assert(scip != NULL);
 
-   fprintf(file, "%13.6e ", SCIPgetLocalDualbound(scip));
+   curdualbound = SCIPgetLocalDualbound(scip);
+   if( SCIPisInfinity(scip, ABS(curdualbound)) )
+      fprintf(file, "      --      ");
+   else
+      fprintf(file, "%13.6e ", curdualbound);
 
    return SCIP_OKAY;
 }
@@ -462,11 +468,17 @@ DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
 static
 DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
 {  /*lint --e{715}*/
+   Real avgdualbound;
+
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_AVGDUALBOUND) == 0);
    assert(scip != NULL);
 
-   fprintf(file, "%13.6e ", SCIPgetAvgDualbound(scip));
+   avgdualbound = SCIPgetAvgDualbound(scip);
+   if( SCIPisInfinity(scip, ABS(avgdualbound)) )
+      fprintf(file, "      --      ");
+   else
+      fprintf(file, "%13.6e ", avgdualbound);
 
    return SCIP_OKAY;
 }
@@ -474,11 +486,17 @@ DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
 static
 DECL_DISPOUTPUT(SCIPdispOutputDualbound)
 {  /*lint --e{715}*/
+   Real dualbound;
+
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_DUALBOUND) == 0);
    assert(scip != NULL);
 
-   fprintf(file, "%13.6e ", SCIPgetDualbound(scip));
+   dualbound = SCIPgetDualbound(scip);
+   if( SCIPisInfinity(scip, ABS(dualbound)) )
+      fprintf(file, "      --      ");
+   else
+      fprintf(file, "%13.6e ", dualbound);
 
    return SCIP_OKAY;
 }

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.6 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.7 2004/10/05 11:01:38 bzfpfend Exp $"
 
 /**@file   pub_branch.h
  * @brief  public methods for branching rules
@@ -70,6 +70,12 @@ int SCIPbranchruleGetPriority(
 /** gets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
 extern
 int SCIPbranchruleGetMaxdepth(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
+extern
+Real SCIPbranchruleGetMaxbounddist(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.66 2004/09/23 15:46:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.67 2004/10/05 11:01:39 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -328,6 +328,18 @@ RETCODE SCIPtreeEndProbing(
  * type validity.
  */
 
+/** gets number of children */
+extern
+int SCIPtreeGetNChildren(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets number of siblings */
+extern
+int SCIPtreeGetNSiblings(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
 /** gets number of leaves */
 extern
 int SCIPtreeGetNLeaves(
@@ -408,7 +420,10 @@ NODE* SCIPtreeGetProbingNode(
  */
 
 #define SCIPtreeGetNLeaves(tree)        SCIPnodepqLen((tree)->leaves)
-#define SCIPtreeGetNNodes(tree)         ((tree)->nchildren + (tree)->nsiblings + SCIPtreeGetNLeaves(tree))
+#define SCIPtreeGetNChildren(tree)      ((tree)->nchildren)
+#define SCIPtreeGetNSiblings(tree)      ((tree)->nsiblings)
+#define SCIPtreeGetNNodes(tree)         \
+   (SCIPtreeGetNChildren(tree) + SCIPtreeGetNSiblings(tree) + SCIPtreeGetNLeaves(tree))
 #define SCIPtreeIsPathComplete(tree)    ((tree)->focusnode == NULL || (tree)->focusnode->depth < (tree)->pathlen)
 #define SCIPtreeGetFocusNode(tree)      (tree)->focusnode
 #define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (tree)->focusnode->depth : -1)
