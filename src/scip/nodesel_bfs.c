@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.29 2004/06/01 18:04:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.30 2004/07/07 18:06:14 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -103,10 +103,16 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
 
-   /* check, if we want to plunge once more */
+   /* get current lower bound and global lower and upper bounds */
    curlowerbound = SCIPgetLocalLowerbound(scip);
    lowerbound = SCIPgetLowerbound(scip);
    upperbound = SCIPgetUpperbound(scip);
+
+   /* if we didn't find a solution yet, the upper bound is usually very bad: use only 20% of the gap as upper bound */
+   if( SCIPgetNSolsFound(scip) == 0 )
+      upperbound = lowerbound + 0.2 * (upperbound - lowerbound);
+
+   /* check, if we want to plunge once more */
    plungedepth = SCIPgetPlungeDepth(scip);
    maxplungequot = nodeseldata->maxplungequot;
    if( plungedepth < nodeseldata->minplungedepth

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.h,v 1.1 2004/07/07 09:52:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.h,v 1.2 2004/07/07 18:06:13 bzfpfend Exp $"
 
 /**@file   heur_feaspump.h
- * @brief  feasibility pump heuristic from Fischetti, Glover and Lodi 
+ * @brief  feasibility pump heuristic by Fischetti, Glover and Lodi 
  * @author Kati Wolter
  */
 

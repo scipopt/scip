@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.13 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.14 2004/07/07 18:06:13 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -32,9 +32,9 @@
 #define HEUR_NAME             "fracdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
 #define HEUR_DISPCHAR         'f'
-#define HEUR_PRIORITY         -1000000
+#define HEUR_PRIORITY         -1002000
 #define HEUR_FREQ             10
-#define HEUR_FREQOFS          0
+#define HEUR_FREQOFS          2
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
@@ -45,15 +45,15 @@
  * Default parameter settings
  */
 
-#define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
-#define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT       0.1 /**< maximal fraction of diving LP iterations compared to total iteration number */
-#define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
-                                         *   where diving is performed */
-#define DEFAULT_MAXDIVEAVGQUOT      4.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                         *   where diving is performed */
-#define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet */
-#define DEFAULT_MAXDIVEAVGQUOTNOSOL 8.0 /**< maximal AVGQUOT when no solution was found yet */
+#define DEFAULT_MINRELDEPTH         0.0  /**< minimal relative depth to start diving */
+#define DEFAULT_MAXRELDEPTH         1.0  /**< maximal relative depth to start diving */
+#define DEFAULT_MAXLPITERQUOT       0.02 /**< maximal fraction of diving LP iterations compared to total iteration number */
+#define DEFAULT_MAXDIVEUBQUOT       0.8  /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
+                                          *   where diving is performed */
+#define DEFAULT_MAXDIVEAVGQUOT      4.0  /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                          *   where diving is performed */
+#define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1  /**< maximal UBQUOT when no solution was found yet */
+#define DEFAULT_MAXDIVEAVGQUOTNOSOL 8.0  /**< maximal AVGQUOT when no solution was found yet */
 
 
 
@@ -231,9 +231,6 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
 
-
-   *result = SCIP_DIDNOTFIND;
-
    /* calculate the objective search bound */
    if( SCIPgetNSolsFound(scip) == 0 )
    {
@@ -255,6 +252,9 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
+
+
+   *result = SCIP_DIDNOTFIND;
 
    /* start diving */
    CHECK_OKAY( SCIPstartDive(scip) );

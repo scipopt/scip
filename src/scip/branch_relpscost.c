@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.5 2004/06/02 07:39:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.6 2004/07/07 18:06:12 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -34,11 +34,11 @@
 #define BRANCHRULE_PRIORITY      10000
 #define BRANCHRULE_MAXDEPTH      -1
 
-#define DEFAULT_MINRELIABLE      4.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MINRELIABLE      8.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
 #define DEFAULT_SBITEROFS    10000      /**< additional number of allowed strong branching LP iterations */
-#define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
+#define DEFAULT_MAXLOOKAHEAD     4      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
 

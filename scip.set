@@ -19,35 +19,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal variable distance value to use for branching pseudo cost updates
-# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
+# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
 numerics/pseudocosteps = 0.1
 
 # minimal objective distance value to use for branching pseudo cost updates
@@ -583,12 +583,12 @@ branching/relpscost/priority = 10000
 branching/relpscost/maxdepth = -1
 
 # minimal value for minimum pseudo cost size to regard pseudo cost value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-branching/relpscost/minreliable = 4
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
+branching/relpscost/minreliable = 8
 
 # maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 16]
-branching/relpscost/maxreliable = 16
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
+branching/relpscost/maxreliable = 8
 
 # maximal fraction of strong branching LP iterations compared to node relaxation LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -599,8 +599,8 @@ branching/relpscost/sbiterquot = 0.5
 branching/relpscost/sbiterofs = 10000
 
 # maximal number of further variables evaluated without better score
-# [type: int, range: [1,2147483647], default: 8]
-branching/relpscost/maxlookahead = 8
+# [type: int, range: [1,2147483647], default: 4]
+branching/relpscost/maxlookahead = 4
 
 # maximal number of candidates initialized with strong branching per node
 # [type: int, range: [0,2147483647], default: 100]
@@ -620,7 +620,7 @@ heuristics/coefdiving/freq = 10
 
 # frequency offset for calling primal heuristic <coefdiving>
 # [type: int, range: [0,2147483647], default: 1]
-heuristics/coefdiving/freqofs = 2
+heuristics/coefdiving/freqofs = 1
 
 # maximal depth level to call primal heuristic <coefdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -635,8 +635,8 @@ heuristics/coefdiving/minreldepth = 0
 heuristics/coefdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.1]
-heuristics/coefdiving/maxlpiterquot = 0.1
+# [type: real, range: [0,1], default: 0.02]
+heuristics/coefdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -671,12 +671,16 @@ heuristics/feaspump/freqofs = 3
 heuristics/feaspump/maxdepth = -1
 
 # minimal relative depth to start diving
-# [type: real, range: [0,1], default: 0.5]
-heuristics/feaspump/divestartdepth = 0.5
+# [type: real, range: [0,1], default: 0]
+heuristics/feaspump/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/feaspump/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.1]
-heuristics/feaspump/maxlpiterquot = 0.1
+# [type: real, range: [0,1], default: 0.01]
+heuristics/feaspump/maxlpiterquot = 0.01
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -686,33 +690,17 @@ heuristics/feaspump/depthfac = 0.5
 # [type: real, range: [0,1.79769313486232e+308], default: 2]
 heuristics/feaspump/depthfacnosol = 2
 
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
-# [type: real, range: [0,1], default: 0.8]
-heuristics/feaspump/maxdiveubquot = 0.8
-
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1e+99], default: 4]
-heuristics/feaspump/maxdiveavgquot = 4
-
-# maximal UBQUOT when no solution was found yet
-# [type: real, range: [0,1], default: 0.1]
-heuristics/feaspump/maxdiveubquotnosol = 0.1
-
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1e+99], default: 8]
-heuristics/feaspump/maxdiveavgquotnosol = 8
-
 # priority of heuristic <fracdiving>
-# [type: int, range: [-2147483648,2147483647], default: -1000000]
-heuristics/fracdiving/priority = -1000000
+# [type: int, range: [-2147483648,2147483647], default: -1002000]
+heuristics/fracdiving/priority = -1002000
 
 # frequency for calling primal heuristic <fracdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/fracdiving/freq = 10
 
 # frequency offset for calling primal heuristic <fracdiving>
-# [type: int, range: [0,2147483647], default: 0]
-heuristics/fracdiving/freqofs = 0
+# [type: int, range: [0,2147483647], default: 2]
+heuristics/fracdiving/freqofs = 2
 
 # maximal depth level to call primal heuristic <fracdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -727,8 +715,8 @@ heuristics/fracdiving/minreldepth = 0
 heuristics/fracdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.1]
-heuristics/fracdiving/maxlpiterquot = 0.1
+# [type: real, range: [0,1], default: 0.02]
+heuristics/fracdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -748,7 +736,7 @@ heuristics/fracdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
-heuristics/objpscostdiving/priority = -1003000
+heuristics/objpscostdiving/priority = -1004000
 
 # frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
@@ -756,7 +744,7 @@ heuristics/objpscostdiving/freq = 10
 
 # frequency offset for calling primal heuristic <objpscostdiving>
 # [type: int, range: [0,2147483647], default: 4]
-heuristics/objpscostdiving/freqofs = 6
+heuristics/objpscostdiving/freqofs = 4
 
 # maximal depth level to call primal heuristic <objpscostdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -771,8 +759,8 @@ heuristics/objpscostdiving/minreldepth = 0
 heuristics/objpscostdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.1]
-heuristics/objpscostdiving/maxlpiterquot = 0.1
+# [type: real, range: [0,1], default: 0.01]
+heuristics/objpscostdiving/maxlpiterquot = 0.01
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -783,16 +771,16 @@ heuristics/objpscostdiving/depthfac = 0.5
 heuristics/objpscostdiving/depthfacnosol = 2
 
 # priority of heuristic <pscostdiving>
-# [type: int, range: [-2147483648,2147483647], default: -1002000]
-heuristics/pscostdiving/priority = -1002000
+# [type: int, range: [-2147483648,2147483647], default: -1000000]
+heuristics/pscostdiving/priority = -1000000
 
 # frequency for calling primal heuristic <pscostdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/pscostdiving/freq = 10
 
 # frequency offset for calling primal heuristic <pscostdiving>
-# [type: int, range: [0,2147483647], default: 2]
-heuristics/pscostdiving/freqofs = 4
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/pscostdiving/freqofs = 0
 
 # maximal depth level to call primal heuristic <pscostdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -807,8 +795,8 @@ heuristics/pscostdiving/minreldepth = 0
 heuristics/pscostdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.1]
-heuristics/pscostdiving/maxlpiterquot = 0.1
+# [type: real, range: [0,1], default: 0.02]
+heuristics/pscostdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -843,12 +831,16 @@ heuristics/rootsoldiving/freqofs = 5
 heuristics/rootsoldiving/maxdepth = -1
 
 # minimal relative depth to start diving
-# [type: real, range: [0,1], default: 0.5]
-heuristics/rootsoldiving/divestartdepth = 0.5
+# [type: real, range: [0,1], default: 0]
+heuristics/rootsoldiving/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/rootsoldiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.1]
-heuristics/rootsoldiving/maxlpiterquot = 0.1
+# [type: real, range: [0,1], default: 0.01]
+heuristics/rootsoldiving/maxlpiterquot = 0.01
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -857,22 +849,6 @@ heuristics/rootsoldiving/depthfac = 0.5
 # maximal diving depth factor if no feasible solution was found yet
 # [type: real, range: [0,1.79769313486232e+308], default: 2]
 heuristics/rootsoldiving/depthfacnosol = 2
-
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
-# [type: real, range: [0,1], default: 0.8]
-heuristics/rootsoldiving/maxdiveubquot = 0.8
-
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1e+99], default: 4]
-heuristics/rootsoldiving/maxdiveavgquot = 4
-
-# maximal UBQUOT when no solution was found yet
-# [type: real, range: [0,1], default: 0.1]
-heuristics/rootsoldiving/maxdiveubquotnosol = 0.1
-
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1e+99], default: 8]
-heuristics/rootsoldiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <rounding>
 # [type: int, range: [-2147483648,2147483647], default: -1000]
@@ -919,8 +895,8 @@ separating/cmir/freq = 25
 separating/cmir/maxrounds = 5
 
 # maximal number of cmir separation rounds in the root node
-# [type: int, range: [0,2147483647], default: 10]
-separating/cmir/maxroundsroot = 10
+# [type: int, range: [0,2147483647], default: 20]
+separating/cmir/maxroundsroot = 20
 
 # maximal number of cmir cuts separated per separation round
 # [type: int, range: [0,2147483647], default: 25]
@@ -931,8 +907,8 @@ separating/cmir/maxsepacuts = 25
 separating/cmir/maxsepacutsroot = 100
 
 # maximal number of aggregations for each row per separation round
-# [type: int, range: [0,2147483647], default: 5]
-separating/cmir/maxaggrs = 5
+# [type: int, range: [0,2147483647], default: 4]
+separating/cmir/maxaggrs = 4
 
 # maximal number of aggregations for each row per separation round in the root node
 # [type: int, range: [0,2147483647], default: 8]
@@ -942,9 +918,17 @@ separating/cmir/maxaggrsroot = 8
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/cmir/dynamiccuts = FALSE
 
+# min. violation of c-MIR cut to be used
+# [type: real, range: [0,1.79769313486232e+308], default: 0.2]
+separating/cmir/minviolation = 0.2
+
 # maximal slack of rows to be used
 # [type: real, range: [0,1.79769313486232e+308], default: 0.1]
 separating/cmir/maxslack = 0.1
+
+# weight of slack in the aggregation scoring of the rows
+# [type: real, range: [0,1.79769313486232e+308], default: 0.001]
+separating/cmir/slackscore = 0.001
 
 # maximal row aggregation factor
 # [type: int, range: [0,2147483647], default: 10000]
@@ -955,8 +939,8 @@ separating/cmir/maxrowfac = 10000
 separating/cmir/minrowfac = -10000
 
 # maximal number of different deltas tested
-# [type: int, range: [0,2147483647], default: 128]
-separating/cmir/maxtestdelta = 128
+# [type: int, range: [0,2147483647], default: 100]
+separating/cmir/maxtestdelta = 100
 
 # maximal number of cont. vars in aggregated row
 # [type: int, range: [0,2147483647], default: 10]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.6 2004/07/07 09:52:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.7 2004/07/07 18:06:13 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -45,11 +45,11 @@
  * Default parameter settings
  */
 
-#define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
-#define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT       0.1 /**< maximal fraction of diving LP iterations compared to total iteration number */
-#define DEFAULT_DEPTHFAC            0.5 /**< maximal diving depth: number of binary/integer variables times depthfac */
-#define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
+#define DEFAULT_MINRELDEPTH        0.0  /**< minimal relative depth to start diving */
+#define DEFAULT_MAXRELDEPTH        1.0  /**< maximal relative depth to start diving */
+#define DEFAULT_MAXLPITERQUOT      0.01 /**< maximal fraction of diving LP iterations compared to total iteration number */
+#define DEFAULT_DEPTHFAC           0.5  /**< maximal diving depth: number of binary/integer variables times depthfac */
+#define DEFAULT_DEPTHFACNOSOL      2.0  /**< maximal diving depth factor if no feasible solution was found yet */
 
 
 /* locally defined heuristic data */
@@ -276,15 +276,15 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
 
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
+   /* calculate the maximal diving depth */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
       maxdivedepth = heurdata->depthfacnosol * nvars;
    else
       maxdivedepth = heurdata->depthfac * nvars;
+
+
+   *result = SCIP_DIDNOTFIND;
 
    /* get temporary memory for remembering the current soft roundings */
    CHECK_OKAY( SCIPallocBufferArray(scip, &roundings, nvars) );

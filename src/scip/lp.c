@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.125 2004/07/07 09:52:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.126 2004/07/07 18:06:13 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6538,6 +6538,18 @@ RETCODE SCIPlpCalcMIR(
    substituteMIRRow(set, stat, lp, weights, scale, mircoef, mirrhs, slacksign, f0, cutactivity);
 
    *success = TRUE;
+
+#ifndef NDEBUG
+   {
+      Real act;
+      int i;
+
+      act = 0.0;
+      for( i = 0; i < nvars; ++i )
+         act += mircoef[i] * SCIPvarGetLPSol(vars[i]);
+      assert(SCIPsetIsSumEQ(set, act, *cutactivity));
+   }
+#endif
 
  TERMINATE:
    /* free temporary memory */
