@@ -1652,12 +1652,6 @@ RETCODE SCIPincludeConsHdlrSetcover(
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
-   /* set covering constraint handler parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
-                  "conshdlr_setcover_npseudobranches", 
-                  "number of children created in pseudo branching",
-                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
-   
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
@@ -1672,6 +1666,12 @@ RETCODE SCIPincludeConsHdlrSetcover(
    /* include the linear constraint to set covering constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetcover, LINCONSUPGD_PRIORITY) );
 
+   /* set covering constraint handler parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "conshdlr/setcover/npseudobranches", 
+                  "number of children created in pseudo branching",
+                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 

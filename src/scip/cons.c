@@ -1012,11 +1012,13 @@ DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)  /**< compares two constraint handlers w
 /** creates a constraint handler */
 RETCODE SCIPconshdlrCreate(
    CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int              checkpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              checkpriority,      /**< priority of the constraint handler for checking infeasibility */
    int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
@@ -1036,6 +1038,8 @@ RETCODE SCIPconshdlrCreate(
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
+   char paramname[MAXSTRLEN];
+
    assert(conshdlr != NULL);
    assert(name != NULL);
    assert(desc != NULL);
@@ -1106,6 +1110,16 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->initialized = FALSE;
    (*conshdlr)->delayupdates = FALSE;
+
+   /* add parameters */
+   sprintf(paramname, "conshdlr/%s/sepafreq", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
+                  paramname, "frequency for separating cuts (-1: never, 0: only in root node)",
+                  &(*conshdlr)->sepafreq, sepafreq, -1, INT_MAX, NULL, NULL) );
+   sprintf(paramname, "conshdlr/%s/propfreq", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
+                  paramname, "frequency for propagating domains (-1: never, 0: only in root node)",
+                  &(*conshdlr)->propfreq, propfreq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

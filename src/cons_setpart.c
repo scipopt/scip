@@ -2014,12 +2014,6 @@ RETCODE SCIPincludeConsHdlrSetpart(
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
-   /* set partitioning constraint handler parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
-                  "conshdlr_setpart_npseudobranches", 
-                  "number of children created in pseudo branching",
-                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
-   
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
@@ -2034,6 +2028,12 @@ RETCODE SCIPincludeConsHdlrSetpart(
    /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetpart, LINCONSUPGD_PRIORITY) );
 
+   /* set partitioning constraint handler parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "conshdlr/setpart/npseudobranches", 
+                  "number of children created in pseudo branching",
+                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 

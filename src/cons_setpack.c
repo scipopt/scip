@@ -1666,12 +1666,6 @@ RETCODE SCIPincludeConsHdlrSetpack(
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
-   /* set packing constraint handler parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
-                  "conshdlr_setpack_npseudobranches", 
-                  "number of children created in pseudo branching",
-                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
-   
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
@@ -1686,6 +1680,12 @@ RETCODE SCIPincludeConsHdlrSetpack(
    /* include the linear constraint to set packing constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetpack, LINCONSUPGD_PRIORITY) );
 
+   /* set packing constraint handler parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "conshdlr/setpack/npseudobranches", 
+                  "number of children created in pseudo branching",
+                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 

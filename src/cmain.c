@@ -90,7 +90,7 @@ RETCODE runSCIP(
     * Parameters *
     **************/
 
-   CHECK_OKAY( SCIPwriteParams(scip, "scip.set", TRUE) );
+   /*CHECK_OKAY( SCIPwriteParams(scip, "scip.set", TRUE) );*/
    if( SCIPfileExists("scip.set") )
    {
       printf("reading parameter file <scip.set>\n");
