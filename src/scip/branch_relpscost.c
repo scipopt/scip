@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.2 2004/04/15 10:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.3 2004/04/27 15:49:56 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -76,11 +76,11 @@ DECL_BRANCHFREE(branchFreeRelpscost)
 }
 
 
-/** initialization method of branching rule (called when problem solving starts) */
+/** initialization method of branching rule (called after problem was transformed) */
 #define branchInitRelpscost NULL
 
 
-/** deinitialization method of branching rule (called when problem solving exits) */
+/** deinitialization method of branching rule (called before transformed problem is freed) */
 #define branchExitRelpscost NULL
 
 
@@ -190,7 +190,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       ninitcands = 0;
 
       /* get current node number, depth, maximal depth, and number of binary/integer variables */
-      nodenum = SCIPgetNodenum(scip);
+      nodenum = SCIPgetNNodes(scip);
       depth = SCIPgetDepth(scip);
       maxdepth = SCIPgetMaxDepth(scip);
       maxdepth = MAX(maxdepth, MINMAXDEPTH);
@@ -316,7 +316,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          {
             SCIPmessage(scip, SCIP_VERBLEVEL_HIGH,
                "(node %lld) error in strong branching call for variable <%s> with solution %g\n", 
-               SCIPgetNodenum(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
+               SCIPgetNNodes(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
             break;
          }
 

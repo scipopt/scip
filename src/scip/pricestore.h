@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.6 2004/02/04 17:27:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.7 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   pricestore.h
  * @brief  internal methods for storing priced variables
@@ -99,7 +99,7 @@ RETCODE SCIPpricestoreAddProbVars(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -113,7 +113,7 @@ RETCODE SCIPpricestoreApplyVars(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< LP data */
    );
 

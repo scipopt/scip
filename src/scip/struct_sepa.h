@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.4 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.5 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -35,7 +35,7 @@
 /** separators data */
 struct Sepa
 {
-   Longint          lastsepanode;       /**< last node where this separator was called */
+   Longint          lastsepanode;       /**< last (total) node where this separator was called */
    Longint          ncalls;             /**< number of times, this separator was called */
    Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
    char*            name;               /**< name of separator */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.3 2004/02/04 17:27:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.4 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -73,7 +73,7 @@ DECL_SEPAFREE(sepaFreeObj)
 }
 
 
-/** initialization method of cut separator (called when problem solving starts) */
+/** initialization method of cut separator (called after problem was transformed) */
 static
 DECL_SEPAINIT(sepaInitObj)
 {  /*lint --e{715}*/
@@ -90,7 +90,7 @@ DECL_SEPAINIT(sepaInitObj)
 }
 
 
-/** deinitialization method of cut separator (called when problem solving exits) */
+/** deinitialization method of cut separator (called before transformed problem is freed) */
 static
 DECL_SEPAEXIT(sepaExitObj)
 {  /*lint --e{715}*/

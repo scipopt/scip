@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.101 2004/04/19 17:08:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.102 2004/04/27 15:50:04 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -142,7 +142,7 @@ RETCODE redcostStrengthening(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PRIMAL*          primal,             /**< primal data */
@@ -164,12 +164,15 @@ RETCODE redcostStrengthening(
    assert(tree != NULL);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(primal != NULL);
-   assert(!SCIPsetIsInfinity(set, primal->cutoffbound));
    assert(SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->cutoffbound) );
 
    /* we cannot apply reduced cost fixing, if we want to solve exactly */
    /**@todo implement reduced cost fixing with interval arithmetics */
    if( set->exactsolve )
+      return SCIP_OKAY;
+
+   /* reduced cost strengthening can only be applied, if we have an upper bound on the LP value */
+   if( SCIPsetIsInfinity(set, primal->cutoffbound) )
       return SCIP_OKAY;
 
    /* get LP columns */
@@ -436,8 +439,8 @@ RETCODE updatePseudocost(
          assert(var->pseudocostflag != PSEUDOCOST_NONE);
          if( var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
-            SCIPvarUpdatePseudocost(var, set, stat, 
-               SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight);
+            CHECK_OKAY( SCIPvarUpdatePseudocost(var, set, stat, 
+                           SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
          }
          var->pseudocostflag = PSEUDOCOST_NONE;
       }
@@ -480,7 +483,7 @@ RETCODE initRootLP(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    PRICESTORE*      pricestore,         /**< pricing storage */
    SEPASTORE*       sepastore,          /**< separation storage */
@@ -493,6 +496,7 @@ RETCODE initRootLP(
    COL* col;
    int v;
    int h;
+   Bool lperror;
 
    assert(lp != NULL);
    assert(SCIPlpGetNCols(lp) == 0);
@@ -502,6 +506,14 @@ RETCODE initRootLP(
    assert(cutoff != NULL);
 
    *cutoff = FALSE;
+
+   /* make sure, the empty LP is flushed to the LP solver */
+   CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, FALSE, TRUE, &lperror) );
+   if( lperror )
+   {
+      errorMessage("error while solving empty LP\n");
+      return SCIP_LPERROR;
+   }
 
    /* inform pricing and separation storage, that LP is now filled with initial data */
    SCIPpricestoreStartInitialLP(pricestore);
@@ -574,7 +586,6 @@ RETCODE solveNodeInitialLP(
    /* init root node LP */
    if( SCIPnodeGetDepth(tree->actnode) == 0 )
    {
-      assert(stat->lpcount == 0);
       CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
    }
 
@@ -612,7 +623,6 @@ RETCODE priceAndCutLoop(
    SEPASTORE*       sepastore,          /**< separation storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    CONFLICT*        conflict,           /**< conflict analysis data */
-   LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal,             /**< primal data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -627,6 +637,7 @@ RETCODE priceAndCutLoop(
    Bool mustprice;
    Bool mustsepar;
    Bool root;
+   int ncolvars;
    int h;
    int s;
 
@@ -659,6 +670,7 @@ RETCODE priceAndCutLoop(
    }
 
    /* price-and-cut loop */
+   ncolvars = prob->ncolvars;
    mustprice = TRUE;
    mustsepar = TRUE;
    *cutoff = FALSE;
@@ -683,6 +695,7 @@ RETCODE priceAndCutLoop(
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
          CHECK_OKAY( SCIPpricestoreAddProbVars(pricestore, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
+         ncolvars = prob->ncolvars;
 
          /* if no additional problem variables were found, call external pricers to create additional problem variables */
          if( SCIPpricestoreGetNVars(pricestore) == 0 )
@@ -707,7 +720,7 @@ RETCODE priceAndCutLoop(
          /* apply the priced variables to the LP */
          CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
-         mustprice = !lp->solved;
+         mustprice = !lp->solved || prob->ncolvars != ncolvars;
          mustsepar = mustsepar || !lp->solved;
          
          /* after adding columns, the LP should be primal feasible such that primal simplex is applicable;
@@ -722,7 +735,7 @@ RETCODE priceAndCutLoop(
          CHECK_OKAY( SCIPpricestoreResetBounds(pricestore, memhdr, set, stat, lp, branchcand, eventqueue) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
-         mustprice = mustprice || !lp->solved;
+         mustprice = mustprice || !lp->solved || prob->ncolvars != ncolvars;
          mustsepar = mustsepar || !lp->solved;
 
          /* solve LP again after resetting bounds (with dual simplex) */
@@ -844,7 +857,7 @@ RETCODE priceAndCutLoop(
                   CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, cutoff) );
                }
                
-               mustprice = mustprice || !lp->solved;
+               mustprice = mustprice || !lp->solved || prob->ncolvars != ncolvars;
                mustsepar = !lp->solved;
                
                if( !(*cutoff) )
@@ -884,11 +897,11 @@ RETCODE priceAndCutLoop(
       CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
       CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
 
-      /* analyze an infeasible LP */
-      if( !set->exactsolve
+      /* analyze an infeasible LP (not necessary in the root node) */
+      if( !set->exactsolve && SCIPnodeGetDepth(tree->actnode) > 0
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT) )
       {
-         CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, NULL) );
+         CHECK_OKAY( SCIPconflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, NULL) );
       }
    }
    debugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -910,7 +923,6 @@ RETCODE solveNodeLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    CONFLICT*        conflict,           /**< conflict analysis data */
-   LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal,             /**< primal data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -951,8 +963,7 @@ RETCODE solveNodeLP(
    {
       /* solve the LP with price-and-cut*/
       CHECK_OKAY( priceAndCutLoop(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, 
-                     conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
-                     cutoff, lperror) );
+                     conflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa, cutoff, lperror) );
    }
    assert(*cutoff || *lperror || lp->solved);
 
@@ -1235,8 +1246,6 @@ RETCODE solveNode(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    CONFLICT*        conflict,           /**< conflict analysis data */
-   LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
-   PSEUDOCONFLICT*  pseudoconflict,     /**< conflict analysis data for pseudo solution conflicts */
    PRIMAL*          primal,             /**< primal data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -1294,7 +1303,7 @@ RETCODE solveNode(
       {
          /* solve the node's LP */
          CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore,
-                        cutpool, conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
+                        cutpool, conflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
                         initiallpsolved, cutoff, &lperror) );
          initiallpsolved = TRUE;
          debugMessage(" -> LP status: %d, LP obj: %g\n", SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
@@ -1337,12 +1346,14 @@ RETCODE solveNode(
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
       SCIPnodeUpdateLowerbound(tree->actnode, pseudoobjval);
-      debugMessage(" -> new lower bound: %g (pseudoobj: %g)\n", tree->actnode->lowerbound, pseudoobjval);
+      debugMessage(" -> new lower bound: %g [%g] (pseudoobj: %g [%g])\n",
+         tree->actnode->lowerbound, SCIPprobExternObjval(prob, set, tree->actnode->lowerbound),
+         pseudoobjval, SCIPprobExternObjval(prob, set, pseudoobjval));
 
       /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
       if( pseudoobjval >= primal->cutoffbound )
       {
-         CHECK_OKAY( SCIPpseudoconflictAnalyze(pseudoconflict, memhdr, set, stat, prob, tree, lp, conflict, NULL) );
+         CHECK_OKAY( SCIPconflictAnalyzePseudo(conflict, memhdr, set, stat, prob, tree, lp, NULL) );
       }
       
       /* check for infeasible node by bounding */
@@ -1516,8 +1527,6 @@ RETCODE SCIPsolveCIP(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    CONFLICT*        conflict,           /**< conflict analysis data */
-   LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
-   PSEUDOCONFLICT*  pseudoconflict,     /**< conflict analysis data for pseudo solution conflicts */
    PRIMAL*          primal,             /**< primal data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -1573,7 +1582,9 @@ RETCODE SCIPsolveCIP(
          /* update statistics */
          depth = SCIPnodeGetDepth(actnode);
          stat->maxdepth = MAX(stat->maxdepth, depth);
+         stat->maxtotaldepth = MAX(stat->maxtotaldepth, depth);
          stat->nnodes++;
+         stat->ntotalnodes++;
          if( SCIPnodeGetType(actnode) == SCIP_NODETYPE_LEAF )
          {
             stat->plungedepth = 0;
@@ -1632,8 +1643,7 @@ RETCODE SCIPsolveCIP(
       else
       {
          CHECK_OKAY( solveNode(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, cutpool,
-                        conflict, lpconflict, pseudoconflict, primal, eventfilter, eventqueue,
-                        conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible) );
+                        conflict, primal, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible) );
       }
       assert(!cutoff || infeasible);
 

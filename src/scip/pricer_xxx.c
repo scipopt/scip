@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.2 2004/02/04 17:27:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.3 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -79,7 +79,7 @@ DECL_PRICERFREE(pricerFreeXxx)
 #endif
 
 
-/** initialization method of variable pricer (called when problem solving starts) */
+/** initialization method of variable pricer (called after problem was transformed) */
 #if 0
 static
 DECL_PRICERINIT(pricerInitXxx)
@@ -94,7 +94,7 @@ DECL_PRICERINIT(pricerInitXxx)
 #endif
 
 
-/** deinitialization method of variable pricer (called when problem solving exits) */
+/** deinitialization method of variable pricer (called before transformed problem is freed) */
 #if 0
 static
 DECL_PRICEREXIT(pricerExitXxx)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.2 2004/04/15 10:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.3 2004/04/27 15:49:59 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -145,7 +145,7 @@ DECL_HEURFREE(heurFreeObjpscostdiving) /*lint --e{715}*/
 }
 
 
-/** initialization method of primal heuristic (called when problem solving starts) */
+/** initialization method of primal heuristic (called after problem was transformed) */
 static
 DECL_HEURINIT(heurInitObjpscostdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
@@ -168,7 +168,7 @@ DECL_HEURINIT(heurInitObjpscostdiving) /*lint --e{715}*/
 }
 
 
-/** deinitialization method of primal heuristic (called when problem solving exits) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 DECL_HEUREXIT(heurExitObjpscostdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
@@ -238,7 +238,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* don't dive two times at the same node */
-   if( SCIPgetLastDivenode(scip) == SCIPgetNodenum(scip) )
+   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) )
       return SCIP_OKAY;
 
    /* get heuristic's data */
@@ -281,7 +281,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
    debugMessage("(node %lld) executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%lld, maxdivedepth=%d\n", 
-      SCIPgetNodenum(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
+      SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
    /* dive as long we are in the given diving depth and iteration limits and fractional variables exist, but
     * - if the last objective change was in a direction, that corresponds to a feasibile rounding, we continue in any case

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.20 2004/03/22 16:03:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.21 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -69,7 +69,7 @@ RETCODE SCIPprimalSetUpperbound(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    Real             upperbound          /**< new upper bound */
    );
@@ -82,7 +82,7 @@ RETCODE SCIPprimalAddSol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
@@ -97,7 +97,7 @@ RETCODE SCIPprimalAddSolFree(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -112,7 +112,7 @@ RETCODE SCIPprimalTrySol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
@@ -129,7 +129,7 @@ RETCODE SCIPprimalTrySolFree(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */

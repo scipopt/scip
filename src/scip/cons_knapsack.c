@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.40 2004/04/19 17:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.41 2004/04/27 15:49:58 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -770,6 +770,7 @@ RETCODE separateCardinality(
          solval = solvals[covervars[i]];
          activity -= solval;
          ncovervars--;
+         assert(ncovervars == i);
 
          /* add current var to noncovervars (sorted by non-increasing LP solution value) */
          for( j = nnoncovervars - 1; j >= 0 && solvals[noncovervars[j]] < solval; j-- )
@@ -808,7 +809,7 @@ RETCODE separateCardinality(
             int v;
             
             /* create LP row */
-            sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+            sprintf(name, "%s_card%lld_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), i);
             CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)ncovervars, 
                            SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
             
@@ -1237,16 +1238,39 @@ DECL_CONSFREE(consFreeKnapsack)
 }
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #define consInitKnapsack NULL
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitKnapsack NULL
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
-#define consSolstartKnapsack NULL
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolKnapsack NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolKnapsack)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* release the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->row != NULL )
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** frees specific constraint data */
@@ -1771,7 +1795,7 @@ RETCODE SCIPincludeConshdlrKnapsack(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeKnapsack, consInitKnapsack, consExitKnapsack, consSolstartKnapsack,
+                  consFreeKnapsack, consInitKnapsack, consExitKnapsack, consInitsolKnapsack, consExitsolKnapsack,
                   consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
                   consSepaKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
                   consPropKnapsack, consPresolKnapsack, consRescvarKnapsack,

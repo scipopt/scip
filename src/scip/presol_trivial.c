@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.12 2004/03/30 12:51:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.13 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -44,11 +44,11 @@
 #define presolFreeTrivial NULL
 
 
-/** initialization method of presolver (called when problem solving starts) */
+/** initialization method of presolver (called after problem was transformed) */
 #define presolInitTrivial NULL
 
 
-/** deinitialization method of presolver (called when problem solving exits) */
+/** deinitialization method of presolver (called before transformed problem is freed) */
 #define presolExitTrivial NULL
 
 

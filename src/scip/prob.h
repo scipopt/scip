@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.31 2004/04/06 13:09:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.32 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -60,6 +60,8 @@ RETCODE SCIPprobCreate(
    DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
+   DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
+   DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
    PROBDATA*        probdata,           /**< user problem data set by the reader */
    Bool             transformed         /**< is this the transformed problem? */
    );
@@ -154,11 +156,12 @@ RETCODE SCIPprobDelCons(
    CONS*            cons                /**< constraint to remove */
    );
 
-/** resets maximum number of constraints to current number of constraints, remembers current number of constraints
- *  as starting number of constraints
+/** remembers the current number of constraints in the problem's internal data structure
+ *  - resets maximum number of constraints to current number of constraints
+ *  - remembers current number of constraints as starting number of constraints
  */
 extern
-void SCIPprobSolvingStarts(
+void SCIPprobMarkNConss(
    PROB*            prob                /**< problem data */
    );
 
@@ -204,6 +207,22 @@ extern
 void SCIPprobCheckObjIntegral(
    PROB*            prob,               /**< problem data */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** initializes problem for branch and bound process */
+extern
+RETCODE SCIPprobInitSolve(
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** deinitializes problem for branch and bound process, and converts all COLUMN variables back into LOOSE variables */
+extern
+RETCODE SCIPprobExitSolve(
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
    );
 
 

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.3 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -39,7 +39,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  */
 #define DECL_BRANCHFREE(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
-/** initialization method of branching rule (called when problem solving starts)
+/** initialization method of branching rule (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -47,7 +47,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  */
 #define DECL_BRANCHINIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
-/** deinitialization method of branching rule (called when problem solving exits)
+/** deinitialization method of branching rule (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure

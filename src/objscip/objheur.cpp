@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.5 2004/04/15 10:41:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.6 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -73,7 +73,7 @@ DECL_HEURFREE(heurFreeObj)
 }
 
 
-/** initialization method of primal heuristic (called when problem solving starts) */
+/** initialization method of primal heuristic (called after problem was transformed) */
 static
 DECL_HEURINIT(heurInitObj)
 {  /*lint --e{715}*/
@@ -90,7 +90,7 @@ DECL_HEURINIT(heurInitObj)
 }
 
 
-/** deinitialization method of primal heuristic (called when problem solving exits) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 DECL_HEUREXIT(heurExitObj)
 {  /*lint --e{715}*/

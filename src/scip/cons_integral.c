@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.23 2004/03/30 12:51:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.24 2004/04/27 15:49:58 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -45,6 +45,43 @@
  * Callback methods
  */
 
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+#define consFreeIntegral NULL
+
+
+/** initialization method of constraint handler (called after problem was transformed) */
+#define consInitIntegral NULL
+
+
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
+#define consExitIntegral NULL
+
+
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolIntegral NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+#define consExitsolIntegral NULL
+
+
+/** frees specific constraint data */
+#define consDeleteIntegral NULL
+
+
+/** transforms constraint data into data belonging to the transformed problem */ 
+#define consTransIntegral NULL
+
+
+/** LP initialization method of constraint handler */
+#define consInitlpIntegral NULL
+
+
+/** separation method of constraint handler */
+#define consSepaIntegral NULL
+
+
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpIntegral)
 {  /*lint --e{715}*/
@@ -67,6 +104,12 @@ DECL_CONSENFOLP(consEnfolpIntegral)
    return SCIP_OKAY;
 }
 
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+#define consEnfopsIntegral NULL
+
+
+/** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckIntegral)
 {  /*lint --e{715}*/
@@ -110,6 +153,41 @@ DECL_CONSCHECK(consCheckIntegral)
 }
 
 
+/** domain propagation method of constraint handler */
+#define consPropIntegral NULL
+
+
+/** presolving method of constraint handler */
+#define consPresolIntegral NULL
+
+
+/** conflict variable resolving method of constraint handler */
+#define consRescvarIntegral NULL
+
+
+/** variable rounding lock method of constraint handler */
+#define consLockIntegral NULL
+
+
+/** variable rounding unlock method of constraint handler */
+#define consUnlockIntegral NULL
+
+
+/** constraint activation notification method of constraint handler */
+#define consActiveIntegral NULL
+
+
+/** constraint deactivation notification method of constraint handler */
+#define consDeactiveIntegral NULL
+
+
+/** constraint enabling notification method of constraint handler */
+#define consEnableIntegral NULL
+
+
+/** constraint disabling notification method of constraint handler */
+#define consDisableIntegral NULL
+
 
 
 
@@ -122,16 +200,23 @@ RETCODE SCIPincludeConshdlrIntegral(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   CONSHDLRDATA* conshdlrdata;
+
+   /* create integral constraint handler data */
+   conshdlrdata = NULL;
+
+   /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
-                  CONSHDLR_NEEDSCONS,
-                  NULL, NULL, NULL, NULL,
-                  NULL, NULL, 
-                  NULL, NULL, consEnfolpIntegral, NULL, consCheckIntegral, NULL, NULL, NULL,
-                  NULL, NULL,
-                  NULL, NULL, NULL, NULL,
-                  NULL) );
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
+                  consFreeIntegral, consInitIntegral, consExitIntegral, consInitsolIntegral, consExitsolIntegral,
+                  consDeleteIntegral, consTransIntegral, consInitlpIntegral,
+                  consSepaIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
+                  consPropIntegral, consPresolIntegral, consRescvarIntegral,
+                  consLockIntegral, consUnlockIntegral,
+                  consActiveIntegral, consDeactiveIntegral, 
+                  consEnableIntegral, consDisableIntegral,
+                  conshdlrdata) );
 
    return SCIP_OKAY;
 }

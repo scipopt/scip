@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.5 2004/03/30 12:51:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.6 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -73,7 +73,7 @@ DECL_BRANCHFREE(branchFreeObj)
 }
 
 
-/** initialization method of branching rule (called when problem solving starts) */
+/** initialization method of branching rule (called after problem was transformed) */
 static
 DECL_BRANCHINIT(branchInitObj)
 {  /*lint --e{715}*/
@@ -90,7 +90,7 @@ DECL_BRANCHINIT(branchInitObj)
 }
 
 
-/** deinitialization method of branching rule (called when problem solving exits) */
+/** deinitialization method of branching rule (called before transformed problem is freed) */
 static
 DECL_BRANCHEXIT(branchExitObj)
 {  /*lint --e{715}*/

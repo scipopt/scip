@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.36 2004/04/06 15:21:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.37 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -138,6 +138,7 @@ void SCIPstatReset(
 
    SCIPhistoryReset(stat->glbhistory);
 
+   stat->nruns = 0;
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
@@ -154,28 +155,41 @@ void SCIPstatReset(
    stat->nnodelps = 0;
    stat->ndivinglps = 0;
    stat->nstrongbranchs = 0;
-   stat->npricerounds = 0;
-   stat->nseparounds = 0;
    stat->nredcoststrcalls = 0;
    stat->nredcoststrfound = 0;
-   stat->nnodes = 0;
+   stat->ntotalnodes = 0;
    stat->ncreatednodes = 0;
    stat->nboundchanges = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
-   stat->lastdispnode = 0;
-   stat->lastdivenode = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;
-   stat->ndisplines = 0;
-   stat->maxdepth = -1;
-   stat->plungedepth = 0;
+   stat->maxtotaldepth = -1;
    stat->memsavemode = FALSE;
-   stat->lastbranchvar = NULL;
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+
+   SCIPstatResetCurrentRun(stat);
+}
+
+/** reset current branch and bound run specific statistics */
+void SCIPstatResetCurrentRun(
+   STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->npricerounds = 0;
+   stat->nseparounds = 0;
+   stat->nnodes = 0;
+   stat->maxdepth = -1;
+   stat->plungedepth = 0;
+   stat->lastdivenode = 0;
+   stat->lastbranchvar = NULL;
+
+   SCIPstatResetDisplay(stat);
 }
 
 /** resets display statistics, such that a new header line is displayed before the next display line */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.4 2004/04/06 13:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.5 2004/04/27 15:50:04 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -80,7 +80,7 @@ DECL_SEPAFREE(sepaFreeXxx)
 #endif
 
 
-/** initialization method of separator (called when problem solving starts) */
+/** initialization method of separator (called after problem was transformed) */
 #if 0
 static
 DECL_SEPAINIT(sepaInitXxx)
@@ -95,7 +95,7 @@ DECL_SEPAINIT(sepaInitXxx)
 #endif
 
 
-/** deinitialization method of separator (called when problem solving exits) */
+/** deinitialization method of separator (called before transformed problem is freed) */
 #if 0
 static
 DECL_SEPAEXIT(sepaExitXxx)

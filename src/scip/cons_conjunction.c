@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.1 2004/03/05 11:38:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.2 2004/04/27 15:49:57 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -249,16 +249,20 @@ RETCODE checkAllConss(
 #define consFreeConjunction NULL
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #define consInitConjunction NULL
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitConjunction NULL
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
-#define consSolstartConjunction NULL
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolConjunction NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+#define consExitsolConjunction NULL
 
 
 /** frees specific constraint data */
@@ -496,7 +500,8 @@ RETCODE SCIPincludeConshdlrConjunction(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeConjunction, consInitConjunction, consExitConjunction, consSolstartConjunction,
+                  consFreeConjunction, consInitConjunction, consExitConjunction, 
+                  consInitsolConjunction, consExitsolConjunction,
                   consDeleteConjunction, consTransConjunction, consInitlpConjunction,
                   consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
                   consPropConjunction, consPresolConjunction, consRescvarConjunction,

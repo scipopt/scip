@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.3 2004/04/06 13:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -104,7 +104,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  */
 #define DECL_EVENTFREE(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
 
-/** initialization method of event handler (called when problem solving starts)
+/** initialization method of event handler (called after problem was transformed)
  *
  *  input:
  *    scip            : SCIP main data structure
@@ -112,7 +112,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  */
 #define DECL_EVENTINIT(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
 
-/** deinitialization method of event handler (called when problem solving exits)
+/** deinitialization method of event handler (called before transformed problem is freed)
  *
  *  input:
  *    scip            : SCIP main data structure

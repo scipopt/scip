@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.5 2004/03/30 12:51:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.6 2004/04/27 15:49:56 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -80,7 +80,7 @@ DECL_BRANCHFREE(branchFreeXxx)
 #endif
 
 
-/** initialization method of branching rule (called when problem solving starts) */
+/** initialization method of branching rule (called after problem was transformed) */
 #if 0
 static
 DECL_BRANCHINIT(branchInitXxx)
@@ -95,7 +95,7 @@ DECL_BRANCHINIT(branchInitXxx)
 #endif
 
 
-/** deinitialization method of branching rule (called when problem solving exits) */
+/** deinitialization method of branching rule (called before transformed problem is freed) */
 #if 0
 static
 DECL_BRANCHEXIT(branchExitXxx)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.23 2004/03/10 17:00:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.24 2004/04/27 15:50:04 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -50,7 +50,7 @@ RETCODE SCIPsolCreate(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
+   TREE*            tree,               /**< branch and bound tree, or NULL */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -81,7 +81,7 @@ RETCODE SCIPsolCreatePseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
@@ -93,7 +93,7 @@ RETCODE SCIPsolCreateCurrentSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
@@ -123,7 +123,7 @@ RETCODE SCIPsolLinkPseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
    );
 
@@ -134,7 +134,7 @@ RETCODE SCIPsolLinkCurrentSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
    );
 
@@ -143,7 +143,7 @@ extern
 RETCODE SCIPsolClear(
    SOL*             sol,                /**< primal CIP solution */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree                /**< branch and bound tree */
    );
 
 /** stores solution values of variables in solution's own array */
@@ -160,7 +160,7 @@ RETCODE SCIPsolSetVal(
    SOL*             sol,                /**< primal CIP solution */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    VAR*             var,                /**< variable to add to solution */
    Real             val                 /**< solution value of variable */
    );
@@ -171,7 +171,7 @@ RETCODE SCIPsolIncVal(
    SOL*             sol,                /**< primal CIP solution */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    VAR*             var,                /**< variable to increase solution value for */
    Real             incval              /**< increment for solution value of variable */
    );
@@ -205,7 +205,7 @@ RETCODE SCIPsolRound(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether rounding was successful */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.61 2004/04/16 10:48:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.62 2004/04/27 15:50:07 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -238,6 +238,16 @@ RETCODE SCIPvarColumn(
    LP*              lp                  /**< current LP data */
    );
 
+/** converts column transformed variable back into loose variable, frees LP column */
+extern
+RETCODE SCIPvarLoose(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   LP*              lp                  /**< current LP data */
+   );
+
 /** converts variable into fixed variable */
 extern
 RETCODE SCIPvarFix(
@@ -399,8 +409,8 @@ RETCODE SCIPvarChgLbLocal(
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
-   int              inferdepth,         /**< depth in the tree, where this bound change took place, or -1 */
-   int              inferindex,         /**< bound change index for each node representing the order of changes, or -1 */
+   int              fixdepth,           /**< depth in the tree, where this bound change took place, or -1 */
+   int              fixindex,           /**< bound change index for each node representing the order of changes, or -1 */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
    );
 
@@ -420,8 +430,8 @@ RETCODE SCIPvarChgUbLocal(
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
-   int              inferdepth,         /**< depth in the tree, where this bound change took place, or -1 */
-   int              inferindex,         /**< bound change index for each node representing the order of changes, or -1 */
+   int              fixdepth,           /**< depth in the tree, where this bound change took place, or -1 */
+   int              fixindex,           /**< bound change index for each node representing the order of changes, or -1 */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
    );
 
@@ -442,8 +452,8 @@ RETCODE SCIPvarChgBdLocal(
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
-   int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              inferindex,         /**< bound change index for each node representing the order of changes */
+   int              fixdepth,           /**< depth in the tree, where this bound change took place, or -1 */
+   int              fixindex,           /**< bound change index for each node representing the order of changes, or -1 */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
    );
 
@@ -629,11 +639,11 @@ RETCODE SCIPvarDropEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
 
-/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
- *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+/** updates the pseudo costs of the given variable and the global pseudo costs after a change of
+ *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
 extern
-void SCIPvarUpdatePseudocost(
+RETCODE SCIPvarUpdatePseudocost(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -654,12 +664,12 @@ Real SCIPvarGetPseudocost(
 extern
 Real SCIPvarGetPseudocostCount(
    VAR*             var,                /**< problem variable */
-   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
    );
 
 /** increases the number of branchings counter of the variable */
 extern
-void SCIPvarIncNBranchings(
+RETCODE SCIPvarIncNBranchings(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    int              depth,              /**< depth at which the bound change took place */
@@ -668,7 +678,7 @@ void SCIPvarIncNBranchings(
 
 /** increases the number of inferences counter of the variable */
 extern
-void SCIPvarIncNInferences(
+RETCODE SCIPvarIncNInferences(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    BRANCHDIR        dir                 /**< branching direction */

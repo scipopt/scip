@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.5 2004/04/15 10:41:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.6 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -85,7 +85,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** initialization method of node selector (called when problem solving starts) */
+   /** initialization method of node selector (called after problem was transformed) */
    virtual RETCODE scip_init(
       SCIP*         scip,               /**< SCIP data structure */
       NODESEL*      nodesel             /**< the node selector itself */
@@ -94,7 +94,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** deinitialization method of node selector (called when problem solving exits) */
+   /** deinitialization method of node selector (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
       SCIP*         scip,               /**< SCIP data structure */
       NODESEL*      nodesel             /**< the node selector itself */
@@ -105,7 +105,7 @@ public:
    
    /** node selection method of node selector
     *
-    *  This method is called to select the next leaf of the branch-and-bound tree to be processed.
+    *  This method is called to select the next leaf of the branch and bound tree to be processed.
     *
     *  possible return values for *selnode:
     *  - NULL    : problem is solved, because tree is empty

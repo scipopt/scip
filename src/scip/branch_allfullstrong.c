@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.2 2004/04/21 12:11:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.3 2004/04/27 15:49:56 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -129,7 +129,7 @@ RETCODE branch(
          {
             SCIPmessage(scip, SCIP_VERBLEVEL_HIGH,
                "(node %lld) error in strong branching call for variable <%s> with solution %g\n", 
-               SCIPgetNodenum(scip), SCIPvarGetName(pseudocands[c]), solval);
+               SCIPgetNNodes(scip), SCIPvarGetName(pseudocands[c]), solval);
             break;
          }
 
@@ -336,7 +336,7 @@ DECL_BRANCHFREE(branchFreeAllfullstrong)
 }
 
 
-/** initialization method of branching rule (called when problem solving starts) */
+/** initialization method of branching rule (called after problem was transformed) */
 static
 DECL_BRANCHINIT(branchInitAllfullstrong)
 {
@@ -350,7 +350,7 @@ DECL_BRANCHINIT(branchInitAllfullstrong)
 }
 
 
-/** deinitialization method of branching rule (called when problem solving exits) */
+/** deinitialization method of branching rule (called before transformed problem is freed) */
 #define branchExitAllfullstrong NULL
 
 

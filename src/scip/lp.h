@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.72 2004/04/06 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.73 2004/04/27 15:50:00 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -176,9 +176,9 @@ Real SCIPcolGetFarkas(
 extern
 RETCODE SCIPcolGetStrongbranch(
    COL*             col,                /**< LP column */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   LP*              lp,                 /**< LP data */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
@@ -599,6 +599,7 @@ RETCODE SCIPlpSetState(
 extern
 RETCODE SCIPlpSetCutoffbound(
    LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
    Real             cutoffbound         /**< new upper objective limit */
    );
 
@@ -728,6 +729,14 @@ RETCODE SCIPlpUpdateVarColumn(
    LP*              lp,                 /**< current LP data */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
+   );
+
+/** informs LP, that given formerly column problem variable is now again a loose variable */
+extern
+RETCODE SCIPlpUpdateVarLoose(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
    );
 
 /** stores the LP solution in the columns and rows */
@@ -911,6 +920,12 @@ int SCIPlpGetNNewrows(
    LP*              lp                  /**< current LP data */
    );
 
+/** gets the LP solver interface */
+extern
+LPI* SCIPlpGetLPI(
+   LP*              lp                  /**< current LP data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -925,6 +940,7 @@ int SCIPlpGetNNewrows(
 #define SCIPlpGetNNewcols(lp)           ((lp)->ncols - (lp)->firstnewcol)
 #define SCIPlpGetNewrows(lp)            (&((lp)->rows[(lp)->firstnewrow]))
 #define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
+#define SCIPlpGetLPI(lp)                (lp)->lpi
 
 #endif
 

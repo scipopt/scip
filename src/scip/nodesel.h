@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.28 2004/02/05 14:12:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.29 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -62,7 +62,7 @@ RETCODE SCIPnodepqFree(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
    );
 
@@ -140,7 +140,7 @@ RETCODE SCIPnodepqBound(
    NODEPQ*          nodepq,             /**< node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );

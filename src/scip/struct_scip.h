@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.5 2004/03/31 14:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.6 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   scipstruct.h
  * @brief  SCIP main data structure
@@ -60,22 +60,20 @@ struct Scip
    STAT*            stat;               /**< dynamic problem statistics */
    PROB*            origprob;           /**< original problem data */
 
-   /* INITSOLVE */
+   /* TRANSFORMED */
    EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    BRANCHCAND*      branchcand;         /**< storage for branching candidates */
-   TREE*            tree;               /**< branch and bound tree */
    LP*              lp;                 /**< LP data */
    PROB*            transprob;          /**< transformed problem after presolve */
 
-   /* PRESOLVED */
+   /* SOLVING */
    PRICESTORE*      pricestore;         /**< storage for priced variables */
    SEPASTORE*       sepastore;          /**< storage for separated cuts */
    CUTPOOL*         cutpool;            /**< global cut pool */
-   CONFLICT*        conflict;           /**< conflict analysis data for propagation conflicts */
-   LPCONFLICT*      lpconflict;         /**< conflict analysis data for infeasible LP conflicts */
-   PSEUDOCONFLICT*  pseudoconflict;     /**< conflict analysis data for pseudo solution conflicts */
+   CONFLICT*        conflict;           /**< conflict analysis data */
    PRIMAL*          primal;             /**< primal data and solution storage */
+   TREE*            tree;               /**< branch and bound tree */
 
    STAGE            stage;              /**< SCIP operation stage */
 };

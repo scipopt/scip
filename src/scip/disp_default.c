@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.39 2004/03/16 13:41:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.40 2004/04/27 15:49:59 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -45,13 +45,13 @@
 #define DISP_POSI_TIME          50
 #define DISP_STRI_TIME          TRUE
 
-#define DISP_NAME_NODENUM       "nodenum"
-#define DISP_DESC_NODENUM       "number of processed nodes"
-#define DISP_HEAD_NODENUM       "node"
-#define DISP_WIDT_NODENUM       7
-#define DISP_PRIO_NODENUM       100000
-#define DISP_POSI_NODENUM       100
-#define DISP_STRI_NODENUM       TRUE
+#define DISP_NAME_NNODES        "nnodes"
+#define DISP_DESC_NNODES        "number of processed nodes"
+#define DISP_HEAD_NNODES        "node"
+#define DISP_WIDT_NNODES        7
+#define DISP_PRIO_NNODES        100000
+#define DISP_POSI_NNODES        100
+#define DISP_STRI_NNODES        TRUE
 
 #define DISP_NAME_NODESLEFT     "nodesleft"
 #define DISP_DESC_NODESLEFT     "number of unprocessed nodes"
@@ -231,7 +231,8 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
 
    sol = SCIPgetBestSol(scip);
    if( sol != NULL
-      && SCIPgetSolNodenum(scip, sol) == SCIPgetNodenum(scip)
+      && SCIPgetSolRunnum(scip, sol) == SCIPgetNRuns(scip)
+      && SCIPgetSolNodenum(scip, sol) == SCIPgetNNodes(scip)
       && SCIPisEQ(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetPrimalbound(scip)) )
    {
       fprintf(file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
@@ -255,13 +256,13 @@ DECL_DISPOUTPUT(SCIPdispOutputTime)
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputNodenum)
+DECL_DISPOUTPUT(SCIPdispOutputNNodes)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NODENUM) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NNODES) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, SCIPgetNodenum(scip), DISP_WIDT_NODENUM);
+   SCIPdispDecimal(file, SCIPgetNNodes(scip), DISP_WIDT_NNODES);
 
    return SCIP_OKAY;
 }
@@ -539,9 +540,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_TIME, DISP_DESC_TIME, DISP_HEAD_TIME,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputTime, NULL, 
                   DISP_WIDT_TIME, DISP_PRIO_TIME, DISP_POSI_TIME, DISP_STRI_TIME) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_NODENUM, DISP_DESC_NODENUM, DISP_HEAD_NODENUM,
-                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputNodenum, NULL, 
-                  DISP_WIDT_NODENUM, DISP_PRIO_NODENUM, DISP_POSI_NODENUM, DISP_STRI_NODENUM) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_NNODES, DISP_DESC_NNODES, DISP_HEAD_NNODES,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputNNodes, NULL, 
+                  DISP_WIDT_NNODES, DISP_PRIO_NNODES, DISP_POSI_NNODES, DISP_STRI_NNODES) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_NODESLEFT, DISP_DESC_NODESLEFT, DISP_HEAD_NODESLEFT,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputNodesleft, NULL, 
                   DISP_WIDT_NODESLEFT, DISP_PRIO_NODESLEFT, DISP_POSI_NODESLEFT, DISP_STRI_NODESLEFT) );

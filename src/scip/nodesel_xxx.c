@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.4 2004/02/04 17:27:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.5 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.c
  * @brief  xxx node selector
@@ -81,7 +81,7 @@ DECL_NODESELFREE(nodeselFreeXxx)
 #endif
 
 
-/** initialization method of node selector (called when problem solving starts) */
+/** initialization method of node selector (called after problem was transformed) */
 #if 0
 static
 DECL_NODESELINIT(nodeselInitXxx)
@@ -96,7 +96,7 @@ DECL_NODESELINIT(nodeselInitXxx)
 #endif
 
 
-/** deinitialization method of node selector (called when problem solving exits) */
+/** deinitialization method of node selector (called before transformed problem is freed) */
 #if 0
 static
 DECL_NODESELEXIT(nodeselExitXxx)

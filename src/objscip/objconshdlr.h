@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.10 2004/04/15 10:41:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.11 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -102,7 +102,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** initialization method of constraint handler (called when problem solving starts) */
+   /** initialization method of constraint handler (called after problem was transformed) */
    virtual RETCODE scip_init(
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr            /**< the constraint handler itself */
@@ -111,7 +111,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** deinitialization method of constraint handler (called when problem solving exits) */
+   /** deinitialization method of constraint handler (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr            /**< the constraint handler itself */
@@ -120,7 +120,7 @@ public:
       return SCIP_OKAY;
    }
 
-   /** solving start notification method of constraint handler (called when presolving was finished)
+   /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
     *
     *  This method is called when the presolving was finished and the branch and bound process is about to begin.
     *  It is called even when presolving is turned off.
@@ -128,7 +128,7 @@ public:
     *  before the branch and bound process begins.
     *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here.
     */
-   virtual RETCODE scip_solstart(
+   virtual RETCODE scip_initsol(
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       CONS**        conss,              /**< final array of constraints in transformed problem */
@@ -137,7 +137,25 @@ public:
       )
    {
       assert(result != NULL);
+
       *result = SCIP_FEASIBLE;
+
+      return SCIP_OKAY;
+   }
+   
+   /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed)
+    *
+    *  This method is called before the branch and bound process is freed.
+    *  The constraint handler should use this call to clean up its branch and bound data, in particular to release
+    *  all LP rows that he has created or captured.
+    */
+   virtual RETCODE scip_exitsol(
+      SCIP*         scip,               /**< SCIP data structure */
+      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      CONS**        conss,              /**< array of constraints of the constraint handler */
+      int           nconss              /**< number of constraints of the constraint handler */
+      )
+   {
       return SCIP_OKAY;
    }
    

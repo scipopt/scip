@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.6 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.7 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -73,7 +73,7 @@ DECL_CONSFREE(consFreeObj)
 }
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 static
 DECL_CONSINIT(consInitObj)
 {  /*lint --e{715}*/
@@ -90,7 +90,7 @@ DECL_CONSINIT(consInitObj)
 }
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 static
 DECL_CONSEXIT(consExitObj)
 {  /*lint --e{715}*/
@@ -107,9 +107,9 @@ DECL_CONSEXIT(consExitObj)
 }
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
-DECL_CONSSOLSTART(consSolstartObj)
+DECL_CONSINITSOL(consInitsolObj)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
 
@@ -118,7 +118,24 @@ DECL_CONSSOLSTART(consSolstartObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_solstart(scip, conshdlr, conss, nconss, result) );
+   CHECK_OKAY( conshdlrdata->objconshdlr->scip_initsol(scip, conshdlr, conss, nconss, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolObj)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   CHECK_OKAY( conshdlrdata->objconshdlr->scip_exitsol(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -425,7 +442,7 @@ RETCODE SCIPincludeObjConshdlr(
    CHECK_OKAY( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 
                   objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
                   objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_needscons_,
-                  consFreeObj, consInitObj, consExitObj, consSolstartObj,
+                  consFreeObj, consInitObj, consExitObj, consInitsolObj, consExitsolObj,
                   consDeleteObj, consTransObj, consInitlpObj,
                   consSepaObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
                   consPropObj, consPresolObj, consRescvarObj,

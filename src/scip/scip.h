@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.125 2004/04/19 17:08:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.126 2004/04/27 15:50:03 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -504,7 +504,8 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
-   DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
+   DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
+   DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
@@ -988,6 +989,8 @@ RETCODE SCIPcreateProb(
    DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
+   DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
+   DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
    PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 
@@ -998,7 +1001,7 @@ RETCODE SCIPreadProb(
    const char*      filename            /**< problem file name */
    );
 
-/** frees problem and branch-and-bound data structures */
+/** frees problem and branch and bound data structures */
 extern
 RETCODE SCIPfreeProb(
    SCIP*            scip                /**< SCIP data structure */
@@ -1345,9 +1348,17 @@ RETCODE SCIPsolve(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** frees all solution process data, only original problem is kept */
+/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
+ *  preserved
+ */
 extern
 RETCODE SCIPfreeSolve(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** frees all solution process data including presolving and transformed problem, only original problem is kept */
+extern
+RETCODE SCIPfreeTransform(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -1484,8 +1495,8 @@ RETCODE SCIPgetVarStrongbranchLast(
    Real*            solval              /**< stores LP solution value of variable at last strong branching call, or NULL */
    );
 
-/** gets number of the last node where strong branching was used on the given COLUMN variable,
- *  or -1 if strong branching was never applied to the variable
+/** gets node number of the last node in current branch and bound run, where strong branching was used on the
+ *  given column, or -1 if strong branching was never applied to the column in current run
  */
 extern
 Longint SCIPgetVarStrongbranchNode(
@@ -2229,7 +2240,7 @@ RETCODE SCIPsolveDiveLP(
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
-/** returns the number of the node where the last LP diving was applied */
+/** returns the number of the node in the current branch and bound run, where the last LP diving was applied */
 extern
 Longint SCIPgetLastDivenode(
    SCIP*            scip                /**< SCIP data structure */
@@ -2763,7 +2774,14 @@ Real SCIPgetSolTime(
    SOL*             sol                 /**< primal solution */
    );
 
-/** gets node number, where this solution was found */
+/** gets branch and bound run number, where this solution was found */
+extern
+int SCIPgetSolRunnum(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol                 /**< primal solution */
+   );
+
+/** gets node number of the specific branch and bound run, where this solution was found */
 extern
 Longint SCIPgetSolNodenum(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3003,9 +3021,21 @@ NODE* SCIPgetBestboundNode(
 /**@name Statistic Methods */
 /**@{ */
 
+/** gets number of branch and bound runs performed, including the current run */
+extern
+int SCIPgetNRuns(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets number of processed nodes, including the active node */
 extern
-Longint SCIPgetNodenum(
+Longint SCIPgetNNodes(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of processed nodes in all runs, including the active node */
+extern
+Longint SCIPgetNTotalNodes(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -3123,9 +3153,15 @@ int SCIPgetDepth(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets maximal depth of all processed nodes */
+/** gets maximal depth of all processed nodes in current branch and bound run */
 extern
 int SCIPgetMaxDepth(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets maximal depth of all processed nodes over all branch and bound runs */
+extern
+int SCIPgetMaxTotalDepth(
    SCIP*            scip                /**< SCIP data structure */
    );
 

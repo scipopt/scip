@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.43 2004/04/06 13:09:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.44 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -133,6 +133,8 @@ RETCODE SCIPprobCreate(
    DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
+   DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
+   DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
    PROBDATA*        probdata,           /**< user problem data set by the reader */
    Bool             transformed         /**< is this the transformed problem? */
    )
@@ -146,6 +148,8 @@ RETCODE SCIPprobCreate(
    (*prob)->probdelorig = probdelorig;
    (*prob)->probtrans = probtrans;
    (*prob)->probdeltrans = probdeltrans;
+   (*prob)->probinitsol = probinitsol;
+   (*prob)->probexitsol = probexitsol;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, memhdr, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->fixedvars = NULL;
@@ -271,7 +275,8 @@ RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    sprintf(transname, "t_%s", source->name);
-   CHECK_OKAY( SCIPprobCreate(target, memhdr, transname, NULL, NULL, source->probdeltrans, NULL, TRUE) );
+   CHECK_OKAY( SCIPprobCreate(target, memhdr, transname, NULL, NULL, source->probdeltrans, 
+                  source->probinitsol, source->probexitsol, NULL, TRUE) );
 
    /* transform objective limit */
    if( source->objlim < SCIP_INVALID )
@@ -609,9 +614,13 @@ RETCODE SCIPprobVarChangedStatus(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-   case SCIP_VARSTATUS_LOOSE:
-      errorMessage("variables cannot switch to ORIGINAL or LOOSE status\n");
+      errorMessage("variables cannot switch to ORIGINAL status\n");
       return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_LOOSE:
+      /* variable switched from column to loose */
+      prob->ncolvars--;
+      break;
 
    case SCIP_VARSTATUS_COLUMN:
       /* variable switched from non-column to column */
@@ -755,11 +764,11 @@ RETCODE SCIPprobDelCons(
    return SCIP_OKAY;
 }
 
-/** informs problem, that the solution process is about to beginn;
+/** remembers the current number of constraints in the problem's internal data structure
  *  - resets maximum number of constraints to current number of constraints
  *  - remembers current number of constraints as starting number of constraints
  */
-void SCIPprobSolvingStarts(
+void SCIPprobMarkNConss(
    PROB*            prob                /**< problem data */
    )
 {
@@ -873,6 +882,63 @@ void SCIPprobCheckObjIntegral(
 
    /* objective value is integral, if the variable loop scanned all variables */
    prob->objisintegral = (v == prob->nvars);
+}
+
+/** initializes problem for branch and bound process */
+RETCODE SCIPprobInitSolve(
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->transformed);
+   assert(set != NULL);
+
+   /* call user data function */
+   if( prob->probinitsol != NULL )
+   {
+      CHECK_OKAY( prob->probinitsol(set->scip, prob->probdata) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deinitializes problem for branch and bound process, and converts all COLUMN variables back into LOOSE variables */
+RETCODE SCIPprobExitSolve(
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   VAR* var;
+   int v;
+
+   assert(prob != NULL);
+   assert(prob->transformed);
+   assert(set != NULL);
+
+   /* call user data function */
+   if( prob->probexitsol != NULL )
+   {
+      CHECK_OKAY( prob->probexitsol(set->scip, prob->probdata) );
+   }
+
+   /* convert all COLUMN variables back into LOOSE variables */
+   if( prob->ncolvars > 0 )
+   {
+      for( v = 0; v < prob->nvars; ++v )
+      {
+         var = prob->vars[v];
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+         {
+            CHECK_OKAY( SCIPvarLoose(var, memhdr, set, prob, lp) );
+         }
+      }
+   }
+   assert(prob->ncolvars == 0);
+
+   return SCIP_OKAY;
 }
 
 

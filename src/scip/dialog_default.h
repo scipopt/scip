@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.13 2004/04/15 10:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.14 2004/04/27 15:49:59 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -98,6 +98,10 @@ DECL_DIALOGEXEC(SCIPdialogExecHelp);
 /** dialog execution method for the free command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecFree);
+
+/** dialog execution method for the newstart command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecNewstart);
 
 /** dialog execution method for the optimize command */
 extern

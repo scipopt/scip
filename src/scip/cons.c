@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.71 2004/04/21 16:39:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.72 2004/04/27 15:49:57 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1012,7 +1012,8 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
-   DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
+   DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
+   DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
@@ -1052,7 +1053,8 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
    (*conshdlr)->consexit = consexit;
-   (*conshdlr)->conssolstart = conssolstart;
+   (*conshdlr)->consinitsol = consinitsol;
+   (*conshdlr)->consexitsol = consexitsol;
    (*conshdlr)->consdelete = consdelete;
    (*conshdlr)->constrans = constrans;
    (*conshdlr)->consinitlp = consinitlp;
@@ -1268,8 +1270,8 @@ RETCODE SCIPconshdlrExit(
    return SCIP_OKAY;
 }
 
-/** informs constraint handler that the presolving was finished and the branch and bound process is being started */
-RETCODE SCIPconshdlrSolstart(
+/** informs constraint handler that the branch and bound process is being started */
+RETCODE SCIPconshdlrInitsol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP*            scip,               /**< SCIP data structure */   
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -1280,25 +1282,42 @@ RETCODE SCIPconshdlrSolstart(
 
    *result = SCIP_FEASIBLE;
 
-   /* call solution start method of constraint handler */
-   if( conshdlr->conssolstart != NULL )
+   /* call solving process initialization method of constraint handler */
+   if( conshdlr->consinitsol != NULL )
    {
-      CHECK_OKAY( conshdlr->conssolstart(scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
-   }
+      CHECK_OKAY( conshdlr->consinitsol(scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
 
-   /* evaluate result */
-   if( *result != SCIP_CUTOFF
-      && *result != SCIP_UNBOUNDED
-      && *result != SCIP_FEASIBLE )
-   {
-      errorMessage("solstart method of constraint handler <%s> returned invalid result <%d>\n", 
-         conshdlr->name, *result);
-      return SCIP_INVALIDRESULT;
+      /* evaluate result */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_FEASIBLE )
+      {
+         errorMessage("solving process initialization method of constraint handler <%s> returned invalid result <%d>\n", 
+            conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
    }
 
    /* update statistics */
    conshdlr->maxnconss = conshdlr->nconss;
    conshdlr->startnconss = conshdlr->nconss;
+
+   return SCIP_OKAY;
+}
+
+/** informs constraint handler that the branch and bound process data is being freed */
+RETCODE SCIPconshdlrExitsol(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(conshdlr != NULL);
+
+   /* call solving process deinitialization method of constraint handler */
+   if( conshdlr->consexitsol != NULL )
+   {
+      CHECK_OKAY( conshdlr->consexitsol(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+   }
 
    return SCIP_OKAY;
 }

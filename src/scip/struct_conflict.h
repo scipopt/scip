@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.5 2004/03/31 14:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.6 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -50,35 +50,29 @@ struct Conflicthdlr
    Bool             initialized;        /**< is conflict handler initialized? */
 };
 
-/** conflict analysis data structure for propagation conflicts */
+/** conflict analysis data structure */
 struct Conflict
 {
-   Longint          ncalls;             /**< number of calls to propagation conflict analysis */
-   Longint          nconflicts;         /**< number of valid conflicts detected in propagation conflict analysis */
-   CLOCK*           analyzetime;        /**< time used for propagation conflict analysis */
+   Longint          npropcalls;         /**< number of calls to propagation conflict analysis */
+   Longint          npropconflicts;     /**< number of valid conflicts detected in propagation conflict analysis */
+   Longint          nlpcalls;           /**< number of calls to infeasible LP conflict analysis */
+   Longint          nlpconflicts;       /**< number of valid conflicts detected in infeasible LP conflict analysis */
+   Longint          nlpiterations;      /**< total number of LP iterations used in LP conflict analysis */
+   Longint          nsbcalls;           /**< number of calls to infeasible strong branching conflict analysis */
+   Longint          nsbconflicts;       /**< number of valid conflicts detected in infeasible strong branching analysis */
+   Longint          nsbiterations;      /**< total number of LP iterations used in infeasible strong branching analysis */
+   Longint          npseudocalls;       /**< number of calls to pseudo solution conflict analysis */
+   Longint          npseudoconflicts;   /**< number of valid conflicts detected in pseudo solution conflict analysis */
+   CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
+   CLOCK*           lpanalyzetime;      /**< time used for infeasible LP conflict analysis */
+   CLOCK*           sbanalyzetime;      /**< time used for infeasible LP conflict analysis */
+   CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
+   LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
    PQUEUE*          varqueue;           /**< unprocessed conflict variables */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
    int              conflictvarssize;   /**< size of conflictvars array */
    int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
    int              count;              /**< conflict set counter to label conflict variables with */
-};
-
-/** conflict analysis data structure for infeasible LP conflicts */
-struct LPConflict
-{
-   Longint          ncalls;             /**< number of calls to infeasible LP conflict analysis */
-   Longint          nconflicts;         /**< number of valid conflicts detected in infeasible LP conflict analysis */
-   Longint          nlpiterations;      /**< total number of iterations used for solving alternative LPs */
-   CLOCK*           analyzetime;        /**< time used for infeasible LP conflict analysis */
-   LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
-};
-
-/** conflict analysis data structure for pseudo solution conflicts */
-struct PseudoConflict
-{
-   Longint          ncalls;             /**< number of calls to pseudo solution conflict analysis */
-   Longint          nconflicts;         /**< number of valid conflicts detected in pseudo solution conflict analysis */
-   CLOCK*           analyzetime;        /**< time used for pseudo solution conflict analysis */
 };
 
 

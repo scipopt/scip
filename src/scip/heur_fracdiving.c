@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.10 2004/04/15 10:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.11 2004/04/27 15:49:59 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -105,7 +105,7 @@ DECL_HEURFREE(heurFreeFracdiving) /*lint --e{715}*/
 }
 
 
-/** initialization method of primal heuristic (called when problem solving starts) */
+/** initialization method of primal heuristic (called after problem was transformed) */
 static
 DECL_HEURINIT(heurInitFracdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
@@ -128,7 +128,7 @@ DECL_HEURINIT(heurInitFracdiving) /*lint --e{715}*/
 }
 
 
-/** deinitialization method of primal heuristic (called when problem solving exits) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 DECL_HEUREXIT(heurExitFracdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
@@ -200,7 +200,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* don't dive two times at the same node */
-   if( SCIPgetLastDivenode(scip) == SCIPgetNodenum(scip) )
+   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) )
       return SCIP_OKAY;
 
    /* get heuristic's data */
@@ -256,7 +256,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
    debugMessage("(node %lld) executing fracdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
-      SCIPgetNodenum(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
+      SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
     * - if the last rounding was in a direction, that never destroys feasibility, we continue in any case

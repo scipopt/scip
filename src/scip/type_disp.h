@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.2 2004/02/04 17:27:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_disp.h,v 1.3 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_disp.h
  * @brief  type definitions for displaying runtime statistics
@@ -47,7 +47,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  */
 #define DECL_DISPFREE(x) RETCODE x (SCIP* scip, DISP* disp)
 
-/** initialization method of display column (called when problem solving starts)
+/** initialization method of display column (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -55,7 +55,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  */
 #define DECL_DISPINIT(x) RETCODE x (SCIP* scip, DISP* disp)
 
-/** deinitialization method of display column (called when problem solving exits)
+/** deinitialization method of display column (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure

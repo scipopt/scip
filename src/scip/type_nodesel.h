@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.3 2004/02/04 17:27:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_nodesel.h
  * @brief  type definitions for node selectors
@@ -40,7 +40,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  */
 #define DECL_NODESELFREE(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
 
-/** initialization method of node selector (called when problem solving starts)
+/** initialization method of node selector (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -48,7 +48,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  */
 #define DECL_NODESELINIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
 
-/** deinitialization method of node selector (called when problem solving exits)
+/** deinitialization method of node selector (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -58,7 +58,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 /** node selection method of node selector
  *
- *  This method is called to select the next leaf of the branch-and-bound tree to be processed.
+ *  This method is called to select the next leaf of the branch and bound tree to be processed.
  *
  *  input:
  *  - scip            : SCIP main data structure

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.6 2004/04/15 10:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.7 2004/04/27 15:50:00 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -59,6 +59,14 @@ void SCIPhistoryReset(
    HISTORY*         history             /**< branching and inference history */
    );
 
+/** unites two history entries by adding the values of the second one to the first one */
+extern
+void SCIPhistoryUnite(
+   HISTORY*         history,            /**< branching and inference history */
+   HISTORY*         addhistory,         /**< history values to add to history */
+   Bool             switcheddirs        /**< should the history entries be united with switched directories */
+   );
+   
 /** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
  *  in the LP's objective value
  */
@@ -77,6 +85,12 @@ void SCIPhistoryUpdatePseudocost(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** returns the opposite direction of the given branching direction */
+extern
+BRANCHDIR SCIPbranchdirOpposite(
+   BRANCHDIR        dir                 /**< branching direction */
+   );
 
 /** returns the expected dual gain for moving the corresponding variable by "solvaldelta" */
 extern
@@ -150,6 +164,8 @@ Real SCIPhistoryGetAvgBranchdepth(
  * speed up the algorithms.
  */
 
+#define SCIPbranchdirOpposite(dir)                 ((dir) == SCIP_BRANCHDIR_DOWNWARDS \
+                                                   ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS)
 #define SCIPhistoryGetPseudocost(history,solvaldelta)                                       \
    ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->pscostcount[1] > 0.0                \
                             ? (history)->pscostsum[1] / (history)->pscostcount[1] : 1.0)    \

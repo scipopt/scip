@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.1 2004/04/15 10:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.2 2004/04/27 15:49:56 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -45,11 +45,11 @@
 #define branchFreeInference NULL
 
 
-/** initialization method of branching rule (called when problem solving starts) */
+/** initialization method of branching rule (called after problem was transformed) */
 #define branchInitInference NULL
 
 
-/** deinitialization method of branching rule (called when problem solving exits) */
+/** deinitialization method of branching rule (called before transformed problem is freed) */
 #define branchExitInference NULL
 
 

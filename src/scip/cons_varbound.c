@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.1 2004/04/19 17:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.2 2004/04/27 15:49:59 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -475,16 +475,39 @@ RETCODE propagateCons(
 #define consFreeVarbound NULL
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #define consInitVarbound NULL
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitVarbound NULL
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
-#define consSolstartVarbound NULL
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolVarbound NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolVarbound)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* release the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->row != NULL )
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** frees specific constraint data */
@@ -912,7 +935,7 @@ RETCODE SCIPincludeConshdlrVarbound(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeVarbound, consInitVarbound, consExitVarbound, consSolstartVarbound,
+                  consFreeVarbound, consInitVarbound, consExitVarbound, consInitsolVarbound, consExitsolVarbound,
                   consDeleteVarbound, consTransVarbound, consInitlpVarbound,
                   consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
                   consPropVarbound, consPresolVarbound, consRescvarVarbound,

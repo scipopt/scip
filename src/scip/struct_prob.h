@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.8 2004/02/25 16:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.9 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -43,6 +43,8 @@ struct Prob
    DECL_PROBDELORIG ((*probdelorig));   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans));     /**< creates user data of transformed problem by transforming original user data */
    DECL_PROBDELTRANS((*probdeltrans));  /**< frees user data of transformed problem */
+   DECL_PROBINITSOL ((*probinitsol));   /**< solving process initialization method of transformed data */
+   DECL_PROBEXITSOL ((*probexitsol));   /**< solving process deinitialization method of transformed data */
    PROBDATA*        probdata;           /**< user problem data set by the reader */
    HASHTABLE*       varnames;           /**< hash table storing variable's names */
    VAR**            fixedvars;          /**< array with fixed and aggregated variables */

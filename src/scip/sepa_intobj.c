@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.1 2004/04/06 13:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.2 2004/04/27 15:50:04 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -179,11 +179,11 @@ DECL_SEPAFREE(sepaFreeIntobj)
 }
 
 
-/** initialization method of separator (called when problem solving starts) */
+/** initialization method of separator (called after problem was transformed) */
 #define sepaInitIntobj NULL
 
 
-/** deinitialization method of separator (called when problem solving exits) */
+/** deinitialization method of separator (called before transformed problem is freed) */
 static
 DECL_SEPAEXIT(sepaExitIntobj)
 {  /*lint --e{715}*/
@@ -262,7 +262,7 @@ DECL_SEPAEXEC(sepaExecIntobj)
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 #define eventFreeIntobj NULL
 
-/** initialization method of event handler (called when problem solving starts) */
+/** initialization method of event handler (called after problem was transformed) */
 static
 DECL_EVENTINIT(eventInitIntobj)
 {
@@ -271,7 +271,7 @@ DECL_EVENTINIT(eventInitIntobj)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of event handler (called when problem solving exits) */
+/** deinitialization method of event handler (called before transformed problem is freed) */
 static
 DECL_EVENTEXIT(eventExitIntobj)
 {

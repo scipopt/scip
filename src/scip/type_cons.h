@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.8 2004/04/21 16:39:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.9 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -43,7 +43,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  */
 #define DECL_CONSFREE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
-/** initialization method of constraint handler (called when problem solving starts)
+/** initialization method of constraint handler (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -51,7 +51,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  */
 #define DECL_CONSINIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
-/** deinitialization method of constraint handler (called when problem solving exits)
+/** deinitialization method of constraint handler (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -59,7 +59,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  */
 #define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
-/** solving start notification method of constraint handler (called when presolving was finished)
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
  *  It is called even when presolving is turned off.
@@ -81,7 +81,21 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
  */
-#define DECL_CONSSOLSTART(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSINITSOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The constraint handler should use this call to clean up its branch and bound data, in particular to release
+ *  all LP rows that he has created or captured.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints of the constraint handler
+ *  - nconss          : number of constraints of the constraint handler
+ */
+#define DECL_CONSEXITSOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
 
 /** frees specific constraint data
  *

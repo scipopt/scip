@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.37 2004/04/16 10:48:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.38 2004/04/27 15:49:58 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -314,11 +314,7 @@ RETCODE consdataSwitchWatchedvars(
    assert(watchedvar1 == -1 || watchedvar1 != watchedvar2);
    assert(watchedvar1 != -1 || watchedvar2 == -1);
    assert(watchedvar1 == -1 || (0 <= watchedvar1 && watchedvar1 < consdata->nvars));
-   assert(watchedvar1 == -1 || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[watchedvar1]), 0.0));
-   assert(watchedvar1 == -1 || SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[watchedvar1]), 1.0));
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
-   assert(watchedvar2 == -1 || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[watchedvar2]), 0.0));
-   assert(watchedvar2 == -1 || SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[watchedvar2]), 1.0));
 
    /* drop events on old watched variables */
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 && consdata->watchedvar1 != watchedvar2 )
@@ -1064,16 +1060,39 @@ DECL_CONSFREE(consFreeLogicor)
 }
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #define consInitLogicor NULL
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitLogicor NULL
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
-#define consSolstartLogicor NULL
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolLogicor NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolLogicor)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* release the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->row != NULL )
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** frees specific constraint data */
@@ -1110,7 +1129,7 @@ DECL_CONSTRANS(consTransLogicor)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(SCIPstage(scip) == SCIP_STAGE_INITSOLVE);
+   assert(SCIPstage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
@@ -1341,7 +1360,7 @@ RETCODE branchLP(
             char name[MAXSTRLEN];
          
             /* add logic or constraint x(S) >= 1 */
-            sprintf(name, "LOB%lld", SCIPgetNodenum(scip));
+            sprintf(name, "LOB%lld", SCIPgetNTotalNodes(scip));
 
             CHECK_OKAY( SCIPcreateConsLogicor(scip, &newcons, name, nselcands, branchcands,
                            FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
@@ -2142,7 +2161,7 @@ RETCODE SCIPincludeConshdlrLogicor(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  consFreeLogicor, consInitLogicor, consExitLogicor, consSolstartLogicor,
+                  consFreeLogicor, consInitLogicor, consExitLogicor, consInitsolLogicor, consExitsolLogicor,
                   consDeleteLogicor, consTransLogicor, 
                   consInitlpLogicor, consSepaLogicor, 
                   consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 

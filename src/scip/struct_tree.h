@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.8 2004/04/15 10:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.9 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_tree.h
- * @brief  datastructures for branch-and-bound tree
+ * @brief  datastructures for branch and bound tree
  * @author Tobias Achterberg
  */
 

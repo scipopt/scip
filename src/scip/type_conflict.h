@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.4 2004/03/31 14:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.5 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -29,9 +29,8 @@
 
 typedef struct Conflicthdlr CONFLICTHDLR; /**< conflict handler to process conflict sets */
 typedef struct ConflicthdlrData CONFLICTHDLRDATA; /**< conflict handler data */
-typedef struct Conflict CONFLICT;       /**< conflict analysis data structure for propagation conflicts */
-typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure for infeasible LP conflicts */
-typedef struct PseudoConflict PSEUDOCONFLICT; /** conflict analysis data structure for pseudo solution conflicts */
+typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
+
 
 /** destructor of conflict handler to free conflict handler data (called when SCIP is exiting)
  *
@@ -41,7 +40,7 @@ typedef struct PseudoConflict PSEUDOCONFLICT; /** conflict analysis data structu
  */
 #define DECL_CONFLICTFREE(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
 
-/** initialization method of conflict handler (called when problem solving starts)
+/** initialization method of conflict handler (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -49,7 +48,7 @@ typedef struct PseudoConflict PSEUDOCONFLICT; /** conflict analysis data structu
  */
 #define DECL_CONFLICTINIT(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
 
-/** deinitialization method of conflict handler (called when problem solving exits)
+/** deinitialization method of conflict handler (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure

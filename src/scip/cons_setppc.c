@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.40 2004/04/05 15:48:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.41 2004/04/27 15:49:59 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1230,16 +1230,39 @@ DECL_CONSFREE(consFreeSetppc)
 }
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #define consInitSetppc NULL
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitSetppc NULL
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
-#define consSolstartSetppc NULL
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolSetppc NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolSetppc)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* release the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->row != NULL )
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** frees specific constraint data */
@@ -1275,7 +1298,7 @@ DECL_CONSTRANS(consTransSetppc)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(SCIPstage(scip) == SCIP_STAGE_INITSOLVE);
+   assert(SCIPstage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
@@ -1485,7 +1508,7 @@ RETCODE branchLP(
             char name[MAXSTRLEN];
          
             /* add set covering constraint x(S) >= 1 */
-            sprintf(name, "BSB%lld", SCIPgetNodenum(scip));
+            sprintf(name, "BSB%lld", SCIPgetNTotalNodes(scip));
 
             CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
                            FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
@@ -2553,7 +2576,7 @@ RETCODE SCIPincludeConshdlrSetppc(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  consFreeSetppc, consInitSetppc, consExitSetppc, consSolstartSetppc,
+                  consFreeSetppc, consInitSetppc, consExitSetppc, consInitsolSetppc, consExitsolSetppc,
                   consDeleteSetppc, consTransSetppc, 
                   consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
                   consPropSetppc, consPresolSetppc, consRescvarSetppc,

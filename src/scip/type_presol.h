@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.3 2004/02/04 17:27:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers
@@ -39,7 +39,7 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
  */
 #define DECL_PRESOLFREE(x) RETCODE x (SCIP* scip, PRESOL* presol)
 
-/** initialization method of presolver (called when problem solving starts)
+/** initialization method of presolver (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -47,7 +47,7 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
  */
 #define DECL_PRESOLINIT(x) RETCODE x (SCIP* scip, PRESOL* presol)
 
-/** deinitialization method of presolver (called when problem solving exits)
+/** deinitialization method of presolver (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.5 2004/04/15 11:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.6 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -68,7 +68,7 @@ public:
    }
 
    /** creates user data of transformed problem by transforming the original user problem data
-    *  (called when problem solving starts)
+    *  (called after problem was transformed)
     *
     *  The user has two possibilities to implement this method:
     *   1. Return the pointer to the original problem data object as pointer to the transformed problem data object.
@@ -107,6 +107,31 @@ public:
     *  longer needed.
     */
    virtual RETCODE scip_deltrans(
+      SCIP*         scip                /**< SCIP data structure */
+      )
+   {
+      return SCIP_OKAY;
+   }
+
+   /** solving process initialization method of transformed data (called before the branch and bound process begins)
+    *
+    *  This method is called before the branch and bound process begins and can be used to initialize user problem
+    *  data that depends for example on the number of active problem variables, because these are now fixed.
+    */
+   virtual RETCODE scip_initsol(
+      SCIP*         scip                /**< SCIP data structure */
+      )
+   {
+      return SCIP_OKAY;
+   }
+
+   /** solving process deinitialization method of transformed data (called before the branch and bound data is freed)
+    *
+    *  This method is called before the branch and bound data is freed and should be used to free all data that
+    *  was allocated in the solving process initialization method. The user has to make sure, that all LP rows associated
+    *  to the transformed user problem data are released.
+    */
+   virtual RETCODE scip_exitsol(
       SCIP*         scip                /**< SCIP data structure */
       )
    {

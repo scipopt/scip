@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sol.h,v 1.3 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sol.h,v 1.4 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_sol.h
  * @brief  datastructures for storing primal CIP solutions
@@ -47,11 +47,12 @@ struct Sol
 {
    Real             obj;                /**< objective value of solution */
    Real             time;               /**< clock time, when the solution was discovered */
-   Longint          nodenum;            /**< last node number, where this solution was modified */
+   Longint          nodenum;            /**< last node number of current run, where this solution was modified */
    REALARRAY*       vals;               /**< solution values for variables */
    BOOLARRAY*       valid;              /**< for solutions originating from LPSOL or PSEUDOSOL: TRUE iff variable's val
                                          *   is valid; otherwise the value has to be retrieved from the origin */
    HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
+   int              runnum;             /**< branch and bound run number in which the solution was found */
    int              depth;              /**< depth at which the solution was found */
    SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
 };

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.3 2004/02/04 17:27:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -40,7 +40,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  */
 #define DECL_HEURFREE(x) RETCODE x (SCIP* scip, HEUR* heur)
 
-/** initialization method of primal heuristic (called when problem solving starts)
+/** initialization method of primal heuristic (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -48,7 +48,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  */
 #define DECL_HEURINIT(x) RETCODE x (SCIP* scip, HEUR* heur)
 
-/** deinitialization method of primal heuristic (called when problem solving exits)
+/** deinitialization method of primal heuristic (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure

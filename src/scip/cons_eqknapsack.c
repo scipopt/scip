@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.11 2004/02/04 17:27:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.12 2004/04/27 15:49:58 bzfpfend Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -76,7 +76,7 @@ DECL_CONSFREE(consFreeEqknapsack)
 #endif
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #if 0
 static
 DECL_CONSINIT(consInitEqknapsack)
@@ -91,7 +91,7 @@ DECL_CONSINIT(consInitEqknapsack)
 #endif
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #if 0
 static
 DECL_CONSEXIT(consExitEqknapsack)
@@ -106,10 +106,10 @@ DECL_CONSEXIT(consExitEqknapsack)
 #endif
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_CONSSOLSTART(consSolstartEqknapsack)
+DECL_CONSINITSOL(consInitsolEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
@@ -117,7 +117,22 @@ DECL_CONSSOLSTART(consSolstartEqknapsack)
    return SCIP_OKAY;
 }
 #else
-#define consSolstartEqknapsack NULL
+#define consInitsolEqknapsack NULL
+#endif
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+#if 0
+static
+DECL_CONSEXITSOL(consExitsolEqknapsack)
+{  /*lint --e{715}*/
+   errorMessage("method of eqknapsack constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consExitsolEqknapsack NULL
 #endif
 
 
@@ -402,7 +417,7 @@ RETCODE SCIPincludeConshdlrEqknapsack(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, consSolstartEqknapsack,
+                  consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
                   consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,
                   consSepaEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
                   consPropEqknapsack, consPresolEqknapsack, consRescvarEqknapsack,

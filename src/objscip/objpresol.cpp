@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.3 2004/02/04 17:27:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.4 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -73,7 +73,7 @@ DECL_PRESOLFREE(presolFreeObj)
 }
 
 
-/** initialization method of presolver (called when problem solving starts) */
+/** initialization method of presolver (called after problem was transformed) */
 static
 DECL_PRESOLINIT(presolInitObj)
 {  /*lint --e{715}*/
@@ -90,7 +90,7 @@ DECL_PRESOLINIT(presolInitObj)
 }
 
 
-/** deinitialization method of presolver (called when problem solving exits) */
+/** deinitialization method of presolver (called before transformed problem is freed) */
 static
 DECL_PRESOLEXIT(presolExitObj)
 {  /*lint --e{715}*/

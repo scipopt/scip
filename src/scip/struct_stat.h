@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.10 2004/04/06 15:21:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.11 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -45,7 +45,8 @@ struct Stat
    Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
    Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
-   Longint          nnodes;             /**< number of nodes processed (including active node) */
+   Longint          nnodes;             /**< number of nodes processed in current run (including active node) */
+   Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including active node) */
    Longint          ncreatednodes;      /**< number of nodes created */
    Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
    Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
@@ -66,6 +67,7 @@ struct Stat
    HISTORY*         glbhistory;         /**< global history information over all variables */
    VAR*             lastbranchvar;      /**< last variable, that was branched on */
    VBC*             vbc;                /**< VBC Tool information */
+   int              nruns;              /**< number of branch and bound runs on current problem, including current run */
    int              nvaridx;            /**< number of used variable indices */
    int              ncolidx;            /**< number of used column indices */
    int              nrowidx;            /**< number of used row indices */
@@ -82,7 +84,8 @@ struct Stat
    int              npricerounds;       /**< number of pricing rounds performed in current node */
    int              nseparounds;        /**< number of separation rounds performed in current node */
    int              ndisplines;         /**< number of displayed information lines */
-   int              maxdepth;           /**< maximal depth of all processed nodes */
+   int              maxdepth;           /**< maximal depth of all processed nodes in current run */
+   int              maxtotaldepth;      /**< maximal depth of all processed nodes over all runs */
    int              plungedepth;        /**< current plunging depth (successive times, a child was selected as next node) */
    Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
 };

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.3 2004/02/04 17:27:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_prob.h
  * @brief  type definitions for storing and manipulating the main problem
@@ -50,7 +50,7 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
 #define DECL_PROBDELORIG(x) RETCODE x (SCIP* scip, PROBDATA** probdata)
 
 /** creates user data of transformed problem by transforming the original user problem data
- *  (called when problem solving starts)
+ *  (called after problem was transformed)
  *
  *  Because the original problem and the user data of the original problem should not be
  *  modified during the solving process, a transformed problem is created as a copy of
@@ -79,6 +79,30 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
  *    probdata        : pointer to the user problem data to free
  */
 #define DECL_PROBDELTRANS(x) RETCODE x (SCIP* scip, PROBDATA** probdata)
+
+/** solving process initialization method of transformed data (called before the branch and bound process begins)
+ *
+ *  This method is called before the branch and bound process begins and can be used to initialize user problem
+ *  data that depends for example on the number of active problem variables, because these are now fixed.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    probdata        : user problem data
+ */
+#define DECL_PROBINITSOL(x) RETCODE x (SCIP* scip, PROBDATA* probdata)
+
+/** solving process deinitialization method of transformed data (called before the branch and bound data is freed)
+ *
+ *  This method is called before the branch and bound data is freed and should be used to free all data that
+ *  was allocated in the solving process initialization method. The user has to make sure, that all LP rows associated
+ *  to the transformed user problem data are released.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    probdata        : user problem data
+ */
+#define DECL_PROBEXITSOL(x) RETCODE x (SCIP* scip, PROBDATA* probdata)
+
 
 
 

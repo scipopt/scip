@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.2 2004/02/04 17:27:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.3 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -72,7 +72,7 @@ DECL_PROBDELORIG(probDelorigObj)
 
 
 /** creates user data of transformed problem by transforming the original user problem data
- *  (called when problem solving starts)
+ *  (called after problem was transformed)
  */
 static
 DECL_PROBTRANS(probTransObj)
@@ -120,6 +120,34 @@ DECL_PROBDELTRANS(probDeltransObj)
 }
 
 
+/** solving process initialization method of transformed data (called before the branch and bound process begins) */
+static
+DECL_PROBINITSOL(probInitsolObj)
+{  /*lint --e{715}*/
+   assert(probdata != NULL);
+   assert(probdata->objprobdata != NULL);
+
+   /* call virtual method of probdata object */
+   CHECK_OKAY( probdata->objprobdata->scip_initsol(scip) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of transformed data (called before the branch and bound data is freed) */
+static
+DECL_PROBEXITSOL(probExitsolObj)
+{  /*lint --e{715}*/
+   assert(probdata != NULL);
+   assert(probdata->objprobdata != NULL);
+
+   /* call virtual method of probdata object */
+   CHECK_OKAY( probdata->objprobdata->scip_exitsol(scip) );
+
+   return SCIP_OKAY;
+}
+
+
 
 
 /*
@@ -144,7 +172,8 @@ RETCODE SCIPcreateObjProb(
    probdata->deleteobject = deleteobject;
 
    /* create problem */
-   CHECK_OKAY( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, probdata) );
+   CHECK_OKAY( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, 
+                  probInitsolObj, probExitsolObj, probdata) );
 
    return SCIP_OKAY;
 }

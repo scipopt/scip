@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.95 2004/04/06 15:21:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.96 2004/04/27 15:50:04 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -127,6 +127,7 @@
 /* Conflict Analysis */
 #define SCIP_DEFAULT_USEPROPCONFLICT   TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_USELPCONFLICT    FALSE /**< should infeasible LP conflict analysis be used? */
+#define SCIP_DEFAULT_USESBCONFLICT    FALSE /**< should infeasible strong branching conflict analysis be used? */
 #define SCIP_DEFAULT_USEPSEUDOCONFLICT TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_MINMAXCONFVARS      20 /**< minimal absolute maximum of variables involved in a conflict clause */
@@ -451,6 +452,11 @@ RETCODE SCIPsetCreate(
                   "conflict/uselpconflict",
                   "should infeasible LP conflict analysis be used?",
                   &(*set)->uselpconflict, SCIP_DEFAULT_USELPCONFLICT,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "conflict/usesbconflict",
+                  "should infeasible strong branching conflict analysis be used?",
+                  &(*set)->usesbconflict, SCIP_DEFAULT_USESBCONFLICT,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "conflict/usepseudoconflict",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.6 2004/04/15 10:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.7 2004/04/27 15:50:00 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -56,7 +56,7 @@ struct HeurData
 #define heurFreeSimplerounding NULL
 
 
-/** initialization method of primal heuristic (called when problem solving starts) */
+/** initialization method of primal heuristic (called after problem was transformed) */
 static
 DECL_HEURINIT(heurInitSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
@@ -76,7 +76,7 @@ DECL_HEURINIT(heurInitSimplerounding) /*lint --e{715}*/
 }
 
 
-/** deinitialization method of primal heuristic (called when problem solving exits) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 DECL_HEUREXIT(heurExitSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/

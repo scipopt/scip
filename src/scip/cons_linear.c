@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.91 2004/03/30 12:51:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.92 2004/04/27 15:49:58 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2608,17 +2608,17 @@ DECL_CONSFREE(consFreeLinear)
 }
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #define consInitLinear NULL
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitLinear NULL
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
-DECL_CONSSOLSTART(consSolstartLinear)
+DECL_CONSINITSOL(consInitsolLinear)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
@@ -2635,7 +2635,28 @@ DECL_CONSSOLSTART(consSolstartLinear)
       }
    }
 
-   *result = SCIP_FEASIBLE;
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolLinear)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* release the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->row != NULL )
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2674,7 +2695,7 @@ DECL_CONSTRANS(consTransLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(SCIPstage(scip) == SCIP_STAGE_INITSOLVE);
+   assert(SCIPstage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
@@ -4677,7 +4698,7 @@ RETCODE SCIPincludeConshdlrLinear(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_SEPAFREQ,
                   CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeLinear, consInitLinear, consExitLinear, consSolstartLinear,
+                  consFreeLinear, consInitLinear, consExitLinear, consInitsolLinear, consExitsolLinear,
                   consDeleteLinear, consTransLinear, 
                   consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
                   consPropLinear, consPresolLinear, consRescvarLinear,
@@ -4975,8 +4996,15 @@ RETCODE SCIPupgradeConsLinear(
    /* check, if the constraint is already stored as LP row */
    if( consdata->row != NULL )
    {
-      errorMessage("cannot upgrade linear constraint that is already stored as LP row\n");
-      return SCIP_INVALIDDATA;
+      if( SCIProwIsInLP(consdata->row) )
+      {
+         errorMessage("cannot upgrade linear constraint that is already stored as row in the LP\n");
+         return SCIP_INVALIDDATA;
+      }
+      else
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+      }
    }
 
 

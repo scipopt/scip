@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.4 2004/02/04 17:27:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.5 2004/04/27 15:50:06 bzfpfend Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -39,7 +39,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  */
 #define DECL_PRICERFREE(x) RETCODE x (SCIP* scip, PRICER* pricer)
 
-/** initialization method of variable pricer (called when problem solving starts and pricer is active)
+/** initialization method of variable pricer (called after problem was transformed and pricer is active)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -47,7 +47,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  */
 #define DECL_PRICERINIT(x) RETCODE x (SCIP* scip, PRICER* pricer)
 
-/** deinitialization method of variable pricer (called when problem solving exits and pricer is active)
+/** deinitialization method of variable pricer (called before transformed problem is freed and pricer is active)
  *
  *  input:
  *  - scip            : SCIP main data structure

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.2 2004/04/05 15:48:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.3 2004/04/27 15:49:58 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -353,11 +353,7 @@ RETCODE consdataSwitchWatchedvars(
    assert(watchedvar1 == -1 || watchedvar1 != watchedvar2);
    assert(watchedvar1 != -1 || watchedvar2 == -1);
    assert(watchedvar1 == -1 || (0 <= watchedvar1 && watchedvar1 < consdata->nvars));
-   assert(watchedvar1 == -1 || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[watchedvar1]), 0.0));
-   assert(watchedvar1 == -1 || SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[watchedvar1]), 1.0));
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
-   assert(watchedvar2 == -1 || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[watchedvar2]), 0.0));
-   assert(watchedvar2 == -1 || SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[watchedvar2]), 1.0));
 
    /* drop upper bound tighten events on old watched variables */
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 && consdata->watchedvar1 != watchedvar2 )
@@ -428,6 +424,29 @@ RETCODE consdataCreate(
    return SCIP_OKAY;
 }
 
+/** releases LP rows of constraint data and frees rows array */
+static
+RETCODE consdataFreeRows(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   int r;
+
+   assert(consdata != NULL);
+
+   if( consdata->rows != NULL )
+   {
+      for( r = 0; r < consdataGetNRows(consdata); ++r )
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->rows[r]) );
+      }
+      SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->rowssize);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** frees constraint data for or constraint */
 static
 RETCODE consdataFree(
@@ -455,15 +474,8 @@ RETCODE consdataFree(
       assert((*consdata)->watchedvar2 == -1);
    }
 
-   /* release the rows */
-   if( (*consdata)->rows != NULL )
-   {
-      for( r = 0; r < consdataGetNRows(*consdata); ++r )
-      {
-         CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->rows[r]) );
-      }
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->rows, (*consdata)->rowssize);
-   }
+   /* release and free the rows */
+   CHECK_OKAY( consdataFreeRows(scip, *consdata) );
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
@@ -1059,16 +1071,34 @@ DECL_CONSFREE(consFreeOr)
 }
 
 
-/** initialization method of constraint handler (called when problem solving starts) */
+/** initialization method of constraint handler (called after problem was transformed) */
 #define consInitOr NULL
 
 
-/** deinitialization method of constraint handler (called when problem solving exits) */
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitOr NULL
 
 
-/** solving start notification method of constraint handler (called when presolving was finished) */
-#define consSolstartOr NULL
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolOr NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolOr)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* release and free the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      CHECK_OKAY( consdataFreeRows(scip, consdata) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** frees specific constraint data */
@@ -1450,7 +1480,7 @@ RETCODE SCIPincludeConshdlrOr(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeOr, consInitOr, consExitOr, consSolstartOr,
+                  consFreeOr, consInitOr, consExitOr, consInitsolOr, consExitsolOr,
                   consDeleteOr, consTransOr, consInitlpOr,
                   consSepaOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
                   consPropOr, consPresolOr, consRescvarOr,

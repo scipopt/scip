@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.9 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.10 2004/04/27 15:50:04 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -85,7 +85,7 @@ RETCODE SCIPsepastoreApplyCuts(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */

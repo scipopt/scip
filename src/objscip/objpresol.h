@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.5 2004/04/15 10:41:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.6 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -75,7 +75,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** initialization method of presolver (called when problem solving starts) */
+   /** initialization method of presolver (called after problem was transformed) */
    virtual RETCODE scip_init(
       SCIP*         scip,               /**< SCIP data structure */
       PRESOL*       presol              /**< the presolver itself */
@@ -84,7 +84,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** deinitialization method of presolver (called when problem solving exits) */
+   /** deinitialization method of presolver (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
       SCIP*         scip,               /**< SCIP data structure */
       PRESOL*       presol              /**< the presolver itself */

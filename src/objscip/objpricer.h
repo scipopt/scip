@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.5 2004/04/15 10:41:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.6 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -75,7 +75,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** initialization method of variable pricer (called when problem solving starts) */
+   /** initialization method of variable pricer (called after problem was transformed) */
    virtual RETCODE scip_init(
       SCIP*         scip,               /**< SCIP data structure */
       PRICER*       pricer              /**< the variable pricer itself */
@@ -84,7 +84,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** deinitialization method of variable pricer (called when problem solving exits) */
+   /** deinitialization method of variable pricer (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
       SCIP*         scip,               /**< SCIP data structure */
       PRICER*       pricer              /**< the variable pricer itself */

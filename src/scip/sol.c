@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.32 2004/03/10 17:00:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.33 2004/04/27 15:50:04 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -47,14 +47,13 @@ RETCODE SCIPsolCreate(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
+   TREE*            tree,               /**< branch and bound tree, or NULL */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(sol != NULL);
    assert(memhdr != NULL);
    assert(stat != NULL);
-   assert(tree != NULL);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, sol) );   
    CHECK_OKAY( SCIPrealarrayCreate(&(*sol)->vals, memhdr) );
@@ -64,7 +63,8 @@ RETCODE SCIPsolCreate(
    (*sol)->time = SCIPclockGetTime(stat->solvingtime);
    (*sol)->nodenum = stat->nnodes;
    (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
-   (*sol)->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
+   (*sol)->runnum = stat->nruns;
+   (*sol)->depth = (tree != NULL && tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    debugMessage("created empty solution %p\n", *sol);
 
@@ -97,6 +97,7 @@ RETCODE SCIPsolCopy(
    (*sol)->time = sourcesol->time;
    (*sol)->nodenum = sourcesol->nodenum;
    (*sol)->solorigin = sourcesol->solorigin;
+   (*sol)->runnum = sourcesol->runnum;
    (*sol)->depth = sourcesol->depth;
 
    return SCIP_OKAY;
@@ -132,7 +133,7 @@ RETCODE SCIPsolCreatePseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
@@ -153,7 +154,7 @@ RETCODE SCIPsolCreateCurrentSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
@@ -258,6 +259,7 @@ RETCODE SCIPsolLinkLPSol(
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
+   sol->runnum = stat->nruns;
    sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    debugMessage(" -> objective value: %g\n", sol->obj);
@@ -271,7 +273,7 @@ RETCODE SCIPsolLinkPseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
    )
 {
@@ -299,6 +301,7 @@ RETCODE SCIPsolLinkPseudoSol(
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
+   sol->runnum = stat->nruns;
    sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    debugMessage(" -> objective value: %g\n", sol->obj);
@@ -312,7 +315,7 @@ RETCODE SCIPsolLinkCurrentSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
    )
 {
@@ -336,7 +339,7 @@ RETCODE SCIPsolLinkCurrentSol(
 RETCODE SCIPsolClear(
    SOL*             sol,                /**< primal CIP solution */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(sol != NULL);
@@ -353,6 +356,7 @@ RETCODE SCIPsolClear(
    }
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
+   sol->runnum = stat->nruns;
    sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    return SCIP_OKAY;
@@ -436,7 +440,7 @@ RETCODE SCIPsolSetVal(
    SOL*             sol,                /**< primal CIP solution */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    VAR*             var,                /**< variable to add to solution */
    Real             val                 /**< solution value of variable */
    )
@@ -445,7 +449,7 @@ RETCODE SCIPsolSetVal(
 
    assert(sol != NULL);
    assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
-   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || sol->nodenum == stat->nnodes);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
    assert(tree != NULL);
    assert(var != NULL);
@@ -467,6 +471,7 @@ RETCODE SCIPsolSetVal(
          sol->obj += SCIPvarGetObj(var) * (val - oldval);
          sol->time = SCIPclockGetTime(stat->solvingtime);
          sol->nodenum = stat->nnodes;
+         sol->runnum = stat->nruns;
          sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
       }
       return SCIP_OKAY;
@@ -498,14 +503,14 @@ RETCODE SCIPsolIncVal(
    SOL*             sol,                /**< primal CIP solution */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    VAR*             var,                /**< variable to increase solution value for */
    Real             incval              /**< increment for solution value of variable */
    )
 {
    assert(sol != NULL);
    assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
-   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || sol->nodenum == stat->nnodes);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
    assert(tree != NULL);
    assert(var != NULL);
@@ -528,6 +533,7 @@ RETCODE SCIPsolIncVal(
       sol->obj += SCIPvarGetObj(var) * incval;
       sol->time = SCIPclockGetTime(stat->solvingtime);
       sol->nodenum = stat->nnodes;
+      sol->runnum = stat->nruns;
       sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
       return SCIP_OKAY;
 
@@ -569,7 +575,7 @@ RETCODE SCIPsolGetVal(
 
    assert(sol != NULL);
    assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
-   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || sol->nodenum == stat->nnodes);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
    assert(solval != NULL);
 
@@ -660,7 +666,7 @@ RETCODE SCIPsolRound(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether rounding was successful */
    )
 {
@@ -780,6 +786,16 @@ Real SCIPsolGetTime(
    assert(sol != NULL);
 
    return sol->time;
+}
+
+/** gets branch and bound run number, where this solution was found */
+int SCIPsolGetRunnum(
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->runnum;
 }
 
 /** gets node number, where this solution was found */

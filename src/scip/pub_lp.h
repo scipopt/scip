@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.6 2004/03/10 17:00:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.7 2004/04/27 15:50:03 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -132,8 +132,8 @@ Real* SCIPcolGetVals(
    COL*             col                 /**< LP column */
    );
 
-/** gets number of the last node where strong branching was used on the given column,
- *  or -1 if strong branching was never applied to the column
+/** gets node number of the last node in current branch and bound run, where strong branching was used on the
+ *  given column, or -1 if strong branching was never applied to the column in current run
  */
 extern
 Longint SCIPcolGetStrongbranchNode(

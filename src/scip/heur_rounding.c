@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.23 2004/04/15 10:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.24 2004/04/27 15:50:00 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -403,7 +403,7 @@ RETCODE selectEssentialRounding(
 #define heurFreeRounding NULL
 
 
-/** initialization method of primal heuristic (called when problem solving starts) */
+/** initialization method of primal heuristic (called after problem was transformed) */
 static
 DECL_HEURINIT(heurInitRounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
@@ -422,7 +422,7 @@ DECL_HEURINIT(heurInitRounding) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** deinitialization method of primal heuristic (called when problem solving exits) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 DECL_HEUREXIT(heurExitRounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
@@ -529,6 +529,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
    /* calculate the minimal objective value possible after rounding fractional variables */
    minobj = SCIPsolGetObj(sol);
+   assert(minobj < SCIPgetUpperbound(scip));
    for( c = 0; c < nlpcands; ++c )
    {
       obj = SCIPvarGetObj(lpcands[c]);
@@ -544,14 +545,15 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       Real oldsolval;
       Real newsolval;
          
+      debugMessage("rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+         nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
+
       assert(minobj < SCIPgetUpperbound(scip)); /* otherwise, the rounding variable selection should have returned NULL */
 
       /* choose next variable to process:
        *  - if a violated row exists, round a variable decreasing the violation, that has least impact on other rows
        *  - otherwise, round a variable, that has strongest devastating impact on rows in opposite direction
        */
-      debugMessage("rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
-         nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
       if( nviolrows > 0 )
       {
          ROW* row;

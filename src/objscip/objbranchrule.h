@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.8 2004/04/15 10:41:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.9 2004/04/27 15:50:01 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -82,7 +82,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** initialization method of branching rule (called when problem solving starts) */
+   /** initialization method of branching rule (called after problem was transformed) */
    virtual RETCODE scip_init(
       SCIP*         scip,               /**< SCIP data structure */
       BRANCHRULE*   branchrule          /**< the branching rule itself */
@@ -91,7 +91,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** deinitialization method of branching rule (called when problem solving exits) */
+   /** deinitialization method of branching rule (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
       SCIP*         scip,               /**< SCIP data structure */
       BRANCHRULE*   branchrule          /**< the branching rule itself */

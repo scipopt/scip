@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.18 2004/04/15 10:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.19 2004/04/27 15:49:59 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -534,6 +534,18 @@ DECL_DIALOGEXEC(SCIPdialogExecFree)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the newstart command */
+DECL_DIALOGEXEC(SCIPdialogExecNewstart)
+{  /*lint --e{715}*/
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   CHECK_OKAY( SCIPfreeSolve(scip) );
+
+   *nextdialog = SCIPdialogGetParent(dialog);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the optimize command */
 DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 {  /*lint --e{715}*/
@@ -547,6 +559,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       break;
 
    case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPsolve(scip) );
@@ -556,9 +569,11 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       printf("problem is already solved\n");
       break;
 
-   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
    default:
       errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
@@ -583,6 +598,7 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
       break;
 
    case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMED:
       CHECK_OKAY( SCIPpresolve(scip) );
       break;
 
@@ -595,9 +611,11 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
       printf("problem is already solved\n");
       break;
 
-   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
    default:
       errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
@@ -1153,6 +1171,15 @@ RETCODE SCIPincludeDialogDefault(
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecHelp, NULL,
                      "help", "display this help", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* newstart */
+   if( !SCIPdialogHasEntry(root, "newstart") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecNewstart, NULL,
+                     "newstart", "reset branch and bound tree to start again from root", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

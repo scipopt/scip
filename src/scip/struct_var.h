@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.11 2004/04/07 14:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.12 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -202,8 +202,8 @@ struct Var
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
    int              branchpriority;     /**< priority of the variable for branching */
    int              inferinfo;          /**< user information for inference to help resolving the conflict */
-   int              inferdepth;         /**< depth in the tree, where the binary variable was fixed, or -1 */
-   int              inferindex;         /**< index of the binary variable's fixing in its depth level, or -1 */
+   int              fixdepth;           /**< depth in the tree, where the binary variable was fixed, or -1 */
+   int              fixindex;           /**< index of the binary variable's fixing in its depth level, or -1 */
    int              conflictsetcount;   /**< number of last conflict set, this variable was member of */
    BOUNDCHGTYPE     boundchgtype;       /**< bound change type (branching or inference) of binary variable's fixing */
    unsigned int     initial:1;          /**< TRUE iff var's column should be present in the initial root LP */

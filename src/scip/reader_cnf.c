@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.15 2004/02/04 17:27:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.16 2004/04/27 15:50:03 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -336,7 +336,7 @@ DECL_READERREAD(readerReadCnf)
    }
 
    /* create problem */
-   CHECK_OKAY( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL) );
+   CHECK_OKAY( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* read cnf file */
    retcode = readCnf(scip, f);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.29 2004/02/04 17:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.30 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -62,6 +62,12 @@ void SCIPstatMark(
 /** reset statistics to the data before solving started */
 extern
 void SCIPstatReset(
+   STAT*            stat                /**< problem statistics data */
+   );
+
+/** reset current branch and bound run specific statistics */
+extern
+void SCIPstatResetCurrentRun(
    STAT*            stat                /**< problem statistics data */
    );
 

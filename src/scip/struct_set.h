@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.17 2004/04/06 15:21:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.18 2004/04/27 15:50:05 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -144,6 +144,7 @@ struct Set
    Bool             catchctrlc;         /**< should the CTRL-C interrupt be catched by SCIP? */
    Bool             usepropconflict;    /**< should propagation conflict analysis be used? */
    Bool             uselpconflict;      /**< should infeasible LP conflict analysis be used? */
+   Bool             usesbconflict;      /**< should infeasible strong branching conflict analysis be used? */
    Bool             usepseudoconflict;  /**< should pseudo solution conflict analysis be used? */
    Bool             checklpfeas;        /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
    Bool             exactsolve;         /**< should the problem be solved exactly (with proven dual bounds)? */

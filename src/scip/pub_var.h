@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.12 2004/04/15 10:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.13 2004/04/27 15:50:03 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -216,6 +216,27 @@ RETCODE SCIPvarGetProbvarSum(
    Real*            constant            /**< pointer to constant c in sum a*x + c */
    );
 
+/** returns the number of times, a bound of the variable was changed in given direction due to branching */
+extern
+Longint SCIPvarGetNBranchings(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the number of inferences branching on this variable in given direction triggered */
+extern
+Longint SCIPvarGetNInferences(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the average depth of bound changes in given direction due to branching on the variable */
+extern
+Real SCIPvarGetAvgBranchdepth(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 
 #ifndef NDEBUG
 
@@ -403,15 +424,17 @@ int SCIPvarGetInferInfo(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets inference depth level of binary variable (depth in the tree at which variable was fixed), or -1 if unfixed */
+/** gets depth level, where the binary variable was fixed, or -1 if unfixed */
 extern
-int SCIPvarGetInferDepth(
+int SCIPvarGetFixDepth(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets inference number of binary variable (inference index in variable's inference depth level), or -1 if unfixed */
+/** gets fixing index of the variable in the depth level, where the binary variable was fixed, or -1 if unfixed or
+ *  fixed during preprocessing
+ */
 extern
-int SCIPvarGetInferIndex(
+int SCIPvarGetFixIndex(
    VAR*             var                 /**< problem variable */
    );
 
@@ -442,27 +465,6 @@ Real SCIPvarGetBranchFactor(
 extern
 int SCIPvarGetBranchPriority(
    VAR*             var                 /**< problem variable */
-   );
-
-/** returns the number of times, a bound of the variable was changed in given direction due to branching */
-extern
-Longint SCIPvarGetNBranchings(
-   VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
-   );
-
-/** returns the number of inferences branching on this variable in given direction triggered */
-extern
-Longint SCIPvarGetNInferences(
-   VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
-   );
-
-/** returns the average depth of bound changes in given direction due to branching on the variable */
-extern
-Real SCIPvarGetAvgBranchdepth(
-   VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
    );
 
 #else
@@ -503,19 +505,16 @@ Real SCIPvarGetAvgBranchdepth(
 #define SCIPvarGetInferVar(var)         (var)->infervar
 #define SCIPvarGetInferCons(var)        (var)->infercons
 #define SCIPvarGetInferInfo(var)        (var)->inferinfo
-#define SCIPvarGetInferDepth(var)       (var)->inferdepth
-#define SCIPvarGetInferIndex(var)       (var)->inferindex
-#define SCIPvarWasFixedEarlier(var1,var2) ((var1)->inferdepth >= 0                            \
-                                            && ((var2)->inferdepth == -1                      \
-                                              || (var1)->inferdepth < (var2)->inferdepth      \
-                                              || ((var1)->inferdepth == (var2)->inferdepth    \
-                                                && (var1)->inferindex < (var2)->inferindex)))
+#define SCIPvarGetFixDepth(var)         (var)->fixdepth
+#define SCIPvarGetFixIndex(var)         (var)->fixindex
+#define SCIPvarWasFixedEarlier(var1,var2) ((var1)->fixdepth >= 0                          \
+                                            && ((var2)->fixdepth == -1                    \
+                                              || (var1)->fixdepth < (var2)->fixdepth      \
+                                              || ((var1)->fixdepth == (var2)->fixdepth    \
+                                                && (var1)->fixindex < (var2)->fixindex)))
 #define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
-#define SCIPvarGetNBranchings(var,dir)    (SCIPhistoryGetNBranchings(var->history, dir))
-#define SCIPvarGetNInferences(var,dir)    (SCIPhistoryGetNInferences(var->history, dir))
-#define SCIPvarGetAvgBranchdepth(var,dir) (SCIPhistoryGetAvgBranchdepth(var->history, dir))
 
 #endif
 

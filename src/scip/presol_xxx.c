@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.7 2004/02/04 17:27:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.8 2004/04/27 15:50:02 bzfpfend Exp $"
 
 /**@file   presol_xxx.c
  * @brief  xxx presolver
@@ -79,7 +79,7 @@ DECL_PRESOLFREE(presolFreeXxx)
 #endif
 
 
-/** initialization method of presolver (called when problem solving starts) */
+/** initialization method of presolver (called after problem was transformed) */
 #if 0
 static
 DECL_PRESOLINIT(presolInitXxx)
@@ -94,7 +94,7 @@ DECL_PRESOLINIT(presolInitXxx)
 #endif
 
 
-/** deinitialization method of presolver (called when problem solving exits) */
+/** deinitialization method of presolver (called before transformed problem is freed) */
 #if 0
 static
 DECL_PRESOLEXIT(presolExitXxx)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.7 2004/04/15 10:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.8 2004/04/27 15:50:00 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -86,6 +86,32 @@ void SCIPhistoryReset(
    history->branchdepthsum[1] = 0;
 }
 
+/** unites two history entries by adding the values of the second one to the first one */
+void SCIPhistoryUnite(
+   HISTORY*         history,            /**< branching and inference history */
+   HISTORY*         addhistory,         /**< history values to add to history */
+   Bool             switcheddirs        /**< should the history entries be united with switched directories */
+   )
+{
+   int d;
+
+   assert(history != NULL);
+   assert(addhistory != NULL);
+
+   d = switcheddirs ? 1 : 0;
+
+   history->pscostcount[0] += addhistory->pscostcount[d];
+   history->pscostcount[1] += addhistory->pscostcount[1-d];
+   history->pscostsum[0] += addhistory->pscostsum[d];
+   history->pscostsum[1] += addhistory->pscostsum[1-d];
+   history->nbranchings[0] += addhistory->nbranchings[d];
+   history->nbranchings[1] += addhistory->nbranchings[1-d];
+   history->ninferences[0] += addhistory->ninferences[d];
+   history->ninferences[1] += addhistory->ninferences[1-d];
+   history->branchdepthsum[0] += addhistory->branchdepthsum[d];
+   history->branchdepthsum[1] += addhistory->branchdepthsum[1-d];
+}
+
 /** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
  *  in the LP's objective value
  */
@@ -149,6 +175,14 @@ void SCIPhistoryUpdatePseudocost(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** returns the opposite direction of the given branching direction */
+BRANCHDIR SCIPbranchdirOpposite(
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   return (dir == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+}
 
 /** returns the expected dual gain for moving the corresponding variable by "solvaldelta" */
 Real SCIPhistoryGetPseudocost(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.1 2004/03/10 17:00:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.2 2004/04/27 15:50:03 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  public methods for primal CIP solutions
@@ -54,7 +54,13 @@ Real SCIPsolGetTime(
    SOL*             sol                 /**< primal CIP solution */
    );
 
-/** gets node number, where this solution was found */
+/** gets branch and bound run number, where this solution was found */
+extern
+int SCIPsolGetRunnum(
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** gets node number of the specific branch and bound run, where this solution was found */
 extern
 Longint SCIPsolGetNodenum(
    SOL*             sol                 /**< primal CIP solution */
@@ -81,6 +87,7 @@ HEUR* SCIPsolGetHeur(
 #define SCIPsolGetObj(sol)              (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
+#define SCIPsolGetRunnum(sol)           (sol)->runnum
 #define SCIPsolGetDepth(sol)            (sol)->depth
 #define SCIPsolGetHeur(sol)             (sol)->heur
 

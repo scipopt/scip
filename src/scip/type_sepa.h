@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.3 2004/02/04 17:27:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.4 2004/04/27 15:50:07 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -40,7 +40,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  */
 #define DECL_SEPAFREE(x) RETCODE x (SCIP* scip, SEPA* sepa)
 
-/** initialization method of separator (called when problem solving starts)
+/** initialization method of separator (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -48,7 +48,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  */
 #define DECL_SEPAINIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
 
-/** deinitialization method of separator (called when problem solving exits)
+/** deinitialization method of separator (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure

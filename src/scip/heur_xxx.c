@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.5 2004/04/15 10:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.6 2004/04/27 15:50:00 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -84,7 +84,7 @@ DECL_HEURFREE(heurFreeXxx)
 #endif
 
 
-/** initialization method of primal heuristic (called when problem solving starts) */
+/** initialization method of primal heuristic (called after problem was transformed) */
 #if 0
 static
 DECL_HEURINIT(heurInitXxx)
@@ -99,7 +99,7 @@ DECL_HEURINIT(heurInitXxx)
 #endif
 
 
-/** deinitialization method of primal heuristic (called when problem solving exits) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 #if 0
 static
 DECL_HEUREXIT(heurExitXxx)
