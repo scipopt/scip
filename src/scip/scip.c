@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.183 2004/07/07 08:58:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.184 2004/07/07 09:03:26 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2670,6 +2670,20 @@ CONS* SCIPfindCons(
       errorMessage("invalid SCIP stage\n");
       abort();
    }  /*lint !e788*/
+}
+
+/** outputs constraint information to file stream */
+RETCODE SCIPprintCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPconsPrint(cons, scip->set, file) );
+
+   return SCIP_OKAY;
 }
 
 
