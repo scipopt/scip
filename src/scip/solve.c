@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.127 2004/08/24 11:58:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.128 2004/08/24 12:50:47 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -70,7 +70,9 @@ Bool SCIPsolveIsStopped(
       || (SCIPgetMemUsed(set->scip) >= set->memlimit*1024.0*1024.0)
       || (SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit))
       || (set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED &&
-         SCIPgetNSolsFound(set->scip) >= set->sollimit));
+         SCIPgetNSolsFound(set->scip) >= set->sollimit)
+      || (set->bestsollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED &&
+         SCIPgetNBestSolsFound(set->scip) >= set->bestsollimit));
 }
 
 /** outputs the reason for termination */
@@ -96,6 +98,9 @@ void SCIPsolvePrintStopReason(
    else if( set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED
       && SCIPgetNSolsFound(set->scip) >= set->sollimit )
       fprintf(file, "solution limit reached");
+   else if( set->bestsollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED
+      && SCIPgetNBestSolsFound(set->scip) >= set->bestsollimit )
+      fprintf(file, "solution improvement limit reached");
 }
 
 /** domain propagation */

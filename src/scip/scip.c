@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.196 2004/08/24 11:58:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.197 2004/08/24 12:50:44 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8739,6 +8739,16 @@ Longint SCIPgetNSolsFound(
    CHECK_ABORT( checkStage(scip, "SCIPgetNSolsFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->primal->nsolsfound;
+}
+
+/** gets number of feasible primal solutions found so far, that improved the primal bound at the time they were found */
+Longint SCIPgetNBestSolsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNBestSolsFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->primal->nbestsolsfound;
 }
 
 /** gets number of primal solutions stored in the solution storage */

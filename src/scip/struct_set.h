@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.23 2004/07/13 15:03:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.24 2004/08/24 12:50:48 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -134,6 +134,8 @@ struct Set
    int              consobsoleteage;    /**< age of a constraint after which it is marked obsolete (not useful anymore) */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    int              sollimit;           /**< solving stops, if the given number of solutions were found (-1: no limit) */
+   int              bestsollimit;       /**< solving stops, if the given number of solution improvements were found
+                                         *   (-1: no limit) */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    int              redcostfreq;        /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.43 2004/08/24 11:58:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.44 2004/08/24 12:50:43 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -109,6 +109,7 @@ RETCODE SCIPprimalCreate(
    (*primal)->existingsolssize = 0;
    (*primal)->nexistingsols = 0;
    (*primal)->nsolsfound = 0;
+   (*primal)->nbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
 
@@ -470,20 +471,6 @@ RETCODE primalAddSol(
    debugMessage(" -> stored at position %d of %d solutions, found %lld solutions\n", 
       insertpos, primal->nsols, primal->nsolsfound);
    
-   /* issue POORLPSOLVED or BESTLPSOLVED event */
-   if( insertpos == 0 )
-   {
-      /* issue BESTLPSOLVED event */
-      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
-   }
-   else
-   {
-      /* issue POORLPSOLVED event */
-      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
-   }
-   CHECK_OKAY( SCIPeventChgSol(&event, sol) );
-   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
-
    /* change color of node in VBC output */
    SCIPvbcFoundSolution(stat->vbc, stat, tree->actnode);
 
@@ -496,7 +483,18 @@ RETCODE primalAddSol(
       
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+
+      /* issue BESTLPSOLVED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
+      primal->nbestsolsfound++;
    }
+   else
+   {
+      /* issue POORLPSOLVED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
+   }
+   CHECK_OKAY( SCIPeventChgSol(&event, sol) );
+   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
    return SCIP_OKAY;
 }

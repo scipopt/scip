@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.155 2004/08/24 11:58:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.156 2004/08/24 12:50:46 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3646,6 +3646,12 @@ Real SCIPgetTransGap(
 /** gets number of feasible primal solutions found so far */
 extern
 Longint SCIPgetNSolsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of feasible primal solutions found so far, that improved the primal bound at the time they were found */
+extern
+Longint SCIPgetNBestSolsFound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
