@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_integral.c
- * @brief  constraint handler for integral constraints
+ * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
  */
 

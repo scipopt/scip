@@ -16,8 +16,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define DEBUG
-/**@file   cons_bitstring.c
- * @brief  constraint handler for bitstring constraints
+/**@file   cons_bitvar.c
+ * @brief  constraint handler for bitvar constraints
  * @author Tobias Achterberg
  */
 
@@ -27,11 +27,11 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_bitstring.h"
+#include "cons_bitvar.h"
 
 
 /* constraint handler properties */
-#define CONSHDLR_NAME          "bitstring"
+#define CONSHDLR_NAME          "bitvar"
 #define CONSHDLR_DESC          "arbitrarily long integer variables represented as bit strings"
 #define CONSHDLR_SEPAPRIORITY  +2000000
 #define CONSHDLR_ENFOPRIORITY  - 500000
@@ -40,10 +40,10 @@
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define EVENTHDLR_NAME         "bitstring"
-#define EVENTHDLR_DESC         "bound change event handler for bitstring constraints"
+#define EVENTHDLR_NAME         "bitvar"
+#define EVENTHDLR_DESC         "bound change event handler for bitvar constraints"
 
-#define WORDSIZE                     16 /**< number of bits in one word of the bitstring */
+#define WORDSIZE                     16 /**< number of bits in one word of the bitvar */
 #define WORDPOWER       (1 << WORDSIZE) /**< number of different values of one word (2^WORDSIZE) */
 
 
@@ -52,11 +52,11 @@
  * Data structures
  */
 
-/** constraint data for bitstring constraints */
+/** constraint data for bitvar constraints */
 struct ConsData
 {
-   VAR**            bits;               /**< binaries representing bits of the bitstring, least significant first */
-   VAR**            words;              /**< integers representing words of the bitstring, least significant first */
+   VAR**            bits;               /**< binaries representing bits of the bitvar, least significant first */
+   VAR**            words;              /**< integers representing words of the bitvar, least significant first */
    ROW**            rows;               /**< LP rows storing equalities for each word */
    int              nbits;              /**< number of bits */
    int              nwords;             /**< number of words: nwords = ceil(nbits/WORDSIZE) */
@@ -79,7 +79,7 @@ struct ConsHdlrData
 /** returns the number of bits of the given word */
 static
 int wordSize(
-   CONSDATA*        consdata,           /**< bitstring constraint data */
+   CONSDATA*        consdata,           /**< bitvar constraint data */
    int              word                /**< word number */
    )
 {
@@ -95,7 +95,7 @@ int wordSize(
 /** returns the number of different values the given word store (2^#bits) */
 static
 int wordPower(
-   CONSDATA*        consdata,           /**< bitstring constraint data */
+   CONSDATA*        consdata,           /**< bitvar constraint data */
    int              word                /**< word number */
    )
 {
@@ -108,7 +108,7 @@ int wordPower(
       return (1 << (consdata->nbits - (consdata->nwords-1) * WORDSIZE));
 }
 
-/** creates constaint handler data for bitstring constraint handler */
+/** creates constaint handler data for bitvar constraint handler */
 static
 RETCODE conshdlrdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
@@ -123,14 +123,14 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
-      errorMessage("event handler for bitstring constraints not found");
+      errorMessage("event handler for bitvar constraints not found");
       return SCIP_PLUGINNOTFOUND;
    }
 
    return SCIP_OKAY;
 }
 
-/** frees constaint handler data for bitstring constraint handler */
+/** frees constaint handler data for bitvar constraint handler */
 static
 RETCODE conshdlrdataFree(
    SCIP*            scip,               /**< SCIP data structure */
@@ -144,12 +144,12 @@ RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
-/** creates a bitstring constraint data object along with the corresponding variables */
+/** creates a bitvar constraint data object along with the corresponding variables */
 static
 RETCODE consdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to store the bitstring constraint data */
-   int              nbits               /**< number of bits in the bitstring */
+   CONSDATA**       consdata,           /**< pointer to store the bitvar constraint data */
+   int              nbits               /**< number of bits in the bitvar */
    )
 {
    assert(consdata != NULL);
@@ -171,14 +171,14 @@ RETCODE consdataCreate(
    return SCIP_OKAY;
 }
 
-/** creates variables for the bitstring and adds them to the problem */
+/** creates variables for the bitvar and adds them to the problem */
 static
 RETCODE consdataCreateVars(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< bitstring constraint data */
+   CONSDATA*        consdata,           /**< bitvar constraint data */
    EVENTHDLR*       eventhdlr,          /**< event handler for bound change events */
    const char*      name,               /**< prefix for variable names */
-   Real             obj                 /**< objective value of bitstring variable */
+   Real             obj                 /**< objective value of bitvar variable */
    )
 {
    char varname[MAXSTRLEN];
@@ -226,7 +226,7 @@ RETCODE consdataCreateVars(
    {
       char msg[MAXSTRLEN];
 
-      sprintf(msg, "Warning! objective value %g of %d-bit string grew up to %g in last bit\n", 
+      sprintf(msg, "Warning! objective value %g of %d-bit variable grew up to %g in last bit\n", 
          obj, consdata->nbits, bitobj/2.0);
       SCIPmessage(scip, SCIP_VERBLEVEL_MINIMAL, msg);
    }
@@ -238,8 +238,8 @@ RETCODE consdataCreateVars(
 static
 RETCODE consdataTransformVars(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        sourcedata,         /**< bitstring constraint data of the source constraint */
-   CONSDATA*        targetdata,         /**< bitstring constraint data of the target constraint */
+   CONSDATA*        sourcedata,         /**< bitvar constraint data of the source constraint */
+   CONSDATA*        targetdata,         /**< bitvar constraint data of the target constraint */
    EVENTHDLR*       eventhdlr           /**< event handler for bound change events */
    )
 {
@@ -254,26 +254,24 @@ RETCODE consdataTransformVars(
    assert(sourcedata->nbits == targetdata->nbits);
    assert(sourcedata->nwords == targetdata->nwords);
 
-   /* get transformed bit variables */
+   /* get transformed variables */
+   CHECK_OKAY( SCIPgetTransformedVars(scip, sourcedata->nbits, sourcedata->bits, targetdata->bits) );
+   CHECK_OKAY( SCIPgetTransformedVars(scip, sourcedata->nwords, sourcedata->words, targetdata->words) );
+
+   /* capture bit variables and catch bound tighten events */
    for( i = 0; i < sourcedata->nbits; ++i )
    {
-      CHECK_OKAY( SCIPgetTransformedVar(scip, sourcedata->bits[i], &targetdata->bits[i]) );
-      CHECK_OKAY( SCIPcaptureVar(scip, targetdata->bits[i]) );
-
-      /* catch bound tighten events on variable */
       assert(SCIPvarIsTransformed(targetdata->bits[i]));
+      CHECK_OKAY( SCIPcaptureVar(scip, targetdata->bits[i]) );
       CHECK_OKAY( SCIPcatchVarEvent(scip, targetdata->bits[i], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
                      (EVENTDATA*)targetdata) );
    }
 
-   /* get transformed word variables */
+   /* capture word variables and catch bound tighten events */
    for( i = 0; i < sourcedata->nwords; ++i )
    {
-      CHECK_OKAY( SCIPgetTransformedVar(scip, sourcedata->words[i], &targetdata->words[i]) );
-      CHECK_OKAY( SCIPcaptureVar(scip, targetdata->words[i]) );
-
-      /* catch bound tighten events on variable */
       assert(SCIPvarIsTransformed(targetdata->words[i]));
+      CHECK_OKAY( SCIPcaptureVar(scip, targetdata->words[i]) );
       CHECK_OKAY( SCIPcatchVarEvent(scip, targetdata->words[i], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
                      (EVENTDATA*)targetdata) );
    }
@@ -281,11 +279,11 @@ RETCODE consdataTransformVars(
    return SCIP_OKAY;
 }
 
-/** frees a bitstring constraint data object and releases corresponding variables */
+/** frees a bitvar constraint data object and releases corresponding variables */
 static
 RETCODE consdataFree(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to the bitstring constraint data */
+   CONSDATA**       consdata,           /**< pointer to the bitvar constraint data */
    EVENTHDLR*       eventhdlr           /**< event handler for bound change events */
    )
 {
@@ -341,14 +339,14 @@ RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
-/** checks given word of bitstring constraint for feasibility of given solution or actual solution */
+/** checks given word of bitvar constraint for feasibility of given solution or actual solution */
 static
 RETCODE checkWord(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< bitstring constraint */
+   CONS*            cons,               /**< bitvar constraint */
    int              word,               /**< word number to check */
    SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
-   Bool             checklprows,        /**< has bitstring constraint to be checked, if it is already in current LP? */
+   Bool             checklprows,        /**< has bitvar constraint to be checked, if it is already in current LP? */
    int*             nviolatedbits       /**< pointer to store the number of violated bits */
    )
 {
@@ -368,7 +366,7 @@ RETCODE checkWord(
    assert(consdata != NULL);
    assert(0 <= word && word < consdata->nwords);
 
-   debugMessage("checking bitstring constraint <%s> at word %d\n", SCIPconsGetName(cons), word);
+   debugMessage("checking bitvar constraint <%s> at word %d\n", SCIPconsGetName(cons), word);
 
    *nviolatedbits = 0;
 
@@ -410,13 +408,13 @@ RETCODE checkWord(
    return SCIP_OKAY;
 }
 
-/** checks all words of bitstring constraint for feasibility of given solution or actual solution */
+/** checks all words of bitvar constraint for feasibility of given solution or actual solution */
 static
 RETCODE check(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< bitstring constraint */
+   CONS*            cons,               /**< bitvar constraint */
    SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
-   Bool             checklprows,        /**< has bitstring constraint to be checked, if it is already in current LP? */
+   Bool             checklprows,        /**< has bitvar constraint to be checked, if it is already in current LP? */
    Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -440,11 +438,11 @@ RETCODE check(
    return SCIP_OKAY;
 }
 
-/** creates an LP row for a single word in a bitstring constraint */
+/** creates an LP row for a single word in a bitvar constraint */
 static
 RETCODE createRow(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< bitstring constraint */
+   CONS*            cons,               /**< bitvar constraint */
    int              word                /**< word number to create the row for */
    )
 {
@@ -490,11 +488,11 @@ RETCODE createRow(
    return SCIP_OKAY;
 }
 
-/** adds bitstring constraint as cuts to the LP */
+/** adds bitvar constraint as cuts to the LP */
 static
 RETCODE addCut(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< bitstring constraint */
+   CONS*            cons,               /**< bitvar constraint */
    int              word,               /**< word number to add the cut for */
    Real             violation           /**< absolute violation of the constraint */
    )
@@ -522,11 +520,11 @@ RETCODE addCut(
    return SCIP_OKAY;
 }
 
-/** separates bitstring constraint: adds each word of bitstring constraint as cut, if violated by current LP solution */
+/** separates bitvar constraint: adds each word of bitvar constraint as cut, if violated by current LP solution */
 static
 RETCODE separate(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< bitstring constraint */
+   CONS*            cons,               /**< bitvar constraint */
    RESULT*          result              /**< pointer to store result of separation */
    )
 {
@@ -555,14 +553,15 @@ RETCODE separate(
    return SCIP_OKAY;
 }
 
-/** propagates domains of variables of a single word in a bitstring constraint */
+/** propagates domains of variables of a single word in a bitvar constraint */
 static
 RETCODE propagateWord(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< bitstring constraint */
+   CONS*            cons,               /**< bitvar constraint */
    int              word,               /**< word number to add the cut for */
    int*             nfixedvars,         /**< pointer to add up the number of fixed variables */
-   int*             nchgbds             /**< pointer to add up the number of fixed bounds */
+   int*             nchgbds,            /**< pointer to add up the number of fixed bounds */
+   Bool*            infeasible          /**< pointer to store whether the constraint is infeasible in current bounds */
    )
 {
    CONSDATA* consdata;
@@ -585,6 +584,9 @@ RETCODE propagateWord(
 
    assert(nfixedvars != NULL);
    assert(nchgbds != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -595,13 +597,12 @@ RETCODE propagateWord(
    wordsize = wordSize(consdata, word);
    bitstart = word*WORDSIZE;
    bitend = bitstart + wordsize;
+   assert(wordsize >= 1);
    assert(bitstart < bitend);
    fixedval = 0;
    nfixedbits = 0;
-   bitval = wordPower(consdata, word);
-   for( b = bitend-1; b >= bitstart; --b )
+   for( b = bitend-1, bitval = (1 << (wordsize-1)); b >= bitstart; --b, bitval >>= 1 )
    {
-      bitval >>= 1;
       assert(bitval == (1 << (b - bitstart)));
       bitvar = consdata->bits[b];
       lb = SCIPvarGetLbLocal(bitvar);
@@ -621,6 +622,7 @@ RETCODE propagateWord(
          break;
    }
    assert(nfixedbits <= wordsize);
+   assert(bitval == ((1 << (wordsize-nfixedbits)) >> 1));
    
    /* get the word along with its bounds */
    wordvar = consdata->words[word];
@@ -630,13 +632,15 @@ RETCODE propagateWord(
    /* update the bounds of the word respectively: if the most significant k bits of an n-bit word are fixed,
     * the value of the word must be in  [fixedval, fixedval+2^(n-k)-1]
     */
-   if( nfixedbits > 0 )
+   if( nfixedbits > 0 && SCIPvarGetStatus(wordvar) != SCIP_VARSTATUS_FIXED )
    {
       unfixedpower = (1 << (wordsize-nfixedbits));
+      assert(unfixedpower >= 1);
+
       if( lb < fixedval - 0.5 )
       {
          /* lower bound can be adjusted to fixedval */
-         debugMessage("bitstring <%s>: adjusting lower bound of word %d <%s>: [%g,%g] -> [%g,%g]\n",
+         debugMessage("bitvar <%s>: adjusting lower bound of word %d <%s>: [%g,%g] -> [%g,%g]\n",
             SCIPconsGetName(cons), word, SCIPvarGetName(wordvar), lb, ub, (Real)fixedval, ub);
          lb = fixedval;
          CHECK_OKAY( SCIPchgVarLb(scip, wordvar, lb) );
@@ -645,7 +649,7 @@ RETCODE propagateWord(
       if( ub > fixedval + unfixedpower - 1 + 0.5 )
       {
          /* upper bound can be adjusted to fixedval + unfixedpower - 1 */
-         debugMessage("bitstring <%s>: adjusting upper bound of word %d <%s>: [%g,%g] -> [%g,%g]\n",
+         debugMessage("bitvar <%s>: adjusting upper bound of word %d <%s>: [%g,%g] -> [%g,%g]\n",
             SCIPconsGetName(cons), word, SCIPvarGetName(wordvar), lb, ub, lb, (Real)(fixedval + unfixedpower - 1));
          ub = fixedval + unfixedpower - 1;
          CHECK_OKAY( SCIPchgVarUb(scip, wordvar, ub) );
@@ -658,32 +662,32 @@ RETCODE propagateWord(
     */
    lbint = (int)(lb+0.5);
    ubint = (int)(ub+0.5);
-   assert(bitval == (1 << (wordsize-nfixedbits-1)));
-   for( b = bitend-1 - nfixedbits; b >= bitstart; --b )
+   assert(bitval == ((1 << (wordsize-nfixedbits)) >> 1));
+   for( b = bitend-1 - nfixedbits; b >= bitstart; --b, bitval >>= 1 )
    {
       assert(bitval == (1 << (b - bitstart)));
       lbbitset = ((lbint & bitval) > 0);
       ubbitset = ((ubint & bitval) > 0);
       if( lbbitset == ubbitset )
       {
-         Bool infeasible;
-
          /* both bounds are identical in this bit: fix the corresponding bit variables */
+         if( SCIPvarGetStatus(consdata->bits[b]) != SCIP_VARSTATUS_FIXED )
+            (*nfixedvars)++;
          if( lbbitset )
          {
-            debugMessage("bitstring <%s>: fixing bit %d <%s> to 1.0 (word %d <%s>: [%g,%g])\n",
+            debugMessage("bitvar <%s>: fixing bit %d <%s> to 1.0 (word %d <%s>: [%g,%g])\n",
                SCIPconsGetName(cons), b, SCIPvarGetName(consdata->bits[b]), word, SCIPvarGetName(wordvar), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 1.0, &infeasible) );
+            CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 1.0, infeasible) );
          }
          else
          {
-            debugMessage("bitstring <%s>: fixing bit %d <%s> to 0.0 (word %d <%s>: [%g,%g])\n",
+            debugMessage("bitvar <%s>: fixing bit %d <%s> to 0.0 (word %d <%s>: [%g,%g])\n",
                SCIPconsGetName(cons), b, SCIPvarGetName(consdata->bits[b]), word, SCIPvarGetName(wordvar), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 0.0, &infeasible) );
+            CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 0.0, infeasible) );
          }
-         assert(!infeasible);
-         (*nfixedvars)++;
-         bitval >>= 1;
+         nfixedbits++;
+         if( *infeasible )
+            return SCIP_OKAY;
       }
       else
       {
@@ -691,21 +695,39 @@ RETCODE propagateWord(
          break;
       }
    }
+   assert(bitval == ((1 << (wordsize-nfixedbits)) >> 1));
+
+   /* if all bits are fixed, fix the word */
+   if( nfixedbits == wordsize )
+   {
+      debugMessage("bitvar <%s>: fixing word %d <%s>: [%g,%g] -> [%g,%g]\n",
+         SCIPconsGetName(cons), word, SCIPvarGetName(wordvar), lb, ub, (Real)fixedval, (Real)fixedval);
+      if( SCIPvarGetStatus(wordvar) != SCIP_VARSTATUS_FIXED )
+         (*nfixedvars)++;
+      CHECK_OKAY( SCIPfixVar(scip, wordvar, (Real)fixedval, infeasible) );
+      if( *infeasible )
+         return SCIP_OKAY;
+   }
 
    return SCIP_OKAY;
 }
 
-/** propagates domains of variables of a bitstring constraint */
+/** propagates domains of variables of a bitvar constraint */
 static
 RETCODE propagate(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< bitstring constraint */
+   CONS*            cons,               /**< bitvar constraint */
    int*             nfixedvars,         /**< pointer to add up the number of fixed variables */
-   int*             nchgbds             /**< pointer to add up the number of fixed bounds */
+   int*             nchgbds,            /**< pointer to add up the number of fixed bounds */
+   Bool*            infeasible          /**< pointer to store whether the constraint is infeasible in current bounds */
    )
 {
    CONSDATA* consdata;
    int w;
+
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -714,14 +736,14 @@ RETCODE propagate(
    if( consdata->propagated )
       return SCIP_OKAY;
 
-   /* propagate all words in the bitstring */
-   for( w = 0; w < consdata->nwords; ++w )
-   {
-      CHECK_OKAY( propagateWord(scip, cons, w, nfixedvars, nchgbds) );
-   }
-
    /* mark the constraint propagated */
    consdata->propagated = TRUE;
+
+   /* propagate all words in the bitvar */
+   for( w = 0; w < consdata->nwords && !(*infeasible); ++w )
+   {
+      CHECK_OKAY( propagateWord(scip, cons, w, nfixedvars, nchgbds, infeasible) );
+   }
 
    return SCIP_OKAY;
 }
@@ -735,7 +757,7 @@ RETCODE propagate(
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
-DECL_CONSFREE(consFreeBitstring)
+DECL_CONSFREE(consFreeBitvar)
 {
    CONSHDLRDATA* conshdlrdata;
 
@@ -755,16 +777,16 @@ DECL_CONSFREE(consFreeBitstring)
 
 
 /** initialization method of constraint handler (called when problem solving starts) */
-#define consInitBitstring NULL
+#define consInitBitvar NULL
 
 
 /** deinitialization method of constraint handler (called when problem solving exits) */
-#define consExitBitstring NULL
+#define consExitBitvar NULL
 
 
 /** frees specific constraint data */
 static
-DECL_CONSDELETE(consDeleteBitstring)
+DECL_CONSDELETE(consDeleteBitvar)
 {
    CONSHDLRDATA* conshdlrdata;
 
@@ -781,7 +803,7 @@ DECL_CONSDELETE(consDeleteBitstring)
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
-DECL_CONSTRANS(consTransBitstring)
+DECL_CONSTRANS(consTransBitvar)
 {
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* sourcedata;
@@ -815,7 +837,7 @@ DECL_CONSTRANS(consTransBitstring)
 
 /** LP initialization method of constraint handler */
 static
-DECL_CONSINITLP(consInitlpBitstring)
+DECL_CONSINITLP(consInitlpBitvar)
 {
    int c;
    int w;
@@ -831,7 +853,7 @@ DECL_CONSINITLP(consInitlpBitstring)
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
 
-         /** add rows for all words in the bitstring constraint */
+         /** add rows for all words in the bitvar constraint */
          for( w = 0; w < consdata->nwords; ++w )
          {
             CHECK_OKAY( addCut(scip, conss[c], w, 0.0) );
@@ -845,7 +867,7 @@ DECL_CONSINITLP(consInitlpBitstring)
 
 /** separation method of constraint handler */
 static
-DECL_CONSSEPA(consSepaBitstring)
+DECL_CONSSEPA(consSepaBitvar)
 {
    int c;
 
@@ -855,14 +877,14 @@ DECL_CONSSEPA(consSepaBitstring)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* step 1: check all useful bitstring constraints for feasibility */
+   /* step 1: check all useful bitvar constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      /*debugMessage("separating bitstring constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+      /*debugMessage("separating bitvar constraint <%s>\n", SCIPconsGetName(conss[c]));*/
       CHECK_OKAY( separate(scip, conss[c], result) );
    }
 
-   /* step 2: if no cuts were found and we are in the root node, check remaining bitstring constraints for feasibility */
+   /* step 2: if no cuts were found and we are in the root node, check remaining bitvar constraints for feasibility */
    if( SCIPgetActDepth(scip) == 0 )
    {
       for( c = nusefulconss; c < nconss && *result == SCIP_DIDNOTFIND; ++c )
@@ -877,7 +899,7 @@ DECL_CONSSEPA(consSepaBitstring)
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpBitstring)
+DECL_CONSENFOLP(consEnfolpBitvar)
 {
    int c;
 
@@ -886,11 +908,11 @@ DECL_CONSENFOLP(consEnfolpBitstring)
    assert(result != NULL);
 
    /* check for violated constraints
-    * LP is processed at current node -> we can add violated bitstring constraints to the LP */
+    * LP is processed at current node -> we can add violated bitvar constraints to the LP */
 
    *result = SCIP_FEASIBLE;
 
-   /* step 1: check all useful bitstring constraints for feasibility */
+   /* step 1: check all useful bitvar constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
       CHECK_OKAY( separate(scip, conss[c], result) );
@@ -898,7 +920,7 @@ DECL_CONSENFOLP(consEnfolpBitstring)
    if( *result != SCIP_FEASIBLE )
       return SCIP_OKAY;
 
-   /* step 2: check all obsolete bitstring constraints for feasibility */
+   /* step 2: check all obsolete bitvar constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
       CHECK_OKAY( separate(scip, conss[c], result) );
@@ -910,7 +932,7 @@ DECL_CONSENFOLP(consEnfolpBitstring)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsBitstring)
+DECL_CONSENFOPS(consEnfopsBitvar)
 {
    Bool violated;
    int c;
@@ -926,7 +948,7 @@ DECL_CONSENFOPS(consEnfopsBitstring)
       return SCIP_OKAY;
    }
 
-   /* check all bitstring constraints for feasibility */
+   /* check all bitvar constraints for feasibility */
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
@@ -944,7 +966,7 @@ DECL_CONSENFOPS(consEnfopsBitstring)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckBitstring)
+DECL_CONSCHECK(consCheckBitvar)
 {
    Bool violated;
    int c;
@@ -953,7 +975,7 @@ DECL_CONSCHECK(consCheckBitstring)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   /* check all bitstring constraints for feasibility */
+   /* check all bitvar constraints for feasibility */
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
@@ -971,8 +993,9 @@ DECL_CONSCHECK(consCheckBitstring)
 
 /** domain propagation method of constraint handler */
 static
-DECL_CONSPROP(consPropBitstring)
+DECL_CONSPROP(consPropBitvar)
 {
+   Bool infeasible;
    int nfixedvars;
    int nchgbds;
    int c;
@@ -983,16 +1006,19 @@ DECL_CONSPROP(consPropBitstring)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* propagate all useful bitstring constraints */
+   /* propagate all useful bitvar constraints */
    nfixedvars = 0;
    nchgbds = 0;
-   for( c = 0; c < nusefulconss; ++c )
+   infeasible = FALSE;
+   for( c = 0; c < nusefulconss && !infeasible; ++c )
    {
-      CHECK_OKAY( propagate(scip, conss[c], &nfixedvars, &nchgbds) );
+      CHECK_OKAY( propagate(scip, conss[c], &nfixedvars, &nchgbds, &infeasible) );
    }
 
    /* adjust the result */
-   if( nfixedvars > 0 || nchgbds > 0 )
+   if( infeasible )
+      *result = SCIP_CUTOFF;
+   else if( nfixedvars > 0 || nchgbds > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
@@ -1001,8 +1027,9 @@ DECL_CONSPROP(consPropBitstring)
 
 /** presolving method of constraint handler */
 static
-DECL_CONSPRESOL(consPresolBitstring)
+DECL_CONSPRESOL(consPresolBitvar)
 {
+   Bool infeasible;
    int nactfixedvars;
    int nactchgbds;
    int c;
@@ -1013,16 +1040,19 @@ DECL_CONSPRESOL(consPresolBitstring)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* propagate all bitstring constraints */
+   /* propagate all bitvar constraints */
    nactfixedvars = 0;
    nactchgbds = 0;
-   for( c = 0; c < nconss; ++c )
+   infeasible = FALSE;
+   for( c = 0; c < nconss && !infeasible; ++c )
    {
-      CHECK_OKAY( propagate(scip, conss[c], &nactfixedvars, &nactchgbds) );
+      CHECK_OKAY( propagate(scip, conss[c], &nactfixedvars, &nactchgbds, &infeasible) );
    }
 
    /* adjust the result */
-   if( nactfixedvars > 0 || nactchgbds > 0 )
+   if( infeasible )
+      *result = SCIP_CUTOFF;
+   else if( nactfixedvars > 0 || nactchgbds > 0 )
    {
       *result = SCIP_SUCCESS;
       (*nfixedvars) += nactfixedvars;
@@ -1034,17 +1064,17 @@ DECL_CONSPRESOL(consPresolBitstring)
 
 
 /** conflict variable resolving method of constraint handler */
-#define consRescvarBitstring NULL
+#define consRescvarBitvar NULL
 
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockBitstring)
+DECL_CONSLOCK(consLockBitvar)
 {
    CONSDATA* consdata;
    int i;
 
-   /* every change in variable values alters the feasibility of the bitstring equations:
+   /* every change in variable values alters the feasibility of the bitvar equations:
     * we have to lock rounding in both directions for positive and negative constraint
     */
    consdata = SCIPconsGetData(cons);
@@ -1070,12 +1100,12 @@ DECL_CONSLOCK(consLockBitstring)
 
 /** variable rounding unlock method of constraint handler */
 static
-DECL_CONSUNLOCK(consUnlockBitstring)
+DECL_CONSUNLOCK(consUnlockBitvar)
 {
    CONSDATA* consdata;
    int i;
 
-   /* every change in variable values alters the feasibility of the bitstring equations:
+   /* every change in variable values alters the feasibility of the bitvar equations:
     * we have to unlock rounding in both directions for positive and negative constraint
     */
    consdata = SCIPconsGetData(cons);
@@ -1100,29 +1130,29 @@ DECL_CONSUNLOCK(consUnlockBitstring)
 
 
 /** constraint activation notification method of constraint handler */
-#define consActiveBitstring NULL
+#define consActiveBitvar NULL
 
 
 /** constraint deactivation notification method of constraint handler */
-#define consDeactiveBitstring NULL
+#define consDeactiveBitvar NULL
 
 
 /** constraint enabling notification method of constraint handler */
-#define consEnableBitstring NULL
+#define consEnableBitvar NULL
 
 
 /** constraint disabling notification method of constraint handler */
-#define consDisableBitstring NULL
+#define consDisableBitvar NULL
 
 
 
 
 /*
- * bitstring event handler methods
+ * bitvar event handler methods
  */
 
 static
-DECL_EVENTEXEC(eventExecBitstring)
+DECL_EVENTEXEC(eventExecBitvar)
 {
    CONSDATA* consdata;
 
@@ -1139,8 +1169,8 @@ DECL_EVENTEXEC(eventExecBitstring)
  * constraint specific interface methods
  */
 
-/** creates the handler for bitstring constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrBitstring(
+/** creates the handler for bitvar constraints and includes it in SCIP */
+RETCODE SCIPincludeConsHdlrBitvar(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -1149,38 +1179,38 @@ RETCODE SCIPincludeConsHdlrBitstring(
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
-                  NULL, eventExecBitstring,
+                  NULL, eventExecBitvar,
                   NULL) );
 
-   /* create bitstring constraint handler data */
+   /* create bitvar constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeBitstring, consInitBitstring, consExitBitstring,
-                  consDeleteBitstring, consTransBitstring, consInitlpBitstring,
-                  consSepaBitstring, consEnfolpBitstring, consEnfopsBitstring, consCheckBitstring, 
-                  consPropBitstring, consPresolBitstring, consRescvarBitstring,
-                  consLockBitstring, consUnlockBitstring,
-                  consActiveBitstring, consDeactiveBitstring, 
-                  consEnableBitstring, consDisableBitstring,
+                  consFreeBitvar, consInitBitvar, consExitBitvar,
+                  consDeleteBitvar, consTransBitvar, consInitlpBitvar,
+                  consSepaBitvar, consEnfolpBitvar, consEnfopsBitvar, consCheckBitvar, 
+                  consPropBitvar, consPresolBitvar, consRescvarBitvar,
+                  consLockBitvar, consUnlockBitvar,
+                  consActiveBitvar, consDeactiveBitvar, 
+                  consEnableBitvar, consDisableBitvar,
                   conshdlrdata) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures a bitstring constraint
- *  Warning! Either the bitstring should be short, or the objective value should be zero, because the objective
- *  value of the most significant bit in the string would be 2^(nbits-1)*obj
+/** creates and captures a bitvar constraint
+ *  Warning! Either the bitvar should be short, or the objective value should be zero, because the objective
+ *  value of the most significant bit in the variable would be 2^(nbits-1)*obj
  */
-RETCODE SCIPcreateConsBitstring(
+RETCODE SCIPcreateConsBitvar(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              nbits,              /**< number of bits in the bitstring */
-   Real             obj,                /**< objective value of bitstring variable */
+   int              nbits,              /**< number of bits in the bitvar */
+   Real             obj,                /**< objective value of bitvar variable */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
@@ -1191,15 +1221,15 @@ RETCODE SCIPcreateConsBitstring(
    CONSHDLR* conshdlr;
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
-   const Bool check = TRUE;       /* bit string constraints must always be checked for feasibility */
-   const Bool local = FALSE;      /* bit strings are never local, because they represent problem variables */
-   const Bool modifiable = FALSE; /* bit strings are never modifiable, because they represent problem variables */
+   const Bool check = TRUE;       /* bitvar constraints must always be checked for feasibility */
+   const Bool local = FALSE;      /* bitvar constraints are never local, because they represent problem variables */
+   const Bool modifiable = FALSE; /* bitvar constraints are never modifiable, because they represent problem variables */
 
-   /* find the bitstring constraint handler */
+   /* find the bitvar constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("bitstring constraint handler not found");
+      errorMessage("bitvar constraint handler not found");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -1216,4 +1246,72 @@ RETCODE SCIPcreateConsBitstring(
                   local, modifiable, removeable) );
 
    return SCIP_OKAY;
+}
+
+/** gets array with bits of bitvar, sorted least significant bit first */
+VAR** SCIPgetBitsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->bits;
+}
+
+/** gets number of bits in bitvar */
+int SCIPgetNBitsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->nbits;
+}
+
+/** gets array with words of bitvar, sorted least significant word first */
+VAR** SCIPgetWordsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->words;
+}
+
+/** gets number of words in bitvar */
+int SCIPgetNWordsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->nwords;
 }

@@ -934,12 +934,27 @@ RETCODE SCIPreleaseVar(
    VAR**            var                 /**< pointer to variable */
    );
 
-/** gets corresponding transformed variable of an original or negated original variable */
+/** gets corresponding transformed variable of a given variable;
+ *  returns NULL as transvar, if transformed variable is not yet existing
+ */
 extern
 RETCODE SCIPgetTransformedVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to get transformed variable for */
-   VAR**            transvar            /**< pointer to store the transformed variable, or NULL if not existing yet */
+   VAR**            transvar            /**< pointer to store the transformed variable */
+   );
+
+/** gets corresponding transformed variables for an array of variables;
+ *  stores NULL in a transvars slot, if the transfored variable is not yet existing;
+ *  it is possible to call this method with vars == transvars, but remember that variables that are not
+ *  yet transformed will be replaced with NULL
+ */
+extern
+RETCODE SCIPgetTransformedVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of variables to get transformed variables for */
+   VAR**            vars,               /**< array with variables to get transformed variables for */
+   VAR**            transvars           /**< array to store the transformed variables */
    );
 
 /** gets negated variable x' = lb + ub - x of variable x */

@@ -1552,9 +1552,19 @@ RETCODE SCIPvarFix(
 
    debugMessage("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
 
-   if( var->vartype != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(set, fixedval) )
+   if( (var->vartype != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(set, fixedval))
+      || SCIPsetIsFeasLT(set, fixedval, var->actdom.lb)
+      || SCIPsetIsFeasGT(set, fixedval, var->actdom.ub) )
    {
+      debugMessage(" -> fixing infeasible: actdom=[%g,%g], fixedval=%g\n", var->actdom.lb, var->actdom.ub, fixedval);
       *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   else if( var->varstatus == SCIP_VARSTATUS_FIXED )
+   {
+      *infeasible = !SCIPsetIsFeasEQ(set, fixedval, var->actdom.lb);
+      debugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%d\n", 
+         var->actdom.lb, fixedval, *infeasible);
       return SCIP_OKAY;
    }
 

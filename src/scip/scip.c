@@ -2360,18 +2360,57 @@ RETCODE SCIPreleaseVar(
    }
 }
 
-/** gets corresponding transformed variable of an original or negated original variable */
+/** gets corresponding transformed variable of a given variable;
+ *  returns NULL as transvar, if transformed variable is not yet existing
+ */
 RETCODE SCIPgetTransformedVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to get transformed variable for */
-   VAR**            transvar            /**< pointer to store the transformed variable, or NULL if not existing yet */
+   VAR**            transvar            /**< pointer to store the transformed variable */
    )
 {
-   assert(var != NULL);
+   assert(transvar != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPgetTransformedVar", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPvarGetTransformed(var, scip->mem->solvemem, scip->set, scip->stat, transvar) );
+   if( SCIPvarIsTransformed(var) )
+      *transvar = var;
+   else
+   {
+      CHECK_OKAY( SCIPvarGetTransformed(var, scip->mem->solvemem, scip->set, scip->stat, transvar) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets corresponding transformed variables for an array of variables;
+ *  stores NULL in a transvars slot, if the transfored variable is not yet existing;
+ *  it is possible to call this method with vars == transvars, but remember that variables that are not
+ *  yet transformed will be replaced with NULL
+ */
+RETCODE SCIPgetTransformedVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of variables to get transformed variables for */
+   VAR**            vars,               /**< array with variables to get transformed variables for */
+   VAR**            transvars           /**< array to store the transformed variables */
+   )
+{
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || transvars != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransformedVars", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarIsTransformed(vars[v]) )
+         transvars[v] = vars[v];
+      else
+      {
+         CHECK_OKAY( SCIPvarGetTransformed(vars[v], scip->mem->solvemem, scip->set, scip->stat, &transvars[v]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2744,9 +2783,22 @@ RETCODE SCIPfixVar(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
-      CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
-      *infeasible = (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval));
+      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval))
+         || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
+         || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+      {
+         *infeasible = TRUE;
+      }
+      else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      {
+         *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
+      }
+      else
+      {
+         *infeasible = FALSE;
+         CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
+         CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
+      }
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:

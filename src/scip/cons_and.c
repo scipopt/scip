@@ -544,7 +544,7 @@ RETCODE SCIPcreateConsAnd(
 }
 
 /** adds constraint to the concatenation of an and constraint */
-RETCODE SCIPaddConsAnd(
+RETCODE SCIPaddElemConsAnd(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< and constraint */
    CONS*            andcons             /**< additional constraint in concatenation */

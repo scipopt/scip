@@ -172,7 +172,7 @@ RETCODE runSCIP(
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +3.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], -11.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +4.0) );
-      CHECK_OKAY( SCIPaddConsAnd(scip, andcons, cons) );
+      CHECK_OKAY( SCIPaddElemConsAnd(scip, andcons, cons) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
       /* +2x0 +3x1 +1x2 <= 7 */
@@ -181,7 +181,7 @@ RETCODE runSCIP(
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +2.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], +3.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +1.0) );
-      CHECK_OKAY( SCIPaddConsAnd(scip, andcons, cons) );
+      CHECK_OKAY( SCIPaddElemConsAnd(scip, andcons, cons) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
       CHECK_OKAY( SCIPaddCons(scip, andcons) );
@@ -196,12 +196,9 @@ RETCODE runSCIP(
       /* bitstring constraint */
       CHECK_OKAY( SCIPcreateConsBitstring(scip, &cons, "bitstring", 19, -1.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) );
+      CHECK_OKAY( SCIPchgVarUb(scip, SCIPgetWordsConsBitstring(scip, cons)[1], 2.0) );
+      CHECK_OKAY( SCIPchgVarLb(scip, SCIPgetBitsConsBitstring(scip, cons)[17], 1.0) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-      {
-         VAR* var;
-         var = SCIPfindVar(scip, "bitstring_w1");
-         CHECK_OKAY( SCIPchgVarUb(scip, var, 1.0) );
-      }
    }
 #endif
 

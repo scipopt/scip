@@ -337,35 +337,14 @@ RETCODE consdataCreateTransformed(
    VAR**            vars                /**< variables of the constraint */
    )
 {
-   VAR* var;
-   int i;
-
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
 
+   /* create constraint data */
    CHECK_OKAY( consdataCreate(scip, consdata, nvars, vars) );
 
    /* transform the variables */
-   for( i = 0; i < (*consdata)->nvars; ++i )
-   {
-      var = (*consdata)->vars[i];
-      assert(var != NULL);
-      assert(SCIPisLE(scip, 0.0, SCIPvarGetLbLocal(var)));
-      assert(SCIPisLE(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
-      assert(SCIPisLE(scip, SCIPvarGetUbLocal(var), 1.0));
-      assert(SCIPisIntegral(scip, SCIPvarGetLbLocal(var)));
-      assert(SCIPisIntegral(scip, SCIPvarGetUbLocal(var)));
-
-      /* use transformed variables in constraint instead original ones */
-      if( !SCIPvarIsTransformed(var) )
-      {
-         CHECK_OKAY( SCIPgetTransformedVar(scip, var, &var) );
-         assert(var != NULL);
-         (*consdata)->vars[i] = var;
-      }
-      assert(SCIPvarIsTransformed(var));
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-   }
+   CHECK_OKAY( SCIPgetTransformedVars(scip, nvars, (*consdata)->vars, (*consdata)->vars) );
 
    return SCIP_OKAY;
 }

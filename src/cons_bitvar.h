@@ -15,42 +15,69 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_bitstring.h
- * @brief  constraint handler for bitstring constraints
+/**@file   cons_bitvar.h
+ * @brief  constraint handler for bitvar constraints
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_BITSTRING_H__
-#define __CONS_BITSTRING_H__
+#ifndef __CONS_BITVAR_H__
+#define __CONS_BITVAR_H__
 
 
 #include "scip.h"
 
 
-/** creates the handler for bitstring constraints and includes it in SCIP */
+/** creates the handler for bitvar constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrBitstring(
+RETCODE SCIPincludeConsHdlrBitvar(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a bitstring constraint
- *  Warning! Either the bitstring should be short, or the objective value should be zero, because the objective
- *  value of the most significant bit in the string would be 2^(nbits-1)*obj
+/** creates and captures a bitvar constraint
+ *  Warning! Either the bitvar should be short, or the objective value should be zero, because the objective
+ *  value of the most significant bit in the variable would be 2^(nbits-1)*obj
  */
 extern
-RETCODE SCIPcreateConsBitstring(
+RETCODE SCIPcreateConsBitvar(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              nbits,              /**< number of bits in the bitstring */
-   Real             obj,                /**< objective value of bitstring variable */
+   int              nbits,              /**< number of bits in the bitvar */
+   Real             obj,                /**< objective value of bitvar variable */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   );
+
+/** gets array with bits of bitvar, sorted least significant bit first */
+VAR** SCIPgetBitsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
+   );
+
+/** gets number of bits in bitvar */
+extern
+int SCIPgetNBitsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
+   );
+
+/** gets array with words of bitvar, sorted least significant word first */
+extern
+VAR** SCIPgetWordsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
+   );
+
+/** gets number of words in bitvar */
+extern
+int SCIPgetNWordsConsBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< bitvar constraint */
    );
 
 #endif

@@ -312,6 +312,7 @@ RETCODE consdataCatchEvent(
    assert(0 <= pos && pos < consdata->nvars);
    assert(consdata->vars != NULL);
    assert(consdata->vars[pos] != NULL);
+   assert(SCIPvarIsTransformed(consdata->vars[pos]));
    assert(consdata->eventdatas != NULL);
    assert(consdata->eventdatas[pos] == NULL);
 
@@ -610,17 +611,11 @@ RETCODE consdataCreateTransformed(
    assert((*consdata)->eventdatas == NULL);
    CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize) );
 
-   /* initialize the eventdatas array, transform the variables */
-   for( i = 0; i < (*consdata)->nvars; ++i )
-   {
-      (*consdata)->eventdatas[i] = NULL;
-      if( !SCIPvarIsTransformed((*consdata)->vars[i]) )
-      {
-         CHECK_OKAY( SCIPgetTransformedVar(scip, (*consdata)->vars[i], &(*consdata)->vars[i]) );
-         assert((*consdata)->vars[i] != NULL);
-      }
-      assert(SCIPvarIsTransformed((*consdata)->vars[i]));
-   }
+   /* get transformed variables */
+   CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+
+   /* initialize the eventdatas array */
+   clearMemoryArray((*consdata)->eventdatas, (*consdata)->nvars);
 
    /* catch bound change events of variables */
    CHECK_OKAY( consdataCatchAllEvents(scip, *consdata, eventhdlr) );
@@ -1548,7 +1543,7 @@ RETCODE addCoef(
    transformed = SCIPconsIsTransformed(cons);
 
    /* always use transformed variables in transformed constraints */
-   if( transformed && !SCIPvarIsTransformed(var) )
+   if( transformed )
    {
       CHECK_OKAY( SCIPgetTransformedVar(scip, var, &var) );
    }
