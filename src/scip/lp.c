@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.108 2004/04/15 10:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.109 2004/04/19 17:08:35 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1285,6 +1285,8 @@ RETCODE SCIPcolCreate(
    (*col)->primsol = 0.0;
    (*col)->redcost = SCIP_INVALID;
    (*col)->farkas = SCIP_INVALID;
+   (*col)->minprimsol = (*col)->ub;
+   (*col)->maxprimsol = (*col)->lb;
    (*col)->strongbranchdown = SCIP_INVALID;
    (*col)->strongbranchup = SCIP_INVALID;
    (*col)->strongbranchsolval  = SCIP_INVALID;
@@ -1833,7 +1835,6 @@ RETCODE SCIPcolGetStrongbranch(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(col->primsol < SCIP_INVALID);
-   /*??????????????????????assert(!SCIPsetIsIntegral(set, col->primsol));*/
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
    assert(set != NULL);
@@ -6608,6 +6609,10 @@ RETCODE SCIPlpGetSol(
    for( c = 0; c < nlpicols; ++c )
    {
       lpicols[c]->primsol = primsol[c];
+      if( primsol[c] < lpicols[c]->minprimsol )
+         lpicols[c]->minprimsol = primsol[c];
+      if( primsol[c] > lpicols[c]->maxprimsol )
+         lpicols[c]->maxprimsol = primsol[c];
       lpicols[c]->redcost = redcost[c];
       lpicols[c]->validredcostlp = lpcount;
       if( primalfeasible != NULL )

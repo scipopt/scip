@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.124 2004/04/16 10:48:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.125 2004/04/19 17:08:38 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1509,6 +1509,26 @@ RETCODE SCIPaddVarObj(
    Real             addobj              /**< additional objective value */
    );
 
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+ *  does not change the bounds of the variable
+ */
+extern
+Real SCIPadjustedVarLb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to adjust the bound for */
+   Real             lb                  /**< lower bound value to adjust */
+   );
+
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+ *  does not change the bounds of the variable
+ */
+extern
+Real SCIPadjustedVarUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to adjust the bound for */
+   Real             ub                  /**< upper bound value to adjust */
+   );
+
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
@@ -2736,6 +2756,13 @@ Real SCIPretransformObj(
    Real             obj                 /**< transformed objective value to retransform in original space */
    );
 
+/** gets clock time, when this solution was found */
+extern
+Real SCIPgetSolTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol                 /**< primal solution */
+   );
+
 /** gets node number, where this solution was found */
 extern
 Longint SCIPgetSolNodenum(
@@ -2975,13 +3002,6 @@ NODE* SCIPgetBestboundNode(
 
 /**@name Statistic Methods */
 /**@{ */
-
-/** gets clock time, when this solution was found */
-extern
-Real SCIPgetSolTime(
-   SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol                 /**< primal solution */
-   );
 
 /** gets number of processed nodes, including the active node */
 extern

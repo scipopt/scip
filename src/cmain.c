@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.71 2004/03/22 16:03:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.72 2004/04/19 17:08:27 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -195,16 +195,13 @@ main(
    /**@todo avoid addition of identical rows */
    /**@todo avoid addition of identical constraints */
    /**@todo pricing for pseudo solutions */
-   /**@todo integrality check on objective function, abort if gap is below 1.0 */
-   /**@todo statistics: count domain reductions and constraint additions of constraint handlers */
    /**@todo it's a bit ugly, that user call backs may be called before the nodequeue was processed */
    /**@todo unboundness detection in presolving -> convert problem into feasibility problem to decide
     *       unboundness/infeasibility */
    /**@todo variable event PSSOLCHANGED, update pseudo activities in constraints to speed up checking of pseudo solutions */
    /**@todo branching rule acting as a filter by temporary changing the branching priority of variables and returning 
     *       SCIP_DIDNOTFIND to let the next branching rule select the branching variable */
-   /**@todo in the documentation, make a clear distinction between external "user" methods and internal methods in
-    *       the .h files */
+   /**@todo use aging in all constraint handlers */
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

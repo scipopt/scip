@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.39 2004/04/16 12:41:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.40 2004/04/19 17:08:27 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -622,8 +622,6 @@ RETCODE separateCardinality(
 
    assert(separated != NULL);
 
-   debugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -834,7 +832,7 @@ RETCODE separateCardinality(
             cutfeas = SCIPgetRowLPFeasibility(scip, row);
             if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
             {         
-               debugMessage("lifted cardinality1 cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
+               debugMessage("lifted cardinality cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
                debug(SCIProwPrint(row, NULL));
                CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
                *separated = TRUE;
@@ -861,6 +859,52 @@ RETCODE separateCardinality(
    CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &items) );
+
+   return SCIP_OKAY;
+}
+
+/** separates given knapsack constraint */
+static
+RETCODE separateCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   Bool*            separated           /**< pointer to store whether a cut was found */
+   )
+{
+   CONSDATA* consdata;
+   Real feasibility;
+
+   assert(separated != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   debugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
+
+   *separated = FALSE;
+
+   /* create LP relaxation if not yet existing */
+   if( consdata->row == NULL )
+   {
+      CHECK_OKAY( createRelaxation(scip, cons) );
+   }
+
+   /* check non-LP rows for feasibility and add them as cut, if violated */
+   if( !SCIProwIsInLP(consdata->row) )
+   {
+      feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+      if( SCIPisFeasNegative(scip, feasibility) )
+      {
+         CHECK_OKAY( SCIPaddCut(scip, consdata->row, -feasibility) );
+         *separated = TRUE;
+      }
+   }
+
+   /* if LP row was not violated, separate lifted cardinality inequalities */
+   if( !(*separated) )
+   {
+      CHECK_OKAY( separateCardinality(scip, cons, separated) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1294,7 +1338,7 @@ DECL_CONSSEPA(consSepaKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
    {
-      CHECK_OKAY( separateCardinality(scip, conss[i], &separated) );
+      CHECK_OKAY( separateCons(scip, conss[i], &separated) );
       if( separated )
          ncuts++;
    }
@@ -1302,7 +1346,7 @@ DECL_CONSSEPA(consSepaKnapsack)
    /* separate remaining constraints until a cutting plane was found */
    for( i = nusefulconss; i < nconss && ncuts == 0; i++ )
    {
-      CHECK_OKAY( separateCardinality(scip, conss[i], &separated) );
+      CHECK_OKAY( separateCons(scip, conss[i], &separated) );
       if( separated )
          ncuts++;
    }
@@ -1319,17 +1363,25 @@ DECL_CONSSEPA(consSepaKnapsack)
 static
 DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
+   Bool separated;
    int i;
+
+   *result = SCIP_FEASIBLE;
 
    for( i = 0; i < nconss; i++ )
    {
       if( !checkCons(scip, conss[i], NULL, FALSE) )
       {
-         *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
+         CHECK_OKAY( separateCons(scip, conss[i], &separated) );
+         if( separated )
+         {
+            *result = SCIP_SEPARATED;
+            break;
+         }
+         else
+            *result = SCIP_INFEASIBLE;
       }
    } 
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -1423,7 +1475,7 @@ DECL_CONSPRESOL(consPresolKnapsack)
    oldnchgsides = *nchgsides;
 
    /* get event handler for bound change events */
-   eventhdlr = SCIPfindEventhdlr (scip, EVENTHDLR_NAME);
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
    
    for( i = 0; i < nconss && !cutoff; i++ )

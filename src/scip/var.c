@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.81 2004/04/16 10:48:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.82 2004/04/19 17:08:41 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -904,8 +904,10 @@ RETCODE vboundsAdd(
    )
 {
    assert(vbounds != NULL);
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
 
-   CHECK_OKAY( vboundsEnsureSize(vbounds, memhdr, set, (*vbounds)->len+1) );
+   CHECK_OKAY( vboundsEnsureSize(vbounds, memhdr, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
    assert(*vbounds != NULL);
 
    (*vbounds)->vars[(*vbounds)->len] = var;
@@ -3286,9 +3288,9 @@ RETCODE varProcessChgLbLocal(
    var->boundchgtype = boundchgtype;
 
    /* issue bound change event */
+   assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL) == (var->eventfilter == NULL));
    if( var->eventfilter != NULL )
    {
-      assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
       CHECK_OKAY( varEventLbChanged(var, memhdr, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
 
@@ -3396,6 +3398,7 @@ RETCODE varProcessChgUbLocal(
    var->boundchgtype = boundchgtype;
 
    /* issue bound change event */
+   assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL) == (var->eventfilter == NULL));
    if( var->eventfilter != NULL )
    {
       CHECK_OKAY( varEventUbChanged(var, memhdr, set, lp, branchcand, eventqueue, oldbound, newbound) );
@@ -4021,8 +4024,10 @@ RETCODE SCIPvarAddVlb(
    )
 {
    assert(var != NULL);
-   assert(vlbvar->varstatus == SCIP_VARSTATUS_COLUMN || vlbvar->varstatus == SCIP_VARSTATUS_LOOSE);
    assert(vlbvar->vartype != SCIP_VARTYPE_CONTINUOUS);
+
+   debugMessage("adding variable lower bound <%s> >= %g<%s> + %g\n", 
+      SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
    switch( var->varstatus )
    {
@@ -4033,12 +4038,21 @@ RETCODE SCIPvarAddVlb(
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
-      CHECK_OKAY( vboundsAdd(&var->vlbs, memhdr, set, vlbvar, vlbcoef, vlbconstant) );
+      /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
+      CHECK_OKAY( SCIPvarGetProbvarSum(&vlbvar, &vlbcoef, &vlbconstant) );
+      debugMessage(" -> transformed to variable lower bound <%s> >= %g<%s> + %g\n", 
+         SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
+
+      if( vlbvar != NULL )
+      {
+         /* add variable bound to the variable bounds list */
+         CHECK_OKAY( vboundsAdd(&var->vlbs, memhdr, set, vlbvar, vlbcoef, vlbconstant) );
+      }
       break;
       
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot add variable bounds to a fixed variable\n");
-      return SCIP_INVALIDDATA;
+      /* nothing to do here */
+      break;
       
    case SCIP_VARSTATUS_AGGREGATED:
       /* x = a*y + c:  x >= b*z + d  <=>  a*y + c >= b*z + d  <=>  y >= b/a * z + (d-c)/a, if a > 0
@@ -4067,8 +4081,8 @@ RETCODE SCIPvarAddVlb(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot add variable bounds to a multiple aggregated variable\n");
-      return SCIP_INVALIDDATA;
+      /* nothing to do here */
+      break;
       
    case SCIP_VARSTATUS_NEGATED:
       /* x = offset - x':  x >= b*z + d  <=>  offset - x' >= b*z + d  <=>  x' <= -b*z + (offset-d) */
@@ -4098,9 +4112,10 @@ RETCODE SCIPvarAddVub(
    )
 {
    assert(var != NULL);
-
-   assert(vubvar->varstatus == SCIP_VARSTATUS_COLUMN || vubvar->varstatus == SCIP_VARSTATUS_LOOSE);
    assert(vubvar->vartype != SCIP_VARTYPE_CONTINUOUS);
+
+   debugMessage("adding variable upper bound <%s> <= %g<%s> + %g\n", 
+      SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
    switch( var->varstatus )
    {
@@ -4111,13 +4126,22 @@ RETCODE SCIPvarAddVub(
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
-      CHECK_OKAY( vboundsAdd(&var->vubs, memhdr, set, vubvar, vubcoef, vubconstant) );
+      /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
+      CHECK_OKAY( SCIPvarGetProbvarSum(&vubvar, &vubcoef, &vubconstant) );
+      debugMessage(" -> transformed to variable upper bound <%s> <= %g<%s> + %g\n", 
+         SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
+
+      if( vubvar != NULL )
+      {
+         /* add variable bound to the variable bounds list */
+         CHECK_OKAY( vboundsAdd(&var->vubs, memhdr, set, vubvar, vubcoef, vubconstant) );
+      }
       break;
       
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot add variable bounds to a fixed variable\n");
-      return SCIP_INVALIDDATA;
-      
+      /* nothing to do here */
+      break;
+
    case SCIP_VARSTATUS_AGGREGATED:
       /* x = a*y + c:  x <= b*z + d  <=>  a*y + c <= b*z + d  <=>  y <= b/a * z + (d-c)/a, if a > 0
        *                                                           y >= b/a * z + (d-c)/a, if a < 0
@@ -4145,8 +4169,8 @@ RETCODE SCIPvarAddVub(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot add variable bounds to a multiple aggregated variable\n");
-      return SCIP_INVALIDDATA;
+      /* nothing to do here */
+      break;
       
    case SCIP_VARSTATUS_NEGATED:
       /* x = offset - x':  x <= b*z + d  <=>  offset - x' <= b*z + d  <=>  x' >= -b*z + (offset-d) */

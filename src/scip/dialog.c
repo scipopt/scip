@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.10 2004/02/04 17:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.11 2004/04/19 17:08:34 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -642,8 +642,8 @@ RETCODE SCIPdialogDisplayMenuEntry(
       sprintf(name, "<%s>", dialog->name);
    else
       sprintf(name, "%s", dialog->name);
-   printf("  %-20s  ", name);
-   if( strlen(name) > 20 )
+   printf("  %-21s ", name);
+   if( strlen(name) > 21 )
    {
       /* break the line, and start the description in the next line */
       printf("\n                   -->  ");

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.150 2004/04/16 10:48:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.151 2004/04/19 17:08:37 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3683,6 +3683,38 @@ RETCODE SCIPaddVarObj(
       errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }  /*lint !e788*/   
+}
+
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+ *  does not change the bounds of the variable
+ */
+Real SCIPadjustedVarLb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to adjust the bound for */
+   Real             lb                  /**< lower bound value to adjust */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPadjustedVarLb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPvarAdjustLb(var, scip->set, &lb);
+
+   return lb;
+}
+
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+ *  does not change the bounds of the variable
+ */
+Real SCIPadjustedVarUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to adjust the bound for */
+   Real             ub                  /**< upper bound value to adjust */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPadjustedVarUb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPvarAdjustUb(var, scip->set, &ub);
+
+   return ub;
 }
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.18 2004/04/15 10:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.19 2004/04/19 17:08:39 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -41,8 +41,7 @@
 #include "cons_logicor.h"
 #include "cons_or.h"
 #include "cons_setppc.h"
-#include "cons_varlb.h"
-#include "cons_varub.h"
+#include "cons_varbound.h"
 #include "dialog_default.h"
 #include "disp_default.h"
 #include "heur_coefdiving.h"
@@ -70,21 +69,20 @@ RETCODE SCIPincludeDefaultPlugins(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   CHECK_OKAY( SCIPincludeConshdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConshdlrAnd(scip) );
    CHECK_OKAY( SCIPincludeConshdlrConjunction(scip) );
    CHECK_OKAY( SCIPincludeConshdlrIntegral(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrLinear(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrKnapsack(scip) );
    CHECK_OKAY( SCIPincludeConshdlrLogicor(scip) );
    CHECK_OKAY( SCIPincludeConshdlrOr(scip) );
    CHECK_OKAY( SCIPincludeConshdlrSetppc(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrKnapsack(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrVarbound(scip) );
 
 #if 0
    CHECK_OKAY( SCIPincludeConshdlrEqknapsack(scip) );
    CHECK_OKAY( SCIPincludeConshdlrInvarknapsack(scip) );
    CHECK_OKAY( SCIPincludeConshdlrBinpack(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrVarlb(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrVarub(scip) );
 #endif
 
    CHECK_OKAY( SCIPincludeReaderCnf(scip) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.12 2004/04/06 13:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.13 2004/04/19 17:08:40 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -68,6 +68,8 @@ struct Col
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    Real             farkas;             /**< value in dual farkas infeasibility proof */
+   Real             minprimsol;         /**< minimal LP solution value, this column ever assumed */
+   Real             maxprimsol;         /**< maximal LP solution value, this column ever assumed */
    Real             strongbranchdown;   /**< strong branching information for downwards branching */
    Real             strongbranchup;     /**< strong branching information for upwards branching */
    Real             strongbranchsolval; /**< LP solution value of column at last strong branching call */

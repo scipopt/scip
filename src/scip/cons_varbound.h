@@ -14,38 +14,39 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varub.h,v 1.7 2004/02/04 17:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.h,v 1.1 2004/04/19 17:08:29 bzfpfend Exp $"
 
-/**@file   cons_varub.h
- * @brief  constraint handler for varub constraints
+/**@file   cons_varbound.h
+ * @brief  constraint handler for varbound constraints
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_VARUB_H__
-#define __CONS_VARUB_H__
+#ifndef __CONS_VARBOUND_H__
+#define __CONS_VARBOUND_H__
 
 
 #include "scip.h"
 
 
-/** creates the handler for varub constraints and includes it in SCIP */
+/** creates the handler for varbound constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConshdlrVarub(
+RETCODE SCIPincludeConshdlrVarbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a varub constraint */
+/** creates and captures a varbound constraint: lhs <= x + c*y <= rhs */
 extern
-RETCODE SCIPcreateConsVarub(
+RETCODE SCIPcreateConsVarbound(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the constraint */
-   VAR*             var,                /**< variable that has variable bound */
-   VAR*             switchvar,          /**< binary variable to activate bound */
-   Real             val,                /**< bound value */
+   VAR*             var,                /**< variable x that has variable bound */
+   VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
+   Real             vbdcoef,            /**< coefficient c of bounding variable y */
+   Real             lhs,                /**< left hand side of variable bound inequality */
+   Real             rhs,                /**< right hand side of variable bound inequality */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */

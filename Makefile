@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.73 2004/04/15 10:41:20 bzfpfend Exp $
+# $Id: Makefile,v 1.74 2004/04/19 17:08:25 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -224,8 +224,7 @@ SCIPLIBOBJ	=	branch.o \
 			cons_logicor.o \
 			cons_or.o \
 			cons_setppc.o \
-			cons_varlb.o \
-			cons_varub.o \
+			cons_varbound.o \
 			dialog_default.o \
 			disp_default.o \
 			heur_coefdiving.o \

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.11 2004/02/04 17:27:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.12 2004/04/19 17:08:37 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -121,6 +121,7 @@ DECL_NODESELCOMP(nodeselCompRestartdfs)
       Real lowerbound1;
       Real lowerbound2;
 
+      /**@todo create a better node selection rule for nodes at equal depth (to find primal solutions quickly) */
       lowerbound1 = SCIPnodeGetLowerbound(node1);
       lowerbound2 = SCIPnodeGetLowerbound(node2);
       if( lowerbound1 < lowerbound2 )

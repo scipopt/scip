@@ -226,6 +226,26 @@ misc/catchctrlc = TRUE
 # [type: string, default: "-"]
 misc/vbcfilename = "-"
 
+# priority of conflict handler <linear>
+# [type: int, range: [-2147483648,2147483647], default: -1000000]
+conflict/linear/priority = -1000000
+
+# frequency for separating cuts of constraint handler <linear> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 5]
+constraints/linear/sepafreq = 5
+
+# frequency for propagating domains of constraint handler <linear> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 5]
+constraints/linear/propfreq = 5
+
+# multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/linear/tightenboundsfreq = 1
+
+# maximal allowed relative gain in maximum norm for constraint aggregation
+# [type: real, range: [0,1.79769313486232e+308], default: 5]
+constraints/linear/maxaggrnormscale = 5
+
 # frequency for separating cuts of constraint handler <and> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/sepafreq = 1
@@ -250,25 +270,29 @@ constraints/integral/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
 
-# priority of conflict handler <linear>
-# [type: int, range: [-2147483648,2147483647], default: -1000000]
-conflict/linear/priority = -1000000
+# frequency for separating cuts of constraint handler <knapsack> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+constraints/knapsack/sepafreq = 10
 
-# frequency for separating cuts of constraint handler <linear> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/linear/sepafreq = 5
-
-# frequency for propagating domains of constraint handler <linear> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/linear/propfreq = 5
-
-# multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
+# frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/linear/tightenboundsfreq = 1
+constraints/knapsack/propfreq = 1
 
-# maximal allowed relative gain in maximum norm for constraint aggregation
-# [type: real, range: [0,1.79769313486232e+308], default: 5]
-constraints/linear/maxaggrnormscale = 5
+# maximal number of separation rounds per node
+# [type: int, range: [0,2147483647], default: 5]
+constraints/knapsack/maxrounds = 5
+
+# maximal number of separation rounds per node in the root node
+# [type: int, range: [0,2147483647], default: 10]
+constraints/knapsack/maxroundsroot = 10
+
+# maximal number of cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 50]
+constraints/knapsack/maxsepacuts = 50
+
+# maximal number of cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 200]
+constraints/knapsack/maxsepacutsroot = 200
 
 # priority of conflict handler <logicor>
 # [type: int, range: [-2147483648,2147483647], default: 800000]
@@ -318,29 +342,13 @@ constraints/setppc/propfreq = 1
 # [type: int, range: [2,2147483647], default: 2]
 constraints/setppc/npseudobranches = 2
 
-# frequency for separating cuts of constraint handler <knapsack> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-constraints/knapsack/sepafreq = 10
-
-# frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
+# frequency for separating cuts of constraint handler <varbound> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/knapsack/propfreq = 1
+constraints/varbound/sepafreq = 1
 
-# maximal number of separation rounds per node
-# [type: int, range: [0,2147483647], default: 5]
-constraints/knapsack/maxrounds = 5
-
-# maximal number of separation rounds per node in the root node
-# [type: int, range: [0,2147483647], default: 10]
-constraints/knapsack/maxroundsroot = 10
-
-# maximal number of cuts separated per separation round
-# [type: int, range: [0,2147483647], default: 50]
-constraints/knapsack/maxsepacuts = 50
-
-# maximal number of cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 200]
-constraints/knapsack/maxsepacutsroot = 200
+# frequency for propagating domains of constraint handler <varbound> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/varbound/propfreq = 1
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

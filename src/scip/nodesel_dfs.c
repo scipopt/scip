@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.17 2004/02/04 17:27:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.18 2004/04/19 17:08:36 bzfpfend Exp $"
 
 /**@file   nodesel_dfs.c
  * @brief  node selector for depth first search
@@ -83,7 +83,10 @@ DECL_NODESELCOMP(nodeselCompDfs)
       else if( lowerbound1 > lowerbound2 )
          return +1;
       else
+      {
+         /**@todo create a better node selection rule for nodes at equal depth (to find primal solutions quickly) */
          return 0;
+      }
    }
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.100 2004/04/06 15:21:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.101 2004/04/19 17:08:40 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -131,6 +131,171 @@ RETCODE propagateDomains(
       }
    }
    while( propagain && !(*cutoff) );
+
+   return SCIP_OKAY;
+}
+
+/** strengthens variable's bounds looking at reduced costs */
+static
+RETCODE redcostStrengthening(
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   PRIMAL*          primal,             /**< primal data */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   COL** cols;
+   VAR* var;
+   int* cstat;
+   Real lpobjval;
+   Real redcost;
+   Real oldlb;
+   Real oldub;
+   Real newbd;
+   Bool strengthen;
+   int ncols;
+   int c;
+
+   assert(tree != NULL);
+   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+   assert(primal != NULL);
+   assert(!SCIPsetIsInfinity(set, primal->cutoffbound));
+   assert(SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->cutoffbound) );
+
+   /* we cannot apply reduced cost fixing, if we want to solve exactly */
+   /**@todo implement reduced cost fixing with interval arithmetics */
+   if( set->exactsolve )
+      return SCIP_OKAY;
+
+   /* get LP columns */
+   cols = SCIPlpGetCols(lp);
+   ncols = SCIPlpGetNCols(lp);
+   if( ncols == 0 )
+      return SCIP_OKAY;
+
+   stat->nredcoststrcalls++;
+
+   /* start redcost strengthening timer */
+   SCIPclockStart(stat->redcoststrtime, set);
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
+
+   /* get basis status for columns and LP objective value */
+   CHECK_OKAY( SCIPlpGetBase(lp, cstat, NULL) );
+   lpobjval = SCIPlpGetObjval(lp, set);
+
+   /* check reduced costs for non-basic columns */
+   for( c = 0; c < ncols; ++c )
+   {
+      switch( cstat[c] )
+      {
+      case SCIP_BASESTAT_LOWER:
+         redcost = SCIPcolGetRedcost(cols[c], stat, lp);
+         assert(!SCIPsetIsFeasNegative(set, redcost));
+         if( SCIPsetIsFeasPositive(set, redcost) )
+         {
+            var = SCIPcolGetVar(cols[c]);
+            oldlb = SCIPvarGetLbLocal(var);
+            oldub = SCIPvarGetUbLocal(var);
+            assert(SCIPsetIsEQ(set, oldlb, SCIPcolGetLb(cols[c])));
+            assert(SCIPsetIsEQ(set, oldub, SCIPcolGetUb(cols[c])));
+            if( SCIPsetIsFeasLT(set, oldlb, oldub) )
+            {
+               /* calculate reduced cost based bound */
+               newbd = (primal->cutoffbound - lpobjval) / redcost + oldlb;
+
+               /* check, if new bound is good enough:
+                *  - integer variables: take all possible strengthenings
+                *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
+                *                          at least 20% of the current domain
+                */
+               if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+               {
+                  SCIPvarAdjustUb(var, set, &newbd);
+                  strengthen = (newbd < oldub - 0.5);
+               }
+               else
+                  strengthen = (newbd < cols[c]->maxprimsol && newbd <= 0.2 * oldlb + 0.8 * oldub);
+
+               if( strengthen )
+               {
+                  /* strengthen upper bound */
+                  debugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
+                     SCIPvarGetName(var), oldlb, oldub, oldlb, newbd, primal->cutoffbound, lpobjval, redcost);
+                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                                 var, newbd, SCIP_BOUNDTYPE_UPPER) );
+                  stat->nredcoststrfound++;
+               }
+            }
+         }
+         break;
+
+      case SCIP_BASESTAT_BASIC:
+         break;
+
+      case SCIP_BASESTAT_UPPER:
+         redcost = SCIPcolGetRedcost(cols[c], stat, lp);
+         assert(!SCIPsetIsFeasPositive(set, redcost));
+         if( SCIPsetIsFeasNegative(set, redcost) )
+         {
+            var = SCIPcolGetVar(cols[c]);
+            oldlb = SCIPvarGetLbLocal(var);
+            oldub = SCIPvarGetUbLocal(var);
+            assert(SCIPsetIsEQ(set, oldlb, SCIPcolGetLb(cols[c])));
+            assert(SCIPsetIsEQ(set, oldub, SCIPcolGetUb(cols[c])));
+            if( SCIPsetIsFeasLT(set, oldlb, oldub) )
+            {
+               /* calculate reduced cost based bound */
+               newbd = (primal->cutoffbound - lpobjval) / redcost + oldub;
+
+               /* check, if new bound is good enough:
+                *  - integer variables: take all possible strengthenings
+                *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
+                *                          at least 20% of the current domain
+                */
+               if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+               {
+                  SCIPvarAdjustLb(var, set, &newbd);
+                  strengthen = (newbd > oldlb + 0.5);
+               }
+               else
+                  strengthen = (newbd > cols[c]->minprimsol && newbd >= 0.8 * oldlb + 0.2 * oldub);
+
+               /* check, if new bound is good enough: at least 20% strengthening for continuous variables */
+               if( strengthen )
+               {
+                  /* strengthen lower bound */
+                  debugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
+                     SCIPvarGetName(var), oldlb, oldub, newbd, oldub, primal->cutoffbound, lpobjval, redcost);
+                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                                 var, newbd, SCIP_BOUNDTYPE_LOWER) );
+                  stat->nredcoststrfound++;
+               }
+            }
+         }
+         break;
+
+      case SCIP_BASESTAT_ZERO:
+         assert(SCIPsetIsFeasZero(set, SCIPcolGetRedcost(cols[c], stat, lp)));
+         break;
+
+      default:
+         errorMessage("invalid basis state\n");
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &cstat);
+
+   /* stop redcost strengthening activation timer */
+   SCIPclockStop(stat->redcoststrtime, set);
 
    return SCIP_OKAY;
 }
@@ -434,9 +599,9 @@ RETCODE solveNodeInitialLP(
    return SCIP_OKAY;
 }
 
-/** solve the current LP of a node with price and cut */
+/** solve the current LP of a node with a price-and-cut loop */
 static
-RETCODE solveNodeLP(
+RETCODE priceAndCutLoop(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -597,7 +762,9 @@ RETCODE solveNodeLP(
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT)
          && SCIPsetIsLT(set, tree->actnode->lowerbound, primal->cutoffbound);
 
-      /* separation (has not to be done completely, because we just want to increase the lower bound) */
+      /* separation and reduced cost strengthening
+       * (needs not to be done completely, because we just want to increase the lower bound)
+       */
       if( !(*cutoff) && !(*lperror) && mustsepar )
       {
          Bool separateagain;
@@ -663,6 +830,9 @@ RETCODE solveNodeLP(
 
             oldnboundchanges = stat->nboundchanges;
 
+            /* apply reduced cost bound strengthening */
+            CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, tree, lp, branchcand, primal, eventqueue) );
+                        
             /* apply found cuts */
             CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
@@ -727,150 +897,9 @@ RETCODE solveNodeLP(
    return SCIP_OKAY;
 }
 
-/** strengthens variable's bounds looking at reduced costs */
-static
-RETCODE redcostStrengthening(
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
-   EVENTQUEUE*      eventqueue          /**< event queue */
-   )
-{
-   COL** cols;
-   VAR* var;
-   int* cstat;
-   Real lpobjval;
-   Real redcost;
-   Real oldlb;
-   Real oldub;
-   Real newbd;
-   int ncols;
-   int c;
-
-   assert(tree != NULL);
-   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
-   assert(primal != NULL);
-   assert(!SCIPsetIsInfinity(set, primal->cutoffbound));
-   assert(SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->cutoffbound) );
-
-   /* we cannot apply reduced cost fixing, if we want to solve exactly */
-   /**@todo implement reduced cost fixing with interval arithmetics */
-   if( set->exactsolve )
-      return SCIP_OKAY;
-
-   /* get LP columns */
-   cols = SCIPlpGetCols(lp);
-   ncols = SCIPlpGetNCols(lp);
-   if( ncols == 0 )
-      return SCIP_OKAY;
-
-   stat->nredcoststrcalls++;
-
-   /* start redcost strengthening timer */
-   SCIPclockStart(stat->redcoststrtime, set);
-
-   /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
-
-   /* get basis status for columns and LP objective value */
-   CHECK_OKAY( SCIPlpGetBase(lp, cstat, NULL) );
-   lpobjval = SCIPlpGetObjval(lp, set);
-
-   /* check reduced costs for non-basic columns */
-   for( c = 0; c < ncols; ++c )
-   {
-      switch( cstat[c] )
-      {
-      case SCIP_BASESTAT_LOWER:
-         redcost = SCIPcolGetRedcost(cols[c], stat, lp);
-         assert(!SCIPsetIsFeasNegative(set, redcost));
-         if( SCIPsetIsFeasPositive(set, redcost) )
-         {
-            var = SCIPcolGetVar(cols[c]);
-            oldlb = SCIPvarGetLbLocal(var);
-            oldub = SCIPvarGetUbLocal(var);
-            assert(SCIPsetIsEQ(set, oldlb, SCIPcolGetLb(cols[c])));
-            assert(SCIPsetIsEQ(set, oldub, SCIPcolGetUb(cols[c])));
-            if( SCIPsetIsFeasLT(set, oldlb, oldub) )
-            {
-               /* calculate reduced cost based bound */
-               newbd = (primal->cutoffbound - lpobjval) / redcost + oldlb;
-               SCIPvarAdjustUb(var, set, &newbd);
-
-               /* check, if new bound is good enough */
-               if( SCIPsetIsUbBetter(set, newbd, oldub) )
-               {
-                  /* strengthen upper bound */
-                  debugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
-                     SCIPvarGetName(var), oldlb, oldub, oldlb, newbd, primal->cutoffbound, lpobjval, redcost);
-                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                                 var, newbd, SCIP_BOUNDTYPE_UPPER) );
-                  stat->nredcoststrfound++;
-               }
-            }
-         }
-         break;
-
-      case SCIP_BASESTAT_BASIC:
-         break;
-
-      case SCIP_BASESTAT_UPPER:
-         redcost = SCIPcolGetRedcost(cols[c], stat, lp);
-         assert(!SCIPsetIsFeasPositive(set, redcost));
-         if( SCIPsetIsFeasNegative(set, redcost) )
-         {
-            var = SCIPcolGetVar(cols[c]);
-            oldlb = SCIPvarGetLbLocal(var);
-            oldub = SCIPvarGetUbLocal(var);
-            assert(SCIPsetIsEQ(set, oldlb, SCIPcolGetLb(cols[c])));
-            assert(SCIPsetIsEQ(set, oldub, SCIPcolGetUb(cols[c])));
-            if( SCIPsetIsFeasLT(set, oldlb, oldub) )
-            {
-               /* calculate reduced cost based bound */
-               newbd = (primal->cutoffbound - lpobjval) / redcost + oldub;
-               SCIPvarAdjustLb(var, set, &newbd);
-
-               /* check, if new bound is good enough */
-               if( SCIPsetIsLbBetter(set, newbd, oldlb) )
-               {
-                  /* strengthen lower bound */
-                  debugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
-                     SCIPvarGetName(var), oldlb, oldub, newbd, oldub, primal->cutoffbound, lpobjval, redcost);
-                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                                 var, newbd, SCIP_BOUNDTYPE_LOWER) );
-                  stat->nredcoststrfound++;
-               }
-            }
-         }
-         break;
-
-      case SCIP_BASESTAT_ZERO:
-         assert(SCIPsetIsFeasZero(set, SCIPcolGetRedcost(cols[c], stat, lp)));
-         break;
-
-      default:
-         errorMessage("invalid basis state\n");
-         return SCIP_INVALIDDATA;
-      }
-   }
-
-   /* free temporary memory */
-   SCIPsetFreeBufferArray(set, &cstat);
-
-   /* stop redcost strengthening activation timer */
-   SCIPclockStop(stat->redcoststrtime, set);
-
-   return SCIP_OKAY;
-}
-
 /** solves the current node's LP in a price-and-cut loop */
 static
-RETCODE priceAndCutLoop(
+RETCODE solveNodeLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -912,7 +941,7 @@ RETCODE priceAndCutLoop(
       /* load and solve the initial LP of the node */
       CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, 
                      branchcand, eventfilter, eventqueue, cutoff, lperror) );
-      assert(lp->solved || lperror);
+      assert(*cutoff || *lperror || lp->solved);
       debugMessage("price-and-cut-loop: initial LP status: %d, LP obj: %g\n", 
          SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
    }
@@ -920,48 +949,12 @@ RETCODE priceAndCutLoop(
 
    if( !(*cutoff) && !(*lperror) )
    {
-      /* solve-redcost-propagate loop */
-      do
-      {
-         /* continue solving the LP with price and cut */
-         CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, 
-                        conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
-                        cutoff, lperror) );
-         assert(*cutoff || *lperror || lp->solved);
-         debugMessage("price-and-cut-loop: LP status: %d, LP obj: %g\n", SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
-
-         /**@todo implement reduced cost strengthening as external plugin: create a new callback in separators
-          *       named "propagate"; implement (full) strong branching bound strengthening in the same way
-          */
-         /* reduced cost bound strengthening */
-         if( !(*cutoff) && !(*lperror)
-            && ((set->redcostfreq == 0 && tree->actnode->depth == 0)
-               || (set->redcostfreq >= 1 && (tree->actnode->depth % set->redcostfreq) == 0))
-            && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
-            && !SCIPsetIsInfinity(set, primal->cutoffbound)
-            && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->cutoffbound) )
-         {
-            Longint oldnboundchanges;
-                        
-            oldnboundchanges = stat->nboundchanges;
-                        
-            /* apply reduced cost bound strengthening */
-            CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, tree, lp, branchcand, primal, eventqueue) );
-                        
-            /* apply further domain propagation, if addional bounds have been changed */
-            if( stat->nboundchanges != oldnboundchanges )
-            {
-               CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, cutoff) );
-               if( *cutoff )
-               {
-                  debugMessage("redcost domain propagation determined that node is infeasible\n");
-                  SCIPnodeUpdateLowerbound(tree->actnode, primal->cutoffbound);
-               }
-            }
-         }
-      }
-      while( !(*cutoff) && !(*lperror) && !lp->solved );
+      /* solve the LP with price-and-cut*/
+      CHECK_OKAY( priceAndCutLoop(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, 
+                     conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
+                     cutoff, lperror) );
    }
+   assert(*cutoff || *lperror || lp->solved);
 
    /* update node's LP iteration counter */
    stat->nnodelps += stat->nlps - nlps;
@@ -1299,8 +1292,8 @@ RETCODE solveNode(
       /* check, if we want to solve the LP at this node */
       if( tree->actnodehaslp )
       {
-         /* solve the LP with price and cut */
-         CHECK_OKAY( priceAndCutLoop(memhdr, set, stat, prob, tree, lp, pricestore, sepastore,
+         /* solve the node's LP */
+         CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore,
                         cutpool, conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
                         initiallpsolved, cutoff, &lperror) );
          initiallpsolved = TRUE;
