@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.1 2003/11/28 10:05:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -38,6 +38,7 @@
 struct NodeselData
 {
    scip::ObjNodesel* objnodesel;        /**< node selector object */
+   Bool             deleteobject;       /**< should the node selector object be deleted when node selector is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_NODESELFREE(nodeselFreeObj)
 
    /* call virtual method of nodesel object */
    CHECK_OKAY( nodeseldata->objnodesel->scip_free(scip, nodesel) );
+
+   /* free nodesel object */
+   if( nodeseldata->deleteobject )
+      delete nodeseldata->objnodesel;
 
    /* free nodesel data */
    delete nodeseldata;
@@ -143,7 +148,8 @@ DECL_NODESELCOMP(nodeselCompObj)
 /** creates the node selector for the given node selector object and includes it in SCIP */
 RETCODE SCIPincludeObjNodesel(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjNodesel* objnodesel         /**< node selector object */
+   scip::ObjNodesel* objnodesel,        /**< node selector object */
+   Bool             deleteobject        /**< should the node selector object be deleted when node selector is freed? */
    )
 {
    NODESELDATA* nodeseldata;
@@ -151,6 +157,7 @@ RETCODE SCIPincludeObjNodesel(
    /* create node selector data */
    nodeseldata = new NODESELDATA;
    nodeseldata->objnodesel = objnodesel;
+   nodeseldata->deleteobject = deleteobject;
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 

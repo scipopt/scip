@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.92 2003/12/01 14:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.93 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -420,7 +420,10 @@ int SCIPgetNReaders(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates a variable pricer and includes it in SCIP */
+/** creates a variable pricer and includes it in SCIP
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ *  This should be done during the problem creation stage.
+ */
 extern
 RETCODE SCIPincludePricer(
    SCIP*            scip,               /**< SCIP data structure */
@@ -442,7 +445,7 @@ PRICER* SCIPfindPricer(
    const char*      name                /**< name of variable pricer */
    );
 
-/** returns the array of currently available variable pricers */
+/** returns the array of currently available variable pricers; active pricers are in the first slots of the array */
 extern
 PRICER** SCIPgetPricers(
    SCIP*            scip                /**< SCIP data structure */
@@ -454,12 +457,29 @@ int SCIPgetNPricers(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** returns the number of currently active variable pricers, that are used in the LP solving loop */
+extern
+int SCIPgetNActivePricers(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** sets the priority of a variable pricer */
 extern
 RETCODE SCIPsetPricerPriority(
    SCIP*            scip,               /**< SCIP data structure */
    PRICER*          pricer,             /**< variable pricer */
    int              priority            /**< new priority of the variable pricer */
+   );
+
+/** activates pricer to be used for the current problem
+ *  This method should be called during the problem creation stage for all pricers that are necessary to solve
+ *  the problem model.
+ *  The pricers are automatically deactivated when the problem is freed.
+ */
+extern
+RETCODE SCIPactivatePricer(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRICER*          pricer              /**< variable pricer */
    );
 
 /** creates a constraint handler and includes it in SCIP */
@@ -933,13 +953,17 @@ RETCODE SCIPstartInteraction(
 /**@name Global Problem Methods */
 /**@{ */
 
-/** creates empty problem and initializes all solving data structures; the objective sense is set to MINIMIZE */
+/** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
+ *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
 extern
 RETCODE SCIPcreateProb(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< problem name */
-   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
-   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
+   DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
+   DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 

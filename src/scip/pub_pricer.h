@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_pricer.h,v 1.1 2003/12/01 14:41:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_pricer.h,v 1.2 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   pub_pricer.h
  * @brief  public methods for variable pricers
@@ -75,15 +75,21 @@ int SCIPpricerGetNVarsFound(
    PRICER*          pricer              /**< variable pricer */
    );
 
-/** is variable pricer initialized? */
-extern
-Bool SCIPpricerIsInitialized(
-   PRICER*            pricer                /**< variable pricer */
-   );
-
 /** gets time in seconds used in this pricer */
 extern
 Real SCIPpricerGetTime(
+   PRICER*            pricer                /**< variable pricer */
+   );
+
+/** returns whether the given pricer is in use in the current problem */
+extern
+Bool SCIPpricerIsActive(
+   PRICER*          pricer              /**< variable pricer */
+   );
+
+/** is variable pricer initialized? */
+extern
+Bool SCIPpricerIsInitialized(
    PRICER*            pricer                /**< variable pricer */
    );
 

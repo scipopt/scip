@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.1 2003/11/28 10:05:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.2 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -38,6 +38,7 @@
 struct SepaData
 {
    scip::ObjSepa*   objsepa;            /**< cut separator object */
+   Bool             deleteobject;       /**< should the cut separator object be deleted when cut separator is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_SEPAFREE(sepaFreeObj)
 
    /* call virtual method of sepa object */
    CHECK_OKAY( sepadata->objsepa->scip_free(scip, sepa) );
+
+   /* free sepa object */
+   if( sepadata->deleteobject )
+      delete sepadata->objsepa;
 
    /* free sepa data */
    delete sepadata;
@@ -128,7 +133,8 @@ DECL_SEPAEXEC(sepaExecObj)
 /** creates the cut separator for the given cut separator object and includes it in SCIP */
 RETCODE SCIPincludeObjSepa(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjSepa*   objsepa             /**< cut separator object */
+   scip::ObjSepa*   objsepa,            /**< cut separator object */
+   Bool             deleteobject        /**< should the cut separator object be deleted when cut separator is freed? */
    )
 {
    SEPADATA* sepadata;
@@ -136,6 +142,7 @@ RETCODE SCIPincludeObjSepa(
    /* create cut separator data */
    sepadata = new SEPADATA;
    sepadata->objsepa = objsepa;
+   sepadata->deleteobject = deleteobject;
 
    /* include cut separator */
    CHECK_OKAY( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 

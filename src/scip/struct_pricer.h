@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricer.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricer.h,v 1.3 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   struct_pricer.h
  * @brief  datastructures for variable pricers
@@ -47,6 +47,7 @@ struct Pricer
    CLOCK*           clock;              /**< pricer execution time */
    int              ncalls;             /**< number of times, this pricer was called */
    int              nvarsfound;         /**< number of variables priced in found so far by this pricer */
+   Bool             active;             /**< is variable pricer in use for the current problem? */
    Bool             initialized;        /**< is variable pricer initialized? */
 };
 

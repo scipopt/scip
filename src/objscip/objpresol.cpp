@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.1 2003/11/28 10:05:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -38,6 +38,7 @@
 struct PresolData
 {
    scip::ObjPresol* objpresol;          /**< presolver object */
+   Bool             deleteobject;       /**< should the presolver object be deleted when presolver is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_PRESOLFREE(presolFreeObj)
 
    /* call virtual method of presol object */
    CHECK_OKAY( presoldata->objpresol->scip_free(scip, presol) );
+
+   /* free presol object */
+   if( presoldata->deleteobject )
+      delete presoldata->objpresol;
 
    /* free presol data */
    delete presoldata;
@@ -132,7 +137,8 @@ DECL_PRESOLEXEC(presolExecObj)
 /** creates the presolver for the given presolver object and includes it in SCIP */
 RETCODE SCIPincludeObjPresol(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPresol* objpresol           /**< presolver object */
+   scip::ObjPresol* objpresol,          /**< presolver object */
+   Bool             deleteobject        /**< should the presolver object be deleted when presolver is freed? */
    )
 {
    PRESOLDATA* presoldata;
@@ -140,6 +146,7 @@ RETCODE SCIPincludeObjPresol(
    /* create presolver data */
    presoldata = new PRESOLDATA;
    presoldata->objpresol = objpresol;
+   presoldata->deleteobject = deleteobject;
 
    /* include presolver */
    CHECK_OKAY( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, objpresol->scip_priority_,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.24 2003/12/01 14:41:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.25 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -47,13 +47,17 @@
  * problem creation
  */
 
-/** creates problem data structure */
+/** creates problem data structure
+ *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
 extern
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
    const char*      name,               /**< problem name */
-   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
-   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
+   DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
+   DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    PROBDATA*        probdata,           /**< user problem data set by the reader */
    Bool             transformed         /**< is this the transformed problem? */
    );

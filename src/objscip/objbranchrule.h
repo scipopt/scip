@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.2 2003/12/02 14:17:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.3 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -120,9 +120,11 @@ public:
 
    
 /** creates the branching rule for the given branching rule object and includes it in SCIP */
+extern
 RETCODE SCIPincludeObjBranchrule(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjBranchrule* objbranchrule   /**< branching rule object */
+   scip::ObjBranchrule* objbranchrule,  /**< branching rule object */
+   Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
    );
 
 #endif

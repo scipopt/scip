@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.67 2003/12/03 18:08:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.68 2003/12/08 11:51:05 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -1708,7 +1708,7 @@ RETCODE actnodeToFork(
    /* resolve LP after cleaning up */
    if( !lp->solved )
    {
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, FALSE) );
 
       /* If the reduced LP is not solved to optimality, something numerically weird happened.
        * The only thing we can do, is to completely forget about the LP and treat the node as
@@ -1797,7 +1797,7 @@ RETCODE actnodeToSubroot(
    /* resolve LP after cleaning up */
    if( !lp->solved )
    {
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, FALSE) );
 
       /* If the reduced LP is not solved to optimality, something numerically weird happened.
        * The only thing we can do, is to completely forget about the LP and treat the node as

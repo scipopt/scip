@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.1 2003/11/28 10:05:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -120,9 +120,11 @@ public:
 
    
 /** creates the presolver for the given presolver object and includes it in SCIP */
+extern
 RETCODE SCIPincludeObjPresol(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPresol* objpresol           /**< presolver object */
+   scip::ObjPresol* objpresol,          /**< presolver object */
+   Bool             deleteobject        /**< should the presolver object be deleted when presolver is freed? */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.5 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.6 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -80,6 +80,20 @@ extern
 RETCODE SCIPpricerExit(
    PRICER*          pricer,             /**< variable pricer */
    SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** activates pricer such that it is called in LP solving loop */
+extern
+RETCODE SCIPpricerActivate(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** deactivates pricer such that it is no longer called in LP solving loop */
+extern
+RETCODE SCIPpricerDeactivate(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls reduced cost pricing method of variable pricer */

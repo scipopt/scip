@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.1 2003/11/28 10:05:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -38,6 +38,7 @@
 struct ReaderData
 {
    scip::ObjReader* objreader;          /**< file reader object */
+   Bool             deleteobject;       /**< should the reader object be deleted when reader is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_READERFREE(readerFreeObj)
 
    /* call virtual method of reader object */
    CHECK_OKAY( readerdata->objreader->scip_free(scip, reader) );
+
+   /* free reader object */
+   if( readerdata->deleteobject )
+      delete readerdata->objreader;
 
    /* free reader data */
    delete readerdata;
@@ -94,7 +99,8 @@ DECL_READERREAD(readerReadObj)
 /** creates the file reader for the given file reader object and includes it in SCIP */
 RETCODE SCIPincludeObjReader(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjReader* objreader           /**< file reader object */
+   scip::ObjReader* objreader,          /**< file reader object */
+   Bool             deleteobject        /**< should the reader object be deleted when reader is freed? */
    )
 {
    READERDATA* readerdata;
@@ -102,6 +108,7 @@ RETCODE SCIPincludeObjReader(
    /* create file reader data */
    readerdata = new READERDATA;
    readerdata->objreader = objreader;
+   readerdata->deleteobject = deleteobject;
 
    /* include file reader */
    CHECK_OKAY( SCIPincludeReader(scip, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.2 2003/12/02 14:17:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.3 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -328,9 +328,11 @@ public:
 
    
 /** creates the constraint handler for the given constraint handler object and includes it in SCIP */
+extern
 RETCODE SCIPincludeObjConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjConshdlr* objconshdlr           /**< constraint handler object */
+   scip::ObjConshdlr* objconshdlr,      /**< constraint handler object */
+   Bool             deleteobject        /**< should the constraint handler object be deleted when conshdlr is freed? */
    );
 
 #endif

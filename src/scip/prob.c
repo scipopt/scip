@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.35 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.36 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -120,12 +120,16 @@ RETCODE probEnsureConssMem(
  * problem creation
  */
 
-/** creates problem data structure */
+/** creates problem data structure
+ *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
    const char*      name,               /**< problem name */
-   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
-   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
+   DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
+   DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    PROBDATA*        probdata,           /**< user problem data set by the reader */
    Bool             transformed         /**< is this the transformed problem? */
    )
@@ -136,30 +140,31 @@ RETCODE SCIPprobCreate(
    ALLOC_OKAY( duplicateMemoryArray(&(*prob)->name, name, strlen(name)+1) );
 
    (*prob)->probdata = probdata;
-   (*prob)->probdelete = probdelete;
+   (*prob)->probdelorig = probdelorig;
    (*prob)->probtrans = probtrans;
-   (*prob)->fixedvars = NULL;
-   (*prob)->vars = NULL;
+   (*prob)->probdeltrans = probdeltrans;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
-   (*prob)->conss = NULL;
-   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
-                  SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
-   (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
-   (*prob)->objoffset = 0.0;
-   (*prob)->objlim = SCIP_INVALID;
+   (*prob)->fixedvars = NULL;
    (*prob)->fixedvarssize = 0;
    (*prob)->nfixedvars = 0;
-   (*prob)->varssize = 0;
+   (*prob)->vars = NULL;
    (*prob)->nvars = 0;
    (*prob)->nbin = 0;
    (*prob)->nint = 0;
    (*prob)->nimpl = 0;
    (*prob)->ncont = 0;
-   (*prob)->consssize = 0;
+   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
+                  SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
+   (*prob)->conss = NULL;
    (*prob)->nconss = 0;
    (*prob)->maxnconss = 0;
    (*prob)->startnconss = 0;
+   (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
+   (*prob)->objoffset = 0.0;
+   (*prob)->objlim = SCIP_INVALID;
+   (*prob)->varssize = 0;
+   (*prob)->consssize = 0;
    (*prob)->transformed = transformed;
 
    return SCIP_OKAY;
@@ -180,9 +185,19 @@ RETCODE SCIPprobFree(
    assert(set != NULL);
    
    /* free user problem data */
-   if( (*prob)->probdelete != NULL )
+   if( (*prob)->transformed )
    {
-      CHECK_OKAY( (*prob)->probdelete(set->scip, &(*prob)->probdata) );
+      if( (*prob)->probdeltrans != NULL )
+      {
+         CHECK_OKAY( (*prob)->probdeltrans(set->scip, &(*prob)->probdata) );
+      }
+   }
+   else
+   {
+      if( (*prob)->probdelorig != NULL )
+      {
+         CHECK_OKAY( (*prob)->probdelorig(set->scip, &(*prob)->probdata) );
+      }
    }
 
    /* remove all constraints from the problem */
@@ -247,9 +262,9 @@ RETCODE SCIPprobTransform(
 
    debugMessage("transform problem: original has %d variables\n", source->nvars);
 
-   /* create target problem data (probtrans is not needed, probdata is set later) */
+   /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    sprintf(transname, "t_%s", source->name);
-   CHECK_OKAY( SCIPprobCreate(target, transname, source->probdelete, NULL, NULL, TRUE) );
+   CHECK_OKAY( SCIPprobCreate(target, transname, NULL, NULL, source->probdeltrans, NULL, TRUE) );
 
    /* transform objective limit */
    if( source->objlim < SCIP_INVALID )

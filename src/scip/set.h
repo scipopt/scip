@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.58 2003/12/01 14:41:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.59 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -36,7 +36,6 @@
 #include "type_clock.h"
 #include "type_paramset.h"
 #include "type_event.h"
-#include "type_lp.h"
 #include "type_scip.h"
 #include "type_branch.h"
 #include "type_conflict.h"
@@ -475,13 +474,13 @@ DISP* SCIPsetFindDisp(
 /** initializes all user callback functions */
 extern
 RETCODE SCIPsetInitCallbacks(
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit methods of all user callback functions */
 extern
 RETCODE SCIPsetExitCallbacks(
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calculate memory size for dynamically allocated arrays */
@@ -516,7 +515,6 @@ RETCODE SCIPsetSetVerbLevel(
 extern
 RETCODE SCIPsetSetFeastol(
    SET*             set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data (or NULL) */
    Real             feastol             /**< new feasibility tolerance */
    );
 

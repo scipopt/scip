@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.87 2003/12/04 15:11:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.88 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4111,7 +4111,7 @@ RETCODE SCIPlpCreate(
    CHECK_OKAY( SCIPlpiChgObjsen((*lp)->lpi, SCIP_OBJSEN_MINIMIZE) );
 
    /* set default parameters in LP solver */
-   CHECK_OKAY( SCIPlpSetFeastol(*lp, (*lp)->lpifeastol) );
+   CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
@@ -4934,7 +4934,8 @@ RETCODE SCIPlpSetState(
 }
 
 /** sets the feasibility tolerance of the LP solver */
-RETCODE SCIPlpSetFeastol(
+static
+RETCODE lpSetFeastol(
    LP*              lp,                 /**< actual LP data */
    Real             feastol             /**< new feasibility tolerance */
    )
@@ -4967,7 +4968,8 @@ RETCODE SCIPlpSetFeastol(
 }
 
 /** sets the FROMSCRATCH setting of the LP solver */
-RETCODE SCIPlpSetFromscratch(
+static
+RETCODE lpSetFromscratch(
    LP*              lp,                 /**< actual LP data */
    Bool             fromscratch         /**< new FROMSCRATCH setting */
    )
@@ -4993,7 +4995,8 @@ RETCODE SCIPlpSetFromscratch(
 }
 
 /** sets the FASTMIP setting of the LP solver */
-RETCODE SCIPlpSetFastmip(
+static
+RETCODE lpSetFastmip(
    LP*              lp,                 /**< actual LP data */
    Bool             fastmip             /**< new FASTMIP setting */
    )
@@ -5019,7 +5022,8 @@ RETCODE SCIPlpSetFastmip(
 }
 
 /** sets the SCALING setting of the LP solver */
-RETCODE SCIPlpSetScaling(
+static
+RETCODE lpSetScaling(
    LP*              lp,                 /**< actual LP data */
    Bool             scaling             /**< new SCALING setting */
    )
@@ -5076,6 +5080,17 @@ RETCODE lpPrimalSimplex(
    debugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", 
       stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
+#if 0 /*???????????????????????*/
+   if( stat->nnodes >= 7480 )
+   {
+      char fname[MAXSTRLEN];
+      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
+      CHECK_OKAY( SCIPlpWrite(lp, fname) );
+      printf("wrote LP to file <%s> (primal simplex, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
+         fname, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+   }
+#endif
+
    /* start timing */
    SCIPclockStart(stat->primallptime, set);
 
@@ -5121,6 +5136,17 @@ RETCODE lpDualSimplex(
 
    debugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", 
       stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
+
+#if 0 /*???????????????????????*/
+   if( stat->nnodes >= 7480 )
+   {
+      char fname[MAXSTRLEN];
+      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
+      CHECK_OKAY( SCIPlpWrite(lp, fname) );
+      printf("wrote LP to file <%s> (dual simplex, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
+         fname, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+   }
+#endif
 
    /* start timing */
    SCIPclockStart(stat->duallptime, set);
@@ -5185,6 +5211,7 @@ RETCODE lpSolveStable(
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   Bool             fromscratch,        /**< should the LP be solved from scratch without using actual basis? */
    Bool             useprimal           /**< should the primal simplex be used? */
    )
 {
@@ -5193,19 +5220,11 @@ RETCODE lpSolveStable(
    assert(set != NULL);
    assert(stat != NULL);
 
-   /* set LP solver to be fast but unprecise */
-   CHECK_OKAY( SCIPlpSetFeastol(lp, set->feastol) );
-   CHECK_OKAY( SCIPlpSetFromscratch(lp, FALSE) );
-   CHECK_OKAY( SCIPlpSetFastmip(lp, TRUE) );
-   CHECK_OKAY( SCIPlpSetScaling(lp, TRUE) );
-
-   /* if columns have been deleted to the LPI, turn FASTMIP off */
-   if( lp->flushdeletedcols )
-   {
-      CHECK_OKAY( SCIPlpSetFastmip(lp, FALSE) );
-   }
-
-   /* call simplex */
+   /* solve with fast but unprecise settings (if columns have been added to or deleted from the LPI, turn FASTMIP off) */
+   CHECK_OKAY( lpSetFeastol(lp, set->feastol) );
+   CHECK_OKAY( lpSetFromscratch(lp, fromscratch) );
+   CHECK_OKAY( lpSetFastmip(lp, set->fastmip && !fromscratch && !lp->flushaddedcols && !lp->flushdeletedcols) );
+   CHECK_OKAY( lpSetScaling(lp, set->scaling) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
 
    /* check for stability */
@@ -5216,9 +5235,9 @@ RETCODE lpSolveStable(
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
       stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-   CHECK_OKAY( SCIPlpSetFeastol(lp, 0.001*set->feastol) );
-   CHECK_OKAY( SCIPlpSetFromscratch(lp, TRUE) );
-   CHECK_OKAY( SCIPlpSetFastmip(lp, FALSE) );
+   CHECK_OKAY( lpSetFeastol(lp, 0.001*set->feastol) );
+   CHECK_OKAY( lpSetFromscratch(lp, TRUE) );
+   CHECK_OKAY( lpSetFastmip(lp, FALSE) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
 
    /* check for stability */
@@ -5239,7 +5258,7 @@ RETCODE lpSolveStable(
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex without scaling\n", 
       stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-   CHECK_OKAY( SCIPlpSetScaling(lp, FALSE) );
+   CHECK_OKAY( lpSetScaling(lp, FALSE) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
    
    /* check for stability */
@@ -5276,6 +5295,7 @@ RETCODE lpSolve(
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   Bool             fromscratch,        /**< should the LP be solved from scratch without using actual basis? */
    Bool             useprimal           /**< should the primal simplex be used? */
    )
 {
@@ -5285,7 +5305,7 @@ RETCODE lpSolve(
    assert(stat != NULL);
 
    /* call simplex */
-   CHECK_OKAY( lpSolveStable(lp, set, stat, useprimal) );
+   CHECK_OKAY( lpSolveStable(lp, set, stat, fromscratch, useprimal) );
 
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
@@ -5352,7 +5372,8 @@ RETCODE SCIPlpSolve(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             fromscratch         /**< should the LP be solved from scratch without using actual basis? */
    )
 {
    assert(lp != NULL);
@@ -5360,26 +5381,16 @@ RETCODE SCIPlpSolve(
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
-#if 0 /*???????????????????????*/
-   if( stat->nnodes <= 10 )
-   {
-      char fname[MAXSTRLEN];
-      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
-      CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s>\n", fname);
-   }
-#endif
-
    /* select simplex method */
    if( lp->dualfeasible || !lp->primalfeasible )
    {
       debugMessage("solving dual LP\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, FALSE) );
+      CHECK_OKAY( lpSolve(lp, set, stat, fromscratch, FALSE) );
    }
    else
    {
       debugMessage("solving primal LP\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, TRUE) );
+      CHECK_OKAY( lpSolve(lp, set, stat, fromscratch, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -5406,24 +5417,12 @@ RETCODE SCIPlpSolveAndEval(
    {
       Bool primalfeasible;
       Bool dualfeasible;
-      Bool resetfastmip;
-      Bool resetfromscratch;
+      Bool fromscratch;
 
-      resetfastmip = FALSE;
-      resetfromscratch = FALSE;
+      fromscratch = FALSE;
 
    SOLVEAGAIN:
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
-
-      /* reset FASTMIP and FROMSCRATCH setting, if it was turned off due to numerical problems */
-      if( resetfastmip )
-      {
-         CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
-      }
-      if( resetfromscratch )
-      {
-         CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-      }
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, fromscratch) );
 
       switch( SCIPlpGetSolstat(lp) )
       {
@@ -5446,27 +5445,13 @@ RETCODE SCIPlpSolveAndEval(
          }
          if( !primalfeasible || !dualfeasible )
          {
-            if( !resetfastmip )
-            {
-               /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
-               infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
-                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
-               CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
-               resetfastmip = TRUE;
-               assert(!resetfromscratch);
-               goto SOLVEAGAIN;
-            }
-            else if( !resetfromscratch )
+            if( !fromscratch )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
-               CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
-               CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
-               resetfastmip = TRUE;
-               resetfromscratch = TRUE;
+               fromscratch = TRUE;
                goto SOLVEAGAIN;
             }
             else

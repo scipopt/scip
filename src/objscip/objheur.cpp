@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.1 2003/11/28 10:05:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -38,6 +38,7 @@
 struct HeurData
 {
    scip::ObjHeur*   objheur;            /**< primal heuristic object */
+   Bool             deleteobject;       /**< should the primal heuristic object be deleted when heuristic is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_HEURFREE(heurFreeObj)
 
    /* call virtual method of heur object */
    CHECK_OKAY( heurdata->objheur->scip_free(scip, heur) );
+
+   /* free heur object */
+   if( heurdata->deleteobject )
+      delete heurdata->objheur;
 
    /* free heur data */
    delete heurdata;
@@ -128,7 +133,8 @@ DECL_HEUREXEC(heurExecObj)
 /** creates the primal heuristic for the given primal heuristic object and includes it in SCIP */
 RETCODE SCIPincludeObjHeur(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjHeur* objheur           /**< primal heuristic object */
+   scip::ObjHeur*   objheur,            /**< primal heuristic object */
+   Bool             deleteobject        /**< should the primal heuristic object be deleted when heuristic is freed? */
    )
 {
    HEURDATA* heurdata;
@@ -136,6 +142,7 @@ RETCODE SCIPincludeObjHeur(
    /* create primal heuristic data */
    heurdata = new HEURDATA;
    heurdata->objheur = objheur;
+   heurdata->deleteobject = deleteobject;
 
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,

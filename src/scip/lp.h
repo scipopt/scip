@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.59 2003/12/04 15:11:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.60 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -577,34 +577,6 @@ RETCODE SCIPlpSetState(
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
-/** sets the feasibility tolerance of the LP solver */
-extern
-RETCODE SCIPlpSetFeastol(
-   LP*              lp,                 /**< actual LP data */
-   Real             feastol             /**< new feasibility tolerance */
-   );
-
-/** sets the FROMSCRATCH setting of the LP solver */
-extern
-RETCODE SCIPlpSetFromscratch(
-   LP*              lp,                 /**< actual LP data */
-   Bool             fromscratch         /**< new FROMSCRATCH setting */
-   );
-
-/** sets the FASTMIP setting of the LP solver */
-extern
-RETCODE SCIPlpSetFastmip(
-   LP*              lp,                 /**< actual LP data */
-   Bool             fastmip             /**< new FASTMIP setting */
-   );
-
-/** sets the SCALING setting of the LP solver */
-extern
-RETCODE SCIPlpSetScaling(
-   LP*              lp,                 /**< actual LP data */
-   Bool             scaling             /**< new SCALING setting */
-   );
-
 /** sets the upper objective limit of the LP solver */
 extern
 RETCODE SCIPlpSetUpperbound(
@@ -618,7 +590,8 @@ RETCODE SCIPlpSolve(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             fromscratch         /**< should the LP be solved from scratch without using actual basis? */
    );
 
 /** solves the LP with simplex algorithm, and copy the solution into the column's data */

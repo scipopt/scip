@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.78 2003/12/02 15:42:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.79 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -85,7 +85,9 @@
 
 /* LP Solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ         4 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
+#define SCIP_DEFAULT_FASTMIP          TRUE /**< should FASTMIP setting of LP solver be used? */
+#define SCIP_DEFAULT_SCALING          TRUE /**< should scaling of LP solver be used? */
+#define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LPSOLVEDEPTH       -1 /**< maximal depth for solving LPs (-1: no depth limit) */
 #define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a column can reach before it is deleted from the LP */
 #define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a row can reach before it is deleted from the LP */
@@ -210,6 +212,7 @@ RETCODE SCIPsetCreate(
    (*set)->readerssize = 0;
    (*set)->pricers = NULL;
    (*set)->npricers = 0;
+   (*set)->nactivepricers = 0;
    (*set)->pricerssize = 0;
    (*set)->pricerssorted = FALSE;
    (*set)->conshdlrs = NULL;
@@ -432,6 +435,16 @@ RETCODE SCIPsetCreate(
                   "lp/lpsolvedepth",
                   "maximal depth for solving LP at the nodes (-1: no depth limit)",
                   &(*set)->lpsolvedepth, SCIP_DEFAULT_LPSOLVEDEPTH, -1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "lp/fastmip",
+                  "should FASTMIP setting of LP solver be used?",
+                  &(*set)->fastmip, SCIP_DEFAULT_FASTMIP,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "lp/scaling",
+                  "should scaling of LP solver be used?",
+                  &(*set)->scaling, SCIP_DEFAULT_SCALING,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "lp/cleanupcols",
@@ -1533,15 +1546,16 @@ DISP* SCIPsetFindDisp(
 
 /** initializes all user callback functions */
 RETCODE SCIPsetInitCallbacks(
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    int i;
 
    assert(set != NULL);
 
-   /* variable pricers */
-   for( i = 0; i < set->npricers; ++i )
+   /* active variable pricers */
+   SCIPsetSortPricers(set);
+   for( i = 0; i < set->nactivepricers; ++i )
    {
       CHECK_OKAY( SCIPpricerInit(set->pricers[i], set->scip) );
    }
@@ -1606,15 +1620,16 @@ RETCODE SCIPsetInitCallbacks(
 
 /** calls exit methods of all user callback functions */
 RETCODE SCIPsetExitCallbacks(
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    int i;
 
    assert(set != NULL);
 
-   /* variable pricers */
-   for( i = 0; i < set->npricers; ++i )
+   /* active variable pricers */
+   SCIPsetSortPricers(set);
+   for( i = 0; i < set->nactivepricers; ++i )
    {
       CHECK_OKAY( SCIPpricerExit(set->pricers[i], set->scip) );
    }
@@ -1725,17 +1740,12 @@ RETCODE SCIPsetSetVerbLevel(
 /** sets LP feasibility tolerance */
 RETCODE SCIPsetSetFeastol(
    SET*             set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data (or NULL) */
    Real             feastol             /**< new feasibility tolerance */
    )
 {
    assert(set != NULL);
 
    set->feastol = feastol;
-   if( lp != NULL )
-   {
-      CHECK_OKAY( SCIPlpSetFeastol(lp, feastol) );
-   }
 
    return SCIP_OKAY;
 }

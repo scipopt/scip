@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.4 2003/12/01 16:14:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.5 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -40,10 +40,13 @@
 
 
 
-/** compares two pricers w. r. to their priority */
+/** compares two pricers w. r. to their activity and their priority */
 DECL_SORTPTRCOMP(SCIPpricerComp)
 {  /*lint --e{715}*/
-   return ((PRICER*)elem2)->priority - ((PRICER*)elem1)->priority;
+   if( ((PRICER*)elem1)->active != ((PRICER*)elem2)->active )
+      return ((PRICER*)elem1)->active ? -1 : +1;
+   else
+      return ((PRICER*)elem2)->priority - ((PRICER*)elem1)->priority;
 }
 
 /** method to call, when the priority of a pricer was changed */
@@ -61,7 +64,9 @@ DECL_PARAMCHGD(paramChgdPricerPriority)
    return SCIP_OKAY;
 }
 
-/** creates a variable pricer */
+/** creates a variable pricer
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ */
 RETCODE SCIPpricerCreate(
    PRICER**         pricer,             /**< pointer to variable pricer data structure */
    SET*             set,                /**< global SCIP settings */
@@ -98,6 +103,7 @@ RETCODE SCIPpricerCreate(
    CHECK_OKAY( SCIPclockCreate(&(*pricer)->clock, SCIP_CLOCKTYPE_DEFAULT) );
    (*pricer)->ncalls = 0;
    (*pricer)->nvarsfound = 0;
+   (*pricer)->active = FALSE;
    (*pricer)->initialized = FALSE;
 
    /* add parameters */
@@ -142,6 +148,7 @@ RETCODE SCIPpricerInit(
    )
 {
    assert(pricer != NULL);
+   assert(pricer->active);
    assert(scip != NULL);
 
    if( pricer->initialized )
@@ -171,6 +178,7 @@ RETCODE SCIPpricerExit(
    )
 {
    assert(pricer != NULL);
+   assert(pricer->active);
    assert(scip != NULL);
 
    if( !pricer->initialized )
@@ -188,6 +196,56 @@ RETCODE SCIPpricerExit(
    return SCIP_OKAY;
 }
 
+/** activates pricer such that it is called in LP solving loop */
+RETCODE SCIPpricerActivate(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(pricer != NULL);
+   assert(set != NULL);
+   assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+
+   if( !pricer->active )
+   {
+      pricer->active = TRUE;
+      set->nactivepricers++;
+      set->pricerssorted = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deactivates pricer such that it is no longer called in LP solving loop */
+RETCODE SCIPpricerDeactivate(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(pricer != NULL);
+   assert(set != NULL);
+   assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+
+   if( pricer->active )
+   {
+      pricer->active = FALSE;
+      set->nactivepricers--;
+      set->pricerssorted = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the given pricer is in use in the current problem */
+Bool SCIPpricerIsActive(
+   PRICER*          pricer              /**< variable pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   return pricer->active;
+}
+
 /** calls reduced cost pricing method of variable pricer */
 RETCODE SCIPpricerRedcost(
    PRICER*          pricer,             /**< variable pricer */
@@ -198,6 +256,7 @@ RETCODE SCIPpricerRedcost(
    int oldnvars;
 
    assert(pricer != NULL);
+   assert(pricer->active);
    assert(pricer->pricerredcost != NULL);
    assert(set != NULL);
    assert(prob != NULL);
@@ -232,6 +291,7 @@ RETCODE SCIPpricerFarkas(
    int oldnvars;
 
    assert(pricer != NULL);
+   assert(pricer->active);
    assert(set != NULL);
    assert(prob != NULL);
 

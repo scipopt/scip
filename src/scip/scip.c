@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.110 2003/12/03 18:08:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.111 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -812,7 +812,10 @@ int SCIPgetNReaders(
    return scip->set->nreaders;
 }
 
-/** creates a variable pricer and includes it in SCIP */
+/** creates a variable pricer and includes it in SCIP
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ *  This should be done during the problem creation stage.
+ */
 RETCODE SCIPincludePricer(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of variable pricer */
@@ -851,12 +854,14 @@ PRICER* SCIPfindPricer(
    return SCIPsetFindPricer(scip->set, name);
 }
 
-/** returns the array of currently available variable pricers */
+/** returns the array of currently available variable pricers; active pricers are in the first slots of the array */
 PRICER** SCIPgetPricers(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetPricers", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSortPricers(scip->set);
 
    return scip->set->pricers;
 }
@@ -871,6 +876,16 @@ int SCIPgetNPricers(
    return scip->set->npricers;
 }
 
+/** returns the number of currently active variable pricers, that are used in the LP solving loop */
+int SCIPgetNActivePricers(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNAcvitePricers", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nactivepricers;
+}
+
 /** sets the priority of a variable pricer */
 RETCODE SCIPsetPricerPriority(
    SCIP*            scip,               /**< SCIP data structure */
@@ -881,6 +896,23 @@ RETCODE SCIPsetPricerPriority(
    CHECK_OKAY( checkStage(scip, "SCIPsetPricerPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIPpricerSetPriority(pricer, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
+/** activates pricer to be used for the current problem
+ *  This method should be called during the problem creation stage for all pricers that are necessary to solve
+ *  the problem model.
+ *  The pricers are automatically deactivated when the problem is freed.
+ */
+RETCODE SCIPactivatePricer(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRICER*          pricer              /**< variable pricer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPpricerActivate(pricer, scip->set);
 
    return SCIP_OKAY;
 }
@@ -1011,6 +1043,8 @@ CONFLICTHDLR** SCIPgetConflicthdlrs(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetConflicthdlrs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
+   SCIPsetSortConflicthdlrs(scip->set);
+
    return scip->set->conflicthdlrs;
 }
 
@@ -1081,6 +1115,8 @@ PRESOL** SCIPgetPresols(
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetPresols", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSortPresols(scip->set);
 
    return scip->set->presols;
 }
@@ -1154,6 +1190,8 @@ SEPA** SCIPgetSepas(
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetSepas", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSortSepas(scip->set);
 
    return scip->set->sepas;
 }
@@ -1229,6 +1267,8 @@ HEUR** SCIPgetHeurs(
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetHeurs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSortHeurs(scip->set);
 
    return scip->set->heurs;
 }
@@ -1448,6 +1488,8 @@ BRANCHRULE* SCIPfindBranchrule(
 
    CHECK_ABORT( checkStage(scip, "SCIPfindBranchrule", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
+   SCIPsetSortBranchrules(scip->set);
+
    return SCIPsetFindBranchrule(scip->set, name);
 }
 
@@ -1664,12 +1706,16 @@ RETCODE SCIPstartInteraction(
  * global problem methods
  */
 
-/** creates empty problem and initializes all solving data structures; the objective sense is set to MINIMIZE */
+/** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
+ *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
 RETCODE SCIPcreateProb(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< problem name */
-   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
-   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
+   DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
+   DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    PROBDATA*        probdata            /**< user problem data set by the reader */
    )
 {
@@ -1678,7 +1724,7 @@ RETCODE SCIPcreateProb(
    scip->stage = SCIP_STAGE_PROBLEM;
    
    CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->set) );
-   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelete, probtrans, probdata, FALSE) );
+   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelorig, probtrans, probdeltrans, probdata, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -1745,9 +1791,20 @@ RETCODE SCIPfreeProb(
 
    if( scip->stage == SCIP_STAGE_PROBLEM )
    {
+      int p;
+
+      /* deactivate all pricers */
+      for( p = 0; p < scip->set->nactivepricers; ++p )
+      {
+         CHECK_OKAY( SCIPpricerDeactivate(scip->set->pricers[p], scip->set) );
+      }
+      assert(scip->set->nactivepricers == 0);
+
+      /* free problem and problem statistics datastructures */
       CHECK_OKAY( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPstatFree(&scip->stat) );
 
+      /* switch stage to INIT */
       scip->stage = SCIP_STAGE_INIT;
    }
    assert(scip->stage == SCIP_STAGE_INIT);
@@ -7484,7 +7541,7 @@ RETCODE SCIPsetFeastol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetFeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetSetFeastol(scip->set, scip->lp, feastol) );
+   CHECK_OKAY( SCIPsetSetFeastol(scip->set, feastol) );
 
    return SCIP_OKAY;
 }

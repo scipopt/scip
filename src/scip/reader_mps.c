@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.36 2003/11/27 17:48:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.37 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -1237,7 +1237,7 @@ RETCODE readMps(
 
    CHECK_OKAY( readName(mpsi) );
 
-   CHECK_OKAY( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL) );
+   CHECK_OKAY( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL) );
 
    if (mpsinputSection(mpsi) == MPS_OBJSEN)
    {

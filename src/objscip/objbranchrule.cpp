@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.2 2003/11/28 10:05:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.3 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -38,6 +38,7 @@
 struct BranchruleData
 {
    scip::ObjBranchrule* objbranchrule;  /**< branching rule object */
+   Bool             deleteobject;       /**< should the branching rule object be deleted when branching rule is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_BRANCHFREE(branchFreeObj)
 
    /* call virtual method of branchrule object */
    CHECK_OKAY( branchruledata->objbranchrule->scip_free(scip, branchrule) );
+
+   /* free branchrule object */
+   if( branchruledata->deleteobject )
+      delete branchruledata->objbranchrule;
 
    /* free branchrule data */
    delete branchruledata;
@@ -144,7 +149,8 @@ DECL_BRANCHEXECPS(branchExecpsObj)
 /** creates the branching rule for the given branching rule object and includes it in SCIP */
 RETCODE SCIPincludeObjBranchrule(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjBranchrule* objbranchrule   /**< branching rule object */
+   scip::ObjBranchrule* objbranchrule,  /**< branching rule object */
+   Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
    )
 {
    BRANCHRULEDATA* branchruledata;
@@ -152,6 +158,7 @@ RETCODE SCIPincludeObjBranchrule(
    /* create branching rule data */
    branchruledata = new BRANCHRULEDATA;
    branchruledata->objbranchrule = objbranchrule;
+   branchruledata->deleteobject = deleteobject;
 
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 

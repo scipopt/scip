@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.74 2003/12/03 18:08:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.75 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -336,9 +336,9 @@ RETCODE solveNodeLP(
             /* sort pricer algorithms by priority */
             SCIPsetSortPricers(set);
             
-            /* call external pricer algorithms */
+            /* call external pricer algorithms, that are active for the current problem */
             enoughvars = FALSE;
-            for( p = 0; p < set->npricers && !enoughvars; ++p )
+            for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
             {
                CHECK_OKAY( SCIPpricerExec(set->pricers[p], set, prob, lp) );
                enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetMaxpricevars(set, root)/2);

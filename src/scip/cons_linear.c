@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.76 2003/12/01 16:14:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.77 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1258,6 +1258,8 @@ RETCODE consdataTightenVarBounds(
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+            else if( newub < lb ) /* avoid infeasibilities in consequence of numerical inaccuracies */
+               newub = lb;
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
             ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasLE(scip, ub, newub));
@@ -1280,6 +1282,8 @@ RETCODE consdataTightenVarBounds(
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+            else if( newlb > ub ) /* avoid infeasibilities in consequence of numerical inaccuracies */
+               newlb = ub;
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
             lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasGE(scip, lb, newlb));
@@ -1306,6 +1310,8 @@ RETCODE consdataTightenVarBounds(
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+            else if( newlb > ub ) /* avoid infeasibilities in consequence of numerical inaccuracies */
+               newlb = ub;
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
             lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasGE(scip, lb, newlb));
@@ -1328,6 +1334,8 @@ RETCODE consdataTightenVarBounds(
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+            else if( newub < lb ) /* avoid infeasibilities in consequence of numerical inaccuracies */
+               newub = lb;
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
             ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasLE(scip, ub, newub));

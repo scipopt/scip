@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.2 2003/11/28 10:05:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.3 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -38,6 +38,7 @@
 struct PricerData
 {
    scip::ObjPricer* objpricer;          /**< variable pricer object */
+   Bool             deleteobject;       /**< should the pricer object be deleted when pricer is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_PRICERFREE(pricerFreeObj)
 
    /* call virtual method of pricer object */
    CHECK_OKAY( pricerdata->objpricer->scip_free(scip, pricer) );
+
+   /* free pricer object */
+   if( pricerdata->deleteobject )
+      delete pricerdata->objpricer;
 
    /* free pricer data */
    delete pricerdata;
@@ -145,7 +150,8 @@ DECL_PRICERREDCOST(pricerFarkasObj)
 /** creates the variable pricer for the given variable pricer object and includes it in SCIP */
 RETCODE SCIPincludeObjPricer(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPricer* objpricer           /**< variable pricer object */
+   scip::ObjPricer* objpricer,          /**< variable pricer object */
+   Bool             deleteobject        /**< should the pricer object be deleted when pricer is freed? */
    )
 {
    PRICERDATA* pricerdata;
@@ -153,6 +159,7 @@ RETCODE SCIPincludeObjPricer(
    /* create variable pricer data */
    pricerdata = new PRICERDATA;
    pricerdata->objpricer = objpricer;
+   pricerdata->deleteobject = deleteobject;
 
    /* include variable pricer */
    CHECK_OKAY( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.2 2003/11/28 10:05:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.3 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -38,6 +38,7 @@
 struct ConshdlrData
 {
    scip::ObjConshdlr* objconshdlr;      /**< constraint handler object */
+   Bool             deleteobject;       /**< should the constraint handler object be deleted when conshdlr is freed? */
 };
 
 
@@ -59,6 +60,10 @@ DECL_CONSFREE(consFreeObj)
 
    /* call virtual method of conshdlr object */
    CHECK_OKAY( conshdlrdata->objconshdlr->scip_free(scip, conshdlr) );
+
+   /* free conshdlr object */
+   if( conshdlrdata->deleteobject )
+      delete conshdlrdata->objconshdlr;
 
    /* free conshdlr data */
    delete conshdlrdata;
@@ -405,7 +410,8 @@ DECL_CONSDISABLE(consDisableObj)
 /** creates the constraint handler for the given constraint handler object and includes it in SCIP */
 RETCODE SCIPincludeObjConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjConshdlr* objconshdlr       /**< constraint handler object */
+   scip::ObjConshdlr* objconshdlr,      /**< constraint handler object */
+   Bool             deleteobject        /**< should the constraint handler object be deleted when conshdlr is freed? */
    )
 {
    CONSHDLRDATA* conshdlrdata;
@@ -413,6 +419,7 @@ RETCODE SCIPincludeObjConshdlr(
    /* create obj constraint handler data */
    conshdlrdata = new CONSHDLRDATA;
    conshdlrdata->objconshdlr = objconshdlr;
+   conshdlrdata->deleteobject = deleteobject;
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 

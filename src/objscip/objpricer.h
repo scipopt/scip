@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.1 2003/11/27 17:48:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -109,9 +109,11 @@ public:
 
    
 /** creates the variable pricer for the given variable pricer object and includes it in SCIP */
+extern
 RETCODE SCIPincludeObjPricer(
    SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPricer* objpricer           /**< variable pricer object */
+   scip::ObjPricer* objpricer,          /**< variable pricer object */
+   Bool             deleteobject        /**< should the pricer object be deleted when pricer is freed? */
    );
 
 #endif

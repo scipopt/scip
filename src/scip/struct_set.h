@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.1 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.2 2003/12/08 11:51:04 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -58,8 +58,9 @@ struct Set
    int              readerssize;        /**< size of readers array */
    PRICER**         pricers;            /**< variable pricers */
    int              npricers;           /**< number of variable pricers */
+   int              nactivepricers;     /**< number of variable pricers used in the current problem */
    int              pricerssize;        /**< size of pricers array */
-   Bool             pricerssorted;      /**< are the pricers sorted by priority? */
+   Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
@@ -134,6 +135,8 @@ struct Set
    Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
+   Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
+   Bool             scaling;            /**< should scaling of LP solver be used? */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
    Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
    CLOCKTYPE        clocktype;          /**< default clock type to use */
