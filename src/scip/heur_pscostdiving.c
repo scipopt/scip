@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.5 2004/06/01 18:04:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.6 2004/06/02 07:39:07 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -264,19 +264,20 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    /* don't try to dive, if we are in the higher fraction of the tree, given by divestartdepth */
    depth = SCIPgetDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
+   maxdepth = MAX(maxdepth, 30);
    if( depth < heurdata->divestartdepth*maxdepth )
       return SCIP_OKAY;
 
    /* don't try to dive, if we took too many LP iterations during diving */
    nlpiterations = SCIPgetNLPIterations(scip);
-   if( heurdata->nlpiterations > heurdata->maxlpiterquot*nlpiterations )
+   if( heurdata->nlpiterations > heurdata->maxlpiterquot*nlpiterations + 1000 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
    /* calculate the maximal number of LP iterations until heuristic is aborted */
    maxnlpiterations = heurdata->maxlpiterquot*nlpiterations - heurdata->nlpiterations;
-   maxnlpiterations = MAX(maxnlpiterations, 1000);
+   maxnlpiterations = MAX(maxnlpiterations, 10000);
 
    /* calculate the objective search bound */
    nsolsfound = SCIPgetNSolsFound(scip);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.136 2004/06/01 18:04:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.137 2004/06/02 07:39:09 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2442,6 +2442,13 @@ Real SCIPgetRowMaxActivity(
    ROW*             row                 /**< LP row */
    );
 
+/** recalculates the activity of a row in the last LP solution */
+extern
+RETCODE SCIPrecalcRowLPActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
 /** returns the activity of a row in the last LP solution */
 extern
 Real SCIPgetRowLPActivity(
@@ -2456,6 +2463,13 @@ Real SCIPgetRowLPFeasibility(
    ROW*             row                 /**< LP row */
    );
 
+/** recalculates the activity of a row for the current pseudo solution */
+extern
+RETCODE SCIPrecalcRowPseudoActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
 /** returns the activity of a row for the current pseudo solution */
 extern
 Real SCIPgetRowPseudoActivity(
@@ -2466,6 +2480,13 @@ Real SCIPgetRowPseudoActivity(
 /** returns the feasibility of a row for the current pseudo solution: negative value means infeasibility */
 extern
 Real SCIPgetRowPseudoFeasibility(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
+/** recalculates the activity of a row in the last LP or pseudo solution */
+extern
+RETCODE SCIPrecalcRowActivity(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */
    );

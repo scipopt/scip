@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.43 2004/04/29 15:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.44 2004/06/02 07:39:07 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1170,16 +1170,16 @@ Real SCIPbranchGetScore(
 
    assert(set != NULL);
 
-   /* slightly increase gains, such that for zero gains, the branch factor comes into account */
-   downgain += set->sumepsilon;
-   upgain += set->sumepsilon;
-
    /* weigh the two child nodes with branchscorefac and 1-branchscorefac */
    if( downgain > upgain )
       score = set->branchscorefac * downgain + (1.0-set->branchscorefac) * upgain;
    else
       score = set->branchscorefac * upgain + (1.0-set->branchscorefac) * downgain;
 
+   /* slightly increase gains, such that for zero gains, the branch factor comes into account */
+   score += set->sumepsilon;
+
+   /* apply the branch factor of the variable */
    if( var != NULL )
       score *= SCIPvarGetBranchFactor(var);
 

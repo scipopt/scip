@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.27 2004/05/04 19:46:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.28 2004/06/02 07:39:07 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -496,7 +496,10 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    CHECK_OKAY( SCIPallocBufferArray(scip, &violrows, nlprows) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &violrowpos, nlprows) );
 
-   /* get the activities for all globally valid rows */
+   /* get the activities for all globally valid rows;
+    * the rows should be feasible, but due to numerical inaccuracies in the LP solver, they can be violated
+    */
+   nviolrows = 0;
    for( r = 0; r < nlprows; ++r )
    {
       ROW* row;
@@ -507,12 +510,17 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       if( !SCIProwIsLocal(row) )
       {
          activities[r] = SCIPgetRowActivity(scip, row);
-         assert(SCIPisFeasGE(scip, activities[r], SCIProwGetLhs(row)));
-         assert(SCIPisFeasLE(scip, activities[r], SCIProwGetRhs(row)));
-         violrowpos[r] = -1;
+         if( SCIPisFeasLT(scip, activities[r], SCIProwGetLhs(row))
+            || SCIPisFeasGT(scip, activities[r], SCIProwGetRhs(row)) )
+         {
+            violrows[nviolrows] = row;
+            violrowpos[r] = nviolrows;
+            nviolrows++;
+         }
+         else
+            violrowpos[r] = -1;
       }
    }
-   nviolrows = 0;
 
    /* get the working solution from heuristic's local data */
    heurdata = SCIPheurGetData(heur);

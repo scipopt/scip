@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.171 2004/06/01 18:04:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.172 2004/06/02 07:39:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6255,6 +6255,19 @@ Real SCIPgetRowMaxActivity(
    return SCIProwGetMaxActivity(row, scip->set, scip->stat);
 }
 
+/** recalculates the activity of a row in the last LP solution */
+RETCODE SCIPrecalcRowLPActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPrecalcRowLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   SCIProwRecalcLPActivity(row, scip->stat);
+
+   return SCIP_OKAY;
+}
+
 /** returns the activity of a row in the last LP solution */
 Real SCIPgetRowLPActivity(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6277,6 +6290,19 @@ Real SCIPgetRowLPFeasibility(
    return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
 }
 
+/** recalculates the activity of a row for the current pseudo solution */
+RETCODE SCIPrecalcRowPseudoActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPrecalcRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   SCIProwRecalcPseudoActivity(row, scip->stat);
+
+   return SCIP_OKAY;
+}
+
 /** returns the activity of a row for the current pseudo solution */
 Real SCIPgetRowPseudoActivity(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6297,6 +6323,22 @@ Real SCIPgetRowPseudoFeasibility(
    CHECK_ABORT( checkStage(scip, "SCIPgetRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIProwGetPseudoFeasibility(row, scip->stat);
+}
+
+/** recalculates the activity of a row in the last LP or pseudo solution */
+RETCODE SCIPrecalcRowActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPrecalcRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( scip->tree->actnodehaslp )
+      SCIProwRecalcLPActivity(row, scip->stat);
+   else
+      SCIProwRecalcPseudoActivity(row, scip->stat);
+
+   return SCIP_OKAY;
 }
 
 /** returns the activity of a row in the last LP or pseudo solution */

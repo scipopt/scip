@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.79 2004/05/24 17:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.80 2004/06/02 07:39:08 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -369,6 +369,13 @@ RETCODE SCIProwMakeRational(
    Bool*            success             /**< stores whether row could be made rational */
    );
 
+/** recalculates the current activity of a row */
+extern
+void SCIProwRecalcLPActivity(
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
+   );
+
 /** returns the activity of a row in the current LP solution */
 extern
 Real SCIProwGetLPActivity(
@@ -383,6 +390,13 @@ Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
    STAT*            stat,               /**< problem statistics */
    LP*              lp                  /**< current LP data */
+   );
+
+/** calculates the current pseudo activity of a row */
+extern
+void SCIProwRecalcPseudoActivity(
+   ROW*             row,                /**< row data */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** returns the pseudo activity of a row in the current pseudo solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.120 2004/05/24 17:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.121 2004/06/02 07:39:07 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4008,8 +4008,7 @@ void SCIProwForceSort(
 }
 
 /** recalculates the current activity of a row */
-static
-void rowCalcLPActivity(
+void SCIProwRecalcLPActivity(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    )
@@ -4074,7 +4073,7 @@ Real SCIProwGetLPActivity(
    assert(lp->validsollp == stat->lpcount);
 
    if( row->validactivitylp != stat->lpcount )
-      rowCalcLPActivity(row, stat);
+      SCIProwRecalcLPActivity(row, stat);
    assert(row->validactivitylp == stat->lpcount);
    assert(row->activity < SCIP_INVALID);
 
@@ -4098,8 +4097,7 @@ Real SCIProwGetLPFeasibility(
 }
 
 /** calculates the current pseudo activity of a row */
-static
-void rowCalcPseudoActivity(
+void SCIProwRecalcPseudoActivity(
    ROW*             row,                /**< row data */
    STAT*            stat                /**< problem statistics */
    )
@@ -4137,7 +4135,7 @@ Real SCIProwGetPseudoActivity(
 
    /* check, if activity bounds has to be calculated */
    if( row->validpsactivitybdchg != stat->nboundchanges )
-      rowCalcPseudoActivity(row, stat);
+      SCIProwRecalcPseudoActivity(row, stat);
    assert(row->validpsactivitybdchg == stat->nboundchanges);
    assert(row->pseudoactivity < SCIP_INVALID);
 
@@ -8990,6 +8988,11 @@ RETCODE SCIPlpEndDive(
    CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, &lp->divelpistate) );
    assert(lp->divelpistate == NULL);
 
+   /**@todo Get rid of resolving after diving: use separate data fields in columns to store all diving
+    *       information (bounds, obj, solution values) and create calls SCIPvarGetDiveSol() etc.
+    *       to access this diving LP information (not applicable on LOOSE variables).
+    *       Just declare the LP to be solved at this point (remember the LP solution status beforehand).
+    */
    /* resolve LP to reset solution */
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, &lperror) );
    if( lperror )

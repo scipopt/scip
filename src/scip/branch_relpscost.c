@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.4 2004/06/01 16:40:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.5 2004/06/02 07:39:07 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -159,11 +159,11 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       Real up;
       Real downgain;
       Real upgain;
-      Real downscore;
-      Real upscore;
-      Real besthistscore;
+      Real fracscore;
+      Real bestpscscore;
       Real bestsbscore;
       Real bestuninitsbscore;
+      Real bestfracscore;
       Real depthfac;
       Real sizefac;
       Real prio;
@@ -174,7 +174,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       int maxdepth;
       int nintvars;
       int reliable;
-      int besthistcand;
+      int bestpsccand;
       int bestinitcand;
       int maxlookahead;
       int lookahead;
@@ -208,8 +208,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
-      besthistcand = -1;
-      besthistscore = -SCIPinfinity(scip);
+      bestpsccand = -1;
+      bestpscscore = -SCIPinfinity(scip);
       for( c = 0; c < nlpcands; ++c )
       {
          assert(lpcands[c] != NULL);
@@ -266,10 +266,10 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          else
          {
             /* variable will keep it's pseudo cost value: check for better pseudo cost score of candidate */
-            if( score > besthistscore )
+            if( score > bestpscscore )
             {
-               besthistscore = score;
-               besthistcand = c;
+               bestpscscore = score;
+               bestpsccand = c;
             }
          }
       }
@@ -291,6 +291,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       }
       bestinitcand = -1;
       bestsbscore = -SCIPinfinity(scip);
+      bestfracscore = 0.0;
       lookahead = 0;
       for( i = 0; i < ninitcands && lookahead < maxlookahead
               && SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations; ++i )
@@ -358,18 +359,21 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          }
 
          /* check for a better score */
-         downscore = downgain + FRACSCORE * lpcandsfrac[c];
-         upscore = upgain + FRACSCORE * (1.0-lpcandsfrac[c]);
-         score = SCIPgetBranchScore(scip, lpcands[c], downscore, upscore);
-         if( score > bestsbscore )
+         score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
+         fracscore = MIN(lpcandsfrac[c], 1.0 - lpcandsfrac[c]);
+         if( SCIPisGE(scip, score, bestsbscore) )
          {
-            bestinitcand = c;
-            bestsbscore = score;
-            bestsbdown = down;
-            bestsbup = up;
-            lookahead = 0;
+            if( SCIPisGT(scip, score, bestsbscore) || fracscore > bestfracscore )
+            {
+               bestinitcand = c;
+               bestsbscore = score;
+               bestsbdown = down;
+               bestsbup = up;
+               bestfracscore = fracscore;
+               lookahead = 0;
+            }
          }
-         else if( SCIPisLT(scip, score, bestsbscore) )
+         else
             lookahead++;
       
          /* update pseudo cost values */
@@ -396,9 +400,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       /* if the best pseudo cost candidate is better than the best uninitialized strong branching candidate,
        * compare it to the best initialized strong branching candidate
        */
-      if( besthistscore > bestuninitsbscore && besthistscore > bestsbscore )
+      if( bestpscscore > bestuninitsbscore && SCIPisGT(scip, bestpscscore, bestsbscore) )
       {
-         bestcand = besthistcand;
+         bestcand = bestpsccand;
          bestisstrongbranch = FALSE;
       }
       else if( bestinitcand >= 0 )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.64 2004/06/01 16:40:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.65 2004/06/02 07:39:08 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2599,15 +2599,15 @@ RETCODE SCIPlpiSetIntpar(
    {
    case SCIP_LPPAR_FROMSCRATCH:
       assert(ival == TRUE || ival == FALSE);
-      setIntParam(lpi, CPX_PARAM_ADVIND, (ival == FALSE) ? CPX_ON : CPX_OFF);
+      setIntParam(lpi, CPX_PARAM_ADVIND, ival == FALSE ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_FASTMIP:
       assert(ival == TRUE || ival == FALSE);
-      setIntParam(lpi, CPX_PARAM_FASTMIP, (ival == TRUE) ? CPX_ON : CPX_OFF);
+      setIntParam(lpi, CPX_PARAM_FASTMIP, ival == TRUE ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      setIntParam(lpi, CPX_PARAM_SCAIND, (ival == TRUE) ? 0 : -1);
+      setIntParam(lpi, CPX_PARAM_SCAIND, ival == TRUE ? 0 : -1);
       break;
    case SCIP_LPPAR_PRICING:
       switch( (PRICING)ival )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.3 2004/04/27 15:49:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.4 2004/06/02 07:39:07 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -248,19 +248,20 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* don't try to dive, if we are in the higher fraction of the tree, given by divestartdepth */
    depth = SCIPgetDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
+   maxdepth = MAX(maxdepth, 30);
    if( depth < heurdata->divestartdepth*maxdepth )
       return SCIP_OKAY;
 
    /* don't try to dive, if we took too many LP iterations during diving */
    nlpiterations = SCIPgetNLPIterations(scip);
-   if( heurdata->nlpiterations > heurdata->maxlpiterquot*nlpiterations )
+   if( heurdata->nlpiterations > heurdata->maxlpiterquot*nlpiterations + 1000 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
    /* calculate the maximal number of LP iterations until heuristic is aborted */
    maxnlpiterations = heurdata->maxlpiterquot*nlpiterations - heurdata->nlpiterations;
-   maxnlpiterations = MAX(maxnlpiterations, 1000);
+   maxnlpiterations = MAX(maxnlpiterations, 10000);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
