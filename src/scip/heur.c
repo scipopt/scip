@@ -172,6 +172,7 @@ RETCODE SCIPheurExit(
 RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
    const SET*       set,                /**< global SCIP settings */
+   PRIMAL*          primal,             /**< primal data */
    int              actdepth,           /**< depth of active node */
    Bool             actnodehaslp,       /**< is LP being processed in the active node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -184,6 +185,7 @@ RETCODE SCIPheurExec(
    assert(heur->freq >= -1);
    assert(set != NULL);
    assert(set->scip != NULL);
+   assert(primal != NULL);
    assert(actdepth >= 0);
    assert(result != NULL);
 
@@ -204,7 +206,12 @@ RETCODE SCIPheurExec(
 
    if( execute )
    {
+      int oldnsolsfound;
+
       debugMessage("executing primal heuristic <%s>\n", heur->name);
+
+      oldnsolsfound = primal->nsolsfound;
+
       CHECK_OKAY( heur->heurexec(set->scip, heur, result) );
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
@@ -218,6 +225,8 @@ RETCODE SCIPheurExec(
       }
       if( *result != SCIP_DIDNOTRUN )
          heur->ncalls++;
+
+      heur->nsolsfound += primal->nsolsfound - oldnsolsfound;
    }
    else
       *result = SCIP_DIDNOTRUN;
@@ -286,16 +295,6 @@ int SCIPheurGetNCalls(
    assert(heur != NULL);
 
    return heur->ncalls;
-}
-
-/** increases the number of primal feasible solutions found by this heuristic */
-void SCIPheurIncNSolsFound(
-   HEUR*            heur                /**< primal heuristic */
-   )
-{
-   assert(heur != NULL);
-
-   heur->nsolsfound++;
 }
 
 /** gets the number of primal feasible solutions found by this heuristic */

@@ -141,6 +141,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
 #include "var.h"
 #include "tree.h"
 #include "lp.h"
+#include "branch.h"
 
 
 

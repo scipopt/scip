@@ -3465,7 +3465,6 @@ RETCODE SCIPlpCreate(
    (*lp)->nchgrows = 0;
    (*lp)->firstnewcol = 0;
    (*lp)->firstnewrow = 0;
-   (*lp)->nsolsfound = 0;
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;

@@ -78,6 +78,7 @@ struct ConsHdlr
    int              nenfolpcalls;       /**< number of times, the LP enforcer was called */
    int              nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    int              ncutsfound;         /**< total number of cuts found by this constraint handler */
+   Longint          nbranchings;        /**< number of times, the constraint handler performed a branching */
    int              maxnactiveconss;    /**< maximal number of active constraints existing at the same time */
    unsigned int     needscons:1;        /**< should the constraint handler be skipped, if no constraints are available? */
    unsigned int     initialized:1;      /**< is constraint handler initialized? */
@@ -1023,6 +1024,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nenfolpcalls = 0;
    (*conshdlr)->nenfopscalls = 0;
    (*conshdlr)->ncutsfound = 0;
+   (*conshdlr)->nbranchings = 0;
    (*conshdlr)->maxnactiveconss = 0;
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->initialized = FALSE;
@@ -1317,7 +1319,11 @@ RETCODE SCIPconshdlrEnforceLPSol(
             return SCIP_INVALIDRESULT;
          }
          if( *result != SCIP_DIDNOTRUN )
+         {
             conshdlr->nenfolpcalls++;
+            if( *result == SCIP_BRANCHED )
+               conshdlr->nbranchings++;
+         }
       }
    }
 
@@ -1413,7 +1419,11 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
             return SCIP_INVALIDRESULT;
          }
          if( *result != SCIP_DIDNOTRUN )
+         {
             conshdlr->nenfopscalls++;
+            if( *result == SCIP_BRANCHED )
+               conshdlr->nbranchings++;
+         }
       }
    }
 
@@ -1643,6 +1653,16 @@ int SCIPconshdlrGetNCutsFound(
    return conshdlr->ncutsfound;
 }
 
+/** gets number of branchings performed by this constraint handler */
+Longint SCIPconshdlrGetNBranchings(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nbranchings;
+}
+
 /** gets maximum number of active constraints of constraint handler existing at the same time */
 int SCIPconshdlrGetMaxNActiveConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -1681,6 +1701,16 @@ int SCIPconshdlrGetPropFreq(
    assert(conshdlr != NULL);
 
    return conshdlr->propfreq;
+}
+
+/** needs constraint handler a constraint to be called? */
+Bool SCIPconshdlrNeedsCons(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->needscons;
 }
 
 /** is constraint handler initialized? */

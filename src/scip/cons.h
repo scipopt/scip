@@ -513,6 +513,12 @@ int SCIPconshdlrGetNCutsFound(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets number of branchings performed by this constraint handler */
+extern
+Longint SCIPconshdlrGetNBranchings(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets maximum number of active constraints of constraint handler existing at the same time */
 extern
 int SCIPconshdlrGetMaxNActiveConss(
@@ -534,6 +540,12 @@ int SCIPconshdlrGetSepaFreq(
 /** gets propagation frequency of constraint handler */
 extern
 int SCIPconshdlrGetPropFreq(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** needs constraint handler a constraint to be called? */
+extern
+Bool SCIPconshdlrNeedsCons(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

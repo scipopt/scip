@@ -437,6 +437,44 @@ CONSHDLR* SCIPfindConsHdlr(
    return SCIPsetFindConsHdlr(scip->set, name);
 }
 
+/** creates a separator and includes it in SCIP */
+RETCODE SCIPincludeSepa(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of separator */
+   const char*      desc,               /**< description of separator */
+   int              priority,           /**< priority of the separator */
+   int              freq,               /**< frequency for calling separator */
+   DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
+   DECL_SEPAINIT    ((*sepainit)),      /**< initialise separator */
+   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialise separator */
+   DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SEPADATA*        sepadata            /**< separator data */
+   )
+{
+   SEPA* sepa;
+
+   CHECK_OKAY( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPsepaCreate(&sepa, name, desc, priority, freq,
+                  sepafree, sepainit, sepaexit, sepaexec, sepadata) );
+   CHECK_OKAY( SCIPsetIncludeSepa(scip->set, sepa) );
+   
+   return SCIP_OKAY;
+}
+
+/** returns the separator of the given name, or NULL if not existing */
+SEPA* SCIPfindSepa(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of separator */
+   )
+{
+   assert(name != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfindSepa", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindSepa(scip->set, name);
+}
+
 /** creates a primal heuristic and includes it in SCIP */
 RETCODE SCIPincludeHeur(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3684,7 +3722,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Constraints        :         Cuts    #Separate      #EnfoLP      #EnfoPS   ActCons   MaxCons\n");
+   fprintf(file, "Constraints        :         Cuts   Branchings    #Separate      #EnfoLP      #EnfoPS   ActCons   MaxCons\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -3693,11 +3731,12 @@ void printConstraintStatistics(
       
       conshdlr = scip->set->conshdlrs[i];
       maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
-      if( maxnactiveconss > 0 )
+      if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12d %12d %12d %12d %9d %9d\n",
+         fprintf(file, " %12d %12lld %12d %12d %12d %9d %9d\n",
             SCIPconshdlrGetNCutsFound(conshdlr), 
+            SCIPconshdlrGetNBranchings(conshdlr),
             SCIPconshdlrGetNSepaCalls(conshdlr), 
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
@@ -3713,6 +3752,8 @@ void printSeparatorStatistics(
    FILE*            file                /**< output file */
    )
 {
+   int i;
+
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(file != NULL);
@@ -3721,7 +3762,9 @@ void printSeparatorStatistics(
    fprintf(file, "  cut pool         : %12d %12d   (maximal pool size: %d)\n",
       SCIPcutpoolGetNCutsFound(scip->cutpool), SCIPcutpoolGetNCalls(scip->cutpool), SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
-   todoMessage("statistics for LP separators");
+   for( i = 0; i < scip->set->nsepas; ++i )
+      fprintf(file, "  %-17.17s: %12d %12d\n", SCIPsepaGetName(scip->set->sepas[i]),
+         SCIPsepaGetNCutsFound(scip->set->sepas[i]), SCIPsepaGetNCalls(scip->set->sepas[i]));
 }
 
 static
@@ -3734,11 +3777,12 @@ void printHeuristicStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(scip->lp != NULL);
+   assert(scip->tree != NULL);
    assert(file != NULL);
 
    fprintf(file, "Primal Heuristics  :        Found        Calls\n");
-   fprintf(file, "  LP feasible      : %12d            -\n", scip->lp->nsolsfound);
+   fprintf(file, "  LP solutions     : %12d            -\n", scip->tree->nlpsolsfound);
+   fprintf(file, "  pseudo solutions : %12d            -\n", scip->tree->npssolsfound);
 
    for( i = 0; i < scip->set->nheurs; ++i )
       fprintf(file, "  %-17.17s: %12d %12d\n", SCIPheurGetName(scip->set->heurs[i]),
@@ -3765,6 +3809,7 @@ void printSolutionStatistics(
    gap = SCIPgetGap(scip);
 
    fprintf(file, "Solution           :\n");
+   fprintf(file, "  Solutions found  : %12d\n", scip->primal->nsolsfound);
    if( SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
       fprintf(file, "  Primal Bound     :            -\n");
    else
@@ -3783,7 +3828,6 @@ void printSolutionStatistics(
       fprintf(file, "  Gap              :     infinite\n");
    else
       fprintf(file, "  Gap              : %10.4f %%\n", 100.0 * gap);
-   fprintf(file, "  Solutions found  : %12d\n", scip->primal->nsolsfound);
 }
 
 static

@@ -851,6 +851,7 @@ RETCODE SCIPsolveCIP(
          if( !infeasible )
          {
             SOL* sol;
+            int oldnsolsfound;
 
             /* issue NODEFEASIBLE event */
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
@@ -858,15 +859,19 @@ RETCODE SCIPsolveCIP(
             CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
                
             /* found a feasible solution */
+            oldnsolsfound = primal->nsolsfound;
             if( tree->actnodehaslp )
             {
                CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, stat, lp, NULL) );
+               CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
+               tree->nlpsolsfound += primal->nsolsfound - oldnsolsfound;
             }
             else
             {
                CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, stat, tree, NULL) );
+               CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
+               tree->npssolsfound += primal->nsolsfound - oldnsolsfound;
             }
-            CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
          }
       }
 
@@ -890,7 +895,7 @@ RETCODE SCIPsolveCIP(
       /* call primal heuristics */
       for( h = 0; h < set->nheurs; ++h )
       {
-         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, actnode->depth, tree->actnodehaslp, &result) );
+         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actnode->depth, tree->actnodehaslp, &result) );
       }
       
       /* display node information line */

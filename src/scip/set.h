@@ -52,6 +52,8 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "lp.h"
 #include "message.h"
 #include "buffer.h"
+#include "sepa.h"
+#include "heur.h"
 
 
 /** global SCIP settings */
@@ -77,6 +79,9 @@ struct Set
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
+   SEPA**           sepas;              /**< separators */
+   int              nsepas;             /**< number of separators */
+   int              sepassize;          /**< size of sepas array */
    HEUR**           heurs;              /**< primal heuristics */
    int              nheurs;             /**< number of primal heuristics */
    int              heurssize;          /**< size of heurs array */
@@ -155,6 +160,20 @@ extern
 CONSHDLR* SCIPsetFindConsHdlr(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of constraint handler */
+   );
+
+/** inserts separator in separator list */
+extern
+RETCODE SCIPsetIncludeSepa(
+   SET*             set,                /**< global SCIP settings */
+   SEPA*            sepa                /**< separator */
+   );
+
+/** returns the separator of the given name, or NULL if not existing */
+extern
+SEPA* SCIPsetFindSepa(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of separator */
    );
 
 /** inserts primal heuristic in primal heuristic list */

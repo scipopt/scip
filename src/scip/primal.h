@@ -35,6 +35,9 @@ typedef struct Primal PRIMAL;           /**< primal data */
 #include "set.h"
 #include "var.h"
 #include "lp.h"
+#include "prob.h"
+#include "tree.h"
+#include "event.h"
 
 
 /** primal data and solution storage */

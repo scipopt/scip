@@ -203,7 +203,6 @@ struct Lp
    int              nrows;              /**< actual number of LP rows (number of used slots in rows vector) */
    int              firstnewcol;        /**< first column added at the active node */
    int              firstnewrow;        /**< first row added at the active node */
-   int              nsolsfound;         /**< number of feasible LP solutions found so far */
    unsigned int     flushed:1;          /**< are all cached changes applied to the LP solver? */
    unsigned int     solved:1;           /**< is current LP solved? */
    unsigned int     primalfeasible:1;   /**< is actual LP basis primal feasible? */

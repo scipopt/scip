@@ -77,6 +77,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
 #include "scip.h"
 #include "def.h"
 #include "retcode.h"
+#include "primal.h"
 
 
 
@@ -123,6 +124,7 @@ extern
 RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
    const SET*       set,                /**< global SCIP settings */
+   PRIMAL*          primal,             /**< primal data */
    int              actdepth,           /**< depth of active node */
    Bool             actnodehaslp,       /**< is LP being processed in the active node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -162,12 +164,6 @@ int SCIPheurGetFreq(
 /** gets the number of times, the heuristic was called and tried to find a solution */
 extern
 int SCIPheurGetNCalls(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** increases the number of primal feasible solutions found by this heuristic */
-extern
-void SCIPheurIncNSolsFound(
    HEUR*            heur                /**< primal heuristic */
    );
 

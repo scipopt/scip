@@ -161,6 +161,9 @@ RETCODE SCIPsetCreate(
    (*set)->conshdlrs = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
+   (*set)->sepas = NULL;
+   (*set)->nsepas = 0;
+   (*set)->sepassize = 0;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -225,6 +228,13 @@ RETCODE SCIPsetFree(
       CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], (*set)->scip) );
    }
    freeMemoryArrayNull(&(*set)->conshdlrs);
+
+   /* free separators */
+   for( i = 0; i < (*set)->nsepas; ++i )
+   {
+      CHECK_OKAY( SCIPsepaFree(&(*set)->sepas[i], (*set)->scip) );
+   }
+   freeMemoryArrayNull(&(*set)->sepas);
 
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
@@ -361,6 +371,49 @@ CONSHDLR* SCIPsetFindConsHdlr(
    {
       if( strcmp(SCIPconshdlrGetName(set->conshdlrs[i]), name) == 0 )
          return set->conshdlrs[i];
+   }
+
+   return NULL;
+}
+
+/** inserts separator in separator list */
+RETCODE SCIPsetIncludeSepa(
+   SET*             set,                /**< global SCIP settings */
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(set != NULL);
+   assert(sepa != NULL);
+   assert(!SCIPsepaIsInitialized(sepa));
+
+   if( set->nsepas >= set->sepassize )
+   {
+      set->sepassize = SCIPsetCalcMemGrowSize(set, set->nsepas+1);
+      ALLOC_OKAY( reallocMemoryArray(&set->sepas, set->sepassize) );
+   }
+   assert(set->nsepas < set->sepassize);
+   
+   set->sepas[set->nsepas] = sepa;
+   set->nsepas++;
+
+   return SCIP_OKAY;
+}   
+
+/** returns the separator of the given name, or NULL if not existing */
+SEPA* SCIPsetFindSepa(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of separator */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nsepas; ++i )
+   {
+      if( strcmp(SCIPsepaGetName(set->sepas[i]), name) == 0 )
+         return set->sepas[i];
    }
 
    return NULL;
@@ -612,6 +665,12 @@ RETCODE SCIPsetInitCallbacks(
       CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], set->scip) );
    }
 
+   /* separators */
+   for( i = 0; i < set->nsepas; ++i )
+   {
+      CHECK_OKAY( SCIPsepaInit(set->sepas[i], set->scip) );
+   }
+
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
@@ -659,6 +718,12 @@ RETCODE SCIPsetExitCallbacks(
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], set->scip) );
+   }
+
+   /* separators */
+   for( i = 0; i < set->nsepas; ++i )
+   {
+      CHECK_OKAY( SCIPsepaExit(set->sepas[i], set->scip) );
    }
 
    /* primal heuristics */

@@ -77,6 +77,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "disp.h"
 #include "branch.h"
 #include "event.h"
+#include "sepa.h"
 #include "heur.h"
 #include "sort.h"
 #include "price.h"
@@ -212,6 +213,28 @@ extern
 CONSHDLR* SCIPfindConsHdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of constraint handler */
+   );
+
+/** creates a separator and includes it in SCIP */
+extern
+RETCODE SCIPincludeSepa(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of separator */
+   const char*      desc,               /**< description of separator */
+   int              priority,           /**< priority of the separator */
+   int              freq,               /**< frequency for calling separator */
+   DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
+   DECL_SEPAINIT    ((*sepainit)),      /**< initialise separator */
+   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialise separator */
+   DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SEPADATA*        sepadata            /**< separator data */
+   );
+
+/** returns the separator of the given name, or NULL if not existing */
+extern
+SEPA* SCIPfindSepa(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of separator */
    );
 
 /** creates a primal heuristic and includes it in SCIP */
