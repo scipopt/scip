@@ -575,6 +575,9 @@ RETCODE SCIPsolCheck(
    assert(set != NULL);
    assert(feasible != NULL);
 
+   debugMessage("checking solution with objective value %g (nodenum=%lld, origin=%d)\n", 
+      sol->obj, sol->nodenum, sol->solorigin);
+
    *feasible = TRUE;
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {

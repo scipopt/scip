@@ -45,14 +45,16 @@
 
 #define LINCONSUPGD_PRIORITY    +700200
 
-#define MINBRANCHWEIGHT               0.3  /**< minimum weight of both sets in set partitioning branching */
-#define MAXBRANCHWEIGHT               0.7  /**< maximum weight of both sets in set partitioning branching */
+#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
+#define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in set partitioning branching */
+#define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in set partitioning branching */
 
 
 /** constraint handler data */
 struct ConsHdlrData
 {
-   INTARRAY*        varuses;            /**< number of times a variable is used in the active set partitioning constraints */
+   INTARRAY*        varuses;            /**< number of times a var is used in the active set partitioning constraints */
+   int              npseudobranches;    /**< number of children created in pseudo branching */
 };
 
 /** set partitioning constraint data */
@@ -96,6 +98,7 @@ RETCODE conshdlrdataCreate(
 
    CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
    CHECK_OKAY( SCIPcreateIntarray(scip, &(*conshdlrdata)->varuses) );
+   (*conshdlrdata)->npseudobranches = DEFAULT_NPSEUDOBRANCHES;
 
    return SCIP_OKAY;
 }
@@ -543,13 +546,41 @@ RETCODE setpartconsToRow(
    return SCIP_OKAY;
 }
 
+/** prints set partitioning constraint to file stream */
+static
+void setpartconsPrint(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETPARTCONS*     setpartcons,        /**< set partitioning constraint object */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int v;
+
+   assert(setpartcons != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   /* print coefficients */
+   if( setpartcons->nvars == 0 )
+      fprintf(file, "0 ");
+   for( v = 0; v < setpartcons->nvars; ++v )
+   {
+      assert(setpartcons->vars[v] != NULL);
+      fprintf(file, "+%s ", SCIPvarGetName(setpartcons->vars[v]));
+   }
+
+   /* print right hand side */
+   fprintf(file, "= 1\n");
+}
+
 /** checks constraint for violation only looking at the fixed variables, applies further fixings if possible */
 static
 RETCODE processFixings(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< set partitioning constraint to be separated */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            reduceddom,         /**< pointer to store whether a domain reduction was found */
+   Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
    Bool*            addcut,             /**< pointer to store whether this constraint must be added as a cut */
    Bool*            mustcheck           /**< pointer to store whether this constraint must be checked for feasibility */
    )
@@ -732,9 +763,9 @@ static
 RETCODE separate(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< set partitioning constraint to be separated */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            separated,          /**< pointer to store whether a cut was found */
-   Bool*            reduceddom          /**< pointer to store whether a domain reduction was found */
+   Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
    )
 {
    CONSDATA* consdata;
@@ -813,10 +844,10 @@ static
 RETCODE enforcePseudo(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< set partitioning constraint to be separated */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            infeasible,         /**< pointer to store whether the constraint was infeasible */
-   Bool*            reduceddom,         /**< pointer to store whether a domain reduction was found */
-   Bool*            solvelp             /**< pointer to store whether the LP has to be solved */
+   Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   Bool*            infeasible,         /**< pointer to store TRUE, if the constraint was infeasible */
+   Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
+   Bool*            solvelp             /**< pointer to store TRUE, if the LP has to be solved */
    )
 {
    Bool addcut;
@@ -846,12 +877,16 @@ RETCODE enforcePseudo(
       setpartcons = consdata->setpartcons;
       assert(setpartcons != NULL);
 
-      *infeasible = !check(scip, setpartcons, NULL);
-
-      if( !infeasible )
+      if( check(scip, setpartcons, NULL) )
       {
          /* constraint was feasible -> increase age */
          CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      }
+      else
+      {
+         /* constraint was infeasible -> reset age */
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *infeasible = TRUE;
       }
    }
 
@@ -1397,7 +1432,7 @@ RETCODE branchPseudo(
     * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
     * - create an additional child node x_0 = ... = x_n-1 = 0
     */
-   nbranchcands = (nsortcands+9)/10;
+   nbranchcands = MIN(nsortcands, conshdlrdata->npseudobranches-1);
    assert(nbranchcands >= 1);
    for( i = 0; i < nbranchcands; ++i )
    {            
@@ -1447,7 +1482,7 @@ DECL_CONSENFOLP(consEnfolpSetpart)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   debugMessage("enforcing %d set partitioning constraints\n", nconss);
+   debugMessage("LP enforcing %d set partitioning constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 
@@ -1499,6 +1534,8 @@ DECL_CONSENFOPS(consEnfopsSetpart)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   debugMessage("pseudo enforcing %d set partitioning constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 
@@ -1964,6 +2001,12 @@ RETCODE SCIPincludeConsHdlrSetpart(
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
+   /* set partitioning constraint handler parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "conshdlr_setpart_npseudobranches", 
+                  "number of children created in pseudo branching",
+                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
+   
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,

@@ -165,6 +165,15 @@ RETCODE primalAddSol(
    debugMessage("insert primal solution at position %d:", insertpos);
    debug( SCIPsolPrint(sol, set, stat, prob, NULL) );
 
+#ifndef NDEBUG
+   /* check solution again completely */
+   {
+      Bool feasible;
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, TRUE, TRUE, &feasible) );
+      assert(feasible);
+   }
+#endif
+
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
    CHECK_OKAY( SCIPsolUnlink(sol, set, prob) );
 

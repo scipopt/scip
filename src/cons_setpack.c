@@ -45,14 +45,16 @@
 
 #define LINCONSUPGD_PRIORITY    +700100
 
-#define MINBRANCHWEIGHT               0.4  /**< minimum weight of both sets in set packing branching */
-#define MAXBRANCHWEIGHT               0.8  /**< maximum weight of both sets in set packing branching */
+#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
+#define MINBRANCHWEIGHT             0.4  /**< minimum weight of both sets in set packing branching */
+#define MAXBRANCHWEIGHT             0.8  /**< maximum weight of both sets in set packing branching */
 
 
 /** constraint handler data */
 struct ConsHdlrData
 {
    INTARRAY*        varuses;            /**< number of times a variable is used in the active set packing constraints */
+   int              npseudobranches;    /**< number of children created in pseudo branching */
 };
 
 /** set packing constraint data */
@@ -96,6 +98,7 @@ RETCODE conshdlrdataCreate(
 
    CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
    CHECK_OKAY( SCIPcreateIntarray(scip, &(*conshdlrdata)->varuses) );
+   (*conshdlrdata)->npseudobranches = DEFAULT_NPSEUDOBRANCHES;
 
    return SCIP_OKAY;
 }
@@ -548,8 +551,8 @@ static
 RETCODE processFixings(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< set packing constraint to be separated */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            reduceddom,         /**< pointer to store whether a domain reduction was found */
+   Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
    Bool*            addcut,             /**< pointer to store whether this constraint must be added as a cut */
    Bool*            mustcheck           /**< pointer to store whether this constraint must be checked for feasibility */
    )
@@ -696,9 +699,9 @@ static
 RETCODE separate(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< set packing constraint to be separated */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            separated,          /**< pointer to store whether a cut was found */
-   Bool*            reduceddom          /**< pointer to store whether a domain reduction was found */
+   Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
    )
 {
    CONSDATA* consdata;
@@ -777,10 +780,10 @@ static
 RETCODE enforcePseudo(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< set packing constraint to be separated */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            infeasible,         /**< pointer to store whether the constraint was infeasible */
-   Bool*            reduceddom,         /**< pointer to store whether a domain reduction was found */
-   Bool*            solvelp             /**< pointer to store whether the LP has to be solved */
+   Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   Bool*            infeasible,         /**< pointer to store TRUE, if the constraint was infeasible */
+   Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
+   Bool*            solvelp             /**< pointer to store TRUE, if the LP has to be solved */
    )
 {
    Bool addcut;
@@ -810,12 +813,16 @@ RETCODE enforcePseudo(
       setpackcons = consdata->setpackcons;
       assert(setpackcons != NULL);
 
-      *infeasible = !check(scip, setpackcons, NULL);
-
-      if( !infeasible )
+      if( check(scip, setpackcons, NULL) )
       {
          /* constraint was feasible -> increase age */
          CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      }
+      else
+      {
+         /* constraint was infeasible -> reset age */
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *infeasible = TRUE;
       }
    }
 
@@ -1173,7 +1180,7 @@ RETCODE branchPseudo(
     * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
     * - create an additional child node x_0 = ... = x_n-1 = 0
     */
-   nbranchcands = (nsortcands+9)/10;
+   nbranchcands = MIN(nsortcands, conshdlrdata->npseudobranches-1);
    assert(nbranchcands >= 1);
    for( i = 0; i < nbranchcands; ++i )
    {            
@@ -1645,6 +1652,12 @@ RETCODE SCIPincludeConsHdlrSetpack(
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
+   /* set packing constraint handler parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "conshdlr_setpack_npseudobranches", 
+                  "number of children created in pseudo branching",
+                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
+   
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,

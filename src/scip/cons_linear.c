@@ -1643,8 +1643,7 @@ void linconsPrint(
    for( v = 0; v < lincons->nvars; ++v )
    {
       assert(lincons->vars[v] != NULL);
-      assert(lincons->vars[v]->name != NULL);
-      fprintf(file, "%+g%s ", lincons->vals[v], lincons->vars[v]->name);
+      fprintf(file, "%+g%s ", lincons->vals[v], SCIPvarGetName(lincons->vars[v]));
    }
 
    /* print right hand side */

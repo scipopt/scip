@@ -1925,6 +1925,8 @@ RETCODE varProcessChgLbGlobal(
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
+            assert(SCIPsetIsEQ(set, parentvar->glbdom.lb,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -1932,6 +1934,8 @@ RETCODE varProcessChgLbGlobal(
          {
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+            assert(SCIPsetIsEQ(set, parentvar->glbdom.ub,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -1993,6 +1997,8 @@ RETCODE varProcessChgUbGlobal(
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change upper bound of y */
+            assert(SCIPsetIsEQ(set, parentvar->glbdom.ub,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2000,6 +2006,8 @@ RETCODE varProcessChgUbGlobal(
          {
             /* a < 0 -> change lower bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+            assert(SCIPsetIsEQ(set, parentvar->glbdom.lb,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2060,12 +2068,16 @@ RETCODE SCIPvarChgLbGlobal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
+         assert(SCIPsetIsEQ(set, var->glbdom.lb,
+                   var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change upper bound of y */
+         assert(SCIPsetIsEQ(set, var->glbdom.lb,
+                   var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -2135,12 +2147,16 @@ RETCODE SCIPvarChgUbGlobal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
+         assert(SCIPsetIsEQ(set, var->glbdom.ub,
+                   var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change upper bound of y */
+         assert(SCIPsetIsEQ(set, var->glbdom.ub,
+                   var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -2327,6 +2343,8 @@ RETCODE varProcessChgLbLocal(
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
+            assert(SCIPsetIsEQ(set, parentvar->actdom.lb,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2334,6 +2352,8 @@ RETCODE varProcessChgLbLocal(
          {
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+            assert(SCIPsetIsEQ(set, parentvar->actdom.ub,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2399,18 +2419,22 @@ RETCODE varProcessChgUbLocal(
          errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable");
          abort();
       
-      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c */
          assert(parentvar->data.aggregate.var == var);
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
-            /* a > 0 -> change upper bound of y */
+            /* a > 0 -> change upper bound of x */
+            assert(SCIPsetIsEQ(set, parentvar->actdom.ub,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          else
          {
-            /* a < 0 -> change lower bound of y */
+            /* a < 0 -> change lower bound of x */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+            assert(SCIPsetIsEQ(set, parentvar->actdom.lb,
+                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2480,12 +2504,16 @@ RETCODE SCIPvarChgLbLocal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
+         assert(SCIPsetIsEQ(set, var->actdom.lb,
+                   var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change upper bound of y */
+         assert(SCIPsetIsEQ(set, var->actdom.lb,
+                   var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -2564,12 +2592,16 @@ RETCODE SCIPvarChgUbLocal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change upper bound of y */
+         assert(SCIPsetIsEQ(set, var->actdom.ub,
+                   var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change lower bound of y */
+         assert(SCIPsetIsEQ(set, var->actdom.ub,
+                   var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }

@@ -1,5 +1,5 @@
 # verbosity level of output [default: 2]
-global_VerbLevel = 4
+global_VerbLevel = 2
 
 # values larger than this are considered infinity [default: 1.000000000000000e+20]
 global_Infinity = 1.000000000000000e+20
@@ -105,4 +105,13 @@ reader_MPS_DynamicConss = TRUE
 
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root) [default: 5]
 conshdlr_linear_TightenBoundsFreq = 5
+
+# number of children created in pseudo branching [default: 2]
+conshdlr_setcover_npseudobranches = 2
+
+# number of children created in pseudo branching [default: 2]
+conshdlr_setpack_npseudobranches = 2
+
+# number of children created in pseudo branching [default: 2]
+conshdlr_setpart_npseudobranches = 2
 
