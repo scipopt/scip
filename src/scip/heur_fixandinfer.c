@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.8 2005/01/25 09:59:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.9 2005/01/25 12:46:19 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -39,6 +39,31 @@
 #define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
 #define MAXDIVEDEPTH          100
+
+
+
+
+/*
+ * Default parameter settings
+ */
+
+#define DEFAULT_PROPROUNDS           0  /**< maximal number of propagation rounds in probing subproblems */
+#define DEFAULT_MINFIXINGS         100  /**< minimal number of fixings to apply before dive may be aborted */
+
+
+
+
+/*
+ * Data structures
+ */
+
+/** primal heuristic data */
+struct HeurData
+{
+   int              proprounds;         /**< maximal number of propagation rounds in probing subproblems */
+   int              minfixings;         /**< minimal number of fixings to apply before dive may be aborted */
+};
+
 
 
 
@@ -105,7 +130,19 @@ RETCODE fixVariable(
  */
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeFixandinfer NULL
+static
+DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
+{  /*lint --e{715}*/
+   HEURDATA* heurdata;
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
@@ -120,6 +157,7 @@ RETCODE fixVariable(
 static
 DECL_HEUREXEC(heurExecFixandinfer)
 {  /*lint --e{715}*/
+   HEURDATA* heurdata;
    VAR** cands;
    int ncands;
    int startncands;
@@ -141,6 +179,10 @@ DECL_HEUREXEC(heurExecFixandinfer)
 
    *result = SCIP_DIDNOTFIND;
 
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
    /* start probing */
    CHECK_OKAY( SCIPstartProbing(scip) );
 
@@ -151,7 +193,7 @@ DECL_HEUREXEC(heurExecFixandinfer)
    divedepth = 0;
    startncands = ncands;
    while( !cutoff && ncands > 0
-      && (divedepth < MAXDIVEDEPTH || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) )
+      && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) )
    {
       divedepth++;
 
@@ -162,7 +204,7 @@ DECL_HEUREXEC(heurExecFixandinfer)
       CHECK_OKAY( fixVariable(scip, cands, ncands) );
 
       /* propagate the fixing */
-      CHECK_OKAY( SCIPpropagateProbing(scip, &cutoff) );
+      CHECK_OKAY( SCIPpropagateProbing(scip, heurdata->proprounds, &cutoff) );
 
       /* get remaining unfixed variables */
       if( !cutoff )
@@ -222,13 +264,23 @@ RETCODE SCIPincludeHeurFixandinfer(
    HEURDATA* heurdata;
 
    /* create fixandinfer primal heuristic data */
-   heurdata = NULL;
+   CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
          heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer, heurExecFixandinfer,
          heurdata) );
+
+   /* fixandinfer heuristic parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "heuristics/fixandinfer/proprounds", 
+         "maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)",
+         &heurdata->proprounds, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "heuristics/fixandinfer/minfixings", 
+         "minimal number of fixings to apply before dive may be aborted",
+         &heurdata->minfixings, DEFAULT_MINFIXINGS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

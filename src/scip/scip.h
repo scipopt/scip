@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.197 2005/01/25 09:59:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.198 2005/01/25 12:46:21 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3279,6 +3279,7 @@ RETCODE SCIPfixVarProbing(
 extern
 RETCODE SCIPpropagateProbing(
    SCIP*            scip,               /**< SCIP data structure */
+   int              maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
    );
 

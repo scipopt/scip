@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.14 2005/01/21 09:16:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.15 2005/01/25 12:46:18 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -78,6 +78,30 @@ RETCODE addHistory(
    return SCIP_OKAY;
 }
 
+/** returns the current length of the history list */
+static
+int getHistoryLength(
+   void
+   )
+{
+   return history_length;
+}
+
+/** removes a single element from the history list */
+static
+RETCODE removeHistory(
+   int              pos                 /**< list position of history entry to remove */
+   )
+{
+   HIST_ENTRY* entry;
+
+   entry = remove_history(pos);
+   if( entry != NULL )
+      free_history_entry(entry);
+
+   return SCIP_OKAY;
+}
+
 #else
 
 /** reads a line of input from stdin */
@@ -118,6 +142,25 @@ RETCODE addHistory(
    return SCIP_OKAY;
 }
 
+/** returns the current length of the history list */
+static
+int getHistoryLength(
+   void
+   )
+{
+   return 0;
+}
+
+/** removes a single element from the history list */
+static
+RETCODE removeHistory(
+   int              pos                 /**< list position of history entry to remove */
+   )
+{
+   /* nothing to do here */
+   return SCIP_OKAY;
+}
+
 #endif
 
 
@@ -137,6 +180,7 @@ RETCODE SCIPdialoghdlrCreate(
    ALLOC_OKAY( allocMemory(dialoghdlr) );
    (*dialoghdlr)->rootdialog = NULL;
    (*dialoghdlr)->buffersize = MAXSTRLEN;
+   (*dialoghdlr)->nprotectedhistelems = -1;
    ALLOC_OKAY( allocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
@@ -260,6 +304,8 @@ const char* SCIPdialoghdlrGetWord(
    /* get input from the user, if the buffer is empty */
    if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
    {
+      int len;
+
       /* clear the buffer */
       SCIPdialoghdlrClearBuffer(dialoghdlr);
 
@@ -274,6 +320,14 @@ const char* SCIPdialoghdlrGetWord(
 
       /* read command line from stdin */
       CHECK_ABORT( readLine(dialoghdlr, prompt) );
+
+      /* strip trailing spaces */
+      len = strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+      while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+      {
+         dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
+         len--;
+      }
 
       /* insert command in command history */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
@@ -319,9 +373,14 @@ RETCODE SCIPdialoghdlrAddHistory(
 {
    char s[MAXSTRLEN];
    char h[MAXSTRLEN];
+   Bool cleanuphistory;
 
    assert(dialoghdlr != NULL);
 
+   /* the current history list should be cleaned up if a dialog is given (i.e. the command is not partial) */
+   cleanuphistory = (dialog != NULL);
+
+   /* generate the string to add to the history */
    s[MAXSTRLEN-1] = '\0';
    h[MAXSTRLEN-1] = '\0';
 
@@ -332,14 +391,37 @@ RETCODE SCIPdialoghdlrAddHistory(
 
    while( dialog != NULL && dialog != dialoghdlr->rootdialog )
    {
-      snprintf(s, MAXSTRLEN-1, "%s %s", dialog->name, h);
-      (void)strncpy(h, s, MAXSTRLEN-1);
+      if( h[0] == '\0' )
+         strncpy(h, dialog->name, MAXSTRLEN-1);
+      else
+      {
+         snprintf(s, MAXSTRLEN-1, "%s %s", dialog->name, h);
+         (void)strncpy(h, s, MAXSTRLEN-1);
+      }
       dialog = dialog->parent;
    }
 
+   /* clean up the unmarked history entries */
+   if( cleanuphistory )
+   {
+      int i;
+
+      for( i = getHistoryLength()-1; i >= dialoghdlr->nprotectedhistelems; --i )
+      {
+         CHECK_OKAY( removeHistory(i) );
+      }
+   }
+
+   /* add command to history */
    if( h[0] != '\0' )
    {
       CHECK_OKAY( addHistory(h) );
+   }
+
+   /* if the history string was a full command line, protect the history entry from future cleanups */
+   if( cleanuphistory )
+   {
+      dialoghdlr->nprotectedhistelems = getHistoryLength();
    }
 
    return SCIP_OKAY;

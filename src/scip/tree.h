@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.71 2005/01/25 09:59:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.72 2005/01/25 12:46:23 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -359,6 +359,22 @@ RETCODE SCIPtreeCreateProbingNode(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
+   );
+
+/** undoes all changes to the problem applied in probing up to the given probing depth;
+ *  the changes of the probing node of the given probing depth are the last ones that remain active;
+ *  changes that were applied before calling SCIPtreeCreateProbingNode() cannot be undone
+ */
+extern
+RETCODE SCIPtreeBacktrackProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   int              probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
    );
 
 /** switches back from probing to normal operation mode, frees all nodes on the probing path, restores bounds of all

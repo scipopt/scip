@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.160 2005/01/25 09:59:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.161 2005/01/25 12:46:21 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -95,14 +95,14 @@ RETCODE SCIPpropagateDomains(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
+   int              depth,              /**< depth level to use for propagator frequency checks */
+   int              maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    NODE* node;
    RESULT result;
    Bool propagain;
-   int depth;
-   int maxproprounds;
    int propround;
    int h;
    int p;
@@ -118,10 +118,14 @@ RETCODE SCIPpropagateDomains(
       || SCIPnodeGetType(node) == SCIP_NODETYPE_REFOCUSNODE
       || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
-   debugMessage("domain propagation of node %p in depth %d\n", node, SCIPnodeGetDepth(node));
+   /* adjust maximal number of propagation rounds */
+   if( maxproprounds == -1 )
+      maxproprounds = INT_MAX;
+   else if( maxproprounds == 0 )
+      maxproprounds = (depth == 0 ? set->prop_maxroundsroot : set->prop_maxrounds);
 
-   depth = SCIPnodeGetDepth(node);
-   maxproprounds = (depth == 0 ? set->prop_maxroundsroot : set->prop_maxrounds);
+   debugMessage("domain propagation of node %p in depth %d (using depth %d, maxrounds %d)\n", 
+      node, SCIPnodeGetDepth(node), depth, maxproprounds);
 
    /* propagate as long new bound changes were found and the maximal number of propagation rounds is not exceeded */
    *cutoff = FALSE;
@@ -1002,7 +1006,8 @@ RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
-                  CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, cutoff) );
+                  CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, 
+                        SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
                }
                
                mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
@@ -1590,7 +1595,7 @@ RETCODE solveNode(
       if( propagateagain && !(*cutoff) )
       {
          propagateagain = FALSE;
-         CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, cutoff) );
+         CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);

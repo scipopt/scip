@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.30 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.31 2005/01/25 12:46:22 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -63,6 +63,8 @@ RETCODE SCIPpropagateDomains(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
+   int              depth,              /**< depth level to use for propagator frequency checks */
+   int              maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 

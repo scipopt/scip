@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.5 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.6 2005/01/25 12:46:22 bzfpfend Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -55,6 +55,7 @@ struct Dialoghdlr
    char*            buffer;             /**< command buffer */
    int              buffersize;         /**< size of command buffer */
    int              bufferpos;          /**< position of first unprocessed character in buffer */
+   int              nprotectedhistelems;/**< number of history entries protected from cleaning up */
 };
 
 

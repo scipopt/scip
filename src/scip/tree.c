@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.130 2005/01/25 09:59:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.131 2005/01/25 12:46:22 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1001,7 +1001,7 @@ RETCODE nodeRepropagate(
 
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
-   CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, cutoff) );
+   CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, SCIPnodeGetDepth(node), 0, cutoff) );
    assert(!node->reprop);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
    assert(node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
@@ -3445,6 +3445,91 @@ RETCODE SCIPtreeCreateProbingNode(
    return SCIP_OKAY;
 }
 
+/** undoes all changes to the problem applied in probing up to the given probing depth */
+static
+RETCODE treeBacktrackProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   int              probingdepth        /**< probing depth of the node in the probing path that should be reactivated,
+                                         *   -1 to even deactivate the probing root, thus exiting probing mode */
+   )
+{
+   int newpathlen;
+
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree));
+   assert(tree->probingroot != NULL);
+   assert(tree->focusnode != NULL);
+   assert(SCIPnodeGetType(tree->probingroot) == SCIP_NODETYPE_PROBINGNODE);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE
+      || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE);
+   assert(tree->probingroot->parent == tree->focusnode);
+   assert(SCIPnodeGetDepth(tree->probingroot) == SCIPnodeGetDepth(tree->focusnode)+1);
+   assert(tree->pathlen >= 2);
+   assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
+   assert(-1 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
+
+   newpathlen = SCIPnodeGetDepth(tree->probingroot) + probingdepth + 1;
+   assert(newpathlen >= 1); /* at least root node of the tree remains active */
+   while( tree->pathlen > newpathlen )
+   {
+      assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
+      assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
+      assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
+
+      /* undo bound changes by deactivating the probing node */
+      CHECK_OKAY( nodeDeactivate(tree->path[tree->pathlen-1], memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+
+      /* free the probing node */
+      CHECK_OKAY( SCIPnodeFree(&tree->path[tree->pathlen-1], memhdr, set, tree, lp) );
+      tree->pathlen--;
+   }
+   assert(tree->pathlen == newpathlen);
+
+   /* if the highest cutoff or repropagation depth is inside the deleted part of the probing path,
+    * reset them to infinity
+    */
+   if( tree->cutoffdepth >= tree->pathlen )
+      tree->cutoffdepth = INT_MAX;
+   if( tree->repropdepth >= tree->pathlen )
+      tree->repropdepth = INT_MAX;
+
+   return SCIP_OKAY;
+}
+
+/** undoes all changes to the problem applied in probing up to the given probing depth;
+ *  the changes of the probing node of the given probing depth are the last ones that remain active;
+ *  changes that were applied before calling SCIPtreeCreateProbingNode() cannot be undone
+ */
+RETCODE SCIPtreeBacktrackProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   int              probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
+   )
+{
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree));
+   assert(0 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
+
+   /* undo the domain and constraint set changes and free the temporary probing nodes below the given probing depth */
+   CHECK_OKAY( treeBacktrackProbing(tree, memhdr, set, stat, lp, branchcand, eventqueue, probingdepth) );
+
+   assert(SCIPtreeProbing(tree));
+   assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(tree)) == SCIP_NODETYPE_PROBINGNODE);
+
+   return SCIP_OKAY;
+}
+
 /** switches back from probing to normal operation mode, frees all nodes on the probing path, restores bounds of all
  *  variables and restores active constraints arrays of focus node
  */
@@ -3471,25 +3556,9 @@ RETCODE SCIPtreeEndProbing(
    assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
 
    /* undo the domain and constraint set changes of the temporary probing nodes and free the probing nodes */
-   while( SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE )
-   {
-      assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
-      assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
-
-      /* undo bound changes by deactivating the probing node */
-      CHECK_OKAY( nodeDeactivate(tree->path[tree->pathlen-1], memhdr, set, stat, tree, lp, branchcand, eventqueue) );
-
-      /* free the probing node */
-      CHECK_OKAY( SCIPnodeFree(&tree->path[tree->pathlen-1], memhdr, set, tree, lp) );
-      tree->pathlen--;
-   }
+   CHECK_OKAY( treeBacktrackProbing(tree, memhdr, set, stat, lp, branchcand, eventqueue, -1) );
    assert(SCIPtreeGetCurrentNode(tree) == tree->focusnode);
-
-   /* if the highest cutoff or repropagation depth is inside the probing path, reset them to infinity */
-   if( tree->cutoffdepth >= tree->pathlen )
-      tree->cutoffdepth = INT_MAX;
-   if( tree->repropdepth >= tree->pathlen )
-      tree->repropdepth = INT_MAX;
+   assert(!SCIPtreeProbing(tree));
 
    /* there are no LP changes allowed in probing (all bound changes are reset), s.t. the LP is still flushed, if
     * it was flushed before

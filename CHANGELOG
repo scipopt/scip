@@ -9,15 +9,18 @@ interface:
 - methods SCIPvarLockDownCons(), SCIPvarLockUpCons(), SCIPvarUnlockDownCons(), and SCIPvarUnlockUpCons() are
   replaced by SCIPlockVarCons() and SCIPunlockVarCons() which return a RETCODE
 - methods SCIPlockConsVars() and SCIPunlockConsVars() replaced with method SCIPaddConsLocks()
+- additional parameter "maxproprounds" in SCIPpropagateProbing()
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
   nodes
+- new parameters heuristics/fixandinfer/proprounds and heuristics/fixandinfer/minfixings
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
   iterations
 - calling SCIPaddCut() with forcecut=TRUE will add the cut to the LP even if it is redundant
+- command line history in interactive shell now only stores "useful" commands
 
 fixed bugs:
 - fixed bug in MPS file reader

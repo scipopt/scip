@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.40 2005/01/21 09:16:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.41 2005/01/25 12:46:19 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -54,7 +54,6 @@ RETCODE dialogExecMenu(
       /* exit to the root dialog, if command is empty */
       if( command[0] == '\0' )
       {
-         CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
          *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
          return SCIP_OKAY;
       }
@@ -628,10 +627,10 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
    {
       varname = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ");
 
-      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname) );
-
       if( varname[0] != '\0' )
       {
+         CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname) );
+
          var = SCIPfindVar(scip, varname);
          if( var == NULL )
             printf("variable <%s> not found\n", varname);
@@ -826,10 +825,10 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
 
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
-
    if( filename[0] != '\0' )
    {
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
       if( SCIPfileExists(filename) )
       {
          CHECK_OKAY( SCIPfreeProb(scip) );
@@ -863,10 +862,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLoad)
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
 
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
-
    if( filename[0] != '\0' )
    {
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
       if( SCIPfileExists(filename) )
       {
          CHECK_OKAY( SCIPreadParams(scip, filename) );
@@ -891,10 +890,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
 
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
-
    if( filename[0] != '\0' )
    {
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
       CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE, FALSE) );
       printf("saved parameter file <%s>\n", filename);
    }
@@ -911,10 +910,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave)
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
 
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
-
    if( filename[0] != '\0' )
    {
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+   
       CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE, TRUE) );
       printf("saved non-default parameter settings to file <%s>\n", filename);
    }
@@ -948,9 +947,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %s, new value (TRUE/FALSE): ",
          SCIPparamGetBool(param) ? "TRUE" : "FALSE");
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
-      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
       switch( valuestr[0] )
       {
@@ -980,9 +980,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %d, new value [%d,%d]: ",
          SCIPparamGetInt(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
-      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
       if( sscanf(valuestr, "%d", &intval) != 1 )
       {
@@ -1001,9 +1002,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %lld, new value [%lld,%lld]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
-      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
       if( sscanf(valuestr, LONGINT_FORMAT, &longintval) != 1 )
       {
@@ -1022,9 +1024,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %g, new value [%g,%g]: ",
          SCIPparamGetReal(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
-      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
       if( sscanf(valuestr, REAL_FORMAT, &realval) != 1 )
       {
@@ -1042,9 +1045,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_CHAR:
       snprintf(prompt, MAXSTRLEN, "current value: <%c>, new value: ", SCIPparamGetChar(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
-      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
       if( sscanf(valuestr, "%c", &charval) != 1 )
       {
@@ -1062,9 +1066,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_STRING:
       snprintf(prompt, MAXSTRLEN, "current value: <%s>, new value: ", SCIPparamGetString(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
-      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
       retcode = SCIPparamSetString(param, scip, valuestr);
       if( retcode != SCIP_PARAMETERWRONGVAL )
@@ -1157,7 +1162,6 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
 
    /* get variable name from user */
    valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ");
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1189,9 +1193,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    snprintf(prompt, MAXSTRLEN, "current value: %d, new value: ", direction);
    valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
    snprintf(prompt, MAXSTRLEN, "%s %s", SCIPvarGetName(var), valuestr);
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt) );
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt) );
 
    if( sscanf(valuestr, "%d", &direction) != 1 )
    {
@@ -1236,7 +1241,6 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 
    /* get variable name from user */
    valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ");
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1252,9 +1256,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    snprintf(prompt, MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchPriority(var));
    valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
    snprintf(prompt, MAXSTRLEN, "%s %s", SCIPvarGetName(var), valuestr);
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt) );
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt) );
 
    if( sscanf(valuestr, "%d", &priority) != 1 )
    {
@@ -1288,9 +1293,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    /* get new objective limit from user */
    snprintf(prompt, MAXSTRLEN, "current value: %g, new value: ", SCIPgetObjlimit(scip));
    valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
    if( sscanf(valuestr, REAL_FORMAT, &objlim) != 1 )
    {

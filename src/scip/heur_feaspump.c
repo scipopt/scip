@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.9 2005/01/25 09:59:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.10 2005/01/25 12:46:19 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump heuristic by Fischetti, Glover and Lodi 
@@ -24,7 +24,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <string.h>
 
 #include "heur_feaspump.h"
 
@@ -77,10 +76,6 @@ DECL_HEURFREE(heurFreeFeaspump) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -95,9 +90,6 @@ static
 DECL_HEURINIT(heurInitFeaspump) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -117,9 +109,6 @@ static
 DECL_HEUREXIT(heurExitFeaspump) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -162,9 +151,6 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
    int divedepth;   
    int startnlpcands;
 
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
 
