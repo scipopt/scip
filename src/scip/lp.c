@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.145 2004/09/23 15:46:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.146 2004/09/29 19:55:15 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5951,7 +5951,7 @@ RETCODE SCIPlpCreate(
    ALLOC_OKAY( allocMemory(lp) );
 
    /* open LP Solver interface */
-   CHECK_OKAY( SCIPlpiCreate(&(*lp)->lpi, name) );
+   CHECK_OKAY( SCIPlpiCreate(&(*lp)->lpi, name, SCIP_OBJSEN_MINIMIZE) );
 
    (*lp)->lpicols = NULL;
    (*lp)->lpirows = NULL;
@@ -6007,9 +6007,6 @@ RETCODE SCIPlpCreate(
    (*lp)->lpilpinfo = FALSE;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lastwasprimal = FALSE;
-
-   /* set objective sense */
-   CHECK_OKAY( SCIPlpiChgObjsen((*lp)->lpi, SCIP_OBJSEN_MINIMIZE) );
 
    /* set default parameters in LP solver */
    CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim) );
