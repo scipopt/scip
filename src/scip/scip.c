@@ -911,6 +911,20 @@ RETCODE SCIPfindVar(
    }
 }
 
+/** returns TRUE iff all potential variables exist in the problem, and FALSE, if there may be additional variables,
+ *  that will be added in pricing
+ */
+Bool SCIPallVarsInProb(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPallVarsInProb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   todoMessage("check, if pricing algorithms are included in SCIP");
+
+   return TRUE;
+}
+
 /** adds global constraint to the problem */
 RETCODE SCIPaddCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1375,6 +1389,30 @@ RETCODE SCIPgetVarSol(
    return SCIP_OKAY;
 }
 
+/** gets strong branching information on COLUMN variable */
+RETCODE SCIPgetVarStrongbranch(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get solution value for */
+   int              itlim,              /**< iteration limit for strong branchings */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up                  /**< stores dual bound after branching column up */
+   )
+{
+   assert(var != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranch", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( var->varstatus != SCIP_VARSTATUS_COLUMN )
+   {
+      errorMessage("cannot get strong branching information on non-COLUMN variable");
+      return SCIP_INVALIDDATA;
+   }
+
+   CHECK_OKAY( SCIPcolGetStrongbranch(var->data.col, scip->stat, scip->lp, scip->primal->upperbound, itlim, down, up) );
+
+   return SCIP_OKAY;
+}
+
 /** changes lower bound of variable in the given node; if possible, adjust bound to integral value */
 RETCODE SCIPchgVarLbNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1760,6 +1798,20 @@ RETCODE SCIPgetLPRows(
       *nrows = scip->lp->nrows;
 
    return SCIP_OKAY;
+}
+
+/** returns TRUE iff all potential variables exist as columns in the LP, and FALSE, if there may be additional columns,
+ *  that will be added in pricing
+ */
+Bool SCIPallVarsInLP(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPallVarsInLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   todoMessage("check, if pricing algorithms are included in SCIP");
+
+   return (scip->lp->ncols == scip->transprob->nvars);
 }
 
 
@@ -3035,17 +3087,17 @@ RETCODE SCIPgetActDualBound(
    return SCIP_OKAY;
 }
 
-/** gets dual bound of active node in transformed problem */
-RETCODE SCIPgetActTransDualBound(
+/** gets lower (dual) bound of active node in transformed problem */
+RETCODE SCIPgetActTransLowerBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            actdualbound        /**< pointer to store the dual bound */
+   Real*            actlowerbound       /**< pointer to store the lower bound */
    )
 {
-   assert(actdualbound != NULL);
+   assert(actlowerbound != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPgetActTransDualBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetActTransLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   *actdualbound = SCIPtreeGetActLowerbound(scip->tree);
+   *actlowerbound = SCIPtreeGetActLowerbound(scip->tree);
    
    return SCIP_OKAY;
 }
@@ -3066,17 +3118,17 @@ RETCODE SCIPgetAvgDualBound(
    return SCIP_OKAY;
 }
 
-/** gets average dual bound of all unprocessed nodes in transformed problem */
-RETCODE SCIPgetAvgTransDualBound(
+/** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
+RETCODE SCIPgetAvgTransLowerBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            avgdualbound        /**< pointer to store the average dual bound */
+   Real*            avglowerbound       /**< pointer to store the average lower bound */
    )
 {
-   assert(avgdualbound != NULL);
+   assert(avglowerbound != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPgetAvgTransDualBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetAvgTransLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   *avgdualbound = SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->upperbound);
+   *avglowerbound = SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->upperbound);
    
    return SCIP_OKAY;
 }
@@ -3097,17 +3149,17 @@ RETCODE SCIPgetDualBound(
    return SCIP_OKAY;
 }
 
-/** gets global dual bound in transformed problem */
-RETCODE SCIPgetTransDualBound(
+/** gets global lower (dual) bound in transformed problem */
+RETCODE SCIPgetTransLowerBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            dualbound           /**< pointer to store the dual bound */
+   Real*            lowerbound          /**< pointer to store the lower bound */
    )
 {
-   assert(dualbound != NULL);
+   assert(lowerbound != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPgetTransDualBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   *dualbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+   *lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
    
    return SCIP_OKAY;
 }
@@ -3127,17 +3179,17 @@ RETCODE SCIPgetPrimalBound(
    return SCIP_OKAY;
 }
 
-/** gets global primal bound in transformed problem */
-RETCODE SCIPgetTransPrimalBound(
+/** gets global upper (primal) bound in transformed problem */
+RETCODE SCIPgetTransUpperBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            primalbound         /**< pointer to store the primal bound */
+   Real*            upperbound          /**< pointer to store the upper bound */
    )
 {
-   assert(primalbound != NULL);
+   assert(upperbound != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPgetTransPrimalBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransUpperBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   *primalbound = scip->primal->upperbound;
+   *upperbound = scip->primal->upperbound;
    
    return SCIP_OKAY;
 }

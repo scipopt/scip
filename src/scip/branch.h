@@ -66,7 +66,7 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
  *    SCIP_CUTOFF     : the current node was detected to be infeasible
  *    SCIP_BRANCHED   : branching was applied
  *    SCIP_REDUCEDDOM : a domain was reduced that rendered the actual LP solution infeasible
- *    SCIP_SEPARATED  : a cutting plane was generated (only if "lpvalid" is TRUE)
+ *    SCIP_SEPARATED  : a cutting plane was generated
  *    SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)

@@ -392,6 +392,14 @@ RETCODE SCIPfindVar(
    VAR**            var                 /**< pointer to store the variable, returns NULL if not found */
    );
 
+/** returns TRUE iff all potential variables exist in the problem, and FALSE, if there may be additional variables,
+ *  that will be added in pricing and improve the objective value
+ */
+extern
+Bool SCIPallVarsInProb(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** adds global constraint to the problem */
 extern
 RETCODE SCIPaddCons(
@@ -531,6 +539,16 @@ RETCODE SCIPgetVarSol(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to get solution value for */
    Real*            solval              /**< pointer to store the solution value */
+   );
+
+/** gets strong branching information on COLUMN variable */
+extern
+RETCODE SCIPgetVarStrongbranch(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get solution value for */
+   int              itlim,              /**< iteration limit for strong branchings */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up                  /**< stores dual bound after branching column up */
    );
 
 /** changes lower bound of variable in the given node; if possible, adjust bound to integral value */
@@ -684,6 +702,14 @@ RETCODE SCIPgetLPRows(
    SCIP*            scip,               /**< SCIP data structure */
    ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
    int*             nrows               /**< pointer to store the number of LP rows, or NULL */
+   );
+
+/** returns TRUE iff all potential variables exist as columns in the LP, and FALSE, if there may be additional columns,
+ *  that will be added in pricing and improve the objective value
+ */
+extern
+Bool SCIPallVarsInLP(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /**@} */
@@ -1327,11 +1353,11 @@ RETCODE SCIPgetActDualBound(
    Real*            actdualbound        /**< pointer to store the dual bound */
    );
 
-/** gets dual bound of active node in transformed problem */
+/** gets lower (dual) bound of active node in transformed problem */
 extern
-RETCODE SCIPgetActTransDualBound(
+RETCODE SCIPgetActTransLowerBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            actdualbound        /**< pointer to store the dual bound */
+   Real*            actlowerbound       /**< pointer to store the lower bound */
    );
 
 /** gets average dual bound of all unprocessed nodes */
@@ -1341,11 +1367,11 @@ RETCODE SCIPgetAvgDualBound(
    Real*            avgdualbound        /**< pointer to store the average dual bound */
    );
 
-/** gets average dual bound of all unprocessed nodes in transformed problem */
+/** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
 extern
-RETCODE SCIPgetAvgTransDualBound(
+RETCODE SCIPgetAvgTransLowerBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            avgdualbound        /**< pointer to store the average dual bound */
+   Real*            avglowerbound       /**< pointer to store the average lower bound */
    );
 
 /** gets global dual bound */
@@ -1355,11 +1381,11 @@ RETCODE SCIPgetDualBound(
    Real*            dualbound           /**< pointer to store the dual bound */
    );
 
-/** gets global dual bound in transformed problem */
+/** gets global lower (dual) bound in transformed problem */
 extern
-RETCODE SCIPgetTransDualBound(
+RETCODE SCIPgetTransLowerBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            dualbound           /**< pointer to store the dual bound */
+   Real*            lowerbound          /**< pointer to store the lower bound */
    );
 
 /** gets global primal bound */
@@ -1369,11 +1395,11 @@ RETCODE SCIPgetPrimalBound(
    Real*            primalbound         /**< pointer to store the primal bound */
    );
 
-/** gets global primal bound in transformed problem */
+/** gets global upper (primal) bound in transformed problem */
 extern
-RETCODE SCIPgetTransPrimalBound(
+RETCODE SCIPgetTransUpperBound(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            primalbound         /**< pointer to store the primal bound */
+   Real*            upperbound          /**< pointer to store the upper bound */
    );
 
 /**@} */

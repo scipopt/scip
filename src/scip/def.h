@@ -37,23 +37,31 @@
 
 
 #ifndef NDEBUG
-#define CHECK_OKAY(x) { RETCODE _restat_;                                                                   \
-                        if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
-                        {                                                                                   \
-                          printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
-                          return _restat_;                                                                  \
-                        }                                                                                   \
-                      }
-#define ALLOC_OKAY(x) { if( NULL == (x) )                                                                   \
-                        {                                                                                   \
-                          printf("[%s:%d] No memory in function call\n", __FILE__, __LINE__);               \
-                          return SCIP_NOMEMORY;                                                             \
-                        }                                                                                   \
-                      }
+#define CHECK_OKAY(x)  { RETCODE _restat_;                                                                   \
+                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                         {                                                                                   \
+                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
+                           return _restat_;                                                                  \
+                         }                                                                                   \
+                       }
+#define ALLOC_OKAY(x)  { if( NULL == (x) )                                                                   \
+                         {                                                                                   \
+                           printf("[%s:%d] No memory in function call\n", __FILE__, __LINE__);               \
+                           return SCIP_NOMEMORY;                                                             \
+                         }                                                                                   \
+                       }
 #else
-#define CHECK_OKAY(x) { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
-#define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
+#define CHECK_OKAY(x)  { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
+#define ALLOC_OKAY(x)  { if( NULL == (x) ) return SCIP_NOMEMORY; }
 #endif
+
+#define CHECK_ABORT(x) { RETCODE _restat_;                                                                   \
+                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                         {                                                                                   \
+                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
+                           abort();                                                                          \
+                         }                                                                                   \
+                       }
 
 
 #ifndef SQR

@@ -62,7 +62,7 @@
 
 /* Pricing */
 
-#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
+#define SCIP_DEFAULT_USEPRICING      FALSE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS       32 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 1024 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -93,7 +93,7 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ            1 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 

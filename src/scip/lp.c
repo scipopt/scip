@@ -4608,6 +4608,8 @@ RETCODE lpRemoveObsoleteCols(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
+   assert(set != NULL);
+   assert(set->usepricing);
 
    ncols = lp->ncols;
    cols = lp->cols;
@@ -4711,11 +4713,12 @@ RETCODE SCIPlpRemoveObsoletes(
    )
 {
    assert(lp != NULL);
+   assert(set != NULL);
 
    debugMessage("removing obsolete columns starting with %d/%d, obsolete rows starting with %d/%d\n",
       lp->firstnewcol, lp->ncols, lp->firstnewrow, lp->nrows);
 
-   if( lp->firstnewcol < lp->ncols )
+   if( set->usepricing && lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, lp->firstnewcol) );
    }
@@ -4746,6 +4749,8 @@ RETCODE lpCleanupCols(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
+   assert(set != NULL);
+   assert(set->usepricing);
    assert(0 <= firstcol && firstcol < lp->ncols);
 
    ncols = lp->ncols;
@@ -4854,8 +4859,9 @@ RETCODE SCIPlpCleanupNew(
 {
    assert(lp != NULL);
    assert(lp->solved);
+   assert(set != NULL);
 
-   if( lp->firstnewcol < lp->ncols )
+   if( set->usepricing && lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, memhdr, set, lp->firstnewcol) );
    }
@@ -4876,8 +4882,9 @@ RETCODE SCIPlpCleanupAll(
 {
    assert(lp != NULL);
    assert(lp->solved);
+   assert(set != NULL);
 
-   if( 0 < lp->ncols )
+   if( set->usepricing && 0 < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, memhdr, set, 0) );
    }
