@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.137 2004/08/12 14:31:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.138 2004/08/25 15:40:06 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6253,15 +6253,15 @@ void transformMIRRow(
    int idx;
    int v;
 
-   int nvlb;
-   Real* bvlb;
-   VAR** zvlb;
-   Real* dvlb;
+   int nvlb = 0;
+   Real* bvlb = NULL;
+   VAR** zvlb = NULL;
+   Real* dvlb = NULL;
 
-   int nvub;
-   Real* bvub;
-   VAR** zvub;
-   Real* dvub;
+   int nvub = 0;
+   Real* bvub = NULL;
+   VAR** zvub = NULL;
+   Real* dvub = NULL;
 
    Real bestlb;
    Real bestub;

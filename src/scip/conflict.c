@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.53 2004/08/25 15:01:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.54 2004/08/25 15:40:06 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -444,37 +444,23 @@ RETCODE conflictAddConflictVar(
 }
 
 /** compares two conflict set entries, such that bound changes infered later are
- *  ordered prior to ones that were infered earlier; however, bound changes on non-binary variables
- *  preceed binary bound changes, because they have to be resolved first
+ *  ordered prior to ones that were infered earlier
  */
 static
 DECL_SORTPTRCOMP(conflictBdchginfoComp)
 {  /*lint --e{715}*/
    BDCHGINFO* bdchginfo1;
    BDCHGINFO* bdchginfo2;
-   VAR* var1;
-   VAR* var2;
    
    bdchginfo1 = (BDCHGINFO*)elem1;
    bdchginfo2 = (BDCHGINFO*)elem2;
    assert(bdchginfo1 != NULL);
    assert(bdchginfo2 != NULL);
 
-   var1 = SCIPbdchginfoGetVar(bdchginfo1);
-   var2 = SCIPbdchginfoGetVar(bdchginfo2);
+   assert((SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo1)) == SCIP_VARTYPE_BINARY)
+      == (SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo2)) == SCIP_VARTYPE_BINARY));
 
-   if( SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY )
-   {
-      if( SCIPvarGetType(var2) != SCIP_VARTYPE_BINARY )
-         return +1;
-      else if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
-         return -1;
-      else
-         return +1;
-   }
-   else if( SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY )
-      return -1;
-   else if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
+   if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
       return -1;
    else
       return +1;
@@ -497,7 +483,9 @@ RETCODE SCIPconflictCreate(
 #if 0
    CHECK_OKAY( SCIPlpiCreate(&(*conflict)->lpi, "LPconflict") );
 #endif
-   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->memgrowinit, set->memgrowfac, conflictBdchginfoComp) );
+   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->binbdchgqueue, set->memgrowinit, set->memgrowfac, conflictBdchginfoComp) );
+   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->nonbinbdchgqueue, set->memgrowinit, set->memgrowfac, 
+         conflictBdchginfoComp) );
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvarssize = 0;
    (*conflict)->nconflictvars = 0;
@@ -532,7 +520,8 @@ RETCODE SCIPconflictFree(
 #if 0
    CHECK_OKAY( SCIPlpiFree(&(*conflict)->lpi) );
 #endif
-   SCIPpqueueFree(&(*conflict)->bdchgqueue);
+   SCIPpqueueFree(&(*conflict)->binbdchgqueue);
+   SCIPpqueueFree(&(*conflict)->nonbinbdchgqueue);
    freeMemoryArrayNull(&(*conflict)->conflictvars);
    freeMemory(conflict);
 
@@ -549,8 +538,9 @@ RETCODE SCIPconflictInit(
 
    debugMessage("initializing conflict analysis\n");
 
-   /* clear the conflict candidate queue and the conflict set */
-   SCIPpqueueClear(conflict->bdchgqueue);
+   /* clear the conflict candidate queues and the conflict set */
+   SCIPpqueueClear(conflict->binbdchgqueue);
+   SCIPpqueueClear(conflict->nonbinbdchgqueue);
    conflict->nconflictvars = 0;
 
    /* increase the conflict set counter, such that variables of new conflict set are labeled with this new counter */
@@ -569,8 +559,15 @@ RETCODE conflictAddBdchginfo(
    assert(conflict != NULL);
    assert(bdchginfo != NULL);
 
-   /* put candidate in priority queue */
-   CHECK_OKAY( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
+   /* put candidate in the appropriate priority queue */
+   if( SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY )
+   {
+      CHECK_OKAY( SCIPpqueueInsert(conflict->binbdchgqueue, (void*)bdchginfo) );
+   }
+   else
+   {
+      CHECK_OKAY( SCIPpqueueInsert(conflict->nonbinbdchgqueue, (void*)bdchginfo) );
+   }
 
    return SCIP_OKAY;
 }
@@ -642,6 +639,40 @@ RETCODE SCIPconflictAddBound(
    return SCIP_OKAY;
 }
 
+/** removes and returns next conflict analysis candidate from the candidate queues */
+static
+BDCHGINFO* conflictRemoveCand(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   BDCHGINFO* bdchginfo;
+
+   assert(conflict != NULL);
+
+   bdchginfo = (BDCHGINFO*)(SCIPpqueueRemove(conflict->nonbinbdchgqueue));
+   if( bdchginfo == NULL )
+      bdchginfo = (BDCHGINFO*)(SCIPpqueueRemove(conflict->binbdchgqueue));
+
+   return bdchginfo;
+}
+
+/** returns next conflict analysis candidate from the candidate queues without removing it */
+static
+BDCHGINFO* conflictFirstCand(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   BDCHGINFO* bdchginfo;
+
+   assert(conflict != NULL);
+
+   bdchginfo = (BDCHGINFO*)(SCIPpqueueFirst(conflict->nonbinbdchgqueue));
+   if( bdchginfo == NULL )
+      bdchginfo = (BDCHGINFO*)(SCIPpqueueFirst(conflict->binbdchgqueue));
+
+   return bdchginfo;
+}
+
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
@@ -673,13 +704,15 @@ RETCODE conflictAnalyze(
    assert(0 <= validdepth && validdepth <= tree->actnode->depth);
    assert(success != NULL);
 
-   debugMessage("analyzing conflict with %d conflict candidates and starting conflict set of size %d (maxsize=%d)\n",
-      SCIPpqueueNElems(conflict->bdchgqueue), conflict->nconflictvars, maxsize);
+   debugMessage("analyzing conflict with %d+%d conflict candidates and starting conflict set of size %d (maxsize=%d)\n",
+      SCIPpqueueNElems(conflict->binbdchgqueue), SCIPpqueueNElems(conflict->nonbinbdchgqueue),
+      conflict->nconflictvars, maxsize);
 
    *success = FALSE;
 
    /* check, if there is something to analyze */
-   if( SCIPpqueueNElems(conflict->bdchgqueue) + conflict->nconflictvars == 0 )
+   if( SCIPpqueueNElems(conflict->binbdchgqueue) + SCIPpqueueNElems(conflict->nonbinbdchgqueue)
+      + conflict->nconflictvars == 0 )
    {
       errorMessage("no conflict bound changes to analyze\n");
       return SCIP_INVALIDDATA;
@@ -693,7 +726,7 @@ RETCODE conflictAnalyze(
 
    /* process all bound changes in the conflict candidate queue */
    nresolutions = 0;
-   bdchginfo = (BDCHGINFO*)(SCIPpqueueRemove(conflict->bdchgqueue));
+   bdchginfo = conflictRemoveCand(conflict);
    while( bdchginfo != NULL && conflict->nconflictvars < maxsize && validdepth < tree->actnode->depth )
    {
       resolved = FALSE;
@@ -716,14 +749,23 @@ RETCODE conflictAnalyze(
             bdchgdepth, validdepth, SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
-         debugMessage(" - conflict set   :");
+         debugMessage(" - conflict set             :");
          for( v = 0; v < conflict->nconflictvars; ++v )
             printf(" <%s>", SCIPvarGetName(conflict->conflictvars[v]));
          printf("\n");
-         debugMessage(" - candidate queue:");
-         for( v = 0; v < SCIPpqueueNElems(conflict->bdchgqueue); ++v )
+         debugMessage(" - candidate queue (non-bin):");
+         for( v = 0; v < SCIPpqueueNElems(conflict->nonbinbdchgqueue); ++v )
          {
-            BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->bdchgqueue)[v]);
+            BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->nonbinbdchgqueue)[v]);
+            printf(" [<%s> %s %g]", SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+               SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+               SCIPbdchginfoGetNewbound(info));
+         }
+         printf("\n");
+         debugMessage(" - candidate queue (bin)    :");
+         for( v = 0; v < SCIPpqueueNElems(conflict->binbdchgqueue); ++v )
+         {
+            BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->binbdchgqueue)[v]);
             printf(" [<%s> %s %g]", SCIPvarGetName(SCIPbdchginfoGetVar(info)),
                SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
                SCIPbdchginfoGetNewbound(info));
@@ -735,7 +777,7 @@ RETCODE conflictAnalyze(
           * this is a multiple insertion in the conflict candidate queue and we can ignore the current
           * bound change
           */
-         nextbdchginfo = (BDCHGINFO*)(SCIPpqueueFirst(conflict->bdchgqueue));
+         nextbdchginfo = conflictFirstCand(conflict);
          assert(nextbdchginfo == NULL
             || SCIPbdchginfoGetDepth(bdchginfo) >= SCIPbdchginfoGetDepth(nextbdchginfo)
             || (SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) != SCIP_VARTYPE_BINARY
@@ -828,7 +870,7 @@ RETCODE conflictAnalyze(
       }
 
       /* get next conflicting bound from the conflict candidate queue */
-      bdchginfo = (BDCHGINFO*)(SCIPpqueueRemove(conflict->bdchgqueue));
+      bdchginfo = conflictRemoveCand(conflict);
    }
 
    /* if a valid conflict set was found (where at least one resolution was applied), call the conflict handlers */
@@ -1809,6 +1851,10 @@ RETCODE addCand(
    else
       return SCIP_OKAY;
 
+   /* calculate the increase in the proof's activity */
+   proofactdelta = (newbound - oldbound)*proofcoef;
+   assert(SCIPsetIsPositive(set, proofactdelta));
+
    /* if the bound change is not useable in conflict analysis, we have to undo it */
    if( !useable )
       score = set->infinity;
@@ -1820,8 +1866,6 @@ RETCODE addCand(
       score *= depth;
       score = MIN(score, set->infinity/2);
    }
-   proofactdelta = (newbound - oldbound)*proofcoef;
-   assert(SCIPsetIsPositive(set, proofactdelta));
 
    /* get enough memory to store new candidate */
    CHECK_OKAY( ensureCandsSize(set, cands, candscores, newbounds, proofactdeltas, candssize, (*ncands)+1) );
@@ -2212,7 +2256,6 @@ RETCODE undoBdchgsDualsol(
    ROW** rows;
    VAR** vars;
    ROW* row;
-   COL* col;
    VAR* var;
    Real* primsols;
    Real* dualsols;
@@ -2227,7 +2270,6 @@ RETCODE undoBdchgsDualsol(
    int ncols;
    int nvars;
    int r;
-   int c;
    int v;
    int i;
 
@@ -2358,6 +2400,7 @@ RETCODE undoBdchgsDualsol(
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
+      assert(SCIPvarGetProbindex(var) == v);
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
@@ -2366,14 +2409,14 @@ RETCODE undoBdchgsDualsol(
       }
       else
       {
+         COL* col;
+         int c;
+
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          col = SCIPvarGetCol(var);
          c = SCIPcolGetLPPos(col);
          assert(c == -1 || col == lp->cols[c]);
          assert(c == -1 || col == lp->lpicols[c]);
-
-         v = SCIPvarGetProbindex(var);
-         assert(0 <= v && v < nvars);
 
          /* get reduced costs from LPI, or calculate it manually if the column is not in current LP */
          if( c == -1 )
@@ -2386,15 +2429,15 @@ RETCODE undoBdchgsDualsol(
 #endif
             varredcosts[v] = redcosts[c];
          }
-      }
 
-      /* check dual feasibility */
-      if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsFeasPositive(set, varredcosts[v]))
-         || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsFeasNegative(set, varredcosts[v])) )
-      {
-         debugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
-            varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
-         goto TERMINATE;
+         /* check dual feasibility */
+         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsFeasPositive(set, varredcosts[v]))
+            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsFeasNegative(set, varredcosts[v])) )
+         {
+            debugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
+               varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
+            goto TERMINATE;
+         }
       }
 
       /* subtract reduced costs from dual row's coefficients */
