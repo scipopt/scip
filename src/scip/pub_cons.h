@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.21 2005/03/21 11:37:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.22 2005/03/21 11:39:36 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -553,6 +553,7 @@ Bool SCIPconsIsLocked(
 #define SCIPconsIsGlobal(cons)          !(cons)->local
 #define SCIPconsIsLocal(cons)           (cons)->local
 #define SCIPconsIsModifiable(cons)      (cons)->modifiable
+#define SCIPconsIsDynamic(cons)         (cons)->dynamic
 #define SCIPconsIsRemoveable(cons)      (cons)->removeable
 #define SCIPconsIsInProb(cons)          ((cons)->addconssetchg == NULL && (cons)->addarraypos >= 0)
 #define SCIPconsIsOriginal(cons)        (cons)->original
