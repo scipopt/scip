@@ -44,14 +44,10 @@
  */
 
 static
-DECL_CONSENFO(SCIPconsEnfoIntegral)
+DECL_CONSENLP(consEnlpIntegral)
 {
-   VAR** vars;
-   VAR* var;
-   int nbin;
-   int nint;
-   int v;
-   Real primsol;
+   VAR** lpcands;
+   int nlpcands;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -60,48 +56,53 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
    assert(nconss == 0);
    assert(result != NULL);
 
-   debugMessage("Enfo method of integrality constraint\n");
+   debugMessage("Enlp method of integrality constraint\n");
 
-   if( !lpvalid )
+   /* get branching candidates */
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &nlpcands) );
+   if( nlpcands == 0 )
    {
-      /* we have to enforce the pseudo solution, which is always integral */
       *result = SCIP_FEASIBLE;
       return SCIP_OKAY;
    }
+   *result = SCIP_INFEASIBLE;
 
-   CHECK_OKAY( SCIPgetVars(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
-
+   /* call branching methods */
    todoMessage("variable selection rules");
 
-   for( v = 0; v < nbin+nint; ++v )
+   /* if no branching method succeeded in choosing a branching, just branch on the first fractional variable */
+   if( *result == SCIP_INFEASIBLE )
    {
-      var = vars[v];
+      NODE* node;
+      VAR* var;
+      Real primsol;
+
+      var = lpcands[0];
+      assert(var != NULL);
+
       CHECK_OKAY( SCIPgetActVarSol(scip, var, &primsol) );
-      if( !SCIPisIntegral(scip, primsol) )
-      {
-         NODE* node;
+      assert(!SCIPisIntegral(scip, primsol));
 
-         debugMessage("branching on variable <%s> with value %f\n", SCIPvarGetName(var), primsol);
-
-         /* create left child */
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
-         CHECK_OKAY( SCIPchgNodeUb(scip, node, var, SCIPfloor(scip, primsol)) );
-
-         /* create right child */
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
-         CHECK_OKAY( SCIPchgNodeLb(scip, node, var, SCIPceil(scip, primsol)) );
-
-         *result = SCIP_BRANCHED;
-         return SCIP_OKAY;
-      }
+      debugMessage("stupid branching on variable <%s> with value %f\n", SCIPvarGetName(var), primsol);
+      
+      /* create left child */
+      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPchgNodeUb(scip, node, var, SCIPfloor(scip, primsol)) );
+      
+      /* create right child */
+      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      CHECK_OKAY( SCIPchgNodeLb(scip, node, var, SCIPceil(scip, primsol)) );
+      
+      *result = SCIP_BRANCHED;
    }
 
-   *result = SCIP_FEASIBLE;
+   assert(*result != SCIP_INFEASIBLE);
+
    return SCIP_OKAY;
 }
 
 static
-DECL_CONSCHCK(SCIPconsChckIntegral)
+DECL_CONSCHCK(consChckIntegral)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -128,7 +129,7 @@ RETCODE SCIPincludeConsHdlrIntegral(      /**< creates the handler for integrali
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY, CONSHDLR_NEEDSCONS,
                   NULL, NULL, NULL, 
                   NULL, NULL, 
-                  NULL, SCIPconsEnfoIntegral, SCIPconsChckIntegral, NULL,
+                  NULL, consEnlpIntegral, NULL, consChckIntegral, NULL,
                   NULL) );
 
    return SCIP_OKAY;

@@ -326,9 +326,28 @@ Real SCIPsetCeil(                       /**< rounds value up to the next integer
    );
 
 extern
+Real SCIPsetFrac(                       /**< returns fractional part of value, i.e. ceil(x) - x */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to return fractional part for */
+   );
+
+extern
 Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within the LP feasibility bounds */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsFracIntegral(             /**< checks, if given fractional part is smaller than feastol */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsFixed(                    /**< checks, if the given integer bounds correspond to a fixed interval */
+   const SET*       set,                /**< global SCIP settings */
+   Real             lb,                 /**< lower integer bound */
+   Real             ub                  /**< upper integer bound */
    );
 
 #else
@@ -359,7 +378,10 @@ Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within
 #define SCIPsetIsFeasible(set, val)     ( (val) >= -(set)->feastol )
 #define SCIPsetFloor(set, val)          ( floor((val) + (set)->feastol) )
 #define SCIPsetCeil(set, val)           ( ceil((val) - (set)->feastol) )
+#define SCIPsetFrac(set, val)           ( (val) - SCIPsetFloor(set, val) )
 #define SCIPsetIsIntegral(set, val)     ( SCIPsetCeil(set, val) - (val) <= (set)->feastol )
+#define SCIPsetIsFracIntegral(set, val) ( (val) <= (set)->feastol )
+#define SCIPsetIsFixed(set, lb, ub)     ( SCIPsetIsEQ(set, lb, ub) )
 
 #endif
 

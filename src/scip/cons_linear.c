@@ -441,7 +441,7 @@ RETCODE checkConstraints(               /**< checks pseudo solution for violated
  */
 
 static
-DECL_CONSINIT(SCIPconsFreeLinear)
+DECL_CONSINIT(consFreeLinear)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -453,7 +453,7 @@ DECL_CONSINIT(SCIPconsFreeLinear)
 }
 
 static
-DECL_CONSINIT(SCIPconsInitLinear)
+DECL_CONSINIT(consInitLinear)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -465,7 +465,7 @@ DECL_CONSINIT(SCIPconsInitLinear)
 }
 
 static
-DECL_CONSEXIT(SCIPconsExitLinear)
+DECL_CONSEXIT(consExitLinear)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -477,7 +477,7 @@ DECL_CONSEXIT(SCIPconsExitLinear)
 }
 
 static
-DECL_CONSDELE(SCIPconsDeleLinear)
+DECL_CONSDELE(consDeleLinear)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -499,7 +499,7 @@ DECL_CONSDELE(SCIPconsDeleLinear)
 }
 
 static
-DECL_CONSTRAN(SCIPconsTranLinear)
+DECL_CONSTRAN(consTranLinear)
 {
    LINCONS* lincons;
 
@@ -526,7 +526,7 @@ DECL_CONSTRAN(SCIPconsTranLinear)
 }
 
 static
-DECL_CONSSEPA(SCIPconsSepaLinear)
+DECL_CONSSEPA(consSepaLinear)
 {
    Bool found;
 
@@ -549,7 +549,7 @@ DECL_CONSSEPA(SCIPconsSepaLinear)
 }
 
 static
-DECL_CONSENFO(SCIPconsEnfoLinear)
+DECL_CONSENLP(consEnlpLinear)
 {
    Bool found;
 
@@ -558,35 +558,48 @@ DECL_CONSENFO(SCIPconsEnfoLinear)
    assert(scip != NULL);
    assert(result != NULL);
 
-   debugMessage("Enfo method of linear constraints\n");
+   debugMessage("Enlp method of linear constraints\n");
 
    /* check for violated constraints */
-   if( lpvalid )
-   {
-      /* LP is processed at current node -> we can add violated linear constraints to the LP */
-      CHECK_OKAY( separateConstraints(conshdlr, scip, conss, nconss, &found) );
-      
-      if( found )
-         *result = SCIP_SEPARATED;
-      else
-         *result = SCIP_FEASIBLE;
-   }
+
+   /* LP is processed at current node -> we can add violated linear constraints to the LP */
+   CHECK_OKAY( separateConstraints(conshdlr, scip, conss, nconss, &found) );
+   
+   if( found )
+      *result = SCIP_SEPARATED;
    else
-   {
-      /* LP is not processed at current node -> we just have to check pseudo solution for feasibility */
-      CHECK_OKAY( checkConstraints(conshdlr, scip, conss, nconss, &found) );
-      
-      if( found )
-         *result = SCIP_INFEASIBLE;
-      else
-         *result = SCIP_FEASIBLE;
-   }
+      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
 
 static
-DECL_CONSCHCK(SCIPconsChckLinear)
+DECL_CONSENPS(consEnpsLinear)
+{
+   Bool found;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   debugMessage("Enps method of linear constraints\n");
+
+   /* check for violated constraints */
+
+   /* LP is not processed at current node -> we just have to check pseudo solution for feasibility */
+   CHECK_OKAY( checkConstraints(conshdlr, scip, conss, nconss, &found) );
+   
+   if( found )
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_CONSCHCK(consChckLinear)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -599,7 +612,7 @@ DECL_CONSCHCK(SCIPconsChckLinear)
 }
 
 static
-DECL_CONSPROP(SCIPconsPropLinear)
+DECL_CONSPROP(consPropLinear)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -624,9 +637,9 @@ RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear cons
 {
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY, CONSHDLR_NEEDSCONS,
-                  SCIPconsFreeLinear, SCIPconsInitLinear, SCIPconsExitLinear, 
-                  SCIPconsDeleLinear, SCIPconsTranLinear, 
-                  SCIPconsSepaLinear, SCIPconsEnfoLinear, SCIPconsChckLinear, SCIPconsPropLinear,
+                  consFreeLinear, consInitLinear, consExitLinear, 
+                  consDeleLinear, consTranLinear, 
+                  consSepaLinear, consEnlpLinear, consEnpsLinear, consChckLinear, consPropLinear,
                   NULL) );
 
    return SCIP_OKAY;

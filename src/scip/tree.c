@@ -255,6 +255,26 @@ RETCODE SCIPnodeReleaseLPIState(        /**< decreases the reference counter of 
 }
 
 static
+RETCODE junctionInit(                   /**< initializes junction data */
+   JUNCTION*        junction,           /**< pointer to junction data */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(junction != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren > 0);
+
+   junction->nchildren = tree->nchildren;
+
+   /* increase the LPI state usage counter of the actual LP fork */
+   if( tree->actlpfork != NULL )
+      SCIPnodeCaptureLPIState(tree->actlpfork, tree->nchildren);
+
+   return SCIP_OKAY;
+}
+
+#if 0
+static
 RETCODE junctionCreate(                 /**< creates junction data */
    JUNCTION**       junction,           /**< pointer to junction data */
    MEMHDR*          memhdr,             /**< block memory */
@@ -291,6 +311,7 @@ RETCODE junctionFree(                   /**< frees junction data */
 
    return SCIP_OKAY;
 }
+#endif
 
 static
 RETCODE forkCreate(                     /**< creates fork data */
@@ -527,10 +548,9 @@ void nodeReleaseParent(                 /**< decreases number of children of the
          errorMessage("Deadend cannot be a parent node");
          abort();
       case SCIP_NODETYPE_JUNCTION:
-         assert(parent->data.junction != NULL);
-         assert(parent->data.junction->nchildren > 0);
-         parent->data.junction->nchildren--;
-         hasChildren = (parent->data.junction->nchildren > 0);
+         assert(parent->data.junction.nchildren > 0);
+         parent->data.junction.nchildren--;
+         hasChildren = (parent->data.junction.nchildren > 0);
          break;
       case SCIP_NODETYPE_FORK:
          assert(parent->data.fork != NULL);
@@ -711,7 +731,7 @@ RETCODE SCIPnodeFree(                   /**< frees node */
    case SCIP_NODETYPE_DEADEND:
       break;
    case SCIP_NODETYPE_JUNCTION:
-      CHECK_OKAY( junctionFree(&((*node)->data.junction), memhdr) );
+      /*CHECK_OKAY( junctionFree(&((*node)->data.junction), memhdr) );*/
       break;
    case SCIP_NODETYPE_FORK:
       CHECK_OKAY( forkFree(&((*node)->data.fork), memhdr, set, lp) );
@@ -779,8 +799,7 @@ RETCODE nodeDeactivate(                 /**< informs node, that it is no longer 
       hasChildren = FALSE;
       break;
    case SCIP_NODETYPE_JUNCTION:
-      assert((*node)->data.junction != NULL);
-      hasChildren = ((*node)->data.junction->nchildren > 0);
+      hasChildren = ((*node)->data.junction.nchildren > 0);
       break;
    case SCIP_NODETYPE_FORK:
       assert((*node)->data.fork != NULL);
@@ -1007,7 +1026,6 @@ void treeUpdatePathLPSize(              /**< updates the LP sizes of the active 
          errorMessage("Deadend cannot be in the active path");
          abort();
       case SCIP_NODETYPE_JUNCTION:
-         assert(node->data.junction != NULL);
          break;
       case SCIP_NODETYPE_FORK:
          assert(node->data.fork != NULL);
@@ -1520,9 +1538,6 @@ RETCODE actnodeToDeadend(               /**< converts the active node into a dea
    assert(tree->actnode->nodetype == SCIP_NODETYPE_ACTNODE);
    assert(tree->actnode->active);
    assert(tree->nchildren == 0);
-   assert(lp != NULL);
-   assert(lp->flushed);
-   assert(lp->solved);
 
    debugMessage("actnode to deadend at depth %d\n", tree->actnode->depth);
 
@@ -1547,8 +1562,6 @@ RETCODE actnodeToJunction(              /**< converts the active node into a jun
    LP*              lp                  /**< actual LP data */
    )
 {
-   JUNCTION* junction;
-
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(tree->actnode->nodetype == SCIP_NODETYPE_ACTNODE);
@@ -1559,10 +1572,9 @@ RETCODE actnodeToJunction(              /**< converts the active node into a jun
    /* detach dynamic size data from domain change data of old active node */
    CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
 
-   CHECK_OKAY( junctionCreate(&junction, memhdr, tree) );
-
    tree->actnode->nodetype = SCIP_NODETYPE_JUNCTION;
-   tree->actnode->data.junction = junction;
+
+   CHECK_OKAY( junctionInit(&tree->actnode->data.junction, tree) );
 
    /* update the LP column and row counter for the converted node */
    treeUpdatePathLPSize(tree, tree->actnode->depth);

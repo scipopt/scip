@@ -868,7 +868,7 @@ RETCODE SCIPvarColumn(                  /**< converts loose transformed variable
 
    var->varstatus = SCIP_VARSTATUS_COLUMN;
 
-   CHECK_OKAY( SCIPcolCreate(&var->data.col, memhdr, set, lp, stat, var, 0, NULL, NULL) );
+   CHECK_OKAY( SCIPcolCreate(&var->data.col, memhdr, set, stat, lp, var, 0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

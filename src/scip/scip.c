@@ -52,6 +52,7 @@ struct Scip
    LP*              lp;                 /**< LP data */
    PRICE*           price;              /**< storage for priced variables */
    SEPA*            sepa;               /**< storage for separated cuts */
+   BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    CUTPOOL*         cutpool;            /**< global cut pool */
    PRIMAL*          primal;             /**< primal data and solution storage */
 };
@@ -87,6 +88,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp == NULL);
       assert(scip->price == NULL);
       assert(scip->sepa == NULL);
+      assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
       assert(scip->tree == NULL);
@@ -106,6 +108,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp == NULL);
       assert(scip->price == NULL);
       assert(scip->sepa == NULL);
+      assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
       assert(scip->tree == NULL);
@@ -138,6 +141,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
       assert(scip->sepa != NULL);
+      assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree == NULL);
@@ -157,6 +161,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
       assert(scip->sepa != NULL);
+      assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
@@ -176,6 +181,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
       assert(scip->sepa != NULL);
+      assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
@@ -269,6 +275,7 @@ RETCODE SCIPcreate(                     /**< creates and initializes SCIP data s
    (*scip)->lp = NULL;
    (*scip)->price = NULL;
    (*scip)->sepa = NULL;
+   (*scip)->branchcand = NULL;
    (*scip)->cutpool = NULL;
    (*scip)->primal = NULL;
 
@@ -426,6 +433,7 @@ RETCODE SCIPsolve(                      /**< solves problem */
       CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
       CHECK_OKAY( SCIPpriceCreate(&scip->price) );
       CHECK_OKAY( SCIPsepaCreate(&scip->sepa) );
+      CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
       CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->agelimit) );
 
       /* copy problem in solve memory */
@@ -455,7 +463,7 @@ RETCODE SCIPsolve(                      /**< solves problem */
    case SCIP_STAGE_SOLVING:
       /* continue solution process */
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                     scip->lp, scip->price, scip->sepa, scip->cutpool, scip->primal) );
+                     scip->lp, scip->price, scip->sepa, scip->branchcand, scip->cutpool, scip->primal) );
 
       /* detect, whether problem is solved */
       todoMessage("detect, whether problem is solved");
@@ -502,6 +510,7 @@ RETCODE SCIPfreeSolve(                  /**< frees all solution process data, on
       CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
+      CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
       CHECK_OKAY( SCIPsepaFree(&scip->sepa) );
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
@@ -741,6 +750,35 @@ RETCODE SCIPgetActVarSol(               /**< gets solution value for variable in
    return SCIP_OKAY;
 }
 
+RETCODE SCIPgetLPBranchCands(           /**< gets branching candidates for LP solution branching (fractional variables) */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
+   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
+                  lpcands, lpcandsfrac, nlpcands) );
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetPseudoBranchCands(       /**< gets branching candidates for pseudo solution branching (nonfixed variables) */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
+   int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPbranchcandGetPseudoCands(scip->branchcand, scip->set, scip->stat, scip->transprob,
+                  pseudocands, npseudocands) );
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPcreateRow(                  /**< creates and captures an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
@@ -757,7 +795,7 @@ RETCODE SCIPcreateRow(                  /**< creates and captures an LP row */
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->lp, scip->stat, name, 
+   CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat, scip->lp, name, 
                   len, col, val, lhs, rhs, modifiable) );
 
    return SCIP_OKAY;
@@ -978,7 +1016,8 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
    DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
    DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
-   DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
+   DECL_CONSENLP((*consenlp)),          /**< enforcing constraints for LP solutions */
+   DECL_CONSENPS((*consenps)),          /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
    DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -989,7 +1028,7 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
    CHECK_OKAY( checkStage(scip, "SCIPincludeConsHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, name, desc, sepapriority, enfopriority, chckpriority, needscons,
-                  consfree, consinit, consexit, consdele, constran, conssepa, consenfo, conschck, consprop,
+                  consfree, consinit, consexit, consdele, constran, conssepa, consenlp, consenps, conschck, consprop,
                   conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
    

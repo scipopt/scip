@@ -291,6 +291,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
    SEPA*            sepa,               /**< separation storage */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal              /**< primal data */
    )
@@ -313,6 +314,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    assert(lp != NULL);
    assert(price != NULL);
    assert(sepa != NULL);
+   assert(branchcand != NULL);
    assert(cutpool != NULL);
    assert(primal != NULL);
 
@@ -412,7 +414,14 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
             solveagain = FALSE;
             for( h = 0; h < set->nconshdlrs && !resolved; ++h )
             {
-               CHECK_OKAY( SCIPconshdlrEnforce(conshdlrs_enfo[h], set, tree->actnodehaslp, &result) );
+               if( tree->actnodehaslp )
+               {
+                  CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], set, &result) );
+               }
+               else
+               {
+                  CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], set, &result) );
+               }
                switch( result )
                {
                case SCIP_BRANCHED:
@@ -478,6 +487,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
             /* the following is just a temporary implementation of variable fixing */
             
             /* scan the integer variables for a non-fixed variable */
+            todoMessage("call branchcand method instead!");
             for( v = 0; v < prob->nbin + prob->nint + prob->nimpl && !resolved; ++v )
             {
                var = prob->vars[v];
@@ -502,8 +512,8 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
                   /* create child node with x = x' */
                   debugMessage(" -> creating child: <%s> == %g\n", var->name, SCIPsetCeil(set, solval));
                   /*CHECK_OKAY( SCIPcreateChild(scip, &node) );
-                    CHECK_OKAY( SCIPchgNodeUb(scip, node, var, SCIPceil(scip, primsol)) );
-                    CHECK_OKAY( SCIPchgNodeLb(scip, node, var, SCIPfloor(scip, primsol)) );*/
+                    CHECK_OKAY( SCIPchgNodeUb(scip, node, var, fixval) );
+                    CHECK_OKAY( SCIPchgNodeLb(scip, node, var, fixval) );*/
                   CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
                   if( !SCIPsetIsEQ(set, var->dom.lb, fixval) )
                   {
@@ -521,7 +531,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
                   {
                      debugMessage(" -> creating child: <%s> <= %g\n", var->name, fixval-1);
                      /*CHECK_OKAY( SCIPcreateChild(scip, &node) );
-                       CHECK_OKAY( SCIPchgNodeUb(scip, node, var, SCIPceil(scip, primsol)-1) );*/
+                       CHECK_OKAY( SCIPchgNodeUb(scip, node, var, fixval-1) );*/
                      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
                      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, var, fixval-1,
                                     SCIP_BOUNDTYPE_UPPER) );
@@ -532,7 +542,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
                   {
                      debugMessage(" -> creating child: <%s> >= %g\n", var->name, fixval+1);
                      /*CHECK_OKAY( SCIPcreateChild(scip, &node) );
-                       CHECK_OKAY( SCIPchgNodeLb(scip, node, var, SCIPfloor(scip, primsol)+1) );*/
+                       CHECK_OKAY( SCIPchgNodeLb(scip, node, var, fixval+1) );*/
                      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
                      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, var, fixval+1,
                                     SCIP_BOUNDTYPE_LOWER) );

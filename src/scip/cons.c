@@ -43,7 +43,8 @@ struct ConsHdlr
    DECL_CONSDELE((*consdele));          /**< frees specific constraint data */
    DECL_CONSTRAN((*constran));          /**< transforms constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa));          /**< separates cutting planes */
-   DECL_CONSENFO((*consenfo));          /**< enforcing constraints */
+   DECL_CONSENLP((*consenlp));          /**< enforcing constraints for LP solutions */
+   DECL_CONSENPS((*consenps));          /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHCK((*conschck));          /**< check feasibility of primal solution */
    DECL_CONSPROP((*consprop));          /**< propagate variable domains */
    CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
@@ -223,7 +224,8 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
    DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
-   DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
+   DECL_CONSENLP((*consenlp)),          /**< enforcing constraints for LP solutions */
+   DECL_CONSENPS((*consenps)),          /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
    DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -242,7 +244,8 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    (*conshdlr)->consdele = consdele;
    (*conshdlr)->constran = constran;
    (*conshdlr)->conssepa = conssepa;
-   (*conshdlr)->consenfo = consenfo;
+   (*conshdlr)->consenlp = consenlp;
+   (*conshdlr)->consenps = consenps;
    (*conshdlr)->conschck = conschck;
    (*conshdlr)->consprop = consprop;
    (*conshdlr)->conshdlrdata = conshdlrdata;
@@ -360,10 +363,9 @@ RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constrain
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constraint handler */
+RETCODE SCIPconshdlrEnforceLPSol(       /**< calls enforcing method of constraint handler for LP solutions */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
-   Bool             lpvalid,            /**< is the LP being processed at the current node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -371,10 +373,10 @@ RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constrain
    assert(set != NULL);
    assert(result != NULL);
 
-   if( conshdlr->consenfo != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
+   if( conshdlr->consenlp != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
    {
-      debugMessage("enforcing constraints of handler <%s>\n", conshdlr->name);
-      CHECK_OKAY( conshdlr->consenfo(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, lpvalid, result) );
+      debugMessage("enforcing constraints of handler <%s> for LP solutions\n", conshdlr->name);
+      CHECK_OKAY( conshdlr->consenlp(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
       if( *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_SEPARATED
@@ -382,7 +384,39 @@ RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constrain
          && *result != SCIP_FEASIBLE )
       {
          char s[255];
-         sprintf(s, "enforcing method of constraint handler <%s> returned invalid result <%d>", 
+         sprintf(s, "enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>", 
+            conshdlr->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconshdlrEnforcePseudoSol(   /**< calls enforcing method of constraint handler for pseudo solutions */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   if( conshdlr->consenps != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
+   {
+      debugMessage("enforcing constraints of handler <%s> for pseudo solutions\n", conshdlr->name);
+      CHECK_OKAY( conshdlr->consenps(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
+      if( *result != SCIP_BRANCHED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_INFEASIBLE
+         && *result != SCIP_FEASIBLE )
+      {
+         char s[255];
+         sprintf(s, "enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>", 
             conshdlr->name, *result);
          errorMessage(s);
          return SCIP_INVALIDRESULT;

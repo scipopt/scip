@@ -104,6 +104,8 @@ struct Col
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    Real             farkas;             /**< value in dual farkas infeasibility proof */
+   Real             strongdown;         /**< strong branching information for downwards branching */
+   Real             strongup;           /**< strong branching information for upwards branching */
    int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
@@ -113,6 +115,7 @@ struct Col
    int              numneg;             /**< number of negative coefficients */
    int              validredcostlp;     /**< lp number for which reduced cost value is valid */
    int              validfarkaslp;      /**< lp number for which farkas value is valid */
+   int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
@@ -200,8 +203,8 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    COL**            col,                /**< pointer to column data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
@@ -292,6 +295,17 @@ Real SCIPcolGetFarkas(                  /**< gets the farkas value of a column i
    );
 
 extern
+RETCODE SCIPcolGetStrongbranch(         /**< gets strong branching information on a column variable */
+   COL*             col,                /**< LP column */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
+   Real             upperbound,         /**< actual global upper bound */
+   int              itlim,              /**< iteration limit for strong branchings */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up                  /**< stores dual bound after branching column up */
+   );
+
+extern
 void SCIPcolPrint(                      /**< output column to file stream */
    COL*             col,                /**< LP column */
    const SET*       set,                /**< global SCIP settings */
@@ -308,8 +322,8 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    ROW**            row,                /**< pointer to LP row data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */

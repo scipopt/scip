@@ -470,9 +470,6 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
    numlp++;
 
-   todoMessage("can presolving be turned on? it has to be turned off because dual farkas doesn't work if presolver detected infeasibility");
-   /*CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );*/
-   
    return SCIP_OKAY;
 }
 
@@ -1039,9 +1036,8 @@ RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasib
 
 RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iterations on all candidates */
    LPI*             lpi,                /**< LP interface structure */
-   const Real*      psol,               /**< primal LP solution vector */
-   int              ncand,              /**< size of candidate list */
    const int*       cand,               /**< candidate list */
+   int              ncand,              /**< size of candidate list */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching candidate down */
    Real*            up                  /**< stores dual bound after branching candidate up */

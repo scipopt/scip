@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.17 2003/02/20 14:10:18 bzfpfend Exp $
+# $Id: Makefile,v 1.18 2003/02/25 16:01:49 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -87,7 +87,8 @@ NAME		=	scip
 
 #-----------------------------------------------------------------------------
 
-LIBOBJ		=	buffer.o \
+LIBOBJ		=	branch.o \
+			buffer.o \
 			cons.o \
 			cons_integral.o \
 			cons_linear.o \

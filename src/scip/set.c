@@ -55,7 +55,7 @@
 
 /* LP solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ         2 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ        35 /**< frequency for solving LP at the nodes */
 
 
 /* Pricing */
@@ -80,14 +80,14 @@
 
 /* Tree */
 
-/*#define SCIP_DEFAULT_NODELIMIT     INT_MAX*/ /**< maximal number of nodes to create */
-#define SCIP_DEFAULT_NODELIMIT      100000 /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT     INT_MAX /**< maximal number of nodes to create */
+/*#define SCIP_DEFAULT_NODELIMIT    10000000*/ /**< maximal number of nodes to create */
 
 
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ      1000000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -506,6 +506,8 @@ Bool SCIPsetIsEQ(                       /**< checks, if values are in range of e
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( ABS(val1-val2) <= set->epsilon );
 }
 
@@ -515,6 +517,8 @@ Bool SCIPsetIsL(                        /**< checks, if val1 is (more than epsil
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 < val2 - set->epsilon );
 }
 
@@ -524,6 +528,8 @@ Bool SCIPsetIsLE(                       /**< checks, if val1 is not (more than e
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 <= val2 + set->epsilon );
 }
 
@@ -533,6 +539,8 @@ Bool SCIPsetIsG(                        /**< checks, if val1 is (more than epsil
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 > val2 + set->epsilon );
 }
 
@@ -542,6 +550,8 @@ Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than e
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 >= val2 - set->epsilon );
 }
 
@@ -550,6 +560,8 @@ Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilo
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return( ABS(val) <= set->epsilon );
 }
 
@@ -558,6 +570,8 @@ Bool SCIPsetIsPos(                      /**< checks, if value is greater than ep
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return( val > set->epsilon );
 }
 
@@ -566,6 +580,8 @@ Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -eps
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return( val < -set->epsilon );
 }
 
@@ -575,6 +591,8 @@ Bool SCIPsetIsSumEQ(                    /**< checks, if values are in range of s
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( ABS(val1-val2) <= set->sumepsilon );
 }
 
@@ -584,6 +602,8 @@ Bool SCIPsetIsSumL(                     /**< checks, if val1 is (more than sumep
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 < val2 - set->sumepsilon );
 }
 
@@ -593,6 +613,8 @@ Bool SCIPsetIsSumLE(                    /**< checks, if val1 is not (more than s
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 <= val2 + set->sumepsilon );
 }
 
@@ -602,6 +624,8 @@ Bool SCIPsetIsSumG(                     /**< checks, if val1 is (more than sumep
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 > val2 + set->sumepsilon );
 }
 
@@ -611,6 +635,8 @@ Bool SCIPsetIsSumGE(                    /**< checks, if val1 is not (more than s
    Real             val2                /**< second value to be compared */
    )
 {
+   assert(set != NULL);
+
    return( val1 >= val2 - set->sumepsilon );
 }
 
@@ -619,6 +645,8 @@ Bool SCIPsetIsSumZero(                  /**< checks, if value is in range sumeps
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return( ABS(val) <= set->sumepsilon );
 }
 
@@ -627,6 +655,8 @@ Bool SCIPsetIsSumPos(                   /**< checks, if value is greater than su
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return( val > set->sumepsilon );
 }
 
@@ -635,6 +665,8 @@ Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sum
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return( val < -set->sumepsilon );
 }
 
@@ -643,6 +675,8 @@ Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infi
    Real             val                 /**< value to be compared against infinity */
    )
 {
+   assert(set != NULL);
+
    return( val >= set->infinity );
 }
 
@@ -651,6 +685,8 @@ Bool SCIPsetIsFeasible(                 /**< checks, if value is non-negative wi
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return( val >= -set->feastol );
 }
 
@@ -659,6 +695,8 @@ Real SCIPsetFloor(                      /**< rounds value down to the next integ
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return floor(val + set->feastol);
 }
 
@@ -667,7 +705,19 @@ Real SCIPsetCeil(                       /**< rounds value up to the next integer
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return ceil(val - set->feastol);
+}
+
+Real SCIPsetFrac(                       /**< returns fractional part of value, i.e. x - floor(x) */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to return fractional part for */
+   )
+{
+   assert(set != NULL);
+
+   return val - SCIPsetFloor(set, val);
 }
 
 Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within the LP feasibility bounds */
@@ -675,8 +725,36 @@ Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within
    Real             val                 /**< value to be compared against zero */
    )
 {
+   assert(set != NULL);
+
    return (SCIPsetCeil(set, val) - val <= set->feastol);
 }
+
+Bool SCIPsetIsFracIntegral(             /**< checks, if given fractional part is smaller than feastol */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(set != NULL);
+   assert(val >= -set->feastol);
+   assert(val < 1.0);
+
+   return (val <= set->feastol);
+}
+
+Bool SCIPsetIsFixed(                    /**< checks, if the given integer bounds correspond to a fixed interval */
+   const SET*       set,                /**< global SCIP settings */
+   Real             lb,                 /**< lower integer bound */
+   Real             ub                  /**< upper integer bound */
+   )
+{
+   assert(set != NULL);
+   assert(SCIPsetIsIntegral(set, lb));
+   assert(SCIPsetIsIntegral(set, ub));
+
+   return SCIPsetIsEQ(set, lb, ub);
+}
+
 
 #endif
 

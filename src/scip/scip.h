@@ -107,6 +107,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "tree.h"
 #include "nodesel.h"
 #include "disp.h"
+#include "branch.h"
 
 
 extern
@@ -225,6 +226,21 @@ RETCODE SCIPgetActVarSol(               /**< gets solution value for variable in
    );
 
 extern
+RETCODE SCIPgetLPBranchCands(           /**< gets branching candidates for LP solution branching (fractional variables) */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
+   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   );
+
+extern
+RETCODE SCIPgetPseudoBranchCands(       /**< gets branching candidates for pseudo solution branching (nonfixed variables) */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
+   int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
+   );
+
+extern
 RETCODE SCIPcreateRow(                  /**< creates and captures an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
@@ -339,7 +355,8 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
    DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
    DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
-   DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
+   DECL_CONSENLP((*consenlp)),          /**< enforcing constraints for LP solutions */
+   DECL_CONSENPS((*consenps)),          /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
    DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */

@@ -91,6 +91,7 @@ void SCIPstatReset(                     /**< reset statistics to the data before
    stat->nlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
+   stat->nstrongbranch = 0;
    stat->nnodes = 0;
    stat->nboundchanges = 0;
    stat->lastdispnode = 0;

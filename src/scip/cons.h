@@ -96,16 +96,12 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  */
 #define DECL_CONSSEPA(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
 
-/** constraint enforcing method of constraint handler
+/** constraint enforcing method of constraint handler for LP solutions
  *
- *  The method is called at the end of the node processing loop. The parameter "lpvalid" indicates, if the
- *  LP was processed at the current node. If "lpvalid" is TRUE, an optimal LP solution exists, and the LP
- *  solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
+ *  The method is called at the end of the node processing loop for a node where the LP was solved.
+ *  The LP solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
  *  branching, reducing a variable's domain to exclude the solution or separating the solution with a valid
  *  cutting plane.
- *  If "lpvalid" is FALSE, only the pseudosolution exists, which has to be checked for feasibility. If possible,
- *  an infeasibility should be resolved by branching or reducing a variable's domain. Separating a cutting plane
- *  is not allowed, because this would only work at nodes, where the LP is solved.
  *
  *  The enforcing methods of the active constraint handlers are called in decreasing order of their enforcing
  *  priorities until the first constraint handler returned with the value SCIP_BRANCHED, SCIP_REDUCEDDOM, or
@@ -117,25 +113,51 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  solutions must have an enforcing priority greater than zero (e.g. the SOS-constraint incorporates
  *  SOS-branching on non-integral solutions).
  *  If the solution is integral and one of the constraints of the constraint handler is violated, the
- *  constraint handler has to branch or to create a cutting plane -- otherwise, the infeasibility cannot be
- *  resolved.
+ *  constraint handler has to branch, to reduce a variable's domain, or to create a cutting plane -- otherwise,
+ *  the infeasibility cannot be resolved.
  *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
- *    lpvalid         : is the LP being processed at the current node? (see above)
  *    result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
  *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied
  *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced
- *    SCIP_SEPARATED  : at least one constraint is infeasible, and a cutting plane was generated (only if "lpvalid" is TRUE)
+ *    SCIP_SEPARATED  : at least one constraint is infeasible, and a cutting plane was generated
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENFO(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, Bool lpvalid, RESULT* result)
+#define DECL_CONSENLP(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
+
+/** constraint enforcing method of constraint handler for pseudo solutions
+ *
+ *  The method is called at the end of the node processing loop for a node where the LP was not solved.
+ *  The pseudo solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
+ *  branching or reducing a variable's domain to exclude the solution. Separation is not possible, since the
+ *  LP is not processed at the current node. All LP informations like LP solution, slack values, or reduced costs
+ *  are invalid and must not be accessed.
+ *
+ *  Like in the enforcing method for LP solutions, the enforcing methods of the active constraint handlers are
+ *  called in decreasing order of their enforcing priorities until the first constraint handler returned with
+ *  the value SCIP_BRANCHED or SCIP_REDUCEDDOM.
+ *
+ *  input:
+ *    conshdlr        : the constraint handler itself
+ *    scip            : SCIP main data structure
+ *    conss           : array of constraints to process
+ *    nconss          : number of constraints to process
+ *    result          : pointer to store the result of the enforcing call
+ *
+ *  possible return values for *result:
+ *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied
+ *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced
+ *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
+ *    SCIP_FEASIBLE   : all constraints of the handler are feasible
+ */
+#define DECL_CONSENPS(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
@@ -222,7 +244,8 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
    DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
-   DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
+   DECL_CONSENLP((*consenlp)),          /**< enforcing constraints for LP solutions */
+   DECL_CONSENPS((*consenps)),          /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
    DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -254,10 +277,16 @@ RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constrain
    );
 
 extern
-RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constraint handler */
+RETCODE SCIPconshdlrEnforceLPSol(       /**< calls enforcing method of constraint handler for LP solutions */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
-   Bool             lpvalid,            /**< is the LP being processed at the current node? */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+extern
+RETCODE SCIPconshdlrEnforcePseudoSol(   /**< calls enforcing method of constraint handler for pseudo solutions */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

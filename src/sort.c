@@ -517,7 +517,7 @@ const int strhashshift[28] = {
 /** returns the hash value of the key (i.e. string) */
 DECL_HASHKEYVAL(SCIPhashKeyValString)
 {
-   const char* string = (const char*)key;
+   unsigned char* string = (unsigned char*)key;
    unsigned int sum;
    unsigned int val;
    int i;
@@ -527,7 +527,7 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
    while( *string != '\0' )
    {
       assert(0 <= i && i < 28);
-      val = (unsigned int)(*string);
+      val = *string;
       val <<= strhashshift[i];
       sum += val;
       i++;

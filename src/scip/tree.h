@@ -116,7 +116,7 @@ struct Node
       SIBLING       sibling;            /**< data for sibling nodes */
       CHILD         child;              /**< data for child nodes */
       LEAF          leaf;               /**< data for leaf nodes */
-      JUNCTION*     junction;           /**< data for junction nodes */
+      JUNCTION      junction;           /**< data for junction nodes */
       FORK*         fork;               /**< data for fork nodes */
       SUBROOT*      subroot;            /**< data for subroot nodes */
    } data;

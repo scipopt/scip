@@ -49,6 +49,10 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 #define DECL_NODESELINIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
 /** deinitialization method of node selector (called at problem destruction)
+ *
+ *  input:
+ *    nodesel         : the node selector itself
+ *    scip            : SCIP main data structure
  */
 #define DECL_NODESELEXIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 

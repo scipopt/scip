@@ -277,9 +277,8 @@ RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasib
 extern 
 RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iterations on all candidates */
    LPI*             lpi,                /**< LP interface structure */
-   const Real*      psol,               /**< primal LP solution vector */
-   int              ncand,              /**< size of candidate list */
    const int*       cand,               /**< candidate list */
+   int              ncand,              /**< size of candidate list */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching candidate down */
    Real*            up                  /**< stores dual bound after branching candidate up */

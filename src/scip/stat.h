@@ -48,6 +48,7 @@ struct Stat
    int              nlpiterations;      /**< number of simplex iterations (primal + dual) */
    int              nprimallpiterations;/**< number of iterations in primal simplex */
    int              nduallpiterations;  /**< number of iterations in dual simplex */
+   int              nstrongbranch;      /**< number of strong branching calls */
    int              nnodes;             /**< number of nodes processed (including active node) */
    int              nboundchanges;      /**< number of times a variable's bound has been changed */
    int              lastdispnode;       /**< last node for which an information line was displayed */

@@ -1024,8 +1024,8 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    COL**            col,                /**< pointer to column data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
@@ -1071,10 +1071,13 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    (*col)->primsol = 0.0;
    (*col)->redcost = SCIP_INVALID;
    (*col)->farkas = SCIP_INVALID;
+   (*col)->strongdown = SCIP_INVALID;
+   (*col)->strongup = SCIP_INVALID;
    (*col)->numpos = 0;
    (*col)->numneg = 0;
    (*col)->validredcostlp = -1;
    (*col)->validfarkaslp = -1;
+   (*col)->strongitlim = -1;
    (*col)->sorted = TRUE;
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
@@ -1447,6 +1450,47 @@ Real SCIPcolGetFarkas(                  /**< gets the farkas value of a column i
    return col->farkas;
 }
 
+RETCODE SCIPcolGetStrongbranch(         /**< gets strong branching information on a column variable */
+   COL*             col,                /**< LP column */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
+   Real             upperbound,         /**< actual global upper bound */
+   int              itlim,              /**< iteration limit for strong branchings */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up                  /**< stores dual bound after branching column up */
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(col->var->data.col == col);
+   assert(col->primsol < SCIP_INVALID);
+   assert(col->lpipos >= 0);
+   assert(col->inlp);
+   assert(stat != NULL);
+   assert(lp != NULL);
+   assert(lp->solved);
+   assert(itlim >= 1);
+   assert(down != NULL);
+   assert(up != NULL);
+
+   if( itlim > col->strongitlim )
+   {
+      debugMessage("calling strong branching for variable <%s> with %d iterations\n", col->var->name, itlim);
+      stat->nstrongbranch++;
+      col->strongitlim = itlim;
+      CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, 1, itlim, &col->strongdown, &col->strongup) );
+      col->strongdown = MIN(col->strongdown, upperbound);
+      col->strongup = MIN(col->strongup, upperbound);
+   }
+   assert(col->strongdown < SCIP_INVALID);
+   assert(col->strongup < SCIP_INVALID);
+
+   *down = col->strongdown;
+   *up = col->strongup;
+
+   return SCIP_OKAY;
+}
+
 Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member of actual LP */
    COL*             col                 /**< LP column */
    )
@@ -1528,8 +1572,8 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    ROW**            row,                /**< pointer to LP row data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
@@ -2242,8 +2286,11 @@ RETCODE lpFlushDelCols(                 /**< applies all cached column removals 
          lp->lpicols[i]->primsol = 0.0;
          lp->lpicols[i]->redcost = SCIP_INVALID;
          lp->lpicols[i]->farkas = SCIP_INVALID;
+         lp->lpicols[i]->strongdown = SCIP_INVALID;
+         lp->lpicols[i]->strongup = SCIP_INVALID;
          lp->lpicols[i]->validredcostlp = -1;
          lp->lpicols[i]->validfarkaslp = -1;
+         lp->lpicols[i]->strongitlim = -1;
       }
       lp->nlpicols = lp->lpifirstchgcol;
    }
@@ -2336,8 +2383,11 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
       col->primsol = SCIP_INVALID;
       col->redcost = SCIP_INVALID;
       col->farkas = SCIP_INVALID;
+      col->strongdown = SCIP_INVALID;
+      col->strongup = SCIP_INVALID;
       col->validredcostlp = -1;
       col->validfarkaslp = -1;
+      col->strongitlim = -1;
       col->lbchanged = FALSE;
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
@@ -3241,10 +3291,6 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
    Real* dualsol;
    Real* activity;
    Real* redcost;
-#if 0 /* ??? */
-   int colsize;
-   int rowsize;
-#endif
    int c;
    int r;
 
@@ -3255,20 +3301,11 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
    assert(memhdr != NULL);
 
    /* get temporary memory */
-#if 0 /* ??? */
-   colsize = SCIPsetCalcMemGrowSize(set, lp->nlpicols);
-   rowsize = SCIPsetCalcMemGrowSize(set, lp->nlpirows);
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, primsol, colsize) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, dualsol, rowsize) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, activity, rowsize) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, redcost, colsize) );
-#else
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, primsol, lp->nlpicols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, dualsol, lp->nlpirows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, activity, lp->nlpirows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, redcost, lp->nlpicols) );
-#endif
-
+   
    CHECK_OKAY( SCIPlpiGetSol(lp->lpi, &lp->objval, primsol, dualsol, activity, redcost) );
 
    debugMessage("LP solution: obj=%f\n", lp->objval);
@@ -3290,17 +3327,10 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
    }
 
    /* free temporary memory */
-#if 0 /* ??? */
-   freeBlockMemoryArray(memhdr, primsol, colsize);
-   freeBlockMemoryArray(memhdr, dualsol, rowsize);
-   freeBlockMemoryArray(memhdr, activity, rowsize);
-   freeBlockMemoryArray(memhdr, redcost, colsize);
-#else
    SCIPsetReleaseBufferArray(set, redcost);
    SCIPsetReleaseBufferArray(set, activity);
    SCIPsetReleaseBufferArray(set, dualsol);
    SCIPsetReleaseBufferArray(set, primsol);
-#endif
 
    return SCIP_OKAY;
 }

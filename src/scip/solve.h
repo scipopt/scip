@@ -51,6 +51,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
    SEPA*            sepa,               /**< separation storage */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal              /**< primal data */
    );
