@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.18 2003/02/25 16:01:49 bzfpfend Exp $
+# $Id: Makefile,v 1.19 2003/03/10 14:09:06 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -88,6 +88,8 @@ NAME		=	scip
 #-----------------------------------------------------------------------------
 
 LIBOBJ		=	branch.o \
+			branch_mostinf.o \
+			branch_leastinf.o \
 			buffer.o \
 			cons.o \
 			cons_integral.o \
@@ -95,6 +97,7 @@ LIBOBJ		=	branch.o \
 			cutpool.o \
 			disp.o \
 			disp_default.o \
+			event.o \
 			heur.o \
 			lp.o \
 			mem.o \

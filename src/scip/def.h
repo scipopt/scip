@@ -29,6 +29,8 @@
 
 #include <limits.h>
 
+#include "retcode.h"
+
 
 
 #define SCIP_VERSION                 10 /**< SCIP version number (multiplied by 100 to get integer number) */
@@ -36,7 +38,7 @@
 
 
 #ifndef NDEBUG
-#define CHECK_OKAY(x) { int _restat_;                                                                       \
+#define CHECK_OKAY(x) { RETCODE _restat_;                                                                       \
                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                         {                                                                                   \
                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \

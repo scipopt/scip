@@ -373,6 +373,20 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    );
 
 extern
+void SCIPvarAdjustLb(                   /**< adjust lower bound to integral value, if variable is integral */
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            lb                  /**< pointer to lower bound to adjust */
+   );
+
+extern
+void SCIPvarAdjustUb(                   /**< adjust upper bound to integral value, if variable is integral */
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            ub                  /**< pointer to upper bound to adjust */
+   );
+
+extern
 RETCODE SCIPvarChgObj(                  /**< changes objective value of variable */
    VAR*             var,                /**< variable to change, must not be member of the problem */
    Real             newobj              /**< new objective value for variable */

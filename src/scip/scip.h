@@ -105,6 +105,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "disp.h"
 #include "branch.h"
 #include "event.h"
+#include "heur.h"
 
 
 
@@ -294,6 +295,22 @@ RETCODE SCIPgetRowActivityBounds(       /**< returns the minimal and maximal act
    );
 
 extern
+RETCODE SCIPgetRowActivityResiduals(    /**< gets activity bounds for row after setting variable to zero */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   VAR*             var,                /**< variable to calculate activity residual for */
+   Real             val,                /**< coefficient value of variable in linear constraint */
+   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
+   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
+   );
+
+extern
+RETCODE SCIPinvalidRowActivityBounds(   /**< invalidates activity bounds, such that they are recalculated in next get */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
 RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in the last LP solution */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
@@ -388,6 +405,27 @@ RETCODE SCIPfindConsHdlr(               /**< finds the constraint handler of the
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of constraint handler */
    CONSHDLR**       conshdlr            /**< pointer for storing the constraint handler (returns NULL, if not found) */
+   );
+
+extern
+RETCODE SCIPincludeHeur(                /**< creates a primal heuristic and includes it in SCIP */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of primal heuristic */
+   const char*      desc,               /**< description of primal heuristic */
+   int              priority,           /**< priority of the primal heuristic */
+   int              freq,               /**< frequency for calling primal heuristic */
+   DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
+   DECL_HEURINIT((*heurinit)),          /**< initialise primal heuristic */
+   DECL_HEUREXIT((*heurexit)),          /**< deinitialise primal heuristic */
+   DECL_HEUREXEC((*heurexec)),          /**< execution method of primal heuristic */
+   HEURDATA*        heurdata            /**< primal heuristic data */
+   );
+
+extern
+RETCODE SCIPfindHeur(                   /**< finds the primal heuristic of the given name */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of primal heuristic */
+   HEUR**           heur                /**< pointer for storing the primal heuristic (returns NULL, if not found) */
    );
 
 extern
@@ -497,16 +535,8 @@ RETCODE SCIPfindCons(                   /**< finds constraint of given name in t
    );
 
 extern
-RETCODE SCIPchgNodeBd(                  /**< changes bound of variable at the given node */
-   SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound,           /**< new value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   );
-
-extern
-RETCODE SCIPchgNodeLb(                  /**< changes lower bound of variable in the given node */
+RETCODE SCIPchgNodeLb(                  /**< changes lower bound of variable in the given node; if possible, adjust bound
+                                         *   to integral value */
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
    VAR*             var,                /**< variable to change the bound for */
@@ -514,7 +544,8 @@ RETCODE SCIPchgNodeLb(                  /**< changes lower bound of variable in 
    );
 
 extern
-RETCODE SCIPchgNodeUb(                  /**< changes upper bound of variable in the given node */
+RETCODE SCIPchgNodeUb(                  /**< changes upper bound of variable in the given node; if possible, adjust bound
+                                         *   to integral value */
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
    VAR*             var,                /**< variable to change the bound for */
@@ -522,28 +553,18 @@ RETCODE SCIPchgNodeUb(                  /**< changes upper bound of variable in 
    );
 
 extern
-RETCODE SCIPchgLocalLb(                 /**< changes lower bound of variable in the active node */
+RETCODE SCIPchgLb(                      /**< depending on SCIP's stage, changes lower bound of variable in the problem,
+                                         *   in preprocessing, or in active node; if possible, adjust bound to integral
+                                         *   value */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
    );
 
 extern
-RETCODE SCIPchgLocalUb(                 /**< changes upper bound of variable in the active node */
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   );
-
-extern
-RETCODE SCIPchgLb(                      /**< changes lower bound of variable in the problem */
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   );
-
-extern
-RETCODE SCIPchgUb(                      /**< changes upper bound of variable in the problem */
+RETCODE SCIPchgUb(                      /**< depending on SCIP's stage, changes upper bound of variable in the problem,
+                                         *   in preprocessing, or in active node; if possible, adjust bound to integral
+                                         *   value */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */

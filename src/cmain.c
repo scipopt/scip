@@ -150,8 +150,8 @@ main(int argc, char **argv)
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_SCIP( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_SCIP( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
    CHECK_SCIP( SCIPincludeNodeselBfs(scip) );
+   CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
    CHECK_SCIP( SCIPincludeBranchruleMostinf(scip) );
    CHECK_SCIP( SCIPincludeBranchruleLeastinf(scip) );
 

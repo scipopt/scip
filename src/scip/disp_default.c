@@ -40,7 +40,7 @@
 #define DISP_NAME_NODENUM       "nodenum"
 #define DISP_DESC_NODENUM       "number of processed nodes"
 #define DISP_HEAD_NODENUM       "node"
-#define DISP_WIDT_NODENUM       9
+#define DISP_WIDT_NODENUM       7
 #define DISP_PRIO_NODENUM       100000
 #define DISP_POSI_NODENUM       100
 #define DISP_STRI_NODENUM       TRUE
@@ -48,7 +48,7 @@
 #define DISP_NAME_NODESLEFT     "nodesleft"
 #define DISP_DESC_NODESLEFT     "number of unprocessed nodes"
 #define DISP_HEAD_NODESLEFT     "left"
-#define DISP_WIDT_NODESLEFT     9
+#define DISP_WIDT_NODESLEFT     7
 #define DISP_PRIO_NODESLEFT     90000
 #define DISP_POSI_NODESLEFT     200
 #define DISP_STRI_NODESLEFT     TRUE
@@ -56,7 +56,7 @@
 #define DISP_NAME_LPITERATIONS  "lpiterations"
 #define DISP_DESC_LPITERATIONS  "number of simplex iterations"
 #define DISP_HEAD_LPITERATIONS  "LP iter"
-#define DISP_WIDT_LPITERATIONS  11
+#define DISP_WIDT_LPITERATIONS  7
 #define DISP_PRIO_LPITERATIONS  30000
 #define DISP_POSI_LPITERATIONS  1000
 #define DISP_STRI_LPITERATIONS  TRUE

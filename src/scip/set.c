@@ -55,7 +55,7 @@
 
 /* LP solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ        30 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ         4 /**< frequency for solving LP at the nodes */
 
 
 /* Pricing */
@@ -81,13 +81,13 @@
 /* Tree */
 
 #define SCIP_DEFAULT_NODELIMIT LONGINT_MAX /**< maximal number of nodes to create */
-/*#define SCIP_DEFAULT_NODELIMIT    10000000*/ /**< maximal number of nodes to create */
+/*#define SCIP_DEFAULT_NODELIMIT     1000000*/ /**< maximal number of nodes to create */
 
 
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ    100000000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -146,6 +146,9 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->conshdlrs = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
+   (*set)->heurs = NULL;
+   (*set)->nheurs = 0;
+   (*set)->heurssize = 0;
    (*set)->eventhdlrs = NULL;
    (*set)->neventhdlrs = 0;
    (*set)->eventhdlrssize = 0;
@@ -200,6 +203,13 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
       CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], (*set)->scip) );
    }
    freeMemoryArrayNull((*set)->conshdlrs);
+
+   /* free primal heuristics */
+   for( i = 0; i < (*set)->nheurs; ++i )
+   {
+      CHECK_OKAY( SCIPheurFree(&(*set)->heurs[i], (*set)->scip) );
+   }
+   freeMemoryArrayNull((*set)->heurs);
 
    /* free event handlers */
    for( i = 0; i < (*set)->neventhdlrs; ++i )
@@ -321,6 +331,53 @@ RETCODE SCIPsetFindConsHdlr(            /**< finds the constraint handler of the
       if( strcmp(SCIPconshdlrGetName(set->conshdlrs[i]), name) == 0 )
       {
          *conshdlr = set->conshdlrs[i];
+         return SCIP_OKAY;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPsetIncludeHeur(             /**< inserts primal heuristic in primal heuristic list */
+   SET*             set,                /**< global SCIP settings */
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(set != NULL);
+   assert(heur != NULL);
+   assert(!SCIPheurIsInitialized(heur));
+
+   if( set->nheurs >= set->heurssize )
+   {
+      set->heurssize = SCIPsetCalcMemGrowSize(set, set->nheurs+1);
+      ALLOC_OKAY( reallocMemoryArray(set->heurs, set->heurssize) );
+   }
+   assert(set->nheurs < set->heurssize);
+   
+   set->heurs[set->nheurs] = heur;
+   set->nheurs++;
+
+   return SCIP_OKAY;
+}   
+
+RETCODE SCIPsetFindHeur(                /**< finds the primal heuristic of the given name */
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of primal heuristic */
+   HEUR**           heur                /**< pointer for storing the primal heuristic (returns NULL, if not found) */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+   assert(heur != NULL);
+
+   *heur = NULL;
+   for( i = 0; i < set->nheurs; ++i )
+   {
+      if( strcmp(SCIPheurGetName(set->heurs[i]), name) == 0 )
+      {
+         *heur = set->heurs[i];
          return SCIP_OKAY;
       }
    }
@@ -477,6 +534,12 @@ RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback funct
       CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], set->scip) );
    }
 
+   /* primal heuristics */
+   for( i = 0; i < set->nheurs; ++i )
+   {
+      CHECK_OKAY( SCIPheurInit(set->heurs[i], set->scip) );
+   }
+
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
@@ -523,6 +586,12 @@ RETCODE SCIPsetExitCallbacks(           /**< calls exit methods of all user call
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], set->scip) );
+   }
+
+   /* primal heuristics */
+   for( i = 0; i < set->nheurs; ++i )
+   {
+      CHECK_OKAY( SCIPheurExit(set->heurs[i], set->scip) );
    }
 
    /* event handlers */

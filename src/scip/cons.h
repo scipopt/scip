@@ -197,7 +197,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
- *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible for the actual domains
+ *    SCIP_CUTOFF     : at least one constraint is infeasible for the actual domains -> node is infeasible
  *    SCIP_REDUCEDDOM : at least one domain reduction was found
  *    SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
  *    SCIP_DIDNOTRUN  : the propagator was skipped
@@ -306,7 +306,6 @@ extern
 RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
    int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -334,6 +333,11 @@ CONS** SCIPconshdlrGetConss(            /**< gets constraints array of constrain
 
 extern
 int SCIPconshdlrGetNConss(              /**< gets number of constraints in constraints array of constraint handler */
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+extern
+int SCIPconshdlrGetPropfreq(            /**< gets propagation frequency of constraint handler */
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

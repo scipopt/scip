@@ -518,8 +518,8 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    CONSHDLR** conshdlrs_chck;
    NODE* actnode;
    RESULT result;
-   Bool nodeinfeasible;
-   Bool solinfeasible;
+   Bool cutoff;
+   Bool infeasible;
    Bool solveagain;
    Bool propagain;
    int h;
@@ -588,27 +588,27 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
       if( actnode == NULL )
          break;
 
-      debugMessage("Processing node %lld in depth %d\n", stat->nnodes, actnode->depth);
+      debugMessage("Processing node %lld in depth %d, %d siblings\n", stat->nnodes, actnode->depth, tree->nsiblings);
       
       /* presolve node */
       todoMessage("node presolving");
 
       /* domain propagation */
       todoMessage("move domain propagation into an own method; limit number of loops");
-      nodeinfeasible = FALSE;
+      cutoff = FALSE;
       do
       {
          propagain = FALSE;
-         for( h = 0; h < set->nconshdlrs && !nodeinfeasible; ++h )
+         for( h = 0; h < set->nconshdlrs && !cutoff; ++h )
          {
-            CHECK_OKAY( SCIPconshdlrPropagate(conshdlrs_enfo[h], set, stat, actnode->depth, &result) );
+            CHECK_OKAY( SCIPconshdlrPropagate(conshdlrs_enfo[h], set, actnode->depth, &result) );
             propagain |= (result == SCIP_REDUCEDDOM);
-            nodeinfeasible |= (result == SCIP_INFEASIBLE);
+            cutoff |= (result == SCIP_CUTOFF);
          }
       }
-      while( propagain && !nodeinfeasible );
+      while( propagain && !cutoff );
 
-      if( nodeinfeasible )
+      if( cutoff )
       {
          debugMessage("node preprocessing determined that node is infeasible\n");
          tree->actnode->lowerbound = primal->upperbound;
@@ -629,7 +629,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
          do
          {
             solveagain = FALSE;
-            solinfeasible = FALSE;
+            infeasible = FALSE;
             
             /* check, if we want to solve the LP at this node */
             if( tree->actnodehaslp )
@@ -649,18 +649,18 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
             if( SCIPsetIsGE(set, tree->actnode->lowerbound, primal->upperbound) )
             {
                debugMessage("node is infeasible (lower=%g, upper=%g)\n", tree->actnode->lowerbound, primal->upperbound);
-               solinfeasible = TRUE;
+               infeasible = TRUE;
             }
             else
             {
                /* enforce constraints */
                CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, branchcand, primal, eventqueue,
-                              conshdlrs_enfo, &solinfeasible, &solveagain) );
+                              conshdlrs_enfo, &infeasible, &solveagain) );
             }
          }
          while( solveagain );
          
-         if( !solinfeasible )
+         if( !infeasible )
          {
             SOL* sol;
             

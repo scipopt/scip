@@ -111,8 +111,6 @@ struct Col
    int              len;                /**< number of nonzeros in column */
    int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
-   int              numpos;             /**< number of positive coefficients */
-   int              numneg;             /**< number of negative coefficients */
    int              validredcostlp;     /**< lp number for which reduced cost value is valid */
    int              validfarkaslp;      /**< lp number for which farkas value is valid */
    int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
@@ -139,8 +137,12 @@ struct Row
    Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
    Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
-   Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
-   Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
+   Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID,
+                                         *   ignoring the coefficients contributing with infinite value */
+   Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID,
+                                         *   ignoring the coefficients contributing with infinite value */
+   int              minactivityinf;     /**< number of coefficients contributing with infinite value to minactivity */
+   int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
@@ -500,6 +502,23 @@ RETCODE SCIProwGetActivityBounds(       /**< returns the minimal and maximal act
    LP*              lp,                 /**< actual LP data */
    Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
    Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
+   );
+
+extern
+RETCODE SCIProwGetActivityResiduals(    /**< gets activity bounds for row after setting variable to zero */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   VAR*             var,                /**< variable to calculate activity residual for */
+   Real             val,                /**< coefficient value of variable in linear constraint */
+   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
+   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
+   );
+
+extern
+RETCODE SCIProwInvalidActivityBounds(   /**< invalidates activity bounds, such that they are recalculated in next get */
+   ROW*             row                 /**< LP row */
    );
 
 extern

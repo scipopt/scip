@@ -31,7 +31,6 @@
 #include "message.h"
 #include "memory.h"
 
-#define DEBUG 1
 
 
 

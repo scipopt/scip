@@ -141,7 +141,7 @@ void SCIPsolPrint(                      /**< outputs non-zero elements of soluti
    );
 
 extern
-int SCIPsolGetNodenum(                  /**< gets node number, where this solution was found */
+Longint SCIPsolGetNodenum(              /**< gets node number, where this solution was found */
    SOL*             sol                 /**< primal CIP solution */
    );
 

@@ -385,7 +385,8 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             if( !added )
             {
                /* a column not in LP that doesn't have zero in its bounds was added by bound checking above */
-               assert(col->var->dom.lb <= 0.0 && 0.0 <= col->var->dom.ub);
+               assert(!SCIPsetIsPos(set, col->var->dom.lb));
+               assert(!SCIPsetIsNeg(set, col->var->dom.ub));
                
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {

@@ -584,6 +584,7 @@ RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes
    )
 {
    DOMCHG* domchg;
+   int nboundchg;
 
    assert(domchgdyn != NULL);
    assert(domchgdyn->domchg != NULL);
@@ -592,7 +593,8 @@ RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes
    debugMessage("(1) adding bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", oldbound, newbound, var->name, domchgdyn->domchg,
       *domchgdyn->domchg);
-   CHECK_OKAY( ensureBoundchgSize(domchgdyn, memhdr, set, domchgdyn->boundchgsize+1) );
+   nboundchg = (*domchgdyn->domchg == NULL ? 0 : (*domchgdyn->domchg)->nboundchg);
+   CHECK_OKAY( ensureBoundchgSize(domchgdyn, memhdr, set, nboundchg+1) );
    debugMessage("(2) adding bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", oldbound, newbound, var->name, domchgdyn->domchg,
       *domchgdyn->domchg);
@@ -619,12 +621,14 @@ RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes 
    )
 {
    DOMCHG* domchg;
+   int nholechg;
 
    assert(domchgdyn != NULL);
    assert(domchgdyn->domchg != NULL);
    assert(ptr != NULL);
 
-   CHECK_OKAY( ensureHolechgSize(domchgdyn, memhdr, set, domchgdyn->holechgsize+1) );
+   nholechg = (*domchgdyn->domchg == NULL ? 0 : (*domchgdyn->domchg)->nholechg);
+   CHECK_OKAY( ensureHolechgSize(domchgdyn, memhdr, set, nholechg+1) );
 
    domchg = *domchgdyn->domchg;
    assert(domchg != NULL);
@@ -1512,6 +1516,38 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    default:
       errorMessage("Unknown bound type");
       return SCIP_INVALIDDATA;
+   }
+}
+
+void SCIPvarAdjustLb(                   /**< adjust lower bound to integral value, if variable is integral */
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            lb                  /**< pointer to lower bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(lb != NULL);
+
+   if( var->vartype != SCIP_VARTYPE_CONTINOUS )
+   {
+      /* adjust new bound to integral value */
+      *lb = SCIPsetCeil(set, *lb);
+   }
+}
+
+void SCIPvarAdjustUb(                   /**< adjust upper bound to integral value, if variable is integral */
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            ub                  /**< pointer to upper bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(ub != NULL);
+
+   if( var->vartype != SCIP_VARTYPE_CONTINOUS )
+   {
+      /* adjust new bound to integral value */
+      *ub = SCIPsetFloor(set, *ub);
    }
 }
 

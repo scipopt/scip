@@ -38,8 +38,11 @@ enum Result
    SCIP_SEPARATED   =   6,            /**< the method added a cutting plane */
    SCIP_REDUCEDDOM  =   7,            /**< the method reduced the domain of a variable */
    SCIP_BRANCHED    =   8,            /**< the method created a branching */
-   SCIP_SUCCESS     =   9,            /**< the method was successfully executed */  
-   SCIP_FAILURE     =  10             /**< the method's execution failed */
+   SCIP_FOUNDSOL    =   9,            /**< the method found a feasible primal solution */
+   SCIP_SUCCESS     =  10             /**< the method was successfully executed */  
+#if 0
+   SCIP_FAILURE     =  11             /**< the method's execution failed */
+#endif
 };
 typedef enum Result RESULT;           /**< result codes for SCIP callback methods */
 

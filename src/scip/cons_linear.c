@@ -64,8 +64,10 @@ typedef struct LinCons LINCONS;         /**< externally stored linear constraint
 #define CONSHDLR_SEPAPRIORITY  +1000000
 #define CONSHDLR_ENFOPRIORITY  -1000000
 #define CONSHDLR_CHCKPRIORITY  -1000000
-#define CONSHDLR_PROPFREQ             3
+#define CONSHDLR_PROPFREQ             4
 #define CONSHDLR_NEEDSCONS         TRUE /**< the constraint handler should only be called, if linear constraints exist */
+
+#define TIGHTENBOUNDSFREQ             1 /**< multiplier on propagation frequency, how often the bounds are tightened */
 
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
@@ -79,8 +81,12 @@ struct LinCons
    EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             rhs;                /**< right hand side of row */
-   Real             minactivity;        /**< minimal value w.r.t. the variable's bounds for the constraint's activity */
-   Real             maxactivity;        /**< maximal value w.r.t. the variable's bounds for the constraint's activity */
+   Real             minactivity;        /**< minimal value w.r.t. the variable's bounds for the constraint's activity,
+                                         *   ignoring the coefficients contributing with infinite value */
+   Real             maxactivity;        /**< maximal value w.r.t. the variable's bounds for the constraint's activity,
+                                         *   ignoring the coefficients contributing with infinite value */
+   int              minactivityinf;     /**< number of coefficients contributing with infinite value to minactivity */
+   int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
    int              varssize;           /**< size of the vars- and vals-arrays */
    int              nvars;              /**< number of nonzeros in constraint */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
@@ -244,6 +250,8 @@ RETCODE linconsCreate(                  /**< creates a linear constraint data ob
    (*lincons)->rhs = rhs;
    (*lincons)->minactivity = SCIP_INVALID;
    (*lincons)->maxactivity = SCIP_INVALID;
+   (*lincons)->minactivityinf = -1;
+   (*lincons)->maxactivityinf = -1;
    (*lincons)->varssize = nvars;
    (*lincons)->nvars = nvars;
    (*lincons)->modifiable = modifiable;
@@ -432,6 +440,7 @@ RETCODE linconsToRow(                   /**< creates an LP row from a linear con
 static
 void linconsUpdateChgLb(                /**< updates minimum and maximum activity for a change in lower bound */
    LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip,               /**< SCIP data structure */
    Real             oldlb,              /**< old lower bound of variable */
    Real             newlb,              /**< new lower bound of variable */
    Real             val                 /**< coefficient of constraint entry */
@@ -439,21 +448,53 @@ void linconsUpdateChgLb(                /**< updates minimum and maximum activit
 {
    assert(lincons != NULL);
    assert(lincons->transformed);
-
+   
    if( lincons->validactivitybds )
    {
       assert(lincons->minactivity < SCIP_INVALID);
       assert(lincons->maxactivity < SCIP_INVALID);
+      assert(lincons->minactivityinf >= 0);
+      assert(lincons->maxactivityinf >= 0);
+      assert(!SCIPisInfinity(scip, oldlb));
+      assert(!SCIPisInfinity(scip, newlb));
+      
       if( val > 0.0 )
-         lincons->minactivity += val * (newlb - oldlb);
+      {
+         if( SCIPisInfinity(scip, -oldlb) )
+         {
+            assert(lincons->minactivityinf >= 1);
+            lincons->minactivityinf--;
+         }
+         else
+            lincons->minactivity -= val * oldlb;
+
+         if( SCIPisInfinity(scip, -newlb) )
+            lincons->minactivityinf++;
+         else
+            lincons->minactivity += val * newlb;
+      }
       else
-         lincons->maxactivity += val * (newlb - oldlb);
+      {
+         if( SCIPisInfinity(scip, -oldlb) )
+         {
+            assert(lincons->maxactivityinf >= 1);
+            lincons->maxactivityinf--;
+         }
+         else
+            lincons->maxactivity -= val * oldlb;
+
+         if( SCIPisInfinity(scip, -newlb) )
+            lincons->maxactivityinf++;
+         else
+            lincons->maxactivity += val * newlb;
+      }
    }
 }
 
 static
 void linconsUpdateChgUb(                /**< updates minimum and maximum activity for a change in upper bound */
    LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip,               /**< SCIP data structure */
    Real             oldub,              /**< old upper bound of variable */
    Real             newub,              /**< new upper bound of variable */
    Real             val                 /**< coefficient of constraint entry */
@@ -466,16 +507,46 @@ void linconsUpdateChgUb(                /**< updates minimum and maximum activit
    {
       assert(lincons->minactivity < SCIP_INVALID);
       assert(lincons->maxactivity < SCIP_INVALID);
+      assert(!SCIPisInfinity(scip, -oldub));
+      assert(!SCIPisInfinity(scip, -newub));
+
       if( val > 0.0 )
-         lincons->maxactivity += val * (newub - oldub);
+      {
+         if( SCIPisInfinity(scip, oldub) )
+         {
+            assert(lincons->maxactivityinf >= 1);
+            lincons->maxactivityinf--;
+         }
+         else
+            lincons->maxactivity -= val * oldub;
+
+         if( SCIPisInfinity(scip, newub) )
+            lincons->maxactivityinf++;
+         else
+            lincons->maxactivity += val * newub;
+      }
       else
-         lincons->minactivity += val * (newub - oldub);
+      {
+         if( SCIPisInfinity(scip, oldub) )
+         {
+            assert(lincons->minactivityinf >= 1);
+            lincons->minactivityinf--;
+         }
+         else
+            lincons->minactivity -= val * oldub;
+
+         if( SCIPisInfinity(scip, newub) )
+            lincons->minactivityinf++;
+         else
+            lincons->minactivity += val * newub;
+      }
    }
 }
 
 static
 void linconsUpdateAddVar(               /**< updates minimum and maximum activity for variable addition */
    LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable of constraint entry */
    Real             val                 /**< coefficient of constraint entry */
    )
@@ -488,9 +559,242 @@ void linconsUpdateAddVar(               /**< updates minimum and maximum activit
       assert(lincons->minactivity < SCIP_INVALID);
       assert(lincons->maxactivity < SCIP_INVALID);
 
-      linconsUpdateChgLb(lincons, 0.0, SCIPvarGetLb(var), val);
-      linconsUpdateChgUb(lincons, 0.0, SCIPvarGetUb(var), val);
+      linconsUpdateChgLb(lincons, scip, 0.0, SCIPvarGetLb(var), val);
+      linconsUpdateChgUb(lincons, scip, 0.0, SCIPvarGetUb(var), val);
    }
+}
+
+static
+void linconsCalcActivityBounds(         /**< calculates minimum and maximum activity for constraint */
+   LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   int i;
+   
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+   assert(!lincons->validactivitybds);
+   assert(lincons->minactivity >= SCIP_INVALID);
+   assert(lincons->maxactivity >= SCIP_INVALID);
+   
+   lincons->validactivitybds = TRUE;
+   lincons->minactivity = 0.0;
+   lincons->maxactivity = 0.0;
+   lincons->minactivityinf = 0;
+   lincons->maxactivityinf = 0;
+
+   for( i = 0; i < lincons->nvars; ++ i )
+      linconsUpdateAddVar(lincons, scip, lincons->vars[i], lincons->vals[i]);
+}
+
+static
+void linconsPrint(                      /**< prints linear constraint to file stream */
+   LINCONS*         lincons,            /**< linear constraint data object */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int v;
+
+   assert(lincons != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   /* print left hand side */
+   fprintf(file, "%+f <= ", lincons->lhs);
+
+   /* print coefficients */
+   if( lincons->nvars == 0 )
+      fprintf(file, "0 ");
+   for( v = 0; v < lincons->nvars; ++v )
+   {
+      assert(lincons->vars[v] != NULL);
+      assert(lincons->vars[v]->name != NULL);
+      fprintf(file, "%+f%s ", lincons->vals[v], lincons->vars[v]->name);
+   }
+
+   /* print right hand side */
+   fprintf(file, "<= %+f\n", lincons->rhs);
+}
+
+static
+RETCODE consdataGetActivityBounds(      /**< gets activity bounds for constraint */
+   CONSDATA*        consdata,           /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            minactivity,        /**< pointer to store the minimal activity */
+   Real*            maxactivity         /**< pointer to store the maximal activity */
+   )
+{
+   assert(consdata != NULL);
+   assert(scip != NULL);
+   assert(minactivity != NULL);
+   assert(maxactivity != NULL);
+
+   if( consdata->islprow )
+   {
+      CHECK_OKAY( SCIPgetRowActivityBounds(scip, consdata->data.row, minactivity, maxactivity) );
+   }
+   else
+   {
+      LINCONS* lincons;
+
+      lincons = consdata->data.lincons;
+      assert(lincons != NULL);
+      if( !lincons->validactivitybds )
+         linconsCalcActivityBounds(lincons, scip);
+      assert(lincons->minactivity < SCIP_INVALID);
+      assert(lincons->maxactivity < SCIP_INVALID);
+
+      if( lincons->minactivityinf > 0 )
+         *minactivity = -SCIPinfinity(scip);
+      else
+         *minactivity = lincons->minactivity;
+      if( lincons->maxactivityinf > 0 )
+         *maxactivity = SCIPinfinity(scip);
+      else
+         *maxactivity = lincons->maxactivity;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE consdataInvalidActivityBounds(  /**< invalidates activity bounds, such that they are recalculated in next get */
+   CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( consdata->islprow )
+   {
+      CHECK_OKAY( SCIProwInvalidActivityBounds(consdata->data.row) );
+   }
+   else
+   {
+      LINCONS* lincons;
+
+      lincons = consdata->data.lincons;
+      assert(lincons != NULL);
+      lincons->validactivitybds = FALSE;
+      lincons->minactivity = SCIP_INVALID;
+      lincons->maxactivity = SCIP_INVALID;
+      lincons->minactivityinf = -1;
+      lincons->maxactivityinf = -1;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE consdataGetActivityResiduals(   /**< gets activity bounds for constraint after setting variable to zero */
+   CONSDATA*        consdata,           /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to calculate activity residual for */
+   Real             val,                /**< coefficient value of variable in linear constraint */
+   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
+   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
+   )
+{
+   assert(consdata != NULL);
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(minresactivity != NULL);
+   assert(maxresactivity != NULL);
+
+   if( consdata->islprow )
+   {
+      CHECK_OKAY( SCIPgetRowActivityResiduals(scip, consdata->data.row, var, val, minresactivity, maxresactivity) );
+   }
+   else
+   {
+      LINCONS* lincons;
+      Real lb;
+      Real ub;
+
+      lincons = consdata->data.lincons;
+      assert(lincons != NULL);
+      if( !lincons->validactivitybds )
+         linconsCalcActivityBounds(lincons, scip);
+      assert(lincons->minactivity < SCIP_INVALID);
+      assert(lincons->maxactivity < SCIP_INVALID);
+      assert(lincons->minactivityinf >= 0);
+      assert(lincons->maxactivityinf >= 0);
+
+      lb = SCIPvarGetLb(var);
+      ub = SCIPvarGetUb(var);
+      assert(!SCIPisInfinity(scip, lb));
+      assert(!SCIPisInfinity(scip, -ub));
+
+      if( val > 0.0 )
+      {
+         if( SCIPisInfinity(scip, -lb) )
+         {
+            assert(lincons->minactivityinf >= 1);
+            if( lincons->minactivityinf >= 2 )
+               *minresactivity = -SCIPinfinity(scip);
+            else
+               *minresactivity = lincons->minactivity;
+         }
+         else
+         {
+            if( lincons->minactivityinf >= 1 )
+               *minresactivity = -SCIPinfinity(scip);
+            else
+               *minresactivity = lincons->minactivity - val * lb;
+         }
+         if( SCIPisInfinity(scip, ub) )
+         {
+            assert(lincons->maxactivityinf >= 1);
+            if( lincons->maxactivityinf >= 2 )
+               *maxresactivity = +SCIPinfinity(scip);
+            else
+               *maxresactivity = lincons->maxactivity;
+         }
+         else
+         {
+            if( lincons->maxactivityinf >= 1 )
+               *maxresactivity = +SCIPinfinity(scip);
+            else
+               *maxresactivity = lincons->maxactivity - val * ub;
+         }
+      }
+      else
+      {
+         if( SCIPisInfinity(scip, ub) )
+         {
+            assert(lincons->minactivityinf >= 1);
+            if( lincons->minactivityinf >= 2 )
+               *minresactivity = -SCIPinfinity(scip);
+            else
+               *minresactivity = lincons->minactivity;
+         }
+         else
+         {
+            if( lincons->minactivityinf >= 1 )
+               *minresactivity = -SCIPinfinity(scip);
+            else
+               *minresactivity = lincons->minactivity - val * ub;
+         }
+         if( SCIPisInfinity(scip, -lb) )
+         {
+            assert(lincons->maxactivityinf >= 1);
+            if( lincons->maxactivityinf >= 2 )
+               *maxresactivity = +SCIPinfinity(scip);
+            else
+               *maxresactivity = lincons->maxactivity;
+         }
+         else
+         {
+            if( lincons->maxactivityinf >= 1 )
+               *maxresactivity = +SCIPinfinity(scip);
+            else
+               *maxresactivity = lincons->maxactivity - val * lb;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 static
@@ -544,55 +848,217 @@ RETCODE consdataGetRhs(                 /**< gets right hand side of linear cons
 }
 
 static
-void linconsCalcActivityBounds(         /**< calculates minimum and maximum activity for constraint */
-   LINCONS*         lincons             /**< linear constraint data object */
-   )
-{
-   int i;
-   
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-   assert(!lincons->validactivitybds);
-   assert(lincons->minactivity >= SCIP_INVALID);
-   assert(lincons->maxactivity >= SCIP_INVALID);
-   
-   lincons->validactivitybds = TRUE;
-   lincons->minactivity = 0.0;
-   lincons->maxactivity = 0.0;
-   
-   for( i = 0; i < lincons->nvars; ++ i )
-      linconsUpdateAddVar(lincons, lincons->vars[i], lincons->vals[i]);
-}
-
-static
-RETCODE consdataGetActivityBounds(      /**< gets activity bounds for constraint */
+void consdataPrint(                     /**< prints linear constraint to file stream */
    CONSDATA*        consdata,           /**< constraint data */
-   SCIP*            scip,               /**< SCIP data structure */
-   Real*            minactivity,        /**< pointer to store the minimal activity */
-   Real*            maxactivity         /**< pointer to store the maximal activity */
+   FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
    assert(consdata != NULL);
-   assert(scip != NULL);
-   assert(minactivity != NULL);
-   assert(maxactivity != NULL);
 
    if( consdata->islprow )
    {
-      CHECK_OKAY( SCIPgetRowActivityBounds(scip, consdata->data.row, minactivity, maxactivity) );
+      assert(consdata->data.row != NULL);
+      SCIProwPrint(consdata->data.row, file);
+   }
+   else
+   {
+      assert(consdata->data.lincons != NULL);
+      linconsPrint(consdata->data.lincons, file);
+   }
+}
+
+static
+RETCODE tightenVarBounds(               /**< tightens bounds of a single variable due to activity bounds */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< constraint data */
+   VAR*             var,                /**< variable to tighten bounds for */
+   Real             val,                /**< coefficient value of variable in linear constraint */
+   RESULT*          result,             /**< pointer to store SCIP_CUTOFF, if node is infeasible */
+   Bool*            success             /**< pointer to store whether a bound was tightened */
+   )
+{
+   Real lb;
+   Real ub;
+   Real newlb;
+   Real newub;
+   Real minresactivity;
+   Real maxresactivity;
+   Real lhs;
+   Real rhs;
+
+   assert(var != NULL);
+   assert(!SCIPisZero(scip, val));
+   assert(result != NULL);
+   assert(success != NULL);
+
+   CHECK_OKAY( consdataGetLhs(consdata, scip, &lhs) );
+   CHECK_OKAY( consdataGetRhs(consdata, scip, &rhs) );
+   CHECK_OKAY( consdataGetActivityResiduals(consdata, scip, var, val, &minresactivity, &maxresactivity) );
+   assert(!SCIPisInfinity(scip, minresactivity));
+   assert(!SCIPisInfinity(scip, -maxresactivity));
+   
+   lb = SCIPvarGetLb(var);
+   ub = SCIPvarGetUb(var);
+   assert(SCIPisLE(scip, lb, ub));
+
+   *success = FALSE;
+   if( val > 0.0 )
+   {
+      /* check, if we can tighten the variable's bounds */
+      if( !SCIPisInfinity(scip, -minresactivity) && SCIPisG(scip, minresactivity + val * ub, rhs) )
+      {
+         /* tighten upper bound */
+         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+         newub = (rhs - minresactivity)/val;
+         if( SCIPisL(scip, newub, lb) )
+         {
+            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, newub);
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         CHECK_OKAY( SCIPchgUb(scip, var, newub) );
+         ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
+         *success = TRUE;
+         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
+      }
+      if( !SCIPisInfinity(scip, maxresactivity) && SCIPisL(scip, maxresactivity + val * lb, lhs) )
+      {
+         /* tighten lower bound */
+         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+         newlb = (lhs - maxresactivity)/val;
+         if( SCIPisG(scip, newlb, ub) )
+         {
+            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), newlb, ub);
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         CHECK_OKAY( SCIPchgLb(scip, var, newlb) );
+         lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
+         *success = TRUE;
+         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
+      }
+   }
+   else
+   {
+      /* check, if we can tighten the variable's bounds */
+      if( !SCIPisInfinity(scip, -minresactivity) && SCIPisG(scip, minresactivity + val * lb, rhs) )
+      {
+         /* tighten lower bound */
+         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+         newlb = (rhs - minresactivity)/val;
+         if( SCIPisG(scip, newlb, ub) )
+         {
+            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), newlb, ub);
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         CHECK_OKAY( SCIPchgLb(scip, var, newlb) );
+         lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
+         *success = TRUE;
+         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
+      }
+      if( !SCIPisInfinity(scip, maxresactivity) && SCIPisL(scip, maxresactivity + val * ub, lhs) )
+      {
+         /* tighten upper bound */
+         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+         newub = (lhs - maxresactivity)/val;
+         if( SCIPisL(scip, newub, lb) )
+         {
+            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, newub);
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         CHECK_OKAY( SCIPchgUb(scip, var, newub) );
+         ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
+         *success = TRUE;
+         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE consdataTightenBounds(          /**< tightens variable's bounds due to activity bounds */
+   CONSDATA*        consdata,           /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   RESULT*          result              /**< pointer to store SCIP_CUTOFF, if node is infeasible */
+   )
+{
+   Bool success;
+   int lastsuccess;
+
+   assert(consdata != NULL);
+   assert(scip != NULL);
+   assert(result != NULL);
+   assert(*result != SCIP_CUTOFF);
+
+   if( consdata->islprow )
+   {
+      ROW* row;
+      COL** cols;
+      Real* vals;
+      int ncols;
+      int c;
+
+      row = consdata->data.row;
+      cols = SCIProwGetCols(row);
+      vals = SCIProwGetVals(row);
+      ncols = SCIProwGetNNonz(row);
+      assert(ncols == 0 || (cols != NULL && vals != NULL));
+      lastsuccess = 0;
+      c = 0;
+      do
+      {
+         assert(0 <= c && c < ncols);
+         assert(cols[c] != NULL);
+         
+         CHECK_OKAY( tightenVarBounds(scip, consdata, SCIPcolGetVar(cols[c]), vals[c], result, &success) );
+         if( success )
+         {
+            *result = SCIP_REDUCEDDOM;
+            lastsuccess = c;
+         }
+         c++;
+         if( c == ncols )
+            c = 0;
+      }
+      while( c != lastsuccess && *result != SCIP_CUTOFF );
    }
    else
    {
       LINCONS* lincons;
+      VAR** vars;
+      Real* vals;
+      int nvars;
+      int v;
 
       lincons = consdata->data.lincons;
       assert(lincons != NULL);
-      if( !lincons->validactivitybds )
-         linconsCalcActivityBounds(lincons);
-      assert(lincons->minactivity < SCIP_INVALID);
-      assert(lincons->maxactivity < SCIP_INVALID);
-      *minactivity = lincons->minactivity;
-      *maxactivity = lincons->maxactivity;
+      vars = lincons->vars;
+      vals = lincons->vals;
+      nvars = lincons->nvars;
+      assert(nvars == 0 || (vars != NULL && vals != NULL));
+      lastsuccess = 0;
+      v = 0;
+      do
+      {
+         assert(0 <= v && v < nvars);
+         CHECK_OKAY( tightenVarBounds(scip, consdata, vars[v], vals[v], result, &success) );
+         if( success )
+         {
+            *result = SCIP_REDUCEDDOM;
+            lastsuccess = v;
+         }
+         v++;
+         if( v == nvars )
+            v = 0;
+      }
+      while( v != lastsuccess && *result != SCIP_CUTOFF );
    }
 
    return SCIP_OKAY;
@@ -931,6 +1397,9 @@ DECL_CONSPROP(consPropLinear)
    Real lhs;
    Real rhs;
    Bool redundant;
+   Bool tightenbounds;
+   int propfreq;
+   int actdepth;
    int c;
 
    assert(conshdlr != NULL);
@@ -940,13 +1409,42 @@ DECL_CONSPROP(consPropLinear)
 
    /*debugMessage("Prop method of linear constraints\n");*/
 
+   /* check, if we want to tighten variable's bounds */
+   propfreq = SCIPconshdlrGetPropfreq(conshdlr);
+   CHECK_OKAY( SCIPgetActDepth(scip, &actdepth) );
+   tightenbounds = (actdepth % (propfreq * TIGHTENBOUNDSFREQ) == 0);
+
    *result = SCIP_DIDNOTFIND;
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
       assert(cons != NULL);
       consdata = SCIPconsGetConsData(cons);
       assert(consdata != NULL);
+
+      if( tightenbounds )
+      {
+         /*debug(CHECK_OKAY( consdataGetActivityBounds(consdata, scip, &minactivity, &maxactivity) ));*/
+         /*debug(consdataPrint(consdata, NULL));*/
+         /*debugMessage("tighten bounds: old activity = [%g,%g]\n", minactivity, maxactivity);*/
+         CHECK_OKAY( consdataTightenBounds(consdata, scip, result) );
+#ifndef NDEBUG
+         {
+            Real newminactivity;
+            Real newmaxactivity;
+            Real recalcminactivity;
+            Real recalcmaxactivity;
+            
+            CHECK_OKAY( consdataGetActivityBounds(consdata, scip, &newminactivity, &newmaxactivity) );
+            CHECK_OKAY( consdataInvalidActivityBounds(consdata) );
+            CHECK_OKAY( consdataGetActivityBounds(consdata, scip, &recalcminactivity, &recalcmaxactivity) );
+            /*debugMessage("new activity = [%g,%g], recalculated activity = [%g,%g]\n",
+              newminactivity, newmaxactivity, recalcminactivity, recalcmaxactivity);*/
+            assert(SCIPisEQ(scip, newminactivity, recalcminactivity));
+            assert(SCIPisEQ(scip, newmaxactivity, recalcmaxactivity));
+         }
+#endif
+      }
 
       CHECK_OKAY( consdataGetActivityBounds(consdata, scip, &minactivity, &maxactivity) );
       CHECK_OKAY( consdataGetLhs(consdata, scip, &lhs) );
@@ -956,28 +1454,13 @@ DECL_CONSPROP(consPropLinear)
       {
          debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
             SCIPconsGetName(cons), minactivity, maxactivity, lhs, rhs);
-         *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
+         *result = SCIP_CUTOFF;
       }
-      else
+      else if( SCIPisGE(scip, minactivity, lhs) && SCIPisLE(scip, maxactivity, rhs) )
       {
-         redundant = TRUE;
-         if( SCIPisL(scip, minactivity, lhs) )
-         {
-            redundant = FALSE;
-            todoMessage("linear constraint propagation for left hand side");
-         }
-         if( SCIPisG(scip, maxactivity, rhs) )
-         {
-            redundant = FALSE;
-            todoMessage("linear constraint propagation for left hand side");
-         }
-         if( redundant )
-         {
-            debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, lhs, rhs);
-            todoMessage("disable redundant linear constraint");
-         }
+         debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, lhs, rhs);
+         todoMessage("disable redundant linear constraint");
       }
    }
 
@@ -1005,7 +1488,7 @@ DECL_EVENTEXEC(eventExecLinear)
    assert(scip != NULL);
    assert(event != NULL);
 
-   debugMessage("Exec method of bound change event handler for linear constraints\n");
+   /*debugMessage("Exec method of bound change event handler for linear constraints\n");*/
 
    lincons = eventdata->lincons;
    varpos = eventdata->varpos;
@@ -1023,18 +1506,18 @@ DECL_EVENTEXEC(eventExecLinear)
    }
 #endif
 
-   debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
-      eventtype, SCIPvarGetName(lincons->vars[varpos]), oldbound, newbound, lincons->minactivity, lincons->maxactivity);
+   /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
+     eventtype, SCIPvarGetName(lincons->vars[varpos]), oldbound, newbound, lincons->minactivity, lincons->maxactivity);*/
 
    if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-      linconsUpdateChgLb(lincons, oldbound, newbound, lincons->vals[varpos]);
+      linconsUpdateChgLb(lincons, scip, oldbound, newbound, lincons->vals[varpos]);
    else
    {
       assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-      linconsUpdateChgUb(lincons, oldbound, newbound, lincons->vals[varpos]);
+      linconsUpdateChgUb(lincons, scip, oldbound, newbound, lincons->vals[varpos]);
    }
 
-   debug(printf(" -> [%g,%g]\n", lincons->minactivity, lincons->maxactivity));
+   /*debug(printf(" -> [%g,%g]\n", lincons->minactivity, lincons->maxactivity));*/
 
    return SCIP_OKAY;
 }

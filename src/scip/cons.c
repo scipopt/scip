@@ -477,7 +477,6 @@ RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of c
 RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
    int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -493,7 +492,7 @@ RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constra
    {
       debugMessage("propagating constraints of handler <%s>\n", conshdlr->name);
       CHECK_OKAY( conshdlr->consprop(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss, result) );
-      if( *result != SCIP_INFEASIBLE
+      if( *result != SCIP_CUTOFF
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
@@ -555,6 +554,15 @@ int SCIPconshdlrGetNConss(              /**< gets number of constraints in const
    assert(conshdlr != NULL);
 
    return conshdlr->nconss;
+}
+
+int SCIPconshdlrGetPropfreq(            /**< gets propagation frequency of constraint handler */
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->propfreq;
 }
 
 Bool SCIPconshdlrIsInitialized(         /**< is constraint handler initialized? */

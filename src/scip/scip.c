@@ -908,6 +908,39 @@ RETCODE SCIPgetRowActivityBounds(       /**< returns the minimal and maximal act
    return SCIP_OKAY;
 }
 
+RETCODE SCIPgetRowActivityResiduals(    /**< gets activity bounds for row after setting variable to zero */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   VAR*             var,                /**< variable to calculate activity residual for */
+   Real             val,                /**< coefficient value of variable in linear constraint */
+   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
+   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
+   )
+{
+   assert(row != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetRowActivityResiduals", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   CHECK_OKAY( SCIProwGetActivityResiduals(row, scip->mem->solvemem, scip->set, scip->lp, var, val, 
+                  minresactivity, maxresactivity) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPinvalidRowActivityBounds(   /**< invalidates activity bounds, such that they are recalculated in next get */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPinvalidRowActivityBounds", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   CHECK_OKAY( SCIProwInvalidActivityBounds(row) );
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in the last LP solution */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
@@ -1142,6 +1175,46 @@ RETCODE SCIPfindConsHdlr(               /**< finds the constraint handler of the
    CHECK_OKAY( checkStage(scip, "SCIPfindConsHdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetFindConsHdlr(scip->set, name, conshdlr) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPincludeHeur(                /**< creates a primal heuristic and includes it in SCIP */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of primal heuristic */
+   const char*      desc,               /**< description of primal heuristic */
+   int              priority,           /**< priority of the primal heuristic */
+   int              freq,               /**< frequency for calling primal heuristic */
+   DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
+   DECL_HEURINIT((*heurinit)),          /**< initialise primal heuristic */
+   DECL_HEUREXIT((*heurexit)),          /**< deinitialise primal heuristic */
+   DECL_HEUREXEC((*heurexec)),          /**< execution method of primal heuristic */
+   HEURDATA*        heurdata            /**< primal heuristic data */
+   )
+{
+   HEUR* heur;
+
+   CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPheurCreate(&heur, name, desc, priority, freq,
+                  heurfree, heurinit, heurexit, heurexec, heurdata) );
+   CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPfindHeur(                   /**< finds the primal heuristic of the given name */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of primal heuristic */
+   HEUR**           heur                /**< pointer for storing the primal heuristic (returns NULL, if not found) */
+   )
+{
+   assert(name != NULL);
+   assert(heur != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPfindHeur", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetFindHeur(scip->set, name, heur) );
 
    return SCIP_OKAY;
 }
@@ -1417,28 +1490,8 @@ RETCODE SCIPfindCons(                   /**< finds constraint of given name in t
    }
 }
 
-RETCODE SCIPchgNodeBd(                  /**< changes bound of variable at the given node */
-   SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound,           /**< new value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   )
-{
-   assert(var != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPchgNodeBd", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-
-   if( node == NULL )
-      node = scip->tree->actnode;
-   
-   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, 
-                  scip->branchcand, scip->eventqueue, var, newbound, boundtype) );
-   
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPchgNodeLb(                  /**< changes lower bound of variable in the given node */
+RETCODE SCIPchgNodeLb(                  /**< changes lower bound of variable in the given node; if possible, adjust bound
+                                         *   to integral value */
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
    VAR*             var,                /**< variable to change the bound for */
@@ -1447,10 +1500,19 @@ RETCODE SCIPchgNodeLb(                  /**< changes lower bound of variable in 
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgNodeLb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   return SCIPchgNodeBd(scip, node, var, newbound, SCIP_BOUNDTYPE_LOWER);
+   if( node == NULL )
+      node = scip->tree->actnode;
+   
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, 
+                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+   
+   return SCIP_OKAY;
 }
 
-RETCODE SCIPchgNodeUb(                  /**< changes upper bound of variable in the given node */
+RETCODE SCIPchgNodeUb(                  /**< changes upper bound of variable in the given node; if possible, adjust bound
+                                         *   to integral value */
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
    VAR*             var,                /**< variable to change the bound for */
@@ -1459,55 +1521,55 @@ RETCODE SCIPchgNodeUb(                  /**< changes upper bound of variable in 
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgNodeUb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   return SCIPchgNodeBd(scip, node, var, newbound, SCIP_BOUNDTYPE_UPPER);
+   if( node == NULL )
+      node = scip->tree->actnode;
+   
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, 
+                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+   
+   return SCIP_OKAY;
 }
 
-RETCODE SCIPchgLocalLb(                 /**< changes lower bound of variable in the active node */
+RETCODE SCIPchgLb(                      /**< depending on SCIP's stage, changes lower bound of variable in the problem,
+                                         *   in preprocessing, or in active node; if possible, adjust bound to integral
+                                         *   value */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPchgLocalLb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPchgLb", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPchgNodeBd(scip, NULL, var, newbound, SCIP_BOUNDTYPE_LOWER);
-}
-
-RETCODE SCIPchgLocalUb(                 /**< changes upper bound of variable in the active node */
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPchgLocalUb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-
-   return SCIPchgNodeBd(scip, NULL, var, newbound, SCIP_BOUNDTYPE_UPPER);
-}
-
-RETCODE SCIPchgLb(                      /**< changes lower bound of variable in the problem */
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPchgLb", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIPvarAdjustLb(var, scip->set, &newbound);
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree, scip->branchcand, 
-                     scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree,
+                     scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
       if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
       {
+         errorMessage("cannot change bounds of original variables while presolving the problem");
+         return SCIP_INVALIDCALL;
+      }
+      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      {
          errorMessage("cannot change bounds of original variables while solving the problem");
          return SCIP_INVALIDCALL;
       }
-      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, scip->branchcand,
-                     scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+                     scip->tree, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
       return SCIP_OKAY;
 
    default:
@@ -1516,32 +1578,44 @@ RETCODE SCIPchgLb(                      /**< changes lower bound of variable in 
    }
 }
 
-RETCODE SCIPchgUb(                      /**< changes upper bound of variable in the problem */
+RETCODE SCIPchgUb(                      /**< depending on SCIP's stage, changes upper bound of variable in the problem,
+                                         *   in preprocessing, or in active node; if possible, adjust bound to integral
+                                         *   value */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
    )
 {
-   assert(var != NULL);
+   CHECK_OKAY( checkStage(scip, "SCIPchgUb", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( checkStage(scip, "SCIPchgUb", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIPvarAdjustUb(var, scip->set, &newbound);
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree, scip->branchcand,
-                     scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree,
+                     scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
       if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
       {
+         errorMessage("cannot change bounds of original variables while presolving the problem");
+         return SCIP_INVALIDCALL;
+      }
+      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      {
          errorMessage("cannot change bounds of original variables while solving the problem");
          return SCIP_INVALIDCALL;
       }
-      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, scip->branchcand,
-                     scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+                     scip->tree, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
       return SCIP_OKAY;
 
    default:

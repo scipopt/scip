@@ -77,6 +77,9 @@ struct Set
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
+   HEUR**           heurs;              /**< primal heuristics */
+   int              nheurs;             /**< number of primal heuristics */
+   int              heurssize;          /**< size of heurs array */
    EVENTHDLR**      eventhdlrs;         /**< event handlers */
    int              neventhdlrs;        /**< number of event handlers */
    int              eventhdlrssize;     /**< size of eventhdlrs array */
@@ -141,6 +144,19 @@ RETCODE SCIPsetFindConsHdlr(            /**< finds the constraint handler of the
    const SET*       set,                /**< global SCIP settings */
    const char*      name,               /**< name of constraint handler */
    CONSHDLR**       conshdlr            /**< pointer for storing the constraint handler (returns NULL, if not found) */
+   );
+
+extern
+RETCODE SCIPsetIncludeHeur(             /**< inserts primal heuristic in primal heuristic list */
+   SET*             set,                /**< global SCIP settings */
+   HEUR*            heur                /**< primal heuristic */
+   );
+
+extern
+RETCODE SCIPsetFindHeur(                /**< finds the primal heuristic of the given name */
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of primal heuristic */
+   HEUR**           heur                /**< pointer for storing the primal heuristic (returns NULL, if not found) */
    );
 
 extern
