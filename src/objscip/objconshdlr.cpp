@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.17 2004/10/21 14:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.18 2004/12/14 12:08:00 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -506,4 +506,37 @@ RETCODE SCIPincludeObjConshdlr(
          conshdlrdata) );
 
    return SCIP_OKAY;
+}
+
+/** returns the conshdlr object of the given name, or NULL if not existing */
+scip::ObjConshdlr* SCIPfindObjConshdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of constraint handler */
+   )
+{
+   CONSHDLR* conshdlr;
+   CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, name);
+   if( conshdlr == NULL )
+      return NULL;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->objconshdlr;
+}
+   
+/** returns the conshdlr object for the given constraint handler */
+scip::ObjConshdlr* SCIPgetObjConshdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->objconshdlr;
 }

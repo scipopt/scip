@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.12 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.13 2004/12/14 12:08:00 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -185,6 +185,20 @@ RETCODE SCIPincludeObjBranchrule(
    SCIP*            scip,               /**< SCIP data structure */
    scip::ObjBranchrule* objbranchrule,  /**< branching rule object */
    Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
+   );
+
+/** returns the branchrule object of the given name, or NULL if not existing */
+extern
+scip::ObjBranchrule* SCIPfindObjBranchrule(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of branching rule */
+   );
+
+/** returns the branchrule object for the given branching rule */
+extern
+scip::ObjBranchrule* SCIPgetObjBranchrule(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 #endif

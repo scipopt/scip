@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.4 2004/09/23 15:46:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.5 2004/12/14 12:08:01 bzfpfend Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -116,4 +116,37 @@ RETCODE SCIPincludeObjReader(
          readerdata) );
 
    return SCIP_OKAY;
+}
+
+/** returns the reader object of the given name, or NULL if not existing */
+scip::ObjReader* SCIPfindObjReader(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of file reader */
+   )
+{
+   READER* reader;
+   READERDATA* readerdata;
+
+   reader = SCIPfindReader(scip, name);
+   if( reader == NULL )
+      return NULL;
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   return readerdata->objreader;
+}
+   
+/** returns the reader object for the given file reader */
+scip::ObjReader* SCIPgetObjReader(
+   SCIP*            scip,               /**< SCIP data structure */
+   READER*          reader              /**< file reader */
+   )
+{
+   READERDATA* readerdata;
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   return readerdata->objreader;
 }

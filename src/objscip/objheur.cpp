@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.8 2004/09/23 15:46:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.9 2004/12/14 12:08:00 bzfpfend Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -152,4 +152,37 @@ RETCODE SCIPincludeObjHeur(
          heurdata) );
 
    return SCIP_OKAY;
+}
+
+/** returns the heur object of the given name, or NULL if not existing */
+scip::ObjHeur* SCIPfindObjHeur(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of primal heuristic */
+   )
+{
+   HEUR* heur;
+   HEURDATA* heurdata;
+
+   heur = SCIPfindHeur(scip, name);
+   if( heur == NULL )
+      return NULL;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->objheur;
+}
+   
+/** returns the heur object for the given primal heuristic */
+scip::ObjHeur* SCIPgetObjHeur(
+   SCIP*            scip,               /**< SCIP data structure */
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->objheur;
 }

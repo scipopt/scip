@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.1 2004/09/23 15:46:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.2 2004/12/14 12:08:01 bzfpfend Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -168,4 +168,37 @@ RETCODE SCIPincludeObjProp(
          propdata) );
 
    return SCIP_OKAY;
+}
+
+/** returns the prop object of the given name, or NULL if not existing */
+scip::ObjProp* SCIPfindObjProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of propagator */
+   )
+{
+   PROP* prop;
+   PROPDATA* propdata;
+
+   prop = SCIPfindProp(scip, name);
+   if( prop == NULL )
+      return NULL;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   return propdata->objprop;
+}
+   
+/** returns the prop object for the given propagator */
+scip::ObjProp* SCIPgetObjProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROP*            prop                /**< propagator */
+   )
+{
+   PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   return propdata->objprop;
 }

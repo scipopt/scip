@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.3 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.4 2004/12/14 12:08:01 bzfpfend Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -149,6 +149,20 @@ RETCODE SCIPincludeObjRelax(
    SCIP*            scip,               /**< SCIP data structure */
    scip::ObjRelax*  objrelax,           /**< relaxator object */
    Bool             deleteobject        /**< should the relaxator object be deleted when relaxator is freed? */
+   );
+
+/** returns the relax object of the given name, or NULL if not existing */
+extern
+scip::ObjRelax* SCIPfindObjRelax(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of relaxator */
+   );
+
+/** returns the relax object for the given relaxator */
+extern
+scip::ObjRelax* SCIPgetObjRelax(
+   SCIP*            scip,               /**< SCIP data structure */
+   RELAX*           relax               /**< relaxator */
    );
 
 #endif

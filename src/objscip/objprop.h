@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.h,v 1.1 2004/09/23 15:46:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.h,v 1.2 2004/12/14 12:08:01 bzfpfend Exp $"
 
 /**@file   objprop.h
  * @brief  C++ wrapper for propagators
@@ -186,6 +186,20 @@ RETCODE SCIPincludeObjProp(
    SCIP*            scip,               /**< SCIP data structure */
    scip::ObjProp*   objprop,            /**< propagator object */
    Bool             deleteobject        /**< should the propagator object be deleted when propagator is freed? */
+   );
+
+/** returns the prop object of the given name, or NULL if not existing */
+extern
+scip::ObjProp* SCIPfindObjProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of propagator */
+   );
+
+/** returns the prop object for the given propagator */
+extern
+scip::ObjProp* SCIPgetObjProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROP*            prop                /**< propagator */
    );
 
 #endif

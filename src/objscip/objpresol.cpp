@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.6 2004/07/01 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.7 2004/12/14 12:08:00 bzfpfend Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -190,4 +190,37 @@ RETCODE SCIPincludeObjPresol(
          presoldata) );
 
    return SCIP_OKAY;
+}
+
+/** returns the presol object of the given name, or NULL if not existing */
+scip::ObjPresol* SCIPfindObjPresol(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of presolver */
+   )
+{
+   PRESOL* presol;
+   PRESOLDATA* presoldata;
+
+   presol = SCIPfindPresol(scip, name);
+   if( presol == NULL )
+      return NULL;
+
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   return presoldata->objpresol;
+}
+   
+/** returns the presol object for the given presolver */
+scip::ObjPresol* SCIPgetObjPresol(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   PRESOLDATA* presoldata;
+
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   return presoldata->objpresol;
 }

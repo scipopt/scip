@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.5 2004/09/23 15:46:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.6 2004/12/14 12:08:00 bzfpfend Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -166,4 +166,37 @@ RETCODE SCIPincludeObjNodesel(
          nodeseldata) );
 
    return SCIP_OKAY;
+}
+
+/** returns the nodesel object of the given name, or NULL if not existing */
+scip::ObjNodesel* SCIPfindObjNodesel(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of node selector */
+   )
+{
+   NODESEL* nodesel;
+   NODESELDATA* nodeseldata;
+
+   nodesel = SCIPfindNodesel(scip, name);
+   if( nodesel == NULL )
+      return NULL;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+
+   return nodeseldata->objnodesel;
+}
+   
+/** returns the nodesel object for the given node selector */
+scip::ObjNodesel* SCIPgetObjNodesel(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODESEL*         nodesel             /**< node selector */
+   )
+{
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+
+   return nodeseldata->objnodesel;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.23 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.24 2004/12/14 12:08:00 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -720,6 +720,20 @@ RETCODE SCIPincludeObjConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
    scip::ObjConshdlr* objconshdlr,      /**< constraint handler object */
    Bool             deleteobject        /**< should the constraint handler object be deleted when conshdlr is freed? */
+   );
+
+/** returns the conshdlr object of the given name, or NULL if not existing */
+extern
+scip::ObjConshdlr* SCIPfindObjConshdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of constraint handler */
+   );
+
+/** returns the conshdlr object for the given constraint handler */
+extern
+scip::ObjConshdlr* SCIPgetObjConshdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 #endif
