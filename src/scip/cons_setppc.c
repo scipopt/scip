@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.46 2004/06/24 15:34:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.47 2004/06/30 14:58:38 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -59,11 +59,11 @@
 
 /** type of setppc constraint: set partitioning, set packing, or set covering */
 enum SetppcType
-   {
-      SCIP_SETPPCTYPE_PARTITIONING = 0,     /**< constraint is a set partitioning constraint: a*x == 1 */
-      SCIP_SETPPCTYPE_PACKING      = 1,     /**< constraint is a set packing constraint:      a*x <= 1 */
-      SCIP_SETPPCTYPE_COVERING     = 2      /**< constraint is a set covering constraint:     a*x >= 1 */
-   };
+{
+   SCIP_SETPPCTYPE_PARTITIONING = 0,     /**< constraint is a set partitioning constraint: sum(x) == 1 */
+   SCIP_SETPPCTYPE_PACKING      = 1,     /**< constraint is a set packing constraint:      sum(x) <= 1 */
+   SCIP_SETPPCTYPE_COVERING     = 2      /**< constraint is a set covering constraint:     sum(x) >= 1 */
+};
 typedef enum SetppcType SETPPCTYPE;
 
 /** constraint handler data */
