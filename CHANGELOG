@@ -30,6 +30,10 @@ fixed bugs:
 - removed bug in knapsack constraint handler with merging multiple items if more than two items of the same
   variable appear in the constraint
 
+known bugs:
+- after a resolve and further preprocessing, existing primal solutions may get corrupted due to aggregations or
+  fixings that are possible due to the primal bound (given by the best solution)
+
 
 SCIP version 0.78
 =================
