@@ -2263,7 +2263,7 @@ RETCODE SCIPendDive(
    }
 
    /* unmark the diving flag in the LP and reset all variables' objective and bound values */
-   CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, 
+   CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
                   scip->transprob->vars, scip->transprob->nvars) );
 
    /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
@@ -2384,7 +2384,7 @@ RETCODE SCIPsolveDiveLP(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPsolveLP(scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
+   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
 
    return SCIP_OKAY;
 }

@@ -265,8 +265,9 @@ RETCODE SCIPpriceAddBdviolvar(
    return SCIP_OKAY;
 }
 
-/** calls all external pricer, prices problem variables, and adds some columns with negative reduced costs to the LP */
-RETCODE SCIPpriceVars(
+/** prices problem variables */
+static
+RETCODE priceProbVars(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
@@ -281,15 +282,11 @@ RETCODE SCIPpriceVars(
    VAR* var;
    COL* col;
    Bool root;
+   int v;
    int abortpricevars;
    int maxpricevars;
-   int v;
    
    assert(price != NULL);
-   assert(price->nvars == 0);
-   assert(price->nfoundvars == 0);
-   assert(price->naddedbdviolvars == price->nbdviolvars);
-   assert(set != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
@@ -297,6 +294,7 @@ RETCODE SCIPpriceVars(
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(tree->actnodehaslp);
+   assert(prob->nvars > lp->ncols);
 
    root = (tree->actnode->depth == 0);
    maxpricevars = root ? set->maxpricevarsroot : set->maxpricevars;
@@ -359,7 +357,6 @@ RETCODE SCIPpriceVars(
             Real feasibility;
             Bool added;
    
-#if 1
             added = FALSE;
 
             /* add variable, if zero is not feasible within the bounds */
@@ -380,36 +377,6 @@ RETCODE SCIPpriceVars(
                   added = TRUE;
                }
             }
-#else
-            /* add variable, if zero is not best bound w.r.t. objective function */
-            added = FALSE;
-            if( SCIPsetIsNegative(set, var->dom.lb) )
-            {
-               if( SCIPsetIsNegative(set, var->dom.ub) )
-               {
-                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
-                  added = TRUE;
-               }
-               else if( SCIPsetIsPositive(set, var->obj) )
-               {
-                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.lb, root) );
-                  added = TRUE;
-               }
-            }
-            else if( SCIPsetIsPositive(set, var->dom.ub) )
-            {
-               if( SCIPsetIsPositive(set, var->dom.lb) )
-               {
-                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
-                  added = TRUE;
-               }
-               else if( SCIPsetIsNegative(set, var->obj) )
-               {
-                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.ub, root) );
-                  added = TRUE;
-               }
-            }
-#endif
             
             if( !added )
             {
@@ -457,6 +424,45 @@ RETCODE SCIPpriceVars(
          /* we don't have to price fixed or aggregated variables */
          break;
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls all external pricer, prices problem variables, and adds some columns with negative reduced costs to the LP */
+RETCODE SCIPpriceVars(
+   PRICE*           price,              /**< pricing storage */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   LP*              lp,                 /**< LP data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   VAR* var;
+   COL* col;
+   int v;
+   
+   assert(price != NULL);
+   assert(price->nvars == 0);
+   assert(price->nfoundvars == 0);
+   assert(price->naddedbdviolvars == price->nbdviolvars);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+   assert(tree->actnodehaslp);
+
+   /* if there are problem variables not in the LP, price them */
+   if( prob->nvars > lp->ncols )
+   {
+      CHECK_OKAY( priceProbVars(price, memhdr, set, stat, prob, lp, tree, branchcand, eventqueue) );
    }
 
    /* call external pricer algorithms */

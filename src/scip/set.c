@@ -66,7 +66,6 @@
 
 /* Pricing */
 
-#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS      128 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 2048 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -99,7 +98,7 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         138 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ            1 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ       100000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -159,6 +158,9 @@ RETCODE SCIPsetCreate(
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
    (*set)->readerssize = 0;
+   (*set)->pricers = NULL;
+   (*set)->npricers = 0;
+   (*set)->pricerssize = 0;
    (*set)->conshdlrs = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
@@ -197,7 +199,6 @@ RETCODE SCIPsetCreate(
    (*set)->nodelimit = SCIP_DEFAULT_NODELIMIT;
    (*set)->lpsolvefreq = SCIP_DEFAULT_LPSOLVEFREQ;
    (*set)->lpsolvedepth = SCIP_DEFAULT_LPSOLVEDEPTH;
-   (*set)->usepricing = SCIP_DEFAULT_USEPRICING;
    (*set)->cleanupcols = SCIP_DEFAULT_CLEANUPCOLS;
    (*set)->cleanuprows = SCIP_DEFAULT_CLEANUPROWS;
 
@@ -222,6 +223,17 @@ RETCODE SCIPsetFree(
       CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i], (*set)->scip) );
    }
    freeMemoryArrayNull(&(*set)->readers);
+
+   /* free variable pricers */
+   for( i = 0; i < (*set)->npricers; ++i )
+   {
+      errorMessage("pricers not implemented yet");
+      abort();
+#if 0
+      CHECK_OKAY( SCIPpricerFree(&(*set)->pricers[i], (*set)->scip) );
+#endif
+   }
+   freeMemoryArrayNull(&(*set)->pricers);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
@@ -320,6 +332,58 @@ RETCODE SCIPsetFindReader(
          *reader = set->readers[i];
          return SCIP_OKAY;
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** inserts variable pricer in variable pricer list */
+RETCODE SCIPsetIncludePricer(
+   SET*             set,                /**< global SCIP settings */
+   PRICER*          pricer              /**< variable pricer */
+   )
+{
+   assert(set != NULL);
+   assert(pricer != NULL);
+
+   if( set->npricers >= set->pricerssize )
+   {
+      set->pricerssize = SCIPsetCalcMemGrowSize(set, set->npricers+1);
+      ALLOC_OKAY( reallocMemoryArray(&set->pricers, set->pricerssize) );
+   }
+   assert(set->npricers < set->pricerssize);
+   
+   set->pricers[set->npricers] = pricer;
+   set->npricers++;
+
+   return SCIP_OKAY;
+}   
+
+/** finds the variable pricer of the given name */
+RETCODE SCIPsetFindPricer(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of variable pricer */
+   PRICER**         pricer              /**< pointer for storing the variable pricer (returns NULL, if not found) */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+   assert(pricer != NULL);
+
+   *pricer = NULL;
+   for( i = 0; i < set->npricers; ++i )
+   {
+      errorMessage("pricers not yet implemented");
+      abort();
+#if 0
+      if( strcmp(SCIPpricerGetName(set->pricers[i]), name) == 0 )
+      {
+         *pricer = set->pricers[i];
+         return SCIP_OKAY;
+      }
+#endif
    }
 
    return SCIP_OKAY;

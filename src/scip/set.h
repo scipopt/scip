@@ -38,6 +38,10 @@ typedef enum Setting SETTING;
 
 typedef struct Set SET;                 /**< global SCIP settings */
 
+typedef struct Pricer PRICER;           /**< ?????????????? dummy structure for future implementation of pricers */
+
+
+
 #include <math.h>
 
 #include "def.h"
@@ -77,6 +81,9 @@ struct Set
    READER**         readers;            /**< file readers */
    int              nreaders;           /**< number of file readers */
    int              readerssize;        /**< size of readers array */
+   PRICER**         pricers;            /**< variable pricers */
+   int              npricers;           /**< number of variable pricers */
+   int              pricerssize;        /**< size of pricers array */
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
@@ -115,7 +122,6 @@ struct Set
    Longint          nodelimit;          /**< maximal number of nodes to process */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes */
-   unsigned int     usepricing:1;       /**< use pricing of variables */
    unsigned int     cleanupcols:1;      /**< should new non-basic columns be removed after LP solving? */
    unsigned int     cleanuprows:1;      /**< should new basic rows be removed after LP solving? */
 };
@@ -147,6 +153,21 @@ RETCODE SCIPsetFindReader(
    const SET*       set,                /**< global SCIP settings */
    const char*      name,               /**< name of file reader */
    READER**         reader              /**< pointer for storing the file reader (returns NULL, if not found) */
+   );
+
+/** inserts variable pricer in variable pricer list */
+extern
+RETCODE SCIPsetIncludePricer(
+   SET*             set,                /**< global SCIP settings */
+   PRICER*          pricer              /**< variable pricer */
+   );
+
+/** finds the variable pricer of the given name */
+extern
+RETCODE SCIPsetFindPricer(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of variable pricer */
+   PRICER**         pricer              /**< pointer for storing the variable pricer (returns NULL, if not found) */
    );
 
 /** inserts constraint handler in constraint handler list */

@@ -208,6 +208,8 @@ struct Lp
    int              nrows;              /**< actual number of LP rows (number of used slots in rows vector) */
    int              firstnewcol;        /**< first column added at the active node */
    int              firstnewrow;        /**< first row added at the active node */
+   int              nremoveablecols;    /**< number of removeable columns in the LP */
+   int              nremoveablerows;    /**< number of removeable rows in the LP */
    unsigned int     flushed:1;          /**< are all cached changes applied to the LP solver? */
    unsigned int     solved:1;           /**< is current LP solved? */
    unsigned int     primalfeasible:1;   /**< is actual LP basis primal feasible? */
@@ -969,6 +971,16 @@ RETCODE SCIPlpSolve(
    STAT*            stat                /**< problem statistics */
    );
 
+/** solves the LP with simplex algorithm, and copy the solution into the column's data */
+extern
+RETCODE SCIPlpSolveAndEval(
+   LP*              lp,                 /**< LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob                /**< problem data */
+   );
+
 /** gets solution status of last solve call */
 extern
 LPSOLSTAT SCIPlpGetSolstat(
@@ -1072,6 +1084,7 @@ RETCODE SCIPlpEndDive(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
    VAR**            vars,               /**< array with all active variables */
    int              nvars               /**< number of active variables */
    );

@@ -45,15 +45,22 @@ RETCODE initRootLP(
    COL* col;
    int v;
 
+   assert(lp != NULL);
+   assert(lp->ncols == 0);
+   assert(lp->nrows == 0);
+   assert(lp->nremoveablecols == 0);
+   assert(lp->nremoveablerows == 0);
+
    debugMessage("init root LP\n");
-   if( !set->usepricing )
+
+   /* add all unremoveable variables to LP */
+   for( v = 0; v < prob->nvars; ++v )
    {
-      /* if we do not use pricing, add the all variables to LP */
-      for( v = 0; v < prob->nvars; ++v )
+      var = prob->vars[v];
+      assert(var->probindex >= 0);
+      
+      if( !var->removeable )
       {
-         var = prob->vars[v];
-         assert(var->probindex >= 0);
-         
          /* transform variable into column variable, if needed */
          if( var->varstatus == SCIP_VARSTATUS_LOOSE )
          {
@@ -69,91 +76,7 @@ RETCODE initRootLP(
          CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** solves the LP with simplex algorithm, and copy the solution into the column's data */
-RETCODE SCIPsolveLP(
-   MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp                  /**< LP data */
-   )
-{
-   assert(lp != NULL);
-
-   debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
-      lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
-   if( !lp->solved )
-   {
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
-
-      switch( SCIPlpGetSolstat(lp) )
-      {
-      case SCIP_LPSOLSTAT_OPTIMAL:
-         CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
-
-         if( !lp->diving )
-         {
-            /* update ages and remove obsolete columns and rows from LP */
-            CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
-            CHECK_OKAY( SCIPlpRemoveNewObsoletes(lp, memhdr, set, stat) );
-            
-            if( !lp->solved )
-            {
-               /* resolve LP after removing obsolete columns and rows */
-               debugMessage("remove obsoletes: resolve LP again\n");
-               debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
-                  lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
-               CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
-               assert(lp->solved);
-               assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
-               CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
-            }
-         }
-
-         debugMessage(" -> LP objective value: %g\n", lp->objval);
-         break;
-
-      case SCIP_LPSOLSTAT_INFEASIBLE:
-         if( set->usepricing )
-         {
-            CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set) );
-         }
-         debugMessage(" -> LP infeasible\n");
-         break;
-
-      case SCIP_LPSOLSTAT_UNBOUNDED:
-         CHECK_OKAY( SCIPlpGetUnboundedSol(lp, memhdr, set, stat) );
-         debugMessage(" -> LP unbounded\n");
-         break;
-
-      case SCIP_LPSOLSTAT_OBJLIMIT:
-         if( set->usepricing )
-         {
-            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
-         }
-         debugMessage(" -> LP objective limit reached\n");
-         break;
-
-      case SCIP_LPSOLSTAT_ITERLIMIT:
-         errorMessage("LP solver reached iteration limit -- this should not happen!");
-         return SCIP_ERROR;
-
-      case SCIP_LPSOLSTAT_TIMELIMIT:
-         todoMessage("time limit exceeded processing");
-         return SCIP_ERROR;
-
-      case SCIP_LPSOLSTAT_ERROR:
-         errorMessage("Error in LP solver");
-         return SCIP_LPERROR;
-
-      default:
-         errorMessage("Unknown LP solution status");
-         return SCIP_ERROR;
-      }
-   }
+   assert(lp->nremoveablecols == 0);
 
    return SCIP_OKAY;
 }
@@ -192,7 +115,7 @@ RETCODE solveNodeInitialLP(
     * -> dual simplex is applicable as first solver
     */
    debugMessage("node: solve initial LP\n");
-   CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
    assert(lp->solved);
 
    /* issue FIRSTLPSOLVED event */
@@ -247,7 +170,7 @@ RETCODE solveNodeLP(
    root = (tree->actnode->depth == 0);
 
    debugMessage("node: solve LP with price and cut\n");
-   CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
    assert(lp->solved);
 
    /* price-and-cut loop */
@@ -255,16 +178,18 @@ RETCODE solveNodeLP(
    mustprice = TRUE;
    mustsepar = TRUE;
    cutoff = FALSE;
-   while( !cutoff && ((set->usepricing && mustprice) || mustsepar) )
+   while( !cutoff && (mustprice || mustsepar) )
    {
       debugMessage("-------- node solving loop --------\n");
       assert(lp->solved);
 
       /* if the LP is unbounded, we don't need to price */
       mustprice &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
+      /* if all the variables are already in the LP, we don't need to price */
+      mustprice &= (prob->nvars > lp->ncols || set->npricers > 0);
 
       /* pricing (has to be done completely to get a valid lower bound) */
-      while( !cutoff && set->usepricing && mustprice )
+      while( !cutoff && mustprice )
       {
          assert(lp->solved);
          assert(lp->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDED);
@@ -278,7 +203,7 @@ RETCODE solveNodeLP(
           * if LP was infeasible, we have to use dual simplex
           */
          debugMessage("pricing: solve LP\n");
-         CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
          assert(lp->solved);
 
          /* reset bounds temporarily set by pricer to their original values */
@@ -289,7 +214,7 @@ RETCODE solveNodeLP(
 
          /* solve LP (with dual simplex) */
          debugMessage("reset bounds: solve LP\n");
-         CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
          assert(lp->solved);
 
          /* if the LP is unbounded, we can stop pricing */
@@ -378,7 +303,7 @@ RETCODE solveNodeLP(
 
             /* solve LP (with dual simplex) */
             debugMessage("separation: solve LP\n");
-            CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
+            CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
          }
          assert(cutoff || lp->solved); /* after cutoff, the LP may be unsolved due to bound changes */
 
@@ -442,10 +367,12 @@ RETCODE pseudoBranch(
    if( npseudocands == 0 )
    {
       /* all integer variables in the infeasible pseudo solution are fixed,
-       * - if no continous variables exist, the infeasible pseudo solution is completely fixed, and the node is infeasible
-       * - if at least one continous variable exist, we cannot resolve the infeasibility by branching -> solve LP
+       * - if no continous variables exist and all variables are known, the infeasible pseudo solution is completely
+       *   fixed, and the node is infeasible
+       * - if at least one continous variable exist or we do not know all variables due to external pricers, we cannot
+       *   resolve the infeasibility by branching -> solve LP (and maybe price in additional variables)
        */
-      if( prob->ncont == 0 && !set->usepricing )
+      if( prob->ncont == 0 && set->npricers == 0 )
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
@@ -662,12 +589,12 @@ RETCODE enforceConstraints(
          resolved = TRUE;
          break;
       case SCIP_DIDNOTRUN:
-         /* we didn't resolve the infeasibility, but the node may be feasible due to contious variables or additional
-          * priced variables (this can only happen, if the LP was not solved)
-          *  -> we have no other possibility than solving the LP
+         /* we didn't resolve the infeasibility, but the node may be feasible due to contious variables or variables
+          * that are unknown at the moment (this can only happen, if the LP was not solved)
+          *  -> we have no other possibility than solving the LP (and maybe price in new variables)
           */
          assert(tree->nchildren == 0);
-         assert(prob->ncont > 0 || set->usepricing);
+         assert(prob->ncont > 0 || set->npricers > 0);
          assert(!tree->actnodehaslp);
                
          /* solve the LP in the next loop */

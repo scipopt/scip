@@ -46,7 +46,6 @@
 
 #include "misc.h"
 #include "lp.h"
-#include "solve.h"
 
 
 /** list of columns */
@@ -3745,6 +3744,8 @@ RETCODE SCIPlpCreate(
    (*lp)->nchgrows = 0;
    (*lp)->firstnewcol = 0;
    (*lp)->firstnewrow = 0;
+   (*lp)->nremoveablecols = 0;
+   (*lp)->nremoveablerows = 0;
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
@@ -3805,6 +3806,8 @@ RETCODE SCIPlpAddCol(
    col->lppos = lp->ncols;
    col->age = 0;
    lp->ncols++;
+   if( col->removeable )
+      lp->nremoveablecols++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
@@ -3834,6 +3837,8 @@ RETCODE SCIPlpAddRow(
    row->lppos = lp->nrows;
    row->age = 0;
    lp->nrows++;
+   if( row->removeable )
+      lp->nremoveablerows++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
@@ -3849,6 +3854,7 @@ RETCODE SCIPlpShrinkCols(
    int              newncols            /**< new number of columns in the LP */
    )
 {
+   COL* col;
    int c;
 
    assert(lp != NULL);
@@ -3862,12 +3868,16 @@ RETCODE SCIPlpShrinkCols(
 
       for( c = newncols; c < lp->ncols; ++c )
       {
-         assert(lp->cols[c]->var != NULL);
-         assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(lp->cols[c]->var->data.col == lp->cols[c]);
-         assert(lp->cols[c]->lppos == c);
+         col = lp->cols[c];
+         assert(col != NULL);
+         assert(col->var != NULL);
+         assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+         assert(col->var->data.col == lp->cols[c]);
+         assert(col->lppos == c);
          
-         lp->cols[c]->lppos = -1;
+         col->lppos = -1;
+         if( col->removeable )
+            lp->nremoveablecols--;
       }
       lp->ncols = newncols;
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
@@ -3877,6 +3887,7 @@ RETCODE SCIPlpShrinkCols(
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
+   assert(lp->nremoveablecols <= lp->ncols);
 
    return SCIP_OKAY;
 }
@@ -3889,6 +3900,7 @@ RETCODE SCIPlpShrinkRows(
    int              newnrows            /**< new number of rows in the LP */
    )
 {
+   ROW* row;
    int r;
 
    assert(lp != NULL);
@@ -3901,8 +3913,11 @@ RETCODE SCIPlpShrinkRows(
 
       for( r = newnrows; r < lp->nrows; ++r )
       {
-         assert(lp->rows[r]->lppos == r);
-         lp->rows[r]->lppos = -1;
+         row = lp->rows[r];
+         assert(row->lppos == r);
+         row->lppos = -1;
+         if( row->removeable )
+            lp->nremoveablerows--;
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
       }
       lp->nrows = newnrows;
@@ -3913,6 +3928,7 @@ RETCODE SCIPlpShrinkRows(
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
+   assert(lp->nremoveablerows <= lp->nrows);
 
    return SCIP_OKAY;
 }
@@ -4907,6 +4923,94 @@ RETCODE SCIPlpSolve(
    return SCIP_OKAY;
 }
 
+/** solves the LP with simplex algorithm, and copy the solution into the column's data */
+RETCODE SCIPlpSolveAndEval(
+   LP*              lp,                 /**< LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob                /**< problem data */
+   )
+{
+   assert(lp != NULL);
+   assert(prob != NULL);
+   assert(prob->nvars >= lp->ncols);
+
+   debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
+      lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
+   if( !lp->solved )
+   {
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+
+      switch( SCIPlpGetSolstat(lp) )
+      {
+      case SCIP_LPSOLSTAT_OPTIMAL:
+         CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+
+         if( !lp->diving )
+         {
+            /* update ages and remove obsolete columns and rows from LP */
+            CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
+            CHECK_OKAY( SCIPlpRemoveNewObsoletes(lp, memhdr, set, stat) );
+            
+            if( !lp->solved )
+            {
+               /* resolve LP after removing obsolete columns and rows */
+               debugMessage("remove obsoletes: resolve LP again\n");
+               debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
+                  lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
+               CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+               assert(lp->solved);
+               assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
+               CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+            }
+         }
+
+         debugMessage(" -> LP objective value: %g\n", lp->objval);
+         break;
+
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+         if( set->npricers > 0 || prob->nvars > lp->ncols )
+         {
+            CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set) );
+         }
+         debugMessage(" -> LP infeasible\n");
+         break;
+
+      case SCIP_LPSOLSTAT_UNBOUNDED:
+         CHECK_OKAY( SCIPlpGetUnboundedSol(lp, memhdr, set, stat) );
+         debugMessage(" -> LP unbounded\n");
+         break;
+
+      case SCIP_LPSOLSTAT_OBJLIMIT:
+         if( set->npricers > 0 || prob->nvars > lp->ncols )
+         {
+            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+         }
+         debugMessage(" -> LP objective limit reached\n");
+         break;
+
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+         errorMessage("LP solver reached iteration limit -- this should not happen!");
+         return SCIP_ERROR;
+
+      case SCIP_LPSOLSTAT_TIMELIMIT:
+         todoMessage("time limit exceeded processing");
+         return SCIP_ERROR;
+
+      case SCIP_LPSOLSTAT_ERROR:
+         errorMessage("Error in LP solver");
+         return SCIP_LPERROR;
+
+      default:
+         errorMessage("Unknown LP solution status");
+         return SCIP_ERROR;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets solution status of last solve call */
 LPSOLSTAT SCIPlpGetSolstat(
    LP*              lp                  /**< actual LP data */
@@ -5210,6 +5314,7 @@ RETCODE lpDelColset(
          lp->cols[c] = NULL;
          lp->lpicols[c] = NULL;
          lp->ncols--;
+         lp->nremoveablecols--;
          lp->nlpicols--;
       }
       else if( coldstat[c] < c )
@@ -5278,6 +5383,7 @@ RETCODE lpDelRowset(
          assert(lp->rows[r] == NULL);
          lp->lpirows[r] = NULL;
          lp->nrows--;
+         lp->nremoveablerows--;
          lp->nlpirows--;
       }
       else if( rowdstat[r] < r )
@@ -5329,10 +5435,13 @@ RETCODE lpRemoveObsoleteCols(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
+   assert(lp->nremoveablecols <= lp->ncols);
    assert(!lp->diving);
    assert(set != NULL);
-   assert(set->usepricing);
    assert(stat != NULL);
+
+   if( lp->nremoveablecols == 0 )
+      return SCIP_OKAY;
 
    ncols = lp->ncols;
    cols = lp->cols;
@@ -5397,9 +5506,13 @@ RETCODE lpRemoveObsoleteRows(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->nrows == lp->nlpirows);
+   assert(lp->nremoveablerows <= lp->nrows);
    assert(!lp->diving);
    assert(set != NULL);
    assert(stat != NULL);
+
+   if( lp->nremoveablerows == 0 )
+      return SCIP_OKAY;
 
    nrows = lp->nrows;
    rows = lp->rows;
@@ -5458,7 +5571,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
    debugMessage("removing obsolete columns starting with %d/%d, obsolete rows starting with %d/%d\n",
       lp->firstnewcol, lp->ncols, lp->firstnewrow, lp->nrows);
 
-   if( set->usepricing && lp->firstnewcol < lp->ncols )
+   if( lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, stat, lp->firstnewcol) );
    }
@@ -5484,7 +5597,7 @@ RETCODE SCIPlpRemoveAllObsoletes(
 
    debugMessage("removing all obsolete columns and rows\n");
 
-   if( set->usepricing && 0 < lp->ncols )
+   if( 0 < lp->ncols )
    {
       CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, stat, 0) );
    }
@@ -5517,8 +5630,10 @@ RETCODE lpCleanupCols(
    assert(lp->ncols == lp->nlpicols);
    assert(!lp->diving);
    assert(set != NULL);
-   assert(set->usepricing);
    assert(0 <= firstcol && firstcol < lp->ncols);
+
+   if( lp->nremoveablecols == 0 )
+      return SCIP_OKAY;
 
    ncols = lp->ncols;
    cols = lp->cols;
@@ -5582,6 +5697,9 @@ RETCODE lpCleanupRows(
    assert(!lp->diving);
    assert(0 <= firstrow && firstrow < lp->nrows);
 
+   if( lp->nremoveablerows == 0 )
+      return SCIP_OKAY;
+
    nrows = lp->nrows;
    rows = lp->rows;
    lpirows = lp->lpirows;
@@ -5636,7 +5754,7 @@ RETCODE SCIPlpCleanupNew(
    debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d)\n",
       lp->firstnewcol, lp->ncols, set->cleanupcols, lp->firstnewrow, lp->nrows, set->cleanuprows);
 
-   if( set->cleanupcols && set->usepricing && lp->firstnewcol < lp->ncols )
+   if( set->cleanupcols && lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, memhdr, set, lp->firstnewcol) );
    }
@@ -5662,7 +5780,7 @@ RETCODE SCIPlpCleanupAll(
 
    debugMessage("removing all unused columns and rows\n");
 
-   if( /*set->cleanupcols &&*/ set->usepricing && 0 < lp->ncols )
+   if( /*set->cleanupcols &&*/ 0 < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, memhdr, set, 0) );
    }
@@ -5716,6 +5834,7 @@ RETCODE SCIPlpEndDive(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
    VAR**            vars,               /**< array with all active variables */
    int              nvars               /**< number of active variables */
    )
@@ -5747,7 +5866,7 @@ RETCODE SCIPlpEndDive(
    assert(lp->divelpistate == NULL);
 
    /* resolve LP to reset solution */
-   CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
 
    /* switch to standard (non-diving) mode */
    lp->diving = FALSE;

@@ -576,6 +576,8 @@ RETCODE processFixings(
       int nvars;
       int v;
 
+      assert(setcovercons->nfixedones == 0);
+
       /* only one variable is not fixed to zero in an unmodifiable constraint
        * -> this variable can be fixed to one, and the constraint can be disabled
        */
@@ -1374,7 +1376,7 @@ DECL_LINCONSUPGD(linconsUpgdSetcover)
 
    /* check, if linear constraint can be upgraded to set covering constraint
     * -> a set covering constraint consists only of binary variables with a coefficient of +1.0,
-    *    and has left hand side of +1.0, and infinite right hand side
+    *    and has left hand side of +1.0, and infinite right hand side: x(S) >= 1.0
     */
    if( nposbin == nvars && ncoeffspone == nvars && SCIPisEQ(scip, lhs, 1.0) && SCIPisInfinity(scip, rhs) )
    {

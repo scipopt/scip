@@ -40,15 +40,6 @@
 #include "primal.h"
 
 
-/** solves the LP with simplex algorithm, and copy the solution into the column's data */
-extern
-RETCODE SCIPsolveLP(
-   MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp                  /**< LP data */
-   );
-
 /** main solving loop */
 extern
 RETCODE SCIPsolveCIP(
