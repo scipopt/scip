@@ -634,7 +634,7 @@ RETCODE SCIPlpiAddRows(
 
    SPxSCIP* spx = lpi->spx;
    LPRowSet rows(nrows);
-   DSVector rowVector(nrows);
+   DSVector rowVector();
    int last;
    int i;
    int j;
