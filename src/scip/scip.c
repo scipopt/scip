@@ -2572,9 +2572,6 @@ RETCODE SCIPchgVarLbNode(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarLbNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   if( node == NULL )
-      node = scip->tree->actnode;
-   
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
@@ -2593,9 +2590,6 @@ RETCODE SCIPchgVarUbNode(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarUbNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   if( node == NULL )
-      node = scip->tree->actnode;
-   
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 

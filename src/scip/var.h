@@ -70,6 +70,7 @@ typedef struct Var VAR;                 /**< variable of the problem */
 #include "stat.h"
 #include "tree.h"
 #include "prob.h"
+#include "cons.h"
 #include "branch.h"
 #include "event.h"
 
@@ -77,10 +78,10 @@ typedef struct Var VAR;                 /**< variable of the problem */
 /** tracks changes of the variable's domains (fixed sized arrays) */
 struct DomChg
 {
-   BOUNDCHG*        boundchg;           /**< array with changes in bounds of variables */
-   HOLECHG*         holechg;            /**< array with changes in hole lists */
-   int              nboundchg;          /**< number of bound changes */
-   int              nholechg;           /**< number of hole list changes */
+   BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
+   HOLECHG*         holechgs;           /**< array with changes in hole lists */
+   int              nboundchgs;         /**< number of bound changes */
+   int              nholechgs;          /**< number of hole list changes */
 };
 
 /** domain of a variable */
@@ -135,12 +136,12 @@ struct Var
    Real             obj;                /**< objective function value of variable */
    int              index;              /**< consecutively numbered variable identifier */
    int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
-   int              parentvarssize;     /**< available slots in parentvars array */
-   int              nparentvars;        /**< number of parent variables in aggregation tree (used slots of parentvars) */
    int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
    int              eventqueueindexobj; /**< array position in event queue of objective change event, or -1 */
    int              eventqueueindexlb;  /**< array position in event queue of lower bound change event, or -1 */
    int              eventqueueindexub;  /**< array position in event queue of upper bound change event, or -1 */
+   int              parentvarssize;     /**< available slots in parentvars array */
+   int              nparentvars;        /**< number of parent variables in aggregation tree (used slots of parentvars) */
    int              nuses;              /**< number of times, this variable is referenced */
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
@@ -165,7 +166,7 @@ RETCODE SCIPdomchgFree(
 /** applies domain change */
 extern
 RETCODE SCIPdomchgApply(
-   const DOMCHG*    domchg,             /**< domain change to apply */
+   DOMCHG*          domchg,             /**< domain change to apply */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -178,7 +179,7 @@ RETCODE SCIPdomchgApply(
 /** undoes domain change */
 extern
 RETCODE SCIPdomchgUndo(
-   const DOMCHG*    domchg,             /**< domain change to remove */
+   DOMCHG*          domchg,             /**< domain change to remove */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -237,7 +238,7 @@ RETCODE SCIPdomchgdynAddBoundchg(
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    Real             oldbound,           /**< old value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype           /**< type of bound for var: lower or upper bound */
    );
 
 /** adds hole change to domain changes */

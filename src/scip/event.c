@@ -556,7 +556,7 @@ RETCODE SCIPeventProcess(
    VAR* var;
 
    assert(event != NULL);
-
+   
    debugMessage("processing event of type 0x%x\n", event->eventtype);
    
    switch( event->eventtype )
@@ -808,6 +808,9 @@ RETCODE SCIPeventfilterAdd(
    /* update eventfilter mask */
    eventfilter->eventmask |= eventtype;
 
+   debugMessage(" -> new mask of event filter %p: 0x%x\n",
+      eventfilter, eventfilter->eventmask);
+
    return SCIP_OKAY;
 }
 
@@ -909,10 +912,12 @@ RETCODE SCIPeventfilterProcess(
    int i;
 
    assert(eventfilter != NULL);
+   assert(eventfilter->len == 0 || eventfilter->eventmask != 0x00000000);
    assert(set != NULL);
    assert(event != NULL);
 
-   debugMessage("processing event filter %p with event type 0x%x\n", eventfilter, event->eventtype);
+   debugMessage("processing event filter %p (len %d, mask 0x%x) with event type 0x%x\n",
+      eventfilter, eventfilter->len, eventfilter->eventmask, event->eventtype);
 
    /* check, if there may be any event handler for specific event */
    if( (event->eventtype & eventfilter->eventmask) != 0 )
@@ -932,7 +937,11 @@ RETCODE SCIPeventfilterProcess(
       
       /* update eventfilter mask, if event was not processed by any event handler */
       if( !processed )
-         eventfilter->eventmask &= !event->eventtype;
+      {
+         eventfilter->eventmask &= ~event->eventtype;
+         debugMessage(" -> event type 0x%x not processed. new mask of event filter %p: 0x%x\n",
+            event->eventtype, eventfilter, eventfilter->eventmask);
+      }
    }
 
    return SCIP_OKAY;
@@ -1197,6 +1206,7 @@ RETCODE SCIPeventqueueAdd(
                assert(SCIPsetIsEQ(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound));
                eventDisable(qevent);
                var->eventqueueindexub = -1;
+               debugMessage(" -> event disabled\n");
             }
 
             /* free the event that is of no use any longer */
@@ -1265,7 +1275,7 @@ RETCODE SCIPeventqueueProcess(
    assert(eventqueue != NULL);
    assert(eventqueue->delayevents);
 
-   debugMessage("processing events\n");
+   debugMessage("processing %d queued events\n", eventqueue->nevents);
 
    /* pass events to the responsible event filters
     * During event processing, new events may be raised. We have to loop to the mutable eventqueue->nevents.
@@ -1297,6 +1307,7 @@ RETCODE SCIPeventqueueProcess(
          event->data.eventbdchg.var->eventqueueindexub = -1;
       }
 
+      /* process event */
       CHECK_OKAY( SCIPeventProcess(event, set, tree, lp, branchcand, eventfilter) );
 
       /* free the event immediately, because additionally raised events during event processing

@@ -187,7 +187,7 @@ struct EventFilter
    EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
    int              size;               /**< size of filter arrays (available slots in arrays) */
    int              len;                /**< number entries in filter arrays */
-   int              eventmask;          /**< mask for events that are handled by any event handler in the filter */
+   unsigned int     eventmask;          /**< mask for events that are handled by any event handler in the filter */
 };
 
 

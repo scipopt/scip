@@ -298,6 +298,22 @@ RETCODE conshdlrdataIncludeUpgrade(
  * lincons local methods
  */
 
+/* gets linear constraint data from constraint object */
+static
+LINCONS* consGetLincons(
+   CONS*            cons                /**< linear constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->lincons != NULL);
+
+   return consdata->lincons;
+}
+
 /** creates event data for variable at given position, and catches events */
 static
 RETCODE linconsCatchEvent(
@@ -1443,7 +1459,6 @@ RETCODE linconsTightenBounds(
    int nvars;
 
    assert(lincons != NULL);
-   assert(scip != NULL);
    assert(nchgbds != NULL);
    assert(result != NULL);
    assert(*result != SCIP_CUTOFF);
@@ -1758,22 +1773,6 @@ RETCODE linconsSort(
 /*
  * local linear constraint handler methods
  */
-
-/* gets linear constraint data from constraint object */
-static
-LINCONS* consGetLincons(
-   CONS*            cons                /**< linear constraint */
-   )
-{
-   CONSDATA* consdata;
-
-   assert(cons != NULL);
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->lincons != NULL);
-
-   return consdata->lincons;
-}
 
 /** checks linear constraint for feasibility of given solution or actual pseudo solution */
 static

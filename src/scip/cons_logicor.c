@@ -775,6 +775,7 @@ RETCODE processWatchedVars(
    else
    {
       /* there are at least two unfixed variables -> the constraint must be checked manually */
+      assert(watchedvar1 != watchedvar2);
       assert(0 <= watchedvar1 && watchedvar1 < nvars);
       assert(0 <= watchedvar2 && watchedvar2 < nvars);
       assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar1]), 0.0));

@@ -1157,7 +1157,7 @@ RETCODE readBounds(
                   CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
 
-               CHECK_OKAY( SCIPchgVarUb(scip, var, val) );               
+               CHECK_OKAY( SCIPchgVarUb(scip, var, val) );
                break;
             case 'F':
                if (mpsinputField1(mpsi)[1] == 'X')
