@@ -1,9 +1,0 @@
-
-kurzfristig:
-- sind verschiedene Cut-Pools noetig oder reicht ein globaler Cut-Pool erzeugt ueber zusaetzliche linear constraints
-  an der Wurzel aus? -> mit Marc Pfetsch diskutieren
-  * vielleicht will man ja eine andere Separierungs-Frequenz als die des linear constraint handlers haben
-
-mittelfristig:
-
-langfristig:
