@@ -1,7 +1,7 @@
 IP/miplib/10teams.mps
 IP/miplib/air03.mps
-IP/miplib/air04.mps
-IP/miplib/air05.mps
+#IP/miplib/air04.mps
+#IP/miplib/air05.mps
 IP/miplib/bell3a.mps
 IP/miplib/bell5.mps
 IP/miplib/blend2.mps
