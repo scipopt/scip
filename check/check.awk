@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.17 2005/01/21 09:16:45 bzfpfend Exp $
+# $Id: check.awk,v 1.18 2005/02/09 10:10:01 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -75,6 +75,14 @@ BEGIN {
     n  = split ($2, a, "/");
     split(a[n], b, ".");
     prob = b[1];
+    for( i = 2; i < m; ++i )
+       prob = prob "." b[i];
+
+    if( length(prob) > 18 )
+       shortprob = substr(prob, length(prob)-17, 18);
+    else
+       shortprob = prob;
+
     # Escape _ for TeX
     n = split(prob, a, "_");
     pprob = a[1];
@@ -198,7 +206,7 @@ BEGIN {
       pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    
    printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
-      prob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
+      shortprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
       bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
    
    if (sol[prob] == "")

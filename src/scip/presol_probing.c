@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.7 2005/02/08 17:23:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.8 2005/02/09 10:10:01 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -56,6 +56,7 @@ struct PresolData
 {
    int              proprounds;         /**< maximal number of propagation rounds in probing subproblems */
    int              maxfixings;         /**< maximal number of fixings found, until probing is aborted (0: don't abort) */
+   int              startidx;           /**< starting variable index of next call */
    Bool             called;             /**< was probing applied at least once? */
 };
 
@@ -178,6 +179,7 @@ DECL_PRESOLINITPRE(presolInitpreProbing)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
+   presoldata->startidx = 0;
    presoldata->called = FALSE;
 
    return SCIP_OKAY;
@@ -204,7 +206,7 @@ DECL_PRESOLEXEC(presolExecProbing)
    int maxfixings;
    int oldnfixedvars;
    int oldnaggrvars;
-   int i;
+   int c;
    Bool cutoff;
 
    assert(result != NULL);
@@ -242,11 +244,14 @@ DECL_PRESOLEXEC(presolExecProbing)
 
    /* for each binary variable, probe fixing the variable to zero and one */
    cutoff = FALSE;
-   for( i = 0; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip)
-           && *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars < maxfixings; ++i )
+   for( c = 0; c < nbinvars && !cutoff && !SCIPpressedCtrlC(scip)
+           && *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars < maxfixings; ++c )
    {
       Bool localcutoff;
+      int i;
       int j;
+
+      i = (presoldata->startidx + c) % nbinvars;
 
 #if 0
       if( (i+1) % 1000 == 0 )
@@ -364,6 +369,7 @@ DECL_PRESOLEXEC(presolExecProbing)
          }
       }
    }
+   presoldata->startidx = (presoldata->startidx + c) % nbinvars;
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &oneubs);

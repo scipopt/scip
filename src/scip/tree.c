@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.132 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.133 2005/02/09 10:10:01 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1310,6 +1310,7 @@ RETCODE SCIPnodeAddBoundinfer(
    {
       assert(node->active);
       assert(node->nodetype != SCIP_NODETYPE_PROBINGNODE);
+      assert(!probingchange);
 
       debugMessage(" -> bound change in root node: perform global bound change\n");
       CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
