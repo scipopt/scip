@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.23 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.24 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -28,6 +28,7 @@
 
 #include "def.h"
 #include "message.h"
+#include "set.h"
 #include "misc.h"
 #include "paramset.h"
 
@@ -950,21 +951,22 @@ void paramFree(
 static
 RETCODE paramParseBool(
    PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    char*            valuestr            /**< value in string format (may be modified during parse) */
    )
 {
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_BOOL);
+   assert(set != NULL);
    assert(valuestr != NULL);
 
    if( strcasecmp(valuestr, "TRUE") == 0 )
    {
-      CHECK_OKAY( SCIPparamSetBool(param, scip, TRUE) );
+      CHECK_OKAY( SCIPparamSetBool(param, set->scip, TRUE) );
    }
    else if( strcasecmp(valuestr, "FALSE") == 0 )
    {
-      CHECK_OKAY( SCIPparamSetBool(param, scip, FALSE) );
+      CHECK_OKAY( SCIPparamSetBool(param, set->scip, FALSE) );
    }
    else
    {
@@ -979,7 +981,7 @@ RETCODE paramParseBool(
 static
 RETCODE paramParseInt(
    PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    char*            valuestr            /**< value in string format (may be modified during parse) */
    )
 {
@@ -987,11 +989,12 @@ RETCODE paramParseInt(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_INT);
+   assert(set != NULL);
    assert(valuestr != NULL);
 
    if( sscanf(valuestr, "%d", &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetInt(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetInt(param, set->scip, value) );
    }
    else
    {
@@ -1006,7 +1009,7 @@ RETCODE paramParseInt(
 static
 RETCODE paramParseLongint(
    PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    char*            valuestr            /**< value in string format (may be modified during parse) */
    )
 {
@@ -1014,11 +1017,12 @@ RETCODE paramParseLongint(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+   assert(set != NULL);
    assert(valuestr != NULL);
 
    if( sscanf(valuestr, LONGINT_FORMAT, &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetLongint(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetLongint(param, set->scip, value) );
    }
    else
    {
@@ -1033,7 +1037,7 @@ RETCODE paramParseLongint(
 static
 RETCODE paramParseReal(
    PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    char*            valuestr            /**< value in string format (may be modified during parse) */
    )
 {
@@ -1041,11 +1045,12 @@ RETCODE paramParseReal(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+   assert(set != NULL);
    assert(valuestr != NULL);
 
    if( sscanf(valuestr, REAL_FORMAT, &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetReal(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetReal(param, set->scip, value) );
    }
    else
    {
@@ -1060,7 +1065,7 @@ RETCODE paramParseReal(
 static
 RETCODE paramParseChar(
    PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    char*            valuestr            /**< value in string format (may be modified during parse) */
    )
 {
@@ -1068,11 +1073,12 @@ RETCODE paramParseChar(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+   assert(set != NULL);
    assert(valuestr != NULL);
 
    if( sscanf(valuestr, "%c", &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetChar(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetChar(param, set->scip, value) );
    }
    else
    {
@@ -1087,7 +1093,7 @@ RETCODE paramParseChar(
 static
 RETCODE paramParseString(
    PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    char*            valuestr            /**< value in string format (may be modified during parse) */
    )
 {
@@ -1095,6 +1101,7 @@ RETCODE paramParseString(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_STRING);
+   assert(set != NULL);
    assert(valuestr != NULL);
 
    /* check for quotes */
@@ -1109,7 +1116,7 @@ RETCODE paramParseString(
    /* remove the quotes */
    valuestr[len-1] = '\0';
    valuestr++;
-   CHECK_OKAY( SCIPparamSetString(param, scip, valuestr) );
+   CHECK_OKAY( SCIPparamSetString(param, set->scip, valuestr) );
    
    return SCIP_OKAY;
 }
@@ -1592,7 +1599,7 @@ RETCODE SCIPparamsetGetString(
 /** changes the value of an existing Bool parameter */
 RETCODE SCIPparamsetSetBool(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    Bool             value               /**< new value of the parameter */
    )
@@ -1600,6 +1607,7 @@ RETCODE SCIPparamsetSetBool(
    PARAM* param;
 
    assert(paramset != NULL);
+   assert(set != NULL);
 
    /* retrieve parameter from hash table */
    param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
@@ -1609,7 +1617,7 @@ RETCODE SCIPparamsetSetBool(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetBool(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetBool(param, set->scip, value) );
    
    return SCIP_OKAY;
 }
@@ -1617,7 +1625,7 @@ RETCODE SCIPparamsetSetBool(
 /** changes the value of an existing int parameter */
 RETCODE SCIPparamsetSetInt(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    int              value               /**< new value of the parameter */
    )
@@ -1625,6 +1633,7 @@ RETCODE SCIPparamsetSetInt(
    PARAM* param;
 
    assert(paramset != NULL);
+   assert(set != NULL);
 
    /* retrieve parameter from hash table */
    param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
@@ -1634,7 +1643,7 @@ RETCODE SCIPparamsetSetInt(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetInt(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetInt(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1642,7 +1651,7 @@ RETCODE SCIPparamsetSetInt(
 /** changes the value of an existing Longint parameter */
 RETCODE SCIPparamsetSetLongint(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    Longint          value               /**< new value of the parameter */
    )
@@ -1650,6 +1659,7 @@ RETCODE SCIPparamsetSetLongint(
    PARAM* param;
 
    assert(paramset != NULL);
+   assert(set != NULL);
 
    /* retrieve parameter from hash table */
    param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
@@ -1659,7 +1669,7 @@ RETCODE SCIPparamsetSetLongint(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetLongint(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetLongint(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1667,7 +1677,7 @@ RETCODE SCIPparamsetSetLongint(
 /** changes the value of an existing Real parameter */
 RETCODE SCIPparamsetSetReal(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    Real             value               /**< new value of the parameter */
    )
@@ -1675,6 +1685,7 @@ RETCODE SCIPparamsetSetReal(
    PARAM* param;
 
    assert(paramset != NULL);
+   assert(set != NULL);
 
    /* retrieve parameter from hash table */
    param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
@@ -1684,7 +1695,7 @@ RETCODE SCIPparamsetSetReal(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetReal(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetReal(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1692,7 +1703,7 @@ RETCODE SCIPparamsetSetReal(
 /** changes the value of an existing char parameter */
 RETCODE SCIPparamsetSetChar(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    char             value               /**< new value of the parameter */
    )
@@ -1700,6 +1711,7 @@ RETCODE SCIPparamsetSetChar(
    PARAM* param;
 
    assert(paramset != NULL);
+   assert(set != NULL);
 
    /* retrieve parameter from hash table */
    param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
@@ -1709,7 +1721,7 @@ RETCODE SCIPparamsetSetChar(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetChar(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetChar(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1717,7 +1729,7 @@ RETCODE SCIPparamsetSetChar(
 /** changes the value of an existing string parameter */
 RETCODE SCIPparamsetSetString(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    const char*      value               /**< new value of the parameter */
    )
@@ -1725,6 +1737,7 @@ RETCODE SCIPparamsetSetString(
    PARAM* param;
 
    assert(paramset != NULL);
+   assert(set != NULL);
 
    /* retrieve parameter from hash table */
    param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
@@ -1734,7 +1747,7 @@ RETCODE SCIPparamsetSetString(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetString(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetString(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1743,7 +1756,7 @@ RETCODE SCIPparamsetSetString(
 static
 RETCODE paramsetParse(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    char*            line                /**< line to parse (is modified during parse, but not freed) */
    )
 {
@@ -1839,22 +1852,22 @@ RETCODE paramsetParse(
    switch( param->paramtype )
    {
    case SCIP_PARAMTYPE_BOOL:
-      CHECK_OKAY( paramParseBool(param, scip, paramvaluestr) );
+      CHECK_OKAY( paramParseBool(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_INT:
-      CHECK_OKAY( paramParseInt(param, scip, paramvaluestr) );
+      CHECK_OKAY( paramParseInt(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_LONGINT:
-      CHECK_OKAY( paramParseLongint(param, scip, paramvaluestr) );
+      CHECK_OKAY( paramParseLongint(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_REAL:
-      CHECK_OKAY( paramParseReal(param, scip, paramvaluestr) );
+      CHECK_OKAY( paramParseReal(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_CHAR:
-      CHECK_OKAY( paramParseChar(param, scip, paramvaluestr) );
+      CHECK_OKAY( paramParseChar(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_STRING:
-      CHECK_OKAY( paramParseString(param, scip, paramvaluestr) );
+      CHECK_OKAY( paramParseString(param, set, paramvaluestr) );
       break;
    default:
       errorMessage("unknown parameter type\n");
@@ -1867,7 +1880,7 @@ RETCODE paramsetParse(
 /** reads parameters from a file */
 RETCODE SCIPparamsetRead(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      filename            /**< file name */
    )
 {
@@ -1893,7 +1906,7 @@ RETCODE SCIPparamsetRead(
    while( fgets(line, sizeof(line), file) != NULL )
    {
       lineno++;
-      retcode = paramsetParse(paramset, scip, line);
+      retcode = paramsetParse(paramset, set, line);
       if( retcode == SCIP_PARSEERROR )
       {
          errorMessage("input error in file <%s> line %d\n", filename, lineno);

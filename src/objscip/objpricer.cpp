@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.10 2005/01/21 09:16:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.11 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -107,6 +107,40 @@ DECL_PRICEREXIT(pricerExitObj)
 }
 
 
+/** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
+static
+DECL_PRICERINITSOL(pricerInitsolObj)
+{  /*lint --e{715}*/
+   PRICERDATA* pricerdata;
+
+   pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
+   assert(pricerdata->objpricer != NULL);
+
+   /* call virtual method of pricer object */
+   CHECK_OKAY( pricerdata->objpricer->scip_initsol(scip, pricer) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
+static
+DECL_PRICEREXITSOL(pricerExitsolObj)
+{  /*lint --e{715}*/
+   PRICERDATA* pricerdata;
+
+   pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
+   assert(pricerdata->objpricer != NULL);
+
+   /* call virtual method of pricer object */
+   CHECK_OKAY( pricerdata->objpricer->scip_exitsol(scip, pricer) );
+
+   return SCIP_OKAY;
+}
+
+
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
 DECL_PRICERREDCOST(pricerRedcostObj)
@@ -163,7 +197,8 @@ RETCODE SCIPincludeObjPricer(
 
    /* include variable pricer */
    CHECK_OKAY( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
-         pricerFreeObj, pricerInitObj, pricerExitObj, pricerRedcostObj, pricerFarkasObj,
+         pricerFreeObj, pricerInitObj, pricerExitObj, 
+         pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
          pricerdata) );
 
    return SCIP_OKAY;

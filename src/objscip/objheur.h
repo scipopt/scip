@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.12 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.13 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -116,6 +116,33 @@ public:
    
    /** deinitialization method of primal heuristic (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
+      SCIP*         scip,               /**< SCIP data structure */
+      HEUR*         heur                /**< the primal heuristic itself */
+      )
+   {
+      return SCIP_OKAY;
+   }
+   
+   /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
+    *
+    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+    *  The primal heuristic may use this call to initialize its branch and bound specific data.
+    *
+    */
+   virtual RETCODE scip_initsol(
+      SCIP*         scip,               /**< SCIP data structure */
+      HEUR*         heur                /**< the primal heuristic itself */
+      )
+   {
+      return SCIP_OKAY;
+   }
+   
+   /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
+    *
+    *  This method is called before the branch and bound process is freed.
+    *  The primal heuristic should use this call to clean up its branch and bound data.
+    */
+   virtual RETCODE scip_exitsol(
       SCIP*         scip,               /**< SCIP data structure */
       HEUR*         heur                /**< the primal heuristic itself */
       )

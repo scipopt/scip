@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.16 2005/01/21 09:16:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.17 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -59,6 +59,7 @@ struct NodeselData
  * Callback methods
  */
 
+/** destructor of node selector to free user data (called when SCIP is exiting) */
 static
 DECL_NODESELFREE(nodeselFreeRestartdfs)
 {  /*lint --e{715}*/
@@ -77,6 +78,23 @@ DECL_NODESELFREE(nodeselFreeRestartdfs)
    return SCIP_OKAY;
 }
 
+/** initialization method of node selector (called after problem was transformed) */
+#define nodeselInitRestartdfs NULL
+
+
+/** deinitialization method of node selector (called before transformed problem is freed) */
+#define nodeselExitRestartdfs NULL
+
+
+/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
+#define nodeselInitsolRestartdfs NULL
+
+
+/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
+#define nodeselExitsolRestartdfs NULL
+
+
+/** node selection method of node selector */
 static
 DECL_NODESELSELECT(nodeselSelectRestartdfs)
 {  /*lint --e{715}*/
@@ -110,6 +128,8 @@ DECL_NODESELSELECT(nodeselSelectRestartdfs)
    return SCIP_OKAY;
 }
 
+
+/** node comparison method of node selector */
 static
 DECL_NODESELCOMP(nodeselCompRestartdfs)
 {  /*lint --e{715}*/
@@ -163,9 +183,10 @@ RETCODE SCIPincludeNodeselRestartdfs(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-                  NODESEL_LOWESTFIRST,
-                  nodeselFreeRestartdfs, NULL, NULL, nodeselSelectRestartdfs, nodeselCompRestartdfs,
-                  nodeseldata) );
+         NODESEL_LOWESTFIRST,
+         nodeselFreeRestartdfs, nodeselInitRestartdfs, nodeselExitRestartdfs, 
+         nodeselInitsolRestartdfs, nodeselExitsolRestartdfs, nodeselSelectRestartdfs, nodeselCompRestartdfs,
+         nodeseldata) );
 
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,

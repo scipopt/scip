@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.205 2005/02/04 14:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.206 2005/02/07 14:08:26 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -475,6 +475,8 @@ RETCODE SCIPincludePricer(
    DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
+   DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
    DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
    PRICERDATA*      pricerdata          /**< variable pricer data */
@@ -594,6 +596,8 @@ RETCODE SCIPincludeConflicthdlr(
    DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
+   DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
    DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
    CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    );
@@ -680,6 +684,8 @@ RETCODE SCIPincludeRelax(
    DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
+   DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxator */
+   DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxator */
    DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
    RELAXDATA*       relaxdata           /**< relaxator data */
    );
@@ -766,6 +772,8 @@ RETCODE SCIPincludeProp(
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
+   DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
    DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    PROPDATA*        propdata            /**< propagator data */
@@ -814,6 +822,8 @@ RETCODE SCIPincludeHeur(
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
+   DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
+   DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
    DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    );
@@ -854,6 +864,8 @@ RETCODE SCIPincludeEventhdlr(
    DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
+   DECL_EVENTINITSOL((*eventinitsol)),  /**< solving process initialization method of event handler */
+   DECL_EVENTEXITSOL((*eventexitsol)),  /**< solving process deinitialization method of event handler */
    DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
@@ -890,6 +902,8 @@ RETCODE SCIPincludeNodesel(
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
+   DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
+   DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata         /**< node selector data */
@@ -1011,6 +1025,8 @@ RETCODE SCIPincludeDisp(
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
+   DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
+   DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
    DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */

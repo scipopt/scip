@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.3 2005/01/21 09:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.4 2005/02/07 14:08:29 bzfpfend Exp $"
 
 /**@file   type_prop.h
  * @brief  type definitions for propagators
@@ -54,6 +54,28 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - prop            : the propagator itself
  */
 #define DECL_PROPEXIT(x) RETCODE x (SCIP* scip, PROP* prop)
+
+/** solving process initialization method of propagator (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The propagator may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - prop            : the propagator itself
+ */
+#define DECL_PROPINITSOL(x) RETCODE x (SCIP* scip, PROP* prop)
+
+/** solving process deinitialization method of propagator (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The propagator should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - prop            : the propagator itself
+ */
+#define DECL_PROPEXITSOL(x) RETCODE x (SCIP* scip, PROP* prop)
 
 /** execution method of propagator
  *

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.33 2005/02/04 14:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.34 2005/02/07 14:08:27 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -63,35 +63,35 @@ RETCODE SCIPsepaCreate(
 extern
 RETCODE SCIPsepaFree(
    SEPA**           sepa,               /**< pointer to separator data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes separator */
 extern
 RETCODE SCIPsepaInit(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of separator */
 extern
 RETCODE SCIPsepaExit(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs separator that the branch and bound process is being started */
 extern
 RETCODE SCIPsepaInitsol(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs separator that the branch and bound process data is being freed */
 extern
 RETCODE SCIPsepaExitsol(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of separator */

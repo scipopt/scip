@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.22 2005/01/21 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.23 2005/02/07 14:08:26 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -67,16 +67,17 @@ RETCODE SCIPreaderCreate(
 /** frees memory of reader */
 RETCODE SCIPreaderFree(
    READER**         reader,             /**< pointer to reader data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(reader != NULL);
    assert(*reader != NULL);
+   assert(set != NULL);
 
    /* call destructor of reader */
    if( (*reader)->readerfree != NULL )
    {
-      CHECK_OKAY( (*reader)->readerfree(scip, *reader) );
+      CHECK_OKAY( (*reader)->readerfree(set->scip, *reader) );
    }
 
    freeMemoryArray(&(*reader)->name);

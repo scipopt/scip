@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.21 2005/01/21 09:16:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.22 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   nodesel_dfs.c
  * @brief  node selector for depth first search
@@ -42,6 +42,27 @@
  * Callback methods
  */
 
+/** destructor of node selector to free user data (called when SCIP is exiting) */
+#define nodeselFreeDfs NULL
+
+
+/** initialization method of node selector (called after problem was transformed) */
+#define nodeselInitDfs NULL
+
+
+/** deinitialization method of node selector (called before transformed problem is freed) */
+#define nodeselExitDfs NULL
+
+
+/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
+#define nodeselInitsolDfs NULL
+
+
+/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
+#define nodeselExitsolDfs NULL
+
+
+/** node selection method of node selector */
 static
 DECL_NODESELSELECT(nodeselSelectDfs)
 {  /*lint --e{715}*/
@@ -63,6 +84,8 @@ DECL_NODESELSELECT(nodeselSelectDfs)
    return SCIP_OKAY;
 }
 
+
+/** node comparison method of node selector */
 static
 DECL_NODESELCOMP(nodeselCompDfs)
 {  /*lint --e{715}*/
@@ -108,10 +131,17 @@ RETCODE SCIPincludeNodeselDfs(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   NODESELDATA* nodeseldata;
+
+   /* create dfs node selector data */
+   nodeseldata = NULL;
+
+   /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-                  NODESEL_LOWESTFIRST,
-                  NULL, NULL, NULL, nodeselSelectDfs, nodeselCompDfs,
-                  NULL) );
+         NODESEL_LOWESTFIRST,
+         nodeselFreeDfs, nodeselInitDfs, nodeselExitDfs, 
+         nodeselInitsolDfs, nodeselExitsolDfs, nodeselSelectDfs, nodeselCompDfs,
+         nodeseldata) );
 
    return SCIP_OKAY;
 }

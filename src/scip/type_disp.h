@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.5 2005/01/21 09:17:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_disp.h,v 1.6 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   type_disp.h
  * @brief  type definitions for displaying runtime statistics
@@ -62,6 +62,28 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *  - disp            : the display column itself
  */
 #define DECL_DISPEXIT(x) RETCODE x (SCIP* scip, DISP* disp)
+
+/** solving process initialization method of display column (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The display column may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - disp            : the display column itself
+ */
+#define DECL_DISPINITSOL(x) RETCODE x (SCIP* scip, DISP* disp)
+
+/** solving process deinitialization method of display column (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The display column should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - disp            : the display column itself
+ */
+#define DECL_DISPEXITSOL(x) RETCODE x (SCIP* scip, DISP* disp)
 
 /** output method of display column to output file stream 'file'
  *

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.22 2005/01/31 12:20:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.23 2005/02/07 14:08:21 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1331,8 +1331,7 @@ RETCODE SCIPincludeConshdlrXor(
 
    /* create event handler for events on variables */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL,
-         NULL, eventExecXor,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecXor,
          NULL) );
 
    /* create constraint handler data */

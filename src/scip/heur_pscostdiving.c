@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.18 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.19 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -204,6 +204,14 @@ DECL_HEUREXIT(heurExitPscostdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolPscostdiving NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolPscostdiving NULL
 
 
 /** execution method of primal heuristic */
@@ -551,7 +559,8 @@ RETCODE SCIPincludeHeurPscostdiving(
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-         heurFreePscostdiving, heurInitPscostdiving, heurExitPscostdiving, heurExecPscostdiving,
+         heurFreePscostdiving, heurInitPscostdiving, heurExitPscostdiving, 
+         heurInitsolPscostdiving, heurExitsolPscostdiving, heurExecPscostdiving,
          heurdata) );
 
    /* pscostdiving heuristic parameters */

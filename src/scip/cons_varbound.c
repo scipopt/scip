@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.22 2005/01/31 12:20:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.23 2005/02/07 14:08:21 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -1084,7 +1084,7 @@ RETCODE SCIPincludeConshdlrVarbound(
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-         NULL, NULL, NULL, NULL, eventExecVarbound,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecVarbound,
          eventhdlrdata) );
 
    /* include the linear constraint upgrade in the linear constraint handler */

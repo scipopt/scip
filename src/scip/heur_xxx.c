@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.10 2005/01/21 09:16:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.11 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -115,6 +115,36 @@ DECL_HEUREXIT(heurExitXxx)
 #endif
 
 
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#if 0
+static
+DECL_HEURINITSOL(heurInitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define heurInitsolXxx NULL
+#endif
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#if 0
+static
+DECL_HEUREXITSOL(heurExitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define heurExitsolXxx NULL
+#endif
+
+
 /** execution method of primal heuristic */
 static
 DECL_HEUREXEC(heurExecXxx)
@@ -147,7 +177,8 @@ RETCODE SCIPincludeHeurXxx(
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-         heurFreeXxx, heurInitXxx, heurExitXxx, heurExecXxx,
+         heurFreeXxx, heurInitXxx, heurExitXxx, 
+         heurInitsolXxx, heurExitsolXxx, heurExecXxx,
          heurdata) );
 
    /* add xxx primal heuristic parameters */

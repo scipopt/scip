@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.84 2005/01/31 12:20:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.85 2005/02/07 14:08:20 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -169,6 +169,8 @@ RETCODE SCIPconflicthdlrCreate(
    DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
+   DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
    DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
    CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    )
@@ -187,6 +189,8 @@ RETCODE SCIPconflicthdlrCreate(
    (*conflicthdlr)->conflictfree = conflictfree;
    (*conflicthdlr)->conflictinit = conflictinit;
    (*conflicthdlr)->conflictexit = conflictexit;
+   (*conflicthdlr)->conflictinitsol = conflictinitsol;
+   (*conflicthdlr)->conflictexitsol = conflictexitsol;
    (*conflicthdlr)->conflictexec = conflictexec;
    (*conflicthdlr)->conflicthdlrdata = conflicthdlrdata;
    (*conflicthdlr)->initialized = FALSE;
@@ -204,18 +208,18 @@ RETCODE SCIPconflicthdlrCreate(
 /** calls destructor and frees memory of conflict handler */
 RETCODE SCIPconflicthdlrFree(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conflicthdlr != NULL);
    assert(*conflicthdlr != NULL);
    assert(!(*conflicthdlr)->initialized);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_INIT);
+   assert(set != NULL);
 
    /* call destructor of conflict handler */
    if( (*conflicthdlr)->conflictfree != NULL )
    {
-      CHECK_OKAY( (*conflicthdlr)->conflictfree(scip, *conflicthdlr) );
+      CHECK_OKAY( (*conflicthdlr)->conflictfree(set->scip, *conflicthdlr) );
    }
 
    freeMemoryArray(&(*conflicthdlr)->name);
@@ -228,10 +232,11 @@ RETCODE SCIPconflicthdlrFree(
 /** calls init method of conflict handler */
 RETCODE SCIPconflicthdlrInit(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conflicthdlr != NULL);
+   assert(set != NULL);
 
    if( conflicthdlr->initialized )
    {
@@ -242,7 +247,7 @@ RETCODE SCIPconflicthdlrInit(
    /* call initialization method of conflict handler */
    if( conflicthdlr->conflictinit != NULL )
    {
-      CHECK_OKAY( conflicthdlr->conflictinit(scip, conflicthdlr) );
+      CHECK_OKAY( conflicthdlr->conflictinit(set->scip, conflicthdlr) );
    }
    conflicthdlr->initialized = TRUE;
 
@@ -252,10 +257,11 @@ RETCODE SCIPconflicthdlrInit(
 /** calls exit method of conflict handler */
 RETCODE SCIPconflicthdlrExit(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conflicthdlr != NULL);
+   assert(set != NULL);
 
    if( !conflicthdlr->initialized )
    {
@@ -266,9 +272,45 @@ RETCODE SCIPconflicthdlrExit(
    /* call deinitialization method of conflict handler */
    if( conflicthdlr->conflictexit != NULL )
    {
-      CHECK_OKAY( conflicthdlr->conflictexit(scip, conflicthdlr) );
+      CHECK_OKAY( conflicthdlr->conflictexit(set->scip, conflicthdlr) );
    }
    conflicthdlr->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs conflict handler that the branch and bound process is being started */
+RETCODE SCIPconflicthdlrInitsol(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of conflict handler */
+   if( conflicthdlr->conflictinitsol != NULL )
+   {
+      CHECK_OKAY( conflicthdlr->conflictinitsol(set->scip, conflicthdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs conflict handler that the branch and bound process data is being freed */
+RETCODE SCIPconflicthdlrExitsol(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of conflict handler */
+   if( conflicthdlr->conflictexitsol != NULL )
+   {
+      CHECK_OKAY( conflicthdlr->conflictexitsol(set->scip, conflicthdlr) );
+   }
 
    return SCIP_OKAY;
 }
@@ -276,7 +318,7 @@ RETCODE SCIPconflicthdlrExit(
 /** calls execution method of conflict handler */
 RETCODE SCIPconflicthdlrExec(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    NODE*            node,               /**< node to add conflict constraint to */
    VAR**            conflictvars,       /**< variables of the conflict set */
    int              nconflictvars,      /**< number of variables in the conflict set */
@@ -286,6 +328,7 @@ RETCODE SCIPconflicthdlrExec(
    )
 {
    assert(conflicthdlr != NULL);
+   assert(set != NULL);
    assert(conflictvars != NULL || nconflictvars == 0);
    assert(result != NULL);
 
@@ -293,7 +336,7 @@ RETCODE SCIPconflicthdlrExec(
    *result = SCIP_DIDNOTRUN;
    if( conflicthdlr->conflictexec != NULL )
    {
-      CHECK_OKAY( conflicthdlr->conflictexec(scip, conflicthdlr, node, conflictvars, nconflictvars, local, resolved, 
+      CHECK_OKAY( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, conflictvars, nconflictvars, local, resolved, 
             result) );
 
       if( *result != SCIP_CONSADDED
@@ -1024,7 +1067,7 @@ RETCODE conflictAddClause(
          /* call conflict handlers to create a conflict constraint */
          for( h = 0; h < set->nconflicthdlrs; ++h )
          {
-            CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d], 
+            CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set, tree->path[d], 
                   conflictset, *nliterals, (validdepth > 0), *success, &result) );
             *success = *success || (result == SCIP_CONSADDED);
             debugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict clause with %d literals returned result %d\n",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.12 2005/01/21 09:17:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.13 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -122,6 +122,28 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *    eventhdlr       : the event handler itself
  */
 #define DECL_EVENTEXIT(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
+
+/** solving process initialization method of event handler (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The event handler may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
+ */
+#define DECL_EVENTINITSOL(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The event handler should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
+ */
+#define DECL_EVENTEXITSOL(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
 
 /** frees specific event data
  *

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_relax.h,v 1.4 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_relax.h,v 1.5 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   struct_relax.h
  * @brief  datastructures for relaxators
@@ -42,6 +42,8 @@ struct Relax
    DECL_RELAXFREE   ((*relaxfree));     /**< destructor of relaxator */
    DECL_RELAXINIT   ((*relaxinit));     /**< initialize relaxator */
    DECL_RELAXEXIT   ((*relaxexit));     /**< deinitialize relaxator */
+   DECL_RELAXINITSOL((*relaxinitsol));  /**< solving process initialization method of relaxator */
+   DECL_RELAXEXITSOL((*relaxexitsol));  /**< solving process deinitialization method of relaxator */
    DECL_RELAXEXEC   ((*relaxexec));     /**< execution method of relaxator */
    RELAXDATA*       relaxdata;          /**< relaxators local data */
    CLOCK*           clock;              /**< relaxation time */

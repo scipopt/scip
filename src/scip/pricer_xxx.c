@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.6 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.7 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -109,6 +109,36 @@ DECL_PRICEREXIT(pricerExitXxx)
 #endif
 
 
+/** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
+#if 0
+static
+DECL_PRICERINITSOL(pricerInitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx variable pricer not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define pricerInitsolXxx NULL
+#endif
+
+
+/** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
+#if 0
+static
+DECL_PRICEREXITSOL(pricerExitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx variable pricer not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define pricerExitsolXxx NULL
+#endif
+
+
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
 DECL_PRICERREDCOST(pricerRedcostXxx)
@@ -154,7 +184,8 @@ RETCODE SCIPincludePricerXxx(
 
    /* include variable pricer */
    CHECK_OKAY( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY,
-         pricerFreeXxx, pricerInitXxx, pricerExitXxx, pricerRedcostXxx, pricerFarkasXxx,
+         pricerFreeXxx, pricerInitXxx, pricerExitXxx, 
+         pricerInitsolXxx, pricerExitsolXxx, pricerRedcostXxx, pricerFarkasXxx,
          pricerdata) );
 
    /* add xxx variable pricer parameters */

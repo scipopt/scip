@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.21 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.22 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -61,28 +61,28 @@ RETCODE SCIPpresolCreate(
 extern
 RETCODE SCIPpresolFree(
    PRESOL**         presol,             /**< pointer to presolver data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes presolver */
 extern
 RETCODE SCIPpresolInit(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes presolver */
 extern
 RETCODE SCIPpresolExit(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs presolver that the presolving process is being started */
 extern
 RETCODE SCIPpresolInitpre(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -90,7 +90,7 @@ RETCODE SCIPpresolInitpre(
 extern
 RETCODE SCIPpresolExitpre(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

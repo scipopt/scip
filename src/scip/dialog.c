@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.15 2005/01/25 12:46:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.16 2005/02/07 14:08:21 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -205,7 +205,7 @@ RETCODE SCIPdialoghdlrFree(
 /** executes the root dialog of the dialog handler */
 RETCODE SCIPdialoghdlrExec(
    DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    DIALOG* dialog;
@@ -220,7 +220,7 @@ RETCODE SCIPdialoghdlrExec(
    /* execute dialogs until a NULL is returned as nextdialog */
    while( dialog != NULL )
    {
-      CHECK_OKAY( SCIPdialogExec(dialog, scip, dialoghdlr, &dialog) );
+      CHECK_OKAY( SCIPdialogExec(dialog, set, dialoghdlr, &dialog) );
       
       /* reset buffer, it is was consumed completely */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0' )
@@ -552,16 +552,17 @@ RETCODE SCIPdialogRelease(
 /** executes dialog */
 RETCODE SCIPdialogExec(
    DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    DIALOG**         nextdialog          /**< pointer to store the next dialog to process */
    )
 {
    assert(dialog != NULL);
    assert(dialog->dialogexec != NULL);
+   assert(set != NULL);
    assert(nextdialog != NULL);
 
-   CHECK_OKAY( dialog->dialogexec(scip, dialog, dialoghdlr, nextdialog) );
+   CHECK_OKAY( dialog->dialogexec(set->scip, dialog, dialoghdlr, nextdialog) );
 
    return SCIP_OKAY;
 }

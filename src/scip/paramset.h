@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.12 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.13 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -187,7 +187,7 @@ RETCODE SCIPparamsetGetString(
 extern
 RETCODE SCIPparamsetSetBool(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    Bool             value               /**< new value of the parameter */
    );
@@ -196,7 +196,7 @@ RETCODE SCIPparamsetSetBool(
 extern
 RETCODE SCIPparamsetSetInt(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    int              value               /**< new value of the parameter */
    );
@@ -205,7 +205,7 @@ RETCODE SCIPparamsetSetInt(
 extern
 RETCODE SCIPparamsetSetLongint(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    Longint          value               /**< new value of the parameter */
    );
@@ -214,7 +214,7 @@ RETCODE SCIPparamsetSetLongint(
 extern
 RETCODE SCIPparamsetSetReal(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    Real             value               /**< new value of the parameter */
    );
@@ -223,7 +223,7 @@ RETCODE SCIPparamsetSetReal(
 extern
 RETCODE SCIPparamsetSetChar(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    char             value               /**< new value of the parameter */
    );
@@ -232,7 +232,7 @@ RETCODE SCIPparamsetSetChar(
 extern
 RETCODE SCIPparamsetSetString(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of the parameter */
    const char*      value               /**< new value of the parameter */
    );
@@ -240,7 +240,7 @@ RETCODE SCIPparamsetSetString(
 /** reads parameters from a file */
 RETCODE SCIPparamsetRead(
    PARAMSET*        paramset,           /**< parameter set */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    const char*      filename            /**< file name */
    );
 

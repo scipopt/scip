@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.41 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.42 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -96,6 +96,8 @@ RETCODE SCIPheurCreate(
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
+   DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
+   DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
    DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    )
@@ -124,6 +126,8 @@ RETCODE SCIPheurCreate(
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
    (*heur)->heurexit = heurexit;
+   (*heur)->heurinitsol = heurinitsol;
+   (*heur)->heurexitsol = heurexitsol;
    (*heur)->heurexec = heurexec;
    (*heur)->heurdata = heurdata;
    CHECK_OKAY( SCIPclockCreate(&(*heur)->clock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -156,18 +160,18 @@ RETCODE SCIPheurCreate(
 /** calls destructor and frees memory of primal heuristic */
 RETCODE SCIPheurFree(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
    assert(*heur != NULL);
    assert(!(*heur)->initialized);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    /* call destructor of primal heuristic */
    if( (*heur)->heurfree != NULL )
    {
-      CHECK_OKAY( (*heur)->heurfree(scip, *heur) );
+      CHECK_OKAY( (*heur)->heurfree(set->scip, *heur) );
    }
 
    SCIPclockFree(&(*heur)->clock);
@@ -181,11 +185,11 @@ RETCODE SCIPheurFree(
 /** initializes primal heuristic */
 RETCODE SCIPheurInit(
    HEUR*            heur,               /**< primal heuristic */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( heur->initialized )
    {
@@ -200,7 +204,7 @@ RETCODE SCIPheurInit(
 
    if( heur->heurinit != NULL )
    {
-      CHECK_OKAY( heur->heurinit(scip, heur) );
+      CHECK_OKAY( heur->heurinit(set->scip, heur) );
    }
    heur->initialized = TRUE;
 
@@ -210,11 +214,11 @@ RETCODE SCIPheurInit(
 /** calls exit method of primal heuristic */
 RETCODE SCIPheurExit(
    HEUR*            heur,               /**< primal heuristic */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !heur->initialized )
    {
@@ -224,14 +228,14 @@ RETCODE SCIPheurExit(
 
    if( heur->heurexit != NULL )
    {
-      CHECK_OKAY( heur->heurexit(scip, heur) );
+      CHECK_OKAY( heur->heurexit(set->scip, heur) );
    }
    heur->initialized = FALSE;
 
    return SCIP_OKAY;
 }
 
-/** initializes solution process data of primal heuristic */
+/** informs primal heuristic that the branch and bound process is being started */
 RETCODE SCIPheurInitsol(
    HEUR*            heur,               /**< primal heuristic */
    SET*             set                 /**< global SCIP settings */
@@ -244,6 +248,30 @@ RETCODE SCIPheurInitsol(
    {
       heur->delaypos = -1;
       set->heurssorted = FALSE;
+   }
+
+   /* call solving process initialization method of primal heuristic */
+   if( heur->heurinitsol != NULL )
+   {
+      CHECK_OKAY( heur->heurinitsol(set->scip, heur) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs primal heuristic that the branch and bound process data is being freed */
+RETCODE SCIPheurExitsol(
+   HEUR*            heur,               /**< primal heuristic */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(heur != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of primal heuristic */
+   if( heur->heurexitsol != NULL )
+   {
+      CHECK_OKAY( heur->heurexitsol(set->scip, heur) );
    }
 
    return SCIP_OKAY;

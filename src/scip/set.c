@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.135 2005/02/04 14:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.136 2005/02/07 14:08:27 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -817,91 +817,91 @@ RETCODE SCIPsetFree(
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )
    {
-      CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i], (*set)->scip) );
+      CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->readers);
 
    /* free variable pricers */
    for( i = 0; i < (*set)->npricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerFree(&(*set)->pricers[i], (*set)->scip) );
+      CHECK_OKAY( SCIPpricerFree(&(*set)->pricers[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->pricers);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], (*set)->scip) );
+      CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->conshdlrs);
 
    /* free conflict handlers */
    for( i = 0; i < (*set)->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrFree(&(*set)->conflicthdlrs[i], (*set)->scip) );
+      CHECK_OKAY( SCIPconflicthdlrFree(&(*set)->conflicthdlrs[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->conflicthdlrs);
 
    /* free presolvers */
    for( i = 0; i < (*set)->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolFree(&(*set)->presols[i], (*set)->scip) );
+      CHECK_OKAY( SCIPpresolFree(&(*set)->presols[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->presols);
 
    /* free relaxators */
    for( i = 0; i < (*set)->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxFree(&(*set)->relaxs[i], (*set)->scip) );
+      CHECK_OKAY( SCIPrelaxFree(&(*set)->relaxs[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->relaxs);
 
    /* free separators */
    for( i = 0; i < (*set)->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaFree(&(*set)->sepas[i], (*set)->scip) );
+      CHECK_OKAY( SCIPsepaFree(&(*set)->sepas[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->sepas);
 
    /* free propagators */
    for( i = 0; i < (*set)->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropFree(&(*set)->props[i], (*set)->scip) );
+      CHECK_OKAY( SCIPpropFree(&(*set)->props[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->props);
 
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurFree(&(*set)->heurs[i], (*set)->scip) );
+      CHECK_OKAY( SCIPheurFree(&(*set)->heurs[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->heurs);
 
    /* free event handlers */
    for( i = 0; i < (*set)->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrFree(&(*set)->eventhdlrs[i], (*set)->scip) );
+      CHECK_OKAY( SCIPeventhdlrFree(&(*set)->eventhdlrs[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->eventhdlrs);
 
    /* free node selectors */
    for( i = 0; i < (*set)->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i], (*set)->scip) );
+      CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->nodesels);
 
    /* free branching methods */
    for( i = 0; i < (*set)->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleFree(&(*set)->branchrules[i], (*set)->scip) );
+      CHECK_OKAY( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->branchrules);
 
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispFree(&(*set)->disps[i], (*set)->scip) );
+      CHECK_OKAY( SCIPdispFree(&(*set)->disps[i], *set) );
    }
    freeMemoryArrayNull(&(*set)->disps);
 
@@ -1128,7 +1128,7 @@ RETCODE SCIPsetSetBoolParam(
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetBool(set->paramset, set->scip, name, value) );
+   CHECK_OKAY( SCIPparamsetSetBool(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
@@ -1142,7 +1142,7 @@ RETCODE SCIPsetSetIntParam(
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetInt(set->paramset, set->scip, name, value) );
+   CHECK_OKAY( SCIPparamsetSetInt(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
@@ -1156,7 +1156,7 @@ RETCODE SCIPsetSetLongintParam(
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetLongint(set->paramset, set->scip, name, value) );
+   CHECK_OKAY( SCIPparamsetSetLongint(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
@@ -1170,7 +1170,7 @@ RETCODE SCIPsetSetRealParam(
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetReal(set->paramset, set->scip, name, value) );
+   CHECK_OKAY( SCIPparamsetSetReal(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
@@ -1184,7 +1184,7 @@ RETCODE SCIPsetSetCharParam(
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetChar(set->paramset, set->scip, name, value) );
+   CHECK_OKAY( SCIPparamsetSetChar(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
@@ -1198,7 +1198,7 @@ RETCODE SCIPsetSetStringParam(
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetString(set->paramset, set->scip, name, value) );
+   CHECK_OKAY( SCIPparamsetSetString(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
@@ -1211,7 +1211,7 @@ RETCODE SCIPsetReadParams(
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetRead(set->paramset, set->scip, filename) );
+   CHECK_OKAY( SCIPparamsetRead(set->paramset, set, filename) );
 
    return SCIP_OKAY;
 }
@@ -2000,73 +2000,73 @@ RETCODE SCIPsetInitPlugins(
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerInit(set->pricers[i], set->scip) );
+      CHECK_OKAY( SCIPpricerInit(set->pricers[i], set) );
    }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], set) );
    }
 
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrInit(set->conflicthdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPconflicthdlrInit(set->conflicthdlrs[i], set) );
    }
 
    /* presolvers */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolInit(set->presols[i], set->scip) );
+      CHECK_OKAY( SCIPpresolInit(set->presols[i], set) );
    }
 
    /* relaxators */
    for( i = 0; i < set->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxInit(set->relaxs[i], set->scip) );
+      CHECK_OKAY( SCIPrelaxInit(set->relaxs[i], set) );
    }
 
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaInit(set->sepas[i], set->scip) );
+      CHECK_OKAY( SCIPsepaInit(set->sepas[i], set) );
    }
 
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropInit(set->props[i], set->scip) );
+      CHECK_OKAY( SCIPpropInit(set->props[i], set) );
    }
 
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurInit(set->heurs[i], set->scip) );
+      CHECK_OKAY( SCIPheurInit(set->heurs[i], set) );
    }
 
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrInit(set->eventhdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPeventhdlrInit(set->eventhdlrs[i], set) );
    }
 
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselInit(set->nodesels[i], set->scip) );
+      CHECK_OKAY( SCIPnodeselInit(set->nodesels[i], set) );
    }
 
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleInit(set->branchrules[i], set->scip) );
+      CHECK_OKAY( SCIPbranchruleInit(set->branchrules[i], set) );
    }
 
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispInit(set->disps[i], set->scip) );
+      CHECK_OKAY( SCIPdispInit(set->disps[i], set) );
    }
    CHECK_OKAY( SCIPdispAutoActivate(set) );
 
@@ -2086,73 +2086,73 @@ RETCODE SCIPsetExitPlugins(
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerExit(set->pricers[i], set->scip) );
+      CHECK_OKAY( SCIPpricerExit(set->pricers[i], set) );
    }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], set) );
    }
 
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrExit(set->conflicthdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPconflicthdlrExit(set->conflicthdlrs[i], set) );
    }
 
    /* presolvers */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolExit(set->presols[i], set->scip) );
+      CHECK_OKAY( SCIPpresolExit(set->presols[i], set) );
    }
 
    /* relaxators */
    for( i = 0; i < set->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxExit(set->relaxs[i], set->scip) );
+      CHECK_OKAY( SCIPrelaxExit(set->relaxs[i], set) );
    }
 
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaExit(set->sepas[i], set->scip) );
+      CHECK_OKAY( SCIPsepaExit(set->sepas[i], set) );
    }
 
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropExit(set->props[i], set->scip) );
+      CHECK_OKAY( SCIPpropExit(set->props[i], set) );
    }
 
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurExit(set->heurs[i], set->scip) );
+      CHECK_OKAY( SCIPheurExit(set->heurs[i], set) );
    }
 
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrExit(set->eventhdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPeventhdlrExit(set->eventhdlrs[i], set) );
    }
 
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselExit(set->nodesels[i], set->scip) );
+      CHECK_OKAY( SCIPnodeselExit(set->nodesels[i], set) );
    }
 
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExit(set->branchrules[i], set->scip) );
+      CHECK_OKAY( SCIPbranchruleExit(set->branchrules[i], set) );
    }
 
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispExit(set->disps[i], set->scip) );
+      CHECK_OKAY( SCIPdispExit(set->disps[i], set) );
    }
 
    return SCIP_OKAY;
@@ -2175,7 +2175,7 @@ RETCODE SCIPsetInitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolInitpre(set->presols[i], set->scip, &result) );
+      CHECK_OKAY( SCIPpresolInitpre(set->presols[i], set, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2193,7 +2193,7 @@ RETCODE SCIPsetInitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitpre(set->conshdlrs[i], set->scip, &result) );
+      CHECK_OKAY( SCIPconshdlrInitpre(set->conshdlrs[i], set, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2229,7 +2229,7 @@ RETCODE SCIPsetExitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolExitpre(set->presols[i], set->scip, &result) );
+      CHECK_OKAY( SCIPpresolExitpre(set->presols[i], set, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2247,7 +2247,7 @@ RETCODE SCIPsetExitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExitpre(set->conshdlrs[i], set->scip, &result) );
+      CHECK_OKAY( SCIPconshdlrExitpre(set->conshdlrs[i], set, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2275,16 +2275,41 @@ RETCODE SCIPsetInitsolPlugins(
 
    assert(set != NULL);
 
+   /* active variable pricers */
+   SCIPsetSortPricers(set);
+   for( i = 0; i < set->nactivepricers; ++i )
+   {
+      CHECK_OKAY( SCIPpricerInitsol(set->pricers[i], set) );
+   }
+
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitsol(set->conshdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPconshdlrInitsol(set->conshdlrs[i], set) );
    }
    
+   /* conflict handlers */
+   for( i = 0; i < set->nconflicthdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconflicthdlrInitsol(set->conflicthdlrs[i], set) );
+   }
+
+   /* relaxators */
+   for( i = 0; i < set->nrelaxs; ++i )
+   {
+      CHECK_OKAY( SCIPrelaxInitsol(set->relaxs[i], set) );
+   }
+
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaInitsol(set->sepas[i], set->scip) );
+      CHECK_OKAY( SCIPsepaInitsol(set->sepas[i], set) );
+   }
+
+   /* propagators */
+   for( i = 0; i < set->nprops; ++i )
+   {
+      CHECK_OKAY( SCIPpropInitsol(set->props[i], set) );
    }
 
    /* primal heuristics */
@@ -2293,12 +2318,30 @@ RETCODE SCIPsetInitsolPlugins(
       CHECK_OKAY( SCIPheurInitsol(set->heurs[i], set) );
    }
 
+   /* event handlers */
+   for( i = 0; i < set->neventhdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPeventhdlrInitsol(set->eventhdlrs[i], set) );
+   }
+
+   /* node selectors */
+   for( i = 0; i < set->nnodesels; ++i )
+   {
+      CHECK_OKAY( SCIPnodeselInitsol(set->nodesels[i], set) );
+   }
+
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleInitsol(set->branchrules[i], set->scip) );
+      CHECK_OKAY( SCIPbranchruleInitsol(set->branchrules[i], set) );
    }
    
+   /* display columns */
+   for( i = 0; i < set->ndisps; ++i )
+   {
+      CHECK_OKAY( SCIPdispInitsol(set->disps[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2311,32 +2354,73 @@ RETCODE SCIPsetExitsolPlugins(
 
    assert(set != NULL);
 
+   /* active variable pricers */
+   SCIPsetSortPricers(set);
+   for( i = 0; i < set->nactivepricers; ++i )
+   {
+      CHECK_OKAY( SCIPpricerExitsol(set->pricers[i], set) );
+   }
+
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExitsol(set->conshdlrs[i], set->scip) );
+      CHECK_OKAY( SCIPconshdlrExitsol(set->conshdlrs[i], set) );
    }
    
+   /* conflict handlers */
+   for( i = 0; i < set->nconflicthdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconflicthdlrExitsol(set->conflicthdlrs[i], set) );
+   }
+
+   /* relaxators */
+   for( i = 0; i < set->nrelaxs; ++i )
+   {
+      CHECK_OKAY( SCIPrelaxExitsol(set->relaxs[i], set) );
+   }
+
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaExitsol(set->sepas[i], set->scip) );
+      CHECK_OKAY( SCIPsepaExitsol(set->sepas[i], set) );
    }
 
-#if 0
+   /* propagators */
+   for( i = 0; i < set->nprops; ++i )
+   {
+      CHECK_OKAY( SCIPpropExitsol(set->props[i], set) );
+   }
+
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
       CHECK_OKAY( SCIPheurExitsol(set->heurs[i], set) );
    }
-#endif
+
+   /* event handlers */
+   for( i = 0; i < set->neventhdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPeventhdlrExitsol(set->eventhdlrs[i], set) );
+   }
+
+   /* node selectors */
+   for( i = 0; i < set->nnodesels; ++i )
+   {
+      CHECK_OKAY( SCIPnodeselExitsol(set->nodesels[i], set) );
+   }
 
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExitsol(set->branchrules[i], set->scip) );
+      CHECK_OKAY( SCIPbranchruleExitsol(set->branchrules[i], set) );
    }
    
+   /* display columns */
+   for( i = 0; i < set->ndisps; ++i )
+   {
+      CHECK_OKAY( SCIPdispExitsol(set->disps[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 

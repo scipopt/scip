@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.38 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.39 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -65,6 +65,8 @@ RETCODE SCIPdispCreate(
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
+   DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
+   DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
    DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */
@@ -91,6 +93,8 @@ RETCODE SCIPdispCreate(
    (*disp)->dispfree = dispfree;
    (*disp)->dispinit = dispinit;
    (*disp)->dispexit = dispexit;
+   (*disp)->dispinitsol = dispinitsol;
+   (*disp)->dispexitsol = dispexitsol;
    (*disp)->dispoutput = dispoutput;
    (*disp)->dispdata = dispdata;
    (*disp)->width = width;
@@ -112,17 +116,18 @@ RETCODE SCIPdispCreate(
 /** frees memory of display column */
 RETCODE SCIPdispFree(
    DISP**           disp,               /**< pointer to display column data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
    assert(*disp != NULL);
    assert(!(*disp)->initialized);
+   assert(set != NULL);
 
    /* call destructor of display column */
    if( (*disp)->dispfree != NULL )
    {
-      CHECK_OKAY( (*disp)->dispfree(scip, *disp) );
+      CHECK_OKAY( (*disp)->dispfree(set->scip, *disp) );
    }
 
    freeMemoryArray(&(*disp)->name);
@@ -136,11 +141,11 @@ RETCODE SCIPdispFree(
 /** initializes display column */
 RETCODE SCIPdispInit(
    DISP*            disp,               /**< display column */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( disp->initialized )
    {
@@ -150,7 +155,7 @@ RETCODE SCIPdispInit(
 
    if( disp->dispinit != NULL )
    {
-      CHECK_OKAY( disp->dispinit(scip, disp) );
+      CHECK_OKAY( disp->dispinit(set->scip, disp) );
    }
    disp->initialized = TRUE;
 
@@ -160,11 +165,11 @@ RETCODE SCIPdispInit(
 /** deinitializes display column */
 RETCODE SCIPdispExit(
    DISP*            disp,               /**< display column */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !disp->initialized )
    {
@@ -174,9 +179,45 @@ RETCODE SCIPdispExit(
 
    if( disp->dispexit != NULL )
    {
-      CHECK_OKAY( disp->dispexit(scip, disp) );
+      CHECK_OKAY( disp->dispexit(set->scip, disp) );
    }
    disp->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs display column that the branch and bound process is being started */
+RETCODE SCIPdispInitsol(
+   DISP*            disp,               /**< display column */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(disp != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of display column */
+   if( disp->dispinitsol != NULL )
+   {
+      CHECK_OKAY( disp->dispinitsol(set->scip, disp) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs display column that the branch and bound process data is being freed */
+RETCODE SCIPdispExitsol(
+   DISP*            disp,               /**< display column */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(disp != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of display column */
+   if( disp->dispexitsol != NULL )
+   {
+      CHECK_OKAY( disp->dispexitsol(set->scip, disp) );
+   }
 
    return SCIP_OKAY;
 }

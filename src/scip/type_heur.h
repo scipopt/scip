@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.7 2005/01/21 09:17:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.8 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -55,6 +55,28 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  - heur            : the primal heuristic itself
  */
 #define DECL_HEUREXIT(x) RETCODE x (SCIP* scip, HEUR* heur)
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The primal heuristic may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - heur            : the primal heuristic itself
+ */
+#define DECL_HEURINITSOL(x) RETCODE x (SCIP* scip, HEUR* heur)
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The primal heuristic should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - heur            : the primal heuristic itself
+ */
+#define DECL_HEUREXITSOL(x) RETCODE x (SCIP* scip, HEUR* heur)
 
 /** execution method of primal heuristic
  *

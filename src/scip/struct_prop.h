@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.3 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prop.h,v 1.4 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators
@@ -43,6 +43,8 @@ struct Prop
    DECL_PROPFREE    ((*propfree));      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit));      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit));      /**< deinitialize propagator */
+   DECL_PROPINITSOL ((*propinitsol));   /**< solving process initialization method of propagator */
+   DECL_PROPEXITSOL ((*propexitsol));   /**< solving process deinitialization method of propagator */
    DECL_PROPEXEC    ((*propexec));      /**< execution method of propagator */
    DECL_PROPRESPROP ((*propresprop));   /**< propagation conflict resolving method */
    PROPDATA*        propdata;           /**< propagators local data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.6 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.7 2005/02/07 14:08:26 bzfpfend Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -72,6 +72,8 @@ RETCODE SCIPrelaxCreate(
    DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
+   DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxator */
+   DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxator */
    DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
    RELAXDATA*       relaxdata           /**< relaxator data */
    )
@@ -93,6 +95,8 @@ RETCODE SCIPrelaxCreate(
    (*relax)->relaxfree = relaxfree;
    (*relax)->relaxinit = relaxinit;
    (*relax)->relaxexit = relaxexit;
+   (*relax)->relaxinitsol = relaxinitsol;
+   (*relax)->relaxexitsol = relaxexitsol;
    (*relax)->relaxexec = relaxexec;
    (*relax)->relaxdata = relaxdata;
    CHECK_OKAY( SCIPclockCreate(&(*relax)->clock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -117,18 +121,18 @@ RETCODE SCIPrelaxCreate(
 /** calls destructor and frees memory of relaxator */
 RETCODE SCIPrelaxFree(
    RELAX**          relax,              /**< pointer to relaxator data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(relax != NULL);
    assert(*relax != NULL);
    assert(!(*relax)->initialized);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    /* call destructor of relaxator */
    if( (*relax)->relaxfree != NULL )
    {
-      CHECK_OKAY( (*relax)->relaxfree(scip, *relax) );
+      CHECK_OKAY( (*relax)->relaxfree(set->scip, *relax) );
    }
 
    SCIPclockFree(&(*relax)->clock);
@@ -142,11 +146,11 @@ RETCODE SCIPrelaxFree(
 /** initializes relaxator */
 RETCODE SCIPrelaxInit(
    RELAX*           relax,              /**< relaxator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(relax != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( relax->initialized )
    {
@@ -159,7 +163,7 @@ RETCODE SCIPrelaxInit(
 
    if( relax->relaxinit != NULL )
    {
-      CHECK_OKAY( relax->relaxinit(scip, relax) );
+      CHECK_OKAY( relax->relaxinit(set->scip, relax) );
    }
    relax->initialized = TRUE;
 
@@ -169,11 +173,11 @@ RETCODE SCIPrelaxInit(
 /** calls exit method of relaxator */
 RETCODE SCIPrelaxExit(
    RELAX*           relax,              /**< relaxator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(relax != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !relax->initialized )
    {
@@ -183,9 +187,45 @@ RETCODE SCIPrelaxExit(
 
    if( relax->relaxexit != NULL )
    {
-      CHECK_OKAY( relax->relaxexit(scip, relax) );
+      CHECK_OKAY( relax->relaxexit(set->scip, relax) );
    }
    relax->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs relaxator that the branch and bound process is being started */
+RETCODE SCIPrelaxInitsol(
+   RELAX*           relax,              /**< relaxator */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(relax != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of relaxator */
+   if( relax->relaxinitsol != NULL )
+   {
+      CHECK_OKAY( relax->relaxinitsol(set->scip, relax) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs relaxator that the branch and bound process data is being freed */
+RETCODE SCIPrelaxExitsol(
+   RELAX*           relax,              /**< relaxator */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(relax != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of relaxator */
+   if( relax->relaxexitsol != NULL )
+   {
+      CHECK_OKAY( relax->relaxexitsol(set->scip, relax) );
+   }
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.6 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.7 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -72,6 +72,8 @@ RETCODE SCIPpropCreate(
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
+   DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
    DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    PROPDATA*        propdata            /**< propagator data */
@@ -94,6 +96,8 @@ RETCODE SCIPpropCreate(
    (*prop)->propfree = propfree;
    (*prop)->propinit = propinit;
    (*prop)->propexit = propexit;
+   (*prop)->propinitsol = propinitsol;
+   (*prop)->propexitsol = propexitsol;
    (*prop)->propexec = propexec;
    (*prop)->propresprop = propresprop;
    (*prop)->propdata = propdata;
@@ -120,18 +124,18 @@ RETCODE SCIPpropCreate(
 /** calls destructor and frees memory of propagator */
 RETCODE SCIPpropFree(
    PROP**           prop,               /**< pointer to propagator data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(prop != NULL);
    assert(*prop != NULL);
    assert(!(*prop)->initialized);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    /* call destructor of propagator */
    if( (*prop)->propfree != NULL )
    {
-      CHECK_OKAY( (*prop)->propfree(scip, *prop) );
+      CHECK_OKAY( (*prop)->propfree(set->scip, *prop) );
    }
 
    SCIPclockFree(&(*prop)->clock);
@@ -145,11 +149,11 @@ RETCODE SCIPpropFree(
 /** initializes propagator */
 RETCODE SCIPpropInit(
    PROP*            prop,               /**< propagator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(prop != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( prop->initialized )
    {
@@ -165,7 +169,7 @@ RETCODE SCIPpropInit(
 
    if( prop->propinit != NULL )
    {
-      CHECK_OKAY( prop->propinit(scip, prop) );
+      CHECK_OKAY( prop->propinit(set->scip, prop) );
    }
    prop->initialized = TRUE;
 
@@ -175,11 +179,11 @@ RETCODE SCIPpropInit(
 /** calls exit method of propagator */
 RETCODE SCIPpropExit(
    PROP*            prop,               /**< propagator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(prop != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !prop->initialized )
    {
@@ -189,9 +193,45 @@ RETCODE SCIPpropExit(
 
    if( prop->propexit != NULL )
    {
-      CHECK_OKAY( prop->propexit(scip, prop) );
+      CHECK_OKAY( prop->propexit(set->scip, prop) );
    }
    prop->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs propagator that the branch and bound process is being started */
+RETCODE SCIPpropInitsol(
+   PROP*            prop,               /**< propagator */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(prop != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of propagator */
+   if( prop->propinitsol != NULL )
+   {
+      CHECK_OKAY( prop->propinitsol(set->scip, prop) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs propagator that the branch and bound process data is being freed */
+RETCODE SCIPpropExitsol(
+   PROP*            prop,               /**< propagator */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(prop != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of propagator */
+   if( prop->propexitsol != NULL )
+   {
+      CHECK_OKAY( prop->propexitsol(set->scip, prop) );
+   }
 
    return SCIP_OKAY;
 }

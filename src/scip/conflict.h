@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.26 2005/01/31 12:20:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.27 2005/02/07 14:08:20 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -58,6 +58,8 @@ RETCODE SCIPconflicthdlrCreate(
    DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
+   DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
    DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
    CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    );
@@ -66,28 +68,42 @@ RETCODE SCIPconflicthdlrCreate(
 extern
 RETCODE SCIPconflicthdlrFree(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls init method of conflict handler */
 extern
 RETCODE SCIPconflicthdlrInit(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of conflict handler */
 extern
 RETCODE SCIPconflicthdlrExit(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs conflict handler that the branch and bound process is being started */
+extern
+RETCODE SCIPconflicthdlrInitsol(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs conflict handler that the branch and bound process data is being freed */
+extern
+RETCODE SCIPconflicthdlrExitsol(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of conflict handler */
 extern
 RETCODE SCIPconflicthdlrExec(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    NODE*            node,               /**< node to add conflict constraint to */
    VAR**            conflictvars,       /**< variables of the conflict set */
    int              nconflictvars,      /**< number of variables in the conflict set */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.4 2005/01/21 09:16:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.5 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -107,6 +107,40 @@ DECL_RELAXEXIT(relaxExitObj)
 }
 
 
+/** solving process initialization method of relaxator (called when branch and bound process is about to begin) */
+static
+DECL_RELAXINITSOL(relaxInitsolObj)
+{  /*lint --e{715}*/
+   RELAXDATA* relaxdata;
+
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+   assert(relaxdata->objrelax != NULL);
+
+   /* call virtual method of relax object */
+   CHECK_OKAY( relaxdata->objrelax->scip_initsol(scip, relax) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of relaxator (called before branch and bound process data is freed) */
+static
+DECL_RELAXEXITSOL(relaxExitsolObj)
+{  /*lint --e{715}*/
+   RELAXDATA* relaxdata;
+
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+   assert(relaxdata->objrelax != NULL);
+
+   /* call virtual method of relax object */
+   CHECK_OKAY( relaxdata->objrelax->scip_exitsol(scip, relax) );
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of relaxator */
 static
 DECL_RELAXEXEC(relaxExecObj)
@@ -147,7 +181,8 @@ RETCODE SCIPincludeObjRelax(
    /* include relaxator */
    CHECK_OKAY( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_, 
          objrelax->scip_priority_, objrelax->scip_freq_,
-         relaxFreeObj, relaxInitObj, relaxExitObj, relaxExecObj,
+         relaxFreeObj, relaxInitObj, relaxExitObj, 
+         relaxInitsolObj, relaxExitsolObj, relaxExecObj,
          relaxdata) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.43 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.44 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -50,6 +50,8 @@ RETCODE SCIPeventhdlrCreate(
    DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
+   DECL_EVENTINITSOL((*eventinitsol)),  /**< solving process initialization method of event handler */
+   DECL_EVENTEXITSOL((*eventexitsol)),  /**< solving process deinitialization method of event handler */
    DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
@@ -66,6 +68,8 @@ RETCODE SCIPeventhdlrCreate(
    (*eventhdlr)->eventfree = eventfree;
    (*eventhdlr)->eventinit = eventinit;
    (*eventhdlr)->eventexit = eventexit;
+   (*eventhdlr)->eventinitsol = eventinitsol;
+   (*eventhdlr)->eventexitsol = eventexitsol;
    (*eventhdlr)->eventdelete = eventdelete;
    (*eventhdlr)->eventexec = eventexec;
    (*eventhdlr)->eventhdlrdata = eventhdlrdata;
@@ -77,18 +81,18 @@ RETCODE SCIPeventhdlrCreate(
 /** calls destructor and frees memory of event handler */
 RETCODE SCIPeventhdlrFree(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(eventhdlr != NULL);
    assert(*eventhdlr != NULL);
    assert(!(*eventhdlr)->initialized);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    /* call destructor of event handler */
    if( (*eventhdlr)->eventfree != NULL )
    {
-      CHECK_OKAY( (*eventhdlr)->eventfree(scip, *eventhdlr) );
+      CHECK_OKAY( (*eventhdlr)->eventfree(set->scip, *eventhdlr) );
    }
 
    freeMemoryArray(&(*eventhdlr)->name);
@@ -101,11 +105,11 @@ RETCODE SCIPeventhdlrFree(
 /** initializes event handler */
 RETCODE SCIPeventhdlrInit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(eventhdlr != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( eventhdlr->initialized )
    {
@@ -115,7 +119,7 @@ RETCODE SCIPeventhdlrInit(
 
    if( eventhdlr->eventinit != NULL )
    {
-      CHECK_OKAY( eventhdlr->eventinit(scip, eventhdlr) );
+      CHECK_OKAY( eventhdlr->eventinit(set->scip, eventhdlr) );
    }
    eventhdlr->initialized = TRUE;
 
@@ -125,11 +129,11 @@ RETCODE SCIPeventhdlrInit(
 /** calls exit method of event handler */
 RETCODE SCIPeventhdlrExit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(eventhdlr != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !eventhdlr->initialized )
    {
@@ -139,9 +143,45 @@ RETCODE SCIPeventhdlrExit(
 
    if( eventhdlr->eventexit != NULL )
    {
-      CHECK_OKAY( eventhdlr->eventexit(scip, eventhdlr) );
+      CHECK_OKAY( eventhdlr->eventexit(set->scip, eventhdlr) );
    }
    eventhdlr->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs event handler that the branch and bound process is being started */
+RETCODE SCIPeventhdlrInitsol(
+   EVENTHDLR*       eventhdlr,          /**< event handler */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(eventhdlr != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of event handler */
+   if( eventhdlr->eventinitsol != NULL )
+   {
+      CHECK_OKAY( eventhdlr->eventinitsol(set->scip, eventhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs event handler that the branch and bound process data is being freed */
+RETCODE SCIPeventhdlrExitsol(
+   EVENTHDLR*       eventhdlr,          /**< event handler */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(eventhdlr != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of event handler */
+   if( eventhdlr->eventexitsol != NULL )
+   {
+      CHECK_OKAY( eventhdlr->eventexitsol(set->scip, eventhdlr) );
+   }
 
    return SCIP_OKAY;
 }

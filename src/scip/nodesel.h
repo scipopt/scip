@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.36 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.37 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -187,6 +187,8 @@ RETCODE SCIPnodeselCreate(
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
+   DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
+   DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata         /**< node selector data */
@@ -196,21 +198,35 @@ RETCODE SCIPnodeselCreate(
 extern
 RETCODE SCIPnodeselFree(
    NODESEL**        nodesel,            /**< pointer to node selector data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes node selector */
 extern
 RETCODE SCIPnodeselInit(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes node selector */
 extern
 RETCODE SCIPnodeselExit(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs node selector that the branch and bound process is being started */
+extern
+RETCODE SCIPnodeselInitsol(
+   NODESEL*         nodesel,            /**< node selector */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs node selector that the branch and bound process data is being freed */
+extern
+RETCODE SCIPnodeselExitsol(
+   NODESEL*         nodesel,            /**< node selector */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** select next node to be processed */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricer.h,v 1.7 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricer.h,v 1.8 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   struct_pricer.h
  * @brief  datastructures for variable pricers
@@ -40,6 +40,8 @@ struct Pricer
    DECL_PRICERFREE  ((*pricerfree));    /**< destructor of variable pricer */
    DECL_PRICERINIT  ((*pricerinit));    /**< initialize variable pricer */
    DECL_PRICEREXIT  ((*pricerexit));    /**< deinitialize variable pricer */
+   DECL_PRICERINITSOL((*pricerinitsol));/**< solving process initialization method of variable pricer */
+   DECL_PRICEREXITSOL((*pricerexitsol));/**< solving process deinitialization method of variable pricer */
    DECL_PRICERREDCOST((*pricerredcost));/**< reduced cost pricing method of variable pricer for feasible LPs */
    DECL_PRICERFARKAS((*pricerfarkas));  /**< farkas pricing method of variable pricer for infeasible LPs */
    PRICERDATA*      pricerdata;         /**< variable pricers local data */

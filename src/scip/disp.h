@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.24 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.25 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics
@@ -56,6 +56,8 @@ RETCODE SCIPdispCreate(
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
+   DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
+   DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
    DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */
@@ -68,21 +70,35 @@ RETCODE SCIPdispCreate(
 extern
 RETCODE SCIPdispFree(
    DISP**           disp,               /**< pointer to display column data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes display column */
 extern
 RETCODE SCIPdispInit(
    DISP*            disp,               /**< display column */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes display column */
 extern
 RETCODE SCIPdispExit(
    DISP*            disp,               /**< display column */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs display column that the branch and bound process is being started */
+extern
+RETCODE SCIPdispInitsol(
+   DISP*            disp,               /**< display column */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs display column that the branch and bound process data is being freed */
+extern
+RETCODE SCIPdispExitsol(
+   DISP*            disp,               /**< display column */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** output display column to screen */

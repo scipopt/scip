@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.83 2005/02/03 15:30:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.84 2005/02/07 14:08:20 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -2181,7 +2181,7 @@ RETCODE SCIPincludeConshdlrKnapsack(
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-         NULL, NULL, NULL, NULL, eventExecKnapsack,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecKnapsack,
          eventhdlrdata) );
 
    /* create knapsack constraint handler data */

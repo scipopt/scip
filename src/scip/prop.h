@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.5 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.6 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -54,6 +54,8 @@ RETCODE SCIPpropCreate(
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
+   DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
    DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    PROPDATA*        propdata            /**< propagator data */
@@ -63,21 +65,35 @@ RETCODE SCIPpropCreate(
 extern
 RETCODE SCIPpropFree(
    PROP**           prop,               /**< pointer to propagator data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes propagator */
 extern
 RETCODE SCIPpropInit(
    PROP*            prop,               /**< propagator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of propagator */
 extern
 RETCODE SCIPpropExit(
    PROP*            prop,               /**< propagator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs propagator that the branch and bound process is being started */
+extern
+RETCODE SCIPpropInitsol(
+   PROP*            prop,               /**< propagator */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs propagator that the branch and bound process data is being freed */
+extern
+RETCODE SCIPpropExitsol(
+   PROP*            prop,               /**< propagator */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of propagator */

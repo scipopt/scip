@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.38 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.39 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -84,6 +84,22 @@ DECL_NODESELFREE(nodeselFreeBfs)
 
    return SCIP_OKAY;
 }
+
+/** initialization method of node selector (called after problem was transformed) */
+#define nodeselInitBfs NULL
+
+
+/** deinitialization method of node selector (called before transformed problem is freed) */
+#define nodeselExitBfs NULL
+
+
+/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
+#define nodeselInitsolBfs NULL
+
+
+/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
+#define nodeselExitsolBfs NULL
+
 
 /** node selection method of node selector */
 static
@@ -211,6 +227,7 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    return SCIP_OKAY;
 }
 
+
 /** node comparison method of node selector */
 static
 DECL_NODESELCOMP(nodeselCompBfs)
@@ -295,9 +312,10 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-                  NODESEL_LOWESTFIRST,
-                  nodeselFreeBfs, NULL, NULL, nodeselSelectBfs, nodeselCompBfs,
-                  nodeseldata) );
+         NODESEL_LOWESTFIRST,
+         nodeselFreeBfs, nodeselInitBfs, nodeselExitBfs, 
+         nodeselInitsolBfs, nodeselExitsolBfs, nodeselSelectBfs, nodeselCompBfs,
+         nodeseldata) );
 
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,

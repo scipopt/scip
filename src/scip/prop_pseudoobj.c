@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.6 2005/01/25 09:59:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.7 2005/02/07 14:08:26 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -145,6 +145,14 @@ DECL_PROPFREE(propFreePseudoobj)
 
 /** deinitialization method of propagator (called before transformed problem is freed) */
 #define propExitPseudoobj NULL
+
+
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+#define propInitsolPseudoobj NULL
+
+
+/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
+#define propExitsolPseudoobj NULL
 
 
 /** execution method of propagator */
@@ -283,7 +291,8 @@ RETCODE SCIPincludePropPseudoobj(
 
    /* include propagator */
    CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ,
-         propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, propExecPseudoobj, propRespropPseudoobj,
+         propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, 
+         propInitsolPseudoobj, propExitsolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
          propdata) );
 
    /* add pseudoobj propagator parameters */

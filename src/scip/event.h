@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.33 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.34 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -56,6 +56,8 @@ RETCODE SCIPeventhdlrCreate(
    DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
+   DECL_EVENTINITSOL((*eventinitsol)),  /**< solving process initialization method of event handler */
+   DECL_EVENTEXITSOL((*eventexitsol)),  /**< solving process deinitialization method of event handler */
    DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
@@ -65,21 +67,35 @@ RETCODE SCIPeventhdlrCreate(
 extern
 RETCODE SCIPeventhdlrFree(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes event handler */
 extern
 RETCODE SCIPeventhdlrInit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of event handler */
 extern
 RETCODE SCIPeventhdlrExit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs event handler that the branch and bound process is being started */
+extern
+RETCODE SCIPeventhdlrInitsol(
+   EVENTHDLR*       eventhdlr,          /**< event handler */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs event handler that the branch and bound process data is being freed */
+extern
+RETCODE SCIPeventhdlrExitsol(
+   EVENTHDLR*       eventhdlr,          /**< event handler */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of event handler */

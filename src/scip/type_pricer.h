@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.8 2005/01/21 09:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.9 2005/02/07 14:08:29 bzfpfend Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -54,6 +54,28 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - pricer          : the variable pricer itself
  */
 #define DECL_PRICEREXIT(x) RETCODE x (SCIP* scip, PRICER* pricer)
+
+/** solving process initialization method of variable pricer (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The variable pricer may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - pricer          : the variable pricer itself
+ */
+#define DECL_PRICERINITSOL(x) RETCODE x (SCIP* scip, PRICER* pricer)
+
+/** solving process deinitialization method of variable pricer (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The variable pricer should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - pricer          : the variable pricer itself
+ */
+#define DECL_PRICEREXITSOL(x) RETCODE x (SCIP* scip, PRICER* pricer)
 
 /** reduced cost pricing method of variable pricer for feasible LPs
  *

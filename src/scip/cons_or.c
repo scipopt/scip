@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.33 2005/01/31 12:20:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.34 2005/02/07 14:08:21 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1558,8 +1558,7 @@ RETCODE SCIPincludeConshdlrOr(
 
    /* create event handler for events on variables */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL,
-         NULL, eventExecOr,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecOr,
          NULL) );
 
    /* create constraint handler data */

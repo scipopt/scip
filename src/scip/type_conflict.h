@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.9 2005/01/21 09:17:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.10 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -56,6 +56,28 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - conflicthdlr    : the conflict handler itself
  */
 #define DECL_CONFLICTEXIT(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
+
+/** solving process initialization method of conflict handler (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The conflict handler may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conflicthdlr    : the conflict handler itself
+ */
+#define DECL_CONFLICTINITSOL(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
+
+/** solving process deinitialization method of conflict handler (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The conflict handler should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conflicthdlr    : the conflict handler itself
+ */
+#define DECL_CONFLICTEXITSOL(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
 
 /** conflict processing method of conflict handler (called when conflict was found)
  *

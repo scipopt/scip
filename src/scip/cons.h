@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.83 2005/01/31 12:57:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.84 2005/02/07 14:08:20 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -102,28 +102,28 @@ RETCODE SCIPconshdlrCreate(
 extern
 RETCODE SCIPconshdlrFree(
    CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls init method of constraint handler */
 extern
 RETCODE SCIPconshdlrInit(
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of constraint handler */
 extern
 RETCODE SCIPconshdlrExit(
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs constraint handler that the presolving process is being started */
 extern
 RETCODE SCIPconshdlrInitpre(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -131,7 +131,7 @@ RETCODE SCIPconshdlrInitpre(
 extern
 RETCODE SCIPconshdlrExitpre(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -139,14 +139,14 @@ RETCODE SCIPconshdlrExitpre(
 extern
 RETCODE SCIPconshdlrInitsol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs constraint handler that the branch and bound process data is being freed */
 extern
 RETCODE SCIPconshdlrExitsol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls LP initialization method of constraint handler to separate all initial constraints */

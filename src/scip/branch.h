@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.36 2005/02/03 16:57:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.37 2005/02/07 14:08:20 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -159,35 +159,35 @@ RETCODE SCIPbranchruleCreate(
 extern
 RETCODE SCIPbranchruleFree(
    BRANCHRULE**     branchrule,         /**< pointer to branching rule data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes branching rule */
 extern
 RETCODE SCIPbranchruleInit(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes branching rule */
 extern
 RETCODE SCIPbranchruleExit(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs branching rule that the branch and bound process is being started */
 extern
 RETCODE SCIPbranchruleInitsol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs branching rule that the branch and bound process data is being freed */
 extern
 RETCODE SCIPbranchruleExitsol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** executes branching rule for fractional LP solution */

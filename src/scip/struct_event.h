@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.12 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.13 2005/02/07 14:08:27 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -109,6 +109,8 @@ struct Eventhdlr
    DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
    DECL_EVENTINIT   ((*eventinit));     /**< initialize event handler */
    DECL_EVENTEXIT   ((*eventexit));     /**< deinitialize event handler */
+   DECL_EVENTINITSOL((*eventinitsol));  /**< solving process initialization method of event handler */
+   DECL_EVENTEXITSOL((*eventexitsol));  /**< solving process deinitialization method of event handler */
    DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */

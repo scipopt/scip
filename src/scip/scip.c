@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.257 2005/02/04 14:27:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.258 2005/02/07 14:08:26 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1080,6 +1080,8 @@ RETCODE SCIPincludePricer(
    DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
+   DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
    DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
    PRICERDATA*      pricerdata          /**< variable pricer data */
@@ -1091,7 +1093,7 @@ RETCODE SCIPincludePricer(
 
    CHECK_OKAY( SCIPpricerCreate(&pricer, scip->set, scip->mem->setmem,
          name, desc, priority,
-         pricerfree, pricerinit, pricerexit, pricerredcost, pricerfarkas, pricerdata) );
+         pricerfree, pricerinit, pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata) );
    CHECK_OKAY( SCIPsetIncludePricer(scip->set, pricer) );
    
    return SCIP_OKAY;
@@ -1270,6 +1272,8 @@ RETCODE SCIPincludeConflicthdlr(
    DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
+   DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
    DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
    CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    )
@@ -1279,7 +1283,7 @@ RETCODE SCIPincludeConflicthdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->mem->setmem, name, desc, priority, 
-         conflictfree, conflictinit, conflictexit, conflictexec,
+         conflictfree, conflictinit, conflictexit, conflictinitsol, conflictexitsol, conflictexec,
          conflicthdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
    
@@ -1421,6 +1425,8 @@ RETCODE SCIPincludeRelax(
    DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
+   DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxator */
+   DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxator */
    DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
    RELAXDATA*       relaxdata           /**< relaxator data */
    )
@@ -1431,7 +1437,7 @@ RETCODE SCIPincludeRelax(
 
    CHECK_OKAY( SCIPrelaxCreate(&relax, scip->set, scip->mem->setmem,
          name, desc, priority, freq,
-         relaxfree, relaxinit, relaxexit, relaxexec, relaxdata) );
+         relaxfree, relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata) );
    CHECK_OKAY( SCIPsetIncludeRelax(scip->set, relax) );
    
    return SCIP_OKAY;
@@ -1573,6 +1579,8 @@ RETCODE SCIPincludeProp(
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
+   DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
    DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    PROPDATA*        propdata            /**< propagator data */
@@ -1584,7 +1592,7 @@ RETCODE SCIPincludeProp(
 
    CHECK_OKAY( SCIPpropCreate(&prop, scip->set, scip->mem->setmem,
          name, desc, priority, freq,
-         propfree, propinit, propexit, propexec, propresprop, propdata) );
+         propfree, propinit, propexit, propinitsol, propexitsol, propexec, propresprop, propdata) );
    CHECK_OKAY( SCIPsetIncludeProp(scip->set, prop) );
    
    return SCIP_OKAY;
@@ -1654,6 +1662,8 @@ RETCODE SCIPincludeHeur(
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
+   DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
+   DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
    DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    )
@@ -1664,7 +1674,7 @@ RETCODE SCIPincludeHeur(
 
    CHECK_OKAY( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
          name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes, duringplunging,
-         heurfree, heurinit, heurexit, heurexec, heurdata) );
+         heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
    return SCIP_OKAY;
@@ -1727,6 +1737,8 @@ RETCODE SCIPincludeEventhdlr(
    DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
+   DECL_EVENTINITSOL((*eventinitsol)),  /**< solving process initialization method of event handler */
+   DECL_EVENTEXITSOL((*eventexitsol)),  /**< solving process deinitialization method of event handler */
    DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
@@ -1737,7 +1749,7 @@ RETCODE SCIPincludeEventhdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPeventhdlrCreate(&eventhdlr, name, desc, 
-         eventfree, eventinit, eventexit, eventdelete, eventexec,
+         eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
          eventhdlrdata) );
    CHECK_OKAY( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
    
@@ -1788,6 +1800,8 @@ RETCODE SCIPincludeNodesel(
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
+   DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
+   DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata         /**< node selector data */
@@ -1798,7 +1812,8 @@ RETCODE SCIPincludeNodesel(
    CHECK_OKAY( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority, 
-         lowestboundfirst, nodeselfree, nodeselinit, nodeselexit, nodeselselect, nodeselcomp, nodeseldata) );
+         lowestboundfirst, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
+         nodeselselect, nodeselcomp, nodeseldata) );
    CHECK_OKAY( SCIPsetIncludeNodesel(scip->set, nodesel) );
    
    return SCIP_OKAY;
@@ -1994,6 +2009,8 @@ RETCODE SCIPincludeDisp(
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
+   DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
+   DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
    DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */
@@ -2007,7 +2024,7 @@ RETCODE SCIPincludeDisp(
    CHECK_OKAY( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPdispCreate(&disp, scip->set, scip->mem->setmem,
-         name, desc, header, dispstatus, dispfree, dispinit, dispexit, dispoutput, dispdata,
+         name, desc, header, dispstatus, dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata,
          width, priority, position, stripline) );
    CHECK_OKAY( SCIPsetIncludeDisp(scip->set, disp) );
    
@@ -2161,7 +2178,7 @@ RETCODE SCIPstartInteraction(
 {
    CHECK_OKAY( checkStage(scip, "SCIPstartInteraction", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPdialoghdlrExec(scip->dialoghdlr, scip) );
+   CHECK_OKAY( SCIPdialoghdlrExec(scip->dialoghdlr, scip->set) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.9 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.10 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @brief  linesearchdiving primal heuristic
@@ -153,6 +153,14 @@ DECL_HEUREXIT(heurExitLinesearchdiving)
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolLinesearchdiving NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolLinesearchdiving NULL
 
 
 /** execution method of primal heuristic */
@@ -463,7 +471,8 @@ RETCODE SCIPincludeHeurLinesearchdiving(
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-         heurFreeLinesearchdiving, heurInitLinesearchdiving, heurExitLinesearchdiving, heurExecLinesearchdiving,
+         heurFreeLinesearchdiving, heurInitLinesearchdiving, heurExitLinesearchdiving, 
+         heurInitsolLinesearchdiving, heurExitsolLinesearchdiving, heurExecLinesearchdiving,
          heurdata) );
 
    /* add linesearchdiving primal heuristic parameters */

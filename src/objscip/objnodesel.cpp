@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.8 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.9 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -107,6 +107,40 @@ DECL_NODESELEXIT(nodeselExitObj)
 }
 
 
+/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
+static
+DECL_NODESELINITSOL(nodeselInitsolObj)
+{  /*lint --e{715}*/
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   /* call virtual method of nodesel object */
+   CHECK_OKAY( nodeseldata->objnodesel->scip_initsol(scip, nodesel) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
+static
+DECL_NODESELEXITSOL(nodeselExitsolObj)
+{  /*lint --e{715}*/
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   /* call virtual method of nodesel object */
+   CHECK_OKAY( nodeseldata->objnodesel->scip_exitsol(scip, nodesel) );
+
+   return SCIP_OKAY;
+}
+
+
 /** node selection method of node selector */
 static
 DECL_NODESELSELECT(nodeselSelectObj)
@@ -162,7 +196,8 @@ RETCODE SCIPincludeObjNodesel(
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
          objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_, objnodesel->scip_lowestboundfirst_,
-         nodeselFreeObj, nodeselInitObj, nodeselExitObj, nodeselSelectObj, nodeselCompObj,
+         nodeselFreeObj, nodeselInitObj, nodeselExitObj, 
+         nodeselInitsolObj, nodeselExitsolObj, nodeselSelectObj, nodeselCompObj,
          nodeseldata) );
 
    return SCIP_OKAY;

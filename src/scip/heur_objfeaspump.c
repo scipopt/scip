@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.3 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.4 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -119,6 +119,14 @@ DECL_HEUREXIT(heurExitObjfeaspump) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolObjfeaspump NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolObjfeaspump NULL
+
 
 /** execution method of primal heuristic */
 static
@@ -387,9 +395,10 @@ RETCODE SCIPincludeHeurObjfeaspump(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-                  heurFreeObjfeaspump, heurInitObjfeaspump, heurExitObjfeaspump, heurExecObjfeaspump,
-                  heurdata) );
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         heurFreeObjfeaspump, heurInitObjfeaspump, heurExitObjfeaspump, 
+         heurInitsolObjfeaspump, heurExitsolObjfeaspump, heurExecObjfeaspump,
+         heurdata) );
 
    /* objfeaspump heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,

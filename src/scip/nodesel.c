@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.43 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.44 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -295,7 +295,6 @@ RETCODE SCIPnodepqInsert(
    NODE*            node                /**< node to be inserted */
    )
 {
-   SCIP* scip;
    NODESEL* nodesel;
    int pos;
 
@@ -304,7 +303,6 @@ RETCODE SCIPnodepqInsert(
    assert(set != NULL);
    assert(node != NULL);
 
-   scip = set->scip;
    nodesel = nodepq->nodesel;
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
@@ -315,7 +313,7 @@ RETCODE SCIPnodepqInsert(
    pos = nodepq->len;
    nodepq->len++;
    nodepq->lowerboundsum += SCIPnodeGetLowerbound(node);
-   while( pos > 0 && nodesel->nodeselcomp(scip, nodesel, node, nodepq->slots[PQ_PARENT(pos)]) < 0 )
+   while( pos > 0 && nodesel->nodeselcomp(set->scip, nodesel, node, nodepq->slots[PQ_PARENT(pos)]) < 0 )
    {
       nodepq->slots[pos] = nodepq->slots[PQ_PARENT(pos)];
       pos = PQ_PARENT(pos);
@@ -341,7 +339,6 @@ Bool nodepqDelPos(
    int              rempos              /**< queue position of node to remove */
    )
 {
-   SCIP* scip;
    NODESEL* nodesel;
    NODE* lastnode;
    int freepos;
@@ -355,7 +352,6 @@ Bool nodepqDelPos(
    assert(set != NULL);
    assert(0 <= rempos && rempos < nodepq->len);
 
-   scip = set->scip;
    nodesel = nodepq->nodesel;
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
@@ -412,7 +408,7 @@ Bool nodepqDelPos(
    /* try to move parents downwards to insert last node */
    parentfelldown = FALSE;
    parentpos = PQ_PARENT(freepos);
-   while( freepos > 0 && nodesel->nodeselcomp(scip, nodesel, lastnode, nodepq->slots[parentpos]) < 0 )
+   while( freepos > 0 && nodesel->nodeselcomp(set->scip, nodesel, lastnode, nodepq->slots[parentpos]) < 0 )
    {
       nodepq->slots[freepos] = nodepq->slots[parentpos];
       freepos = parentpos;
@@ -429,10 +425,10 @@ Bool nodepqDelPos(
          assert(childpos < nodepq->len);
          brotherpos = PQ_RIGHTCHILD(freepos);
          if( brotherpos < nodepq->len
-            && nodesel->nodeselcomp(scip, nodesel, nodepq->slots[brotherpos], nodepq->slots[childpos]) < 0 )
+            && nodesel->nodeselcomp(set->scip, nodesel, nodepq->slots[brotherpos], nodepq->slots[childpos]) < 0 )
             childpos = brotherpos;
          /* exit search loop if better child is not better than last node */
-         if( nodesel->nodeselcomp(scip, nodesel, lastnode, nodepq->slots[childpos]) <= 0 )
+         if( nodesel->nodeselcomp(set->scip, nodesel, lastnode, nodepq->slots[childpos]) <= 0 )
             break;
          /* move better child upwards, free slot is now the better child's slot */
          nodepq->slots[freepos] = nodepq->slots[childpos];
@@ -724,6 +720,8 @@ RETCODE SCIPnodeselCreate(
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
+   DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
+   DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata         /**< node selector data */
@@ -746,6 +744,8 @@ RETCODE SCIPnodeselCreate(
    (*nodesel)->nodeselfree = nodeselfree;
    (*nodesel)->nodeselinit = nodeselinit;
    (*nodesel)->nodeselexit = nodeselexit;
+   (*nodesel)->nodeselinitsol = nodeselinitsol;
+   (*nodesel)->nodeselexitsol = nodeselexitsol;
    (*nodesel)->nodeselselect = nodeselselect;
    (*nodesel)->nodeselcomp = nodeselcomp;
    (*nodesel)->nodeseldata = nodeseldata;
@@ -771,17 +771,18 @@ RETCODE SCIPnodeselCreate(
 /** frees memory of node selector */
 RETCODE SCIPnodeselFree(
    NODESEL**        nodesel,            /**< pointer to node selector data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
    assert(*nodesel != NULL);
    assert(!(*nodesel)->initialized);
+   assert(set != NULL);
 
    /* call destructor of node selector */
    if( (*nodesel)->nodeselfree != NULL )
    {
-      CHECK_OKAY( (*nodesel)->nodeselfree(scip, *nodesel) );
+      CHECK_OKAY( (*nodesel)->nodeselfree(set->scip, *nodesel) );
    }
 
    freeMemoryArray(&(*nodesel)->name);
@@ -794,11 +795,11 @@ RETCODE SCIPnodeselFree(
 /** initializes node selector */
 RETCODE SCIPnodeselInit(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( nodesel->initialized )
    {
@@ -808,7 +809,7 @@ RETCODE SCIPnodeselInit(
 
    if( nodesel->nodeselinit != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselinit(scip, nodesel) );
+      CHECK_OKAY( nodesel->nodeselinit(set->scip, nodesel) );
    }
    nodesel->initialized = TRUE;
 
@@ -818,11 +819,11 @@ RETCODE SCIPnodeselInit(
 /** deinitializes node selector */
 RETCODE SCIPnodeselExit(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !nodesel->initialized )
    {
@@ -832,9 +833,45 @@ RETCODE SCIPnodeselExit(
 
    if( nodesel->nodeselexit != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselexit(scip, nodesel) );
+      CHECK_OKAY( nodesel->nodeselexit(set->scip, nodesel) );
    }
    nodesel->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs node selector that the branch and bound process is being started */
+RETCODE SCIPnodeselInitsol(
+   NODESEL*         nodesel,            /**< node selector */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(nodesel != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of node selector */
+   if( nodesel->nodeselinitsol != NULL )
+   {
+      CHECK_OKAY( nodesel->nodeselinitsol(set->scip, nodesel) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs node selector that the branch and bound process data is being freed */
+RETCODE SCIPnodeselExitsol(
+   NODESEL*         nodesel,            /**< node selector */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(nodesel != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of node selector */
+   if( nodesel->nodeselexitsol != NULL )
+   {
+      CHECK_OKAY( nodesel->nodeselexitsol(set->scip, nodesel) );
+   }
 
    return SCIP_OKAY;
 }

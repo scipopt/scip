@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.11 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.12 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -77,6 +77,8 @@ RETCODE SCIPpricerCreate(
    DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
+   DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
    DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
    PRICERDATA*      pricerdata          /**< variable pricer data */
@@ -97,6 +99,8 @@ RETCODE SCIPpricerCreate(
    (*pricer)->pricerfree = pricerfree;
    (*pricer)->pricerinit = pricerinit;
    (*pricer)->pricerexit = pricerexit;
+   (*pricer)->pricerinitsol = pricerinitsol;
+   (*pricer)->pricerexitsol = pricerexitsol;
    (*pricer)->pricerredcost = pricerredcost;
    (*pricer)->pricerfarkas = pricerfarkas;
    (*pricer)->pricerdata = pricerdata;
@@ -119,18 +123,18 @@ RETCODE SCIPpricerCreate(
 /** calls destructor and frees memory of variable pricer */
 RETCODE SCIPpricerFree(
    PRICER**         pricer,             /**< pointer to variable pricer data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
    assert(*pricer != NULL);
    assert(!(*pricer)->initialized);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    /* call destructor of variable pricer */
    if( (*pricer)->pricerfree != NULL )
    {
-      CHECK_OKAY( (*pricer)->pricerfree(scip, *pricer) );
+      CHECK_OKAY( (*pricer)->pricerfree(set->scip, *pricer) );
    }
 
    SCIPclockFree(&(*pricer)->clock);
@@ -144,12 +148,12 @@ RETCODE SCIPpricerFree(
 /** initializes variable pricer */
 RETCODE SCIPpricerInit(
    PRICER*          pricer,             /**< variable pricer */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
    assert(pricer->active);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( pricer->initialized )
    {
@@ -164,7 +168,7 @@ RETCODE SCIPpricerInit(
 
    if( pricer->pricerinit != NULL )
    {
-      CHECK_OKAY( pricer->pricerinit(scip, pricer) );
+      CHECK_OKAY( pricer->pricerinit(set->scip, pricer) );
    }
    pricer->initialized = TRUE;
 
@@ -174,12 +178,12 @@ RETCODE SCIPpricerInit(
 /** calls exit method of variable pricer */
 RETCODE SCIPpricerExit(
    PRICER*          pricer,             /**< variable pricer */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
    assert(pricer->active);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !pricer->initialized )
    {
@@ -189,9 +193,45 @@ RETCODE SCIPpricerExit(
 
    if( pricer->pricerexit != NULL )
    {
-      CHECK_OKAY( pricer->pricerexit(scip, pricer) );
+      CHECK_OKAY( pricer->pricerexit(set->scip, pricer) );
    }
    pricer->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs variable pricer that the branch and bound process is being started */
+RETCODE SCIPpricerInitsol(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(pricer != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of variable pricer */
+   if( pricer->pricerinitsol != NULL )
+   {
+      CHECK_OKAY( pricer->pricerinitsol(set->scip, pricer) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs variable pricer that the branch and bound process data is being freed */
+RETCODE SCIPpricerExitsol(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(pricer != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of variable pricer */
+   if( pricer->pricerexitsol != NULL )
+   {
+      CHECK_OKAY( pricer->pricerexitsol(set->scip, pricer) );
+   }
 
    return SCIP_OKAY;
 }

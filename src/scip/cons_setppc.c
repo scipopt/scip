@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.76 2005/02/03 12:19:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.77 2005/02/07 14:08:21 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2683,13 +2683,12 @@ RETCODE SCIPincludeConshdlrSetppc(
 
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL,
-         NULL, eventExecSetppc,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecSetppc,
          NULL) );
 
    /* create conflict handler for setppc constraints */
    CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, conflictExecSetppc,
+         NULL, NULL, NULL, NULL, NULL, conflictExecSetppc,
          NULL) );
 
    /* create constraint handler data */

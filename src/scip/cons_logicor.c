@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.72 2005/01/31 12:20:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.73 2005/02/07 14:08:21 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1627,13 +1627,12 @@ RETCODE SCIPincludeConshdlrLogicor(
 
    /* create event handler for events on watched variables */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL,
-         NULL, eventExecLogicor,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecLogicor,
          NULL) );
 
    /* create conflict handler for logic or constraints */
    CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, conflictExecLogicor,
+         NULL, NULL, NULL, NULL, NULL, conflictExecLogicor,
          NULL) );
 
    /* create constraint handler data */

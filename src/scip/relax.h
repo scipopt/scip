@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.5 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.6 2005/02/07 14:08:26 bzfpfend Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -52,6 +52,8 @@ RETCODE SCIPrelaxCreate(
    DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
+   DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxator */
+   DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxator */
    DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
    RELAXDATA*       relaxdata           /**< relaxator data */
    );
@@ -60,21 +62,35 @@ RETCODE SCIPrelaxCreate(
 extern
 RETCODE SCIPrelaxFree(
    RELAX**          relax,              /**< pointer to relaxator data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes relaxator */
 extern
 RETCODE SCIPrelaxInit(
    RELAX*           relax,              /**< relaxator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of relaxator */
 extern
 RETCODE SCIPrelaxExit(
    RELAX*           relax,              /**< relaxator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs relaxator that the branch and bound process is being started */
+extern
+RETCODE SCIPrelaxInitsol(
+   RELAX*           relax,              /**< relaxator */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs relaxator that the branch and bound process data is being freed */
+extern
+RETCODE SCIPrelaxExitsol(
+   RELAX*           relax,              /**< relaxator */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of relaxator */

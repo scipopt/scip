@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.6 2005/01/21 09:17:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.7 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   type_nodesel.h
  * @brief  type definitions for node selectors
@@ -55,6 +55,28 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - nodesel         : the node selector itself
  */
 #define DECL_NODESELEXIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
+
+/** solving process initialization method of node selector (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The node selector may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
+ */
+#define DECL_NODESELINITSOL(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
+
+/** solving process deinitialization method of node selector (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The node selector should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
+ */
+#define DECL_NODESELEXITSOL(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
 
 /** node selection method of node selector
  *

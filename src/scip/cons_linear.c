@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.147 2005/02/03 17:50:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.148 2005/02/07 14:08:20 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5278,13 +5278,12 @@ RETCODE SCIPincludeConshdlrLinear(
 
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL,
-         NULL, eventExecLinear,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecLinear,
          NULL) );
 
    /* create conflict handler for linear constraints */
    CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, conflictExecLinear,
+         NULL, NULL, NULL, NULL, NULL, conflictExecLinear,
          NULL) );
 
    /* create constraint handler data */

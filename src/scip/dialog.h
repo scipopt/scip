@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.h,v 1.9 2005/01/21 09:16:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.h,v 1.10 2005/02/07 14:08:21 bzfpfend Exp $"
 
 /**@file   dialog.h
  * @brief  internal methods for user interface dialog
@@ -57,7 +57,7 @@ RETCODE SCIPdialoghdlrFree(
 extern
 RETCODE SCIPdialoghdlrExec(
    DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** makes given dialog the root dialog of dialog handler; captures dialog and releases former root dialog */
@@ -102,7 +102,7 @@ RETCODE SCIPdialogRelease(
 extern
 RETCODE SCIPdialogExec(
    DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    DIALOG**         nextdialog          /**< pointer to store the next dialog to process */
    );

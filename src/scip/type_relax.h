@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.4 2005/01/21 09:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.5 2005/02/07 14:08:29 bzfpfend Exp $"
 
 /**@file   type_relax.h
  * @brief  type definitions for relaxators
@@ -55,6 +55,28 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *  - relax           : the relaxator itself
  */
 #define DECL_RELAXEXIT(x) RETCODE x (SCIP* scip, RELAX* relax)
+
+/** solving process initialization method of relaxator (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The relaxator may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - relax           : the relaxator itself
+ */
+#define DECL_RELAXINITSOL(x) RETCODE x (SCIP* scip, RELAX* relax)
+
+/** solving process deinitialization method of relaxator (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The relaxator should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - relax           : the relaxator itself
+ */
+#define DECL_RELAXEXITSOL(x) RETCODE x (SCIP* scip, RELAX* relax)
 
 /** execution method of relaxator
  *

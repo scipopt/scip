@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.10 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.11 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -130,6 +130,14 @@ DECL_HEUREXIT(heurExitRootsoldiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolRootsoldiving NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolRootsoldiving NULL
 
 
 /** execution method of primal heuristic */
@@ -427,9 +435,10 @@ RETCODE SCIPincludeHeurRootsoldiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-                  heurFreeRootsoldiving, heurInitRootsoldiving, heurExitRootsoldiving, heurExecRootsoldiving,
-                  heurdata) );
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         heurFreeRootsoldiving, heurInitRootsoldiving, heurExitRootsoldiving, 
+         heurInitsolRootsoldiving, heurExitsolRootsoldiving, heurExecRootsoldiving,
+         heurdata) );
 
    /* rootsoldiving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,

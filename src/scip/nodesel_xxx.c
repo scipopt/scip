@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.8 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.9 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.c
  * @brief  xxx node selector
@@ -111,6 +111,36 @@ DECL_NODESELEXIT(nodeselExitXxx)
 #endif
 
 
+/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
+#if 0
+static
+DECL_NODESELINITSOL(nodeselInitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx node selector not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define nodeselInitsolXxx NULL
+#endif
+
+
+/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
+#if 0
+static
+DECL_NODESELEXITSOL(nodeselExitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx node selector not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define nodeselExitsolXxx NULL
+#endif
+
+
 /** node selection method of node selector */
 static
 DECL_NODESELSELECT(nodeselSelectXxx)
@@ -152,7 +182,8 @@ RETCODE SCIPincludeNodeselXxx(
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
          NODESEL_LOWESTFIRST,
-         nodeselFreeXxx, nodeselInitXxx, nodeselExitXxx, nodeselSelectXxx, nodeselCompXxx,
+         nodeselFreeXxx, nodeselInitXxx, nodeselExitXxx, 
+         nodeselInitsolXxx, nodeselExitsolXxx, nodeselSelectXxx, nodeselCompXxx,
          nodeseldata) );
 
    /* add xxx node selector parameters */

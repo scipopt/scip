@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.24 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.25 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -119,17 +119,18 @@ RETCODE SCIPpresolCreate(
 /** frees memory of presolver */   
 RETCODE SCIPpresolFree(
    PRESOL**         presol,             /**< pointer to presolver data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
    assert(*presol != NULL);
    assert(!(*presol)->initialized);
+   assert(set != NULL);
 
    /* call destructor of presolver */
    if( (*presol)->presolfree != NULL )
    {
-      CHECK_OKAY( (*presol)->presolfree(scip, *presol) );
+      CHECK_OKAY( (*presol)->presolfree(set->scip, *presol) );
    }
 
    SCIPclockFree(&(*presol)->clock);
@@ -143,10 +144,11 @@ RETCODE SCIPpresolFree(
 /** initializes presolver */
 RETCODE SCIPpresolInit(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
+   assert(set != NULL);
 
    if( presol->initialized )
    {
@@ -178,7 +180,7 @@ RETCODE SCIPpresolInit(
    /* call initialization method of presolver */
    if( presol->presolinit != NULL )
    {
-      CHECK_OKAY( presol->presolinit(scip, presol) );
+      CHECK_OKAY( presol->presolinit(set->scip, presol) );
    }
    presol->initialized = TRUE;
 
@@ -188,10 +190,11 @@ RETCODE SCIPpresolInit(
 /** deinitializes presolver */
 RETCODE SCIPpresolExit(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
+   assert(set != NULL);
 
    if( !presol->initialized )
    {
@@ -202,7 +205,7 @@ RETCODE SCIPpresolExit(
    /* call deinitialization method of presolver */
    if( presol->presolexit != NULL )
    {
-      CHECK_OKAY( presol->presolexit(scip, presol) );
+      CHECK_OKAY( presol->presolexit(set->scip, presol) );
    }
    presol->initialized = FALSE;
 
@@ -212,11 +215,12 @@ RETCODE SCIPpresolExit(
 /** informs presolver that the presolving process is being started */
 RETCODE SCIPpresolInitpre(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(presol != NULL);
+   assert(set != NULL);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -234,7 +238,7 @@ RETCODE SCIPpresolInitpre(
    /* call presolving initialization method of presolver */
    if( presol->presolinitpre != NULL )
    {
-      CHECK_OKAY( presol->presolinitpre(scip, presol, result) );
+      CHECK_OKAY( presol->presolinitpre(set->scip, presol, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -253,11 +257,12 @@ RETCODE SCIPpresolInitpre(
 /** informs presolver that the presolving process is finished */
 RETCODE SCIPpresolExitpre(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(presol != NULL);
+   assert(set != NULL);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -265,7 +270,7 @@ RETCODE SCIPpresolExitpre(
    /* call presolving deinitialization method of presolver */
    if( presol->presolexitpre != NULL )
    {
-      CHECK_OKAY( presol->presolexitpre(scip, presol, result) );
+      CHECK_OKAY( presol->presolexitpre(set->scip, presol, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF

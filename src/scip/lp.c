@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.174 2005/02/03 17:50:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.175 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5863,50 +5863,58 @@ RETCODE SCIPlpCreate(
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: upper objective limit cannot be set -- can lead to unnecessary simplex iterations\n");
+         "LP Solver <%s>: upper objective limit cannot be set -- can lead to unnecessary simplex iterations\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: primal feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n");
+         "LP Solver <%s>: primal feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_DUALFEASTOL, (*lp)->lpidualfeastol, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: dual feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n");
+         "LP Solver <%s>: dual feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch, &success) );
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: fastmip setting not available -- SCIP parameter has no effect\n");
+         "LP Solver <%s>: fastmip setting not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: scaling not available -- SCIP parameter has no effect\n");
+         "LP Solver <%s>: scaling not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRESOLVING, (*lp)->lpipresolving, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: presolving not available -- SCIP parameter has no effect\n");
+         "LP Solver <%s>: presolving not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: iteration limit cannot be set -- can lead to unnecessary simplex iterations\n");
+         "LP Solver <%s>: iteration limit cannot be set -- can lead to unnecessary simplex iterations\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver: lpinfo setting not available -- SCIP parameter has no effect\n");
+         "LP Solver <%s>: lpinfo setting not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
    }
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO, &success) ); /*lint !e641*/
 

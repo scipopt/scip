@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_disp.h,v 1.4 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_disp.h,v 1.5 2005/02/07 14:08:27 bzfpfend Exp $"
 
 /**@file   struct_disp.h
  * @brief  datastructures for displaying runtime statistics
@@ -41,6 +41,8 @@ struct Disp
    DECL_DISPFREE    ((*dispfree));      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit));      /**< initialize display column */
    DECL_DISPEXIT    ((*dispexit));      /**< deinitialize display column */
+   DECL_DISPINITSOL ((*dispinitsol));   /**< solving process initialization method of display column */
+   DECL_DISPEXITSOL ((*dispexitsol));   /**< solving process deinitialization method of display column */
    DECL_DISPOUTPUT  ((*dispoutput));    /**< output method */
    DISPDATA*        dispdata;           /**< display column data */
    int              width;              /**< width of display column (no. of chars used) */

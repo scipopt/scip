@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.14 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.15 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -194,6 +194,14 @@ DECL_HEUREXIT(heurExitObjpscostdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolObjpscostdiving NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolObjpscostdiving NULL
 
 
 /** execution method of primal heuristic */
@@ -551,9 +559,10 @@ RETCODE SCIPincludeHeurObjpscostdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-                  heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving, heurExecObjpscostdiving,
-                  heurdata) );
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving, 
+         heurInitsolObjpscostdiving, heurExitsolObjpscostdiving, heurExecObjpscostdiving,
+         heurdata) );
 
    /* objpscostdiving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,

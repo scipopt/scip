@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.43 2005/02/04 14:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.44 2005/02/07 14:08:27 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -125,18 +125,18 @@ RETCODE SCIPsepaCreate(
 /** calls destructor and frees memory of separator */
 RETCODE SCIPsepaFree(
    SEPA**           sepa,               /**< pointer to separator data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
    assert(*sepa != NULL);
    assert(!(*sepa)->initialized);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    /* call destructor of separator */
    if( (*sepa)->sepafree != NULL )
    {
-      CHECK_OKAY( (*sepa)->sepafree(scip, *sepa) );
+      CHECK_OKAY( (*sepa)->sepafree(set->scip, *sepa) );
    }
 
    SCIPclockFree(&(*sepa)->clock);
@@ -150,11 +150,11 @@ RETCODE SCIPsepaFree(
 /** initializes separator */
 RETCODE SCIPsepaInit(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( sepa->initialized )
    {
@@ -172,7 +172,7 @@ RETCODE SCIPsepaInit(
 
    if( sepa->sepainit != NULL )
    {
-      CHECK_OKAY( sepa->sepainit(scip, sepa) );
+      CHECK_OKAY( sepa->sepainit(set->scip, sepa) );
    }
    sepa->initialized = TRUE;
 
@@ -182,11 +182,11 @@ RETCODE SCIPsepaInit(
 /** calls exit method of separator */
 RETCODE SCIPsepaExit(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
    if( !sepa->initialized )
    {
@@ -196,7 +196,7 @@ RETCODE SCIPsepaExit(
 
    if( sepa->sepaexit != NULL )
    {
-      CHECK_OKAY( sepa->sepaexit(scip, sepa) );
+      CHECK_OKAY( sepa->sepaexit(set->scip, sepa) );
    }
    sepa->initialized = FALSE;
 
@@ -206,15 +206,16 @@ RETCODE SCIPsepaExit(
 /** informs separator that the branch and bound process is being started */
 RETCODE SCIPsepaInitsol(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
+   assert(set != NULL);
 
    /* call solving process initialization method of separator */
    if( sepa->sepainitsol != NULL )
    {
-      CHECK_OKAY( sepa->sepainitsol(scip, sepa) );
+      CHECK_OKAY( sepa->sepainitsol(set->scip, sepa) );
    }
 
    return SCIP_OKAY;
@@ -223,15 +224,16 @@ RETCODE SCIPsepaInitsol(
 /** informs separator that the branch and bound process data is being freed */
 RETCODE SCIPsepaExitsol(
    SEPA*            sepa,               /**< separator */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
+   assert(set != NULL);
 
    /* call solving process deinitialization method of separator */
    if( sepa->sepaexitsol != NULL )
    {
-      CHECK_OKAY( sepa->sepaexitsol(scip, sepa) );
+      CHECK_OKAY( sepa->sepaexitsol(set->scip, sepa) );
    }
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.9 2005/01/25 12:46:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.10 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -153,6 +153,14 @@ DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
 #define heurExitFixandinfer NULL
 
 
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolFixandinfer NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolFixandinfer NULL
+
+
 /** execution method of primal heuristic */
 static
 DECL_HEUREXEC(heurExecFixandinfer)
@@ -269,7 +277,8 @@ RETCODE SCIPincludeHeurFixandinfer(
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-         heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer, heurExecFixandinfer,
+         heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer, 
+         heurInitsolFixandinfer, heurExitsolFixandinfer, heurExecFixandinfer,
          heurdata) );
 
    /* fixandinfer heuristic parameters */

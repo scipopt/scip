@@ -24,7 +24,8 @@ interface:
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
   old implementation is now called "objfeaspump"; parameter names have been changed accordingly
-- new callback methods INITSOL and EXITSOL for separators
+- new callback methods INITSOL and EXITSOL for variable pricers, primal heuristics, conflict handlers,
+  relaxators, separators, propagators, event handlers, node selectors, and display columns
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.12 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.13 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -51,6 +51,8 @@ RETCODE SCIPpricerCreate(
    DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
+   DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
    DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
    PRICERDATA*      pricerdata          /**< variable pricer data */
@@ -60,21 +62,35 @@ RETCODE SCIPpricerCreate(
 extern
 RETCODE SCIPpricerFree(
    PRICER**         pricer,             /**< pointer to variable pricer data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes variable pricer */
 extern
 RETCODE SCIPpricerInit(
    PRICER*          pricer,             /**< variable pricer */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of variable pricer */
 extern
 RETCODE SCIPpricerExit(
    PRICER*          pricer,             /**< variable pricer */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs variable pricer that the branch and bound process is being started */
+extern
+RETCODE SCIPpricerInitsol(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs variable pricer that the branch and bound process data is being freed */
+extern
+RETCODE SCIPpricerExitsol(
+   PRICER*          pricer,             /**< variable pricer */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** activates pricer such that it is called in LP solving loop */

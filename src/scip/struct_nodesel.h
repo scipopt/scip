@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.6 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.7 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -58,6 +58,8 @@ struct Nodesel
    DECL_NODESELFREE ((*nodeselfree));   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit));   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialize node selector */
+   DECL_NODESELINITSOL((*nodeselinitsol));/**< solving process initialization method of node selector */
+   DECL_NODESELEXITSOL((*nodeselexitsol));/**< solving process deinitialization method of node selector */
    DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
    NODESELDATA*     nodeseldata;        /**< node selector data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.111 2005/01/31 12:57:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.112 2005/02/07 14:08:20 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1506,18 +1506,18 @@ RETCODE SCIPconshdlrCreate(
 /** calls destructor and frees memory of constraint handler */
 RETCODE SCIPconshdlrFree(
    CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conshdlr != NULL);
    assert(*conshdlr != NULL);
    assert(!(*conshdlr)->initialized);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_INIT);
+   assert(set != NULL);
 
    /* call destructor of constraint handler */
    if( (*conshdlr)->consfree != NULL )
    {
-      CHECK_OKAY( (*conshdlr)->consfree(scip, *conshdlr) );
+      CHECK_OKAY( (*conshdlr)->consfree(set->scip, *conshdlr) );
    }
 
    SCIPclockFree(&(*conshdlr)->presoltime);
@@ -1542,10 +1542,11 @@ RETCODE SCIPconshdlrFree(
 /** calls init method of constraint handler */
 RETCODE SCIPconshdlrInit(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conshdlr != NULL);
+   assert(set != NULL);
 
    if( conshdlr->initialized )
    {
@@ -1600,7 +1601,7 @@ RETCODE SCIPconshdlrInit(
    /* call initialization method of constraint handler */
    if( conshdlr->consinit != NULL )
    {
-      CHECK_OKAY( conshdlr->consinit(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+      CHECK_OKAY( conshdlr->consinit(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
    }
    conshdlr->initialized = TRUE;
    assert(!conshdlr->delayupdates);
@@ -1611,10 +1612,11 @@ RETCODE SCIPconshdlrInit(
 /** calls exit method of constraint handler */
 RETCODE SCIPconshdlrExit(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conshdlr != NULL);
+   assert(set != NULL);
 
    if( !conshdlr->initialized )
    {
@@ -1625,7 +1627,7 @@ RETCODE SCIPconshdlrExit(
    /* call deinitialization method of constraint handler */
    if( conshdlr->consexit != NULL )
    {
-      CHECK_OKAY( conshdlr->consexit(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+      CHECK_OKAY( conshdlr->consexit(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
    }
    conshdlr->initialized = FALSE;
 
@@ -1635,11 +1637,12 @@ RETCODE SCIPconshdlrExit(
 /** informs constraint handler that the presolving process is being started */
 RETCODE SCIPconshdlrInitpre(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(conshdlr != NULL);
+   assert(set != NULL);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -1647,7 +1650,7 @@ RETCODE SCIPconshdlrInitpre(
    /* call presolving initialization method of constraint handler */
    if( conshdlr->consinitpre != NULL )
    {
-      CHECK_OKAY( conshdlr->consinitpre(scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
+      CHECK_OKAY( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -1666,11 +1669,12 @@ RETCODE SCIPconshdlrInitpre(
 /** informs constraint handler that the presolving is finished */
 RETCODE SCIPconshdlrExitpre(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip,               /**< SCIP data structure */   
+   SET*             set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(conshdlr != NULL);
+   assert(set != NULL);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -1678,7 +1682,7 @@ RETCODE SCIPconshdlrExitpre(
    /* call presolving deinitialization method of constraint handler */
    if( conshdlr->consexitpre != NULL )
    {
-      CHECK_OKAY( conshdlr->consexitpre(scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
+      CHECK_OKAY( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -1701,15 +1705,16 @@ RETCODE SCIPconshdlrExitpre(
 /** informs constraint handler that the branch and bound process is being started */
 RETCODE SCIPconshdlrInitsol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conshdlr != NULL);
+   assert(set != NULL);
 
    /* call solving process initialization method of constraint handler */
    if( conshdlr->consinitsol != NULL )
    {
-      CHECK_OKAY( conshdlr->consinitsol(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+      CHECK_OKAY( conshdlr->consinitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
    }
 
    return SCIP_OKAY;
@@ -1718,15 +1723,16 @@ RETCODE SCIPconshdlrInitsol(
 /** informs constraint handler that the branch and bound process data is being freed */
 RETCODE SCIPconshdlrExitsol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conshdlr != NULL);
+   assert(set != NULL);
 
    /* call solving process deinitialization method of constraint handler */
    if( conshdlr->consexitsol != NULL )
    {
-      CHECK_OKAY( conshdlr->consexitsol(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+      CHECK_OKAY( conshdlr->consexitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
    }
 
    return SCIP_OKAY;

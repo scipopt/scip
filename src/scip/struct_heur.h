@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.9 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.10 2005/02/07 14:08:28 bzfpfend Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -42,6 +42,8 @@ struct Heur
    DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */
+   DECL_HEURINITSOL ((*heurinitsol));   /**< solving process initialization method of primal heuristic */
+   DECL_HEUREXITSOL ((*heurexitsol));   /**< solving process deinitialization method of primal heuristic */
    DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    HEURDATA*        heurdata;           /**< primal heuristics local data */
    CLOCK*           clock;              /**< heuristic execution time */

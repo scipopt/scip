@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.7 2005/02/03 16:57:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.8 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
@@ -149,6 +149,14 @@ DECL_HEUREXIT(heurExitGuideddiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolGuideddiving NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolGuideddiving NULL
 
 
 /** execution method of primal heuristic */
@@ -526,7 +534,8 @@ RETCODE SCIPincludeHeurGuideddiving(
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-         heurFreeGuideddiving, heurInitGuideddiving, heurExitGuideddiving, heurExecGuideddiving,
+         heurFreeGuideddiving, heurInitGuideddiving, heurExitGuideddiving, 
+         heurInitsolGuideddiving, heurExitsolGuideddiving, heurExecGuideddiving,
          heurdata) );
 
    /* guideddiving heuristic parameters */

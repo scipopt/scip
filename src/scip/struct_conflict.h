@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.14 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.15 2005/02/07 14:08:27 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -44,6 +44,8 @@ struct Conflicthdlr
    DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
    DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
    DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */
+   DECL_CONFLICTINITSOL((*conflictinitsol));/**< solving process initialization method of conflict handler */
+   DECL_CONFLICTEXITSOL((*conflictexitsol));/**< solving process deinitialization method of conflict handler */
    DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
    CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
    int              priority;           /**< priority of the conflict handler */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.4 2005/01/21 09:16:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.5 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -102,6 +102,40 @@ DECL_PROPEXIT(propExitObj)
 
    /* call virtual method of prop object */
    CHECK_OKAY( propdata->objprop->scip_exit(scip, prop) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+static
+DECL_PROPINITSOL(propInitsolObj)
+{  /*lint --e{715}*/
+   PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   CHECK_OKAY( propdata->objprop->scip_initsol(scip, prop) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
+static
+DECL_PROPEXITSOL(propExitsolObj)
+{  /*lint --e{715}*/
+   PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   CHECK_OKAY( propdata->objprop->scip_exitsol(scip, prop) );
 
    return SCIP_OKAY;
 }

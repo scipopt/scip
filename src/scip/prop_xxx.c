@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.c,v 1.3 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.c,v 1.4 2005/02/07 14:08:26 bzfpfend Exp $"
 
 /**@file   prop_xxx.c
  * @brief  xxx propagator
@@ -110,6 +110,36 @@ DECL_PROPEXIT(propExitXxx)
 #endif
 
 
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+#if 0
+static
+DECL_PROPINITSOL(propInitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx propagator not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define propInitsolXxx NULL
+#endif
+
+
+/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
+#if 0
+static
+DECL_PROPEXITSOL(propExitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx propagator not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define propExitsolXxx NULL
+#endif
+
+
 /** execution method of propagator */
 static
 DECL_PROPEXEC(propExecXxx)
@@ -151,7 +181,8 @@ RETCODE SCIPincludePropXxx(
 
    /* include propagator */
    CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ,
-         propFreeXxx, propInitXxx, propExitXxx, propExecXxx, propRespropXxx,
+         propFreeXxx, propInitXxx, propExitXxx, 
+         propInitsolXxx, propExitsolXxx, propExecXxx, propRespropXxx,
          propdata) );
 
    /* add xxx propagator parameters */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.13 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.14 2005/02/07 14:08:23 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -96,6 +96,14 @@ DECL_HEUREXIT(heurExitSimplerounding) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolSimplerounding NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolSimplerounding NULL
 
 
 /** execution method of primal heuristic */
@@ -217,9 +225,10 @@ RETCODE SCIPincludeHeurSimplerounding(
 {
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-                  heurFreeSimplerounding, heurInitSimplerounding, heurExitSimplerounding, heurExecSimplerounding,
-                  NULL) );
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         heurFreeSimplerounding, heurInitSimplerounding, heurExitSimplerounding, 
+         heurInitsolSimplerounding, heurExitsolSimplerounding, heurExecSimplerounding,
+         NULL) );
 
    return SCIP_OKAY;
 }

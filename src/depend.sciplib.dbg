@@ -201,8 +201,14 @@ $(OBJDIR)/nodesel.o: src/nodesel.c src/def.h src/type_retcode.h src/message.h \
   src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/pub_var.h src/nodesel.h \
   src/struct_nodesel.h
 $(OBJDIR)/paramset.o: src/paramset.c src/def.h src/type_retcode.h src/message.h \
-  src/misc.h src/memory.h src/type_set.h src/type_misc.h src/pub_misc.h \
-  src/paramset.h src/type_paramset.h src/type_scip.h src/pub_paramset.h \
+  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
+  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/type_event.h src/type_branch.h src/type_result.h \
+  src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
+  src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
+  src/type_presol.h src/type_pricer.h src/type_reader.h src/type_relax.h \
+  src/type_sepa.h src/type_prop.h src/struct_set.h src/misc.h \
+  src/type_misc.h src/pub_misc.h src/paramset.h src/pub_paramset.h \
   src/struct_paramset.h
 $(OBJDIR)/presol.o: src/presol.c src/def.h src/type_retcode.h src/memory.h \
   src/set.h src/message.h src/type_set.h src/type_stat.h src/buffer.h \

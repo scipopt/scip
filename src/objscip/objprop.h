@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.h,v 1.4 2005/01/21 09:16:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.h,v 1.5 2005/02/07 14:08:25 bzfpfend Exp $"
 
 /**@file   objprop.h
  * @brief  C++ wrapper for propagators
@@ -91,6 +91,33 @@ public:
    
    /** deinitialization method of propagator (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
+      SCIP*         scip,               /**< SCIP data structure */
+      PROP*         prop                /**< the propagator itself */
+      )
+   {
+      return SCIP_OKAY;
+   }
+   
+   /** solving process initialization method of propagator (called when branch and bound process is about to begin)
+    *
+    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+    *  The propagator may use this call to initialize its branch and bound specific data.
+    *
+    */
+   virtual RETCODE scip_initsol(
+      SCIP*         scip,               /**< SCIP data structure */
+      PROP*         prop                /**< the propagator itself */
+      )
+   {
+      return SCIP_OKAY;
+   }
+   
+   /** solving process deinitialization method of propagator (called before branch and bound process data is freed)
+    *
+    *  This method is called before the branch and bound process is freed.
+    *  The propagator should use this call to clean up its branch and bound data.
+    */
+   virtual RETCODE scip_exitsol(
       SCIP*         scip,               /**< SCIP data structure */
       PROP*         prop                /**< the propagator itself */
       )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.34 2005/01/31 12:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.35 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -57,6 +57,8 @@ RETCODE SCIPheurCreate(
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
+   DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
+   DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
    DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    );
@@ -65,26 +67,33 @@ RETCODE SCIPheurCreate(
 extern
 RETCODE SCIPheurFree(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes primal heuristic */
 extern
 RETCODE SCIPheurInit(
    HEUR*            heur,               /**< primal heuristic */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of primal heuristic */
 extern
 RETCODE SCIPheurExit(
    HEUR*            heur,               /**< primal heuristic */
-   SCIP*            scip                /**< SCIP data structure */   
+   SET*             set                 /**< global SCIP settings */
    );
 
-/** initializes solution process data of primal heuristic */
+/** informs primal heuristic that the branch and bound process is being started */
 extern
 RETCODE SCIPheurInitsol(
+   HEUR*            heur,               /**< primal heuristic */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs primal heuristic that the branch and bound process data is being freed */
+extern
+RETCODE SCIPheurExitsol(
    HEUR*            heur,               /**< primal heuristic */
    SET*             set                 /**< global SCIP settings */
    );

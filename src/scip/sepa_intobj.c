@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.12 2005/02/04 14:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.13 2005/02/07 14:08:27 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -288,6 +288,12 @@ DECL_EVENTEXIT(eventExitIntobj)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
+#define eventInitsolIntobj NULL
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
+#define eventExitsolIntobj NULL
+
 /** frees specific event data */
 #define eventDeleteIntobj NULL
 
@@ -363,8 +369,9 @@ RETCODE SCIPincludeSepaIntobj(
    /* include event handler for objective change events */
    eventhdlrdata = (EVENTHDLRDATA*)sepadata;
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-                  eventFreeIntobj, eventInitIntobj, eventExitIntobj, eventDeleteIntobj, eventExecIntobj,
-                  eventhdlrdata) );
+         eventFreeIntobj, eventInitIntobj, eventExitIntobj, 
+         eventInitsolIntobj, eventExitsolIntobj, eventDeleteIntobj, eventExecIntobj,
+         eventhdlrdata) );
 
    /* add intobj separator parameters */
    /* TODO: (optional) add separator specific parameters with SCIPaddTypeParam() here */

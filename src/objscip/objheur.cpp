@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.11 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.12 2005/02/07 14:08:24 bzfpfend Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -107,6 +107,40 @@ DECL_HEUREXIT(heurExitObj)
 }
 
 
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+DECL_HEURINITSOL(heurInitsolObj)
+{  /*lint --e{715}*/
+   HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   assert(heurdata->objheur != NULL);
+
+   /* call virtual method of heur object */
+   CHECK_OKAY( heurdata->objheur->scip_initsol(scip, heur) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+DECL_HEUREXITSOL(heurExitsolObj)
+{  /*lint --e{715}*/
+   HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   assert(heurdata->objheur != NULL);
+
+   /* call virtual method of heur object */
+   CHECK_OKAY( heurdata->objheur->scip_exitsol(scip, heur) );
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of primal heuristic */
 static
 DECL_HEUREXEC(heurExecObj)
@@ -148,7 +182,8 @@ RETCODE SCIPincludeObjHeur(
    CHECK_OKAY( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
          objheur->scip_priority_, objheur->scip_freq_, objheur->scip_freqofs_, objheur->scip_maxdepth_,
          objheur->scip_pseudonodes_, objheur->scip_duringplunging_,
-         heurFreeObj, heurInitObj, heurExitObj, heurExecObj,
+         heurFreeObj, heurInitObj, heurExitObj, 
+         heurInitsolObj, heurExitsolObj, heurExecObj,
          heurdata) );
 
    return SCIP_OKAY;

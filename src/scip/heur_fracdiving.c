@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.24 2005/02/03 16:57:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.25 2005/02/07 14:08:22 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -149,6 +149,14 @@ DECL_HEUREXIT(heurExitFracdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#define heurInitsolFracdiving NULL
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#define heurExitsolFracdiving NULL
 
 
 /** execution method of primal heuristic */
@@ -523,7 +531,8 @@ RETCODE SCIPincludeHeurFracdiving(
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-         heurFreeFracdiving, heurInitFracdiving, heurExitFracdiving, heurExecFracdiving,
+         heurFreeFracdiving, heurInitFracdiving, heurExitFracdiving, 
+         heurInitsolFracdiving, heurExitsolFracdiving, heurExecFracdiving,
          heurdata) );
 
    /* fracdiving heuristic parameters */
