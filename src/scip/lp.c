@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.184 2005/03/02 12:39:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.185 2005/03/09 12:59:24 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11009,8 +11009,8 @@ RETCODE SCIPlpCleanupNew(
    cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
    cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d)\n",
-      lp->firstnewcol, lp->ncols, cleanupcols, lp->firstnewrow, lp->nrows, cleanuprows);
+   debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d), basic sol: %d\n",
+      lp->firstnewcol, lp->ncols, cleanupcols, lp->firstnewrow, lp->nrows, cleanuprows, lp->solisbasic);
 
    if( cleanupcols && lp->firstnewcol < lp->ncols )
    {
@@ -11046,7 +11046,8 @@ RETCODE SCIPlpCleanupAll(
    cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
    cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   debugMessage("removing all unused columns (%d) and rows (%d)\n", cleanupcols, cleanuprows);
+   debugMessage("removing all unused columns (%d) and rows (%d), basic sol: %d\n", 
+      cleanupcols, cleanuprows, lp->solisbasic);
 
    if( cleanupcols && 0 < lp->ncols )
    {
