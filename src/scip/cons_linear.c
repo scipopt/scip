@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.108 2004/07/07 09:52:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.109 2004/07/07 11:41:31 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -338,8 +338,8 @@ RETCODE consdataCatchEvent(
    consdata->eventdatas[pos]->consdata = consdata;
    consdata->eventdatas[pos]->varpos = pos;
 
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, 
-         consdata->eventdatas[pos]) );
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED,
+         eventhdlr, consdata->eventdatas[pos]) );
 
    return SCIP_OKAY;
 }
@@ -361,8 +361,8 @@ RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->consdata == consdata);
    assert(consdata->eventdatas[pos]->varpos == pos);
    
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
-         consdata->eventdatas[pos]) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED,
+         eventhdlr, consdata->eventdatas[pos]) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
 
@@ -2414,58 +2414,65 @@ RETCODE separateRelaxedKnapsack(
    Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    Real             rhs,                /**< right hand side of the continuous knapsack constraint */ 
    int*             ncuts               /**< pointer to add up the number of found cuts */
-) 
+   ) 
 {
-   int nvars;
    VAR** binvars;
-   int nbinvars;
-   Real* binvals;
    VAR** consvars;
+   Real* binvals;
    Longint* consvals;
+   int nbinvars;
    int nconsvars;
    int i;
       
    assert(nknapvars > 0);
    assert(knapvars != NULL);
 
-   CHECK_OKAY( SCIPgetVarsData(scip, &binvars, &nvars, &nbinvars, NULL, NULL, NULL) );
-   /* set data structures */
+   CHECK_OKAY( SCIPgetVarsData(scip, &binvars, NULL, &nbinvars, NULL, NULL, NULL) );
+
+   /* set up data structures */
    CHECK_OKAY( SCIPallocBufferArray(scip, &consvars, nbinvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &consvals, nbinvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &binvals, nbinvars) );
-   clearMemoryArray(binvals, nvars);
+   clearMemoryArray(binvals, nbinvars);
 
-   /* relaxe continuous knapsack constraint:
+   /* relax continuous knapsack constraint:
     * 1. make all variables binary: 
     *    if x_j is continuous or integer variable substitute: 
-    *       x_j = lb  or  x_j = vlb with binary variable     if a_j < 0 
-    *       x_j = ub  or  x_j = vub with binary variable     if a_j > 0
-    * 2. make coefficients of all variables to positive integers:
-    *       x~_j = 1 - x_j        if a_j < 0
-    *       round down a_j 
+    *      - a_j < 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with binary variable z
+    *      - a_j > 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with binary variable z
+    * 2. convert coefficients of all variables to positive integers:
+    *    (a) if a_j < 0, substitute  x~_j = 1 - x_j
+    *    (b) round down a_j 
+    *    the order of steps (a) and (b) can be switched
     */ 
+
+   /* replace integer and continuous variables with binary variables */
    for( i = 0; i < nknapvars; i++ )
    {
       VAR* var;
+
       var = knapvars[i];
 
-      /* binary variable */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-          binvals[SCIPvarGetProbindex(var)] += knapvals[i] * valscale;
-      /* continuous or integer variable */
+      {
+         /* binary variable */
+         assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
+         binvals[SCIPvarGetProbindex(var)] += knapvals[i] * valscale;
+      }
       else
       {
-         /* a_j > 0: substitution with lb or vlb */
+         /* continuous or integer variable */
          if( valscale * knapvals[i] > 0 )
          {
-            int nvlb;
-            Real* bvlb;
             VAR** zvlb;
+            Real* bvlb;
             Real* dvlb;
             Real bestlbsol;
             int bestlbtype;
+            int nvlb;
             int j;
 
+            /* a_j > 0: substitution with lb or vlb */
             nvlb = SCIPvarGetNVlbs(var);
             zvlb = SCIPvarGetVlbVars(var);
             bvlb = SCIPvarGetVlbCoefs(var);
@@ -2479,8 +2486,9 @@ RETCODE separateRelaxedKnapsack(
                /* use only vlb with binary variable z */
                if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY )
                {
-                  assert(SCIPvarGetProbindex(zvlb[j]) >= 0);
                   Real vlbsol;
+
+                  assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
                   vlbsol = bvlb[j] * SCIPvarGetLPSol(zvlb[j]) + dvlb[j];
                   if( SCIPisGE(scip, vlbsol, bestlbsol) )
                   {
@@ -2489,31 +2497,31 @@ RETCODE separateRelaxedKnapsack(
                   }
                }
             }
-            /* no lb or vlb with binary variable found */
+
+            /* if no lb or vlb with binary variable was found, we have to abort */
             if( SCIPisInfinity(scip, -bestlbsol) ) 
                goto TERMINATE;
+
+            if( bestlbtype == -1 )
+               rhs -= valscale * knapvals[i] * bestlbsol;
             else
             {
-               if( bestlbtype == -1 )
-                  rhs -= valscale * knapvals[i] * bestlbsol;
-               else
-               {
-                  rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
-                  binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
-               }
+               assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
+               rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
+               binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
             }
          }
-         /* a_j < 0: substitution with ub or vub */
          else
          {
-            int nvub;
-            Real* bvub;
             VAR** zvub;
+            Real* bvub;
             Real* dvub;
             Real bestubsol;
             int bestubtype;
+            int nvub;
             int j;
 
+            /* a_j < 0: substitution with ub or vub */
             nvub = SCIPvarGetNVubs(var);
             zvub = SCIPvarGetVubVars(var);
             bvub = SCIPvarGetVubCoefs(var);
@@ -2527,8 +2535,9 @@ RETCODE separateRelaxedKnapsack(
                /* use only vub with active binary variable z */
                if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY )
                {
-                  assert(SCIPvarGetProbindex(zvub[j]) >= 0);
                   Real vubsol;
+
+                  assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
                   vubsol = bvub[j] * SCIPvarGetLPSol(zvub[j]) + dvub[j];
                   if( SCIPisLE(scip, vubsol, bestubsol) )
                   {
@@ -2537,34 +2546,35 @@ RETCODE separateRelaxedKnapsack(
                   }
                }
             }
-            /* no ub or vub with binary variable found */
+
+            /* if no ub or vub with binary variable was found, we have to abort */
             if( SCIPisInfinity(scip, bestubsol) ) 
                goto TERMINATE;
+
+            if( bestubtype == -1 )
+               rhs -= valscale * knapvals[i] * bestubsol;
             else
             {
-               if( bestubtype == -1 )
-                  rhs -= valscale * knapvals[i] * bestubsol;
-               else
-               {
-                  rhs -= valscale * knapvals[i] * dvub[bestubtype];
-                  binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
-               }
+               assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
+               rhs -= valscale * knapvals[i] * dvub[bestubtype];
+               binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
             }
          }
       }
    }
 
-   /* make coefficents of all (now binary) variables to positive integers: 
-    * substitute x~_j = 1- x_j if a_j < 0 and round down positive coefficients */ 
+   /* convert coefficents of all (now binary) variables to positive integers: 
+    * substitute x~_j = 1- x_j if a_j < 0 and round down positive coefficients
+    */
    nconsvars = 0;
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nbinvars; i++ )
    {
       VAR* var;
       Longint valdownpositive;
 
-      /* a_j > 0 (only rounding) */
       if( binvals[i] > 0 )
       {
+         /* a_j > 0: round value down */
          valdownpositive = (Longint)SCIPfloor(scip, binvals[i]);
          if( valdownpositive > 0 )
          {
@@ -2574,10 +2584,11 @@ RETCODE separateRelaxedKnapsack(
             nconsvars++;
          }
       }
-      /* a_j < 0 */
       else if( binvals[i] < 0 )
       {
          Real fracsum;
+
+         /* a_j < 0: either round value down and negate variable, or negate variable and round value down afterwards */
          fracsum = SCIPfrac(scip, binvals[i]) + SCIPfrac(scip, rhs);
      
          /* round first */
@@ -2601,7 +2612,7 @@ RETCODE separateRelaxedKnapsack(
             nconsvars++;
          }
       }
-    }
+   }
 
    /* separate lifted cut from relaxed knapsack constraint */
    if( nconsvars == 0 )
@@ -2610,7 +2621,7 @@ RETCODE separateRelaxedKnapsack(
    {
       assert(consvars != NULL);
       assert(consvals != NULL);
- 
+
       CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, 
             (Longint)SCIPfloor(scip, rhs), ncuts) );
    }
@@ -2796,8 +2807,11 @@ DECL_CONSEXITPRE(consExitpreLinear)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
+   Bool conschanged;
 
-   /* delete all linear constraints that were upgraded to a more specific constraint type */
+   /* delete all linear constraints that were upgraded to a more specific constraint type;
+    * make sure, only active variables remain in the remaining constraints
+    */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -2806,6 +2820,10 @@ DECL_CONSEXITPRE(consExitpreLinear)
       if( consdata->upgraded )
       {
          CHECK_OKAY( SCIPdelCons(scip, conss[c]) );
+      }
+      else
+      {
+         CHECK_OKAY( applyFixings(scip, conss[c], &conschanged) );
       }
    }
 
@@ -4506,158 +4524,170 @@ DECL_CONSPRESOL(consPresolLinear)
       if( consdata->propagated )
          continue;
 
-      /* mark constraint being propagated/preprocessed */
       assert(SCIPconsIsActive(cons));
-      consdata->propagated = TRUE;
 
-      /* if inequality is already upgraded, delete it now; we only want to keep upgraded inequalities one presolving round
-       * to help detecting redundancy of other linear constraints, but we want to keep equalities until the end of
-       * presolving, because they may be used for aggregating other constraints
-       */
-      if( consdata->upgraded && SCIPisLT(scip, consdata->lhs, consdata->rhs) )
+      while( SCIPconsIsActive(cons) && !consdata->propagated && *result != SCIP_CUTOFF )
       {
-         CHECK_OKAY( SCIPdelCons(scip, cons) );
-         continue;
-      }
+         /* mark constraint being propagated/preprocessed */
+         consdata->propagated = TRUE;
 
-      /* remember the first changed constraint to begin the next aggregation round with */
-      if( firstchange == -1 && consdata->changed )
-         firstchange = c;
-
-      debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
-      debug(consdataPrint(scip, consdata, NULL));
-
-      consdeleted = FALSE;
-      conschanged = FALSE;
-
-      /* incorporate fixings and aggregations in constraint */
-      if( nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
-      {
-         CHECK_OKAY( applyFixings(scip, cons, &conschanged) );
-      }
-
-      /* we can only presolve linear constraints, that are not modifiable */
-      if( SCIPconsIsModifiable(cons) )
-         continue;
-
-      /* normalize constraint */
-      CHECK_OKAY( normalizeCons(scip, cons) );
-
-      /* tighten left and right hand side due to integrality */
-      CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
-
-      /* check bounds */
-      if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
-      {
-         debugMessage("linear constraint <%s> is infeasible: sides=[%g,%g]\n",
-            SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-         *result = SCIP_CUTOFF;
-         break;
-      }
-
-      /* tighten variable's bounds */
-      CHECK_OKAY( tightenBounds(scip, cons, &cutoff, nchgbds) );
-      if( cutoff )
-      {
-         *result = SCIP_CUTOFF;
-         break;
-      }
-
-      /* check for fixed variables */
-      CHECK_OKAY( fixVariables(scip, cons, nfixedvars, result, &conschanged) );
-      if( *result == SCIP_CUTOFF )
-         break;
-
-      /* check, if constraint is empty */
-      if( consdata->nvars == 0 )
-      {
-         if( SCIPisFeasPositive(scip, consdata->lhs) || SCIPisFeasNegative(scip, consdata->rhs) )
+         /* if inequality is already upgraded, delete it now; we only want to keep upgraded inequalities one presolving round
+          * to help detecting redundancy of other linear constraints, but we want to keep equalities until the end of
+          * presolving, because they may be used for aggregating other constraints
+          */
+         if( consdata->upgraded && SCIPisLT(scip, consdata->lhs, consdata->rhs) )
          {
-            debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            continue;
+         }
+
+         /* remember the first changed constraint to begin the next aggregation round with */
+         if( firstchange == -1 && consdata->changed )
+            firstchange = c;
+
+         debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
+         debug(consdataPrint(scip, consdata, NULL));
+
+         consdeleted = FALSE;
+         conschanged = FALSE;
+
+         /* incorporate fixings and aggregations in constraint */
+         if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0
+            || *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
+         {
+            CHECK_OKAY( applyFixings(scip, cons, &conschanged) );
+         }
+#ifndef NDEBUG
+         {
+            int i;
+            for( i = 0; i < consdata->nvars; ++i )
+               assert(SCIPvarIsActive(consdata->vars[i]));
+         }
+#endif
+
+         /* we can only presolve linear constraints, that are not modifiable */
+         if( SCIPconsIsModifiable(cons) )
+            continue;
+
+         /* normalize constraint */
+         CHECK_OKAY( normalizeCons(scip, cons) );
+
+         /* tighten left and right hand side due to integrality */
+         CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
+
+         /* check bounds */
+         if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible: sides=[%g,%g]\n",
                SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
             *result = SCIP_CUTOFF;
             break;
          }
-         else
+
+         /* tighten variable's bounds */
+         CHECK_OKAY( tightenBounds(scip, cons, &cutoff, nchgbds) );
+         if( cutoff )
          {
-            debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
-               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         /* check for fixed variables */
+         CHECK_OKAY( fixVariables(scip, cons, nfixedvars, result, &conschanged) );
+         if( *result == SCIP_CUTOFF )
+            break;
+
+         /* check, if constraint is empty */
+         if( consdata->nvars == 0 )
+         {
+            if( SCIPisFeasPositive(scip, consdata->lhs) || SCIPisFeasNegative(scip, consdata->rhs) )
+            {
+               debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               *result = SCIP_CUTOFF;
+               break;
+            }
+            else
+            {
+               debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               CHECK_OKAY( SCIPdelCons(scip, cons) );
+               assert(!SCIPconsIsActive(cons));
+               if( !consdata->upgraded )
+                  (*ndelconss)++;
+               *result = SCIP_SUCCESS;
+               continue;
+            }
+         }
+
+         /* check constraint for infeasibility and redundancy */
+         consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
+         if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            *result = SCIP_CUTOFF;
+            break;
+         }
+         else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
+         {
+            debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             CHECK_OKAY( SCIPdelCons(scip, cons) );
-            assert(!SCIPconsIsActive(cons));
             if( !consdata->upgraded )
                (*ndelconss)++;
             *result = SCIP_SUCCESS;
             continue;
          }
-      }
+         else if( SCIPisGE(scip, minactivity, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            debugMessage("linear constraint <%s> left hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            CHECK_OKAY( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+            if( !consdata->upgraded )
+               (*nchgsides)++;
+            *result = SCIP_SUCCESS;
+            conschanged = TRUE;
+         }
+         else if( SCIPisLE(scip, maxactivity, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            debugMessage("linear constraint <%s> right hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            CHECK_OKAY( chgRhs(scip, cons, SCIPinfinity(scip)) );
+            if( !consdata->upgraded )
+               (*nchgsides)++;
+            *result = SCIP_SUCCESS;
+            conschanged = TRUE;
+         }
 
-      /* check constraint for infeasibility and redundancy */
-      consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-      if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
-      {
-         debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
-            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-         *result = SCIP_CUTOFF;
-         break;
-      }
-      else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
-      {
-         debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-         CHECK_OKAY( SCIPdelCons(scip, cons) );
-         if( !consdata->upgraded )
-            (*ndelconss)++;
-         *result = SCIP_SUCCESS;
-         continue;
-      }
-      else if( SCIPisGE(scip, minactivity, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) )
-      {
-         debugMessage("linear constraint <%s> left hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-         CHECK_OKAY( chgLhs(scip, cons, -SCIPinfinity(scip)) );
-         if( !consdata->upgraded )
-            (*nchgsides)++;
-         *result = SCIP_SUCCESS;
-         conschanged = TRUE;
-      }
-      else if( SCIPisLE(scip, maxactivity, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) )
-      {
-         debugMessage("linear constraint <%s> right hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-         CHECK_OKAY( chgRhs(scip, cons, SCIPinfinity(scip)) );
-         if( !consdata->upgraded )
-            (*nchgsides)++;
-         *result = SCIP_SUCCESS;
-         conschanged = TRUE;
-      }
+         /* reduce big-M coefficients, that make the constraint redundant if the variable is on a bound */
+         CHECK_OKAY( consdataTightenCoefs(scip, cons, nchgcoefs, nchgsides, &conschanged) );
 
-      /* reduce big-M coefficients, that make the constraint redundant if the variable is on a bound */
-      CHECK_OKAY( consdataTightenCoefs(scip, cons, nchgcoefs, nchgsides, &conschanged) );
+         /* convert special equalities */
+         CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
+               &conschanged, &consdeleted) );
+         if( *result == SCIP_CUTOFF || consdeleted )
+            continue;
 
-      /* convert special equalities */
-      CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
-            &conschanged, &consdeleted) );
-      if( *result == SCIP_CUTOFF || consdeleted )
-         continue;
-
-      /* try to upgrade the constraint into a more specific constraint type */
-      CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
-      if( upgdcons != NULL )
-      {
-         debugMessage("upgraded linear constraint <%s> to type <%s>:\n", 
-            SCIPconsGetName(cons), SCIPconshdlrGetName(SCIPconsGetHdlr(upgdcons)));
-         debug(consdataPrint(scip, consdata, NULL));
+         /* try to upgrade the constraint into a more specific constraint type */
+         CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
+         if( upgdcons != NULL )
+         {
+            debugMessage("upgraded linear constraint <%s> to type <%s>:\n", 
+               SCIPconsGetName(cons), SCIPconshdlrGetName(SCIPconsGetHdlr(upgdcons)));
+            debug(consdataPrint(scip, consdata, NULL));
          
-         /* add the upgraded constraint to the problem */
-         CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
-         CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
-         (*nupgdconss)++;
+            /* add the upgraded constraint to the problem */
+            CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
+            CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
+            (*nupgdconss)++;
          
-         /* mark the linear constraint being upgraded and to be removed after presolving;
-          * don't delete it directly, because it may help to preprocess other linear constraints
-          */
-         assert(!consdata->upgraded);
-         consdata->upgraded = TRUE;
+            /* mark the linear constraint being upgraded and to be removed after presolving;
+             * don't delete it directly, because it may help to preprocess other linear constraints
+             */
+            assert(!consdata->upgraded);
+            consdata->upgraded = TRUE;
+         }
       }
    }
 
@@ -4747,10 +4777,6 @@ static
 DECL_EVENTEXEC(eventExecLinear)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
-   VAR* var;
-   Real oldbound;
-   Real newbound;
-   int varpos;
    EVENTTYPE eventtype;
 
    assert(eventhdlr != NULL);
@@ -4761,27 +4787,36 @@ DECL_EVENTEXEC(eventExecLinear)
    /*debugMessage("Exec method of bound change event handler for linear constraints\n");*/
 
    consdata = eventdata->consdata;
-   varpos = eventdata->varpos;
    assert(consdata != NULL);
-   assert(0 <= varpos && varpos < consdata->nvars);
 
    eventtype = SCIPeventGetType(event);
-   var = SCIPeventGetVar(event);
-   oldbound = SCIPeventGetOldbound(event);
-   newbound = SCIPeventGetNewbound(event);
-   assert(var != NULL);
-   assert(consdata->vars[varpos] == var);
 
-   /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
-     eventtype, SCIPvarGetName(consdatadata->vars[varpos]), oldbound, newbound, consdatadata->minactivity, 
-     consdatadata->maxactivity);*/
-
-   if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-      consdataUpdateChgLb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
-   else
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 )
    {
-      assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-      consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
+      VAR* var;
+      Real oldbound;
+      Real newbound;
+      int varpos;
+
+      varpos = eventdata->varpos;
+      assert(0 <= varpos && varpos < consdata->nvars);
+      var = SCIPeventGetVar(event);
+      oldbound = SCIPeventGetOldbound(event);
+      newbound = SCIPeventGetNewbound(event);
+      assert(var != NULL);
+      assert(consdata->vars[varpos] == var);
+      
+      /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
+        eventtype, SCIPvarGetName(consdatadata->vars[varpos]), oldbound, newbound, consdatadata->minactivity, 
+        consdatadata->maxactivity);*/
+      
+      if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+         consdataUpdateChgLb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
+      else
+      {
+         assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+         consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
+      }
    }
 
    consdata->propagated = FALSE;

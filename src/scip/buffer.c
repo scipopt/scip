@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.14 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.15 2004/07/07 11:41:31 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -179,6 +179,7 @@ RETCODE SCIPbufferReallocMem(
    for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )
    {
    }
+   assert(bufnum >= 0);
    assert(buffer->data[bufnum] == *ptr);
    assert(buffer->used[bufnum]);
    assert(buffer->size[bufnum] >= 1);
@@ -223,6 +224,7 @@ void SCIPbufferFreeMem(
    for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )
    {
    }
+   assert(bufnum >= 0);
    assert(buffer->data[bufnum] == *ptr);
    assert(buffer->used[bufnum]);
 
@@ -234,4 +236,14 @@ void SCIPbufferFreeMem(
 
    debugMessage("freed buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
+}
+
+/** gets number of used buffers */
+int SCIPbufferGetNUsed(
+   BUFFER*          buffer              /**< memory buffer storage */
+   )
+{
+   assert(buffer != NULL);
+
+   return buffer->firstfree;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.120 2004/07/07 08:58:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.121 2004/07/07 11:41:32 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -28,6 +28,7 @@
 #include "def.h"
 #include "set.h"
 #include "stat.h"
+#include "buffer.h"
 #include "clock.h"
 #include "vbc.h"
 #include "interrupt.h"
@@ -1626,6 +1627,8 @@ RETCODE SCIPsolveCIP(
 
    while( !SCIPsolveIsStopped(set, stat) && !(*restart) )
    {
+      assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
       /* update the memory saving flag, switch algorithms respectively */
       SCIPstatUpdateMemsaveMode(stat, set, mem);
 
@@ -1647,6 +1650,7 @@ RETCODE SCIPsolveCIP(
       }
       actnode = nextnode;
       nextnode = NULL;
+      assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       if( actnode != NULL )
       {
@@ -1696,6 +1700,7 @@ RETCODE SCIPsolveCIP(
 
       /* stop node activation timer */
       SCIPclockStop(stat->nodeactivationtime, set);
+      assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* if no more node was selected, we finished optimization */
       if( actnode == NULL )
@@ -1706,6 +1711,7 @@ RETCODE SCIPsolveCIP(
 
       /* domain propagation */
       CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, &cutoff) );
+      assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* solve current node */
       if( cutoff )
@@ -1721,6 +1727,7 @@ RETCODE SCIPsolveCIP(
                conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible, restart) );
       }
       assert(!cutoff || infeasible);
+      assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* check for restart */
       if( !(*restart) )
@@ -1764,6 +1771,7 @@ RETCODE SCIPsolveCIP(
             CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
             CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
          }
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* if no branching was created, the node was not cut off, but it's lower bound is still smaller than
           * the cutoff bound, we have to branch on a non-fixed variable;
@@ -1797,15 +1805,18 @@ RETCODE SCIPsolveCIP(
             }
             while( result == SCIP_REDUCEDDOM );
          }
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* select node to process in next solving loop; the primal heuristics need to know whether a child/sibling
           * (plunging) will be selected as next node or not
           */
          CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &nextnode) );
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* call primal heuristics */
          nnodes = SCIPtreeGetNNodes(tree);
          CHECK_OKAY( primalHeuristics(set, primal, tree, nextnode, &foundsol) );
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
           * again, because the selected next node may be invalid due to cut off
@@ -1822,6 +1833,7 @@ RETCODE SCIPsolveCIP(
          SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
       debugMessage("**********************************************************************\n");
    }
+   assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    debugMessage("Problem solving finished\n");
 
