@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.250 2005/02/02 20:06:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.251 2005/02/03 12:29:35 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -122,11 +122,11 @@ RETCODE checkStage(
       assert(scip->lp == NULL);
       assert(scip->primal == NULL);
       assert(scip->tree == NULL);
+      assert(scip->conflict == NULL);
       assert(scip->transprob == NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-      assert(scip->conflict == NULL);
 
       if( !init )
       {
@@ -144,11 +144,11 @@ RETCODE checkStage(
       assert(scip->lp == NULL);
       assert(scip->primal == NULL);
       assert(scip->tree == NULL);
+      assert(scip->conflict == NULL);
       assert(scip->transprob == NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-      assert(scip->conflict == NULL);
 
       if( !problem )
       {
@@ -166,11 +166,11 @@ RETCODE checkStage(
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-      assert(scip->conflict == NULL);
 
       if( !transforming )
       {
@@ -188,11 +188,11 @@ RETCODE checkStage(
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-      assert(scip->conflict == NULL);
 
       if( !transformed )
       {
@@ -210,11 +210,11 @@ RETCODE checkStage(
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-      assert(scip->conflict == NULL);
 
       if( !presolving )
       {
@@ -232,11 +232,11 @@ RETCODE checkStage(
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-      assert(scip->conflict == NULL);
 
       if( !presolved )
       {
@@ -272,11 +272,11 @@ RETCODE checkStage(
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
-      assert(scip->conflict != NULL);
 
       if( !solving )
       {
@@ -294,11 +294,11 @@ RETCODE checkStage(
       assert(scip->lp != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->transprob != NULL);
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
-      assert(scip->conflict != NULL);
 
       if( !solved )
       {
@@ -331,7 +331,6 @@ RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-      assert(scip->conflict == NULL);
 
       if( !freetrans )
       {
@@ -427,14 +426,14 @@ RETCODE SCIPcreate(
    (*scip)->eventfilter = NULL;
    (*scip)->eventqueue = NULL;
    (*scip)->branchcand = NULL;
-   (*scip)->tree = NULL;
    (*scip)->lp = NULL;
+   (*scip)->primal = NULL;
+   (*scip)->tree = NULL;
+   (*scip)->conflict = NULL;
    (*scip)->transprob = NULL;
    (*scip)->pricestore = NULL;
    (*scip)->sepastore = NULL;
    (*scip)->cutpool = NULL;
-   (*scip)->conflict = NULL;
-   (*scip)->primal = NULL;
 
    return SCIP_OKAY;
 }
@@ -3376,6 +3375,7 @@ RETCODE transformProb(
    CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
    CHECK_OKAY( SCIPprimalCreate(&scip->primal) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
+   CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
@@ -3745,7 +3745,6 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPpricestoreCreate(&scip->pricestore) );
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->sepa_cutagelimit) );
-   CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
    CHECK_OKAY( SCIPtreeCreateRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
 
    /* switch stage to SOLVING */
@@ -3866,7 +3865,6 @@ RETCODE freeSolve(
    CHECK_OKAY( SCIPprobExitSolve(scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
 
    /* free solution process data structures */
-   CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
    CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
    CHECK_OKAY( SCIPsepastoreFree(&scip->sepastore) );
    CHECK_OKAY( SCIPpricestoreFree(&scip->pricestore) );
@@ -3902,6 +3900,7 @@ RETCODE freeTransform(
 
    /* free transformed problem data structures */
    CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
+   CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
    CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
    CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
    CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
@@ -6789,7 +6788,7 @@ RETCODE SCIPinitConflictAnalysis(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPinitConflictAnalysis", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPinitConflictAnalysis", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflictInit(scip->conflict) );
 
@@ -6810,7 +6809,7 @@ RETCODE SCIPaddConflictLb(
                                          *   conflicting bound was valid, NULL for current local bound */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
 
@@ -6831,7 +6830,7 @@ RETCODE SCIPaddConflictUb(
                                          *   conflicting bound was valid, NULL for current local bound */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
 
@@ -6853,7 +6852,7 @@ RETCODE SCIPaddConflictBd(
                                          *   conflicting bound was valid, NULL for current local bound */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, boundtype, bdchgidx) );
 
@@ -6872,7 +6871,7 @@ RETCODE SCIPaddConflictBinvar(
    VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    if( SCIPvarGetLbLocal(var) > 0.5 )
@@ -6901,7 +6900,7 @@ RETCODE SCIPanalyzeConflict(
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, 
          scip->transprob, scip->tree, validdepth, success) );
@@ -6922,7 +6921,7 @@ RETCODE SCIPanalyzeConflictCons(
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflictCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflictCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPconsIsGlobal(cons) )
    {
@@ -10372,7 +10371,7 @@ Longint SCIPgetNConflictClausesFound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNConflictClausesFound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNConflictClausesFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPconflictGetNPropConflictClauses(scip->conflict)
       + SCIPconflictGetNPropReconvergenceClauses(scip->conflict)

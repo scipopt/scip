@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.11 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.12 2005/02/03 12:29:35 bzfpfend Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -67,13 +67,13 @@ struct Scip
    LP*              lp;                 /**< LP data */
    PRIMAL*          primal;             /**< primal data and solution storage */
    TREE*            tree;               /**< branch and bound tree */
+   CONFLICT*        conflict;           /**< conflict analysis data */
    PROB*            transprob;          /**< transformed problem after presolve */
 
    /* SOLVING */
    PRICESTORE*      pricestore;         /**< storage for priced variables */
    SEPASTORE*       sepastore;          /**< storage for separated cuts */
    CUTPOOL*         cutpool;            /**< global cut pool */
-   CONFLICT*        conflict;           /**< conflict analysis data */
 
    STAGE            stage;              /**< SCIP operation stage */
 };

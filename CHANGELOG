@@ -67,6 +67,7 @@ fixed bugs:
 - removed bug with dual presolver, that declared a problem to be unbounded or infeasible, if it could fix a variable
   to infinity even if its objective value is zero
 - fixed bug in knapsack constraint handler that fixed variables are sometimes not removed in presolving
+- made conflict analysis available in presolving stage (for probing conflicts)
 
 known bugs:
 - conflict analysis should be made available in presolving (for probing)
