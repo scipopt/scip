@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.104 2004/08/25 14:56:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.105 2004/08/25 15:01:59 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -735,7 +735,8 @@ RETCODE SCIPnodeFree(
 
 /** cuts off node and whole sub tree from branch and bound tree */
 void SCIPnodeCutoff(
-   NODE*            node                /**< node that should be cut off */
+   NODE*            node,               /**< node that should be cut off */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(node != NULL);
@@ -743,6 +744,7 @@ void SCIPnodeCutoff(
    debugMessage("cutting off node %p in depth %d\n", node, node->depth);
 
    node->cutoff = TRUE;
+   node->lowerbound = set->infinity;
 }
 
 /** informs node, that it is no longer on the active path */

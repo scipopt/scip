@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.61 2004/08/25 14:56:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.62 2004/08/25 15:02:00 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -101,7 +101,8 @@ RETCODE SCIPnodeActivate(
 /** cuts off node and whole sub tree from branch and bound tree */
 extern
 void SCIPnodeCutoff(
-   NODE*            node                /**< node that should be cut off */
+   NODE*            node,               /**< node that should be cut off */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** adds constraint locally to the node and captures it; activates constraint, if node is active;

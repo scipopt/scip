@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.52 2004/08/25 14:56:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.53 2004/08/25 15:01:57 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -852,7 +852,7 @@ RETCODE conflictAnalyze(
          debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", 
             tree->actnode->depth, validdepth);
 
-         SCIPnodeCutoff(tree->path[validdepth]);
+         SCIPnodeCutoff(tree->path[validdepth], set);
          *success = TRUE;
 
          return SCIP_OKAY;

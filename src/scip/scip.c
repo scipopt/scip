@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.198 2004/08/25 14:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.199 2004/08/25 15:01:58 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8292,6 +8292,19 @@ NODE* SCIPgetBestboundNode(
    CHECK_ABORT( checkStage(scip, "SCIPgetBestboundNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPtreeGetLowerboundNode(scip->tree, scip->set);
+}
+
+/** cuts off node and whole sub tree from branch and bound tree */
+RETCODE SCIPcutoffNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node                /**< node that should be cut off */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcutoffNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPnodeCutoff(node, scip->set);
+
+   return SCIP_OKAY;
 }
 
 

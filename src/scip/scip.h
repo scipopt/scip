@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.157 2004/08/25 14:56:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.158 2004/08/25 15:01:59 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3402,6 +3402,13 @@ NODE* SCIPgetBestNode(
 extern
 NODE* SCIPgetBestboundNode(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** cuts off node and whole sub tree from branch and bound tree */
+extern
+RETCODE SCIPcutoffNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node                /**< node that should be cut off */
    );
 
 /**@} */
