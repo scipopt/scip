@@ -55,6 +55,8 @@ plugins:
 - diving heuristics now compare their number of LP iterations with the number of node LP iterations instead of the
   total number (including their own) LP iterations
 - included clique separator for clique cuts with at least 3 elements
+- changed implementation of reliability value calculation in reliability branching; slightly modified influence
+  of maximal total number of strong branching LP iterations in reliability branching
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -80,6 +82,9 @@ parameters:
 - new parameter lp/pricing to set the pricing strategy used in the LP solver
 - changed default of parameter lp/pricing to 's'teepest edge pricing
 - new parameter lp/checkstability to disable stability check of LP solver's result code
+- default parameter branching/relpscost/minreliable changed to 1.0
+- default parameter branching/relpscost/maxreliable changed to 16.0
+- default parameter branching/relpscost/sbiterofs changed to 20000
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
@@ -129,6 +134,7 @@ fixed bugs:
 - fixed bug with globally deleting constraints, that have attached rows which are therefore not released in exitsol methods
 - fixed bugs in intobj separator
 - fixed bug in CPLEX LP interface with dual norms
+- heuristic's display character is now only shown the first time, the new solution was found
 
 
 SCIP version 0.78

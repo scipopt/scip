@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.18 2005/02/09 10:10:01 bzfpfend Exp $
+# $Id: check.awk,v 1.19 2005/03/14 16:10:19 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -47,9 +47,12 @@ BEGIN {
     printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
     printf("\\midrule\n")                                            >TEXFILE;
 
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+#    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+#    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
+#    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
 
     nprobs = 0;
     sbab = 0;
@@ -205,9 +208,11 @@ BEGIN {
    printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
       pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    
-   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
-      shortprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
-      bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
+#   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
+#      shortprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
+#      bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
+   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
+      shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
    
    if (sol[prob] == "")
       printf("unknown\n");
@@ -264,7 +269,8 @@ END {
     printf("\\end{table}\n")                                              >TEXFILE;
     printf("\\end{document}\n")                                           >TEXFILE;
     
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+#    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
     
     printf("\n");
     printf("------------------------[Nodes]---------------[Time]-----------[Basic Time]-------[Overhead Time]-----[Conflict Time]-\n");

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.27 2005/02/24 10:38:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.28 2005/03/14 16:10:19 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -35,10 +35,10 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_MINRELIABLE      8.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
-#define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching LP iterations */
+#define DEFAULT_SBITEROFS    20000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     4      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
@@ -269,8 +269,6 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       Real bestuninitsbscore;
       Real bestsbfracscore;
       Real bestsbdomainscore;
-      Real depthfac;
-      Real sizefac;
       Real prio;
       Real maxlookahead;
       Real lookahead;
@@ -294,6 +292,14 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       if( !SCIPisLPSolBasic(scip) )
          maxninitcands = 0;
 
+      /* calculate maximal number of strong branching LP iterations; if we used too many, don't apply strong branching
+       * any more
+       */
+      maxnsblpiterations = branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip) + branchruledata->sbiterofs
+         + SCIPgetNRootStrongbranchLPIterations(scip);
+      if( SCIPgetNStrongbranchLPIterations(scip) > maxnsblpiterations )
+         maxninitcands = 0;
+
       /* get buffer for storing the unreliable candidates */
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcands, maxninitcands+1) ); /* allocate one additional slot for convenience */
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcandscores, maxninitcands+1) );
@@ -315,13 +321,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       maxbdchgs = branchruledata->maxbdchgs;
 
       /* calculate value used as reliability */
-      depthfac = 1.1 - (Real)depth/(Real)maxdepth;
-      depthfac = MAX(depthfac, 0.0);
-      depthfac = MIN(depthfac, 1.0);
-      sizefac = 1.2 - sqrt((Real)nintvars/(Real)MAXSIZE);
-      sizefac = MAX(sizefac, 0.0);
-      sizefac = MIN(sizefac, 1.0);
-      prio = depthfac * sizefac;
+      prio = (maxnsblpiterations - SCIPgetNStrongbranchLPIterations(scip))/(maxnsblpiterations+1.0);
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
@@ -417,10 +417,6 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          }
       }
 
-      /* calculate maximal number of strong branching LP iterations */
-      maxnsblpiterations = branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip) + branchruledata->sbiterofs
-         + SCIPgetNRootStrongbranchLPIterations(scip);
-
       /* initialize unreliable candidates with strong branching until maxlookahead is reached,
        * search best strong branching candidate
        */
@@ -447,7 +443,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       bestsbdomainscore = -SCIPinfinity(scip);
       lookahead = 0.0;
       for( i = 0; i < ninitcands && lookahead < maxlookahead
-              && SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations; ++i )
+              && (i < maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
       {
          Real down;
          Real up;

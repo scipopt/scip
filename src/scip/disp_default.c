@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.50 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.51 2005/03/14 16:10:19 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -100,6 +100,14 @@
 #define DISP_PRIO_PLUNGEDEPTH   10
 #define DISP_POSI_PLUNGEDEPTH   2200
 #define DISP_STRI_PLUNGEDEPTH   TRUE
+
+#define DISP_NAME_NFRAC         "nfrac"
+#define DISP_DESC_NFRAC         "number of fractional variables in the current solution"
+#define DISP_HEAD_NFRAC         "frac"
+#define DISP_WIDT_NFRAC         5
+#define DISP_PRIO_NFRAC         40
+#define DISP_POSI_NFRAC         2500
+#define DISP_STRI_NFRAC         TRUE
 
 #define DISP_NAME_VARS          "vars"
 #define DISP_DESC_VARS          "number of variables in the problem"
@@ -233,18 +241,18 @@ static
 DECL_DISPOUTPUT(SCIPdispOutputSolfound)
 {  /*lint --e{715}*/
    SOL* sol;
+   DISPDATA* dispdata;
 
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
    assert(scip != NULL);
 
+   dispdata = SCIPdispGetData(disp);
    sol = SCIPgetBestSol(scip);
-   if( sol != NULL
-      && SCIPgetSolRunnum(scip, sol) == SCIPgetNRuns(scip)
-      && SCIPgetSolNodenum(scip, sol) == SCIPgetNNodes(scip)
-      && SCIPisEQ(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetPrimalbound(scip)) )
+   if( sol != (SOL*)dispdata )
    {
       fprintf(file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
+      SCIPdispSetData(disp, (DISPDATA*)sol);
    }
    else
       fprintf(file, " ");
@@ -352,6 +360,22 @@ DECL_DISPOUTPUT(SCIPdispOutputPlungedepth)
    assert(scip != NULL);
 
    SCIPdispDecimal(file, (Longint)SCIPgetPlungeDepth(scip), DISP_WIDT_PLUNGEDEPTH);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
+DECL_DISPOUTPUT(SCIPdispOutputNfrac)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NFRAC) == 0);
+   assert(scip != NULL);
+
+   if( SCIPhasCurrentNodeLP(scip) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      SCIPdispDecimal(file, (Longint)SCIPgetNLPBranchCands(scip), DISP_WIDT_NFRAC);
+   else
+      fprintf(file, "   - ");
 
    return SCIP_OKAY;
 }
@@ -623,6 +647,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_PLUNGEDEPTH, DISP_DESC_PLUNGEDEPTH, DISP_HEAD_PLUNGEDEPTH,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPlungedepth, NULL, 
          DISP_WIDT_PLUNGEDEPTH, DISP_PRIO_PLUNGEDEPTH, DISP_POSI_PLUNGEDEPTH, DISP_STRI_PLUNGEDEPTH) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_NFRAC, DISP_DESC_NFRAC, DISP_HEAD_NFRAC,
+         SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNfrac, NULL, 
+         DISP_WIDT_NFRAC, DISP_PRIO_NFRAC, DISP_POSI_NFRAC, DISP_STRI_NFRAC) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_VARS, DISP_DESC_VARS, DISP_HEAD_VARS,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputVars, NULL, 
          DISP_WIDT_VARS, DISP_PRIO_VARS, DISP_POSI_VARS, DISP_STRI_VARS) );
