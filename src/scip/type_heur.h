@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.1 2003/12/01 14:41:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.2 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -67,7 +67,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *
  *  possible return values for *result:
  *  - SCIP_FOUNDSOL   : at least one feasible primal solution was found
- *  - SCIP_DIDNOTFIND : the heuristic searched, but didn't found a feasible solution
+ *  - SCIP_DIDNOTFIND : the heuristic searched, but did not find a feasible solution
  *  - SCIP_DIDNOTRUN  : the heuristic was skipped
  */
 #define DECL_HEUREXEC(x) RETCODE x (SCIP* scip, HEUR* heur, RESULT* result)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.1 2003/12/01 14:41:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.2 2003/12/08 13:24:54 bzfpfend Exp $"
 
 /**@file   type_reader.h
  * @brief  type definitions for input file readers
@@ -48,10 +48,10 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
  *  - result          : pointer to store the result of the file reading call
  *
  *  possible return values for *result:
- *  - SCIP_SUCCESS    : the reader read the file correctly
+ *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error in the input file, it should return with SCIP_READERR or SCIP_NOFILE.
+ *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
  */
 #define DECL_READERREAD(x) RETCODE x (SCIP* scip, READER* reader, const char* filename, RESULT* result)
 

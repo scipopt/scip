@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.3 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -88,7 +88,18 @@ public:
       return SCIP_OKAY;
    }
    
-   /** execution method of presolver */
+   /** execution method of presolver
+    *
+    *  The presolver should go through the variables and constraints and tighten the domains or
+    *  constraints. Each tightening should increase the given total numbers of changes.
+    *
+    *  possible return values for *result:
+    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+    *  - SCIP_SUCCESS    : the presolver found a reduction
+    *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
+    *  - SCIP_DIDNOTRUN  : the presolver was skipped
+    */
    virtual RETCODE scip_exec(
       SCIP*         scip,               /**< SCIP data structure */
       PRESOL*       presol,             /**< the presolver itself */
@@ -119,7 +130,26 @@ public:
 
 
    
-/** creates the presolver for the given presolver object and includes it in SCIP */
+/** creates the presolver for the given presolver object and includes it in SCIP
+ *
+ *  The method should be called in one of the following ways:
+ *
+ *   1. The user is resposible of deleting the object:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       MyPresol* mypresol = new MyPresol(...);
+ *       CHECK_OKAY( SCIPincludeObjPresol(scip, &mypresol, FALSE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );
+ *       delete mypresol;    // delete presol AFTER SCIPfree() !
+ *
+ *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       CHECK_OKAY( SCIPincludeObjPresol(scip, new MyPresol(...), TRUE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyPresol is called here
+ */
 extern
 RETCODE SCIPincludeObjPresol(
    SCIP*            scip,               /**< SCIP data structure */

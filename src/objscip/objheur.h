@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.3 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -103,7 +103,15 @@ public:
       return SCIP_OKAY;
    }
    
-   /** execution method of primal heuristic */
+   /** execution method of primal heuristic
+    *
+    *  Searches for feasible primal solutions. The method is called in the node processing loop.
+    *
+    *  possible return values for *result:
+    *  - SCIP_FOUNDSOL   : at least one feasible primal solution was found
+    *  - SCIP_DIDNOTFIND : the heuristic searched, but did not find a feasible solution
+    *  - SCIP_DIDNOTRUN  : the heuristic was skipped
+    */
    virtual RETCODE scip_exec(
       SCIP*         scip,               /**< SCIP data structure */
       HEUR*         heur,               /**< the primal heuristic itself */
@@ -115,7 +123,26 @@ public:
 
 
    
-/** creates the primal heuristic for the given primal heuristic object and includes it in SCIP */
+/** creates the primal heuristic for the given primal heuristic object and includes it in SCIP
+ *
+ *  The method should be called in one of the following ways:
+ *
+ *   1. The user is resposible of deleting the object:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       MyHeur* myheur = new MyHeur(...);
+ *       CHECK_OKAY( SCIPincludeObjHeur(scip, &myheur, FALSE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );
+ *       delete myheur;    // delete heur AFTER SCIPfree() !
+ *
+ *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       CHECK_OKAY( SCIPincludeObjHeur(scip, new MyHeur(...), TRUE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyHeur is called here
+ */
 extern
 RETCODE SCIPincludeObjHeur(
    SCIP*            scip,               /**< SCIP data structure */

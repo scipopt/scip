@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.1 2003/12/01 14:41:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.2 2003/12/08 13:24:54 bzfpfend Exp $"
 
 /**@file   type_nodesel.h
  * @brief  type definitions for node selectors
@@ -58,6 +58,8 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 /** node selection method of node selector
  *
+ *  This method is called to select the next leaf of the branch-and-bound tree to be processed.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - nodesel         : the node selector itself
@@ -70,6 +72,8 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 #define DECL_NODESELSELECT(x) RETCODE x (SCIP* scip, NODESEL* nodesel, NODE** selnode)
 
 /** node comparison method of node selector
+ *
+ *  This method is called to compare two nodes regarding their order in the node priority queue.
  *
  *  input:
  *  - scip            : SCIP main data structure

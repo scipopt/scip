@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.1 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.2 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -46,6 +46,7 @@ public:
    }
 
    /** destructor of user problem data to free user data (called when problem is freed)
+    *
     *  If the "deleteobject" flag in the SCIPcreateObjProb() method was set to TRUE, this method is not needed,
     *  because all the work to delete the user problem data can be done in the destructor of the user problem
     *  data object. If the "deleteobject" flag was set to FALSE, and the user problem data object stays alive
@@ -67,6 +68,26 @@ public:
    
 /** creates empty problem, initializes all solving data structures, and sets the user problem data to point to the
  *  given user data object
+ *
+ *  The method should be called in one of the following ways:
+ *
+ *   1. The user is resposible of deleting the object:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       MyProbData* myprobdata = new MyProbData(...);
+ *       CHECK_OKAY( SCIPcreateObjProb(scip, "probname", &myprobdata, FALSE) );
+ *       ... // solve the problem
+ *       CHECK_OKAY( SCIPfreeProb(scip) );
+ *       delete myprobdata;    // delete probdata AFTER SCIPfreeProb() !
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );
+ *
+ *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfreeProb() call:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       CHECK_OKAY( SCIPcreateObjProb(scip, "probname", new MyProbData(...), TRUE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );  // problem is freed and destructor of MyProbData is called here
  */
 extern
 RETCODE SCIPcreateObjProb(

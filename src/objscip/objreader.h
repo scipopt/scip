@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.2 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.3 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -70,7 +70,14 @@ public:
       return SCIP_OKAY;
    }
    
-   /** problem reading method of reader */
+   /** problem reading method of reader
+    *
+    *  possible return values for *result:
+    *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
+    *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
+    *
+    *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
+    */
    virtual RETCODE scip_read(
       SCIP*         scip,               /**< SCIP data structure */
       READER*       reader,             /**< the file reader itself */
@@ -83,7 +90,26 @@ public:
 
 
    
-/** creates the file reader for the given file reader object and includes it in SCIP */
+/** creates the file reader for the given file reader object and includes it in SCIP
+ *
+ *  The method should be called in one of the following ways:
+ *
+ *   1. The user is resposible of deleting the object:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       MyReader* myreader = new MyReader(...);
+ *       CHECK_OKAY( SCIPincludeObjReader(scip, &myreader, FALSE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );
+ *       delete myreader;    // delete reader AFTER SCIPfree() !
+ *
+ *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       CHECK_OKAY( SCIPincludeObjReader(scip, new MyReader(...), TRUE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyReader is called here
+ */
 extern
 RETCODE SCIPincludeObjReader(
    SCIP*            scip,               /**< SCIP data structure */

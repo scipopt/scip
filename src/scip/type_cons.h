@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.1 2003/12/01 14:41:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.2 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -133,7 +133,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_SEPARATED  : at least one cutting plane was generated
  *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
  *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
- *  - SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find a cutting plane
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  */
 #define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
@@ -147,21 +147,18 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  cutting plane.
  *
  *  The enforcing methods of the active constraint handlers are called in decreasing order of their enforcing
- *  priorities until the first constraint handler returned with the value SCIP_BRANCHED, SCIP_REDUCEDDOM,
- *  SCIP_SEPARATED, or SCIP_CONSADDED.
+ *  priorities until the first constraint handler returned with the value SCIP_CUTOFF, SCIP_SEPARATED,
+ *  SCIP_REDUCEDDOM, SCIP_CONSADDED, or SCIP_BRANCHED.
  *  The integrality constraint handler has an enforcing priority of zero. A constraint handler which can
  *  (or wants) to enforce its constraints only for integral solutions should have a negative enforcing priority
  *  (e.g. the alldiff-constraint can only operate on integral solutions).
  *  A constraint handler which wants to incorporate its own branching strategy even on non-integral
  *  solutions must have an enforcing priority greater than zero (e.g. the SOS-constraint incorporates
  *  SOS-branching on non-integral solutions).
- *  If the solution is integral and one of the constraints of the constraint handler is violated, the
- *  constraint handler has to branch, to reduce a variable's domain, to create a cutting plane, or to add an
- *  additional constraint that cuts off the solution -- otherwise, the infeasibility cannot be resolved.
  *
  *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The enforcing
- *  method should process the useful constraints first, and only if no violation was found, the remaining
- *  nconss - nusefulconss constraints must be enforced.
+ *  method should process the useful constraints first. The other nconss - nusefulconss constraints should only
+ *  be enforced, if no violation was found in the useful constraints.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -187,21 +184,21 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *
  *  The method is called at the end of the node processing loop for a node where the LP was not solved.
  *  The pseudo solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
- *  branching or reducing a variable's domain to exclude the solution. Separation is not possible, since the
- *  LP is not processed at the current node. All LP informations like LP solution, slack values, or reduced costs
- *  are invalid and must not be accessed.
+ *  branching, reducing a variable's domain to exclude the solution or adding an additional constraint.
+ *  Separation is not possible, since the LP is not processed at the current node. All LP informations like
+ *  LP solution, slack values, or reduced costs are invalid and must not be accessed.
  *
  *  Like in the enforcing method for LP solutions, the enforcing methods of the active constraint handlers are
  *  called in decreasing order of their enforcing priorities until the first constraint handler returned with
- *  the value SCIP_BRANCHED, SCIP_REDUCEDDOM, or SCIP_CONSADDED.
+ *  the value SCIP_CUTOFF, SCIP_REDUCEDDOM, SCIP_CONSADDED, SCIP_BRANCHED, or SCIP_SOLVELP.
  *
  *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The enforcing
- *  method should process the useful constraints first, and only if no violation was found, the remaining
- *  nconss - nusefulconss constraints must be enforced.
+ *  method should process the useful constraints first. The other nconss - nusefulconss constraints should only
+ *  be enforced, if no violation was found in the useful constraints.
  *
  *  If the pseudo solution's objective value is lower than the lower bound of the node, it cannot be feasible
  *  and the enforcing method may skip it's check and set *result to SCIP_DIDNOTRUN. However, it can also process
- *  it's constraints and return any other possible result code.
+ *  its constraints and return any other possible result code.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -221,7 +218,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
- */ 
+ */
 #define DECL_CONSENFOPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
                                       Bool objinfeasible, RESULT* result)
 
@@ -238,7 +235,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
  *  integrality).
  *
- *  In some cases, integrality conditions or rows in actual LP don't have to be checked, because their
+ *  In some cases, integrality conditions or rows of the actual LP don't have to be checked, because their
  *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
  *  'checklprows' is FALSE.
  *
@@ -276,7 +273,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  possible return values for *result:
  *  - SCIP_CUTOFF     : at least one constraint is infeasible for the actual domains -> node is infeasible
  *  - SCIP_REDUCEDDOM : at least one domain reduction was found
- *  - SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
+ *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  */
 #define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
@@ -321,7 +318,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_SUCCESS    : the presolver found a reduction
- *  - SCIP_DIDNOTFIND : the presolver searched, but didn't found a presolving change
+ *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  */
 #define DECL_CONSPRESOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nrounds, \
@@ -340,10 +337,11 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  value. The variables that form the reason of the assignment must be provided by calls to SCIPaddConflictVar().
  *
  *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE, if both, x and y, are assigned
- *  to FALSE. It uses SCIPinferBinVar(scip, z, 1.0, c) to apply this assignment. In the conflict analysis, the
- *  constraint handler may be asked to resolve variable z. With a call to SCIPvarGetLbLocal(z), the handler can find
- *  out, that variable z is currently assigned to TRUE, and should call SCIPaddConflictVar(scip, x) and
- *  SCIPaddConflictVar(scip, y) to tell SCIP, that the assignments to x and y are the reason for the deduction of z.
+ *  to FALSE. It uses SCIPinferBinVar(scip, z, TRUE, c) to apply this assignment. In the conflict analysis, the
+ *  constraint handler may be asked to resolve variable z with constraint c. With a call to SCIPvarGetLbLocal(z), 
+ *  the handler can find out, that variable z is currently assigned to TRUE, and should call 
+ *  SCIPaddConflictVar(scip, x) and SCIPaddConflictVar(scip, y) to tell SCIP, that the assignments to x and y were
+ *  the reason for the deduction of z.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -382,7 +380,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  If the constraint itself contains other constraints as sub constraints (e.g. the "or" constraint concatenation
  *  "c(x) or d(x)"), the rounding lock methods of these constraints should be called in a proper way.
  *  - If the constraint may get violated by the violation of the sub constraint c, it should call
- *    SCIPlockConsVars(scip, c, nlockspos, nlockneg), saying that infeasibility of c may lead to infeasibility of
+ *    SCIPlockConsVars(scip, c, nlockspos, nlocksneg), saying that infeasibility of c may lead to infeasibility of
  *    the (positive) constraint, and infeasibility of c's negation (i.e. feasibility of c) may lead to infeasibility
  *    of the constraint's negation (i.e. feasibility of the constraint).
  *  - If the constraint may get violated by the feasibility of the sub constraint c, it should call
@@ -398,7 +396,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *
  *  As a second example, consider the equivalence constraint "y <-> c(x)" with variable y and constraint c. The
  *  constraint demands, that y == 1 if and only if c(x) is satisfied. The variable lock method of the corresponding
- *  constraint handler should call SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg) and
+ *  constraint handler should call SCIPvarLock(y, nlockspos + nlocksneg, nlockspos + nlocksneg) and
  *  SCIPlockConsVars(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
  *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
  *
@@ -426,7 +424,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  If the constraint itself contains other constraints as sub constraints, the rounding lock methods of these
  *  constraints should be called in a proper way.
  *  - If the constraint may get violated by the violation of the sub constraint c, it should call
- *    SCIPunlockConsVars(scip, c, nunlockspos, nunlockneg).
+ *    SCIPunlockConsVars(scip, c, nunlockspos, nunlocksneg).
  *  - If the constraint may get violated by the feasibility of the sub constraint c, it should call
  *    SCIPunlockConsVars(scip, c, nunlocksneg, nunlockspos).
  *  - If the constraint may get violated by any change in the feasibility of the sub constraint c, it should call
@@ -449,8 +447,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  the corresponding bound change event was not yet processed.
  *
  *  This method is always called after a constraint of the constraint handler was activated. The constraint
- *  handler may use this call to update his own (statistical) data and to lock rounding of variables in globally
- *  valid constraints.
+ *  handler may use this call to update his own (statistical) data.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -465,8 +462,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  the corresponding bound change event was not yet processed.
  *
  *  This method is always called before a constraint of the constraint handler is deactivated. The constraint
- *  handler may use this call to update his own (statistical) data and to unlock rounding of variables in globally
- *  valid constraints.
+ *  handler may use this call to update his own (statistical) data.
  *
  *  input:
  *  - scip            : SCIP main data structure

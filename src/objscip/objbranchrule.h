@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.3 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.4 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -90,7 +90,15 @@ public:
       return SCIP_OKAY;
    }
    
-   /** branching execution method for fractional LP solutions */
+   /** branching execution method for fractional LP solutions
+    *
+    *  possible return values for *result:
+    *  - SCIP_CUTOFF     : the current node was detected to be infeasible
+    *  - SCIP_BRANCHED   : branching was applied
+    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual LP solution infeasible
+    *  - SCIP_SEPARATED  : a cutting plane was generated
+    *  - SCIP_DIDNOTRUN  : the branching rule was skipped
+    */
    virtual RETCODE scip_execlp(
       SCIP*         scip,               /**< SCIP data structure */
       BRANCHRULE*   branchrule,         /**< the branching rule itself */
@@ -102,7 +110,14 @@ public:
       return SCIP_OKAY;
    }
    
-   /** branching execution method for not completely fixed pseudo solutions */
+   /** branching execution method for not completely fixed pseudo solutions
+    *
+    *  possible return values for *result:
+    *  - SCIP_CUTOFF     : the current node was detected to be infeasible
+    *  - SCIP_BRANCHED   : branching was applied
+    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
+    *  - SCIP_DIDNOTRUN  : the branching rule was skipped
+    */
    virtual RETCODE scip_execps(
       SCIP*         scip,               /**< SCIP data structure */
       BRANCHRULE*   branchrule,         /**< the branching rule itself */
@@ -119,7 +134,26 @@ public:
 
 
    
-/** creates the branching rule for the given branching rule object and includes it in SCIP */
+/** creates the branching rule for the given branching rule object and includes it in SCIP
+ *
+ *  The method should be called in one of the following ways:
+ *
+ *   1. The user is resposible of deleting the object:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       MyBranchrule* mybranchrule = new MyBranchrule(...);
+ *       CHECK_OKAY( SCIPincludeObjBranchrule(scip, &mybranchrule, FALSE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );
+ *       delete mybranchrule;    // delete branchrule AFTER SCIPfree() !
+ *
+ *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       CHECK_OKAY( SCIPincludeObjBranchrule(scip, new MyBranchrule(...), TRUE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyBranchrule is called here
+ */
 extern
 RETCODE SCIPincludeObjBranchrule(
    SCIP*            scip,               /**< SCIP data structure */

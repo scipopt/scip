@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.1 2003/12/01 14:41:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.2 2003/12/08 13:24:54 bzfpfend Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers
@@ -92,7 +92,7 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_SUCCESS    : the presolver found a reduction
- *  - SCIP_DIDNOTFIND : the presolver searched, but didn't found a presolving change
+ *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  */
 #define DECL_PRESOLEXEC(x) RETCODE x (SCIP* scip, PRESOL* presol, int nrounds,              \

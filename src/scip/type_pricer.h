@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.2 2003/12/08 11:51:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.3 2003/12/08 13:24:54 bzfpfend Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -59,13 +59,13 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *
  *  Searches for variables that can contribute to improve the current LP's solution value.
  *  In standard branch-and-price, these are variables with negative feasibility, that is negative
- *  reduced costs for non-negative variables, and non-zero reduced costs for variables that can be
- *  negative.
+ *  reduced costs for non-negative variables, positive reduced costs for non-positive variables,
+ *  and non-zero reduced costs for variables that can be negative and positive.
  *
  *  The method is called in the LP solving loop after an LP was proven to be feasible.
  *
  *  Whenever the pricer finds a variable with negative feasibility, it should call SCIPcreateVar()
- *  and SCIPaddVar() to add the variable to the problem. Furthermore, it should call the appropriate
+ *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
  *  methods of the constraint handlers to add the necessary variable entries to the constraints.
  *
  *  input:
@@ -80,14 +80,22 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  In standard branch-and-price, these are variables with positive farkas values:
  *
  *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
- *  The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
- *  inequality most feasible solution) x' defined by 
- *     x'_i = ub_i, if y^T A_i > 0
- *     x'_i = 0   , if y^T A_i = 0
- *     x'_i = lb_i, if y^T A_i < 0.
- *  Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
+ *  With the values of y, an implicit inequality  y^T A x >= y^T b  is associated, with b given
+ *  by the sides of the LP rows and the sign of y:
+ *   - if y_i is positive, b_i is the left hand side of the row,
+ *   - if y_i is negative, b_i is the right hand side of the row.
+ *
+ *  y is chosen in a way, such that the valid inequality  y^T A x >= y^T b  is violated by all x,
+ *  especially by the (for this inequality least infeasible solution) x' defined by 
+ *     x'_i := ub_i, if y^T A_i >= 0
+ *     x'_i := lb_i, if y^T A_i < 0.
+ *  Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0.
  *
  *  The method is called in the LP solving loop after an LP was proven to be infeasible.
+ *
+ *  Whenever the pricer finds a variable with positive farkas value, it should call SCIPcreateVar()
+ *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
+ *  methods of the constraint handlers to add the necessary variable entries to the constraints.
  *
  *  input:
  *  - scip            : SCIP main data structure

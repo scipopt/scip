@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.1 2003/12/01 14:41:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.2 2003/12/08 13:24:54 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -70,7 +70,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
  *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
- *  - SCIP_DIDNOTFIND : the separator searched, but didn't found a feasible cutting plane
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find a feasible cutting plane
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  */
 #define DECL_SEPAEXEC(x) RETCODE x (SCIP* scip, SEPA* sepa, RESULT* result)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.2 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.3 2003/12/08 13:24:53 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -98,14 +98,29 @@ public:
       return SCIP_OKAY;
    }
    
-   /** node selection method of node selector */
+   /** node selection method of node selector
+    *
+    *  This method is called to select the next leaf of the branch-and-bound tree to be processed.
+    *
+    *  possible return values for *selnode:
+    *  - NULL    : problem is solved, because tree is empty
+    *  - non-NULL: node to be solved next
+    */
    virtual RETCODE scip_select(
       SCIP*         scip,               /**< SCIP data structure */
       NODESEL*      nodesel,            /**< the node selector itself */
       NODE**        selnode             /**< pointer to store the selected node */
       ) = 0;
    
-   /** node comparison method of node selector */
+   /** node comparison method of node selector
+    *
+    *  This method is called to compare two nodes regarding their order in the node priority queue.
+    *
+    *  possible return values:
+    *  - value < 0: node1 comes before (is better than) node2
+    *  - value = 0: both nodes are equally good
+    *  - value > 0: node2 comes after (is worse than) node2
+    */
    virtual int scip_comp(
       SCIP*         scip,               /**< SCIP data structure */
       NODESEL*      nodesel,            /**< the node selector itself */
@@ -118,7 +133,26 @@ public:
 
 
    
-/** creates the node selector for the given node selector object and includes it in SCIP */
+/** creates the node selector for the given node selector object and includes it in SCIP
+ *
+ *  The method should be called in one of the following ways:
+ *
+ *   1. The user is resposible of deleting the object:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       MyNodesel* mynodesel = new MyNodesel(...);
+ *       CHECK_OKAY( SCIPincludeObjNodesel(scip, &mynodesel, FALSE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );
+ *       delete mynodesel;    // delete nodesel AFTER SCIPfree() !
+ *
+ *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
+ *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       ...
+ *       CHECK_OKAY( SCIPincludeObjNodesel(scip, new MyNodesel(...), TRUE) );
+ *       ...
+ *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyNodesel is called here
+ */
 extern
 RETCODE SCIPincludeObjNodesel(
    SCIP*            scip,               /**< SCIP data structure */
