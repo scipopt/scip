@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.3 2005/01/21 09:16:45 bzfpfend Exp $
+# $Id: Makefile,v 1.4 2005/02/09 10:50:33 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
@@ -65,18 +65,18 @@ LDFLAGS		=	-lpthread -lm -lz
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
-GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings \
-			-Wstrict-prototypes -Wmissing-prototypes \
-			-Wmissing-declarations -Wno-unknown-pragmas \
-			-Wno-unused
+GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
+			-Wsign-compare -Wstrict-prototypes \
+			-Wmissing-declarations -Wmissing-prototypes
 
-GXXWARN		=	-Wall -W -Wpointer-arith \
-			-Wcast-align -Wwrite-strings -Wconversion \
-			-Wstrict-prototypes -Wmissing-prototypes \
-			-Wno-unknown-pragmas \
+GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
-			-Woverloaded-virtual -Wsign-promo -Wsynth -Wundef \
-			-Wcast-qual -Wold-style-cast -Wshadow 
+			-Woverloaded-virtual -Wsign-promo -Wsynth \
+			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
