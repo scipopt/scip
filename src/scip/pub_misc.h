@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.5 2004/10/13 14:36:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.6 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -242,18 +242,18 @@ void SCIPbsortPtr(
 
 /** bubble sort of two joint arrays of pointers/Reals, sorted by first array */
 extern
-void SCIPbsortPtrDbl(
+void SCIPbsortPtrReal(
    void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   Real*            realarray,          /**< Real array to be permuted in the same way */
    int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    );
 
 /** bubble sort of three joint arrays of pointers/Reals/ints, sorted by first */
 extern
-void SCIPbsortPtrDblInt(
+void SCIPbsortPtrRealInt(
    void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   Real*            realarray,          /**< Real array to be permuted in the same way */
    int*             intarray,           /**< int array to be permuted in the same way */
    int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
@@ -261,13 +261,21 @@ void SCIPbsortPtrDblInt(
 
 /** bubble sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
 extern
-void SCIPbsortPtrDblIntInt(
+void SCIPbsortPtrRealIntInt(
    void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   Real*            realarray,          /**< Real array to be permuted in the same way */
    int*             intarray1,          /**< first int array to be permuted in the same way */
    int*             intarray2,          /**< second int array to be permuted in the same way */
    int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   );
+
+/** bubble sort of two joint arrays of Reals/pointers, sorted s.t. the Real array is in non-decreasing order */
+extern
+void SCIPbsortRealPtr(
+   Real*            realarray,          /**< Real array to be permuted in the same way */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   int              len                 /**< length of arrays */
    );
 
 

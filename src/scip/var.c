@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.118 2004/10/26 18:24:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.119 2004/10/28 14:30:06 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6947,7 +6947,7 @@ RETCODE SCIPvarAddToRow(
 
    assert(var != NULL);
    assert(row != NULL);
-   assert(!SCIPsetIsInfinity(set, ABS(val)));
+   assert(!SCIPsetIsInfinity(set, REALABS(val)));
 
    debugMessage("adding coefficient %g<%s> to row <%s>\n", val, var->name, row->name);
 
@@ -6978,7 +6978,7 @@ RETCODE SCIPvarAddToRow(
       assert(var->glbdom.lb == var->glbdom.ub); /*lint !e777*/
       assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
       assert(var->locdom.lb == var->glbdom.lb); /*lint !e777*/
-      assert(!SCIPsetIsInfinity(set, ABS(var->locdom.lb)));
+      assert(!SCIPsetIsInfinity(set, REALABS(var->locdom.lb)));
       CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, val * var->locdom.lb) );
       return SCIP_OKAY;
 
@@ -7149,7 +7149,7 @@ Real SCIPvarGetPseudocostCurrentRun(
       if( var->data.transvar == NULL )
          return SCIPhistoryGetPseudocost(stat->glbhistorycrun, solvaldelta);
       else
-         return SCIPvarGetPseudocost(var->data.transvar, stat, solvaldelta);
+         return SCIPvarGetPseudocostCurrentRun(var->data.transvar, stat, solvaldelta);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7163,13 +7163,13 @@ Real SCIPvarGetPseudocostCurrentRun(
       return 0.0;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      return SCIPvarGetPseudocost(var->data.aggregate.var, stat, var->data.aggregate.scalar * solvaldelta);
+      return SCIPvarGetPseudocostCurrentRun(var->data.aggregate.var, stat, var->data.aggregate.scalar * solvaldelta);
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetPseudocost(var->negatedvar, stat, -solvaldelta);
+      return SCIPvarGetPseudocostCurrentRun(var->negatedvar, stat, -solvaldelta);
       
    default:
       errorMessage("unknown variable status\n");
@@ -7236,7 +7236,7 @@ Real SCIPvarGetPseudocostCountCurrentRun(
       if( var->data.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetPseudocostCount(var->data.transvar, dir);
+         return SCIPvarGetPseudocostCountCurrentRun(var->data.transvar, dir);
       
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7247,15 +7247,15 @@ Real SCIPvarGetPseudocostCountCurrentRun(
       
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetPseudocostCount(var->data.aggregate.var, dir);
+         return SCIPvarGetPseudocostCountCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetPseudocostCount(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetPseudocostCountCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetPseudocostCount(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetPseudocostCountCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       errorMessage("unknown variable status\n");
@@ -7503,7 +7503,7 @@ Longint SCIPvarGetNBranchingsCurrentRun(
       if( var->data.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNBranchings(var->data.transvar, dir);
+         return SCIPvarGetNBranchingsCurrentRun(var->data.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7514,15 +7514,15 @@ Longint SCIPvarGetNBranchingsCurrentRun(
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNBranchings(var->data.aggregate.var, dir);
+         return SCIPvarGetNBranchingsCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetNBranchings(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetNBranchingsCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNBranchings(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetNBranchingsCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       errorMessage("unknown variable status\n");
@@ -7589,7 +7589,7 @@ Real SCIPvarGetAvgBranchdepthCurrentRun(
       if( var->data.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetAvgBranchdepth(var->data.transvar, dir);
+         return SCIPvarGetAvgBranchdepthCurrentRun(var->data.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7600,15 +7600,15 @@ Real SCIPvarGetAvgBranchdepthCurrentRun(
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetAvgBranchdepth(var->data.aggregate.var, dir);
+         return SCIPvarGetAvgBranchdepthCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetAvgBranchdepth(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetAvgBranchdepthCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetAvgBranchdepth(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetAvgBranchdepthCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       errorMessage("unknown variable status\n");
@@ -7675,7 +7675,7 @@ Longint SCIPvarGetNInferencesCurrentRun(
       if( var->data.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNInferences(var->data.transvar, dir);
+         return SCIPvarGetNInferencesCurrentRun(var->data.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7686,15 +7686,15 @@ Longint SCIPvarGetNInferencesCurrentRun(
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNInferences(var->data.aggregate.var, dir);
+         return SCIPvarGetNInferencesCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetNInferences(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetNInferencesCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNInferences(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetNInferencesCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       errorMessage("unknown variable status\n");
@@ -7767,7 +7767,7 @@ Real SCIPvarGetAvgInferencesCurrentRun(
       if( var->data.transvar == NULL )
          return SCIPhistoryGetAvgInferences(stat->glbhistorycrun, dir);
       else
-         return SCIPvarGetAvgInferences(var->data.transvar, stat, dir);
+         return SCIPvarGetAvgInferencesCurrentRun(var->data.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7780,15 +7780,15 @@ Real SCIPvarGetAvgInferencesCurrentRun(
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetAvgInferences(var->data.aggregate.var, stat, dir);
+         return SCIPvarGetAvgInferencesCurrentRun(var->data.aggregate.var, stat, dir);
       else
-         return SCIPvarGetAvgInferences(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetAvgInferencesCurrentRun(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetAvgInferences(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetAvgInferencesCurrentRun(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
       errorMessage("unknown variable status\n");
@@ -7853,7 +7853,7 @@ Longint SCIPvarGetNCutoffsCurrentRun(
       if( var->data.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNCutoffs(var->data.transvar, dir);
+         return SCIPvarGetNCutoffsCurrentRun(var->data.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7864,15 +7864,15 @@ Longint SCIPvarGetNCutoffsCurrentRun(
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNCutoffs(var->data.aggregate.var, dir);
+         return SCIPvarGetNCutoffsCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetNCutoffs(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetNCutoffsCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNCutoffs(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetNCutoffsCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       errorMessage("unknown variable status\n");
@@ -7943,7 +7943,7 @@ Real SCIPvarGetAvgCutoffsCurrentRun(
       if( var->data.transvar == NULL )
          return SCIPhistoryGetAvgCutoffs(stat->glbhistorycrun, dir);
       else
-         return SCIPvarGetAvgCutoffs(var->data.transvar, stat, dir);
+         return SCIPvarGetAvgCutoffsCurrentRun(var->data.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -7956,15 +7956,15 @@ Real SCIPvarGetAvgCutoffsCurrentRun(
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetAvgCutoffs(var->data.aggregate.var, stat, dir);
+         return SCIPvarGetAvgCutoffsCurrentRun(var->data.aggregate.var, stat, dir);
       else
-         return SCIPvarGetAvgCutoffs(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetAvgCutoffsCurrentRun(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetAvgCutoffs(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetAvgCutoffsCurrentRun(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
       errorMessage("unknown variable status\n");

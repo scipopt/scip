@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.11 2004/10/21 09:55:59 bzfpfend Exp $
+# $Id: check.awk,v 1.12 2004/10/28 14:30:03 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -63,10 +63,15 @@ BEGIN {
     fail     = 0;
     pass     = 0;
     settings = "default";
+    conftottime           = 0.0;
+    conftimegeom          = 1.0;
+    overheadtottime       = 0.0;
+    overheadtimegeom      = 1.0;
+    basictimegeom = 1.0;
 
-    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
-    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound | Gap% | Time |\n");
-    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------+-------+------+------+------+-------\n");
+    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time | Confs |  Lits | CTim | OTim | BTim |\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------+-------+------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum
 /^@01/ { 
@@ -91,8 +96,47 @@ BEGIN {
     sblps      = 0;
     sbiter     = 0;
     tottime    = 0.0;
+    inconflict   = 0;
+    inconstime   = 0;
+    confclauses  = 0;
+    confliterals = 0.0;
+    conftime     = 0.0;
+    overheadtime = 0.0;
 }
 /^SCIP> loaded parameter file:/ { settings = $5; }
+#
+# conflict analysis
+#
+/^Conflict Analysis  :/ { inconflict = 1; }
+/^  propagation      :/ {
+   if( inconflict == 1 )
+   {
+      conftime += $3; confclauses += $5 + $7; confliterals += $5 * $6 + $7 * $8;
+   }
+}
+/^  infeasible LP    :/ {
+   if( inconflict == 1 )
+   {
+      conftime += $4; confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+   }
+}
+/^  strong branching :/ {
+   if( inconflict == 1 )
+   {
+      conftime += $4; confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+   }
+}
+/^  pseudo solution  :/ {
+   if( inconflict == 1 )
+   {
+      conftime += $4; confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+   }
+}
+/^Separators         :/ { inconflict = 0; }
+/^Constraint Timings :/ { inconstime = 1; }
+/^  logicor          :/ { if( inconstime == 1 ) { overheadtime += $3; } }
+/^Propagators        :/ { inconstime = 0; }
+/^  switching time   :/ { overheadtime += $4; }
 #
 # problem size
 #
@@ -127,8 +171,10 @@ BEGIN {
    slp      += lps;
    ssim     += simplex;
    ssblp    += sblps;
+   conftottime     += conftime;
+   overheadtottime += overheadtime;
    nprobs++;
-
+   
    if (pb > 1e+19  ||  pb < -1e+19) {
       printf ("%-19s & %7d & %5d & %14.9g & %14s & %6.1f & %s \\\\\n", 
 	      pprob, bbnodes, sblps, db, 
@@ -149,8 +195,10 @@ BEGIN {
       printf ("%-19s & %7d & %5d & %14.9g & %14.9g & %6.1f & %7.3f \\\\\n",
          pprob, bbnodes, sblps, db, pb, tottime, gap)           >TEXFILE;
    }
-   printf("%-19s %6d %6d %7d %14.9g %14.9g %6.1f %6.1f ",
-      prob, cons, vars, bbnodes, db, pb, gap, tottime);
+   printf("%-19s %6d %6d %14.9g %14.9g %6.1f %7d %6.1f %7d %7.1f %6.1f %6.1f %6.1f ",
+      prob, cons, vars, db, pb, gap, bbnodes, tottime,
+      confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), conftime, overheadtime, 
+      tottime - conftime - overheadtime);
    
    if (sol[prob] == "")
       printf("unknown\n");
@@ -169,6 +217,7 @@ BEGIN {
       }
    }
    
+   basictime = tottime - conftime - overheadtime;
    if( tottime < 1.0 )
       tottime = 1.0;
    timegeom = timegeom^((nprobs-1)/nprobs) * tottime^(1.0/nprobs);
@@ -178,6 +227,15 @@ BEGIN {
    if( sblps < 1 )
       sblps = 1;
    sblpgeom = sblpgeom^((nprobs-1)/nprobs) * sblps^(1.0/nprobs);
+   if( conftime < 1.0 )
+      conftime = 1.0;
+   conftimegeom = conftimegeom^((nprobs-1)/nprobs) * conftime^(1.0/nprobs);
+   if( overheadtime < 1.0 )
+      overheadtime = 1.0;
+   overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * overheadtime^(1.0/nprobs);
+   if( basictime < 1.0 )
+      basictime = 1.0;
+   basictimegeom = basictimegeom^((nprobs-1)/nprobs) * basictime^(1.0/nprobs);
 }
 END {   
     printf("\\hline\n")                                                   >TEXFILE;
@@ -194,12 +252,14 @@ END {
     printf("\\end{table}\n")                                              >TEXFILE;
     printf("\\end{document}")                                             >TEXFILE;
     
-    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------+-------+------+------+------+-------\n");
     
-    printf("\n----------------------------------------------------------------\n");
-    printf("  Cnt  Pass  Fail  kNodes FailTime  TotTime  NodeGeom  TimeGeom\n");
-    printf("----------------------------------------------------------------\n");
-    printf("%5d %5d %5d %7d %8.0f %8.0f %9.1f %9.1f\n",
-	   nprobs, pass, fail, sbab / 1000, failtime, stottime, nodegeom, timegeom);
-    printf("----------------------------------------------------------------\n");
+    printf("\n");
+    printf("------------------------[Nodes]---------------[Time]---------[Conflict Time]------[Overhead Time]------[Basic Time]---\n");
+    printf("  Cnt  Pass  Fail  total(k)     geom.     total     geom.     total     geom.     total     geom.     total     geom. \n");
+    printf("----------------------------------------------------------------------------------------------------------------------\n");
+    printf("%5d %5d %5d %9d %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f\n",
+       nprobs, pass, fail, sbab / 1000, nodegeom, stottime, timegeom, conftottime, conftimegeom, 
+       overheadtottime, overheadtimegeom, stottime - conftottime - overheadtottime, basictimegeom);
+    printf("----------------------------------------------------------------------------------------------------------------------\n");
 }

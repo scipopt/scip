@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.155 2004/10/26 07:30:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.156 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1300,7 +1300,7 @@ void rowAddNorms(
    assert(set != NULL);
    assert(col != NULL);
 
-   absval = ABS(val);
+   absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
 
    /* update min/maxidx */
@@ -1355,7 +1355,7 @@ void rowDelNorms(
    assert(set != NULL);
    assert(col != NULL);
 
-   absval = ABS(val);
+   absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
    assert(row->nummaxval == 0 || SCIPsetIsGE(set, row->maxval, absval));
    assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
@@ -2546,7 +2546,7 @@ RETCODE SCIPcolChgObj(
 
    /* update squared euclidean norm and sum norm of objective function vector */
    lp->objsqrnorm += SQR(newobj) - SQR(col->obj);
-   lp->objsumnorm += ABS(newobj) - ABS(col->obj);
+   lp->objsumnorm += REALABS(newobj) - REALABS(col->obj);
 
    /* store new objective function value */
    col->obj = newobj;
@@ -2807,7 +2807,7 @@ Real SCIPcolGetFeasibility(
       else if( SCIPsetIsPositive(set, col->ub) )
       {
          /* dual row is  activity == obj  <=>  redcost == 0 */
-         return -ABS(redcost);
+         return -REALABS(redcost);
       }
       else
       {
@@ -3346,6 +3346,16 @@ Longint SCIPcolGetStrongbranchNode(
    assert(col != NULL);
 
    return col->strongbranchnode;
+}
+
+/** gets opposite bound type of given bound type */
+BOUNDTYPE SCIPboundtypeOpposite(
+   BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
+   )
+{
+   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
+
+   return (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
 }
 
 #endif
@@ -3993,7 +4003,7 @@ RETCODE SCIProwChgConstant(
 {
    assert(row != NULL);
    assert(row->lhs <= row->rhs);
-   assert(!SCIPsetIsInfinity(set, ABS(constant)));
+   assert(!SCIPsetIsInfinity(set, REALABS(constant)));
    assert(stat != NULL);
    assert(lp != NULL);
    assert(!lp->diving);
@@ -4039,7 +4049,7 @@ RETCODE SCIProwAddConstant(
 {
    assert(row != NULL);
    assert(row->lhs <= row->rhs);
-   assert(!SCIPsetIsInfinity(set, ABS(addval)));
+   assert(!SCIPsetIsInfinity(set, REALABS(addval)));
    assert(stat != NULL);
    assert(lp != NULL);
    assert(!lp->diving);
@@ -4164,7 +4174,7 @@ RETCODE SCIProwCalcIntegralScalar(
          Real absval;
 
          fractional = TRUE;
-         absval = ABS(val);
+         absval = REALABS(val);
          minval = MIN(minval, absval);
          break;
       }
@@ -4198,7 +4208,7 @@ RETCODE SCIProwCalcIntegralScalar(
 
          /* check, if the coefficient can be scaled with a simple scalar */
          val = row->vals[c];
-         absval = ABS(val);
+         absval = REALABS(val);
          if( scalable )
          {
             while( scaleval <= maxscale
@@ -4726,7 +4736,7 @@ void rowCalcActivityBounds(
    int i;
    
    assert(row != NULL);
-   assert(!SCIPsetIsInfinity(set, ABS(row->constant)));
+   assert(!SCIPsetIsInfinity(set, REALABS(row->constant)));
    assert(stat != NULL);
    
    /* calculate activity bounds */
@@ -4956,7 +4966,7 @@ Real SCIProwGetParallelism(
 
    scalarprod = SCIProwGetScalarProduct(row1, row2);
    
-   return (ABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2)));
+   return (REALABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2)));
 }
 
 /** returns the degree of orthogonality between the hyperplanes defined by the two row vectors v, w:
@@ -4988,7 +4998,7 @@ Real SCIProwGetObjParallelism(
 
    prod = row->sqrnorm * lp->objsqrnorm;
 
-   parallelism = SCIPsetIsPositive(set, prod) ? ABS(row->objprod) / sqrt(prod) : 0.0;
+   parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / SQRT(prod) : 0.0;
    assert(SCIPsetIsGE(set, parallelism, 0.0));
    assert(SCIPsetIsLE(set, parallelism, 1.0));
 
@@ -5024,7 +5034,7 @@ void SCIProwPrint(
    }
 
    /* print constant */
-   if( ABS(row->constant) > SCIP_DEFAULT_EPSILON )
+   if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
       fprintf(file, "%+g ", row->constant);
 
    /* print right hand side */
@@ -6399,7 +6409,7 @@ RETCODE SCIPlpAddCol(
 
    /* update squared euclidean norm and sum norm of objective function vector */
    lp->objsqrnorm += SQR(col->obj);
-   lp->objsumnorm += ABS(col->obj);
+   lp->objsumnorm += REALABS(col->obj);
 
    /* update column arrays of all linked rows */
    colUpdateAddLP(col);
@@ -6499,7 +6509,7 @@ RETCODE SCIPlpShrinkCols(
          /* update squared euclidean norm and sum norm of objective function vector */
          lp->objsqrnorm -= SQR(col->obj);
          lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
-         lp->objsumnorm -= ABS(col->obj);
+         lp->objsumnorm -= REALABS(col->obj);
          lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
 
          /* update column arrays of all linked rows */
@@ -6800,7 +6810,7 @@ void sumMIRRow(
    for( r = 0; r < lp->nrows; ++r )
    {
       weight = scale * weights[r];
-      absweight = ABS(weight);
+      absweight = REALABS(weight);
       maxweight = MAX(maxweight, absweight);
    }
 
@@ -6822,7 +6832,7 @@ void sumMIRRow(
        * close to zero weights or weights outside the maximal range are ignored
        */
       weight = scale * weights[r];
-      absweight = ABS(weight);
+      absweight = REALABS(weight);
       if( !row->modifiable && (allowlocal || !row->local)
          && absweight * maxweightrange >= maxweight && !SCIPsetIsSumZero(set, weight) )
       {
@@ -8593,12 +8603,12 @@ Real SCIPlpGetModifiedPseudoObjval(
    pseudoobjvalinf = lp->pseudoobjvalinf;
    if( boundtype == SCIPvarGetBestBoundType(var) )
    {
-      if( SCIPsetIsInfinity(set, ABS(oldbound)) )
+      if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
          pseudoobjvalinf--;
       else
          pseudoobjval -= oldbound * SCIPvarGetObj(var);
       assert(pseudoobjvalinf >= 0);
-      if( SCIPsetIsInfinity(set, ABS(newbound)) )
+      if( SCIPsetIsInfinity(set, REALABS(newbound)) )
          pseudoobjvalinf++;
       else
          pseudoobjval += newbound * SCIPvarGetObj(var);
@@ -8638,7 +8648,7 @@ Real SCIPlpGetModifiedProvedPseudoObjval(
       SCIPintervalSet(&psval, pseudoobjval);
       SCIPintervalSet(&obj, SCIPvarGetObj(var));
 
-      if( SCIPsetIsInfinity(set, ABS(oldbound)) )
+      if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
          pseudoobjvalinf--;
       else
       {
@@ -8647,7 +8657,7 @@ Real SCIPlpGetModifiedProvedPseudoObjval(
          SCIPintervalSub(&psval, psval, prod);
       }
       assert(pseudoobjvalinf >= 0);
-      if( SCIPsetIsInfinity(set, ABS(newbound)) )
+      if( SCIPsetIsInfinity(set, REALABS(newbound)) )
          pseudoobjvalinf++;
       else
       {
@@ -8686,10 +8696,10 @@ RETCODE lpUpdateVar(
    assert(lp != NULL);
    assert(lp->pseudoobjvalinf >= 0);
    assert(lp->looseobjvalinf >= 0);
-   assert(!SCIPsetIsInfinity(set, ABS(oldobj)));
+   assert(!SCIPsetIsInfinity(set, REALABS(oldobj)));
    assert(!SCIPsetIsInfinity(set, oldlb));
    assert(!SCIPsetIsInfinity(set, -oldub));
-   assert(!SCIPsetIsInfinity(set, ABS(newobj)));
+   assert(!SCIPsetIsInfinity(set, REALABS(newobj)));
    assert(!SCIPsetIsInfinity(set, newlb));
    assert(!SCIPsetIsInfinity(set, -newub));
    assert(var != NULL);
@@ -8778,10 +8788,10 @@ RETCODE lpUpdateVarProved(
    assert(lp != NULL);
    assert(lp->pseudoobjvalinf >= 0);
    assert(lp->looseobjvalinf >= 0);
-   assert(!SCIPsetIsInfinity(set, ABS(oldobj)));
+   assert(!SCIPsetIsInfinity(set, REALABS(oldobj)));
    assert(!SCIPsetIsInfinity(set, oldlb));
    assert(!SCIPsetIsInfinity(set, -oldub));
-   assert(!SCIPsetIsInfinity(set, ABS(newobj)));
+   assert(!SCIPsetIsInfinity(set, REALABS(newobj)));
    assert(!SCIPsetIsInfinity(set, newlb));
    assert(!SCIPsetIsInfinity(set, -newub));
    assert(var != NULL);

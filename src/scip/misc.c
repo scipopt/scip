@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.27 2004/10/13 14:36:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.28 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2413,9 +2413,9 @@ void SCIPbsortPtr(
 }
 
 /** bubble sort of two joint arrays of pointers/Reals, sorted by first array */
-void SCIPbsortPtrDbl(
+void SCIPbsortPtrReal(
    void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   Real*            realarray,          /**< Real array to be permuted in the same way */
    int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
@@ -2425,10 +2425,10 @@ void SCIPbsortPtrDbl(
    int pos;
    int sortpos;
    void* tmpptr;
-   Real tmpdbl;
+   Real tmpreal;
 
    assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || dblarray != NULL);
+   assert(len == 0 || realarray != NULL);
    assert(ptrcomp != NULL);
 
    firstpos = 0;
@@ -2446,16 +2446,16 @@ void SCIPbsortPtrDbl(
             break;
          assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
          tmpptr = ptrarray[pos];
-         tmpdbl = dblarray[pos];
+         tmpreal = realarray[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos+1];
-            dblarray[pos] = dblarray[pos+1];
+            realarray[pos] = realarray[pos+1];
             pos++;
          }
          while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
          ptrarray[pos] = tmpptr;
-         dblarray[pos] = tmpdbl;
+         realarray[pos] = tmpreal;
          sortpos = pos;
          pos++;
       }
@@ -2472,16 +2472,16 @@ void SCIPbsortPtrDbl(
             break;
          assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
          tmpptr = ptrarray[pos];
-         tmpdbl = dblarray[pos];
+         tmpreal = realarray[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos-1];
-            dblarray[pos] = dblarray[pos-1];
+            realarray[pos] = realarray[pos-1];
             pos--;
          }
          while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
-         dblarray[pos] = tmpdbl;
+         realarray[pos] = tmpreal;
          sortpos = pos;
          pos--;
       }
@@ -2490,9 +2490,9 @@ void SCIPbsortPtrDbl(
 }
 
 /** bubble sort of three joint arrays of pointers/Reals/ints, sorted by first */
-void SCIPbsortPtrDblInt(
+void SCIPbsortPtrRealInt(
    void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   Real*            realarray,          /**< Real array to be permuted in the same way */
    int*             intarray,           /**< int array to be permuted in the same way */
    int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
@@ -2503,11 +2503,11 @@ void SCIPbsortPtrDblInt(
    int pos;
    int sortpos;
    void* tmpptr;
-   Real tmpdbl;
+   Real tmpreal;
    int tmpint;
 
    assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || dblarray != NULL);
+   assert(len == 0 || realarray != NULL);
    assert(len == 0 || intarray != NULL);
    assert(ptrcomp != NULL);
 
@@ -2526,18 +2526,18 @@ void SCIPbsortPtrDblInt(
             break;
          assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
          tmpptr = ptrarray[pos];
-         tmpdbl = dblarray[pos];
+         tmpreal = realarray[pos];
          tmpint = intarray[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos+1];
-            dblarray[pos] = dblarray[pos+1];
+            realarray[pos] = realarray[pos+1];
             intarray[pos] = intarray[pos+1];
             pos++;
          }
          while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
          ptrarray[pos] = tmpptr;
-         dblarray[pos] = tmpdbl;
+         realarray[pos] = tmpreal;
          intarray[pos] = tmpint;
          sortpos = pos;
          pos++;
@@ -2555,18 +2555,18 @@ void SCIPbsortPtrDblInt(
             break;
          assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
          tmpptr = ptrarray[pos];
-         tmpdbl = dblarray[pos];
+         tmpreal = realarray[pos];
          tmpint = intarray[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos-1];
-            dblarray[pos] = dblarray[pos-1];
+            realarray[pos] = realarray[pos-1];
             intarray[pos] = intarray[pos-1];
             pos--;
          }
          while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
-         dblarray[pos] = tmpdbl;
+         realarray[pos] = tmpreal;
          intarray[pos] = tmpint;
          sortpos = pos;
          pos--;
@@ -2576,9 +2576,9 @@ void SCIPbsortPtrDblInt(
 }
 
 /** bubble sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
-void SCIPbsortPtrDblIntInt(
+void SCIPbsortPtrRealIntInt(
    void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   Real*            realarray,          /**< Real array to be permuted in the same way */
    int*             intarray1,          /**< first int array to be permuted in the same way */
    int*             intarray2,          /**< second int array to be permuted in the same way */
    int              len,                /**< length of arrays */
@@ -2590,12 +2590,12 @@ void SCIPbsortPtrDblIntInt(
    int pos;
    int sortpos;
    void* tmpptr;
-   Real tmpdbl;
+   Real tmpreal;
    int tmpint1;
    int tmpint2;
 
    assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || dblarray != NULL);
+   assert(len == 0 || realarray != NULL);
    assert(len == 0 || intarray1 != NULL);
    assert(len == 0 || intarray2 != NULL);
    assert(ptrcomp != NULL);
@@ -2615,20 +2615,20 @@ void SCIPbsortPtrDblIntInt(
             break;
          assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
          tmpptr = ptrarray[pos];
-         tmpdbl = dblarray[pos];
+         tmpreal = realarray[pos];
          tmpint1 = intarray1[pos];
          tmpint2 = intarray2[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos+1];
-            dblarray[pos] = dblarray[pos+1];
+            realarray[pos] = realarray[pos+1];
             intarray1[pos] = intarray1[pos+1];
             intarray2[pos] = intarray2[pos+1];
             pos++;
          }
          while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
          ptrarray[pos] = tmpptr;
-         dblarray[pos] = tmpdbl;
+         realarray[pos] = tmpreal;
          intarray1[pos] = tmpint1;
          intarray2[pos] = tmpint2;
          sortpos = pos;
@@ -2647,22 +2647,95 @@ void SCIPbsortPtrDblIntInt(
             break;
          assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
          tmpptr = ptrarray[pos];
-         tmpdbl = dblarray[pos];
+         tmpreal = realarray[pos];
          tmpint1 = intarray1[pos];
          tmpint2 = intarray2[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos-1];
-            dblarray[pos] = dblarray[pos-1];
+            realarray[pos] = realarray[pos-1];
             intarray1[pos] = intarray1[pos-1];
             intarray2[pos] = intarray2[pos-1];
             pos--;
          }
          while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
-         dblarray[pos] = tmpdbl;
+         realarray[pos] = tmpreal;
          intarray1[pos] = tmpint1;
          intarray2[pos] = tmpint2;
+         sortpos = pos;
+         pos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
+/** bubble sort of two joint arrays of Reals/pointers, sorted s.t. the Real array is in non-decreasing order */
+void SCIPbsortRealPtr(
+   Real*            realarray,          /**< Real array to be permuted in the same way */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   int              len                 /**< length of arrays */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int pos;
+   int sortpos;
+   Real tmpreal;
+   void* tmpptr;
+
+   assert(len == 0 || realarray != NULL);
+   assert(len == 0 || ptrarray != NULL);
+
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      pos = firstpos;
+      sortpos = firstpos;
+      while( pos < lastpos )
+      {
+         while( pos < lastpos && realarray[pos] <= realarray[pos+1] )
+            pos++;
+         if( pos >= lastpos )
+            break;
+         tmpreal = realarray[pos];
+         tmpptr = ptrarray[pos];
+         do
+         {
+            realarray[pos] = realarray[pos+1];
+            ptrarray[pos] = ptrarray[pos+1];
+            pos++;
+         }
+         while( pos < lastpos && tmpreal > realarray[pos+1] );
+         realarray[pos] = tmpreal;
+         ptrarray[pos] = tmpptr;
+         sortpos = pos;
+         pos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      pos = lastpos;
+      sortpos = lastpos;
+      while( pos > firstpos )
+      {
+         while( pos > firstpos && realarray[pos-1] <= realarray[pos] )
+            pos--;
+         if( pos <= firstpos )
+            break;
+         tmpreal = realarray[pos];
+         tmpptr = ptrarray[pos];
+         do
+         {
+            realarray[pos] = realarray[pos-1];
+            ptrarray[pos] = ptrarray[pos-1];
+            pos--;
+         }
+         while( pos > firstpos && realarray[pos-1] > tmpreal );
+         realarray[pos] = tmpreal;
+         ptrarray[pos] = tmpptr;
          sortpos = pos;
          pos--;
       }
@@ -2823,7 +2896,7 @@ Bool SCIPrealToRational(
       delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
 
-   if( ABS(g0) > (LONGINT_MAX >> 4) || h0 > (LONGINT_MAX >> 4) )
+   if( REALABS(g0) > (LONGINT_MAX >> 4) || h0 > (LONGINT_MAX >> 4) )
       return FALSE;
 
    assert(h0 > 0.5);

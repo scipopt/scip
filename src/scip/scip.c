@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.219 2004/10/26 18:24:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.220 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -77,6 +77,7 @@
 
 
 
+#ifndef NDEBUG
 /** checks, if SCIP is in one of the feasible stages */
 static
 RETCODE checkStage(
@@ -322,6 +323,10 @@ RETCODE checkStage(
       return SCIP_ERROR;
    }
 }
+#else
+#define checkStage(scip,method,init,problem,transforming,transformed,presolving,presolved,initsolve,solving,solved, \
+   freesolve,freetrans) SCIP_OKAY
+#endif
 
 
 
@@ -3358,7 +3363,7 @@ RETCODE initSolve(
          if( !SCIPsetIsZero(scip->set, obj) )
          {
             bd = SCIPvarGetWorstBound(var);
-            if( SCIPsetIsInfinity(scip->set, ABS(bd)) )
+            if( SCIPsetIsInfinity(scip->set, REALABS(bd)) )
                objbound = SCIPsetInfinity(scip->set);
             else
                objbound += obj * bd;
@@ -4062,14 +4067,23 @@ RETCODE SCIPgetVarSols(
    )
 {
    int v;
+   Bool uselp;
 
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPgetVarSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   for( v = 0; v < nvars; ++v )
-      vals[v] = SCIPvarGetSol(vars[v], SCIPtreeHasCurrentNodeLP(scip->tree));
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   {
+      for( v = 0; v < nvars; ++v )
+         vals[v] = SCIPvarGetLPSol(vars[v]);
+   }
+   else
+   {
+      for( v = 0; v < nvars; ++v )
+         vals[v] = SCIPvarGetPseudoSol(vars[v]);
+   }
 
    return SCIP_OKAY;
 }
@@ -8333,8 +8347,8 @@ Real SCIPgetSolVal(
       return SCIPsolGetVal(sol, scip->stat, var);
    else
    {
-      CHECK_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-      return SCIPgetVarSol(scip, var);
+      CHECK_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+      return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
    }
 }
 
@@ -8361,10 +8375,7 @@ RETCODE SCIPgetSolVals(
    }
    else
    {
-      CHECK_OKAY( checkStage(scip, "SCIPgetSolVals(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-      for( v = 0; v < nvars; ++v )
-         vals[v] = SCIPgetVarSol(scip, vars[v]);
+      CHECK_OKAY( SCIPgetVarSols(scip, nvars, vars, vals) );
    }
 
    return SCIP_OKAY;
@@ -9590,12 +9601,12 @@ Real SCIPgetGap(
    primalbound = SCIPgetPrimalbound(scip);
    dualbound = SCIPgetDualbound(scip);
 
-   if( SCIPsetIsZero(scip->set, dualbound) || SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
+   if( SCIPsetIsZero(scip->set, dualbound) || SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
       return SCIPsetInfinity(scip->set);
    else if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
       return 0.0;
    else
-      return ABS((primalbound - dualbound)/dualbound);
+      return REALABS((primalbound - dualbound)/dualbound);
 }
 
 /** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem */
@@ -9618,7 +9629,7 @@ Real SCIPgetTransGap(
    else if( SCIPsetIsEQ(scip->set, upperbound, lowerbound) )
       return 0.0;
    else
-      return ABS((upperbound - lowerbound)/lowerbound);
+      return REALABS((upperbound - lowerbound)/lowerbound);
 }
 
 /** gets number of feasible primal solutions found so far */
@@ -10196,7 +10207,7 @@ void printSolutionStatistics(
 
    fprintf(file, "Solution           :\n");
    fprintf(file, "  Solutions found  : %10lld\n", scip->primal->nsolsfound);
-   if( SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
+   if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->stage == SCIP_STAGE_SOLVED )
       {
@@ -10230,7 +10241,7 @@ void printSolutionStatistics(
             ? SCIPheurGetName(SCIPsolGetHeur(scip->primal->sols[0])) : "relaxation");
       }
    }
-   if( SCIPsetIsInfinity(scip->set, ABS(dualbound)) )
+   if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
       fprintf(file, "  Dual Bound       :          -\n");
    else
       fprintf(file, "  Dual Bound       : %+21.14e\n", dualbound);
@@ -10238,7 +10249,7 @@ void printSolutionStatistics(
       fprintf(file, "  Gap              :   infinite\n");
    else
       fprintf(file, "  Gap              : %10.2f %%\n", 100.0 * gap);
-   if( SCIPsetIsInfinity(scip->set, ABS(dualboundroot)) )
+   if( SCIPsetIsInfinity(scip->set, REALABS(dualboundroot)) )
       fprintf(file, "  Root Dual Bound  :          -\n");
    else
       fprintf(file, "  Root Dual Bound  : %+21.14e\n", dualboundroot);

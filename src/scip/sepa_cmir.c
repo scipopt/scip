@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.25 2004/10/19 18:36:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.26 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -160,7 +160,7 @@ RETCODE storeCutInArrays(
          {
             assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
-            absval = ABS(val);
+            absval = REALABS(val);
             norm = MAX(norm, absval);
             cutcols[len] = SCIPvarGetCol(vars[v]);
             cutvals[len] = val;
@@ -176,7 +176,7 @@ RETCODE storeCutInArrays(
          {
             assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
-            norm += ABS(val);
+            norm += REALABS(val);
             cutcols[len] = SCIPvarGetCol(vars[v]);
             cutvals[len] = val;
             len++;
@@ -557,7 +557,7 @@ RETCODE aggregation(
             continue;
 
          /* try to divide the aggregation by this coefficient */
-         delta = 1 / ABS(aggrcoefs[c]);
+         delta = 1 / REALABS(aggrcoefs[c]);
 
          /* check, if delta was already tested */
          tested = FALSE;
@@ -729,7 +729,7 @@ RETCODE aggregation(
                
                /* don't aggregate rows that would lead to a too extreme aggregation factor */
                factor = - aggrcoefs[c] / nonzcoefs[r]; 
-               absfactor = ABS(factor);
+               absfactor = REALABS(factor);
                if( !SCIPisPositive(scip, absfactor) || absfactor > sepadata->maxrowfac
                   || maxweight/absfactor > sepadata->maxrowfac )
                   continue;
@@ -775,7 +775,7 @@ RETCODE aggregation(
 
       /* change row's aggregation weight */
       rowweights[SCIProwGetLPPos(bestrow)] = aggrfac;
-      absaggrfac = ABS(aggrfac);
+      absaggrfac = REALABS(aggrfac);
       maxweight = MAX(maxweight, absaggrfac);
 
       /* decrease score of aggregation row in order to not aggregate it again too soon */

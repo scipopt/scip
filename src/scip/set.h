@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.69 2004/10/05 16:08:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.70 2004/10/28 14:30:06 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -968,7 +968,7 @@ Real SCIPsetFrac(
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
-#define SCIPsetRelDiff(set, val1, val2)    ( ((val1)-(val2))/(MAX3(1.0,ABS(val1),ABS(val2))) )
+#define SCIPsetRelDiff(set, val1, val2)    ( ((val1)-(val2))/(MAX3(1.0,REALABS(val1),REALABS(val2))) )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->num_epsilon) )

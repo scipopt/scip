@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.44 2004/10/19 18:36:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.45 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -477,7 +477,7 @@ DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
    assert(scip != NULL);
 
    curdualbound = SCIPgetLocalDualbound(scip);
-   if( SCIPisInfinity(scip, ABS(curdualbound)) )
+   if( SCIPisInfinity(scip, REALABS(curdualbound)) )
       fprintf(file, "      --      ");
    else
       fprintf(file, "%13.6e ", curdualbound);
@@ -495,7 +495,7 @@ DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
    assert(scip != NULL);
 
    avgdualbound = SCIPgetAvgDualbound(scip);
-   if( SCIPisInfinity(scip, ABS(avgdualbound)) )
+   if( SCIPisInfinity(scip, REALABS(avgdualbound)) )
       fprintf(file, "      --      ");
    else
       fprintf(file, "%13.6e ", avgdualbound);
@@ -513,7 +513,7 @@ DECL_DISPOUTPUT(SCIPdispOutputDualbound)
    assert(scip != NULL);
 
    dualbound = SCIPgetDualbound(scip);
-   if( SCIPisInfinity(scip, ABS(dualbound)) )
+   if( SCIPisInfinity(scip, REALABS(dualbound)) )
       fprintf(file, "      --      ");
    else
       fprintf(file, "%13.6e ", dualbound);
@@ -531,7 +531,7 @@ DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
    assert(scip != NULL);
 
    primalbound = SCIPgetPrimalbound(scip);
-   if( SCIPisInfinity(scip, ABS(primalbound)) )
+   if( SCIPisInfinity(scip, REALABS(primalbound)) )
       fprintf(file, "      --      ");
    else
       fprintf(file, "%13.6e%c", primalbound, SCIPisPrimalboundSol(scip) ? ' ' : '*');

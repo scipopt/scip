@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.14 2004/10/26 18:24:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.15 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -1018,7 +1018,7 @@ DECL_LINCONSUPGD(linconsUpgdVarbound)
          vbdind = 0;
       else if( !SCIPisIntegral(scip, vals[0]) && SCIPisIntegral(scip, vals[1]) )
          vbdind = 1;
-      else if( ABS(ABS(vals[0]) - 1) < ABS(ABS(vals[1]) - 1) )
+      else if( REALABS(REALABS(vals[0]) - 1.0) < REALABS(REALABS(vals[1]) - 1.0) )
          vbdind = 0;
       else
          vbdind = 1;

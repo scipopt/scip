@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.46 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.47 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -1014,12 +1014,12 @@ RETCODE readRanges(
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
-               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - ABS(val)) );
+               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - REALABS(val)) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
-               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + ABS(val)) );
+               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + REALABS(val)) );
             }
             else
             {
@@ -1050,12 +1050,12 @@ RETCODE readRanges(
                if( SCIPisInfinity(scip, -lhs) )
                {
                   /* lhs = -infinity -> lower or equal */
-                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - ABS(val)) );
+                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - REALABS(val)) );
                }
                else if( SCIPisInfinity(scip, rhs) )
                {
                   /* rhs = +infinity -> greater or equal */
-                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + ABS(val)) );
+                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + REALABS(val)) );
                }
                else
                {

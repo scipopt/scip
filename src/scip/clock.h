@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.h,v 1.8 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.h,v 1.9 2004/10/28 14:30:03 bzfpfend Exp $"
 
 /**@file   clock.h
  * @brief  internal methods for clocks and timing issues
@@ -90,6 +90,12 @@ extern
 void SCIPclockStop(
    CLOCK*           clock,              /**< clock timer */
    SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns whether the clock is currently running */
+extern
+Bool SCIPclockIsRunning(
+   CLOCK*           clock               /**< clock timer */
    );
 
 /** gets the used time of this clock in seconds */

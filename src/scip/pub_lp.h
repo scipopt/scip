@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.15 2004/10/19 18:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.16 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -161,6 +161,12 @@ Longint SCIPcolGetStrongbranchNode(
    COL*             col                 /**< LP column */
    );
 
+/** gets opposite bound type of given bound type */
+extern
+BOUNDTYPE SCIPboundtypeOpposite(
+   BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -183,6 +189,8 @@ Longint SCIPcolGetStrongbranchNode(
 #define SCIPcolGetRows(col)             (col)->rows
 #define SCIPcolGetVals(col)             (col)->vals
 #define SCIPcolGetStrongbranchNode(col) (col)->strongbranchnode
+#define SCIPboundtypeOpposite(boundtype) \
+   ((boundtype) == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)
 
 #endif
 

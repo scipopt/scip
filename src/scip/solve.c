@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.140 2004/10/19 18:36:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.141 2004/10/28 14:30:06 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1875,6 +1875,7 @@ RETCODE SCIPsolveCIP(
 
          /* stop node activation timer */
          SCIPclockStop(stat->nodeactivationtime, set);
+
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
       }
       while( cutoff ); /* select new node, if the current one was located in a cut off subtree */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.70 2004/10/26 07:30:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.71 2004/10/28 14:30:03 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -962,7 +962,7 @@ RETCODE conflictAddClause(
    }
 #endif
 
-#if 1 /*???????????????????? is this really true? */
+#if 0 /*???????????????????? is this really true? */
    /* even if all branching variables up to a certain depth d are member of the conflict, we don't want to delete
     * those variables from the conflict clause and attach the conflict clause locally to the node in depth d,
     * because those branching decisions may be changed into inferences due to repropagation of nodes higher in the
@@ -1893,7 +1893,7 @@ RETCODE generateAltLP(
          {
             inds[cnt] = ncols;
             vals[cnt] = -(rowlhs - SCIProwGetConstant(row));
-            sum_rhs += ABS(rowlhs);
+            sum_rhs += REALABS(rowlhs);
             ++cnt;
          }
          if( row->local )
@@ -1922,7 +1922,7 @@ RETCODE generateAltLP(
          {
             inds[cnt] = ncols;
             vals[cnt] = rowrhs - SCIProwGetConstant(row);
-            sum_rhs += ABS(rowrhs);
+            sum_rhs += REALABS(rowrhs);
             ++cnt;
          }
          if( row->local )
@@ -1990,7 +1990,7 @@ RETCODE generateAltLP(
          {
             inds[cnt] = ncols;
             vals[cnt] = -collb;
-            sum_rhs += ABS(collb);
+            sum_rhs += REALABS(collb);
             ++cnt;
          }
          if( !SCIPsetIsEQ(set, SCIPvarGetLbGlobal(colvar), collb) )
@@ -2022,7 +2022,7 @@ RETCODE generateAltLP(
          {
             inds[cnt] = ncols;
             vals[cnt] = colub;
-            sum_rhs += ABS(colub);
+            sum_rhs += REALABS(colub);
             ++cnt;
          }
          if( !SCIPsetIsEQ(set, SCIPvarGetUbGlobal(colvar), colub) )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.59 2004/10/26 18:24:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.60 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -34,16 +34,16 @@
 
 #define CONSHDLR_NAME          "logicor"
 #define CONSHDLR_DESC          "logic or constraints"
-#define CONSHDLR_SEPAPRIORITY   +700000
-#define CONSHDLR_ENFOPRIORITY   +700000
-#define CONSHDLR_CHECKPRIORITY  -700000
+#define CONSHDLR_SEPAPRIORITY   +800000
+#define CONSHDLR_ENFOPRIORITY   +800000
+#define CONSHDLR_CHECKPRIORITY  -800000
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_MAXPREROUNDS        -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define LINCONSUPGD_PRIORITY    +700000
+#define LINCONSUPGD_PRIORITY    +800000
 
 #define EVENTHDLR_NAME         "logicor"
 #define EVENTHDLR_DESC         "bound tighten event handler for logic or constraints"
@@ -52,15 +52,6 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating logic or constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
-/*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
-#ifdef BRANCHLP
-#define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
-#define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
-#endif
-#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching (0: disable branching) */
-#define DEFAULT_MAXVARUSEFAC        1.0  /**< branching factor to weigh maximum of positive and negative variable uses */
-#define DEFAULT_MINVARUSEFAC       -0.2  /**< branching factor to weigh minimum of positive and negative variable uses */
-
 
 /**@todo make this a parameter setting */
 #define AGEFACTOR 0.2 /*?????????????????????*/
@@ -68,14 +59,7 @@
 /** constraint handler data */
 struct ConshdlrData
 {
-   Real             maxvarusefac;       /**< branching factor to weigh maximum of positive and negative variable uses */
-   Real             minvarusefac;       /**< branching factor to weigh minimum of positive and negative variable uses */
-#ifdef VARUSES
-   INTARRAY*        posvaruses;         /**< number of positive literals of a variable in active logic or constraints */
-   INTARRAY*        negvaruses;         /**< number of negative literals of a variable in active logic or constraints */
-#endif
    EVENTHDLR*       eventhdlr;          /**< event handler for bound tighten events on watched variables */
-   int              npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
 };
 
 /** logic or constraint data */
@@ -89,8 +73,6 @@ struct ConsData
    int              watchedvar2;        /**< position of the second watched variable */
    int              filterpos1;         /**< event filter position of first watched variable */
    int              filterpos2;         /**< event filter position of second watched variable */
-   int              watchedfeasvar;     /**< position of the feasible watched variable (a variable fixed to one) */
-   int              watchedsolvar;      /**< position of the variable making the last solution feasible */
 };
 
 
@@ -110,13 +92,6 @@ RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
 
    CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
-#ifdef VARUSES
-   CHECK_OKAY( SCIPcreateIntarray(scip, &(*conshdlrdata)->posvaruses) );
-   CHECK_OKAY( SCIPcreateIntarray(scip, &(*conshdlrdata)->negvaruses) );
-#endif
-   (*conshdlrdata)->maxvarusefac = DEFAULT_MAXVARUSEFAC;
-   (*conshdlrdata)->minvarusefac = DEFAULT_MINVARUSEFAC;
-   (*conshdlrdata)->npseudobranches = DEFAULT_NPSEUDOBRANCHES;
 
    /* get event handler for catching bound tighten events on watched variables */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -139,75 +114,10 @@ RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-#ifdef VARUSES
-   CHECK_OKAY( SCIPfreeIntarray(scip, &(*conshdlrdata)->posvaruses) );
-   CHECK_OKAY( SCIPfreeIntarray(scip, &(*conshdlrdata)->negvaruses) );
-#endif
    SCIPfreeMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
-
-#ifdef VARUSES
-/** increases the usage counter of the given variable */
-static
-RETCODE conshdlrdataIncVaruses(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   VAR*             var                 /**< variable to increase usage counter for */
-   )
-{
-   assert(conshdlrdata != NULL);
-   assert(var != NULL);
-
-   /* check, if the literal is positive or negative, and increase the corresponding varuses counter */
-   if( SCIPvarIsNegated(var) )
-   {
-      CHECK_OKAY( SCIPgetNegatedVar(scip, var, &var) );
-      CHECK_OKAY( SCIPincIntarrayVal(scip, conshdlrdata->negvaruses, SCIPvarGetIndex(var), +1) );
-   }
-   else
-   {
-      CHECK_OKAY( SCIPincIntarrayVal(scip, conshdlrdata->posvaruses, SCIPvarGetIndex(var), +1) );
-   }
-   /*debugMessage("increased varuses of <%s>: %d+/%d-\n", SCIPvarGetName(var),
-     SCIPgetIntarrayVal(scip, conshdlrdata->posvaruses, SCIPvarGetIndex(var)),
-     SCIPgetIntarrayVal(scip, conshdlrdata->negvaruses, SCIPvarGetIndex(var)));*/
-
-   return SCIP_OKAY;
-}
-
-/** decreases the usage counter of the given variable */
-static
-RETCODE conshdlrdataDecVaruses(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   VAR*             var                 /**< variable to increase usage counter for */
-   )
-{
-   assert(conshdlrdata != NULL);
-   assert(var != NULL);
-
-   /* check, if the literal is positive or negative, and decrease the corresponding varuses counter */
-   if( SCIPvarIsNegated(var) )
-   {
-      CHECK_OKAY( SCIPgetNegatedVar(scip, var, &var) );
-      CHECK_OKAY( SCIPincIntarrayVal(scip, conshdlrdata->negvaruses, SCIPvarGetIndex(var), -1) );
-   }
-   else
-   {
-      CHECK_OKAY( SCIPincIntarrayVal(scip, conshdlrdata->posvaruses, SCIPvarGetIndex(var), -1) );
-   }
-   /*debugMessage("decreased varuses of <%s>: %d+/%d-\n", SCIPvarGetName(var),
-     SCIPgetIntarrayVal(scip, conshdlrdata->posvaruses, SCIPvarGetIndex(var)),
-     SCIPgetIntarrayVal(scip, conshdlrdata->negvaruses, SCIPvarGetIndex(var)));*/
-
-   assert(SCIPgetIntarrayVal(scip, conshdlrdata->posvaruses, SCIPvarGetIndex(var)) >= 0);
-   assert(SCIPgetIntarrayVal(scip, conshdlrdata->negvaruses, SCIPvarGetIndex(var)) >= 0);
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** locks rounding for variable in transformed logic or constraint */
 static
@@ -302,8 +212,6 @@ RETCODE consdataCreate(
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
-   (*consdata)->watchedfeasvar = -1;
-   (*consdata)->watchedsolvar = -1;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -383,19 +291,22 @@ RETCODE switchWatchedvars(
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
 
    /* if one watched variable is equal to the old other watched variable, just switch positions */
-   if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
+   if( watchedvar1 >= 0 )
    {
-      int tmp;
-      
-      tmp = consdata->watchedvar1;
-      consdata->watchedvar1 = consdata->watchedvar2;
-      consdata->watchedvar2 = tmp;
-      tmp = consdata->filterpos1;
-      consdata->filterpos1 = consdata->filterpos2;
-      consdata->filterpos2 = tmp;
+      if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
+      {
+         int tmp;
+         
+         tmp = consdata->watchedvar1;
+         consdata->watchedvar1 = consdata->watchedvar2;
+         consdata->watchedvar2 = tmp;
+         tmp = consdata->filterpos1;
+         consdata->filterpos1 = consdata->filterpos2;
+         consdata->filterpos2 = tmp;
+      }
+      assert(watchedvar1 != consdata->watchedvar2);
+      assert(watchedvar2 != consdata->watchedvar1);
    }
-   assert(watchedvar1 != consdata->watchedvar2);
-   assert(watchedvar2 != consdata->watchedvar1);
 
    /* drop events on old watched variables */
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )
@@ -466,15 +377,9 @@ RETCODE delCoefPos(
       {
          CHECK_OKAY( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar1, -1) );
       }
-      if( pos == consdata->watchedfeasvar )
-         consdata->watchedfeasvar = -1;
-      if( pos == consdata->watchedsolvar )
-         consdata->watchedsolvar = -1;
    }
    assert(pos != consdata->watchedvar1);
    assert(pos != consdata->watchedvar2);
-   assert(pos != consdata->watchedfeasvar);
-   assert(pos != consdata->watchedsolvar);
 
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
@@ -485,10 +390,6 @@ RETCODE delCoefPos(
       consdata->watchedvar1 = pos;
    if( consdata->watchedvar2 == consdata->nvars )
       consdata->watchedvar2 = pos;
-   if( consdata->watchedfeasvar == consdata->nvars )
-      consdata->watchedfeasvar = pos;
-   if( consdata->watchedsolvar == consdata->nvars )
-      consdata->watchedsolvar = pos;
 
    CHECK_OKAY( SCIPenableConsPropagation(scip, cons) );
 
@@ -583,10 +484,12 @@ RETCODE processWatchedVars(
 {
    CONSDATA* consdata;
    VAR** vars;
+   Longint nbranchings1;
+   Longint nbranchings2;
+   Longint nbranchings;
    int nvars;
    int watchedvar1;
    int watchedvar2;
-   int oldwatchedvar2;
    int v;
    int i;
    Bool infeasible;
@@ -613,119 +516,59 @@ RETCODE processWatchedVars(
    assert(nvars == 0 || vars != NULL);
    watchedvar1 = consdata->watchedvar1;
    watchedvar2 = consdata->watchedvar2;
-   oldwatchedvar2 = watchedvar2;
 
-   /* check, if the old watched variables are still valid */
-   if( consdata->watchedfeasvar >= 0 )
+   /* check watched variables if they are fixed to one */
+   if( (watchedvar1 >= 0 && SCIPvarGetLbLocal(vars[watchedvar1]) > 0.5)
+      || (watchedvar2 >= 0 && SCIPvarGetLbLocal(vars[watchedvar2]) > 0.5) )
    {
-      if( SCIPvarGetLbLocal(vars[consdata->watchedfeasvar]) > 0.5 )
-      {
-         /* the watched feasible variable is fixed to one, making the constraint redundant;
-          * we can disable it and don't have to check it for feasibility
-          */
-         debugMessage(" -> disabling constraint <%s> (watched feasible variable still fixed to 1.0)\n", SCIPconsGetName(cons));
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-         return SCIP_OKAY;
-      }
-   }
-   if( watchedvar1 >= 0 )
-   {
-      if( SCIPvarGetUbLocal(vars[watchedvar1]) < 0.5 )
-      {
-         /* the variable is fixed to zero and can no longer be used as watched variable */
-         watchedvar1 = -1;
-      }
-      else if( SCIPvarGetLbLocal(vars[watchedvar1]) > 0.5 )
-      {
-         /* the variable is fixed to one, making the constraint redundant;
-          * remember the variable and disable the constraint
-          */
-         debugMessage(" -> disabling constraint <%s> (watchedvar1 <%s> fixed to 1.0)\n",
-            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]));
-         consdata->watchedfeasvar = watchedvar1;
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-         return SCIP_OKAY;
-      }
-   }
-   if( watchedvar2 >= 0 )
-   {
-      if( SCIPvarGetUbLocal(vars[watchedvar2]) < 0.5 )
-      {
-         /* the variable is fixed to zero and can no longer be used as watched variable */
-         watchedvar2 = -1;
-      }
-      else if( SCIPvarGetLbLocal(vars[watchedvar2]) > 0.5 )
-      {
-         /* the variable is fixed to one, making the constraint redundant;
-          * remember the variable and disable the constraint
-          */
-         debugMessage(" -> disabling constraint <%s> (watchedvar2 <%s> fixed to 1.0)\n",
-            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar2]));
-         consdata->watchedfeasvar = watchedvar2;
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-         return SCIP_OKAY;
-      }
-      else if( watchedvar1 >= 0 )
-      {
-         /* both watched variables are unfixed -> the constraint must be checked manually */
-         assert(0 <= watchedvar1 && watchedvar1 < nvars);
-         assert(0 <= watchedvar2 && watchedvar2 < nvars);
-         assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar1]), 0.0));
-         assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar1]), 1.0));
-         assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar2]), 0.0));
-         assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar2]), 1.0));
-         
-         debugMessage(" -> watched variables <%s> and <%s> of constraint <%s> are still unfixed\n",
-            SCIPvarGetName(vars[watchedvar1]), SCIPvarGetName(vars[watchedvar2]), SCIPconsGetName(cons));
-         
-         *mustcheck = TRUE;
-         CHECK_OKAY( SCIPdisableConsPropagation(scip, cons) );
-         
-         return SCIP_OKAY;
-      }
+      /* the variable is fixed to one, making the constraint redundant;
+       * remember the variable and disable the constraint
+       */
+      debugMessage(" -> disabling constraint <%s> (watchedvar fixed to 1.0)\n", SCIPconsGetName(cons));
+      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      return SCIP_OKAY;
    }
 
-   /* make sure, that if there is a valid watched variable, it is the first one */
-   if( watchedvar1 == -1 )
+   nbranchings1 = LONGINT_MAX;
+   nbranchings2 = LONGINT_MAX;
+   watchedvar1 = -1;
+   watchedvar2 = -1;
+   for( v = 0; v < nvars; ++v )
    {
-      watchedvar1 = watchedvar2;
-      watchedvar2 = -1;
-   }
-
-   /* we have to search new watched variables: loop through variables until two unfixed variables are found */
-   for( i = 0, v = oldwatchedvar2+1; i < nvars; ++i, ++v )
-   {
-      if( v >= nvars )
-         v = 0;
-
-      /* don't use the same variable in both watch slots */
-      if( v == watchedvar1 )
-         continue;
-
       /* check, if the variable is fixed */
-      if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
+      if( SCIPvarGetUbLocal(vars[v]) > 0.5 )
       {
-         /* the variable is fixed to one, making the constraint redundant;
-          * remember the variable and disable the constraint
-          */
-         debugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
-            SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
-         consdata->watchedfeasvar = v;
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-         return SCIP_OKAY;
-      }
-      else if( SCIPvarGetUbLocal(vars[v]) > 0.5 )
-      {
-         /* the variable is unfixed and can be used as watched variable */
-         if( watchedvar1 == -1 )
-            watchedvar1 = v;
-         else
+         if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
          {
-            watchedvar2 = v;
-            break;
+            /* the variable is fixed to one, making the constraint redundant;
+             * remember the variable and disable the constraint
+             */
+            debugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
+               SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
+            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            return SCIP_OKAY;
+         }
+
+         /* the variable is unfixed and can be used as watched variable */
+         nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v], SCIP_BRANCHDIR_DOWNWARDS);
+         if( nbranchings < nbranchings2 )
+         {
+            if( nbranchings < nbranchings1 )
+            {
+               watchedvar2 = watchedvar1;
+               nbranchings2 = nbranchings1;
+               watchedvar1 = v;
+               nbranchings1 = nbranchings;
+            }
+            else
+            {
+               watchedvar2 = v;
+               nbranchings2 = nbranchings;
+            }
          }
       }
    }
+   assert(nbranchings1 <= nbranchings2);
    assert(watchedvar1 >= 0 || watchedvar2 == -1);
 
    if( watchedvar1 == -1 )
@@ -793,29 +636,42 @@ RETCODE processWatchedVars(
 
 /** checks constraint for violation, returns TRUE iff constraint is feasible */
 static
-Bool checkCons(
+RETCODE checkCons(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< logic or constraint to be checked */
-   SOL*             sol                 /**< primal CIP solution */
+   CONS*            cons,               /**< logic or constraint to be checked */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool*            violated            /**< pointer to store whether the given solution violates the constraint */
    )
 {
+   CONSDATA* consdata;
    VAR** vars;
    Real solval;
    Real sum;
    int nvars;
    int v;
-   
+
+   assert(violated != NULL);
+
+   *violated = FALSE;
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
    vars = consdata->vars;
    nvars = consdata->nvars;
-
-   /* check the watched solution variable, if it already makes the constraint feasible */
-   if( consdata->watchedsolvar != -1 )
+   
+   /* if we should check the current LP or pseudo solution, look for a fixed-to-one variable in order to disable
+    * the constraint
+    */
+   if( sol == NULL )
    {
-      assert(consdata->watchedsolvar < nvars);
-      solval = SCIPgetSolVal(scip, sol, vars[consdata->watchedsolvar]);
-      assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
-      if( SCIPisFeasEQ(scip, solval, 1.0) )
-         return TRUE;
+      for( v = 0; v < nvars; ++v )
+      {
+         if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
+         {
+            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            return SCIP_OKAY;
+         }
+      }
    }
 
    /* calculate the constraint's activity */
@@ -829,14 +685,9 @@ Bool checkCons(
       sum += solval;
    }
 
-   /* if the last compared variable has solution value of 1.0, use it as new watched solution variable */
-   if( SCIPisGE(scip, solval, 1.0) )
-   {
-      assert(0 < v && v <= nvars);
-      consdata->watchedsolvar = v-1;
-   }
+   *violated = SCIPisFeasLT(scip, sum, 1.0);
 
-   return SCIPisFeasGE(scip, sum, 1.0);
+   return SCIP_OKAY;
 }
 
 /** creates an LP row in a logic or constraint data object */
@@ -900,7 +751,6 @@ RETCODE separateCons(
    Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
    )
 {
-   CONSDATA* consdata;
    Bool addcut;
    Bool mustcheck;
 
@@ -910,14 +760,6 @@ RETCODE separateCons(
    assert(cutoff != NULL);
    assert(separated != NULL);
    assert(reduceddom != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->nvars == 0 || consdata->vars != NULL);
-
-   /* skip constraints already in the LP */
-   if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
-      return SCIP_OKAY;
 
    debugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
 
@@ -934,19 +776,32 @@ RETCODE separateCons(
 
    if( mustcheck )
    {
+      CONSDATA* consdata;
+
       assert(!addcut);
+      
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
 
       /* variable's fixings didn't give us any information -> we have to check the constraint */
       if( consdata->row != NULL )
       {
-         Real feasibility;
-
-         assert(!SCIProwIsInLP(consdata->row));
-         feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
-         addcut = !SCIPisFeasible(scip, feasibility);
+         /* skip constraints already in the LP */
+         if( SCIProwIsInLP(consdata->row) )
+            return SCIP_OKAY;
+         else
+         {
+            Real feasibility;
+            
+            assert(!SCIProwIsInLP(consdata->row));
+            feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+            addcut = !SCIPisFeasible(scip, feasibility);
+         }
       }
       else
-         addcut = !checkCons(scip, consdata, NULL);
+      {
+         CHECK_OKAY( checkCons(scip, cons, NULL, &addcut) );
+      }
 
       if( !addcut )
       {
@@ -1003,24 +858,25 @@ RETCODE enforcePseudo(
 
    if( mustcheck )
    {
-      CONSDATA* consdata;
+      Bool violated;
 
       assert(!addcut);
 
-      /* get constraint data */
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-
-      if( checkCons(scip, consdata, NULL) )
-      {
-         /* constraint was feasible -> increase age */
-         CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
-      }
-      else
+      CHECK_OKAY( checkCons(scip, cons, NULL, &violated) );
+      if( violated )
       {
          /* constraint was infeasible -> reset age */
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          *infeasible = TRUE;
+      }
+      else
+      {
+         CONSDATA* consdata;
+
+         /* constraint was feasible -> increase age */
+         consdata = SCIPconsGetData(cons);
+         assert(consdata != NULL);
+         CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
       }
    }
    else if( addcut )
@@ -1032,335 +888,6 @@ RETCODE enforcePseudo(
 
    return SCIP_OKAY;
 }
-
-#ifdef VARUSES
-#ifdef BRANCHLP
-/** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) >= 0 */
-static
-RETCODE branchLP(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr,           /**< logic or constraint handler */
-   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
-   )
-{
-   CONSHDLRDATA* conshdlrdata;
-   INTARRAY* posvaruses;
-   INTARRAY* negvaruses;
-   VAR** lpcands;
-   VAR** branchcands;
-   VAR* var;
-   Real* usescores;
-   Real maxvarusefac;
-   Real minvarusefac;
-   Real usescore;
-   Real branchweight;
-   Real solval;
-   int varindex;
-   int nlpcands;
-   int nbranchcands;
-   int nselcands;
-   int posuse;
-   int neguse;
-   int i;
-   int j;
-
-   /**@todo use a better logicor branching on LP solution */
-
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
-   /* get fractional variables */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
-   if( nlpcands == 0 )
-      return SCIP_OKAY;
-
-   /* get temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, nlpcands) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, nlpcands) );
-   
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   posvaruses = conshdlrdata->posvaruses;
-   negvaruses = conshdlrdata->negvaruses;
-   maxvarusefac = conshdlrdata->maxvarusefac;
-   minvarusefac = conshdlrdata->minvarusefac;
-   assert(posvaruses != NULL);
-   assert(negvaruses != NULL);
-
-   /* sort fractional variables by weighted number of uses in enabled logic or constraints */
-   nbranchcands = 0;
-   for( i = 0; i < nlpcands; ++i )
-   {
-      var = lpcands[i];
-      varindex = SCIPvarGetIndex(var);
-      posuse = SCIPgetIntarrayVal(scip, posvaruses, varindex);
-      neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
-      if( posuse + neguse > 0 )
-      {
-         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
-         for( j = nbranchcands; j > 0 && usescore > usescores[j-1]; --j )
-         {
-            branchcands[j] = branchcands[j-1];
-            usescores[j] = usescores[j-1];
-         }
-         assert(0 <= j && j <= nbranchcands);
-
-         /* choose between normal and negated variable in branching, such that setting selected variable
-          * to zero is hopefully leading to a feasible solution
-          */
-         if( posuse > neguse )
-         {
-            CHECK_OKAY( SCIPgetNegatedVar(scip, var, &branchcands[j]) );
-         }
-         else
-            branchcands[j] = var;
-         usescores[j] = usescore;
-         nbranchcands++;
-      }
-   }
-   assert(nbranchcands <= nlpcands);
-
-   /* if none of the fractional variables is member of a logic or constraint,
-    * we are not responsible for doing the branching
-    */
-   if( nbranchcands > 0 )
-   {
-      /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached;
-       * then choose one less
-       */
-      branchweight = 0.0;
-      solval = 0.0;
-      for( nselcands = 0; nselcands < nbranchcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
-      {
-         solval = SCIPgetVarSol(scip, branchcands[nselcands]);
-         assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
-         branchweight += solval;
-      }
-      assert(nselcands > 0);
-      nselcands--;
-      branchweight -= solval;
-
-      /* check, if we accumulated at least MIN and at most MAXBRANCHWEIGHT weight */
-      if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
-      {
-         NODE* node;
-         Real downprio;
-
-         /* perform the binary set branching on the selected variables */
-         assert(1 <= nselcands && nselcands <= nlpcands);
-         
-         /* choose preferred branching direction */
-         switch( SCIPvarGetBranchDirection(branchcands[0]) )
-         {
-         case SCIP_BRANCHDIR_DOWNWARDS:
-            downprio = 1.0;
-            break;
-         case SCIP_BRANCHDIR_UPWARDS:
-            downprio = -1.0;
-            break;
-         case SCIP_BRANCHDIR_AUTO:
-            downprio = SCIPvarGetRootSol(branchcands[0]) - SCIPgetVarSol(scip, branchcands[0]);
-            break;
-         default:
-            errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
-               SCIPvarGetBranchDirection(branchcands[0]), SCIPvarGetName(branchcands[0]));
-            return SCIP_INVALIDDATA;
-         }
-
-         /* create left child, fix x_i = 0 for all i \in S */
-         CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
-         for( i = 0; i < nselcands; ++i )
-         {
-            CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
-         }
-
-         /* create right child: add constraint x(S) >= 1 */
-         CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
-         if( nselcands == 1 )
-         {
-            /* only one candidate selected: fix it to 1.0 */
-            debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(branchcands[0]));
-            CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[0], 1.0) );
-         }
-         else
-         {
-            CONS* newcons;
-            char name[MAXSTRLEN];
-         
-            /* add logic or constraint x(S) >= 1 */
-            sprintf(name, "LOB%lld", SCIPgetNTotalNodes(scip));
-
-            CHECK_OKAY( SCIPcreateConsLogicor(scip, &newcons, name, nselcands, branchcands,
-                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
-            CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
-            CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
-         }
-      
-         *result = SCIP_BRANCHED;
-         
-#ifdef DEBUG
-         printf("logic or LP branching: nselcands=%d/%d, weight(S)=%g, S={", nselcands, nlpcands, branchweight);
-         for( i = 0; i < nselcands; ++i )
-            printf(" %s[%g, %g]", SCIPvarGetName(branchcands[i]), usescores[i], SCIPgetSolVal(scip, NULL, branchcands[i]));
-         printf(" }\n");
-#endif
-      }
-   }
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &usescores);
-   SCIPfreeBufferArray(scip, &branchcands);
-
-   return SCIP_OKAY;
-}
-#endif
-
-/** if unfixed variables exist, chooses a set S of them and creates |S|+1 child nodes:
- *   - for each variable i from S, create child node with x_0 = ... = x_i-1 = 0, x_i = 1
- *   - create an additional child node x_0 = ... = x_n-1 = 0
- */
-static
-RETCODE branchPseudo(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr,           /**< logic or constraint handler */
-   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
-   )
-{
-   CONSHDLRDATA* conshdlrdata;
-   INTARRAY* posvaruses;
-   INTARRAY* negvaruses;
-   VAR** pseudocands;
-   VAR** branchcands;
-   VAR* var;
-   NODE* node;
-   Real* usescores;
-   Real maxvarusefac;
-   Real minvarusefac;
-   Real usescore;
-   int varindex;
-   int npseudocands;
-   int maxnbranchcands;
-   int nbranchcands;
-   int posuse;
-   int neguse;
-   int i;
-   int j;
-
-   /**@todo use a better logic or branching on pseudo solution */
-
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* check, if pseudo branching is disabled */
-   if( conshdlrdata->npseudobranches <= 1 )
-      return SCIP_OKAY;
-
-   /* get fractional variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
-   if( npseudocands == 0 )
-      return SCIP_OKAY;
-
-   posvaruses = conshdlrdata->posvaruses;
-   negvaruses = conshdlrdata->negvaruses;
-   maxvarusefac = conshdlrdata->maxvarusefac;
-   minvarusefac = conshdlrdata->minvarusefac;
-   maxnbranchcands = conshdlrdata->npseudobranches-1;
-   assert(posvaruses != NULL);
-   assert(negvaruses != NULL);
-   assert(maxnbranchcands >= 1);
-
-   /* get temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, maxnbranchcands) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, maxnbranchcands) );
-   
-   /* sort unfixed variables by number of uses in enabled logic or constraints */
-   nbranchcands = 0;
-   for( i = 0; i < npseudocands; ++i )
-   {
-      var = pseudocands[i];
-      varindex = SCIPvarGetIndex(var);
-      posuse = SCIPgetIntarrayVal(scip, posvaruses, varindex);
-      neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
-      if( posuse + neguse > 0 )
-      {
-         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
-         if( nbranchcands < maxnbranchcands || usescore > usescores[nbranchcands-1] )
-         {
-            for( j = MIN(nbranchcands, maxnbranchcands-1); j > 0 && usescore > usescores[j-1]; --j )
-            {
-               branchcands[j] = branchcands[j-1];
-               usescores[j] = usescores[j-1];
-            }
-            assert(0 <= j && j <= nbranchcands && j < maxnbranchcands);
-
-            /* choose between normal and negated variable in branching, such that setting selected variable
-             * to zero is hopefully leading to a feasible solution
-             */
-            if( posuse > neguse )
-            {
-               CHECK_OKAY( SCIPgetNegatedVar(scip, var, &branchcands[j]) );
-            }
-            else
-               branchcands[j] = var;
-            usescores[j] = usescore;
-            if( nbranchcands < maxnbranchcands )
-               nbranchcands++;
-         }
-      }
-   }
-   assert(nbranchcands <= maxnbranchcands);
-
-   /* if none of the unfixed variables is member of a logic or constraint,
-    * we are not responsible for doing the branching
-    */
-   if( nbranchcands > 0 )
-   {
-      /* branch on the first part of the sorted candidates:
-       * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
-       * - create an additional child node x_0 = ... = x_n-1 = 0
-       */
-
-      /* create child with x_0 = ... = x_n-1 = 0 */
-      CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)nbranchcands) );
-      for( i = 0; i < nbranchcands; ++i )
-      {
-         CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
-      }
-
-      /* create children with x_0 = ... = x_i-1 = 0, x_i = 1, i = n-1,...,0 */
-      for( i = nbranchcands-1; i >= 0; --i )
-      {            
-         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)i) );
-         for( j = 0; j < i; ++j )
-         {
-            CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );
-         }
-         CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[i], 1.0) );
-      }
-
-      *result = SCIP_BRANCHED;
-
-#ifdef DEBUG
-      printf("logic or pseudo branching: nbranchcands=%d/%d, S={", nbranchcands, maxnbranchcands);
-      for( i = 0; i < nbranchcands; ++i )
-         printf(" %s [%g]", SCIPvarGetName(branchcands[i]), usescores[i]);
-      printf(" }\n");
-#endif
-   }
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &usescores);
-   SCIPfreeBufferArray(scip, &branchcands);
-
-   return SCIP_OKAY;
-}
-#endif
 
 
 
@@ -1438,20 +965,10 @@ DECL_CONSEXITSOL(consExitsolLogicor)
 static
 DECL_CONSDELETE(consDeleteLogicor)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
-
-   /* get event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
-
-   /* drop bound tighten events for watched variables */
-   CHECK_OKAY( switchWatchedvars(scip, cons, conshdlrdata->eventhdlr, -1, -1) );
 
    /* free LP row and logic or constraint */
    CHECK_OKAY( consdataFree(scip, consdata) );
@@ -1594,18 +1111,6 @@ DECL_CONSENFOLP(consEnfolpLogicor)
       CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
-#ifdef VARUSES
-#ifdef BRANCHLP
-   /* if solution is not integral, choose a variable set to branch on */
-   if( !cutoff && !separated && !reduceddom )
-   {
-      CHECK_OKAY( branchLP(scip, conshdlr, result) );
-      if( *result != SCIP_FEASIBLE )
-         return SCIP_OKAY;
-   }
-#endif
-#endif
-
    /* return the correct result */
    if( cutoff )
       *result = SCIP_CUTOFF;
@@ -1634,16 +1139,6 @@ DECL_CONSENFOPS(consEnfopsLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   /* if the solution is infeasible anyway due to objective value, skip the constraint processing and branch directly */
-#ifdef VARUSES
-   if( objinfeasible )
-   {
-      *result = SCIP_DIDNOTRUN;
-      CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
-      return SCIP_OKAY;
-   }
-#endif
-
    debugMessage("pseudo enforcing %d logic or constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
@@ -1669,16 +1164,7 @@ DECL_CONSENFOPS(consEnfopsLogicor)
    else if( solvelp )
       *result = SCIP_SOLVELP;
    else if( infeasible )
-   {
       *result = SCIP_INFEASIBLE;
-      
-#ifdef VARUSES
-      /* at least one constraint is violated by pseudo solution and we didn't find a better way to resolve this:
-       * -> branch on pseudo solution
-       */
-      CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
-#endif
-   }
    
    return SCIP_OKAY;
 }
@@ -1707,17 +1193,20 @@ DECL_CONSCHECK(consCheckLogicor)
       assert(consdata != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         if( checkCons(scip, consdata, sol) )
-         {
-            /* constraint was feasible -> increase age */
-            CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
-         }
-         else
+         Bool violated;
+
+         CHECK_OKAY( checkCons(scip, cons, sol, &violated) );
+         if( violated )
          {
             /* constraint is violated */
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
             return SCIP_OKAY;
+         }
+         else
+         {
+            /* constraint was feasible -> increase age */
+            CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
          }
       }
    }
@@ -1931,13 +1420,11 @@ DECL_CONSUNLOCK(consUnlockLogicor)
 
 
 /** constraint activation notification method of constraint handler */
-#ifdef VARUSES
 static
 DECL_CONSACTIVE(consActiveLogicor)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
-   int v;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1946,34 +1433,34 @@ DECL_CONSACTIVE(consActiveLogicor)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    debugMessage("activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
    debug(consdataPrint(scip, consdata, NULL));
 
-   /* increase the number of uses for each variable in the constraint */
-   for( v = 0; v < consdata->nvars; ++v )
+   /* catch events on watched variables */
+   if( consdata->watchedvar1 != -1 )
    {
-      CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, consdata->vars[v]) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[consdata->watchedvar1],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, &consdata->filterpos1) );
+   }
+   if( consdata->watchedvar2 != -1 )
+   {
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[consdata->watchedvar2],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, &consdata->filterpos2) );
    }
 
    return SCIP_OKAY;
 }
-#else
-#define consActiveLogicor NULL
-#endif
 
 
 /** constraint deactivation notification method of constraint handler */
-#ifdef VARUSES
 static
 DECL_CONSDEACTIVE(consDeactiveLogicor)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
-   int v;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1982,24 +1469,29 @@ DECL_CONSDEACTIVE(consDeactiveLogicor)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    debugMessage("deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
    debug(consdataPrint(scip, consdata, NULL));
 
-   /* decrease the number of uses for each variable in the constraint */
-   for( v = 0; v < consdata->nvars; ++v )
+   /* drop events on watched variables */
+   if( consdata->watchedvar1 != -1 )
    {
-      CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, consdata->vars[v]) );
+      assert(consdata->filterpos1 != -1);
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, consdata->filterpos1) );
+   }
+   if( consdata->watchedvar2 != -1 )
+   {
+      assert(consdata->filterpos2 != -1);
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, consdata->filterpos2) );
    }
 
    return SCIP_OKAY;
 }
-#else
-#define consDeactiveLogicor NULL
-#endif
+
 
 /** constraint enabling notification method of constraint handler */
 #define consEnableLogicor NULL
@@ -2007,6 +1499,7 @@ DECL_CONSDEACTIVE(consDeactiveLogicor)
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableLogicor NULL
+
 
 /** constraint display method of constraint handler */
 static
@@ -2162,7 +1655,7 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
    }
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%lld", SCIPgetNConflictClausesFound(scip));
+   sprintf(consname, "cf%d_%lld", SCIPgetNRuns(scip), SCIPgetNConflictClausesFound(scip));
    CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
          FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, TRUE) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
@@ -2220,20 +1713,6 @@ RETCODE SCIPincludeConshdlrLogicor(
    /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY) );
 
-   /* logic or constraint handler parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
-         "constraints/logicor/npseudobranches", 
-         "number of children created in pseudo branching (0: disable pseudo branching)",
-         &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
-         "constraints/logicor/maxvarusefac", 
-         "branching factor to weigh maximum of positive and negative variable uses",
-         &conshdlrdata->maxvarusefac, DEFAULT_MAXVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
-         "constraints/logicor/minvarusefac", 
-         "branching factor to weigh minimum of positive and negative variable uses",
-         &conshdlrdata->minvarusefac, DEFAULT_MINVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
-   
    return SCIP_OKAY;
 }
 

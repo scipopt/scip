@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.12 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.13 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -132,7 +132,7 @@ void SCIPhistoryUpdatePseudocost(
 
    assert(history != NULL);
    assert(set != NULL);
-   assert(!SCIPsetIsInfinity(set, ABS(solvaldelta)));
+   assert(!SCIPsetIsInfinity(set, REALABS(solvaldelta)));
    assert(!SCIPsetIsInfinity(set, objdelta));
    assert(!SCIPsetIsNegative(set, objdelta));
    assert(0.0 < weight && weight <= 1.0);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.63 2004/10/14 13:58:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.64 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -86,40 +86,6 @@
 #endif
 
 
-#ifndef SQR
-#define SQR(x)        ((x)*(x))
-#define SQRT(x)       (sqrt(x))
-#endif
-
-#ifndef ABS
-#define ABS(x)        ((x) >= 0 ? (x) : -(x))
-#endif
-
-#ifndef MAX
-#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
-#endif
-
-#ifndef MAX3
-#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))
-#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))
-#endif
-
-#define EPSEQ(x,y,eps)    (ABS((x)-(y)) <= (eps))
-#define EPSLT(x,y,eps)    ((x)-(y) < -(eps))
-#define EPSLE(x,y,eps)    ((x)-(y) <= (eps))
-#define EPSGT(x,y,eps)    ((x)-(y) > (eps))
-#define EPSGE(x,y,eps)    ((x)-(y) >= -(eps))
-#define EPSZ(x,eps)       (ABS(x) <= (eps))
-#define EPSP(x,eps)       ((x) > (eps))
-#define EPSN(x,eps)       ((x) < -(eps))
-#define EPSFLOOR(x,eps)   (floor((x)+(eps)))
-#define EPSCEIL(x,eps)    (ceil((x)-(eps)))
-#define EPSFRAC(x,eps)    ((x)-EPSFLOOR(x,eps))
-#define EPSISINT(x,eps)   (EPSCEIL(x,eps)-(x) <= (eps))
-
-
-
 /*
  * Boolean values
  */
@@ -166,6 +132,41 @@
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
 #define SCIP_INVALID                  1e+99  /**< floating point value is not valid */
+
+
+#define REALABS(x)        (fabs(x))
+#define EPSEQ(x,y,eps)    (REALABS((x)-(y)) <= (eps))
+#define EPSLT(x,y,eps)    ((x)-(y) < -(eps))
+#define EPSLE(x,y,eps)    ((x)-(y) <= (eps))
+#define EPSGT(x,y,eps)    ((x)-(y) > (eps))
+#define EPSGE(x,y,eps)    ((x)-(y) >= -(eps))
+#define EPSZ(x,eps)       (REALABS(x) <= (eps))
+#define EPSP(x,eps)       ((x) > (eps))
+#define EPSN(x,eps)       ((x) < -(eps))
+#define EPSFLOOR(x,eps)   (floor((x)+(eps)))
+#define EPSCEIL(x,eps)    (ceil((x)-(eps)))
+#define EPSFRAC(x,eps)    ((x)-EPSFLOOR(x,eps))
+#define EPSISINT(x,eps)   (EPSCEIL(x,eps)-(x) <= (eps))
+
+
+#ifndef SQR
+#define SQR(x)        ((x)*(x))
+#define SQRT(x)       (sqrt(x))
+#endif
+
+#ifndef ABS
+#define ABS(x)        ((x) >= 0 ? (x) : -(x))
+#endif
+
+#ifndef MAX
+#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
+#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#endif
+
+#ifndef MAX3
+#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))
+#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))
+#endif
 
 
 /*

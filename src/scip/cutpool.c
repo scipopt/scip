@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.37 2004/10/19 18:36:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.38 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -90,11 +90,11 @@ DECL_HASHKEYEQ(hashKeyEqCut)
       || row1->minidx != row2->minidx
       || row1->maxidx != row2->maxidx
       || row1->nummaxval != row2->nummaxval
-      || ABS(row1->lhs - row2->lhs) > SCIP_DEFAULT_EPSILON
-      || ABS(row1->rhs - row2->rhs) > SCIP_DEFAULT_EPSILON
-      || ABS(row1->sqrnorm - row2->sqrnorm) > SCIP_DEFAULT_SUMEPSILON
-      || ABS(row1->sumnorm - row2->sumnorm) > SCIP_DEFAULT_SUMEPSILON
-      || ABS(row1->maxval - row2->maxval) > SCIP_DEFAULT_EPSILON
+      || REALABS(row1->lhs - row2->lhs) > SCIP_DEFAULT_EPSILON
+      || REALABS(row1->rhs - row2->rhs) > SCIP_DEFAULT_EPSILON
+      || REALABS(row1->sqrnorm - row2->sqrnorm) > SCIP_DEFAULT_SUMEPSILON
+      || REALABS(row1->sumnorm - row2->sumnorm) > SCIP_DEFAULT_SUMEPSILON
+      || REALABS(row1->maxval - row2->maxval) > SCIP_DEFAULT_EPSILON
        )
       return FALSE;
 
@@ -108,7 +108,7 @@ DECL_HASHKEYEQ(hashKeyEqCut)
    /* compare the coefficients of the rows */
    for( i = 0; i < row1->len; ++i )
    {
-      if( ABS(row1->vals[i] - row2->vals[i]) > SCIP_DEFAULT_EPSILON )
+      if( REALABS(row1->vals[i] - row2->vals[i]) > SCIP_DEFAULT_EPSILON )
          return FALSE;
    }
 

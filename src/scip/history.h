@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.10 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.11 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -185,32 +185,29 @@ Real SCIPhistoryGetAvgBranchdepth(
  * speed up the algorithms.
  */
 
-#define SCIPbranchdirOpposite(dir)                              \
-   ((dir) == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS  \
+#define SCIPbranchdirOpposite(dir)                                      \
+   ((dir) == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS          \
       : ((dir) == SCIP_BRANCHDIR_UPWARDS ? SCIP_BRANCHDIR_DOWNWARDS : SCIP_BRANCHDIR_AUTO))
-#define SCIPhistoryGetPseudocost(history,solvaldelta)                                       \
-   ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->pscostcount[1] > 0.0                \
-                            ? (history)->pscostsum[1] / (history)->pscostcount[1] : 1.0)    \
-                          : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
-                            ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
+#define SCIPhistoryGetPseudocost(history,solvaldelta)                   \
+   ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->pscostcount[1] > 0.0 \
+      ? (history)->pscostsum[1] / (history)->pscostcount[1] : 1.0)      \
+      : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
+         ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
 #define SCIPhistoryIncNBranchings(history,depth,dir) { (history)->nbranchings[dir]++; \
-                                                       (history)->branchdepthsum[dir] += depth; }
+      (history)->branchdepthsum[dir] += depth; }
 #define SCIPhistoryIncNInferences(history,dir)     (history)->ninferences[dir]++;
 #define SCIPhistoryIncNCutoffs(history,dir)        (history)->ncutoffs[dir]++;
 #define SCIPhistoryGetNBranchings(history,dir)     ((history)->nbranchings[dir])
 #define SCIPhistoryGetNInferences(history,dir)     ((history)->ninferences[dir])
 #define SCIPhistoryGetAvgInferences(history,dir)   ((history)->nbranchings[dir] > 0 \
-                                                   ? (Real)(history)->ninferences[dir]/(Real)(history)->nbranchings[dir] \
-                                                   : 0)
+      ? (Real)(history)->ninferences[dir]/(Real)(history)->nbranchings[dir] : 0)
 #define SCIPhistoryGetNCutoffs(history,dir)        ((history)->ncutoffs[dir])
 #define SCIPhistoryGetAvgCutoffs(history,dir)      ((history)->nbranchings[dir] > 0 \
-                                                   ? (Real)(history)->ncutoffs[dir]/(Real)(history)->nbranchings[dir] \
-                                                   : 0)
+      ? (Real)(history)->ncutoffs[dir]/(Real)(history)->nbranchings[dir] : 0)
 #define SCIPhistoryGetAvgBranchdepth(history,dir)  ((history)->nbranchings[dir] > 0 \
-                                                   ? (Real)(history)->branchdepthsum[dir]/(Real)(history)->nbranchings[dir] \
-                                                   : 0)
+      ? (Real)(history)->branchdepthsum[dir]/(Real)(history)->nbranchings[dir] : 0)
 
 #endif
 

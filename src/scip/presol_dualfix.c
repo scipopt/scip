@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.13 2004/07/01 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.14 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -103,7 +103,7 @@ DECL_PRESOLEXEC(presolExecDualfix)
          continue;
       
       /* apply the fixing */
-      if( SCIPisInfinity(scip, ABS(bound)) )
+      if( SCIPisInfinity(scip, REALABS(bound)) )
       {
          debugMessage(" -> unbounded fixing\n");
          SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,

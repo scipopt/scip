@@ -10,6 +10,7 @@ interface:
 - new method SCIPchgVarBranchDirection()
 - new method SCIPvarGetBranchDirection()
 - new possible result code SCIP_DELAYED for primal heuristics
+- changed SCIPcatchVarEvent() and SCIPdropVarEvent()
 
 parameters:
 - new parameter separating/efficacynorm to choose between euclidean, maximum, sum, and discrete norm
@@ -21,6 +22,7 @@ parameters:
 features:
 - creation of reconvergence clauses in conflict analysis
 - first node of each plunging is not treated as plunging node w.r.t. calling primal heuristics
+- improved performance of logic or constraint handler due to better watched variables handling
 
 fixed bugs:
 - removed bugs in CLP Solver interface
@@ -31,6 +33,7 @@ fixed bugs:
   old focus node's LP fork)
 - bug reconvergence clauses in conflict analysis if bounds on non-binary variables were the reason for the fixing of
   the uip to create a reconvergence clause for
+- wrong subcalls in SCIPvarGet...CurrentRun() for aggregated variables
 
 known bugs (still not fixed):
 - air04 and air05 return wrong optimal value (1 too large): possibly due to strong branching or setppc propagation?

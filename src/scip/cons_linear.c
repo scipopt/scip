@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.124 2004/10/26 18:24:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.125 2004/10/28 14:30:03 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -876,7 +876,7 @@ void consdataUpdateAddCoef(
 
       assert(consdata->maxabsval < SCIP_INVALID);
 
-      absval = ABS(val);
+      absval = REALABS(val);
       consdata->maxabsval = MAX(consdata->maxabsval, absval);
    }
 
@@ -957,7 +957,7 @@ void consdataCalcMaxAbsval(
    for( i = 0; i < consdata->nvars; ++i )
    {
       absval = consdata->vals[i];
-      absval = ABS(absval);
+      absval = REALABS(absval);
       consdata->maxabsval = MAX(consdata->maxabsval, absval);
    }   
 }
@@ -1757,13 +1757,13 @@ RETCODE scaleCons(
    }
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      consdata->lhs *= ABS(scalar);
+      consdata->lhs *= REALABS(scalar);
       if( SCIPisIntegral(scip, consdata->lhs) )
          consdata->lhs = SCIPfloor(scip, consdata->lhs);
    }
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      consdata->rhs *= ABS(scalar);
+      consdata->rhs *= REALABS(scalar);
       if( SCIPisIntegral(scip, consdata->rhs) )
          consdata->rhs = SCIPfloor(scip, consdata->rhs);
    }
@@ -1862,9 +1862,9 @@ RETCODE normalizeCons(
    if( mult == 0 )
    {
       /* 3. the absolute value of the right hand side must be greater than that of the left hand side */
-      if( SCIPisGT(scip, ABS(consdata->rhs), ABS(consdata->lhs)) )
+      if( SCIPisGT(scip, REALABS(consdata->rhs), REALABS(consdata->lhs)) )
          mult = +1;
-      else if( SCIPisLT(scip, ABS(consdata->rhs), ABS(consdata->lhs)) )
+      else if( SCIPisLT(scip, REALABS(consdata->rhs), REALABS(consdata->lhs)) )
          mult = -1;
    }
    
@@ -1932,12 +1932,12 @@ RETCODE normalizeCons(
    {
       /* all coefficients are integral: divide them by their greatest common divisor */
       assert(SCIPisIntegral(scip, vals[0]));
-      gcd = (Longint)(ABS(vals[0]) + feastol);
+      gcd = (Longint)(REALABS(vals[0]) + feastol);
       assert(gcd >= 1);
       for( i = 1; i < nvars && gcd > 1; ++i )
       {
          assert(SCIPisIntegral(scip, vals[i]));
-         gcd = SCIPcalcGreComDiv(gcd, (Longint)(ABS(vals[i]) + feastol));
+         gcd = SCIPcalcGreComDiv(gcd, (Longint)(REALABS(vals[i]) + feastol));
       }
 
       if( gcd > 1 )
@@ -3754,7 +3754,7 @@ RETCODE convertLongEquality(
       /* check, if variable can be used as a slack variable */
       if( slacktype == SCIP_VARTYPE_CONTINUOUS
          || slacktype == SCIP_VARTYPE_IMPLINT
-         || (integral && SCIPisEQ(scip, ABS(val), 1.0))
+         || (integral && SCIPisEQ(scip, REALABS(val), 1.0))
           )
       {
          slackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
@@ -4098,7 +4098,7 @@ RETCODE aggregateConstraints(
          /* count the number of variables in the potential new constraint  a * consdata0 + b * consdata1 */
          varweight = diffidx0minus1weight + diffidx1minus0weight;
          nvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
-         scalarsum = ABS(a) + ABS(b);
+         scalarsum = REALABS(a) + REALABS(b);
          betterscalarsum = (scalarsum < bestscalarsum);
          for( i = 0; i < nvarscommon
                  && (varweight < bestvarweight || (varweight == bestvarweight && betterscalarsum)); ++i )

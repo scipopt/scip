@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.3 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.4 2004/10/28 14:30:03 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -98,7 +98,7 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
 
       score = SCIPgetVarPseudocostScore(scip, lpcands[c], lpcandssol[c]);
       rootsolval = SCIPvarGetRootSol(lpcands[c]);
-      rootdiff = ABS(lpcandssol[c] - rootsolval);
+      rootdiff = REALABS(lpcandssol[c] - rootsolval);
       if( SCIPisSumGT(scip, score, bestscore) || (SCIPisSumEQ(scip, score, bestscore) && rootdiff > bestrootdiff) )
       {
          bestcand = c;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.33 2004/10/05 16:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.34 2004/10/28 14:30:04 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -519,12 +519,12 @@ void SCIPdispTime(
       if( val < 0.0 )
          maxval /= 10;
       timepower = 0;
-      while( ABS(val) + 0.5 >= maxval && timepower < MAXTIMEPOWER )
+      while( REALABS(val) + 0.5 >= maxval && timepower < MAXTIMEPOWER )
       {
          timepower++;
          val /= timepowerval[timepower];
       }
-      if( ABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
+      if( REALABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
          sprintf(format, "%%%d.1f%c", width-1, timepowerchar[timepower]);
       else
          sprintf(format, "%%%d.0f%c", width-1, timepowerchar[timepower]);

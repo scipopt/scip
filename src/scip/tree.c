@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.120 2004/10/26 07:30:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.121 2004/10/28 14:30:06 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -29,6 +29,7 @@
 #include "message.h"
 #include "set.h"
 #include "stat.h"
+#include "clock.h"
 #include "vbc.h"
 #include "event.h"
 #include "lp.h"
@@ -971,6 +972,7 @@ RETCODE nodeRepropagate(
    Bool oldfocusnodehaslp;
    Longint oldnboundchgs;
    Bool initialreprop;
+   Bool clockisrunning;
 
    assert(node != NULL);
    assert(node->nodetype == SCIP_NODETYPE_FOCUSNODE
@@ -991,6 +993,11 @@ RETCODE nodeRepropagate(
 
    /* process the delayed events in order to flush the problem changes */
    CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
+
+   /* stop node activation timer */
+   clockisrunning = SCIPclockIsRunning(stat->nodeactivationtime);
+   if( clockisrunning )
+      SCIPclockStop(stat->nodeactivationtime, set);
 
    /* mark the node refocused and temporarily install it as focus node */
    oldtype = (NODETYPE)node->nodetype;
@@ -1059,6 +1066,10 @@ RETCODE nodeRepropagate(
    {
       CHECK_OKAY( SCIPdomchgMakeStatic(&node->domchg, memhdr, set) );
    }
+
+   /* start node activation timer again */
+   if( clockisrunning )
+      SCIPclockStart(stat->nodeactivationtime, set);
 
    /* delay events in path switching */
    CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
@@ -1364,7 +1375,7 @@ RETCODE SCIPnodeAddBoundinfer(
 
       /* update the branching history */
       CHECK_OKAY( SCIPvarIncNBranchings(var, stat, node->depth, 
-                     boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS) );
+            boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS) );
    }
    else
    {
@@ -2947,7 +2958,6 @@ RETCODE SCIPnodeFocus(
    {
       CHECK_OKAY( SCIPnodeFree(&oldfocusnode, memhdr, set, tree, lp) );
    }
-
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
    return SCIP_OKAY;

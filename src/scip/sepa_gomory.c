@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.36 2004/10/19 18:36:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.37 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -131,7 +131,7 @@ RETCODE storeCutInArrays(
          {
             assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
-            absval = ABS(val);
+            absval = REALABS(val);
             norm = MAX(norm, absval);
             cutcols[len] = SCIPvarGetCol(vars[v]);
             cutvals[len] = val;
@@ -147,7 +147,7 @@ RETCODE storeCutInArrays(
          {
             assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
-            norm += ABS(val);
+            norm += REALABS(val);
             cutcols[len] = SCIPvarGetCol(vars[v]);
             cutvals[len] = val;
             len++;

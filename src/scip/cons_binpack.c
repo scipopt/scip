@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.19 2004/08/24 11:57:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.20 2004/10/28 14:30:03 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -438,14 +438,14 @@ DECL_LINCONSUPGD(linconsUpgdBinpack)
          assert(!SCIPisInfinity(scip, rhs));
 
          for( i = 0; i < nvars && !found; ++i )
-            found = SCIPisEQ(scip, rhs, ABS(vals[i]) + negcoeffsum);
+            found = SCIPisEQ(scip, rhs, REALABS(vals[i]) + negcoeffsum);
       }
       else
       {
          assert(SCIPisInfinity(scip, rhs));
 
          for( i = 0; i < nvars && !found; ++i )
-            found = SCIPisEQ(scip, lhs, -ABS(vals[i]) - negcoeffsum);
+            found = SCIPisEQ(scip, lhs, -REALABS(vals[i]) - negcoeffsum);
       }
 
       upgrade = found;

@@ -463,8 +463,8 @@ $(OBJDIR)/tree.o: src/tree.c src/def.h src/type_retcode.h src/message.h src/set.
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_sepa.h \
   src/type_prop.h src/struct_set.h src/stat.h src/type_mem.h \
-  src/struct_stat.h src/type_vbc.h src/type_history.h src/vbc.h \
-  src/event.h src/type_lp.h src/type_primal.h src/pub_event.h \
+  src/struct_stat.h src/type_vbc.h src/type_history.h src/clock.h \
+  src/vbc.h src/event.h src/type_lp.h src/type_primal.h src/pub_event.h \
   src/struct_event.h src/lp.h src/type_lpi.h src/type_misc.h \
   src/type_prob.h src/pub_lp.h src/struct_lp.h src/var.h src/pub_var.h \
   src/struct_var.h src/primal.h src/struct_primal.h src/tree.h \

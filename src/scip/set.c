@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.117 2004/10/20 15:52:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.118 2004/10/28 14:30:05 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2246,10 +2246,9 @@ Real SCIPsetRelDiff(
 
    assert(set != NULL);
 
-   absval1 = ABS(val1);
-   absval2 = ABS(val2);
-   quot = MAX(absval1, absval2);
-   quot = MAX(quot, 1.0);
+   absval1 = REALABS(val1);
+   absval2 = REALABS(val2);
+   quot = MAX3(1.0, absval1, absval2);
    
    return (val1-val2)/quot;
 }

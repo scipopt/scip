@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.12 2004/10/05 16:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.13 2004/10/28 14:30:03 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -292,6 +292,16 @@ void SCIPclockStop(
          }
       }
    }
+}
+
+/** returns whether the clock is currently running */
+Bool SCIPclockIsRunning(
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   assert(clock != NULL);
+
+   return (clock->nruns > 0);
 }
 
 /** converts CPU clock ticks into seconds */
