@@ -160,11 +160,11 @@ RETCODE SCIPlpiAddCols(
    const Real*      obj,                /**< objective function values of new columns */
    const Real*      lb,                 /**< lower bounds of new columns */
    const Real*      ub,                 /**< upper bounds of new columns */
+   char**           colnames,           /**< column names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
-   const Real*      val,                /**< values of constraint matrix entries */
-   char**           name                /**< column names */
+   const Real*      val                 /**< values of constraint matrix entries */
    );
 
 /** deletes all columns in the given range from LP */
@@ -191,11 +191,11 @@ RETCODE SCIPlpiAddRows(
    int              nrows,              /**< number of rows to be added */
    const Real*      lhs,                /**< left hand sides of new rows */
    const Real*      rhs,                /**< right hand sides of new rows */
+   char**           rownames,           /**< row names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
-   const Real*      val,                /**< values of constraint matrix entries */
-   char**           name                /**< row names */
+   const Real*      val                 /**< values of constraint matrix entries */
    );
 
 /** deletes all rows in the given range from LP */

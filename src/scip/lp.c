@@ -3258,7 +3258,7 @@ RETCODE lpFlushAddCols(
 
    /* call LP interface */
    debugMessage("flushing col additions: enlarge LP from %d to %d colums\n", lp->nlpicols, lp->ncols);
-   CHECK_OKAY( SCIPlpiAddCols(lp->lpi, naddcols, obj, lb, ub, nnonz, beg, ind, val, name) );
+   CHECK_OKAY( SCIPlpiAddCols(lp->lpi, naddcols, obj, lb, ub, name, nnonz, beg, ind, val) );
    lp->nlpicols = lp->ncols;
    lp->lpifirstchgcol = lp->nlpicols;
 
@@ -3426,7 +3426,7 @@ RETCODE lpFlushAddRows(
 
    /* call LP interface */
    debugMessage("flushing row additions: enlarge LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
-   CHECK_OKAY( SCIPlpiAddRows(lp->lpi, naddrows, lhs, rhs, nnonz, beg, ind, val, name) );
+   CHECK_OKAY( SCIPlpiAddRows(lp->lpi, naddrows, lhs, rhs, name, nnonz, beg, ind, val) );
    lp->nlpirows = lp->nrows;
    lp->lpifirstchgrow = lp->nlpirows;
 
