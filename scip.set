@@ -311,8 +311,12 @@ heuristics/diving/maxdiveubquotnosol = 0.1
 heuristics/diving/maxdiveavgquotnosol = 8
 
 # frequency for calling primal heuristic <rounding> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 5]
+heuristics/rounding/freq = 5
+
+# frequency for calling primal heuristic <simplerounding> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-heuristics/rounding/freq = 1
+heuristics/simplerounding/freq = 1
 
 # frequency for calling separator <gomory> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 8]
