@@ -35,6 +35,7 @@ struct NodePQ
    int              len;                /**< number of used element slots */
    int              size;               /**< total number of available element slots */
    NODE**           slots;              /**< array of element slots */
+   NODE*            lowerboundnode;     /**< node with minimal lower bound, or NULL if not available */
    Real             lowerboundsum;      /**< sum of lower bounds of all nodes in the queue */
    Real             lowerbound;         /**< minimal lower bound value of all nodes in the queue */
    int              nlowerbounds;       /**< number of nodes in the queue with minimal lower bound (0 if invalid) */
@@ -58,7 +59,10 @@ struct Nodesel
 
 
 
-/* node priority queue methods */
+
+/* 
+ * node priority queue methods
+ */
 
 #define PQ_PARENT(q) (((q)+1)/2-1)
 #define PQ_LEFTCHILD(p) (2*(p)+1)
@@ -67,7 +71,7 @@ struct Nodesel
 /** resizes node memory to hold at least the given number of nodes */
 static
 RETCODE nodepqResize(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    const SET*       set,                /**< global SCIP settings */
    int              minsize             /**< minimal number of storeable nodes */
    )
@@ -86,7 +90,7 @@ RETCODE nodepqResize(
 /** updates the cached minimal lower bound of all nodes in the queue */
 static
 void nodepqUpdateLowerbound(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    const SET*       set,                /**< global SCIP settings */
    NODE*            node                /**< node to be inserted */
    )
@@ -101,6 +105,7 @@ void nodepqUpdateLowerbound(
       assert(nodepq->lowerbound < SCIP_INVALID);
       if( SCIPsetIsLE(set, node->lowerbound, nodepq->lowerbound) )
       {
+         nodepq->lowerboundnode = node;
          if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
             nodepq->nlowerbounds++;
          else
@@ -111,6 +116,44 @@ void nodepqUpdateLowerbound(
       }
    }
    debugMessage(" -> new queuebound=%g, nlowerbounds=%d\n", nodepq->lowerbound, nodepq->nlowerbounds);
+}
+
+/** calculates the minimal lower bound of all nodes in the queue */
+static
+void nodepqCalcLowerbound(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   NODE* node;
+   int i;
+
+   assert(nodepq != NULL);
+   assert(set != NULL);
+   assert(set->nodesel != NULL);
+
+   nodepq->validlowerbound = TRUE;
+   nodepq->lowerboundnode = NULL;
+   nodepq->lowerbound = set->infinity;
+   nodepq->nlowerbounds = 0;
+
+   if( set->nodesel->lowestboundfirst )
+   {
+      /* the node selector's compare method sorts the minimal lower bound to the front */
+      if( nodepq->len > 0 )
+      {
+         assert(nodepq->slots[0] != NULL);
+         nodepq->lowerboundnode = nodepq->slots[0];
+         nodepq->lowerbound = nodepq->slots[0]->lowerbound;
+         nodepq->nlowerbounds = 1;
+      }
+   }
+   else
+   {
+      /* if we don't know the minimal lower bound, compare all nodes */
+      for( i = 0; i < nodepq->len; ++i )
+         nodepqUpdateLowerbound(nodepq, set, nodepq->slots[i]);
+   }
 }
 
 /** creates node priority queue */
@@ -125,6 +168,7 @@ RETCODE SCIPnodepqCreate(
    (*nodepq)->len = 0;
    (*nodepq)->size = 0;
    (*nodepq)->slots = NULL;
+   (*nodepq)->lowerboundnode = NULL;
    (*nodepq)->lowerboundsum = 0.0;
    (*nodepq)->lowerbound = set->infinity;
    (*nodepq)->nlowerbounds = 0;
@@ -175,7 +219,7 @@ RETCODE SCIPnodepqFree(
 
 /** inserts node into node priority queue */
 RETCODE SCIPnodepqInsert(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    const SET*       set,                /**< global SCIP settings */
    NODE*            node                /**< node to be inserted */
    )
@@ -191,6 +235,7 @@ RETCODE SCIPnodepqInsert(
 
    scip = set->scip;
    nodesel = set->nodesel;
+   assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
 
    CHECK_OKAY( nodepqResize(nodepq, set, nodepq->len+1) );
@@ -217,7 +262,7 @@ RETCODE SCIPnodepqInsert(
  */
 static
 Bool nodepqDelPos(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    const SET*       set,                /**< global SCIP settings */
    int              rempos              /**< queue position of node to remove */
    )
@@ -233,11 +278,13 @@ Bool nodepqDelPos(
 
    assert(nodepq != NULL);
    assert(nodepq->len > 0);
+   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
    assert(set != NULL);
    assert(0 <= rempos && rempos < nodepq->len);
 
    scip = set->scip;
    nodesel = set->nodesel;
+   assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
 
    /* update the minimal lower bound */
@@ -259,8 +306,11 @@ Bool nodepqDelPos(
             nodepq->lowerbound = SCIP_INVALID;
          }
       }
+      if( node == nodepq->lowerboundnode )
+         nodepq->lowerboundnode = NULL;
       debugMessage(" -> new queuebound=%g, nlowerbounds=%d\n", nodepq->lowerbound, nodepq->nlowerbounds);
    }
+   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
 
    /* remove node of the tree and get a free slot,
     * if the removed node was the last node of the queue
@@ -316,28 +366,55 @@ Bool nodepqDelPos(
    return parentfelldown;
 }
 
-/** removes and returns best node from the node priority queue */
-NODE* SCIPnodepqRemove(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
-   const SET*       set                 /**< global SCIP settings */
+/** returns the position of given node in the priority queue, or -1 if not existing */
+static
+int nodepqFindNode(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   const SET*       set,                /**< global SCIP settings */
+   NODE*            node                /**< node to find */
    )
 {
-   NODE* root;
+   int pos;
 
    assert(nodepq != NULL);
+   assert(nodepq->len >= 0);
+   assert(set != NULL);
+   assert(node != NULL);
 
-   if( nodepq->len == 0 )
-      return NULL;
+   /* search the node in the queue */
+   for( pos = 0; pos < nodepq->len && node != nodepq->slots[pos]; ++pos )
+   {}
 
-   root = nodepq->slots[0];
-   nodepqDelPos(nodepq, set, 0);
+   if( pos == nodepq->len )
+      pos = -1;
+   
+   return pos;
+}
 
-   return root;
+/** removes node from the node priority queue */
+RETCODE SCIPnodepqRemove(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   const SET*       set,                /**< global SCIP settings */
+   NODE*            node                /**< node to remove */
+   )
+{
+   int pos;
+
+   pos = nodepqFindNode(nodepq, set, node);
+   if( pos == -1 )
+   {
+      errorMessage("node doesn't exist in node priority queue");
+      return SCIP_INVALIDDATA;
+   }
+
+   nodepqDelPos(nodepq, set, pos);
+
+   return SCIP_OKAY;
 }
 
 /** returns the best node of the queue without removing it */
 NODE* SCIPnodepqFirst(
-   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   const NODEPQ*    nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -353,7 +430,7 @@ NODE* SCIPnodepqFirst(
 
 /** returns the nodes array of the queue */
 NODE** SCIPnodepqNodes(
-   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   const NODEPQ*    nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -363,7 +440,7 @@ NODE** SCIPnodepqNodes(
 
 /** returns the number of nodes stored in the node priority queue */
 int SCIPnodepqLen(
-   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   const NODEPQ*    nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -374,53 +451,48 @@ int SCIPnodepqLen(
 
 /** gets the minimal lower bound of all nodes in the queue */
 Real SCIPnodepqGetLowerbound(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    const SET*       set                 /**< global SCIP settings */
    )
 {
-   NODE* node;
-   int i;
-
    assert(nodepq != NULL);
    assert(set != NULL);
    assert(set->nodesel != NULL);
 
    /* if the cached lower bound is invalid, calculate it */
    if( !nodepq->validlowerbound )
-   {
-      assert(nodepq->nlowerbounds == 0);
+      nodepqCalcLowerbound(nodepq, set);
 
-      nodepq->validlowerbound = TRUE;
-
-      if( set->nodesel->lowestboundfirst )
-      {
-         /* the node selector's compare method sorts the minimal lower bound to the front */
-         if( nodepq->len > 0 )
-         {
-            assert(nodepq->slots[0] != NULL);
-            nodepq->lowerbound = nodepq->slots[0]->lowerbound;
-         }
-         else
-            nodepq->lowerbound = set->infinity;
-      }
-      else
-      {
-         /* if we don't know the minimal lower bound, compare all nodes */
-         nodepq->lowerbound = set->infinity;
-         nodepq->nlowerbounds = 0;
-         for( i = 0; i < nodepq->len; ++i )
-            nodepqUpdateLowerbound(nodepq, set, nodepq->slots[i]);
-      }
-   }
    assert(nodepq->validlowerbound);
    assert(nodepq->lowerbound < SCIP_INVALID);
 
    return nodepq->lowerbound;
 }
 
+/** gets the node with minimal lower bound of all nodes in the queue */
+NODE* SCIPnodepqGetLowerboundNode(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(nodepq != NULL);
+   assert(set != NULL);
+   assert(set->nodesel != NULL);
+
+   /* if the cached lower bound node is invalid, calculate it */
+   if( !nodepq->validlowerbound || nodepq->lowerboundnode == NULL )
+      nodepqCalcLowerbound(nodepq, set);
+   
+   assert(nodepq->validlowerbound);
+   assert(nodepq->lowerbound < SCIP_INVALID);
+   assert(nodepq->lowerbound == set->infinity || nodepq->lowerboundnode != NULL);
+
+   return nodepq->lowerboundnode;
+}
+
 /** gets the sum of lower bounds of all nodes in the queue */
 Real SCIPnodepqGetLowerboundSum(
-   NODEPQ*          nodepq              /**< pointer to a node priority queue */
+   NODEPQ*          nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -430,7 +502,7 @@ Real SCIPnodepqGetLowerboundSum(
 
 /** free all nodes from the queue that are cut off by the given upper bound */
 RETCODE SCIPnodepqBound(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
@@ -486,9 +558,53 @@ RETCODE SCIPnodepqBound(
    return SCIP_OKAY;
 }
 
+/** resorts the priority queue (necessary for changes in node selector) */
+RETCODE SCIPnodepqResort(
+   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   NODEPQ* newnodepq;
+   NODESEL* nodesel;
+   int i;
+
+   assert(nodepq != NULL);
+   assert(*nodepq != NULL);
+   assert((*nodepq)->len >= 0);
+   assert(set != NULL);
+
+   nodesel = set->nodesel;
+   assert(nodesel != NULL);
+   assert(nodesel->nodeselcomp != NULL);
+
+   /* create new node priority queue */
+   CHECK_OKAY( SCIPnodepqCreate(&newnodepq, set) );
+
+   /* resize the new node priority queue to be able to store all nodes */
+   CHECK_OKAY( nodepqResize(newnodepq, set, (*nodepq)->len) );
+
+   /* insert all nodes in the new node priority queue */
+   for( i = 0; i < (*nodepq)->len; ++i )
+   {
+      CHECK_OKAY( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
+   }
+
+   /* destroy the old node priority queue without freeing the nodes */
+   SCIPnodepqDestroy(nodepq);
+
+   /* use the new node priority queue */
+   *nodepq = newnodepq;
+
+   return SCIP_OKAY;
+}
 
 
-/* node selector methods */
+
+
+/*
+ * node selector methods 
+ */
 
 /** creates a node selector */
 RETCODE SCIPnodeselCreate(

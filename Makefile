@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.33 2003/07/03 12:47:37 bzfpfend Exp $
+# $Id: Makefile,v 1.34 2003/07/09 13:14:14 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -95,9 +95,7 @@ LIBOBJ		=	branch.o \
 			cons.o \
 			cons_integral.o \
 			cons_linear.o \
-			cons_setcover.o \
-			cons_setpack.o \
-			cons_setpart.o \
+			cons_setppc.o \
 			cutpool.o \
 			disp.o \
 			disp_default.o \
@@ -114,6 +112,7 @@ LIBOBJ		=	branch.o \
 			nodesel.o \
 			nodesel_bfs.o \
 			nodesel_dfs.o \
+			nodesel_plunging.o \
 			paramset.o \
 			presol.o \
 			presol_dualfix.o \

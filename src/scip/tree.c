@@ -1051,7 +1051,7 @@ RETCODE SCIPnodeAddBoundchg(
 }
 
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
-void SCIPnodeUpdateLowerBound(
+void SCIPnodeUpdateLowerbound(
    NODE*            node,               /**< node to update lower bound for */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
@@ -1089,7 +1089,7 @@ int SCIPnodeGetDepth(
 }
 
 /** gets the lower bound of the node */
-Real SCIPnodeGetLowerBound(
+Real SCIPnodeGetLowerbound(
    NODE*            node                /**< node */
    )
 {
@@ -2106,12 +2106,9 @@ RETCODE SCIPnodeActivate(
          SCIPdomchgdynAttach(tree->actnodedomchg, &node->domchg);
 
          /* remove node from the queue */
-         if( node != SCIPnodepqRemove(tree->leaves, set) )
-         {
-            errorMessage("Selected node is a leaf, but not the first on the queue");
-            return SCIP_INVALIDDATA;
-         }
+         CHECK_OKAY( SCIPnodepqRemove(tree->leaves, set, node) );
          break;
+
       default:
          errorMessage("Selected node is neither sibling, child, nor leaf");
          return SCIP_INVALIDDATA;
@@ -2271,6 +2268,18 @@ RETCODE SCIPtreeFree(
    freeMemoryArrayNull(&(*tree)->pathnlprows);
 
    freeMemory(tree);
+
+   return SCIP_OKAY;
+}
+
+/** resorts the leave priority queue (necessary for changes in node selector) */
+RETCODE SCIPtreeResortLeaves(
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   CHECK_OKAY( SCIPnodepqResort(&tree->leaves, memhdr, set) );
 
    return SCIP_OKAY;
 }
@@ -2694,15 +2703,15 @@ Real SCIPtreeGetLowerbound(
 
    assert(tree != NULL);
    assert(set != NULL);
-   assert(set->nodesel != NULL);
 
    /* get the lower bound from the queue */
    lowerbound = SCIPnodepqGetLowerbound(tree->leaves, set);
 
-   /* compare lower bound with active node */
-   if( tree->actnode != NULL )
+   /* compare lower bound with children */
+   for( i = 0; i < tree->nchildren; ++i )
    {
-      lowerbound = MIN(lowerbound, tree->actnode->lowerbound);
+      assert(tree->children[i] != NULL);
+      lowerbound = MIN(lowerbound, tree->children[i]->lowerbound); 
    }
 
    /* compare lower bound with siblings */
@@ -2712,14 +2721,55 @@ Real SCIPtreeGetLowerbound(
       lowerbound = MIN(lowerbound, tree->siblings[i]->lowerbound); 
    }
 
+   /* compare lower bound with active node */
+   if( tree->actnode != NULL )
+   {
+      lowerbound = MIN(lowerbound, tree->actnode->lowerbound);
+   }
+
+   return lowerbound;
+}
+
+/** gets the node with minimal lower bound of all nodes in the tree (child, sibling, or leaf) */
+NODE* SCIPtreeGetLowerboundNode(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   NODE* lowerboundnode;
+   Real lowerbound;
+   int i;
+
+   assert(tree != NULL);
+   assert(set != NULL);
+
+   /* get the lower bound from the queue */
+   lowerboundnode = SCIPnodepqGetLowerboundNode(tree->leaves, set);
+   lowerbound = lowerboundnode != NULL ? lowerboundnode->lowerbound : set->infinity;
+
    /* compare lower bound with children */
    for( i = 0; i < tree->nchildren; ++i )
    {
       assert(tree->children[i] != NULL);
-      lowerbound = MIN(lowerbound, tree->children[i]->lowerbound); 
+      if( tree->children[i]->lowerbound < lowerbound )
+      {
+         lowerboundnode = tree->children[i]; 
+         lowerbound = lowerboundnode->lowerbound; 
+      }
    }
 
-   return lowerbound;
+   /* compare lower bound with siblings */
+   for( i = 0; i < tree->nsiblings; ++i )
+   {
+      assert(tree->siblings[i] != NULL);
+      if( tree->siblings[i]->lowerbound < lowerbound )
+      {
+         lowerboundnode = tree->siblings[i]; 
+         lowerbound = lowerboundnode->lowerbound; 
+      }
+   }
+
+   return lowerboundnode;
 }
 
 /** gets the lower bound of the active node */

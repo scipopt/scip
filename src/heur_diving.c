@@ -150,17 +150,17 @@ DECL_HEUREXEC(SCIPheurExecDiving)
    /* calculate the objective search bound */
    if( SCIPgetNSolsFound(scip) == 0 )
    {
-      searchubbound = SCIPgetTransLowerBound(scip)
-         + heurdata->maxdiveubquotnosol * (SCIPgetTransUpperBound(scip) - SCIPgetTransLowerBound(scip));
-      searchavgbound = SCIPgetTransLowerBound(scip)
-         + heurdata->maxdiveavgquotnosol * (SCIPgetAvgTransLowerBound(scip) - SCIPgetTransLowerBound(scip));
+      searchubbound = SCIPgetTransLowerbound(scip)
+         + heurdata->maxdiveubquotnosol * (SCIPgetTransUpperbound(scip) - SCIPgetTransLowerbound(scip));
+      searchavgbound = SCIPgetTransLowerbound(scip)
+         + heurdata->maxdiveavgquotnosol * (SCIPgetAvgTransLowerbound(scip) - SCIPgetTransLowerbound(scip));
    }
    else
    {
-      searchubbound = SCIPgetTransLowerBound(scip)
-         + heurdata->maxdiveubquot * (SCIPgetTransUpperBound(scip) - SCIPgetTransLowerBound(scip));
-      searchavgbound = SCIPgetTransLowerBound(scip)
-         + heurdata->maxdiveavgquot * (SCIPgetAvgTransLowerBound(scip) - SCIPgetTransLowerBound(scip));
+      searchubbound = SCIPgetTransLowerbound(scip)
+         + heurdata->maxdiveubquot * (SCIPgetTransUpperbound(scip) - SCIPgetTransLowerbound(scip));
+      searchavgbound = SCIPgetTransLowerbound(scip)
+         + heurdata->maxdiveavgquot * (SCIPgetAvgTransLowerbound(scip) - SCIPgetTransLowerbound(scip));
    }
    searchbound = MIN(searchubbound, searchavgbound);
 

@@ -146,10 +146,16 @@ RETCODE SCIPbranchcandUpdateVar(
 
 /* branching rules */
 
+/** compares two branching rules w. r. to their priority */
+extern
+DECL_SORTPTRCOMP(SCIPbranchruleComp);
+
 /** creates a branching rule */
 extern
 RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
@@ -208,6 +214,14 @@ const char* SCIPbranchruleGetName(
 extern
 int SCIPbranchruleGetPriority(
    BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets priority of branching rule */
+extern
+void SCIPbranchruleSetPriority(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the branching rule */
    );
 
 /** gets user data of branching rule */

@@ -29,7 +29,7 @@
 enum Result
 {
    SCIP_DIDNOTRUN   =   0,            /**< the method was not executed */
-   SCIP_DIDNOTFIND  =   1,            /**< the method was executed, but did not have success to find anything */
+   SCIP_DIDNOTFIND  =   1,            /**< the method was executed, but failed finding anything */
    SCIP_FEASIBLE    =   2,            /**< no infeasibility could be found */
    SCIP_INFEASIBLE  =   3,            /**< an infeasibility was detected */
    SCIP_UNBOUNDED   =   4,            /**< an unboundness was detected */

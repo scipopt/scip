@@ -29,7 +29,7 @@
 
 
 #define NODESEL_NAME "dfs"
-#define NODESEL_DESC "Depth First Search"
+#define NODESEL_DESC "depth first search"
 
 
 
@@ -72,11 +72,15 @@ DECL_NODESELCOMP(nodeselCompDfs)
       Real lowerbound1;
       Real lowerbound2;
 
-      lowerbound1 = SCIPnodeGetLowerBound(node1);
-      lowerbound2 = SCIPnodeGetLowerBound(node2);
+      lowerbound1 = SCIPnodeGetLowerbound(node1);
+      lowerbound2 = SCIPnodeGetLowerbound(node2);
       if( lowerbound1 < lowerbound2 )
          return -1;
       else if( lowerbound1 > lowerbound2 )
+         return +1;
+      else if( node1 < node2 )  /* everything is equal -> compare the pointers themselves */
+         return -1;
+      else if( node1 > node2 )
          return +1;
       else
          return 0;

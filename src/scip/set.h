@@ -92,9 +92,12 @@ struct Set
    int              nnodesels;          /**< number of node selectors */
    int              nodeselssize;       /**< size of nodesels array */
    NODESEL*         nodesel;            /**< active node selector */
+   NODESEL*         stdnodesel;         /**< standard node selector, used if used memory is clearly below limit */
+   NODESEL*         memsavenodesel;     /**< node selector used to save memory */
    BRANCHRULE**     branchrules;        /**< branching rules */
    int              nbranchrules;       /**< number of branching rules */
    int              branchrulessize;    /**< size of branchrules array */
+   Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    DISP**           disps;              /**< display columns */
    int              ndisps;             /**< number of display columns */
    int              dispssize;          /**< size of disps array */
@@ -130,6 +133,8 @@ struct Set
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
    Real             timelimit;          /**< maximal time in seconds to run */
+   Longint          memlimit;           /**< maximal memory usage (-1: no limit) */
+   Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
@@ -473,6 +478,12 @@ extern
 BRANCHRULE* SCIPsetFindBranchrule(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of event handler */
+   );
+
+/** sorts branching rules by priorities */
+extern
+void SCIPsetSortBranchrules(
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts display column in display column list */

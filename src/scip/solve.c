@@ -40,7 +40,8 @@ Bool SCIPsolveIsStopped(
 {
    return (SCIPinterrupted()
       || (set->nodelimit >= 0 && stat->nnodes >= set->nodelimit)
-      || SCIPclockGetTime(stat->solvingtime) >= set->timelimit);
+      || SCIPclockGetTime(stat->solvingtime) >= set->timelimit
+      || (set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit));
 }
 
 /** outputs the reason for termination */
@@ -59,6 +60,8 @@ void SCIPsolvePrintStopReason(
       fprintf(file, "node limit reached");
    else if( SCIPclockGetTime(stat->solvingtime) >= set->timelimit )
       fprintf(file, "time limit reached");
+   else if( set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit )
+      fprintf(file, "memory limit reached");
 }
 
 /** constructs the LP of the root node */
@@ -372,58 +375,6 @@ RETCODE solveNodeLP(
    return SCIP_OKAY;
 }
 
-/** branches on infeasible pseudo solution */
-static
-RETCODE pseudoBranch(
-   MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   RESULT*          result              /**< pointer to store the result of the callback method */
-   )
-{
-   VAR** pseudocands;
-   int npseudocands;
-   
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* get pseudo branching candidates (the non-fixed binary/integer/implicit integer variables) */
-   CHECK_OKAY( SCIPbranchcandGetPseudoCands(branchcand, set, prob, &pseudocands, &npseudocands) );
-
-   if( npseudocands == 0 )
-   {
-      /* all integer variables in the infeasible pseudo solution are fixed,
-       * - if no continous variables exist and all variables are known, the infeasible pseudo solution is completely
-       *   fixed, and the node is infeasible
-       * - if at least one continous variable exist or we do not know all variables due to external pricers, we cannot
-       *   resolve the infeasibility by branching -> solve LP (and maybe price in additional variables)
-       */
-      if( prob->ncont == 0 && set->npricers == 0 )
-         *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
-   /* call external pseudo branching methods */
-   todoMessage("external pseudo branching");
-   
-   /* if no pseudo branching method succeeded in choosing a branching, just branch on the first non-fixed variable */
-   if( *result == SCIP_DIDNOTRUN )
-   {
-      CHECK_OKAY( SCIPtreeBranchVar(tree, memhdr, set, stat, lp, branchcand, eventqueue, pseudocands[0]) );
-      *result = SCIP_BRANCHED;
-   }
-
-   assert(*result != SCIP_DIDNOTRUN);
-
-   return SCIP_OKAY;
-}
-
 /** enforces constraints by branching, separation, or domain reduction */
 static
 RETCODE enforceConstraints(
@@ -604,7 +555,8 @@ RETCODE enforceConstraints(
 
       assert(!(*solveagain));
    
-      CHECK_OKAY( pseudoBranch(memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, &result) );
+      /* branch on pseudo solution */
+      CHECK_OKAY( SCIPbranchPseudo(set->scip, &result) );
       assert(set->buffer->firstfree == 0);
 
       switch( result )
@@ -623,23 +575,30 @@ RETCODE enforceConstraints(
          resolved = TRUE;
          break;
       case SCIP_DIDNOTRUN:
-         /* we didn't resolve the infeasibility, but the node may be feasible due to contious variables or variables
-          * that are unknown at the moment (this can only happen, if the LP was not solved)
-          *  -> we have no other possibility than solving the LP (and maybe price in new variables)
+         /* all integer variables in the infeasible pseudo solution are fixed,
+          * - if no continous variables exist and all variables are known, the infeasible pseudo solution is completely
+          *   fixed, and the node is infeasible
+          * - if at least one continous variable exist or we do not know all variables due to external pricers, we cannot
+          *   resolve the infeasibility by branching -> solve LP (and maybe price in additional variables)
           */
          assert(tree->nchildren == 0);
-         assert(prob->ncont > 0 || set->npricers > 0);
-         assert(!tree->actnodehaslp);
-               
-         /* solve the LP in the next loop */
-         tree->actnodehaslp = TRUE;
-         *solveagain = TRUE;
+
+         if( prob->ncont == 0 && set->npricers == 0 )
+            resolved = TRUE;
+         else
+         {
+            assert(!tree->actnodehaslp);
+            
+            /* solve the LP in the next loop */
+            tree->actnodehaslp = TRUE;
+            *solveagain = TRUE;
+         }
          break;
 
       default:
          {
             char s[MAXSTRLEN];
-            sprintf(s, "invalid result code <%d> from pseudoBranch()", result);
+            sprintf(s, "invalid result code <%d> from SCIPbranchPseudo()", result);
             errorMessage(s);
             abort();
          }
@@ -653,7 +612,7 @@ RETCODE enforceConstraints(
 /** main solving loop */
 RETCODE SCIPsolveCIP(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -669,6 +628,7 @@ RETCODE SCIPsolveCIP(
 {
    CONSHDLR** conshdlrs_sepa;
    CONSHDLR** conshdlrs_enfo;
+   NODESEL* nodesel;
    NODE* actnode;
    EVENT event;
    RESULT result;
@@ -705,6 +665,27 @@ RETCODE SCIPsolveCIP(
    {
       assert(set->buffer->firstfree == 0);
 
+      /* update the memory saving flag, switch algorithms respectively */
+      SCIPstatUpdateMemsaveMode(stat, set);
+
+      /* check, if we have to switch the node selector due to memory usage */
+      nodesel = stat->memsavemode ? set->memsavenodesel : set->stdnodesel;
+      assert(nodesel != NULL);
+      if( nodesel != set->nodesel )
+      {
+         set->nodesel = nodesel;
+         CHECK_OKAY( SCIPtreeResortLeaves(tree, memhdr, set) );
+
+         if( stat->nnodes > 0 )
+         {
+            char s[MAXSTRLEN];
+            
+            /* activate new node selector and reorder the leaves in the priority queue of the tree */
+            sprintf(s, "(node %lld) switching to node selector <%s>", stat->nnodes, SCIPnodeselGetName(nodesel));
+            infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+         }
+      }
+
       /* select next node to process */
       CHECK_OKAY( SCIPnodeselSelect(set->nodesel, set, &actnode) );
       assert(set->buffer->firstfree == 0);
@@ -731,6 +712,9 @@ RETCODE SCIPsolveCIP(
          }
       }
       
+      /* start node activation timer */
+      SCIPclockStart(stat->nodeactivationtime, set);
+
       /* delay events in node activation */
       CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
       assert(set->buffer->firstfree == 0);
@@ -748,6 +732,9 @@ RETCODE SCIPsolveCIP(
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
       CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
       CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
+      /* stop node activation timer */
+      SCIPclockStop(stat->nodeactivationtime, set);
 
       /* if no more node was selected, we finished optimisation */
       if( actnode == NULL )

@@ -63,7 +63,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    debugMessage("Execlp method of fullstrong branching\n");
 
    /* get current lower objective bound */
-   lowerbound = SCIPgetActTransLowerBound(scip);
+   lowerbound = SCIPgetActTransLowerbound(scip);
 
    /* check, if all variables are in LP, and thus the strong branching results give lower bounds */
    allvarsinlp = SCIPallVarsInLP(scip);
@@ -80,8 +80,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       assert(lpcands[i] != NULL);
 
       CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[i], INT_MAX, &down, &up) );
-      assert(SCIPisGE(scip, down, lowerbound));
-      assert(SCIPisGE(scip, up, lowerbound));
+      down = MAX(down, lowerbound);
+      up = MAX(up, lowerbound);
 
       if( allvarsinlp )
       {
@@ -90,7 +90,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          Bool upinf;
 
          /* because all variables are in LP, the strong branching bounds are feasible lower bounds */
-         upperbound = SCIPgetTransUpperBound(scip);
+         upperbound = SCIPgetTransUpperbound(scip);
          downinf = SCIPisGE(scip, down, upperbound);
          upinf = SCIPisGE(scip, up, upperbound);
 
@@ -143,7 +143,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
       if( allvarsinlp )
       {
-         CHECK_OKAY( SCIPupdateNodeLowerBound(scip, node, bestdown) );
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
       }
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
@@ -153,7 +153,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
       if( allvarsinlp )
       {
-         CHECK_OKAY( SCIPupdateNodeLowerBound(scip, node, bestup) );
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
       }
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
 

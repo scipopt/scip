@@ -967,6 +967,44 @@ NODESEL* SCIPfindNodesel(
    return SCIPsetFindNodesel(scip->set, name);
 }
 
+/** returns the currently used node selector */
+NODESEL* SCIPgetNodesel(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNodesel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nodesel;
+}
+
+/** use the given node selector as standard node selector */
+RETCODE SCIPsetStdNodesel(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODESEL*         nodesel             /**< node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPsetStdNodesel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   scip->set->stdnodesel = nodesel;
+
+   return SCIP_OKAY;
+}
+
+/** use the given node selector as memory saving node selector */
+RETCODE SCIPsetMemSaveNodesel(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODESEL*         nodesel             /**< node selector */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetMemSaveNodesel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   scip->set->memsavenodesel = nodesel;
+
+   return SCIP_OKAY;
+}
+
 /** creates a branching rule and includes it in SCIP */
 RETCODE SCIPincludeBranchrule(
    SCIP*            scip,               /**< SCIP data structure */
@@ -985,7 +1023,7 @@ RETCODE SCIPincludeBranchrule(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, name, desc, priority,
+   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->set, scip->mem->setmem, name, desc, priority,
                   branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
    CHECK_OKAY( SCIPsetIncludeBranchrule(scip->set, branchrule) );
    
@@ -1003,6 +1041,20 @@ BRANCHRULE* SCIPfindBranchrule(
    CHECK_ABORT( checkStage(scip, "SCIPfindBranchrule", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsetFindBranchrule(scip->set, name);
+}
+
+/** sets the priority of a branching rule */
+RETCODE SCIPsetBranchrulePriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   int              priority            /**< new priority of the branching rule */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetBranchrulePriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPbranchruleSetPriority(branchrule, scip->set, priority);
+
+   return SCIP_OKAY;
 }
 
 /** creates a display column and includes it in SCIP */
@@ -1624,11 +1676,9 @@ Bool SCIPallVarsInProb(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPallVarsInProb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPallVarsInProb", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   todoMessage("check, if pricing algorithms are included in SCIP");
-
-   return TRUE;
+   return (scip->set->npricers == 0);
 }
 
 /** adds global constraint to the problem */
@@ -1930,18 +1980,18 @@ RETCODE presolve(
 
       /* print presolving statistics */
       sprintf(s, "presolving after %d rounds:", nrounds);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL, s);
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
       sprintf(s, " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients",
          nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL, s);
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
    }
    
    /* print presolving statistics */
    sprintf(s, "presolving (%d rounds):", nrounds);
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
    sprintf(s, " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients",
       nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
 
    return SCIP_OKAY;
 }
@@ -2041,7 +2091,7 @@ RETCODE SCIPpresolve(
 
    /* display timing statistics */
    sprintf(s, "Presolving Time: %.2f", SCIPclockGetTime(scip->stat->presolvingtime));
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL, s);
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
 
    return SCIP_OKAY;
 }
@@ -2056,6 +2106,13 @@ RETCODE SCIPsolve(
 
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
+   /* check, if a node selector exists */
+   if( scip->set->nodesel == NULL )
+   {
+      errorMessage("no node selector available");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   
    /* capture the CTRL-C interrupt */
    SCIPinterruptCapture(scip->interrupt, scip->set);
 
@@ -2944,9 +3001,7 @@ Bool SCIPallVarsInLP(
 {
    CHECK_ABORT( checkStage(scip, "SCIPallVarsInLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   todoMessage("check, if pricing algorithms are included in SCIP");
-
-   return (scip->lp->ncols == scip->transprob->nvars);
+   return (scip->lp->ncols == scip->transprob->nvars && scip->set->npricers == 0);
 }
 
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
@@ -3715,7 +3770,7 @@ RETCODE SCIPbranchVar(
    return SCIP_OKAY;
 }
 
-/** calls branching rules to branch on an LP solution */
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
 RETCODE SCIPbranchLP(
    SCIP*            scip,               /**< SCIP data structure */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
@@ -3729,15 +3784,15 @@ RETCODE SCIPbranchLP(
 
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
+   *result = SCIP_DIDNOTRUN;
+
    /* get branching candidates */
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
    if( nlpcands == 0 )
-   {
-      *result = SCIP_FEASIBLE;
       return SCIP_OKAY;
-   }
 
-   *result = SCIP_DIDNOTRUN;
+   /* sort the branching rules by priority */
+   SCIPsetSortBranchrules(scip->set);
 
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < scip->set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
@@ -3749,6 +3804,46 @@ RETCODE SCIPbranchLP(
    {
       /* no branching method succeeded in choosing a branching: just branch on the first fractional variable */
       CHECK_OKAY( SCIPbranchVar(scip, lpcands[0]) );
+      *result = SCIP_BRANCHED;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
+RETCODE SCIPbranchPseudo(
+   SCIP*            scip,               /**< SCIP data structure */
+   RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   )
+{
+   VAR** pseudocands;
+   int npseudocands;
+   int i;
+
+   assert(result != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPbranchPseudo", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get branching candidates */
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands) );
+   if( npseudocands == 0 )
+      return SCIP_OKAY;
+
+   /* sort the branching rules by priority */
+   SCIPsetSortBranchrules(scip->set);
+
+   /* try all branching rules until one succeeded to branch */
+   for( i = 0; i < scip->set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleExecPseudoSol(scip->set->branchrules[i], scip->set, result) );
+   }
+
+   if( *result == SCIP_DIDNOTRUN )
+   {
+      /* no branching method succeeded in choosing a branching: just branch on the first unfixed variable */
+      CHECK_OKAY( SCIPbranchVar(scip, pseudocands[0]) );
       *result = SCIP_BRANCHED;
    }
 
@@ -4384,6 +4479,33 @@ int SCIPgetNSiblings(
    return scip->tree->nsiblings;
 }
 
+/** gets leaves of the tree along with the number of leaves */
+RETCODE SCIPgetLeaves(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE***          leaves,             /**< pointer to store leaves array, or NULL if not needed */
+   int*             nleaves             /**< pointer to store number of leaves, or NULL if not needed */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLeaves", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( leaves != NULL )
+      *leaves = SCIPnodepqNodes(scip->tree->leaves);
+   if( nleaves != NULL )
+      *nleaves = SCIPnodepqLen(scip->tree->leaves);
+   
+   return SCIP_OKAY;
+}
+
+/** gets number of leaves in the tree */
+int SCIPgetNLeaves(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNLeaves", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPnodepqLen(scip->tree->leaves);
+}
+
 /** gets the best child of the active node */
 NODE* SCIPgetBestChild(
    SCIP*            scip                /**< SCIP data structure */
@@ -4424,16 +4546,26 @@ NODE* SCIPgetBestNode(
    return SCIPtreeGetBestNode(scip->tree, scip->set);
 }
 
+/** gets the node with smallest lower bound from the tree (child, sibling, or leaf) */
+NODE* SCIPgetLowerboundNode(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLowerboundNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPtreeGetLowerboundNode(scip->tree, scip->set);
+}
+
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
-RETCODE SCIPupdateNodeLowerBound(
+RETCODE SCIPupdateNodeLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to update lower bound for */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPupdateNodeLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPupdateNodeLowerbound", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerBound(node, newbound);
+   SCIPnodeUpdateLowerbound(node, newbound);
 
    return SCIP_OKAY;
 }
@@ -4604,11 +4736,11 @@ Real SCIPgetActDualBound(
 }
 
 /** gets lower (dual) bound of active node in transformed problem */
-Real SCIPgetActTransLowerBound(
+Real SCIPgetActTransLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetActTransLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetActTransLowerbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    return SCIPtreeGetActLowerbound(scip->tree);
 }
@@ -4625,11 +4757,11 @@ Real SCIPgetAvgDualBound(
 }
 
 /** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
-Real SCIPgetAvgTransLowerBound(
+Real SCIPgetAvgTransLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetAvgTransLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetAvgTransLowerbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    return SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->upperbound);
 }
@@ -4653,11 +4785,11 @@ Real SCIPgetDualBound(
 }
 
 /** gets global lower (dual) bound in transformed problem */
-Real SCIPgetTransLowerBound(
+Real SCIPgetTransLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetTransLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetTransLowerbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    return SCIPtreeGetLowerbound(scip->tree, scip->set);
 }
@@ -4674,11 +4806,11 @@ Real SCIPgetPrimalBound(
 }
 
 /** gets global upper (primal) bound in transformed problem */
-Real SCIPgetTransUpperBound(
+Real SCIPgetTransUpperbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetTransUpperBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetTransUpperbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    return scip->primal->upperbound;
 }
@@ -4693,7 +4825,7 @@ Real SCIPgetGap(
 
    CHECK_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, SCIPgetTransLowerBound(scip)) )
+   if( SCIPsetIsInfinity(scip->set, SCIPgetTransLowerbound(scip)) )
       return 0.0;
 
    primalbound = SCIPgetPrimalBound(scip);
@@ -4714,8 +4846,8 @@ Real SCIPgetTransGap(
 
    CHECK_ABORT( checkStage(scip, "SCIPgetTransGap", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   upperbound = SCIPgetTransUpperBound(scip);
-   lowerbound = SCIPgetTransLowerBound(scip);
+   upperbound = SCIPgetTransUpperbound(scip);
+   lowerbound = SCIPgetTransLowerbound(scip);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
       return 0.0;
@@ -5037,6 +5169,7 @@ void printTreeStatistics(
    fprintf(file, "B&B Tree           :\n");
    fprintf(file, "  nodes            : %12lld\n", scip->stat->nnodes);
    fprintf(file, "  max depth        : %12d\n", scip->stat->maxdepth);
+   fprintf(file, "  switching time   : %12.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 
 static
@@ -5130,7 +5263,7 @@ RETCODE SCIPprintStatus(
       {
          fprintf(file, "solving was interrupted [");
          SCIPsolvePrintStopReason(scip->set, scip->stat, file);
-         fprintf(file, "]\n");
+         fprintf(file, "]");
       }
       else
          fprintf(file, "solving process is running");
@@ -5174,6 +5307,7 @@ RETCODE SCIPprintStatistics(
    case SCIP_STAGE_SOLVED:
       fprintf(file, "SCIP Status        : ");
       CHECK_OKAY( SCIPprintStatus(scip, file) );
+      fprintf(file, "\n");
       fprintf(file, "Solving Time       : %12.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);

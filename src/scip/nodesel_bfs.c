@@ -29,17 +29,17 @@
 
 
 #define NODESEL_NAME "bfs"
-#define NODESEL_DESC "Best First Search"
+#define NODESEL_DESC "best first search"
 
 
 /*
  * Default parameter settings
  */
 
-#define SCIP_DEFAULT_MAXPLUNGEAVGQUOT    1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                              *   where plunging is performed */
-#define SCIP_DEFAULT_MAXPLUNGEDEPTH       25 /**< maximal plunging depth, before new best node is forced to be selected */
-#define SCIP_DEFAULT_MINPLUNGEDEPTH       10 /**< minimal plunging depth, before new best node may be selected */
+#define MINPLUNGEDEPTH               10 /**< minimal plunging depth, before new best node may be selected */
+#define MAXPLUNGEDEPTH               25 /**< maximal plunging depth, before new best node is forced to be selected */
+#define MAXPLUNGEQUOT               1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                         *   where plunging is performed */
 
 
 
@@ -97,9 +97,9 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    assert(nodeseldata != NULL);
 
    /* check, if we want to plunge once more */
-   actlowerbound = SCIPgetActTransLowerBound(scip);
-   avglowerbound = SCIPgetAvgTransLowerBound(scip);
-   lowerbound = SCIPgetTransLowerBound(scip);
+   actlowerbound = SCIPgetActTransLowerbound(scip);
+   avglowerbound = SCIPgetAvgTransLowerbound(scip);
+   lowerbound = SCIPgetTransLowerbound(scip);
    plungedepth = SCIPgetPlungeDepth(scip);
    if( plungedepth < nodeseldata->minplungedepth
       || (plungedepth < nodeseldata->maxplungedepth
@@ -136,11 +136,11 @@ DECL_NODESELCOMP(nodeselCompBfs)
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
-   lowerbound1 = SCIPnodeGetLowerBound(node1);
-   lowerbound2 = SCIPnodeGetLowerBound(node2);
-   if( SCIPisLT(scip, lowerbound1, lowerbound2) )
+   lowerbound1 = SCIPnodeGetLowerbound(node1);
+   lowerbound2 = SCIPnodeGetLowerbound(node2);
+   if( lowerbound1 < lowerbound2 )
       return -1;
-   else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
+   else if( lowerbound1 > lowerbound2 )
       return +1;
    else
    {
@@ -168,6 +168,10 @@ DECL_NODESELCOMP(nodeselCompBfs)
             return -1;
          else if( depth1 < depth2 )
             return +1;
+         else if( node1 < node2 )  /* everything is equal -> compare the pointers themselves */
+            return -1;
+         else if( node1 > node2 )
+            return +1;
          else
             return 0;
       }
@@ -191,15 +195,29 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* allocate and initialise node selector data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
-   nodeseldata->maxplungequot = SCIP_DEFAULT_MAXPLUNGEAVGQUOT;
-   nodeseldata->maxplungedepth = SCIP_DEFAULT_MAXPLUNGEDEPTH;
-   nodeseldata->minplungedepth = SCIP_DEFAULT_MINPLUNGEDEPTH;
+   nodeseldata->maxplungequot = MAXPLUNGEQUOT;
+   nodeseldata->maxplungedepth = MAXPLUNGEDEPTH;
+   nodeseldata->minplungedepth = MINPLUNGEDEPTH;
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
                   nodeselFreeBfs, NULL, NULL, nodeselSelectBfs, nodeselCompBfs,
                   nodeseldata, TRUE) );
 
+   /* add node selector parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "nodesel/bfs/minplungedepth",
+                  "minimal plunging depth, before new best node may be selected",
+                  &nodeseldata->minplungedepth, MINPLUNGEDEPTH, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "nodesel/bfs/maxplungedepth",
+                  "maximal plunging depth, before new best node is forced to be selected",
+                  &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "nodesel/bfs/maxplungequot",
+                  "maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed",
+                  &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, REAL_MAX, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 

@@ -59,7 +59,7 @@ void SCIPsolvePrintStopReason(
 extern
 RETCODE SCIPsolveCIP(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */

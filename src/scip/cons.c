@@ -36,7 +36,7 @@ struct ConsHdlr
    char*            desc;               /**< description of constraint handler */
    int              sepapriority;       /**< priority of the constraint handler for separation */
    int              enfopriority;       /**< priority of the constraint handler for constraint enforcing */
-   int              checkpriority;       /**< priority of the constraint handler for checking infeasibility */
+   int              checkpriority;      /**< priority of the constraint handler for checking infeasibility */
    int              sepafreq;           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
    DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
@@ -994,17 +994,20 @@ RETCODE conshdlrAddUpdateCons(
    return SCIP_OKAY;
 }
 
-DECL_SORTPTRCOMP(SCIPconshdlrCompSepa)  /**< compares two constraint handlers w. r. to their separation priority */
+/** compares two constraint handlers w. r. to their separation priority */
+DECL_SORTPTRCOMP(SCIPconshdlrCompSepa)
 {
    return ((CONSHDLR*)elem2)->sepapriority - ((CONSHDLR*)elem1)->sepapriority;
 }
 
-DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo)  /**< compares two constraint handlers w. r. to their enforcing priority */
+/** compares two constraint handlers w. r. to their enforcing priority */
+DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo)
 {
    return ((CONSHDLR*)elem2)->enfopriority - ((CONSHDLR*)elem1)->enfopriority;
 }
 
-DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)  /**< compares two constraint handlers w. r. to their feasibility check priority */
+/** compares two constraint handlers w. r. to their feasibility check priority */
+DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)
 {
    return ((CONSHDLR*)elem2)->checkpriority - ((CONSHDLR*)elem1)->checkpriority;
 }

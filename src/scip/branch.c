@@ -351,9 +351,32 @@ RETCODE SCIPbranchcandUpdateVar(
  * branching rule methods
  */
 
+/** compares two branching rules w. r. to their priority */
+DECL_SORTPTRCOMP(SCIPbranchruleComp)
+{
+   return ((BRANCHRULE*)elem2)->priority - ((BRANCHRULE*)elem1)->priority;
+}
+
+/** method to call, when the priority of a branching rule was changed */
+static
+DECL_PARAMCHGD(paramChgdBranchrulePriority)
+{
+   PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetBranchrulePriority() to mark the branchrules unsorted */
+   CHECK_OKAY( SCIPsetBranchrulePriority(scip, (BRANCHRULE*)paramdata, SCIPparamGetInt(param)) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a branching rule */
 RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
@@ -365,6 +388,8 @@ RETCODE SCIPbranchruleCreate(
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
+   char paramname[MAXSTRLEN];
+
    assert(branchrule != NULL);
    assert(name != NULL);
    assert(desc != NULL);
@@ -380,6 +405,13 @@ RETCODE SCIPbranchruleCreate(
    (*branchrule)->branchexecps = branchexecps;
    (*branchrule)->branchruledata = branchruledata;
    (*branchrule)->initialized = FALSE;
+
+   /* add parameters */
+   sprintf(paramname, "branchrule/%s/priority", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
+                  paramname, "priority of branching rule",
+                  &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
+                  paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) );
 
    return SCIP_OKAY;
 }
@@ -540,6 +572,20 @@ int SCIPbranchruleGetPriority(
    assert(branchrule != NULL);
 
    return branchrule->priority;
+}
+
+/** gets priority of branching rule */
+void SCIPbranchruleSetPriority(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the branching rule */
+   )
+{
+   assert(branchrule != NULL);
+   assert(set != NULL);
+   
+   branchrule->priority = priority;
+   set->branchrulessorted = FALSE;
 }
 
 /** gets user data of branching rule */

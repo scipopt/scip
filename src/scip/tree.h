@@ -258,7 +258,7 @@ RETCODE SCIPnodeAddBoundchg(
 
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
 extern
-void SCIPnodeUpdateLowerBound(
+void SCIPnodeUpdateLowerbound(
    NODE*            node,               /**< node to update lower bound for */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
@@ -283,7 +283,7 @@ int SCIPnodeGetDepth(
 
 /** gets the lower bound of the node */
 extern
-Real SCIPnodeGetLowerBound(
+Real SCIPnodeGetLowerbound(
    NODE*            node                /**< node */
    );
 
@@ -295,7 +295,7 @@ Real SCIPnodeGetLowerBound(
 
 #define SCIPnodeGetType(node)           ( (node)->nodetype )
 #define SCIPnodeGetDepth(node)          ( (node)->depth )
-#define SCIPnodeGetLowerBound(node)     ( (node)->lowerbound )
+#define SCIPnodeGetLowerbound(node)     ( (node)->lowerbound )
 
 
 #endif
@@ -321,6 +321,14 @@ RETCODE SCIPtreeFree(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
+   );
+
+/** resorts the leave priority queue (necessary for changes in node selector) */
+extern
+RETCODE SCIPtreeResortLeaves(
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** cuts off nodes with lower bound not better than given upper bound */
@@ -444,6 +452,13 @@ NODE* SCIPtreeGetBestNode(
 /** gets the minimal lower bound of all nodes in the tree */
 extern
 Real SCIPtreeGetLowerbound(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets the node with minimal lower bound of all nodes in the tree (child, sibling, or leaf) */
+extern
+NODE* SCIPtreeGetLowerboundNode(
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set                 /**< global SCIP settings */
    );

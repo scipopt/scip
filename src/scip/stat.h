@@ -46,6 +46,7 @@ struct Stat
    CLOCK*           lppricingtime;      /**< LP pricing time */
    CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
+   CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    Longint          nlpiterations;      /**< number of simplex iterations (primal + dual) */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
@@ -71,6 +72,7 @@ struct Stat
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */
    int              plungedepth;        /**< actual plunging depth (successive times, a child was selected as next node) */
+   Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
 };
 
 
@@ -97,6 +99,13 @@ void SCIPstatMark(
 extern
 void SCIPstatReset(
    STAT*            stat                /**< problem statistics data */
+   );
+
+/** depending on the current memory usage, switches mode flag to standard or memory saving mode */
+extern
+void SCIPstatUpdateMemsaveMode(
+   STAT*            stat,               /**< problem statistics data */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 #endif

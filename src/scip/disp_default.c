@@ -207,7 +207,7 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
    sol = SCIPgetBestSol(scip);
    if( sol != NULL
       && SCIPsolGetNodenum(sol) == SCIPgetNodenum(scip)
-      && SCIPisEQ(scip, SCIPsolGetObj(sol), SCIPgetTransUpperBound(scip)) )
+      && SCIPisEQ(scip, SCIPsolGetObj(sol), SCIPgetTransUpperbound(scip)) )
    {
       fprintf(file, "%c", SCIPheurGetDispchar(SCIPsolGetHeur(sol)));
    }

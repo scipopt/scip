@@ -47,6 +47,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lppricingtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
@@ -73,6 +74,7 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->lppricingtime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
+   SCIPclockFree(&(*stat)->nodeactivationtime);
 
    freeMemory(stat);
 
@@ -116,6 +118,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->lppricingtime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
+   SCIPclockReset(stat->nodeactivationtime);
 
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
@@ -139,8 +142,45 @@ void SCIPstatReset(
    stat->ndisplines = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
+   stat->memsavemode = FALSE;
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+}
+
+/** depending on the current memory usage, switches mode flag to standard or memory saving mode */
+void SCIPstatUpdateMemsaveMode(
+   STAT*            stat,               /**< problem statistics data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(stat != NULL);
+   assert(set != NULL);
+
+   if( set->memlimit >= 0 && SCIPsetIsLT(set, set->memsavefac, 1.0) )
+   {
+      Longint memused;
+      char s[MAXSTRLEN];
+
+      memused = SCIPgetMemUsed(set->scip);
+      if( !stat->memsavemode && memused >= set->memsavefac * set->memlimit )
+      {
+         /* switch to memory saving mode */
+         sprintf(s, "(node %lld) switching to memory saving mode (mem: %lld/%lld)", 
+            stat->nnodes, memused, set->memlimit);
+         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+         stat->memsavemode = TRUE;
+      }
+      else if( stat->memsavemode && memused < 0.5 * set->memsavefac * set->memlimit )
+      {
+         /* switch to standard mode */
+         sprintf(s, "(node %lld) switching to standard mode (mem: %lld/%lld)", 
+            stat->nnodes, memused, set->memlimit);
+         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+         stat->memsavemode = FALSE;
+      }
+   }
+   else
+      stat->memsavemode = FALSE;
 }

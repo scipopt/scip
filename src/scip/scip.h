@@ -517,6 +517,26 @@ NODESEL* SCIPfindNodesel(
    const char*      name                /**< name of event handler */
    );
 
+/** returns the currently used node selector */
+extern
+NODESEL* SCIPgetNodesel(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** use the given node selector as standard node selector */
+extern
+RETCODE SCIPsetStdNodesel(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODESEL*         nodesel             /**< node selector */
+   );
+
+/** use the given node selector as memory saving node selector */
+extern
+RETCODE SCIPsetMemSaveNodesel(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODESEL*         nodesel             /**< node selector */
+   );
+
 /** creates a branching rule and includes it in SCIP */
 extern
 RETCODE SCIPincludeBranchrule(
@@ -537,6 +557,14 @@ extern
 BRANCHRULE* SCIPfindBranchrule(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of event handler */
+   );
+
+/** sets the priority of a branching rule */
+extern
+RETCODE SCIPsetBranchrulePriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   int              priority            /**< new priority of the branching rule */
    );
 
 /** creates a display column and includes it in SCIP */
@@ -1549,9 +1577,16 @@ RETCODE SCIPbranchVar(
    VAR*             var                 /**< variable to branch on */
    );
 
-/** calls branching rules to branch on an LP solution */
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
 extern
 RETCODE SCIPbranchLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
+/** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
+extern
+RETCODE SCIPbranchPseudo(
    SCIP*            scip,               /**< SCIP data structure */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
@@ -1868,6 +1903,20 @@ int SCIPgetNSiblings(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets leaves of the tree along with the number of leaves */
+extern
+RETCODE SCIPgetLeaves(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE***          leaves,             /**< pointer to store leaves array, or NULL if not needed */
+   int*             nleaves             /**< pointer to store number of leaves, or NULL if not needed */
+   );
+
+/** gets number of leaves in the tree */
+extern
+int SCIPgetNLeaves(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets the best child of the active node */
 extern
 NODE* SCIPgetBestChild(
@@ -1892,9 +1941,15 @@ NODE* SCIPgetBestNode(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets the node with smallest lower bound from the tree (child, sibling, or leaf) */
+extern
+NODE* SCIPgetLowerboundNode(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
 extern
-RETCODE SCIPupdateNodeLowerBound(
+RETCODE SCIPupdateNodeLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to update lower bound for */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
@@ -2005,7 +2060,7 @@ Real SCIPgetActDualBound(
 
 /** gets lower (dual) bound of active node in transformed problem */
 extern
-Real SCIPgetActTransLowerBound(
+Real SCIPgetActTransLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2017,7 +2072,7 @@ Real SCIPgetAvgDualBound(
 
 /** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
 extern
-Real SCIPgetAvgTransLowerBound(
+Real SCIPgetAvgTransLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2029,7 +2084,7 @@ Real SCIPgetDualBound(
 
 /** gets global lower (dual) bound in transformed problem */
 extern
-Real SCIPgetTransLowerBound(
+Real SCIPgetTransLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2041,7 +2096,7 @@ Real SCIPgetPrimalBound(
 
 /** gets global upper (primal) bound in transformed problem */
 extern
-Real SCIPgetTransUpperBound(
+Real SCIPgetTransUpperbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 

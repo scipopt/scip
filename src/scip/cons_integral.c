@@ -59,6 +59,10 @@ DECL_CONSENFOLP(consEnfolpIntegral)
    /* call branching methods */
    CHECK_OKAY( SCIPbranchLP(scip, result) );
 
+   /* if no branching was done, the LP solution was not fractional */
+   if( *result == SCIP_DIDNOTRUN )
+      *result = SCIP_FEASIBLE;
+
    return SCIP_OKAY;
 }
 

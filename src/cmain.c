@@ -31,12 +31,11 @@
 #include "disp_default.h"
 #include "cons_integral.h"
 #include "cons_linear.h"
-#include "cons_setcover.h"
-#include "cons_setpack.h"
-#include "cons_setpart.h"
+#include "cons_setppc.h"
 #include "presol_dualfix.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
+#include "nodesel_plunging.h"
 #include "branch_fullstrong.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
@@ -70,13 +69,12 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrSetpack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrSetpart(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrSetppc(scip) );
    CHECK_OKAY( SCIPincludePresolDualfix(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
-   /*CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );*/
+   CHECK_OKAY( SCIPincludeNodeselPlunging(scip) );
+   CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurDiving(scip) );
@@ -91,13 +89,21 @@ RETCODE runSCIP(
     **************/
 
    /*CHECK_OKAY( SCIPwriteParams(scip, "scip.set", TRUE) );*/
-   if( SCIPfileExists("scip.set") )
+   if( argc >= 3 )
+   {
+      if( SCIPfileExists(argv[2]) )
+      {
+         printf("reading parameter file <%s>\n", argv[2]);
+         CHECK_OKAY( SCIPreadParams(scip, argv[2]) );
+      }
+      else
+         printf("parameter file <%s> not found - using default parameters\n", argv[2]);
+   }
+   else if( SCIPfileExists("scip.set") )
    {
       printf("reading parameter file <scip.set>\n");
       CHECK_OKAY( SCIPreadParams(scip, "scip.set") );
    }
-   else
-      printf("parameter file <scip.set> not found - using default parameters\n");
 
 
 
@@ -107,7 +113,7 @@ RETCODE runSCIP(
 
    if( argc < 2 )
    {
-      printf("syntax: %s <problem>\n", argv[0]);
+      printf("syntax: %s <problem> [parameter file]\n", argv[0]);
       return SCIP_OKAY;
    }
 
@@ -188,11 +194,9 @@ main(
    todoMessage("avoid addition of identical constraints");
    todoMessage("pricing for pseudo solutions");
    todoMessage("integrality check on objective function, abort if gap is below 1.0");
-   todoMessage("numerical problems in tree->actpseudoobjval if variable's bounds are infinity");
    todoMessage("implement reduced cost fixing");
    todoMessage("statistics: count domain reductions and constraint additions of constraint handlers");
    todoMessage("it's a bit ugly, that user call backs may be called before the nodequeue was processed");
-   todoMessage("information method if parameter changed");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

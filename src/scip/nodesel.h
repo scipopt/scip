@@ -76,7 +76,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *
  *  possible return values:
  *    < 0: node1 comes before (is better than) node2
- *    = 0: both nodes have the same value
+ *    = 0: both nodes are identical, i.e. the pointers are equal
  *    > 0: node2 comes after (is worse than) node2
  */
 #define DECL_NODESELCOMP(x) int x (SCIP* scip, NODESEL* nodesel, NODE* node1, NODE* node2)
@@ -90,6 +90,11 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 #include "tree.h"
 #include "lp.h"
 
+
+
+/* 
+ * node priority queue methods
+ */
 
 /** creates node priority queue */
 extern
@@ -117,59 +122,82 @@ RETCODE SCIPnodepqFree(
 /** inserts node into node priority queue */
 extern
 RETCODE SCIPnodepqInsert(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    const SET*       set,                /**< global SCIP settings */
    NODE*            node                /**< node to be inserted */
    );
 
-/** removes and returns best node from the node priority queue */
+/** removes node from the node priority queue */
 extern
-NODE* SCIPnodepqRemove(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
-   const SET*       set                 /**< global SCIP settings */
+RETCODE SCIPnodepqRemove(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   const SET*       set,                /**< global SCIP settings */
+   NODE*            node                /**< node to remove */
    );
 
 /** returns the best node of the queue without removing it */
 extern
 NODE* SCIPnodepqFirst(
-   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   const NODEPQ*    nodepq              /**< node priority queue */
    );
 
 /** returns the nodes array of the queue */
 extern
 NODE** SCIPnodepqNodes(
-   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   const NODEPQ*    nodepq              /**< node priority queue */
    );
 
 /** returns the number of nodes stored in the node priority queue */
 extern
 int SCIPnodepqLen(
-   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   const NODEPQ*    nodepq              /**< node priority queue */
    );
 
 /** gets the minimal lower bound of all nodes in the queue */
 extern
 Real SCIPnodepqGetLowerbound(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets the node with minimal lower bound of all nodes in the queue */
+extern
+NODE* SCIPnodepqGetLowerboundNode(
+   NODEPQ*          nodepq,             /**< node priority queue */
    const SET*       set                 /**< global SCIP settings */
    );
 
 /** gets the sum of lower bounds of all nodes in the queue */
 extern
 Real SCIPnodepqGetLowerboundSum(
-   NODEPQ*          nodepq              /**< pointer to a node priority queue */
+   NODEPQ*          nodepq              /**< node priority queue */
    );
 
 /** free all nodes from the queue that are cut off by the given upper bound */
 extern
 RETCODE SCIPnodepqBound(
-   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   NODEPQ*          nodepq,             /**< node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    );
+
+/** resorts the priority queue (necessary for changes in node selector) */
+extern
+RETCODE SCIPnodepqResort(
+   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+
+
+
+/*
+ * node selector methods 
+ */
 
 /** creates a node selector */
 extern

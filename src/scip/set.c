@@ -47,14 +47,14 @@
 
 /* Dynamic Memory */
 
-#define SCIP_DEFAULT_MEMGROWFAC        1.2
-#define SCIP_DEFAULT_MEMGROWINIT         4
-#define SCIP_DEFAULT_BUFGROWFAC        2.0
-#define SCIP_DEFAULT_BUFGROWINIT     65536
-#define SCIP_DEFAULT_TREEGROWFAC       2.0
-#define SCIP_DEFAULT_TREEGROWINIT    65536
-#define SCIP_DEFAULT_PATHGROWFAC       2.0
-#define SCIP_DEFAULT_PATHGROWINIT      256
+#define SCIP_DEFAULT_MEMLIMIT           -1 /**< maximal memory usage (-1: no limit) */
+#define SCIP_DEFAULT_MEMSAVEFAC        0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
+#define SCIP_DEFAULT_MEMGROWFAC        1.2 /**< memory growing factor for dynamically allocated arrays */
+#define SCIP_DEFAULT_MEMGROWINIT         4 /**< initial size of dynamically allocated arrays */
+#define SCIP_DEFAULT_TREEGROWFAC       2.0 /**< memory growing factor for tree array */
+#define SCIP_DEFAULT_TREEGROWINIT    65536 /**< initial size of tree array */
+#define SCIP_DEFAULT_PATHGROWFAC       2.0 /**< memory growing factor for path array */
+#define SCIP_DEFAULT_PATHGROWINIT      256 /**< initial size of path array */
 
 
 /* Branching */
@@ -161,6 +161,64 @@ DECL_PARAMCHGD(paramChgdFeastol)
    return SCIP_OKAY;
 }
 
+/** information method for a parameger change of the current standard node selector */
+static
+DECL_PARAMCHGD(paramChgdStdnodeselector)
+{
+   NODESEL* newnodesel;
+   char* newname;
+
+   newname = SCIPparamGetString(param);
+   newnodesel = SCIPfindNodesel(scip, newname);
+   
+   if( newnodesel == NULL )
+   {
+      if( *newname != '\0' )
+      {
+         char s[MAXSTRLEN];
+         sprintf(s, "node selector <%s> not found", newname);
+         errorMessage(s);
+         return SCIP_INVALIDDATA;
+      }
+      else
+         return SCIP_OKAY;
+   }
+
+   /* use the new node selector */
+   CHECK_OKAY( SCIPsetStdNodesel(scip, newnodesel) );
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameger change of the current memory saving node selector */
+static
+DECL_PARAMCHGD(paramChgdMemsavenodeselector)
+{
+   NODESEL* newnodesel;
+   char* newname;
+
+   newname = SCIPparamGetString(param);
+   newnodesel = SCIPfindNodesel(scip, newname);
+   
+   if( newnodesel == NULL )
+   {
+      if( *newname != '\0' )
+      {
+         char s[MAXSTRLEN];
+         sprintf(s, "node selector <%s> not found", newname);
+         errorMessage(s);
+         return SCIP_INVALIDDATA;
+      }
+      else
+         return SCIP_OKAY;
+   }
+
+   /* use the new node selector */
+   CHECK_OKAY( SCIPsetMemSaveNodesel(scip, newnodesel) );
+
+   return SCIP_OKAY;
+}
+
 /** creates global SCIP settings */
 RETCODE SCIPsetCreate(
    SET**            set,                /**< pointer to SCIP settings */
@@ -206,9 +264,12 @@ RETCODE SCIPsetCreate(
    (*set)->nnodesels = 0;
    (*set)->nodeselssize = 0;
    (*set)->nodesel = NULL;
+   (*set)->stdnodesel = NULL;
+   (*set)->memsavenodesel = NULL;
    (*set)->branchrules = NULL;
    (*set)->nbranchrules = 0;
    (*set)->branchrulessize = 0;
+   (*set)->branchrulessorted = FALSE;
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
@@ -259,6 +320,11 @@ RETCODE SCIPsetCreate(
                   "epsilon for deciding if a cut is violated",
                   &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_MAXEPSILON,
                   NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+                  "global/memory/memsavefac",
+                  "fraction of maximal memory usage resulting in switch to memory saving mode",
+                  &(*set)->memsavefac, SCIP_DEFAULT_MEMSAVEFAC, 0.0, 1.0,
+                  NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "global/memory/memgrowfac",
                   "memory growing factor for dynamically allocated arrays",
@@ -289,6 +355,16 @@ RETCODE SCIPsetCreate(
                   "initial size of path array",
                   &(*set)->pathgrowinit, SCIP_DEFAULT_PATHGROWINIT, 0, INT_MAX,
                   NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddStringParam(*set, memhdr,
+                  "global/nodeselection/stdnodeselector",
+                  "standard node selection method",
+                  NULL, "",
+                  paramChgdStdnodeselector, NULL) );
+   CHECK_OKAY( SCIPsetAddStringParam(*set, memhdr,
+                  "global/nodeselection/memsavenodeselector",
+                  "memory saving mode node selection method",
+                  NULL, "",
+                  paramChgdMemsavenodeselector, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
                   "global/branching/branchscorefac",
                   "branching score factor to weigh downward and upward gain prediction",
@@ -353,6 +429,11 @@ RETCODE SCIPsetCreate(
                   "global/limits/timelimit",
                   "maximal time in seconds to run",
                   &(*set)->timelimit, SCIP_DEFAULT_TIMELIMIT, 0.0, REAL_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
+                  "global/limits/memlimit",
+                  "maximal memory usage (-1: no limit); reported memory usage is lower than real memory usage!",
+                  &(*set)->memlimit, SCIP_DEFAULT_MEMLIMIT, -1, LONGINT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "global/lp/lpsolvefreq",
@@ -1149,8 +1230,15 @@ RETCODE SCIPsetIncludeNodesel(
    set->nodesels[set->nnodesels] = nodesel;
    set->nnodesels++;
 
-   if( set->nodesel == NULL )
+   if( set->nnodesels == 1 )
+   {
+      assert(set->nodesel == NULL);
+      assert(set->stdnodesel == NULL);
+      assert(set->memsavenodesel == NULL);
       set->nodesel = nodesel;
+      set->stdnodesel = nodesel;
+      set->memsavenodesel = nodesel;
+   }
 
    return SCIP_OKAY;
 }   
@@ -1194,12 +1282,7 @@ RETCODE SCIPsetIncludeBranchrule(
    }
    assert(set->nbranchrules < set->branchrulessize);
 
-   for( i = set->nbranchrules; i > 0
-           && SCIPbranchruleGetPriority(branchrule) > SCIPbranchruleGetPriority(set->branchrules[i-1]); --i )
-   {
-      set->branchrules[i] = set->branchrules[i-1];
-   }
-   set->branchrules[i] = branchrule;
+   set->branchrules[set->nbranchrules] = branchrule;
    set->nbranchrules++;
 
    return SCIP_OKAY;
@@ -1223,6 +1306,21 @@ BRANCHRULE* SCIPsetFindBranchrule(
    }
 
    return NULL;
+}
+
+/** sorts branching rules by priorities */
+void SCIPsetSortBranchrules(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->branchrulessorted )
+   {
+      /* sort constraint handlers by priorities */
+      SCIPbsortPtr((void**)set->branchrules, set->nbranchrules, SCIPbranchruleComp);
+      set->branchrulessorted = TRUE;
+   }
 }
 
 /** inserts display column in display column list */
