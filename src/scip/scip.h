@@ -571,12 +571,12 @@ RETCODE SCIPcreateRow(
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
    const char*      name,               /**< name of row */
-   CONS*            cons,               /**< constraint, this row belongs to, or NULL if the row was separated from LP */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
+   Bool             model,              /**< does row belongs to a model constraint? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
@@ -744,7 +744,7 @@ RETCODE SCIPpoolCut(
 extern
 RETCODE SCIPgetPoolsize(
    SCIP*            scip,               /**< SCIP data structure */
-   int*             poolsize            /**< pointer to store the number of columns */
+   int*             poolsize            /**< pointer to store the number of rows in the global cut pool */
    );
 
 

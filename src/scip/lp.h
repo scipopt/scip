@@ -126,7 +126,6 @@ struct Col
 struct Row
 {
    char*            name;               /**< name of the row */
-   CONS*            cons;               /**< constraint, this row belongs to, or NULL if the row was separated from LP */
    COL**            col;                /**< columns of row entries, that may have a nonzero primal solution value */
    Real*            val;                /**< coefficients of row entries */
    int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
@@ -163,8 +162,9 @@ struct Row
    unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
    unsigned int     rhschanged:1;       /**< was right hand side changed, and has data of LP solver to be updated? */
    unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
+   unsigned int     model:1;            /**< does row belongs to a model constraint? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int     nlocks:23;          /**< number of sealed locks of an unmodifiable row */
 };
 
 /** actual LP data */
@@ -386,12 +386,12 @@ RETCODE SCIProwCreate(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
-   CONS*            cons,               /**< constraint, this row belongs to, or NULL if the row was separated from LP */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
+   Bool             model,              /**< does row belongs to a model constraint? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
@@ -535,12 +535,6 @@ Real SCIProwGetRhs(
 /** returns the name of the row */
 extern
 const char* SCIProwGetName(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets constraint this row belongs to, or NULL if it's a cut */
-extern
-CONS* SCIProwGetCons(
    ROW*             row                 /**< LP row */
    );
 

@@ -154,8 +154,8 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
+   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );

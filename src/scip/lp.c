@@ -1952,12 +1952,12 @@ RETCODE SCIProwCreate(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
-   CONS*            cons,               /**< constraint, this row belongs to, or NULL if the row was separated from LP */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
+   Bool             model,              /**< does row belongs to a model constraint? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    )
 {
@@ -1988,7 +1988,6 @@ RETCODE SCIProwCreate(
    }
    
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->name, name, strlen(name)+1) );
-   (*row)->cons = cons;
    (*row)->constant = 0.0;
    (*row)->lhs = lhs;
    (*row)->rhs = rhs;
@@ -2020,6 +2019,7 @@ RETCODE SCIProwCreate(
    (*row)->lhschanged = FALSE;
    (*row)->rhschanged = FALSE;
    (*row)->coefchanged = FALSE;
+   (*row)->model = model;
    (*row)->modifiable = modifiable;
    (*row)->nlocks = 0;
 
@@ -3008,16 +3008,6 @@ const char* SCIProwGetName(
    return row->name;
 }
 
-/** gets constraint this row belongs to, or NULL if it's a cut */
-CONS* SCIProwGetCons(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->cons;
-}
-
 /** gets unique index of row */
 int SCIProwGetIndex(
    ROW*             row                 /**< LP row */
@@ -3035,7 +3025,7 @@ Bool SCIProwIsModel(
 {
    assert(row != NULL);
 
-   return (row->cons != NULL && SCIPconsIsModel(row->cons));
+   return row->model;
 }
 
 /** gets position of row in actual LP, or -1 if it is not in LP */

@@ -621,7 +621,9 @@ RETCODE SCIPsolveCIP(
          debug(SCIPprobPrintPseudoSol(prob, set));
          
          /* check, if we want to solve the LP at the selected node */
-         tree->actnodehaslp = (set->lpsolvefreq >= 1 && actnode->depth % set->lpsolvefreq == 0);
+         tree->actnodehaslp = (actnode->depth <= set->lpsolvedepth
+            && set->lpsolvefreq >= 1 && actnode->depth % set->lpsolvefreq == 0);
+
          /* solve at least the root LP, if there are continous variables present */
          tree->actnodehaslp |= (actnode->depth == 0 && prob->ncont > 0);
          /* don't solve the node if its cut off by the pseudo objective value anyway */

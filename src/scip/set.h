@@ -104,6 +104,7 @@ struct Set
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes */
+   int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes */
    unsigned int     usepricing:1;       /**< use pricing of variables */
 };
 
@@ -609,6 +610,15 @@ Bool SCIPsetIsFixed(
 #define SCIPsetIsSumZero(set, val)         ( EPSZ(val, (set)->sumepsilon) )
 #define SCIPsetIsSumPos(set, val)          ( EPSP(val, (set)->sumepsilon) )
 #define SCIPsetIsSumNeg(set, val)          ( EPSN(val, (set)->sumepsilon) )
+
+#define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSEQ(val1, val2, (set)->feastol) )
+#define SCIPsetIsFeasL(set, val1, val2)    ( EPSL(val1, val2, (set)->feastol) )
+#define SCIPsetIsFeasLE(set, val1, val2)   ( EPSLE(val1, val2, (set)->feastol) )
+#define SCIPsetIsFeasG(set, val1, val2)    ( EPSG(val1, val2, (set)->feastol) )
+#define SCIPsetIsFeasGE(set, val1, val2)   ( EPSGE(val1, val2, (set)->feastol) )
+#define SCIPsetIsFeasZero(set, val)        ( EPSZ(val, (set)->feastol) )
+#define SCIPsetIsFeasPos(set, val)         ( EPSP(val, (set)->feastol) )
+#define SCIPsetIsFeasNeg(set, val)         ( EPSN(val, (set)->feastol) )
 
 #define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
 #define SCIPsetIsRelL(set, val1, val2)     ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )

@@ -55,6 +55,7 @@
 /* LP solving */
 
 #define SCIP_DEFAULT_LPSOLVEFREQ         3 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEDEPTH  INT_MAX /**< maximal depth for solving LPs */
 
 
 /* Pricing */
@@ -79,7 +80,7 @@
 
 /* Tree */
 
-#define SCIP_DEFAULT_NODELIMIT        5000 /*LONGINT_MAX*/ /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT LONGINT_MAX /*10000000*/ /**< maximal number of nodes to create */
 
 
 /* Display */
@@ -174,6 +175,7 @@ RETCODE SCIPsetCreate(
    (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
    (*set)->nodelimit = SCIP_DEFAULT_NODELIMIT;
    (*set)->lpsolvefreq = SCIP_DEFAULT_LPSOLVEFREQ;
+   (*set)->lpsolvedepth = SCIP_DEFAULT_LPSOLVEDEPTH;
    (*set)->usepricing = SCIP_DEFAULT_USEPRICING;
 
    return SCIP_OKAY;
