@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.74 2005/02/14 13:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.75 2005/03/10 17:11:16 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -325,7 +325,8 @@ RETCODE SCIPtreeLoadLP(
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   LP*              lp                  /**< current LP data */
+   LP*              lp,                 /**< current LP data */
+   Bool*            initroot            /**< pointer to store whether the root LP relaxation has to be initialized */
    );
 
 /** branches on a variable; if solution value x' is fractional, two child nodes are created

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.137 2005/02/22 19:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.138 2005/03/10 17:11:16 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2033,7 +2033,8 @@ RETCODE SCIPtreeLoadLP(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   LP*              lp                  /**< current LP data */
+   LP*              lp,                 /**< current LP data */
+   Bool*            initroot            /**< pointer to store whether the root LP relaxation has to be initialized */
    )
 {
    NODE* lpfork;
@@ -2051,6 +2052,7 @@ RETCODE SCIPtreeLoadLP(
    assert(blkmem != NULL);
    assert(set != NULL);
    assert(lp != NULL);
+   assert(initroot != NULL);
 
    debugMessage("load LP for current fork node %p at depth %d\n", 
       tree->focuslpfork, tree->focuslpfork == NULL ? -1 : (int)(tree->focuslpfork->depth));
@@ -2165,6 +2167,9 @@ RETCODE SCIPtreeLoadLP(
    debugMessage("-> new correctlpdepth: %d\n", tree->correctlpdepth);
    debugMessage("-> new LP has %d cols and %d rows, primalfeasible=%d, dualfeasible=%d\n", 
       SCIPlpGetNCols(lp), SCIPlpGetNRows(lp), lp->primalfeasible, lp->dualfeasible);
+
+   /* if the correct LP depth is still -1, the root LP relaxation has to be initialized */
+   *initroot = (tree->correctlpdepth == -1);
 
    return SCIP_OKAY;
 }
@@ -2646,15 +2651,15 @@ RETCODE SCIPnodeFocus(
 
    /* remember the depth of the common fork node for LP updates */
    debugMessage("focus node: old correctlpdepth=%d\n", tree->correctlpdepth);
-   if( subroot == tree->focussubroot && fork != NULL )
+   if( subroot == tree->focussubroot && fork != NULL && lpfork != NULL )
    {
-      /* we are in the same subtree: the LP is correct at most upto the common fork depth */
+      /* we are in the same subtree with valid LP fork: the LP is correct at most upto the common fork depth */
       assert(subroot == NULL || subroot->active);
       tree->correctlpdepth = MIN(tree->correctlpdepth, (int)fork->depth);
    }
    else
    {
-      /* we are in a different subtree: the LP is completely incorrect */
+      /* we are in a different subtree, or no valid LP fork exists: the LP is completely incorrect */
       assert(subroot == NULL || !subroot->active
          || (tree->focussubroot != NULL && (int)(tree->focussubroot->depth) > subroot->depth));
       tree->correctlpdepth = -1;

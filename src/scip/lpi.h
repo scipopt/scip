@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.51 2005/02/22 19:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.52 2005/03/10 17:11:15 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -511,6 +511,13 @@ Bool SCIPlpiIsTimelimExc(
 extern
 int SCIPlpiGetInternalStatus(
    LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
+extern
+RETCODE SCIPlpiIgnoreInstability(
+   LPI*             lpi,                /**< LP interface structure */
+   Bool*            success             /**< pointer to store, whether the instability could be ignored */
    );
 
 /** gets objective value of solution */

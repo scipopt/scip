@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.186 2005/03/09 13:02:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.187 2005/03/10 17:11:14 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8864,6 +8864,17 @@ RETCODE lpSolveStable(
    /* check for stability */
    if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
       return SCIP_OKAY;
+   else if( !set->lp_checkstability )
+   {
+      CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+      if( success )
+      {
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         return SCIP_OKAY;
+      }
+   }
 
    /* if FASTMIP is turned on, solve again without FASTMIP */
    if( fastmip && simplex )
@@ -8879,6 +8890,17 @@ RETCODE lpSolveStable(
          /* check for stability */
          if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
             return SCIP_OKAY;
+         else if( !set->lp_checkstability )
+         {
+            CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            if( success )
+            {
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               return SCIP_OKAY;
+            }
+         }
       }
    }
 
@@ -8894,6 +8916,17 @@ RETCODE lpSolveStable(
       /* check for stability */
       if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
          return SCIP_OKAY;
+      else if( !set->lp_checkstability )
+      {
+         CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+         if( success )
+         {
+            infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            return SCIP_OKAY;
+         }
+      }
 
       /* reset scaling */
       CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
@@ -8912,6 +8945,17 @@ RETCODE lpSolveStable(
       /* check for stability */
       if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
          return SCIP_OKAY;
+      else if( !set->lp_checkstability )
+      {
+         CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+         if( success )
+         {
+            infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            return SCIP_OKAY;
+         }
+      }
 
       /* reset presolving */
       CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
@@ -8934,6 +8978,17 @@ RETCODE lpSolveStable(
          /* check for stability */
          if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
             return SCIP_OKAY;
+         else if( !set->lp_checkstability )
+         {
+            CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            if( success )
+            {
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               return SCIP_OKAY;
+            }
+         }
 
          /* reset feasibility tolerance */
          CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
@@ -8956,6 +9011,17 @@ RETCODE lpSolveStable(
          /* check for stability */
          if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
             return SCIP_OKAY;
+         else if( !set->lp_checkstability )
+         {
+            CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            if( success )
+            {
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               return SCIP_OKAY;
+            }
+         }
       }
    }
 
@@ -8971,6 +9037,17 @@ RETCODE lpSolveStable(
       /* check for stability */
       if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
          return SCIP_OKAY;
+      else if( !set->lp_checkstability )
+      {
+         CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+         if( success )
+         {
+            infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            return SCIP_OKAY;
+         }
+      }
 
       /* solve again with opposite scaling and other simplex */
       CHECK_OKAY( lpSetScaling(lp, !set->lp_scaling, &success) );
@@ -8984,6 +9061,17 @@ RETCODE lpSolveStable(
          /* check for stability */
          if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
             return SCIP_OKAY;
+         else if( !set->lp_checkstability )
+         {
+            CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            if( success )
+            {
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               return SCIP_OKAY;
+            }
+         }
          
          /* reset scaling */
          CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
@@ -9002,6 +9090,17 @@ RETCODE lpSolveStable(
          /* check for stability */
          if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
             return SCIP_OKAY;
+         else if( !set->lp_checkstability )
+         {
+            CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            if( success )
+            {
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               return SCIP_OKAY;
+            }
+         }
          
          /* reset presolving */
          CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
@@ -9024,6 +9123,17 @@ RETCODE lpSolveStable(
             /* check for stability */
             if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
                return SCIP_OKAY;
+            else if( !set->lp_checkstability )
+            {
+               CHECK_OKAY( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+               if( success )
+               {
+                  infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                     "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
+                     stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+                  return SCIP_OKAY;
+               }
+            }
          
             /* reset feasibility tolerance */
             CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );

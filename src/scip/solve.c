@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.175 2005/03/02 19:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.176 2005/03/10 17:11:16 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -695,6 +695,7 @@ RETCODE solveNodeInitialLP(
 {
    NODE* focusnode;
    EVENT event;
+   Bool initroot;
 
    assert(stat != NULL);
    assert(tree != NULL);
@@ -711,10 +712,11 @@ RETCODE solveNodeInitialLP(
 
    /* load the LP into the solver and load the LP state */
    debugMessage("loading LP\n");
-   CHECK_OKAY( SCIPtreeLoadLP(tree, blkmem, set, stat, lp) );
-   
+   CHECK_OKAY( SCIPtreeLoadLP(tree, blkmem, set, stat, lp, &initroot) );
+   assert(initroot || SCIPnodeGetDepth(focusnode) > 0);
+
    /* init root node LP */
-   if( SCIPnodeGetDepth(focusnode) == 0 )
+   if( initroot )
    {
       CHECK_OKAY( initRootLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
    }

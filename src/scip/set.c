@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.145 2005/03/02 12:39:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.146 2005/03/10 17:11:16 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -116,7 +116,7 @@
                                                  *   barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
                                                  *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_PRICING             'a' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
+#define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
                                                  *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from LP
                                                  *   (-1: don't delete columns due to aging) */
@@ -126,6 +126,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPCOLSROOT   FALSE /**< should new non-basic columns be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
+#define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
 #define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
@@ -565,6 +566,11 @@ RETCODE SCIPsetCreate(
          "lp/cleanuprowsroot",
          "should new basic rows be removed after root LP solving?",
          &(*set)->lp_cleanuprowsroot, SCIP_DEFAULT_LP_CLEANUPROWSROOT,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/checkstability",
+         "should LP solver's return status be checked for stability?",
+         &(*set)->lp_checkstability, SCIP_DEFAULT_LP_CHECKSTABILITY,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
          "lp/checkfeas",

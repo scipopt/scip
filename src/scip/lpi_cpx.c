@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.88 2005/03/09 12:40:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.89 2005/03/10 17:11:15 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2408,7 +2408,7 @@ Bool SCIPlpiIsStable(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   debugMessage("checking for stability\n");
+   debugMessage("checking for stability: CPLEX solstat = %d\n", lpi->solstat);
 
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
@@ -2478,6 +2478,29 @@ int SCIPlpiGetInternalStatus(
    assert(lpi->cpxlp != NULL);
 
    return lpi->solstat;
+}
+
+/** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
+RETCODE SCIPlpiIgnoreInstability(
+   LPI*             lpi,                /**< LP interface structure */
+   Bool*            success             /**< pointer to store, whether the instability could be ignored */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(success != NULL);
+   assert(lpi->solstat == CPX_STAT_UNBOUNDED
+      || lpi->solstat == CPX_STAT_NUM_BEST
+      || lpi->solstat == CPX_STAT_OPTIMAL_INFEAS);
+
+   /* replace instable status with optimal status */
+   if( lpi->solstat == CPX_STAT_NUM_BEST || lpi->solstat == CPX_STAT_OPTIMAL_INFEAS )
+      lpi->solstat = CPX_STAT_OPTIMAL;
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** gets objective value of solution */

@@ -1,0 +1,19 @@
+$(OBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
+  lib/clpinc/ClpModel.hpp lib/clpinc/ClpMatrixBase.hpp \
+  lib/clpinc/CoinPragma.hpp lib/clpinc/CoinPackedMatrix.hpp \
+  lib/clpinc/CoinError.hpp lib/clpinc/CoinPackedVectorBase.hpp \
+  lib/clpinc/CoinFloatEqual.hpp lib/clpinc/CoinFinite.hpp \
+  lib/clpinc/CoinShallowPackedVector.hpp \
+  lib/clpinc/CoinMessageHandler.hpp lib/clpinc/ClpParameters.hpp \
+  lib/clpinc/ClpObjective.hpp lib/clpinc/ClpSolve.hpp \
+  lib/clpinc/ClpPrimalColumnSteepest.hpp \
+  lib/clpinc/ClpPrimalColumnPivot.hpp lib/clpinc/ClpDualRowSteepest.hpp \
+  lib/clpinc/ClpDualRowPivot.hpp lib/clpinc/CoinIndexedVector.hpp \
+  lib/clpinc/CoinSort.hpp lib/clpinc/CoinDistance.hpp \
+  lib/clpinc/ClpFactorization.hpp lib/clpinc/CoinFactorization.hpp \
+  lib/clpinc/ClpSimplexDual.hpp src/scip/lpi.h src/scip/def.h \
+  src/scip/type_retcode.h src/scip/memory.h src/scip/type_lpi.h \
+  src/scip/bitencode.h src/scip/message.h
+$(OBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
+  src/scip/bitencode.h
+$(OBJDIR)/scip/memory.o: src/scip/memory.c src/scip/memory.h

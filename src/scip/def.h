@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.73 2005/02/24 11:02:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.74 2005/03/10 17:11:14 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -42,6 +42,7 @@
 
 #define CHECK_ABORT_QUIET(x) do { if( (x) != SCIP_OKAY ) abort(); } while( FALSE )
 #define CHECK_OKAY_QUIET(x)  do { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
+#define ALLOC_ABORT_QUIET(x) do { if( NULL == (x) ) abort(); } while( FALSE )
 #define ALLOC_OKAY_QUIET(x)  do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
 
 #define CHECK_ABORT(x) do                                                                                     \
@@ -56,6 +57,16 @@
                        }                                                                                      \
                        while( FALSE )
 
+#define ALLOC_ABORT(x) do                                                                                     \
+                       {                                                                                      \
+                          if( NULL == (x) )                                                                   \
+                          {                                                                                   \
+                             printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__);       \
+                             fflush(stdout);                                                                  \
+                             abort();                                                                         \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
 
 #ifndef NDEBUG
 #define CHECK_OKAY(x)  do                                                                                     \

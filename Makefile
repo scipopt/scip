@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.101 2005/03/09 12:40:26 bzfpfend Exp $
+# $Id: Makefile,v 1.102 2005/03/10 17:11:12 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -80,7 +80,7 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
-OBJSUBDIRS      =	scip objscip
+OBJSUBDIRS      =	scip objscip tclique
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -246,10 +246,14 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/prop_pseudoobj.o \
 			scip/reader_cnf.o \
 			scip/reader_mps.o \
+			scip/sepa_clique.o \
 			scip/sepa_cmir.o \
 			scip/sepa_gomory.o \
 			scip/sepa_intobj.o \
-			scip/sepa_strongcg.o
+			scip/sepa_strongcg.o \
+			tclique/branch.o \
+			tclique/coloring.o \
+			tclique/graph.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).a

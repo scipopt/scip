@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.47 2005/03/02 12:39:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.48 2005/03/10 17:11:16 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -164,6 +164,7 @@ struct Set
    Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root LP solving? */
    Bool             lp_cleanuprows;     /**< should new basic rows be removed after LP solving? */
    Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root LP solving? */
+   Bool             lp_checkstability;  /**< should LP solver's return status be checked for stability? */
    Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
    Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
    Bool             lp_scaling;         /**< should scaling of LP solver be used? */

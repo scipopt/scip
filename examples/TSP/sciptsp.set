@@ -123,7 +123,7 @@ lp/initalgorithm = s
 lp/resolvealgorithm = s
 
 # LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
-# [type: char, range: {afsqd}, default: a]
+# [type: char, range: {afsqd}, default: s]
 lp/pricing = a
 
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
@@ -1405,6 +1405,26 @@ propagating/pseudoobj/delay = FALSE
 # maximal number of variables to look at in a single propagation round (-1: process all variables)
 # [type: int, range: [-1,2147483647], default: 100]
 propagating/pseudoobj/maxcands = 100
+
+# priority of separator <clique>
+# [type: int, range: [-2147483648,2147483647], default: -5000]
+separating/clique/priority = -5000
+
+# frequency for calling separator <clique> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/clique/freq = 10
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/clique/delay = FALSE
+
+# factor for scaling weights
+# [type: real, range: [0,1.79769313486232e+308], default: 1000]
+separating/clique/scaleval = 1000
+
+# maximal number of nodes in branch and bound tree
+# [type: int, range: [0,2147483647], default: 100]
+separating/clique/maxtreenodes = 100
 
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -3000]

@@ -114,6 +114,18 @@ lp/solvefreq = 1
 # [type: int, range: [-1,2147483647], default: -1]
 lp/solvedepth = -1
 
+# LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)
+# [type: char, range: {sbc}, default: s]
+lp/initalgorithm = s
+
+# LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)
+# [type: char, range: {sbc}, default: s]
+lp/resolvealgorithm = s
+
+# LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
+# [type: char, range: {afsqd}, default: s]
+lp/pricing = s
+
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
 # [type: int, range: [-1,2147483647], default: 10]
 lp/colagelimit = 10
@@ -205,6 +217,10 @@ numerics/feastol = 1e-06
 # LP feasibility tolerance for reduced costs
 # [type: real, range: [1e-17,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
+
+# LP convergence tolerance used in barrier algorithm
+# [type: real, range: [1e-17,0.001], default: 1e-10]
+numerics/barrierconvtol = 1e-10
 
 # minimal improve for strengthening bounds
 # [type: real, range: [1e-17,1e+98], default: 0.0001]
@@ -718,6 +734,10 @@ presolving/probing/maxrounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 presolving/probing/delay = TRUE
 
+# maximal number of runs, probing participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 1]
+presolving/probing/maxruns = 1
+
 # maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/probing/proprounds = -1
@@ -725,6 +745,10 @@ presolving/probing/proprounds = -1
 # maximal number of fixings found, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 10]
 presolving/probing/maxfixings = 10
+
+# maximal number of successive useless probings, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 2000]
+presolving/probing/maxuseless = 2000
 
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]
@@ -922,8 +946,8 @@ heuristics/coefdiving/minreldepth = 0
 # [type: real, range: [0,1], default: 1]
 heuristics/coefdiving/maxreldepth = 1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.02]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
 heuristics/coefdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
@@ -958,8 +982,8 @@ heuristics/feaspump/freqofs = 0
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/feaspump/maxdepth = -1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.01]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.01]
 heuristics/feaspump/maxlpiterquot = 0.01
 
 # factor by which the regard of the objective is decreased in each round, 1.0 for dynamic
@@ -1030,8 +1054,8 @@ heuristics/fracdiving/minreldepth = 0
 # [type: real, range: [0,1], default: 1]
 heuristics/fracdiving/maxreldepth = 1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.02]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
 heuristics/fracdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
@@ -1074,8 +1098,8 @@ heuristics/guideddiving/minreldepth = 0
 # [type: real, range: [0,1], default: 1]
 heuristics/guideddiving/maxreldepth = 1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.02]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
 heuristics/guideddiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
@@ -1118,8 +1142,8 @@ heuristics/linesearchdiving/minreldepth = 0
 # [type: real, range: [0,1], default: 1]
 heuristics/linesearchdiving/maxreldepth = 1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.02]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
 heuristics/linesearchdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
@@ -1162,8 +1186,8 @@ heuristics/objfeaspump/minreldepth = 0
 # [type: real, range: [0,1], default: 1]
 heuristics/objfeaspump/maxreldepth = 1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.01]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.01]
 heuristics/objfeaspump/maxlpiterquot = 0.01
 
 # maximal diving depth: number of binary/integer variables times depthfac
@@ -1234,8 +1258,8 @@ heuristics/pscostdiving/minreldepth = 0
 # [type: real, range: [0,1], default: 1]
 heuristics/pscostdiving/maxreldepth = 1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.02]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
 heuristics/pscostdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
@@ -1278,8 +1302,8 @@ heuristics/rootsoldiving/minreldepth = 0
 # [type: real, range: [0,1], default: 1]
 heuristics/rootsoldiving/maxreldepth = 1
 
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.01]
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.01]
 heuristics/rootsoldiving/maxlpiterquot = 0.01
 
 # maximal diving depth: number of binary/integer variables times depthfac
@@ -1337,6 +1361,26 @@ propagating/pseudoobj/delay = FALSE
 # maximal number of variables to look at in a single propagation round (-1: process all variables)
 # [type: int, range: [-1,2147483647], default: 100]
 propagating/pseudoobj/maxcands = 100
+
+# priority of separator <clique>
+# [type: int, range: [-2147483648,2147483647], default: -5000]
+separating/clique/priority = -5000
+
+# frequency for calling separator <clique> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/clique/freq = 10
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/clique/delay = FALSE
+
+# factor for scaling weights
+# [type: real, range: [0,1.79769313486232e+308], default: 1000]
+separating/clique/scaleval = 1000
+
+# maximal number of nodes in branch and bound tree
+# [type: int, range: [0,2147483647], default: 100]
+separating/clique/maxtreenodes = 100
 
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -3000]

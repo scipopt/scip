@@ -54,6 +54,7 @@ plugins:
   old implementation is now called "objfeaspump"; parameter names have been changed accordingly
 - diving heuristics now compare their number of LP iterations with the number of node LP iterations instead of the
   total number (including their own) LP iterations
+- included clique separator for clique cuts with at least 3 elements
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -77,6 +78,8 @@ parameters:
 - new parameters lp/initalgorithm and lp/resolvealgorithm for switching between simplex and barrier algorithm
 - new parameter numerics/barrierconvtol to set the convergence tolerance in the barrier algorithm
 - new parameter lp/pricing to set the pricing strategy used in the LP solver
+- changed default of parameter lp/pricing to 's'teepest edge pricing
+- new parameter lp/checkstability to disable stability check of LP solver's result code
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
