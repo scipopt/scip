@@ -796,9 +796,8 @@ RETCODE SCIPaddCons(
    CONS*            cons                /**< constraint to add */
    );
 
-/** globally removes constraint from all subproblems; removes constraint from the subproblem of the node, where it
- *  was created, or from the global problem, if it was a globally valid problem constraint;
- *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
+/** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
+ *  node, where it was created, or from the problem, if it was a problem constraint
  */
 extern
 RETCODE SCIPdelCons(

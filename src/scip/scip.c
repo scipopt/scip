@@ -1722,9 +1722,8 @@ RETCODE SCIPaddCons(
    }
 }
 
-/** globally removes constraint from all subproblems; removes constraint from the subproblem of the node, where it
- *  was created, or from the global problem, if it was a globally valid problem constraint;
- *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
+/** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
+ *  node, where it was created, or from the problem, if it was a problem constraint
  */
 RETCODE SCIPdelCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1738,13 +1737,14 @@ RETCODE SCIPdelCons(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert(cons->node == NULL);
+      assert(cons->addconssetchg == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
+      assert(cons->addconssetchg == NULL);
+      /* fallthrough */
    case SCIP_STAGE_SOLVING:
-      assert(scip->stage == SCIP_STAGE_SOLVING || cons->node == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
       return SCIP_OKAY;
 
@@ -1842,19 +1842,19 @@ RETCODE SCIPdisableConsLocal(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert(cons->node == NULL);
+      assert(cons->addconssetchg == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      assert(cons->node == NULL);
+      assert(cons->addconssetchg == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
       assert(scip->tree->actnode != NULL);
       assert(scip->tree->actnode->nodetype == SCIP_NODETYPE_ACTNODE);
-      if( cons->node == NULL && scip->tree->actnode == scip->tree->root )
+      if( scip->tree->actnode == scip->tree->root )
       {
          assert(scip->tree->actnode->depth == 0);
          CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );

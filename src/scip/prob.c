@@ -615,18 +615,21 @@ RETCODE SCIPprobAddCons(
    assert(prob != NULL);
    assert(memhdr != NULL);
    assert(cons != NULL);
-   assert(cons->node == NULL);
-   assert(cons->arraypos == -1);
+   assert(cons->addconssetchg == NULL);
+   assert(cons->addarraypos == -1);
 
    /* mark the constraint as problem constraint, and remember the constraint's position */
-   cons->node = NULL;
-   cons->arraypos = prob->nconss;
+   cons->addconssetchg = NULL;
+   cons->addarraypos = prob->nconss;
 
    /* add the constraint to the problem's constraint array */
    CHECK_OKAY( probEnsureConssMem(prob, set, prob->nconss+1) );
    prob->conss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
+
+   /* undelete constraint, if it was globally deleted in the past */
+   cons->deleted = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(cons);
@@ -652,10 +655,10 @@ RETCODE SCIPprobDelCons(
    assert(prob != NULL);
    assert(memhdr != NULL);
    assert(cons != NULL);
-   assert(cons->node == NULL);
-   assert(0 <= cons->arraypos && cons->arraypos < prob->nconss);
+   assert(cons->addconssetchg == NULL);
+   assert(0 <= cons->addarraypos && cons->addarraypos < prob->nconss);
    assert(prob->conss != NULL);
-   assert(prob->conss[cons->arraypos] == cons);
+   assert(prob->conss[cons->addarraypos] == cons);
 
    /* deactivate constraint, if it is currently active */
    if( cons->active && !cons->updatedeactivate )
@@ -669,15 +672,15 @@ RETCODE SCIPprobDelCons(
    CHECK_OKAY( SCIPhashtableRemove(prob->consnames, memhdr, (void*)cons) );
 
    /* remove the constraint from the problem's constraint array */
-   arraypos = cons->arraypos;
+   arraypos = cons->addarraypos;
    prob->conss[arraypos] = prob->conss[prob->nconss-1];
-   prob->conss[arraypos]->arraypos = arraypos;
-   prob->nconss--;
    assert(prob->conss[arraypos] != NULL);
-   assert(prob->conss[arraypos]->node == NULL);
+   assert(prob->conss[arraypos]->addconssetchg == NULL);
+   prob->conss[arraypos]->addarraypos = arraypos;
+   prob->nconss--;
 
    /* mark the constraint to be no longer in the problem */
-   cons->arraypos = -1;
+   cons->addarraypos = -1;
 
    /* free constraint data, such that constraint exists only as a zombie constraint from now on */
    CHECK_OKAY( SCIPconsFreeData(cons, memhdr, set) );

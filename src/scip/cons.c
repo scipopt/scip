@@ -2309,9 +2309,7 @@ RETCODE conssetchgRelease(
       cons = conssetchg->addedconss[i];
       if( cons != NULL )
       {
-         assert(cons->arraypos == i);
-         cons->node = NULL;
-         cons->arraypos = -1;
+         assert(!cons->active || cons->updatedeactivate);
          CHECK_OKAY( SCIPconsRelease(&conssetchg->addedconss[i], memhdr, set) );
       }
    }
@@ -2410,8 +2408,6 @@ RETCODE SCIPconssetchgAddAddedCons(
    assert(conssetchg != NULL);
    assert(node != NULL);
    assert(cons != NULL);
-   assert(cons->node == NULL);
-   assert(cons->arraypos == -1);
 
    /* if constraint set change doesn't exist, create it */
    if( *conssetchg == NULL )
@@ -2419,13 +2415,15 @@ RETCODE SCIPconssetchgAddAddedCons(
       CHECK_OKAY( conssetchgCreate(conssetchg, memhdr) );
    }
 
+   /* add constraint to the addedconss array */
    CHECK_OKAY( conssetchgEnsureAddedconssSize(*conssetchg, memhdr, set, (*conssetchg)->naddedconss+1) );
-
    (*conssetchg)->addedconss[(*conssetchg)->naddedconss] = cons;
-   cons->node = node;
-   cons->arraypos = (*conssetchg)->naddedconss;
    (*conssetchg)->naddedconss++;
 
+   /* undelete constraint, if it was globally deleted in the past */
+   cons->deleted = FALSE;
+
+   /* capture constraint */
    SCIPconsCapture(cons);
 
    return SCIP_OKAY;
@@ -2448,11 +2446,12 @@ RETCODE SCIPconssetchgAddDisabledCons(
       CHECK_OKAY( conssetchgCreate(conssetchg, memhdr) );
    }
 
+   /* add constraint to the disabledconss array */
    CHECK_OKAY( conssetchgEnsureDisabledconssSize(*conssetchg, memhdr, set, (*conssetchg)->ndisabledconss+1) );
-
    (*conssetchg)->disabledconss[(*conssetchg)->ndisabledconss] = cons;
    (*conssetchg)->ndisabledconss++;
 
+   /* capture constraint */
    SCIPconsCapture(cons);
 
    return SCIP_OKAY;
@@ -2464,35 +2463,41 @@ RETCODE conssetchgDelAddedCons(
    CONSSETCHG*      conssetchg,         /**< constraint set change to delete constraint from */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   CONS*            cons                /**< constraint to delete from addedconss array */
+   int              arraypos            /**< position of constraint in disabledconss array */
    )
 {
-   int arraypos;
+   CONS* cons;
 
    assert(conssetchg != NULL);
-   assert(cons != NULL);
-
-   debugMessage("delete added constraint <%s> from constraint set change data\n", cons->name);
-
-   assert(!cons->active || cons->updatedeactivate);
-   assert(!cons->enabled || cons->updatedeactivate);
-
-   /* release and remove constraint from the addedconss array */
-   arraypos = cons->arraypos;
+   assert(conssetchg->addedconss != NULL);
    assert(0 <= arraypos && arraypos < conssetchg->naddedconss);
-   assert(conssetchg->addedconss[arraypos] == cons);
 
-   /* mark the constraint to be no longer in the problem */
-   cons->node = NULL;
-   cons->arraypos = -1;
+   cons = conssetchg->addedconss[arraypos];
 
-   /* free constraint data, such that constraint exists only as a zombie constraint from now on */
-   CHECK_OKAY( SCIPconsFreeData(cons, memhdr, set) );
+   debugMessage("delete added constraint <%s> at position %d from constraint set change data\n", cons->name, arraypos);
 
    /* release constraint */
-   CHECK_OKAY( SCIPconsRelease(&cons, memhdr, set) );
+   CHECK_OKAY( SCIPconsRelease(&conssetchg->addedconss[arraypos], memhdr, set) );
 
-   conssetchg->addedconss[arraypos] = NULL;
+   /* move the last constraint of the addedconss array to the empty slot */
+   if( arraypos < conssetchg->naddedconss-1 )
+   {
+      conssetchg->addedconss[arraypos] = conssetchg->addedconss[conssetchg->naddedconss-1];
+      assert(conssetchg->addedconss[arraypos] != NULL);
+      if( conssetchg->addedconss[arraypos]->addconssetchg == conssetchg )
+      {
+         assert(conssetchg->addedconss[arraypos]->addarraypos == conssetchg->naddedconss-1);
+         conssetchg->addedconss[arraypos]->addarraypos = arraypos;
+      }
+   }
+   conssetchg->naddedconss--;
+
+   /* remove the link to the constraint set change data */
+   if( cons->addconssetchg == conssetchg )
+   {
+      cons->addconssetchg = NULL;
+      cons->addarraypos = -1;
+   }
 
    return SCIP_OKAY;
 }
@@ -2509,12 +2514,20 @@ RETCODE conssetchgDelDisabledCons(
    assert(conssetchg != NULL);
    assert(0 <= arraypos && arraypos < conssetchg->ndisabledconss);
    assert(conssetchg->disabledconss[arraypos] != NULL);
-   assert(!conssetchg->disabledconss[arraypos]->active);
-   assert(!conssetchg->disabledconss[arraypos]->enabled);
 
+   debugMessage("delete disabled constraint <%s> at position %d from constraint set change data\n",
+      conssetchg->disabledconss[arraypos]->name, arraypos);
+
+   /* release constraint */
    CHECK_OKAY( SCIPconsRelease(&conssetchg->disabledconss[arraypos], memhdr, set) );
 
-   assert(conssetchg->disabledconss[arraypos] == NULL);
+   /* move the last constraint of the disabledconss array to the empty slot */
+   if( arraypos < conssetchg->ndisabledconss-1 )
+   {
+      assert(conssetchg->disabledconss[conssetchg->ndisabledconss-1] != NULL);
+      conssetchg->disabledconss[arraypos] = conssetchg->disabledconss[conssetchg->ndisabledconss-1];
+   }
+   conssetchg->ndisabledconss--;
 
    return SCIP_OKAY;
 }
@@ -2541,12 +2554,28 @@ RETCODE SCIPconssetchgApply(
    for( i = 0; i < conssetchg->naddedconss; ++i )
    {
       cons = conssetchg->addedconss[i];
-      if( cons != NULL )
+      assert(cons != NULL);
+      assert(!cons->update);
+
+      /* if constraint is already active, or if constraint is globally deleted, it can be removed from addedconss array */
+      if( cons->active || cons->deleted )
       {
-         assert(!cons->update);
+         CHECK_OKAY( conssetchgDelAddedCons(conssetchg, memhdr, set, i) );
+         i--; /* the empty slot is now used by the last constraint, and naddedconss was decreased */
+      }
+      else
+      {
+         assert(cons->addconssetchg == NULL);
+         assert(cons->addarraypos == -1);
+
+         /* activate constraint */
          CHECK_OKAY( SCIPconsActivate(cons, set) );
          assert(cons->active);
          assert(!cons->update);
+         
+         /* remember, that this constraint set change data was resposible for the constraint's addition */
+         cons->addconssetchg = conssetchg;
+         cons->addarraypos = i;
       }
    }
 
@@ -2557,18 +2586,10 @@ RETCODE SCIPconssetchgApply(
 
       if( cons != NULL )
       {
-         int arraypos;
-
          assert(!cons->update);
 
-         arraypos = cons->arraypos;
-         assert(!cons->active || arraypos >= 0);
-
-         /* if the constraint is inactive, we can permanently remove it from the disabledconss array
-          * if the constraint was added at this node and is no check-constraint, we can deactivate and remove it from
-          * both arrays
-          */
-         if( !cons->active )
+         /* if the constraint is disabled, we can permanently remove it from the disabledconss array */
+         if( !cons->enabled )
          {
             debugMessage("constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
                cons->name, cons->conshdlr->name);
@@ -2576,25 +2597,14 @@ RETCODE SCIPconssetchgApply(
             /* release and remove constraint from the disabledconss array */
             CHECK_OKAY( conssetchgDelDisabledCons(conssetchg, memhdr, set, i) );
          }
-         else if( !cons->check && arraypos < conssetchg->naddedconss && cons == conssetchg->addedconss[arraypos] )
-         {
-            debugMessage("constraint <%s> of handler <%s> was added and disabled at same node -> remove from both arrays\n",
-               cons->name, cons->conshdlr->name);
-            
-            /* deactivate the just activated constraint */
-            CHECK_OKAY( SCIPconsDeactivate(cons, set) );
-
-            /* release and remove constraint from the addedconss array */
-            CHECK_OKAY( conssetchgDelAddedCons(conssetchg, memhdr, set, cons) );
-
-            /* release and remove constraint from the disabledconss array */
-            CHECK_OKAY( conssetchgDelDisabledCons(conssetchg, memhdr, set, i) );
-         }
          else
          {
+            assert(cons->addarraypos >= 0);
+            assert(!cons->deleted); /* deleted constraints must not be enabled! */
             CHECK_OKAY( SCIPconsDisable(conssetchg->disabledconss[i], set) );
          }
          assert(!cons->update);
+         assert(!cons->enabled);
       }
    }
 
@@ -2625,19 +2635,18 @@ RETCODE SCIPconssetchgUndo(
       cons = conssetchg->disabledconss[i];
       if( cons != NULL )
       {
-         int arraypos;
-
          assert(!cons->update);
 
-         arraypos = cons->arraypos;
-         assert(!cons->active || arraypos >= 0);
-
-         /* if the constraint is inactive, we can permanently remove it from the disabledconss array (it was deactivated
+         /* If the constraint is inactive, we can permanently remove it from the disabledconss array. It was deactivated
           * in the subtree of the current node but not reactivated on the switching way back to the current node, which
           * means, the deactivation was more global (i.e. valid on a higher level node) than the current node and the
-          * disabling at the current node doesn't have any effect anymore);
-          * if the constraint was added at this node and is no check-constraint, we can deactivate and remove it from
-          * both arrays
+          * disabling at the current node doesn't have any effect anymore.
+          * If the constraint is already enabled, we need not to do anything. This may happen on a path A -> B,
+          * if the constraint is disabled at node B, and while processing the subtree of B, it is also disabled at
+          * the more global node A. Then on the switching path back to A, the node is enabled at node B (which is
+          * actually wrong, since it now should be disabled in the whole subtree of A, but we cannot know this), and
+          * again enabled at node A (where enabling is ignored). If afterwards, a subnode of B is processed, the
+          * switching disables the constraint in node A, and the disabling is then removed from node B.
           */
          if( !cons->active )
          {
@@ -2647,25 +2656,14 @@ RETCODE SCIPconssetchgUndo(
             /* release and remove constraint from the disabledconss array */
             CHECK_OKAY( conssetchgDelDisabledCons(conssetchg, memhdr, set, i) );
          }
-         else if( !cons->check && arraypos < conssetchg->naddedconss && cons == conssetchg->addedconss[arraypos] )
+         else if( !cons->enabled )
          {
-            debugMessage("constraint <%s> of handler <%s> was added and disabled at same node -> remove from both arrays\n",
-               cons->name, cons->conshdlr->name);
-            
-            /* deactivate the just activated constraint */
-            CHECK_OKAY( SCIPconsDeactivate(cons, set) );
-
-            /* release and remove constraint from the addedconss array */
-            CHECK_OKAY( conssetchgDelAddedCons(conssetchg, memhdr, set, cons) );
-
-            /* release and remove constraint from the disabledconss array */
-            CHECK_OKAY( conssetchgDelDisabledCons(conssetchg, memhdr, set, i) );
-         }
-         else
-         {
+            assert(cons->addarraypos >= 0);
+            assert(!cons->deleted); /* deleted constraints must not be active! */
             CHECK_OKAY( SCIPconsEnable(cons, set) );
          }
          assert(!cons->update);
+         assert(!cons->active || cons->enabled);
       }
    }
 
@@ -2676,7 +2674,26 @@ RETCODE SCIPconssetchgUndo(
       if( cons != NULL )
       {
          assert(!cons->update);
-         CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+
+         /* If the constraint is already deactivated, we need not to do anything. This may happen on a path A -> B,
+          * if the constraint is added at node B, and while processing the subtree of B, it is also added at
+          * the more global node A. Then on the switching path back to A, the node is deactivated at node B (which is
+          * actually wrong, since it now should be active in the whole subtree of A, but we cannot know this), and
+          * again deactivated at node A (where deactivation is ignored). If afterwards, a subnode of B is processed, the
+          * switching activates the constraint in node A, and the activation is then removed from node B.
+          */
+         if( cons->active )
+         {
+            assert(cons->addconssetchg == conssetchg);
+            assert(cons->addarraypos == i);
+            
+            /* deactivate constraint */
+            CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+         
+            /* unlink the constraint and the constraint set change */
+            cons->addconssetchg = NULL;
+            cons->addarraypos = -1;
+         }
          assert(!cons->active);
          assert(!cons->update);
       }
@@ -2725,15 +2742,15 @@ RETCODE SCIPconsCreate(
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*cons)->name, name, strlen(name)+1) );
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
-   (*cons)->node = NULL;
-   (*cons)->nuses = 0;
-   (*cons)->age = 0;
+   (*cons)->addconssetchg = NULL;
+   (*cons)->addarraypos = -1;
    (*cons)->consspos = -1;
    (*cons)->sepaconsspos = -1;
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
-   (*cons)->arraypos = -1;
+   (*cons)->nuses = 0;
+   (*cons)->age = 0;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
@@ -2746,6 +2763,7 @@ RETCODE SCIPconsCreate(
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
+   (*cons)->deleted = FALSE;
    (*cons)->update = FALSE;
    (*cons)->updateactivate = FALSE;
    (*cons)->updatedeactivate = FALSE;
@@ -2848,9 +2866,8 @@ RETCODE SCIPconsRelease(
    return SCIP_OKAY;
 }
 
-/** globally removes constraint from all subproblems; removes constraint from the addedconss array of the node, where it
- *  was created, or from the problem, if it was a problem constraint;
- *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
+/** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
+ *  node, where it was created, or from the problem, if it was a problem constraint
  */
 RETCODE SCIPconsDelete(
    CONS*            cons,               /**< constraint to delete */
@@ -2860,6 +2877,7 @@ RETCODE SCIPconsDelete(
    )
 {
    assert(cons != NULL);
+   assert(!cons->active || cons->updatedeactivate || cons->addarraypos >= 0);
 
    debugMessage("globally deleting constraint <%s>\n", cons->name);
 
@@ -2871,15 +2889,26 @@ RETCODE SCIPconsDelete(
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
 
-   if( cons->node == NULL )
+   /* mark constraint deleted */
+   cons->deleted = TRUE;
+
+   /* remove formerly active constraint from the conssetchg's/prob's addedconss/conss array */
+   if( cons->addarraypos >= 0 )
    {
-      /* remove problem constraint from the problem */
-      CHECK_OKAY( SCIPprobDelCons(prob, memhdr, set, cons) );
-   }
-   else
-   {
-      /* remove constraint from the node's addedconss array */
-      CHECK_OKAY( conssetchgDelAddedCons(cons->node->conssetchg, memhdr, set, cons) );
+      if( cons->addconssetchg == NULL )
+      {
+         /* remove problem constraint from the problem */
+         CHECK_OKAY( SCIPprobDelCons(prob, memhdr, set, cons) );
+      }
+      else
+      {
+         assert(cons->addconssetchg->addedconss != NULL);
+         assert(0 <= cons->addarraypos && cons->addarraypos < cons->addconssetchg->naddedconss);
+         assert(cons->addconssetchg->addedconss[cons->addarraypos] == cons);
+         
+         /* remove constraint from the constraint set change addedconss array */
+         CHECK_OKAY( conssetchgDelAddedCons(cons->addconssetchg, memhdr, set, cons->addarraypos) );
+      }
    }
 
    return SCIP_OKAY;

@@ -765,23 +765,17 @@ RETCODE SCIPnodeAddCons(
 {
    assert(node != NULL);
    assert(cons != NULL);
-   assert(cons->node == NULL);
-   assert(cons->arraypos == -1);
 
    /* add constraint addition to the node's constraint set change data */
    CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, node, cons) );
+   assert(node->conssetchg != NULL);
+   assert(node->conssetchg->addedconss != NULL);
 
    /* activate constraint, if node is active */
-   if( node->active )
+   if( node->active && !cons->active && !cons->updateactivate )
    {
       CHECK_OKAY( SCIPconsActivate(cons, set) );
    }
-
-   assert(node->conssetchg != NULL);
-   assert(node->conssetchg->addedconss != NULL);
-   assert(cons->node == node);
-   assert(0 <= cons->arraypos && cons->arraypos < node->conssetchg->naddedconss);
-   assert(node->conssetchg->addedconss[cons->arraypos] == cons);
 
    return SCIP_OKAY;
 }
@@ -800,22 +794,19 @@ RETCODE SCIPnodeDisableCons(
    assert(node != NULL);
    assert(tree != NULL);
    assert(cons != NULL);
-   assert(cons->active);
-   assert(cons->enabled);
 
    debugMessage("disabling constraint <%s> at node in depth %d\n", cons->name, node->depth);
 
    /* add constraint disabling to the node's constraint set change data */
    CHECK_OKAY( SCIPconssetchgAddDisabledCons(&node->conssetchg, memhdr, set, cons) );
+   assert(node->conssetchg != NULL);
+   assert(node->conssetchg->disabledconss != NULL);
 
    /* disable constraint, if node is active */
-   if( node->active )
+   if( node->active && cons->enabled && !cons->updatedisable )
    {
       CHECK_OKAY( SCIPconsDisable(cons, set) );
    }
-
-   assert(node->conssetchg != NULL);
-   assert(node->conssetchg->disabledconss != NULL);
 
    return SCIP_OKAY;
 }

@@ -416,15 +416,16 @@ struct Cons
    char*            name;               /**< name of the constraint */
    CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
    CONSDATA*        consdata;           /**< data for this specific constraint */
-   NODE*            node;               /**< node where this constraint was created, or NULL if it's a global constraint */
-   int              nuses;              /**< number of times, this constraint is referenced */
-   int              age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
+   CONSSETCHG*      addconssetchg;      /**< constraint change that added constraint to current subproblem, or NULL if
+                                         *   constraint is from global problem */
+   int              addarraypos;        /**< position of constraint in the conssetchg's/prob's addedconss/conss array */
    int              consspos;           /**< position of constraint in the handler's conss array */
    int              sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
    int              enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int              checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int              propconsspos;       /**< position of constraint in the handler's propconss array */
-   int              arraypos;           /**< position of constraint in the node's/problem's addedconss/conss array */
+   int              nuses;              /**< number of times, this constraint is referenced */
+   int              age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
@@ -437,6 +438,7 @@ struct Cons
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
    unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
    unsigned int     obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
+   unsigned int     deleted:1;          /**< TRUE iff constraint was globally deleted */
    unsigned int     update:1;           /**< TRUE iff constraint has to be updated in update phase */
    unsigned int     updateactivate:1;   /**< TRUE iff constraint has to be activated in update phase */
    unsigned int     updatedeactivate:1; /**< TRUE iff constraint has to be deactivated in update phase */
@@ -943,9 +945,8 @@ RETCODE SCIPconsRelease(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** globally removes constraint from all subproblems; removes constraint from the addedconss array of the node, where it
- *  was created, or from the problem, if it was a problem constraint;
- *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
+/** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
+ *  node, where it was created, or from the problem, if it was a problem constraint
  */
 extern
 RETCODE SCIPconsDelete(
