@@ -3103,12 +3103,15 @@ RETCODE linconsRemoveRedundancy(
          continue;
 
       lincons1 = consGetLincons(cons1);
-      assert(lincons1->sorted);
-      assert(lincons1->nvars >= 1);
 
       /* if both constraints didn't change since last redundancy check, we can ignore the pair */
       if( lincons0->redchecked && lincons1->redchecked )
          continue;
+
+      assert(lincons1->nvars >= 1);
+
+      /* sort the constraint */
+      CHECK_OKAY( linconsSort(scip, lincons1) );
 
       cons1isequality = SCIPisEQ(scip, lincons1->lhs, lincons1->rhs);
       
