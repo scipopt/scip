@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.35 2004/10/26 07:30:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.36 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -125,7 +125,7 @@ DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
    else
       sol = NULL;
@@ -549,7 +549,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
       CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
    }
@@ -600,7 +600,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
 
    printf("\n");
 
-   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
    else
       sol = NULL;
@@ -676,7 +676,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
       CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
    }
@@ -719,7 +719,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   switch( SCIPstage(scip) )
+   switch( SCIPgetStage(scip) )
    {
    case SCIP_STAGE_INIT:
       printf("no problem exists\n");
@@ -758,7 +758,7 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   switch( SCIPstage(scip) )
+   switch( SCIPgetStage(scip) )
    {
    case SCIP_STAGE_INIT:
       printf("no problem exists\n");
@@ -1135,7 +1135,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    /* branching priorities cannot be set, if no problem was created */
-   if( SCIPstage(scip) == SCIP_STAGE_INIT )
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT )
    {
       printf("cannot set branching directions before problem was created\n");
       return SCIP_OKAY;
@@ -1214,7 +1214,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    /* branching priorities cannot be set, if no problem was created */
-   if( SCIPstage(scip) == SCIP_STAGE_INIT )
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT )
    {
       printf("cannot set branching priorities before problem was created\n");
       return SCIP_OKAY;
@@ -1265,7 +1265,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    /* objective limit cannot be set, if no problem was created */
-   if( SCIPstage(scip) == SCIP_STAGE_INIT )
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT )
    {
       printf("cannot set objective limit before problem was created\n");
       return SCIP_OKAY;
@@ -1285,7 +1285,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    }
    
    /* check, if new objective limit is valid */
-   if( SCIPstage(scip) > SCIP_STAGE_PROBLEM
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM
       && SCIPtransformObj(scip, objlim) > SCIPtransformObj(scip, SCIPgetObjlimit(scip)) )
    {
       printf("\ncannot relax objective limit from %g to %g after problem was transformed\n\n",

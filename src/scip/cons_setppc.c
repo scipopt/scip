@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.66 2004/10/28 14:30:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.67 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1447,7 +1447,7 @@ DECL_CONSTRANS(consTransSetppc)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(SCIPstage(scip) == SCIP_STAGE_TRANSFORMING);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
@@ -2477,7 +2477,7 @@ RETCODE createConsSetppc(
    }
 
    /* create the constraint specific data */
-   if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
    {
       /* create constraint in original problem */
       CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars, setppctype) );
@@ -2492,7 +2492,7 @@ RETCODE createConsSetppc(
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, removeable) );
 
-   if( SCIPstage(scip) != SCIP_STAGE_PROBLEM )
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
       CONSHDLRDATA* conshdlrdata;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.60 2004/10/28 14:30:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.61 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -988,7 +988,7 @@ DECL_CONSTRANS(consTransLogicor)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(SCIPstage(scip) == SCIP_STAGE_TRANSFORMING);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 

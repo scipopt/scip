@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.53 2004/10/26 07:30:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.54 2004/10/29 10:39:00 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -64,6 +64,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistorycrun, memhdr) );
    CHECK_OKAY( SCIPvbcCreate(&(*stat)->vbc) );
 
+   (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.119 2004/10/28 14:30:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.120 2004/10/29 10:39:00 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2020,6 +2020,17 @@ RETCODE SCIPvarRelease(
    return SCIP_OKAY;
 }
 
+/** initializes variable data structure for solving */
+void SCIPvarInitSolve(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   SCIPhistoryReset(var->historycrun);
+   var->conflictsetcount = 0;
+}
+
 /** outputs variable information into file stream */
 void SCIPvarPrint(
    VAR*             var,                /**< problem variable */
@@ -3578,7 +3589,7 @@ RETCODE SCIPvarChgObj(
          }
          else
          {
-            assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+            assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
             var->obj = newobj;
          }
          break;
@@ -3621,7 +3632,7 @@ RETCODE SCIPvarAddObj(
 {
    assert(var != NULL);
    assert(set != NULL);
-   assert(SCIPstage(set->scip) < SCIP_STAGE_INITSOLVE);
+   assert(SCIPgetStage(set->scip) < SCIP_STAGE_INITSOLVE);
 
    debugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
 
@@ -3639,7 +3650,7 @@ RETCODE SCIPvarAddObj(
          }
          else
          {
-            assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+            assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
             var->obj += addobj;
          }
          break;
@@ -3995,7 +4006,7 @@ RETCODE SCIPvarChgLbGlobal(
       }
       else
       {
-         assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          CHECK_OKAY( varProcessChgLbGlobal(var, set, newbound) );
       }
       break;
@@ -4086,7 +4097,7 @@ RETCODE SCIPvarChgUbGlobal(
       }
       else
       {
-         assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          CHECK_OKAY( varProcessChgUbGlobal(var, set, newbound) );
       }
       break;
@@ -4483,7 +4494,7 @@ RETCODE SCIPvarChgLbLocal(
       }
       else
       {
-         assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
          var->locdom.lb = newbound;
       }
@@ -4585,7 +4596,7 @@ RETCODE SCIPvarChgUbLocal(
       }
       else
       {
-         assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
          var->locdom.ub = newbound;
       }
@@ -5358,7 +5369,7 @@ void SCIPvarChgBranchFactor(
          SCIPvarChgBranchFactor(var->data.transvar, set, branchfactor);
       else
       {
-         assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          var->branchfactor = branchfactor;
       }
       break;
@@ -7013,16 +7024,6 @@ RETCODE SCIPvarAddToRow(
       errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-}
-
-/** resets history of current run for given variable */
-void SCIPvarResetHistoryCurrentRun(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   SCIPhistoryReset(var->historycrun);
 }
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.30 2004/07/07 08:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.31 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -151,6 +151,22 @@ RETCODE SCIPchgRhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real             rhs                 /**< new right hand side */
+   );
+
+/** gets the activity of the linear constraint in the given solution */
+extern
+Real SCIPgetActivityLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
+   SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   );
+
+/** gets the feasibility of the linear constraint in the given solution */
+extern
+Real SCIPgetFeasibilityLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
+   SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
 /** gets the dual solution of the linear constraint in the current LP */

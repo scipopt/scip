@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.25 2004/10/26 07:30:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.26 2004/10/29 10:39:00 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -83,6 +83,7 @@ struct Stat
    HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    VAR*             lastbranchvar;      /**< last variable, that was branched on */
    VBC*             vbc;                /**< VBC Tool information */
+   STATUS           status;             /**< SCIP solving status */
    BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    int              nruns;              /**< number of branch and bound runs on current problem, including current run */
    int              nrootboundchgsrun;  /**< total number of bound changes generated in the root node of current run */

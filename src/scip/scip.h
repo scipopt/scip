@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.176 2004/10/26 18:24:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.177 2004/10/29 10:39:00 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -158,8 +158,28 @@ void SCIPmessage(
 
 /** returns current stage of SCIP */
 extern
-STAGE SCIPstage(
+STAGE SCIPgetStage(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** outputs SCIP stage and solution status if applicable */
+extern
+RETCODE SCIPprintStage(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/** gets solution status */
+extern
+STATUS SCIPgetStatus(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** outputs solution status */
+extern
+RETCODE SCIPprintStatus(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /** returns whether the current stage belongs to the transformed problem space */
@@ -4051,13 +4071,6 @@ RETCODE SCIPprintOrigProblem(
 /** outputs transformed problem to file stream */
 extern
 RETCODE SCIPprintTransProblem(
-   SCIP*            scip,               /**< SCIP data structure */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   );
-
-/** outputs SCIP status */
-extern
-RETCODE SCIPprintStatus(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file (or NULL for standard output) */
    );

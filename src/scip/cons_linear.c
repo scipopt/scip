@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.125 2004/10/28 14:30:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.126 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3072,7 +3072,7 @@ DECL_CONSTRANS(consTransLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(SCIPstage(scip) == SCIP_STAGE_TRANSFORMING);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
@@ -5224,7 +5224,7 @@ RETCODE SCIPcreateConsLinear(
    }
 
    /* create the constraint specific data */
-   if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
    {
       /* create constraint in original problem */
       CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
@@ -5348,6 +5348,54 @@ RETCODE SCIPchgRhsLinear(
    CHECK_OKAY( chgRhs(scip, cons, rhs) );
 
    return SCIP_OKAY;
+}
+
+/** gets the activity of the linear constraint in the given solution */
+Real SCIPgetActivityLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
+   SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIPgetRowSolActivity(scip, consdata->row, sol);
+   else
+      return consdataGetActivity(scip, consdata, sol);
+}
+
+/** gets the feasibility of the linear constraint in the given solution */
+Real SCIPgetFeasibilityLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
+   SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIPgetRowSolFeasibility(scip, consdata->row, sol);
+   else
+      return consdataGetFeasibility(scip, consdata, sol);
 }
 
 /** gets the dual solution of the linear constraint in the current LP */

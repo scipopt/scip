@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.56 2004/10/05 16:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.57 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -948,11 +948,9 @@ RETCODE SCIPprobInitSolve(
       CHECK_OKAY( SCIPconsResetAge(prob->conss[c], set) );
    }
 
-   /* reset variable's current run history entries */
+   /* initialize variables for solving */
    for( v = 0; v < prob->nvars; ++v )
-   {
-      SCIPvarResetHistoryCurrentRun(prob->vars[v]);
-   }
+      SCIPvarInitSolve(prob->vars[v]);
 
    /* call user data function */
    if( prob->probinitsol != NULL )

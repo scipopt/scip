@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.27 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.28 2004/10/29 10:39:00 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -46,19 +46,13 @@
 
 
 
-/** returns whether the solving process will be / was stopped before proving optimality */
+/** returns whether the solving process will be / was stopped before proving optimality;
+ *  if the solving process was stopped, stores the reason as status in stat
+ */
 extern
 Bool SCIPsolveIsStopped(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
-   );
-
-/** outputs the reason for termination */
-extern
-void SCIPsolvePrintStopReason(
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /** applies domain propagation on current node */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.79 2004/10/26 18:24:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.80 2004/10/29 10:39:01 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -220,6 +220,12 @@ RETCODE SCIPvarRelease(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
+   );
+
+/** initializes variable data structure for solving */
+extern
+void SCIPvarInitSolve(
+   VAR*             var                 /**< problem variable */
    );
 
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
@@ -632,12 +638,6 @@ RETCODE SCIPvarAddToRow(
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
-   );
-
-/** resets history of current run for given variable */
-extern
-void SCIPvarResetHistoryCurrentRun(
-   VAR*             var                 /**< problem variable */
    );
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of

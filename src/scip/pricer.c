@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.7 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.8 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -204,7 +204,7 @@ RETCODE SCIPpricerActivate(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+   assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
 
    if( !pricer->active )
    {
@@ -224,7 +224,7 @@ RETCODE SCIPpricerDeactivate(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+   assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
 
    if( pricer->active )
    {

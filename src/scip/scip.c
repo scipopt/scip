@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.220 2004/10/28 14:30:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.221 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -458,13 +458,150 @@ void SCIPmessage(
 }
 
 /** returns current stage of SCIP */
-STAGE SCIPstage(
+STAGE SCIPgetStage(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
    return scip->stage;
+}
+
+/** outputs SCIP stage and solution status if applicable */
+RETCODE SCIPprintStage(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintStage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( file == NULL )
+      file = stdout;
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_INIT:
+      fprintf(file, "initialization");
+      break;
+   case SCIP_STAGE_PROBLEM:
+      fprintf(file, "problem creation / modification");
+      break;
+   case SCIP_STAGE_TRANSFORMING:
+      fprintf(file, "problem transformation");
+      break;
+   case SCIP_STAGE_TRANSFORMED:
+      fprintf(file, "problem transformed");
+      break;
+   case SCIP_STAGE_PRESOLVING:
+      fprintf(file, "presolving is running");
+      break;
+   case SCIP_STAGE_PRESOLVED:
+      fprintf(file, "problem is presolved");
+      break;
+   case SCIP_STAGE_INITSOLVE:
+      fprintf(file, "solving process initialization");
+      break;
+   case SCIP_STAGE_SOLVING:
+      if( SCIPsolveIsStopped(scip->set, scip->stat) )
+      {
+         fprintf(file, "solving was interrupted [");
+         CHECK_OKAY( SCIPprintStatus(scip, file) );
+         fprintf(file, "]");
+      }
+      else
+         fprintf(file, "solving process is running");
+      break;
+   case SCIP_STAGE_SOLVED:
+      fprintf(file, "problem is solved [");
+      CHECK_OKAY( SCIPprintStatus(scip, file) );
+      fprintf(file, "]");
+      break;
+   case SCIP_STAGE_FREESOLVE:
+      fprintf(file, "solving process deinitialization");
+      break;
+   case SCIP_STAGE_FREETRANS:
+      fprintf(file, "freeing transformed problem");
+      break;
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets solution status */
+STATUS SCIPgetStatus(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( scip->stage == SCIP_STAGE_INIT )
+      return SCIP_STATUS_UNKNOWN;
+   else
+   {
+      assert(scip->stat != NULL);
+
+      return scip->stat->status;
+   }
+}
+
+/** outputs solution status */
+RETCODE SCIPprintStatus(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( file == NULL )
+      file = stdout;
+
+   switch( SCIPgetStatus(scip) )
+   {
+   case SCIP_STATUS_UNKNOWN:
+      fprintf(file, "unknown");
+      break;
+   case SCIP_STATUS_USERINTERRUPT:
+      fprintf(file, "user interrupt");
+      break;
+   case SCIP_STATUS_NODELIMIT:
+      fprintf(file, "node limit reached");
+      break;
+   case SCIP_STATUS_TIMELIMIT:
+      fprintf(file, "time limit reached");
+      break;
+   case SCIP_STATUS_MEMLIMIT:
+      fprintf(file, "memory limit reached");
+      break;
+   case SCIP_STATUS_GAPLIMIT:
+      fprintf(file, "gap limit reached");
+      break;
+   case SCIP_STATUS_SOLLIMIT:
+      fprintf(file, "solution limit reached");
+      break;
+   case SCIP_STATUS_BESTSOLLIMIT:
+      fprintf(file, "solution improvement limit reached");
+      break;
+   case SCIP_STATUS_OPTIMAL:
+      fprintf(file, "optimal solution found");
+      break;
+   case SCIP_STATUS_INFEASIBLE:
+      fprintf(file, "infeasible");
+      break;
+   case SCIP_STATUS_UNBOUNDED:
+      fprintf(file, "unbounded");
+      break;
+   case SCIP_STATUS_INFORUNBD:
+      fprintf(file, "infeasible or unbounded");
+      break;
+   default:
+      errorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns whether the current stage belongs to the transformed problem space */
@@ -1954,7 +2091,7 @@ RETCODE SCIPcreateProb(
    CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
    CHECK_OKAY( SCIPprobCreate(&scip->origprob, scip->mem->probmem, name, 
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probdata, FALSE) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -3024,6 +3161,7 @@ RETCODE transformProb(
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
+   assert(scip->stat->status == SCIP_STATUS_UNKNOWN);
    assert(scip->stage == SCIP_STAGE_PROBLEM);
 
    /* check, if a node selector exists */
@@ -3121,6 +3259,8 @@ RETCODE presolve(
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->stat->status == SCIP_STATUS_UNKNOWN);
    assert(scip->transprob != NULL);
    assert(scip->stage == SCIP_STAGE_TRANSFORMED);
    assert(unbounded != NULL);
@@ -3409,6 +3549,9 @@ RETCODE freeSolve(
    /* switch stage to FREESOLVE */
    scip->stage = SCIP_STAGE_FREESOLVE;
 
+   /* switch status to UNKNOWN */
+   scip->stat->status = SCIP_STATUS_UNKNOWN;
+
    /* clear the LP, and flush the changes to clear the LP of the solver */
    CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
    CHECK_OKAY( SCIPlpFlush(scip->lp, scip->mem->solvemem, scip->set) );
@@ -3456,6 +3599,8 @@ RETCODE freeTransform(
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->stat->status == SCIP_STATUS_UNKNOWN);
    assert(scip->stage == SCIP_STAGE_TRANSFORMED);
 
    /* exit callback methods */
@@ -3527,10 +3672,23 @@ RETCODE SCIPpresolve(
          if( infeasible )
          {
             infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.\n");
+
+            /* switch status to INFEASIBLE */
+            scip->stat->status = SCIP_STATUS_INFEASIBLE;
+         }
+         else if( scip->primal->nsols >= 1 )
+         {
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
+
+            /* switch status to UNBOUNDED */
+            scip->stat->status = SCIP_STATUS_UNBOUNDED;
          }
          else
          {
-            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness (or infeasibility).\n");
+
+            /* switch status to INFORUNBD */
+            scip->stat->status = SCIP_STATUS_INFORUNBD;
          }
       }
       else
@@ -3645,24 +3803,30 @@ RETCODE SCIPsolve(
          /* detect, whether problem is solved */
          if( SCIPtreeGetNNodes(scip->tree) == 0 && SCIPtreeGetCurrentNode(scip->tree) == NULL )
          {
+            assert(scip->stat->status == SCIP_STATUS_OPTIMAL
+               || scip->stat->status == SCIP_STATUS_INFEASIBLE
+               || scip->stat->status == SCIP_STATUS_UNBOUNDED
+               || scip->stat->status == SCIP_STATUS_INFORUNBD);
+
             /* tree is empty, and no current node exists -> problem is solved */
             scip->stage = SCIP_STAGE_SOLVED;
          }
-         else
+         else if( restart )
          {
-            /* check for restart */
-            if( restart )
-            {
-               SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
-                  "(run %d) restarting after %d root node bound changes\n\n",
-                  scip->stat->nruns, scip->stat->nrootboundchgsrun);
-               CHECK_OKAY( SCIPfreeSolve(scip) );
-               assert(scip->stage == SCIP_STAGE_TRANSFORMED);
-            }
+            /* free the solving process data in order to restart */
+            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+               "(run %d) restarting after %d root node bound changes\n\n",
+               scip->stat->nruns, scip->stat->nrootboundchgsrun);
+            CHECK_OKAY( SCIPfreeSolve(scip) );
+            assert(scip->stage == SCIP_STAGE_TRANSFORMED);
          }
          break;
 
       case SCIP_STAGE_SOLVED:
+         assert(scip->stat->status == SCIP_STATUS_OPTIMAL
+            || scip->stat->status == SCIP_STATUS_INFEASIBLE
+            || scip->stat->status == SCIP_STATUS_UNBOUNDED
+            || scip->stat->status == SCIP_STATUS_INFORUNBD);
          break;
 
       default:
@@ -3680,7 +3844,7 @@ RETCODE SCIPsolve(
    {
       printf("\n");
       printf("SCIP Status        : ");
-      CHECK_OKAY( SCIPprintStatus(scip, NULL) );
+      CHECK_OKAY( SCIPprintStage(scip, NULL) );
       printf("\n");
       printf("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       if( scip->stat->nruns > 1 )
@@ -10255,73 +10419,6 @@ void printSolutionStatistics(
       fprintf(file, "  Root Dual Bound  : %+21.14e\n", dualboundroot);
 }
 
-/** outputs SCIP status */
-RETCODE SCIPprintStatus(
-   SCIP*            scip,               /**< SCIP data structure */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPprintStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   if( file == NULL )
-      file = stdout;
-
-   switch( scip->stage )
-   {
-   case SCIP_STAGE_INIT:
-      fprintf(file, "initialization");
-      break;
-   case SCIP_STAGE_PROBLEM:
-      fprintf(file, "problem creation");
-      break;
-   case SCIP_STAGE_TRANSFORMING:
-      fprintf(file, "problem transformation");
-      break;
-   case SCIP_STAGE_TRANSFORMED:
-      fprintf(file, "problem transformed");
-      break;
-   case SCIP_STAGE_PRESOLVING:
-      fprintf(file, "presolving is running");
-      break;
-   case SCIP_STAGE_PRESOLVED:
-      fprintf(file, "problem is presolved");
-      break;
-   case SCIP_STAGE_INITSOLVE:
-      fprintf(file, "solving process initialization");
-      break;
-   case SCIP_STAGE_SOLVING:
-      if( SCIPsolveIsStopped(scip->set, scip->stat) )
-      {
-         fprintf(file, "solving was interrupted [");
-         SCIPsolvePrintStopReason(scip->set, scip->stat, file);
-         fprintf(file, "]");
-      }
-      else
-         fprintf(file, "solving process is running");
-      break;
-   case SCIP_STAGE_SOLVED:
-      fprintf(file, "problem is solved");
-      if( scip->primal->nsols == 0 )
-         fprintf(file, " [infeasible]");
-      else if( SCIPsetIsInfinity(scip->set, -scip->primal->upperbound) )
-         fprintf(file, " [unbounded]");
-      else
-         fprintf(file, " [optimal solution found]");
-      break;
-   case SCIP_STAGE_FREESOLVE:
-      fprintf(file, "solving process deinitialization");
-      break;
-   case SCIP_STAGE_FREETRANS:
-      fprintf(file, "freeing transformed problem");
-      break;
-   default:
-      errorMessage("invalid SCIP stage\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** outputs solving statistics */
 RETCODE SCIPprintStatistics(
    SCIP*            scip,               /**< SCIP data structure */
@@ -10333,24 +10430,23 @@ RETCODE SCIPprintStatistics(
    if( file == NULL )
       file = stdout;
 
+   fprintf(file, "SCIP Status        : ");
+   CHECK_OKAY( SCIPprintStage(scip, file) );
+   fprintf(file, "\n");
+
    switch( scip->stage )
    {
    case SCIP_STAGE_INIT:
-      fprintf(file, "SCIP Status        : initialization\n");
       fprintf(file, "Original Problem   : no problem exists.\n");
       return SCIP_OKAY;
 
    case SCIP_STAGE_PROBLEM:
-      fprintf(file, "SCIP Status        : problem creation / modification\n");
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVED:
-      fprintf(file, "SCIP Status        : ");
-      CHECK_OKAY( SCIPprintStatus(scip, file) );
-      fprintf(file, "\n");
       fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
@@ -10362,9 +10458,6 @@ RETCODE SCIPprintStatistics(
 
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      fprintf(file, "SCIP Status        : ");
-      CHECK_OKAY( SCIPprintStatus(scip, file) );
-      fprintf(file, "\n");
       fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);

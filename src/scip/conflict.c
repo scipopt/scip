@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.71 2004/10/28 14:30:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.72 2004/10/29 10:38:58 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -210,7 +210,7 @@ RETCODE SCIPconflicthdlrFree(
    assert(conflicthdlr != NULL);
    assert(*conflicthdlr != NULL);
    assert(!(*conflicthdlr)->initialized);
-   assert(SCIPstage(scip) == SCIP_STAGE_INIT);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_INIT);
 
    /* call destructor of conflict handler */
    if( (*conflicthdlr)->conflictfree != NULL )
@@ -463,7 +463,8 @@ RETCODE conflictAddConflictVar(
 #ifndef NDEBUG
       for( i = 0; i < conflict->nconflictvars + conflict->ntmpconflictvars && conflict->conflictvars[i] != var; ++i )
       {}
-      assert(i < conflict->nconflictvars + conflict->ntmpconflictvars && conflict->conflictvars[i] == var);
+      assert(i < conflict->nconflictvars + conflict->ntmpconflictvars);
+      assert(conflict->conflictvars[i] == var);
 #endif
       return SCIP_OKAY;
    }

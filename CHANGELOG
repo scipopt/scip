@@ -11,6 +11,15 @@ interface:
 - new method SCIPvarGetBranchDirection()
 - new possible result code SCIP_DELAYED for primal heuristics
 - changed SCIPcatchVarEvent() and SCIPdropVarEvent()
+- method SCIPstage() is now called SCIPgetStage()
+- method SCIPprintStatus() is now called SCIPprintStage()
+- new method SCIPgetStatus() returns the solution status
+- new method SCIPprintStatus() outputs the solution status
+  (beware, that the old SCIPprintStatus() method is now called SCIPprintStage())
+
+plugins:
+- new method SCIPgetActivityLinear() in linear constraint handler
+- new method SCIPgetFeasibilityLinear() in linear constraint handler
 
 parameters:
 - new parameter separating/efficacynorm to choose between euclidean, maximum, sum, and discrete norm
@@ -34,6 +43,8 @@ fixed bugs:
 - bug reconvergence clauses in conflict analysis if bounds on non-binary variables were the reason for the fixing of
   the uip to create a reconvergence clause for
 - wrong subcalls in SCIPvarGet...CurrentRun() for aggregated variables
+- variables' conflict set counter was not reset when the problem was resolved again
 
 known bugs (still not fixed):
+- unbounded models lead to an error
 - air04 and air05 return wrong optimal value (1 too large): possibly due to strong branching or setppc propagation?

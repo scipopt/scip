@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.141 2004/10/28 14:30:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.142 2004/10/29 10:39:00 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -59,49 +59,32 @@
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
 
 
-/** returns whether the solving process will be / was stopped before proving optimality */
+/** returns whether the solving process will be / was stopped before proving optimality;
+ *  if the solving process was stopped, stores the reason as status in stat
+ */
 Bool SCIPsolveIsStopped(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
    )
 {
-   return (SCIPinterrupted()
-      || (set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes)
-      || SCIPclockGetTime(stat->solvingtime) >= set->limit_time
-      || (SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0)
-      || (SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap))
-      || (set->limit_sol >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED &&
-         SCIPgetNSolsFound(set->scip) >= set->limit_sol)
-      || (set->limit_bestsol >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED &&
-         SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol));
-}
-
-/** outputs the reason for termination */
-void SCIPsolvePrintStopReason(
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   if( file == NULL )
-      file = stdout;
-
    if( SCIPinterrupted() )
-      fprintf(file, "user interrupt");
+      stat->status = SCIP_STATUS_USERINTERRUPT;
    else if( set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
-      fprintf(file, "node limit reached");
+      stat->status = SCIP_STATUS_NODELIMIT;
    else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
-      fprintf(file, "time limit reached");
+      stat->status = SCIP_STATUS_TIMELIMIT;
    else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0 )
-      fprintf(file, "memory limit reached");
-   else if( SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
-      fprintf(file, "gap limit reached");
-   else if( set->limit_sol >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED
+      stat->status = SCIP_STATUS_MEMLIMIT;
+   else if( SCIPgetStage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
+      stat->status = SCIP_STATUS_GAPLIMIT;
+   else if( set->limit_sol >= 0 && SCIPgetStage(set->scip) >= SCIP_STAGE_PRESOLVED
       && SCIPgetNSolsFound(set->scip) >= set->limit_sol )
-      fprintf(file, "solution limit reached");
-   else if( set->limit_bestsol >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED
+      stat->status = SCIP_STATUS_SOLLIMIT;
+   else if( set->limit_bestsol >= 0 && SCIPgetStage(set->scip) >= SCIP_STAGE_PRESOLVED
       && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )
-      fprintf(file, "solution improvement limit reached");
+      stat->status = SCIP_STATUS_BESTSOLLIMIT;
+
+   return (stat->status != SCIP_STATUS_UNKNOWN);
 }
 
 /** applies domain propagation on current node */
@@ -681,6 +664,7 @@ RETCODE priceAndCutLoop(
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers sorted by separation priority */
    Bool             initialloop,        /**< is this the first price-and-cut loop call at the current node? */
    Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   Bool*            unbounded,          /**< pointer to store whether an unbounded ray was found in the LP */
    Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
@@ -714,6 +698,7 @@ RETCODE priceAndCutLoop(
    assert(primal != NULL);
    assert(set->nconshdlrs == 0 || conshdlrs_sepa != NULL);
    assert(cutoff != NULL);
+   assert(unbounded != NULL);
    assert(lperror != NULL);
 
    focusnode = SCIPtreeGetFocusNode(tree);
@@ -755,6 +740,7 @@ RETCODE priceAndCutLoop(
    mustprice = TRUE;
    mustsepar = separate;
    *cutoff = FALSE;
+   *unbounded = FALSE;
    nsepastallrounds = 0;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepar) )
    {
@@ -879,7 +865,7 @@ RETCODE priceAndCutLoop(
 
          assert(lp->flushed);
          assert(lp->solved);
-         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
          oldlpobjval = SCIPlpGetObjval(lp, set);
 
@@ -901,7 +887,7 @@ RETCODE priceAndCutLoop(
          }
          assert(lp->flushed);
          assert(lp->solved);
-         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
          /* constraint separation */
          debugMessage("constraint separation\n");
@@ -909,7 +895,8 @@ RETCODE priceAndCutLoop(
          /* separate constraints and LP */
          separateagain = TRUE;
          while( !(*cutoff) && !(*lperror) && !enoughcuts && separateagain
-            && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+            && lp->solved
+            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
          {
             separateagain = FALSE;
 
@@ -951,10 +938,12 @@ RETCODE priceAndCutLoop(
          assert(*cutoff || *lperror || (lp->flushed && lp->solved));
          assert(!lp->solved
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT);
 
-         if( *cutoff || *lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
+         if( *cutoff || *lperror
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
          {
             /* the found cuts are of no use, because the node is infeasible anyway (or we have an error in the LP) */
             CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
@@ -966,10 +955,13 @@ RETCODE priceAndCutLoop(
             olddomchgcount = stat->domchgcount;
 
             /* apply reduced cost bound strengthening */
-            if( (set->prop_redcostfreq == 0 && root)
-               || (set->prop_redcostfreq > 0 && actdepth % set->prop_redcostfreq == 0) )
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
             {
-               CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue) );
+               if( (set->prop_redcostfreq == 0 && root)
+                  || (set->prop_redcostfreq > 0 && actdepth % set->prop_redcostfreq == 0) )
+               {
+                  CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue) );
+               }
             }
         
             /* apply found cuts */
@@ -1040,6 +1032,13 @@ RETCODE priceAndCutLoop(
       {
          CHECK_OKAY( SCIPconflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, NULL) );
       }
+
+      /* check for unboundness */
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      {
+         assert(root); /* this can only happen in the root node */
+         *unbounded = TRUE;
+      }
    }
    debugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set));
@@ -1067,6 +1066,7 @@ RETCODE solveNodeLP(
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers for separating constraints, sorted by priority */
    Bool             initiallpsolved,    /**< was the initial LP already solved? */
    Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   Bool*            unbounded,          /**< pointer to store TRUE, if an unbounded ray was found in the LP */
    Bool*            lperror             /**< pointer to store TRUE, if an unresolved error in LP solving occured */
    )
 {
@@ -1078,7 +1078,11 @@ RETCODE solveNodeLP(
    assert(SCIPtreeHasFocusNodeLP(tree));
    assert(cutoff != NULL);
    assert(lperror != NULL);
+   assert(cutoff != NULL);
+   assert(unbounded != NULL);
+   assert(lperror != NULL);
    assert(*cutoff == FALSE);
+   assert(*unbounded == FALSE);
    assert(*lperror == FALSE);
 
    nlps = stat->nlps;
@@ -1103,7 +1107,7 @@ RETCODE solveNodeLP(
    {
       /* solve the LP with price-and-cut*/
       CHECK_OKAY( priceAndCutLoop(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, cutpool, 
-            branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa, initiallpsolved, cutoff, lperror) );
+            branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa, initiallpsolved, cutoff, unbounded, lperror) );
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
@@ -1345,6 +1349,7 @@ RETCODE solveNode(
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers for separating constraints, sorted by priority */
    CONSHDLR**       conshdlrs_enfo,     /**< constraint handlers for enforcing constraints, sorted by priority */
    Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   Bool*            unbounded,          /**< pointer to store whether the focus node is unbounded */
    Bool*            infeasible,         /**< pointer to store whether the focus node's solution is infeasible */
    Bool*            restart             /**< should solving process be started again with presolving? */
    )
@@ -1367,10 +1372,12 @@ RETCODE solveNode(
    assert(tree != NULL);
    assert(primal != NULL);
    assert(cutoff != NULL);
+   assert(unbounded != NULL);
    assert(infeasible != NULL);
    assert(restart != NULL);
 
    *cutoff = FALSE;
+   *unbounded = FALSE;
    *infeasible = FALSE;
    *restart = FALSE;
 
@@ -1442,7 +1449,7 @@ RETCODE solveNode(
          /* solve the node's LP */
          CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore,
                cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
-               initiallpsolved, cutoff, &lperror) );
+               initiallpsolved, cutoff, unbounded, &lperror) );
          initiallpsolved = TRUE;
          debugMessage(" -> LP status: %d, LP obj: %g, iter: %lld, count: %d\n", 
             SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set),
@@ -1538,7 +1545,7 @@ RETCODE solveNode(
        *    branch, the constraints can hopefully reduce domains of other variables to cut
        *    off the current solution.
        */
-      if( *infeasible && !(*cutoff) && !solvelpagain && !propagateagain && !branched )
+      if( *infeasible && !(*cutoff) && !(*unbounded) && !solvelpagain && !propagateagain && !branched )
       {
          RESULT result;
          int nlpcands;
@@ -1645,7 +1652,7 @@ RETCODE solveNode(
       *restart = TRUE;
 
    /* remember root LP solution */
-   if( actdepth == 0 && !(*restart) )
+   if( actdepth == 0 && !(*restart) && !(*unbounded) )
    {
       SCIPprobStoreRootSol(prob, SCIPtreeHasFocusNodeLP(tree));
    }
@@ -1804,6 +1811,7 @@ RETCODE SCIPsolveCIP(
    int nnodes;
    int depth;
    Bool cutoff;
+   Bool unbounded;
    Bool infeasible;
    Bool foundsol;
 
@@ -1823,6 +1831,9 @@ RETCODE SCIPsolveCIP(
    assert(restart != NULL);
 
    *restart = FALSE;
+
+   /* switch status to UNKNOWN */
+   stat->status = SCIP_STATUS_UNKNOWN;
 
    /* sort constraint handlers by priorities */
    ALLOC_OKAY( duplicateMemoryArray(&conshdlrs_sepa, set->conshdlrs, set->nconshdlrs) );
@@ -1904,7 +1915,8 @@ RETCODE SCIPsolveCIP(
 
       /* solve focus node */
       CHECK_OKAY( solveNode(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,
-            conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible, restart) );
+            conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo,
+            &cutoff, &unbounded, &infeasible, restart) );
       assert(!cutoff || infeasible);
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
@@ -1930,7 +1942,7 @@ RETCODE SCIPsolveCIP(
             CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
             CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
          }
-         else
+         else if( !unbounded )
          {
             /* node solution is not feasible */
             if( tree->nchildren == 0 )
@@ -1962,7 +1974,7 @@ RETCODE SCIPsolveCIP(
           * in this case, no branching would have been generated by the enforcement of constraints, but we
           * have to further investigate the current sub tree
           */
-         if( !cutoff && tree->nchildren == 0 && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
+         if( !cutoff && !unbounded && tree->nchildren == 0 && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
          {
             RESULT result;
 
@@ -2018,7 +2030,7 @@ RETCODE SCIPsolveCIP(
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-   debugMessage("Problem solving finished (stopped=%d, restart=%d)\n", SCIPsolveIsStopped(set, stat), *restart);
+   debugMessage("Problem solving finished (restart=%d)\n", *restart);
 
    /* if the current node is the only remaining node, and if its lower bound exceeds the upper bound, we have
     * to delete it manually in order to get to the SOLVED stage instead of thinking, that only the gap limit
@@ -2036,6 +2048,27 @@ RETCODE SCIPsolveCIP(
    /* free sorted constraint handler arrays */
    freeMemoryArrayNull(&conshdlrs_sepa);
    freeMemoryArrayNull(&conshdlrs_enfo);
+
+   /* check if we finised solving */
+   if( SCIPtreeGetNNodes(tree) == 0 && SCIPtreeGetCurrentNode(tree) == NULL )
+   {
+      /* set the solution status */
+      if( unbounded )
+      {
+         /* switch status to UNBOUNDED */
+         stat->status = SCIP_STATUS_UNBOUNDED;
+      }
+      else if( primal->nsols == 0 )
+      {
+         /* switch status to INFEASIBLE */
+         stat->status = SCIP_STATUS_INFEASIBLE;
+      }
+      else
+      {
+         /* switch status to INFEASIBLE */
+         stat->status = SCIP_STATUS_OPTIMAL;
+      }
+   }
 
    return SCIP_OKAY;
 }

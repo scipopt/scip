@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.98 2004/10/26 07:30:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.99 2004/10/29 10:38:59 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1516,7 +1516,7 @@ RETCODE SCIPconshdlrFree(
    assert(conshdlr != NULL);
    assert(*conshdlr != NULL);
    assert(!(*conshdlr)->initialized);
-   assert(SCIPstage(scip) == SCIP_STAGE_INIT);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_INIT);
 
    /* call destructor of constraint handler */
    if( (*conshdlr)->consfree != NULL )
