@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.46 2005/02/22 19:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.47 2005/02/23 16:40:07 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2
@@ -2214,6 +2214,15 @@ RETCODE SCIPlpiFreeState(
    lpistateFree(lpistate, blkmem);
 
    return SCIP_OKAY;
+}
+
+/** checks, whether the given LP state contains simplex basis information */
+Bool SCIPlpiHasStateBasis(
+   LPI*             lpi,                /**< LP interface structure */
+   LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   )
+{
+   return TRUE;
 }
 
 /** reads LP state (like basis information from a file */

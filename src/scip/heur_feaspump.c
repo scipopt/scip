@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.21 2005/02/22 19:13:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.22 2005/02/23 16:40:06 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -40,7 +40,7 @@
 #define HEUR_PSEUDONODES      FALSE      /* call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   FALSE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
-#define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to total iteration number */
+#define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
@@ -55,7 +55,7 @@ struct HeurData
    SOL*             sol;                /**< working solution */
    SOL*             roundedsol;         /**< rounded solution */ 
    Longint          nlpiterations;      /**< number of LP iterations used in this heuristic */
-   Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
+   Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
    Real             objfactor;          /**< factor by which the regard of the objective is decreased in each round, 
                                          * 1.0 for dynamic, depending on solutions already found */
    int              maxloops;           /**< maximum number of loops (-1: no limit) */ 
@@ -587,8 +587,8 @@ RETCODE SCIPincludeHeurFeaspump(
    /* add feaspump primal heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/feaspump/maxlpiterquot", 
-         "maximal fraction of diving LP iterations compared to total iteration number",
-         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
+         "maximal fraction of diving LP iterations compared to node LP iterations",
+         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/feaspump/objfactor", 
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",

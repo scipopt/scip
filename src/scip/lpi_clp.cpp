@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.14 2005/02/22 19:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.15 2005/02/23 16:40:06 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -2242,7 +2242,6 @@ RETCODE SCIPlpiSetState(
    return SCIP_OKAY;
 }
 
-
 /** frees LPi state information */
 RETCODE SCIPlpiFreeState(
    LPI*             lpi,                /**< LP interface structure */
@@ -2259,6 +2258,14 @@ RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
+/** checks, whether the given LP state contains simplex basis information */
+Bool SCIPlpiHasStateBasis(
+   LPI*             lpi,                /**< LP interface structure */
+   LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   )
+{
+   return TRUE;
+}
 
 /** reads LP state (like basis information from a file */
 RETCODE SCIPlpiReadState(
