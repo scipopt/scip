@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.76 2004/12/07 14:36:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.77 2004/12/08 13:15:59 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2282,7 +2282,7 @@ Bool SCIPlpiHasDualRay(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_UNBOUNDED && CPXgetmethod(cpxenv, lpi->cpxlp) == CPX_ALG_DUAL);
+   return (lpi->solstat == CPX_STAT_INFEASIBLE && CPXgetmethod(cpxenv, lpi->cpxlp) == CPX_ALG_DUAL);
 }
 
 /** returns TRUE iff LP is proven to be dual unbounded */
