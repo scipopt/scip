@@ -58,7 +58,7 @@ DECL_BRANCHEXLP(branchExlpMostinf)
    debugMessage("Exlp method of mostinf branching\n");
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandsfrac, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands) );
    assert(nlpcands > 0);
 
    /* search the most infeasible candidate */

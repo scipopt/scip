@@ -117,6 +117,7 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
    );

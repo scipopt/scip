@@ -130,6 +130,8 @@ struct Var
    int              eventqueueindexlb;  /**< array position in event queue of lower bound change event, or -1 */
    int              eventqueueindexub;  /**< array position in event queue of upper bound change event, or -1 */
    int              nuses;              /**< number of times, this variable is referenced */
+   int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
+   int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
 };
@@ -330,6 +332,49 @@ extern
 RETCODE SCIPvarChgType(                 /**< changes type of variable; cannot be called, if var belongs to a problem */
    VAR*             var,                /**< problem variable to change */
    VARTYPE          vartype             /**< new type of variable */
+   );
+
+extern
+RETCODE SCIPvarForbidRoundDown(         /**< increases lock number for rounding down; tells variable, that rounding its
+                                         *   value down will make the solution infeasible */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+RETCODE SCIPvarForbidRoundUp(           /**< increases lock number for rounding up; tells variable, that rounding its
+                                         *   value up will make the solution infeasible */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+RETCODE SCIPvarForbidRound(             /**< increases lock number for rounding down and up; tells variable, that rounding
+                                         *   value in either direction will make the solution infeasible */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+RETCODE SCIPvarAllowRoundDown(          /**< decreases lock number for rounding down; cancels a prior forbidRoundDown() */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+RETCODE SCIPvarAllowRoundUp(            /**< decreases lock number for rounding up; cancels a prior forbidRoundUp() */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+RETCODE SCIPvarAllowRound(              /**< decreases lock number for rounding down & up; cancels a prior forbidRound() */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+Bool SCIPvarMayRoundDown(               /**< is it possible, to round variable down and stay feasible? */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+Bool SCIPvarMayRoundUp(                 /**< is it possible, to round variable up and stay feasible? */
+   VAR*             var                 /**< problem variable */
    );
 
 extern

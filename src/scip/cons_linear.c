@@ -589,6 +589,114 @@ void linconsCalcActivityBounds(         /**< calculates minimum and maximum acti
 }
 
 static
+RETCODE linconsForbidRounding(          /**< forbids roundings of variables in constraint that may violate constraint */
+   LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   VAR** vars;
+   Real* vals;
+   Bool lhsexists;
+   Bool rhsexists;
+   int v;
+   
+   assert(lincons != NULL);
+   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
+   assert(!SCIPisInfinity(scip, lincons->lhs));
+   assert(!SCIPisInfinity(scip, -lincons->rhs));
+
+   lhsexists = !SCIPisInfinity(scip, -lincons->lhs);
+   rhsexists = !SCIPisInfinity(scip, lincons->rhs);
+   vars = lincons->vars;
+   vals = lincons->vals;
+
+   for( v = 0; v < lincons->nvars; ++v )
+   {
+      assert(vars[v] != NULL);
+
+      if( SCIPisPos(scip, vals[v]) )
+      {
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundDown(vars[v]) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundUp(vars[v]) );
+         }
+      }
+      else
+      {
+         assert(SCIPisNeg(scip, vals[v]));
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundUp(vars[v]) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundDown(vars[v]) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE linconsAllowRounding(           /**< allows roundings of variables in constraint that may violate constraint */
+   LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   VAR** vars;
+   Real* vals;
+   Bool lhsexists;
+   Bool rhsexists;
+   int v;
+   
+   assert(lincons != NULL);
+   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
+   assert(!SCIPisInfinity(scip, lincons->lhs));
+   assert(!SCIPisInfinity(scip, -lincons->rhs));
+
+   lhsexists = !SCIPisInfinity(scip, -lincons->lhs);
+   rhsexists = !SCIPisInfinity(scip, lincons->rhs);
+   vars = lincons->vars;
+   vals = lincons->vals;
+
+   for( v = 0; v < lincons->nvars; ++v )
+   {
+      assert(vars[v] != NULL);
+
+      if( SCIPisPos(scip, vals[v]) )
+      {
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundDown(vars[v]) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundUp(vars[v]) );
+         }
+      }
+      else
+      {
+         assert(SCIPisNeg(scip, vals[v]));
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundUp(vars[v]) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundDown(vars[v]) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 void linconsPrint(                      /**< prints linear constraint to file stream */
    LINCONS*         lincons,            /**< linear constraint data object */
    FILE*            file                /**< output file (or NULL for standard output) */
@@ -894,6 +1002,8 @@ RETCODE tightenVarBounds(               /**< tightens bounds of a single variabl
    CHECK_OKAY( consdataGetLhs(consdata, scip, &lhs) );
    CHECK_OKAY( consdataGetRhs(consdata, scip, &rhs) );
    CHECK_OKAY( consdataGetActivityResiduals(consdata, scip, var, val, &minresactivity, &maxresactivity) );
+   assert(!SCIPisInfinity(scip, lhs));
+   assert(!SCIPisInfinity(scip, -rhs));
    assert(!SCIPisInfinity(scip, minresactivity));
    assert(!SCIPisInfinity(scip, -maxresactivity));
    
@@ -905,80 +1015,96 @@ RETCODE tightenVarBounds(               /**< tightens bounds of a single variabl
    if( val > 0.0 )
    {
       /* check, if we can tighten the variable's bounds */
-      if( !SCIPisInfinity(scip, -minresactivity) && SCIPisG(scip, minresactivity + val * ub, rhs) )
+      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
       {
-         /* tighten upper bound */
-         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
          newub = (rhs - minresactivity)/val;
-         if( SCIPisL(scip, newub, lb) )
+         if( SCIPisSumL(scip, newub, ub) )
          {
-            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, newub);
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            /* tighten upper bound */
+            debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            debugMessage("  -> newub=%f\n", newub);
+            if( SCIPisL(scip, newub, lb) )
+            {
+               debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, newub);
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            CHECK_OKAY( SCIPchgUb(scip, var, newub) );
+            ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
+            *success = TRUE;
+            debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
-         CHECK_OKAY( SCIPchgUb(scip, var, newub) );
-         ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
-         *success = TRUE;
-         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
       }
-      if( !SCIPisInfinity(scip, maxresactivity) && SCIPisL(scip, maxresactivity + val * lb, lhs) )
+      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
       {
-         /* tighten lower bound */
-         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
          newlb = (lhs - maxresactivity)/val;
-         if( SCIPisG(scip, newlb, ub) )
+         if( SCIPisSumG(scip, newlb, lb) )
          {
-            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), newlb, ub);
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            /* tighten lower bound */
+            debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            debugMessage("  -> newlb=%f\n", newlb);
+            if( SCIPisG(scip, newlb, ub) )
+            {
+               debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), newlb, ub);
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            CHECK_OKAY( SCIPchgLb(scip, var, newlb) );
+            lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
+            *success = TRUE;
+            debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
-         CHECK_OKAY( SCIPchgLb(scip, var, newlb) );
-         lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
-         *success = TRUE;
-         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
       }
    }
    else
    {
       /* check, if we can tighten the variable's bounds */
-      if( !SCIPisInfinity(scip, -minresactivity) && SCIPisG(scip, minresactivity + val * lb, rhs) )
+      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
       {
-         /* tighten lower bound */
-         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
          newlb = (rhs - minresactivity)/val;
-         if( SCIPisG(scip, newlb, ub) )
+         if( SCIPisSumG(scip, newlb, lb) )
          {
-            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), newlb, ub);
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            /* tighten lower bound */
+            debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            debugMessage("  -> newlb=%f\n", newlb);
+            if( SCIPisG(scip, newlb, ub) )
+            {
+               debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), newlb, ub);
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            CHECK_OKAY( SCIPchgLb(scip, var, newlb) );
+            lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
+            *success = TRUE;
+            debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
-         CHECK_OKAY( SCIPchgLb(scip, var, newlb) );
-         lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
-         *success = TRUE;
-         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
       }
-      if( !SCIPisInfinity(scip, maxresactivity) && SCIPisL(scip, maxresactivity + val * ub, lhs) )
+      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
       {
-         /* tighten upper bound */
-         debugMessage("linear constraint: tighten <%s>, old bounds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-            SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
          newub = (lhs - maxresactivity)/val;
-         if( SCIPisL(scip, newub, lb) )
+         if( SCIPisSumL(scip, newub, ub) )
          {
-            debugMessage("linear constraint: cutoff  <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, newub);
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            /* tighten upper bound */
+            debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            debugMessage("  -> newub=%f\n", newub);
+            if( SCIPisL(scip, newub, lb) )
+            {
+               debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, newub);
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            CHECK_OKAY( SCIPchgUb(scip, var, newub) );
+            ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
+            *success = TRUE;
+            debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
-         CHECK_OKAY( SCIPchgUb(scip, var, newub) );
-         ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
-         *success = TRUE;
-         debugMessage("linear constraint: tighten <%s>, new bounds=[%g,%g]\n", SCIPvarGetName(var), lb, ub);
       }
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -1006,28 +1132,32 @@ RETCODE consdataTightenBounds(          /**< tightens variable's bounds due to a
       int c;
 
       row = consdata->data.row;
-      cols = SCIProwGetCols(row);
-      vals = SCIProwGetVals(row);
       ncols = SCIProwGetNNonz(row);
-      assert(ncols == 0 || (cols != NULL && vals != NULL));
-      lastsuccess = 0;
-      c = 0;
-      do
+      if( ncols > 0 )
       {
-         assert(0 <= c && c < ncols);
-         assert(cols[c] != NULL);
-         
-         CHECK_OKAY( tightenVarBounds(scip, consdata, SCIPcolGetVar(cols[c]), vals[c], result, &success) );
-         if( success )
+         cols = SCIProwGetCols(row);
+         vals = SCIProwGetVals(row);
+         assert(cols != NULL);
+         assert(vals != NULL);
+         lastsuccess = 0;
+         c = 0;
+         do
          {
-            *result = SCIP_REDUCEDDOM;
-            lastsuccess = c;
+            assert(0 <= c && c < ncols);
+            assert(cols[c] != NULL);
+            
+            CHECK_OKAY( tightenVarBounds(scip, consdata, SCIPcolGetVar(cols[c]), vals[c], result, &success) );
+            if( success )
+            {
+               *result = SCIP_REDUCEDDOM;
+               lastsuccess = c;
+            }
+            c++;
+            if( c == ncols )
+               c = 0;
          }
-         c++;
-         if( c == ncols )
-            c = 0;
+         while( c != lastsuccess && *result != SCIP_CUTOFF );
       }
-      while( c != lastsuccess && *result != SCIP_CUTOFF );
    }
    else
    {
@@ -1039,26 +1169,30 @@ RETCODE consdataTightenBounds(          /**< tightens variable's bounds due to a
 
       lincons = consdata->data.lincons;
       assert(lincons != NULL);
-      vars = lincons->vars;
-      vals = lincons->vals;
       nvars = lincons->nvars;
-      assert(nvars == 0 || (vars != NULL && vals != NULL));
-      lastsuccess = 0;
-      v = 0;
-      do
+      if( nvars > 0 )
       {
-         assert(0 <= v && v < nvars);
-         CHECK_OKAY( tightenVarBounds(scip, consdata, vars[v], vals[v], result, &success) );
-         if( success )
+         vars = lincons->vars;
+         vals = lincons->vals;
+         assert(vars != NULL);
+         assert(vals != NULL);
+         lastsuccess = 0;
+         v = 0;
+         do
          {
-            *result = SCIP_REDUCEDDOM;
-            lastsuccess = v;
+            assert(0 <= v && v < nvars);
+            CHECK_OKAY( tightenVarBounds(scip, consdata, vars[v], vals[v], result, &success) );
+            if( success )
+            {
+               *result = SCIP_REDUCEDDOM;
+               lastsuccess = v;
+            }
+            v++;
+            if( v == nvars )
+               v = 0;
          }
-         v++;
-         if( v == nvars )
-            v = 0;
+         while( v != lastsuccess && *result != SCIP_CUTOFF );
       }
-      while( v != lastsuccess && *result != SCIP_CUTOFF );
    }
 
    return SCIP_OKAY;
@@ -1440,8 +1574,8 @@ DECL_CONSPROP(consPropLinear)
             CHECK_OKAY( consdataGetActivityBounds(consdata, scip, &recalcminactivity, &recalcmaxactivity) );
             /*debugMessage("new activity = [%g,%g], recalculated activity = [%g,%g]\n",
               newminactivity, newmaxactivity, recalcminactivity, recalcmaxactivity);*/
-            assert(SCIPisEQ(scip, newminactivity, recalcminactivity));
-            assert(SCIPisEQ(scip, newmaxactivity, recalcmaxactivity));
+            assert(SCIPisRelEQ(scip, newminactivity, recalcminactivity));
+            assert(SCIPisRelEQ(scip, newmaxactivity, recalcmaxactivity));
          }
 #endif
       }
@@ -1603,6 +1737,12 @@ RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear const
                      modifiable) );
    }
 
+   /* forbid rounding of variables */
+   if( model )
+   {
+      CHECK_OKAY( linconsForbidRounding(consdata->data.lincons, scip) );
+   }
+
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, model) );
 
@@ -1637,6 +1777,12 @@ RETCODE SCIPcreateConsLPRow(            /**< creates and captures a linear const
    /* capture the row, because we need it as data storage */
    SCIPcaptureRow(scip, row);
 
+   /* forbid rounding of variables */
+   if( model )
+   {
+      CHECK_OKAY( SCIPforbidRowRounding(scip, row) );
+   }
+
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, SCIProwGetName(row), conshdlr, consdata, model) );
 
@@ -1652,6 +1798,7 @@ RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constrai
 {
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
+   Bool model;
 
    assert(cons != NULL);
    assert(scip != NULL);
@@ -1659,6 +1806,7 @@ RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constrai
 
    /*debugMessage("adding coefficient %g * <%s> to linear constraint <%s>\n", val, var->name, SCIPconsGetName(cons));*/
 
+   model = SCIPconsIsModel(cons);
    conshdlr = SCIPconsGetConsHdlr(cons);
    assert(conshdlr != NULL);
 
@@ -1672,7 +1820,15 @@ RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constrai
    if( consdata->islprow )
    {
       assert(consdata->data.row != NULL);
+      if( model )
+      {
+         CHECK_OKAY( SCIPallowRowRounding(scip, consdata->data.row) );
+      }
       CHECK_OKAY( SCIPaddVarToRow(scip, consdata->data.row, var, val) );
+      if( model )
+      {
+         CHECK_OKAY( SCIPforbidRowRounding(scip, consdata->data.row) );
+      }
    }
    else
    {
@@ -1684,7 +1840,15 @@ RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constrai
       assert(conshdlrdata != NULL);
       assert(conshdlrdata->eventhdlr != NULL);
 
+      if( model )
+      {
+         CHECK_OKAY( linconsAllowRounding(consdata->data.lincons, scip) );
+      }
       CHECK_OKAY( linconsAddCoef(consdata->data.lincons, scip, conshdlrdata->eventhdlr, var, val) );
+      if( model )
+      {
+         CHECK_OKAY( linconsForbidRounding(consdata->data.lincons, scip) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1762,8 +1926,22 @@ RETCODE SCIPconsLinearChgLhs(           /**< changes left hand side of linear co
    }
    else
    {
-      assert(consdata->data.lincons != NULL);
+      LINCONS* lincons;
+      Bool updaterounding;
+
+      lincons = consdata->data.lincons;
+      assert(lincons != NULL);
+
+      updaterounding = (SCIPconsIsModel(cons) && SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, -lincons->lhs));
+      if( updaterounding )
+      {
+         CHECK_OKAY( linconsAllowRounding(consdata->data.lincons, scip) );
+      }
       consdata->data.lincons->lhs = lhs;
+      if( updaterounding )
+      {
+         CHECK_OKAY( linconsForbidRounding(consdata->data.lincons, scip) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1795,8 +1973,22 @@ RETCODE SCIPconsLinearChgRhs(           /**< changes right hand side of linear c
    }
    else
    {
-      assert(consdata->data.lincons != NULL);
+      LINCONS* lincons;
+      Bool updaterounding;
+
+      lincons = consdata->data.lincons;
+      assert(lincons != NULL);
+
+      updaterounding = (SCIPconsIsModel(cons) && SCIPisInfinity(scip, rhs) != SCIPisInfinity(scip, lincons->rhs));
+      if( updaterounding )
+      {
+         CHECK_OKAY( linconsAllowRounding(consdata->data.lincons, scip) );
+      }
       consdata->data.lincons->rhs = rhs;
+      if( updaterounding )
+      {
+         CHECK_OKAY( linconsForbidRounding(consdata->data.lincons, scip) );
+      }
    }
 
    return SCIP_OKAY;

@@ -228,6 +228,7 @@ extern
 RETCODE SCIPgetLPBranchCands(           /**< gets branching candidates for LP solution branching (fractional variables) */
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
    );
@@ -262,6 +263,18 @@ extern
 RETCODE SCIPreleaseRow(                 /**< decreases usage counter of LP row, and frees memory if necessary */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row                 /**< pointer to LP row */
+   );
+
+extern
+RETCODE SCIPforbidRowRounding(          /**< forbids roundings of variables in row that may violate row */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+RETCODE SCIPallowRowRounding(           /**< allows roundings of variables in row that may violate row */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
    );
 
 extern
@@ -329,6 +342,26 @@ RETCODE SCIPprintRow(                   /**< output row to file stream */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+extern
+RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved in the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            actnodehaslp        /**< pointer to store whether the active node has LP information */
+   );
+
+extern
+RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
+   SCIP*            scip,               /**< SCIP data structure */
+   COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
+   int*             ncols               /**< pointer to store the number of LP columns, or NULL */
+   );
+
+extern
+RETCODE SCIPgetLPRows(                  /**< gets actual LP rows */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
+   int*             nrows               /**< pointer to store the number of LP rows, or NULL */
    );
 
 extern

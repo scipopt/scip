@@ -766,6 +766,7 @@ RETCODE SCIPgetVarSol(                  /**< gets solution value for variable in
 RETCODE SCIPgetLPBranchCands(           /**< gets branching candidates for LP solution branching (fractional variables) */
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
    )
@@ -773,7 +774,7 @@ RETCODE SCIPgetLPBranchCands(           /**< gets branching candidates for LP so
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-                  lpcands, lpcandsfrac, nlpcands) );
+                  lpcands, lpcandssol, lpcandsfrac, nlpcands) );
    
    return SCIP_OKAY;
 }
@@ -835,6 +836,34 @@ RETCODE SCIPreleaseRow(                 /**< decreases usage counter of LP row, 
    CHECK_OKAY( checkStage(scip, "SCIPreleaseRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIProwRelease(row, scip->mem->solvemem, scip->set, scip->lp) );
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPforbidRowRounding(          /**< forbids roundings of variables in row that may violate row */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPforbidRowRounding", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwForbidRounding(row, scip->set) );
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPallowRowRounding(           /**< allows roundings of variables in row that may violate row */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPallowRowRounding", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwAllowRounding(row, scip->set) );
    
    return SCIP_OKAY;
 }
@@ -988,6 +1017,72 @@ RETCODE SCIPprintRow(                   /**< output row to file stream */
    return SCIP_OKAY;
 }
 
+RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved in the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            actnodehaslp        /**< pointer to store whether the active node has LP information */
+   )
+{
+   assert(actnodehaslp != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPhasActnodeLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *actnodehaslp = scip->tree->actnodehaslp;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
+   SCIP*            scip,               /**< SCIP data structure */
+   COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
+   int*             ncols               /**< pointer to store the number of LP columns, or NULL */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
+
+   if( scip->tree->actnodehaslp )
+   {
+      if( cols != NULL )
+         *cols = scip->lp->cols;
+      if( ncols != NULL )
+         *ncols = scip->lp->ncols;
+   }
+   else
+   {
+      if( cols != NULL )
+         *cols = NULL;
+      if( ncols != NULL )
+         *ncols = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetLPRows(                  /**< gets actual LP rows */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
+   int*             nrows               /**< pointer to store the number of LP rows, or NULL */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
+
+   if( scip->tree->actnodehaslp )
+   {
+      if( rows != NULL )
+         *rows = scip->lp->rows;
+      if( nrows != NULL )
+         *nrows = scip->lp->nrows;
+   }
+   else
+   {
+      if( rows != NULL )
+         *rows = NULL;
+      if( nrows != NULL )
+         *nrows = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPaddCut(                     /**< adds cut to separation storage */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
@@ -1081,7 +1176,7 @@ RETCODE SCIPbranchLP(                   /**< calls branching rules to branch on 
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
    if( nlpcands == 0 )
    {
       *result = SCIP_FEASIBLE;

@@ -407,47 +407,6 @@ int colSearchCoeff(                     /**< searches coefficient in column, ret
 }
 
 static
-void colAddSign(                        /**< update column sign after addition of new coefficient */
-   COL*             col,                /**< LP column */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value of new coefficient */
-   )
-{   
-   assert(col != NULL);
-   assert(col->numpos >= 0 && col->numneg >= 0);
-   assert(!SCIPsetIsZero(set, val));
-
-   if( SCIPsetIsPos(set, val) )
-      col->numpos++;
-   else
-   {
-      assert(SCIPsetIsNeg(set, val));
-      col->numneg++;
-   }
-}
-
-static
-void colDelSign(                        /**< update column sign after deletion of coefficient */
-   COL*             col,                /**< LP column */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value of deleted coefficient */
-   )
-{
-   assert(col != NULL);
-   assert(!SCIPsetIsZero(set, val));
-
-   if( SCIPsetIsPos(set, val) )
-      col->numpos--;
-   else
-   {
-      assert(SCIPsetIsNeg(set, val));
-      col->numneg--;
-   }
-
-   assert(col->numpos >= 0 && col->numneg >= 0);
-}
-
-static
 RETCODE colAddCoeff(                    /**< adds a previously non existing coefficient to an LP column */
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
@@ -486,8 +445,6 @@ RETCODE colAddCoeff(                    /**< adds a previously non existing coef
    if( linkpos == -1 )
       col->nunlinked++;
    col->len++;
-
-   colAddSign(col, set, val);
 
    coefChanged(row, col, lp);
       
@@ -535,8 +492,6 @@ RETCODE colDelCoeffPos(                 /**< deletes coefficient at given positi
    }
    col->len--;
 
-   colDelSign(col, set, val);
-   
    coefChanged(row, col, lp);
 
    return SCIP_OKAY;
@@ -570,9 +525,7 @@ RETCODE colChgCoeffPos(                 /**< changes a coefficient at given posi
    else if( !SCIPsetIsEQ(set, col->val[pos], val) )
    {
       /* change existing coefficient */
-      colDelSign(col, set, col->val[pos]);
       col->val[pos] = val;
-      colAddSign(col, set, col->val[pos]);
       coefChanged(col->row[pos], col, lp);
    }
 
@@ -1310,8 +1263,6 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    (*col)->farkas = SCIP_INVALID;
    (*col)->strongdown = SCIP_INVALID;
    (*col)->strongup = SCIP_INVALID;
-   (*col)->numpos = 0;
-   (*col)->numneg = 0;
    (*col)->validredcostlp = -1;
    (*col)->validfarkaslp = -1;
    (*col)->strongitlim = -1;
@@ -1322,13 +1273,11 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    (*col)->inlp = FALSE;
 
    /* check, if column is sorted
-    * update number of positive/negative entries
     */
    for( i = 0; i < len; ++i )
    {
       assert(!SCIPsetIsZero(set, (*col)->val[i]));
       (*col)->sorted &= (i == 0 || (*col)->row[i-1]->index < (*col)->row[i]->index);
-      colAddSign(*col, set, (*col)->val[i]);
    }
 
    return SCIP_OKAY;
@@ -1671,6 +1620,18 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
    return SCIP_OKAY;
 }
 
+Real SCIPcolGetPrimsol(                 /**< gets the primal LP solution of a column */
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   if( col->inlp )
+      return col->primsol;
+   else
+      return 0.0;
+}
+
 static
 void colCalcRedcost(                    /**< calculates the reduced costs of a column */
    COL*             col                 /**< LP column */
@@ -1824,6 +1785,33 @@ Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member o
    assert(col != NULL);
 
    return col->inlp;
+}
+
+int SCIPcolGetNNonz(                    /**< get number of nonzero entries in column vector */
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->len;
+}
+
+ROW** SCIPcolGetRows(                   /**< gets array with rows of nonzero entries */
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->row;
+}
+
+Real* SCIPcolGetVals(                   /**< gets array with coefficients of nonzero entries */
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->val;
 }
 
 void SCIPcolPrint(                      /**< output column to file stream */
@@ -2090,6 +2078,112 @@ RETCODE SCIProwUnlock(                  /**< unlocks a lock of a row; a row with
    }
 
    row->nlocks--;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIProwForbidRounding(          /**< forbids roundings of variables in row that may violate row */
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   COL** cols;
+   Real* vals;
+   Bool lhsexists;
+   Bool rhsexists;
+   int c;
+   
+   assert(row != NULL);
+   assert(row->len == 0 || (row->col != NULL && row->val != NULL));
+   assert(!SCIPsetIsInfinity(set, row->lhs));
+   assert(!SCIPsetIsInfinity(set, -row->rhs));
+
+   lhsexists = !SCIPsetIsInfinity(set, -row->lhs);
+   rhsexists = !SCIPsetIsInfinity(set, row->rhs);
+   cols = row->col;
+   vals = row->val;
+
+   for( c = 0; c < row->len; ++c )
+   {
+      assert(cols[c] != NULL);
+
+      if( SCIPsetIsPos(set, vals[c]) )
+      {
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundDown(cols[c]->var) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundUp(cols[c]->var) );
+         }
+      }
+      else
+      {
+         assert(SCIPsetIsNeg(set, vals[c]));
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundUp(cols[c]->var) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarForbidRoundDown(cols[c]->var) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIProwAllowRounding(           /**< allows roundings of variables in row that may violate row */
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   COL** cols;
+   Real* vals;
+   Bool lhsexists;
+   Bool rhsexists;
+   int c;
+   
+   assert(row != NULL);
+   assert(row->len == 0 || (row->col != NULL && row->val != NULL));
+   assert(!SCIPsetIsInfinity(set, row->lhs));
+   assert(!SCIPsetIsInfinity(set, -row->rhs));
+
+   lhsexists = !SCIPsetIsInfinity(set, -row->lhs);
+   rhsexists = !SCIPsetIsInfinity(set, row->rhs);
+   cols = row->col;
+   vals = row->val;
+
+   for( c = 0; c < row->len; ++c )
+   {
+      assert(cols[c] != NULL);
+
+      if( SCIPsetIsPos(set, vals[c]) )
+      {
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundDown(cols[c]->var) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundUp(cols[c]->var) );
+         }
+      }
+      else
+      {
+         assert(SCIPsetIsNeg(set, vals[c]));
+         if( lhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundUp(cols[c]->var) );
+         }
+         if( rhsexists )
+         {
+            CHECK_OKAY( SCIPvarAllowRoundDown(cols[c]->var) );
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }

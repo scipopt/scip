@@ -689,6 +689,8 @@ RETCODE varCreate(                      /**< creates a variable */
    (*var)->parentvarssize = 0;
    (*var)->nparentvars = 0;
    (*var)->nuses = 0;
+   (*var)->nlocksdown = 0;
+   (*var)->nlocksup = 0;
    (*var)->vartype = vartype;
 
    return SCIP_OKAY;
@@ -1077,6 +1079,97 @@ RETCODE SCIPvarChgType(                 /**< changes type of variable; cannot be
    return SCIP_OKAY;
 }
 
+RETCODE SCIPvarForbidRoundDown(         /**< increases lock number for rounding down; tells variable, that rounding its
+                                         *   value down will make the solution infeasible */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->nlocksdown >= 0);
+
+   var->nlocksdown++;
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPvarForbidRoundUp(           /**< increases lock number for rounding up; tells variable, that rounding its
+                                         *   value up will make the solution infeasible */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->nlocksup >= 0);
+
+   var->nlocksup++;
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPvarForbidRound(             /**< increases lock number for rounding down and up; tells variable, that rounding
+                                         *   value in either direction will make the solution infeasible */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   CHECK_OKAY( SCIPvarForbidRoundDown(var) );
+   CHECK_OKAY( SCIPvarForbidRoundUp(var) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPvarAllowRoundDown(          /**< decreases lock number for rounding down; cancels a prior forbidRoundDown() */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->nlocksdown >= 1);
+
+   var->nlocksdown--;
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPvarAllowRoundUp(            /**< decreases lock number for rounding up; cancels a prior forbidRoundUp() */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->nlocksup >= 1);
+
+   var->nlocksup--;
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPvarAllowRound(              /**< decreases lock number for rounding down & up; cancels a prior forbidRound() */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   CHECK_OKAY( SCIPvarAllowRoundDown(var) );
+   CHECK_OKAY( SCIPvarAllowRoundUp(var) );
+
+   return SCIP_OKAY;
+}
+
+Bool SCIPvarMayRoundDown(               /**< is it possible, to round variable down and stay feasible? */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->nlocksdown >= 0);
+
+   return (var->nlocksdown == 0);
+}
+
+Bool SCIPvarMayRoundUp(                 /**< is it possible, to round variable up and stay feasible? */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->nlocksup >= 0);
+
+   return (var->nlocksup == 0);
+}
+
 static
 RETCODE varEventLbChanged(              /**< appends LBTIGHTENED or LBRELAXED event to the event queue */
    VAR*             var,                /**< problem variable to change */
@@ -1351,6 +1444,9 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
 
    debugMessage("changing lower bound of <%s> from %g to %g\n", var->name, var->dom.lb, newbound);
 
+   if( SCIPsetIsZero(set, newbound) )
+      newbound = 0.0;
+
    if( !SCIPsetIsEQ(set, var->dom.lb, newbound) )
    {
       /* change bounds of attached variables */
@@ -1429,6 +1525,9 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
    assert(var != NULL);
 
    debugMessage("changing upper bound of <%s> from %g to %g\n", var->name, var->dom.ub, newbound);
+
+   if( SCIPsetIsZero(set, newbound) )
+      newbound = 0.0;
 
    if( !SCIPsetIsEQ(set, var->dom.ub, newbound) )
    {

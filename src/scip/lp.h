@@ -290,6 +290,11 @@ Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member o
    );
 
 extern
+Real SCIPcolGetPrimsol(                 /**< gets the primal LP solution of a column */
+   COL*             col                 /**< LP column */
+   );
+
+extern
 Real SCIPcolGetRedcost(                 /**< gets the reduced costs of a column in last LP or after recalculation */
    COL*             col,                /**< LP column */
    STAT*            stat                /**< problem statistics */
@@ -316,6 +321,21 @@ RETCODE SCIPcolGetStrongbranch(         /**< gets strong branching information o
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up                  /**< stores dual bound after branching column up */
+   );
+
+extern
+int SCIPcolGetNNonz(                    /**< get number of nonzero entries in column vector */
+   COL*             col                 /**< LP column */
+   );
+
+extern
+ROW** SCIPcolGetRows(                   /**< gets array with rows of nonzero entries */
+   COL*             col                 /**< LP column */
+   );
+
+extern
+Real* SCIPcolGetVals(                   /**< gets array with coefficients of nonzero entries */
+   COL*             col                 /**< LP column */
    );
 
 extern
@@ -380,6 +400,18 @@ RETCODE SCIProwUnlock(                  /**< unlocks a lock of a row; a row with
 extern
 void SCIProwSort(                       /**< sorts row entries by column index */
    ROW*             row                 /**< row to be sorted */
+   );
+
+extern
+RETCODE SCIProwForbidRounding(          /**< forbids roundings of variables in row that may violate row */
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+RETCODE SCIProwAllowRounding(           /**< allows roundings of variables in row that may violate row */
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 extern

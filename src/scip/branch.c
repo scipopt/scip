@@ -33,6 +33,7 @@
 struct BranchCand
 {
    VAR**            lpcands;            /**< candidates for branching on LP solution (fractional integer variables) */
+   Real*            lpcandssol;         /**< solution values of LP candidates */
    Real*            lpcandsfrac;        /**< fractionalities of LP candidates */
    VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
    int              lpcandssize;        /**< number of available slots in lpcands array */
@@ -80,6 +81,7 @@ RETCODE ensureLpcandsSize(              /**< ensures, that lpcands array can sto
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(branchcand->lpcands, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(branchcand->lpcandssol, newsize) );
       ALLOC_OKAY( reallocMemoryArray(branchcand->lpcandsfrac, newsize) );
       branchcand->lpcandssize = newsize;
    }
@@ -129,6 +131,7 @@ RETCODE SCIPbranchcandCreate(           /**< creates a branching candidate stora
 
    ALLOC_OKAY( allocMemory(*branchcand) );
    (*branchcand)->lpcands = NULL;
+   (*branchcand)->lpcandssol = NULL;
    (*branchcand)->lpcandsfrac = NULL;
    (*branchcand)->pseudocands = NULL;
    (*branchcand)->lpcandssize = 0;
@@ -154,6 +157,7 @@ RETCODE SCIPbranchcandFree(             /**< frees branching candidate storage *
    assert(branchcand != NULL);
 
    freeMemoryArrayNull((*branchcand)->lpcands);
+   freeMemoryArrayNull((*branchcand)->lpcandssol);
    freeMemoryArrayNull((*branchcand)->lpcandsfrac);
    freeMemoryArrayNull((*branchcand)->pseudocands);
    freeMemory(*branchcand);
@@ -167,6 +171,7 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
    )
@@ -218,6 +223,7 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
 
                assert(branchcand->nlpcands < branchcand->lpcandssize);
                branchcand->lpcands[branchcand->nlpcands] = var;
+               branchcand->lpcandssol[branchcand->nlpcands] = col->primsol;
                branchcand->lpcandsfrac[branchcand->nlpcands] = frac;
                branchcand->nlpcands++;
             }
@@ -232,6 +238,8 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
    /* assign return values */
    if( lpcands != NULL )
       *lpcands = branchcand->lpcands;
+   if( lpcandssol != NULL )
+      *lpcandssol = branchcand->lpcandssol;
    if( lpcandsfrac != NULL )
       *lpcandsfrac = branchcand->lpcandsfrac;
    if( nlpcands != NULL )

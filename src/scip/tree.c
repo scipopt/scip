@@ -874,7 +874,7 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to active node, c
       if( SCIPsetIsLE(set, newbound, oldbound) )
       {
          char s[255];
-         sprintf(s, "variable's lower bound was not tightened: var <%s>, oldbound=%g, newbound=%g",
+         sprintf(s, "variable's lower bound was not tightened: var <%s>, oldbound=%f, newbound=%f",
             var->name, oldbound, newbound);
          errorMessage(s);
          return SCIP_INVALIDDATA;
@@ -888,7 +888,7 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to active node, c
       if( SCIPsetIsGE(set, newbound, oldbound) )
       {
          char s[255];
-         sprintf(s, "variable's upper bound was not tightened: var <%s>, oldbound=%g, newbound=%g",
+         sprintf(s, "variable's upper bound was not tightened: var <%s>, oldbound=%f, newbound=%f",
             var->name, oldbound, newbound);
          errorMessage(s);
          return SCIP_INVALIDDATA;
