@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.21 2004/04/15 10:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.22 2004/04/21 12:11:58 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -63,7 +63,17 @@ DECL_BRANCHFREE(branchFreeFullstrong)
 
 
 /** initialization method of branching rule (called when problem solving starts) */
-#define branchInitFullstrong NULL
+static
+DECL_BRANCHINIT(branchInitFullstrong)
+{
+   BRANCHRULEDATA* branchruledata;
+
+   /* init branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   branchruledata->lastcand = 0;
+
+   return SCIP_OKAY;
+}
 
 
 /** deinitialization method of branching rule (called when problem solving exits) */

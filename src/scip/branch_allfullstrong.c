@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.1 2004/04/15 10:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.2 2004/04/21 12:11:58 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -43,38 +43,14 @@ struct BranchruleData
 
 
 
-
-/*
- * Callback methods
- */
-
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
+/** performs the all fullstrong branching */
 static
-DECL_BRANCHFREE(branchFreeAllfullstrong)
-{  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
-
-   /* free branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemory(scip, &branchruledata);
-   SCIPbranchruleSetData(branchrule, NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** initialization method of branching rule (called when problem solving starts) */
-#define branchInitAllfullstrong NULL
-
-
-/** deinitialization method of branching rule (called when problem solving exits) */
-#define branchExitAllfullstrong NULL
-
-
-/** branching execution method for fractional LP solutions */
-static
-DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
-{  /*lint --e{715}*/
+RETCODE branch(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
    BRANCHRULEDATA* branchruledata;
    VAR** pseudocands;
    Real cutoffbound;
@@ -91,10 +67,6 @@ DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-
-   debugMessage("Execlp method of allfullstrong branching\n");
-
-   *result = SCIP_DIDNOTRUN;
 
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
@@ -343,8 +315,78 @@ DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 }
 
 
+
+
+/*
+ * Callback methods
+ */
+
+/** destructor of branching rule to free user data (called when SCIP is exiting) */
+static
+DECL_BRANCHFREE(branchFreeAllfullstrong)
+{  /*lint --e{715}*/
+   BRANCHRULEDATA* branchruledata;
+
+   /* free branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of branching rule (called when problem solving starts) */
+static
+DECL_BRANCHINIT(branchInitAllfullstrong)
+{
+   BRANCHRULEDATA* branchruledata;
+
+   /* init branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   branchruledata->lastcand = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of branching rule (called when problem solving exits) */
+#define branchExitAllfullstrong NULL
+
+
+/** branching execution method for fractional LP solutions */
+static
+DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
+{
+   assert(result != NULL);
+
+   debugMessage("Execlp method of allfullstrong branching\n");
+
+   *result = SCIP_DIDNOTRUN;
+   
+   CHECK_OKAY( branch(scip, branchrule, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsAllfullstrong NULL
+static
+DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
+{
+   assert(result != NULL);
+
+   debugMessage("Execps method of allfullstrong branching\n");
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPhasActNodeLP(scip) )
+   {
+      CHECK_OKAY( branch(scip, branchrule, result) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.151 2004/04/19 17:08:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.152 2004/04/21 12:11:58 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2154,7 +2154,7 @@ RETCODE SCIPaddPricedVar(
 }
 
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
- *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  */
 RETCODE SCIPgetVarsData(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2210,7 +2210,7 @@ RETCODE SCIPgetVarsData(
 }
 
 /** gets array with active problem variables; data may become invalid after
- *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  */
 VAR** SCIPgetVars(
    SCIP*            scip                /**< SCIP data structure */
@@ -8145,20 +8145,21 @@ RETCODE SCIPprintBranchingStatistics(
          depths[i] = depth;
       }
 
-      fprintf(file, "                        branchings          depth           inferences             LP gain  \n");
-      fprintf(file, " variable             down       up     down       up     down       up       down         up\n");
+      fprintf(file, "                                         branchings        inferences             LP gain  \n");
+      fprintf(file, " variable        priority    depth     down       up     down       up       down         up\n");
 
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
-            fprintf(file, " %-16s %8lld %8lld %8.1f %8.1f %8.1f %8.1f %10.1f %10.1f\n",
+            fprintf(file, " %-16s %7d %8.1f %8lld %8lld %8.1f %8.1f %10.1f %10.1f\n",
                SCIPvarGetName(vars[v]),
+               SCIPvarGetBranchPriority(vars[v]),
+               (SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS)
+                  + SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS))/2.0 - 1.0,
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS),
-               SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
-               SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS),
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
                SCIPvarGetPseudocost(vars[v], scip->stat, -1.0),

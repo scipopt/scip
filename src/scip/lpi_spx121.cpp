@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.4 2004/04/15 10:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.5 2004/04/21 12:11:58 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -26,7 +26,7 @@
 #include <cassert>
 #include <fstream>
 
-/* include SOPLEX in non-debug mode */
+/* include SOPLEX in optimized mode */
 #ifdef DEBUG
 #define ___DEBUG
 #undef DEBUG
@@ -37,40 +37,16 @@
 #define NDEBUG
 #endif
 
-#include "spxdefines.h"
 #include "soplex.h"
-#include "spxlp.h"
 #include "slufactor.h"
 #include "spxsteeppr.h"
 #include "spxfastrt.h"
-#include "nameset.h"
-#include "didxset.h"
-
-/* reset the defines to its original SCIP values */
-#ifdef ___DEBUG
-#define DEBUG
-#undef ___DEBUG
-#endif
-#ifdef ___NDEBUG
-#undef ___NDEBUG
-#else
-#undef NDEBUG
-#endif
 
 
-extern "C" 
-{
-#include "lpi.h"
-#include "bitencode.h"
-#include "message.h"
-}
 
-
-typedef DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
-#define COLS_PER_PACKET DUALPACKETSIZE
-typedef DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
-#define ROWS_PER_PACKET DUALPACKETSIZE
-
+/********************************************************************/
+/*----------------------------- C++ --------------------------------*/
+/********************************************************************/
 
 using namespace soplex;
 
@@ -229,6 +205,39 @@ public:
    }
 
 };
+
+
+/* reset the defines to its original SCIP values */
+#undef DEBUG
+#undef NDEBUG
+#ifdef ___DEBUG
+#define DEBUG
+#undef ___DEBUG
+#endif
+#ifdef ___NDEBUG
+#undef ___NDEBUG
+#define NDEBUG
+#endif
+
+
+
+/********************************************************************/
+/*-----------------------------  C  --------------------------------*/
+/********************************************************************/
+
+extern "C" 
+{
+#include "lpi.h"
+#include "bitencode.h"
+#include "message.h"
+#include "pub_misc.h"
+}
+
+
+typedef DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
+#define COLS_PER_PACKET DUALPACKETSIZE
+typedef DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
+#define ROWS_PER_PACKET DUALPACKETSIZE
 
 
 
@@ -1320,9 +1329,9 @@ RETCODE SCIPlpiStrongbranch(
    )
 {
    SPxSCIP* spx;
-   SPxSolver::VarStatus* rowstat;
-   SPxSolver::VarStatus* colstat;
-   SPxSolver::Status status;
+   SoPlex::VarStatus* rowstat;
+   SoPlex::VarStatus* colstat;
+   SoPlex::Status status;
    Real oldlb;
    Real oldub;
    Real newlb;
@@ -1339,9 +1348,9 @@ RETCODE SCIPlpiStrongbranch(
 
    /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
-   rowstat = new SPxSolver::VarStatus[spx->nRows()];
-   colstat = new SPxSolver::VarStatus[spx->nCols()]; 
-   status = SPxSolver::UNKNOWN;                      
+   rowstat = new SoPlex::VarStatus[spx->nRows()];
+   colstat = new SoPlex::VarStatus[spx->nCols()]; 
+   status = SoPlex::UNKNOWN;                      
    error = false;                                 
 
    /* get basis and current bounds of column */
@@ -1366,13 +1375,13 @@ RETCODE SCIPlpiStrongbranch(
       status = spx->solve();
       switch( status )
       {
-      case SPxSolver::ABORT_TIME:
-      case SPxSolver::ABORT_ITER:
-      case SPxSolver::OPTIMAL:
+      case SoPlex::ABORT_TIME:
+      case SoPlex::ABORT_ITER:
+      case SoPlex::OPTIMAL:
          *down = spx->value();
          break;
-      case SPxSolver::ABORT_VALUE:
-      case SPxSolver::INFEASIBLE:
+      case SoPlex::ABORT_VALUE:
+      case SoPlex::INFEASIBLE:
          *down = spx->terminationValue();
          break;
       default:
@@ -1398,16 +1407,16 @@ RETCODE SCIPlpiStrongbranch(
       status = spx->solve();
       switch( status )
       {
-      case SPxSolver::ABORT_TIME:
-      case SPxSolver::ABORT_ITER:
-      case SPxSolver::OPTIMAL:
+      case SoPlex::ABORT_TIME:
+      case SoPlex::ABORT_ITER:
+      case SoPlex::OPTIMAL:
          *up = spx->value();
          break;
-      case SPxSolver::ABORT_VALUE:
-      case SPxSolver::INFEASIBLE:
+      case SoPlex::ABORT_VALUE:
+      case SoPlex::INFEASIBLE:
          *up = spx->terminationValue();
          break;
-      case SPxSolver::UNBOUNDED:
+      case SoPlex::UNBOUNDED:
       default:
          error = true;
          break;
@@ -1699,6 +1708,19 @@ Bool SCIPlpiIsTimelimExc(
    assert(lpi->spx != NULL);
 
    return (lpi->spx->getStatus() == SoPlex::ABORT_TIME);
+}
+
+/** returns the internal solution status of the solver */
+int SCIPlpiGetInternalStatus(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiIsTimelimExc()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return lpi->spx->getStatus();
 }
 
 /** gets objective value of solution */
