@@ -66,7 +66,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    conshdlr        : the constraint handler itself
  *    consdata        : pointer to the constraint data to free
  */
-#define DECL_CONSDELE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONSDATA** consdata)
+#define DECL_CONSDELETE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONSDATA** consdata)
 
 /** transforms constraint data into data belonging to the transformed problem
  *
@@ -76,7 +76,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    sourcecons      : source constraint to transform
  *    targetcons      : pointer to store created target constraint
  */
-#define DECL_CONSTRAN(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* sourcecons, CONS** targetcons)
+#define DECL_CONSTRANS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* sourcecons, CONS** targetcons)
 
 /** separation method of constraint handler
  *
@@ -145,8 +145,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-                                    RESULT* result)
+#define DECL_CONSENFOLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
+                                      RESULT* result)
 
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
@@ -180,8 +180,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-                                    RESULT* result)
+#define DECL_CONSENFOPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
+                                      RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
@@ -197,8 +197,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  integrality).
  *
  *  In some cases, integrality conditions or rows in actual LP don't have to be checked, because their
- *  feasibility is already checked or implicitly given. In these cases, 'chckintegrality' or
- *  'chcklprows' is FALSE.
+ *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
+ *  'checklprows' is FALSE.
  *
  *  input:
  *    scip            : SCIP main data structure
@@ -206,16 +206,16 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    sol             : the solution to check feasibility for
- *    chckintegrality : has integrality to be checked?
- *    chcklprows      : have current LP rows to be checked?
+ *    checkintegrality: has integrality to be checked?
+ *    checklprows     : have current LP rows to be checked?
  *    result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
  *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSCHCK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, SOL* sol, \
-                                    Bool chckintegrality, Bool chcklprows, RESULT* result)
+#define DECL_CONSCHECK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, SOL* sol, \
+                                     Bool checkintegrality, Bool checklprows, RESULT* result)
 
 /** domain propagation method of constraint handler
  *
@@ -240,6 +240,30 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 #define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
                                     RESULT* result)
 
+/** constraint enabling notification method of constraint handler
+ *
+ *  This method is always called after a constraint of the constraint handler was enabled. The constraint
+ *  handler may use this call to update his own (statistical) data.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
+ *    cons            : the constraint that has been activated
+ */
+#define DECL_CONSENABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+
+/** constraint disabling notification method of constraint handler
+ *
+ *  This method is always called before a constraint of the constraint handler is disabled. The constraint
+ *  handler may use this call to update his own (statistical) data.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
+ *    cons            : the constraint that will be deactivated
+ */
+#define DECL_CONSDISABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+
 
 
 #include "scip.h"
@@ -263,7 +287,7 @@ struct Cons
    int              age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    int              sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
    int              enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
-   int              chckconsspos;       /**< position of constraint in the handler's chckconss array */
+   int              checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int              propconsspos;       /**< position of constraint in the handler's propconss array */
    int              arraypos;           /**< position of constraint in the node's/problem's addedconss/conss array */
    unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
@@ -308,7 +332,7 @@ DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo);
 
 /** compares two constraint handlers w. r. to their feasibility check priority */
 extern
-DECL_SORTPTRCOMP(SCIPconshdlrCompChck);
+DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
 
 /** creates a constraint handler */
 extern
@@ -318,19 +342,22 @@ RETCODE SCIPconshdlrCreate(
    const char*      desc,               /**< description of constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              checkpriority,      /**< priority of the constraint handler for checking infeasibility */
+   int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
-   DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
-   DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
-   DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
-   DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
-   DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
-   DECL_CONSENLP((*consenlp)),          /**< enforcing constraints for LP solutions */
-   DECL_CONSENPS((*consenps)),          /**< enforcing constraints for pseudo solutions */
-   DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
-   DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
+   DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
+   DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
+   DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
+   DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
+   DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -362,6 +389,7 @@ RETCODE SCIPconshdlrSeparate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   int              actdepth,           /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -397,8 +425,8 @@ RETCODE SCIPconshdlrCheck(
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -458,7 +486,13 @@ int SCIPconshdlrGetNEnabledConss(
 
 /** gets checking priority of constraint handler */
 extern
-int SCIPconshdlrGetChckPriority(
+int SCIPconshdlrGetCheckPriority(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets separation frequency of constraint handler */
+extern
+int SCIPconshdlrGetSepaFreq(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

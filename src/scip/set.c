@@ -54,7 +54,7 @@
 
 /* LP Solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ         3 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes */
 #define SCIP_DEFAULT_LPSOLVEDEPTH  INT_MAX /**< maximal depth for solving LPs */
 
 
@@ -307,7 +307,7 @@ RETCODE SCIPsetIncludeConsHdlr(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
-   int chckpriority;
+   int checkpriority;
    int i;
 
    assert(set != NULL);
@@ -321,8 +321,8 @@ RETCODE SCIPsetIncludeConsHdlr(
    }
    assert(set->nconshdlrs < set->conshdlrssize);
 
-   chckpriority = SCIPconshdlrGetChckPriority(conshdlr);
-   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetChckPriority(set->conshdlrs[i-1]) < chckpriority; --i )
+   checkpriority = SCIPconshdlrGetCheckPriority(conshdlr);
+   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetCheckPriority(set->conshdlrs[i-1]) < checkpriority; --i )
    {
       set->conshdlrs[i] = set->conshdlrs[i-1];
    }
@@ -705,6 +705,19 @@ RETCODE SCIPsetSetFeastol(
    return SCIP_OKAY;
 }
 
+/** returns the maximal number of cuts separated per round */
+int SCIPsetGetMaxsepacuts(
+   const SET*       set,                /**< global SCIP settings */
+   Bool             root                /**< are we at the root node? */
+   )
+{
+   assert(set != NULL);
+
+   if( root )
+      return set->maxsepacutsroot;
+   else
+      return set->maxsepacuts;
+}
 
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
 Real SCIPsetRelDiff(

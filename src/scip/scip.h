@@ -175,8 +175,8 @@ RETCODE SCIPincludeReader(
    const char*      name,               /**< name of reader */
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
-   DECL_READERFREE((*readerfree)),      /**< destructor of reader */
-   DECL_READERREAD((*readerread)),      /**< read method */
+   DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
+   DECL_READERREAD  ((*readerread)),    /**< read method */
    READERDATA*      readerdata          /**< reader data */
    );
 
@@ -189,18 +189,21 @@ RETCODE SCIPincludeConsHdlr(
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
-   DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
-   DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
-   DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
-   DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
-   DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
-   DECL_CONSENLP((*consenlp)),          /**< enforcing constraints for LP solutions */
-   DECL_CONSENPS((*consenps)),          /**< enforcing constraints for pseudo solutions */
-   DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
-   DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
+   DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
+   DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
+   DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
+   DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
+   DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -221,10 +224,10 @@ RETCODE SCIPincludeHeur(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
-   DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
-   DECL_HEURINIT((*heurinit)),          /**< initialise primal heuristic */
-   DECL_HEUREXIT((*heurexit)),          /**< deinitialise primal heuristic */
-   DECL_HEUREXEC((*heurexec)),          /**< execution method of primal heuristic */
+   DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
+   DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
+   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
+   DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    );
 
@@ -242,11 +245,11 @@ RETCODE SCIPincludeEventhdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
-   DECL_EVENTFREE((*eventfree)),        /**< destructor of event handler */
-   DECL_EVENTINIT((*eventinit)),        /**< initialise event handler */
-   DECL_EVENTEXIT((*eventexit)),        /**< deinitialise event handler */
-   DECL_EVENTDELE((*eventdele)),        /**< free specific event data */
-   DECL_EVENTEXEC((*eventexec)),        /**< execute event handler */
+   DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
+   DECL_EVENTINIT   ((*eventinit)),     /**< initialise event handler */
+   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialise event handler */
+   DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
+   DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    );
 
@@ -264,11 +267,11 @@ RETCODE SCIPincludeNodesel(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
-   DECL_NODESELFREE((*nodeselfree)),    /**< destructor of node selector */
-   DECL_NODESELINIT((*nodeselinit)),    /**< initialise node selector */
-   DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
-   DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
-   DECL_NODESELCOMP((*nodeselcomp)),    /**< node comparison method */
+   DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
+   DECL_NODESELINIT ((*nodeselinit)),   /**< initialise node selector */
+   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialise node selector */
+   DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata,        /**< node selector data */
    Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    );
@@ -280,11 +283,11 @@ RETCODE SCIPincludeBranchrule(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
-   DECL_BRANCHFREE((*branchfree)),      /**< destructor of branching rule */
-   DECL_BRANCHINIT((*branchinit)),      /**< initialise branching rule */
-   DECL_BRANCHEXIT((*branchexit)),      /**< deinitialise branching rule */
-   DECL_BRANCHEXLP((*branchexlp)),      /**< branching execution method for fractional LP solutions */
-   DECL_BRANCHEXPS((*branchexps)),      /**< branching execution method for not completely fixed pseudo solutions */
+   DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
+   DECL_BRANCHINIT  ((*branchinit)),    /**< initialise branching rule */
+   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialise branching rule */
+   DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    );
 
@@ -295,10 +298,10 @@ RETCODE SCIPincludeDisp(
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
-   DECL_DISPFREE((*dispfree)),          /**< destructor of display column */
-   DECL_DISPINIT((*dispinit)),          /**< initialise display column */
-   DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
-   DECL_DISPOUTP((*dispoutp)),          /**< output method */
+   DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
+   DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
+   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
+   DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */
    int              priority,           /**< priority of display column */
@@ -1695,6 +1698,28 @@ Bool SCIPisFeasible(
 
 /**@name Memory Management */
 /**@{ */
+
+#define SCIPallocMemory(scip,ptr)               ( (allocMemory((ptr)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocMemoryArray(scip,ptr,num)      ( (allocMemoryArray((ptr), (num)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocMemorySize(scip,ptr,size)      ( (allocMemorySize((ptr), (size)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPreallocMemoryArray(scip,ptr,newnum) ( (reallocMemoryArray((ptr), (newnum)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPreallocMemorySize(scip,ptr,newsize) ( (reallocMemorySize((ptr), (newsize)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateMemory(scip, ptr, source)  ( (duplicateMemory((ptr), (source)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateMemoryArray(scip, ptr, source, num) \
+                                                ( (duplicateMemoryArray((ptr), (source), (num)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPfreeMemory(scip,ptr)                freeMemory((ptr))
+#define SCIPfreeMemoryNull(scip,ptr)            freeMemoryNull((ptr))
+#define SCIPfreeMemoryArray(scip,ptr)           freeMemoryArray((ptr))
+#define SCIPfreeMemoryArrayNull(scip,ptr)       freeMemoryArrayNull((ptr))
+#define SCIPfreeMemorySize(scip,ptr)            freeMemorySize((ptr))
+#define SCIPfreeMemorySizeNull(scip,ptr)        freeMemorySizeNull((ptr))
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (allocBlockMemory(SCIPmemhdr(scip), (ptr)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )

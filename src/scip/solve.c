@@ -223,9 +223,6 @@ RETCODE solveNodeLP(
 
    root = (tree->actnode->depth == 0);
 
-   /* only the bounds and the constraint list may have been changed since the LP state node
-    * -> dual simplex is applicable as first solver
-    */
    debugMessage("node: solve LP with price and cut\n");
    CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
    assert(lp->solved);
@@ -278,13 +275,15 @@ RETCODE solveNodeLP(
       tree->actnode->lowerbound = SCIPlpGetObjval(lp);
       tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
 
-      /* if the LP is infeasible, we don't need to separate cuts */
+      /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
       mustsepar &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE);
+      mustsepar &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT);
 
       /* separation (has not to be done completely, because we just want to increase the lower bound) */
       if( mustsepar )
       {
          Bool separateagain;
+         Bool enoughcuts;
 
          assert(lp->solved);
 
@@ -300,20 +299,22 @@ RETCODE solveNodeLP(
          for( h = 0; h < set->nconshdlrs; ++h )
             SCIPconshdlrResetSepa(set->conshdlrs[h]);
          
-         /* try separating constraints until a constraint handler found a cut */
+         /* try separating constraints until the cut pool is at least half full */
+         enoughcuts = FALSE;
          do
          {
             separateagain = FALSE;
-            for( h = 0; h < set->nconshdlrs && SCIPsepaGetNCuts(sepa) == 0; ++h )
+            for( h = 0; h < set->nconshdlrs && !enoughcuts; ++h )
             {
-               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, &result) );
+               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, tree->actnode->depth, &result) );
                separateagain |= (result == SCIP_CONSADDED);
+               enoughcuts |= (SCIPsepaGetNCuts(sepa) >= SCIPsetGetMaxsepacuts(set, root)/2);
             }
          }
-         while( separateagain && (SCIPsepaGetNCuts(sepa) == 0) );
+         while( separateagain && !enoughcuts );
          
-         /* cut separation */
-         if( SCIPsepaGetNCuts(sepa) == 0 )
+         /* separate LP, if the cut pool is less than half full */
+         if( !enoughcuts )
          {
             todoMessage("cut separation");
          }

@@ -664,6 +664,7 @@ RETCODE SCIPrealarrayExtend(
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + newvalssize);
 
@@ -709,6 +710,7 @@ RETCODE SCIPrealarrayExtend(
       nfree = realarray->valssize - nused;
       assert(nfree >= 0);
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
       
@@ -739,6 +741,7 @@ RETCODE SCIPrealarrayExtend(
       nfree = realarray->valssize - nused;
       assert(nfree >= 0);
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
       
@@ -1008,6 +1011,7 @@ RETCODE SCIPintarrayExtend(
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + newvalssize);
 
@@ -1053,6 +1057,7 @@ RETCODE SCIPintarrayExtend(
       nfree = intarray->valssize - nused;
       assert(nfree >= 0);
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
       
@@ -1083,6 +1088,7 @@ RETCODE SCIPintarrayExtend(
       nfree = intarray->valssize - nused;
       assert(nfree >= 0);
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
       
@@ -1352,6 +1358,7 @@ RETCODE SCIPboolarrayExtend(
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + newvalssize);
 
@@ -1397,6 +1404,7 @@ RETCODE SCIPboolarrayExtend(
       nfree = boolarray->valssize - nused;
       assert(nfree >= 0);
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
       
@@ -1427,6 +1435,7 @@ RETCODE SCIPboolarrayExtend(
       nfree = boolarray->valssize - nused;
       assert(nfree >= 0);
       newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
       

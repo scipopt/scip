@@ -4216,8 +4216,8 @@ RETCODE SCIPlpGetSol(
       lp->lpicols[c]->primsol = primsol[c];
       lp->lpicols[c]->redcost = redcost[c];
       lp->lpicols[c]->validredcostlp = stat->nlp;
-      /*debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
-        lp->lpicols[c]->var->name, lp->lpicols[c]->primsol, lp->lpicols[c]->redcost);*/
+      debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
+         lp->lpicols[c]->var->name, lp->lpicols[c]->primsol, lp->lpicols[c]->redcost);
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -4225,8 +4225,8 @@ RETCODE SCIPlpGetSol(
       lp->lpirows[r]->dualsol = dualsol[r];
       lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
       lp->lpirows[r]->validactivitylp = stat->nlp;
-      /*debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
-        lp->lpirows[r]->name, lp->lpirows[r]->dualsol, lp->lpirows[r]->activity);*/
+      debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
+         lp->lpirows[r]->name, lp->lpirows[r]->dualsol, lp->lpirows[r]->activity);
    }
 
    /* free temporary memory */

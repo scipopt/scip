@@ -46,11 +46,11 @@ struct Nodesel
 {
    char*            name;               /**< name of node selector */
    char*            desc;               /**< description of node selector */
-   DECL_NODESELFREE((*nodeselfree));    /**< destructor of node selector */
-   DECL_NODESELINIT((*nodeselinit));    /**< initialise node selector */
-   DECL_NODESELEXIT((*nodeselexit));    /**< deinitialise node selector */
-   DECL_NODESELSLCT((*nodeselslct));    /**< node selection method */
-   DECL_NODESELCOMP((*nodeselcomp));    /**< node comparison method */
+   DECL_NODESELFREE ((*nodeselfree));   /**< destructor of node selector */
+   DECL_NODESELINIT ((*nodeselinit));   /**< initialise node selector */
+   DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialise node selector */
+   DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
+   DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
    NODESELDATA*     nodeseldata;        /**< node selector data */
    unsigned int     lowestboundfirst:1; /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    unsigned int     initialized:1;      /**< is node selector initialized? */
@@ -492,11 +492,11 @@ RETCODE SCIPnodeselCreate(
    NODESEL**        nodesel,            /**< pointer to store node selector */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
-   DECL_NODESELFREE((*nodeselfree)),    /**< destructor of node selector */
-   DECL_NODESELINIT((*nodeselinit)),    /**< initialise node selector */
-   DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
-   DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
-   DECL_NODESELCOMP((*nodeselcomp)),    /**< node comparison method */
+   DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
+   DECL_NODESELINIT ((*nodeselinit)),   /**< initialise node selector */
+   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialise node selector */
+   DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata,        /**< node selector data */
    Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    )
@@ -504,7 +504,7 @@ RETCODE SCIPnodeselCreate(
    assert(nodesel != NULL);
    assert(name != NULL);
    assert(desc != NULL);
-   assert(nodeselslct != NULL);
+   assert(nodeselselect != NULL);
    assert(nodeselcomp != NULL);
 
    ALLOC_OKAY( allocMemory(nodesel) );
@@ -513,7 +513,7 @@ RETCODE SCIPnodeselCreate(
    (*nodesel)->nodeselfree = nodeselfree;
    (*nodesel)->nodeselinit = nodeselinit;
    (*nodesel)->nodeselexit = nodeselexit;
-   (*nodesel)->nodeselslct = nodeselslct;
+   (*nodesel)->nodeselselect = nodeselselect;
    (*nodesel)->nodeselcomp = nodeselcomp;
    (*nodesel)->nodeseldata = nodeseldata;
    (*nodesel)->lowestboundfirst = lowestboundfirst;
@@ -605,11 +605,11 @@ RETCODE SCIPnodeselSelect(
    )
 {
    assert(nodesel != NULL);
-   assert(nodesel->nodeselslct != NULL);
+   assert(nodesel->nodeselselect != NULL);
    assert(scip != NULL);
    assert(selnode != NULL);
 
-   CHECK_OKAY( nodesel->nodeselslct(scip, nodesel, selnode) );
+   CHECK_OKAY( nodesel->nodeselselect(scip, nodesel, selnode) );
 
    return SCIP_OKAY;
 }

@@ -124,7 +124,7 @@ RETCODE SCIPsepaAddCut(
    assert(set != NULL);
    assert(cut != NULL);
 
-   maxsepacuts = root ? set->maxsepacutsroot : set->maxsepacuts;
+   maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
    assert(sepa->ncuts <= maxsepacuts);
    if( maxsepacuts == 0 )
       return SCIP_OKAY;

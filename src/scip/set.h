@@ -252,6 +252,12 @@ RETCODE SCIPsetSetFeastol(
    Real             feastol             /**< new feasibility tolerance */
    );
 
+/** returns the maximal number of cuts separated per round */
+extern
+int SCIPsetGetMaxsepacuts(
+   const SET*       set,                /**< global SCIP settings */
+   Bool             root                /**< are we at the root node? */
+   );
 
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
 extern

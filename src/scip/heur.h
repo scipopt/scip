@@ -89,10 +89,10 @@ RETCODE SCIPheurCreate(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
-   DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
-   DECL_HEURINIT((*heurinit)),          /**< initialise primal heuristic */
-   DECL_HEUREXIT((*heurexit)),          /**< deinitialise primal heuristic */
-   DECL_HEUREXEC((*heurexec)),          /**< execution method of primal heuristic */
+   DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
+   DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
+   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
+   DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    );
 

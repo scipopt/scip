@@ -71,8 +71,8 @@ RETCODE SCIPreaderCreate(
    const char*      name,               /**< name of reader */
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
-   DECL_READERFREE((*readerfree)),      /**< destructor of reader */
-   DECL_READERREAD((*readerread)),      /**< read method */
+   DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
+   DECL_READERREAD  ((*readerread)),    /**< read method */
    READERDATA*      readerdata          /**< reader data */
    );
 

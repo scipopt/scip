@@ -33,7 +33,8 @@
 #define CONSHDLR_DESC          "Integrality constraint"
 #define CONSHDLR_SEPAPRIORITY  -1000000
 #define CONSHDLR_ENFOPRIORITY         0
-#define CONSHDLR_CHCKPRIORITY         0
+#define CONSHDLR_CHECKPRIORITY        0
+#define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS        FALSE /**< the constraint handler is called without constraints */
 
@@ -44,7 +45,7 @@
  */
 
 static
-DECL_CONSENLP(consEnlpIntegral)
+DECL_CONSENFOLP(consEnfolpIntegral)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -53,7 +54,7 @@ DECL_CONSENLP(consEnlpIntegral)
    assert(nconss == 0);
    assert(result != NULL);
 
-   debugMessage("Enlp method of integrality constraint\n");
+   debugMessage("Enfolp method of integrality constraint\n");
 
    /* call branching methods */
    CHECK_OKAY( SCIPbranchLP(scip, result) );
@@ -62,7 +63,7 @@ DECL_CONSENLP(consEnlpIntegral)
 }
 
 static
-DECL_CONSCHCK(consChckIntegral)
+DECL_CONSCHECK(consCheckIntegral)
 {
    VAR** vars;
    Real solval;
@@ -78,7 +79,7 @@ DECL_CONSCHCK(consChckIntegral)
 
    *result = SCIP_FEASIBLE;
 
-   if( chckintegrality )
+   if( checkintegrality )
    {
       for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
       {
@@ -105,11 +106,13 @@ RETCODE SCIPincludeConsHdlrIntegral(
    )
 {
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY, CONSHDLR_PROPFREQ,
+                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
                   NULL, NULL, NULL, 
                   NULL, NULL, 
-                  NULL, consEnlpIntegral, NULL, consChckIntegral, NULL,
+                  NULL, consEnfolpIntegral, NULL, consCheckIntegral, NULL,
+                  NULL, NULL,
                   NULL) );
 
    return SCIP_OKAY;

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.20 2003/03/18 12:29:59 bzfpfend Exp $
+# $Id: Makefile,v 1.21 2003/04/07 09:23:15 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -94,6 +94,7 @@ LIBOBJ		=	branch.o \
 			cons.o \
 			cons_integral.o \
 			cons_linear.o \
+			cons_setcover.o \
 			cutpool.o \
 			disp.o \
 			disp_default.o \
@@ -122,6 +123,7 @@ LIBOBJ		=	branch.o \
 			stat.o \
 			tree.o \
 			var.o
+
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)

@@ -35,10 +35,10 @@ struct Disp
    char*            name;               /**< name of display column */
    char*            desc;               /**< description of display column */
    char*            header;             /**< head line of display column */
-   DECL_DISPFREE((*dispfree));          /**< destructor of display column */
-   DECL_DISPINIT((*dispinit));          /**< initialise display column */
-   DECL_DISPEXIT((*dispexit));          /**< deinitialise display column */
-   DECL_DISPOUTP((*dispoutp));          /**< output method */
+   DECL_DISPFREE    ((*dispfree));      /**< destructor of display column */
+   DECL_DISPINIT    ((*dispinit));      /**< initialise display column */
+   DECL_DISPEXIT    ((*dispexit));      /**< deinitialise display column */
+   DECL_DISPOUTPUT  ((*dispoutput));    /**< output method */
    DISPDATA*        dispdata;           /**< display column data */
    int              width;              /**< width of display column (no. of chars used) */
    int              priority;           /**< priority of display column */
@@ -58,10 +58,10 @@ RETCODE SCIPdispCreate(
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
-   DECL_DISPFREE((*dispfree)),          /**< destructor of display column */
-   DECL_DISPINIT((*dispinit)),          /**< initialise display column */
-   DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
-   DECL_DISPOUTP((*dispoutp)),          /**< output method */
+   DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
+   DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
+   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
+   DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */
    int              priority,           /**< priority of display column */
@@ -73,7 +73,7 @@ RETCODE SCIPdispCreate(
    assert(name != NULL);
    assert(desc != NULL);
    assert(header != NULL);
-   assert(dispoutp != NULL);
+   assert(dispoutput != NULL);
    assert(width >= 0);
 
    ALLOC_OKAY( allocMemory(disp) );
@@ -83,7 +83,7 @@ RETCODE SCIPdispCreate(
    (*disp)->dispfree = dispfree;
    (*disp)->dispinit = dispinit;
    (*disp)->dispexit = dispexit;
-   (*disp)->dispoutp = dispoutp;
+   (*disp)->dispoutput = dispoutput;
    (*disp)->dispdata = dispdata;
    (*disp)->width = width;
    (*disp)->priority = priority;
@@ -178,10 +178,10 @@ RETCODE SCIPdispOutput(
    )
 {
    assert(disp != NULL);
-   assert(disp->dispoutp != NULL);
+   assert(disp->dispoutput != NULL);
    assert(scip != NULL);
 
-   CHECK_OKAY( disp->dispoutp(scip, disp, stdout) );
+   CHECK_OKAY( disp->dispoutput(scip, disp, stdout) );
 
    return SCIP_OKAY;
 }

@@ -35,8 +35,13 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
  *
  *  input:
  *    scip            : SCIP main data structure
- *    linconsdata     : data of the linear constraint that should be upgraded
- *    upgdcons        : pointer to store the upgraded constraint
+ *    cons            : the linear constraint to upgrade
+ *    nvars           : number of variables in the constraint
+ *    vars            : array with constraint variables
+ *    vals            : array with constraint coefficients
+ *    lhs             : left hand side of linear constraint
+ *    rhs             : right hand side of linear constraint
+ *    local           : TRUE iff linear constraint is only locally valid
  *    nposbin         : number of binary variables with positive coefficient
  *    nnegbin         : number of binary variables with negative coefficient
  *    nposint         : number of integer variables with positive coefficient
@@ -52,16 +57,18 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
  *    ncoeffspfrac    : number of positive fractional coefficients
  *    ncoeffsnfrac    : number of negative fractional coefficients
  *    integral        : TRUE iff constraints activity value is always integral
- *    result          : pointer to store the result of the upgrade call
+ *    upgdcons        : pointer to store the upgraded constraint
+ *    upgraded        : pointer to store TRUE iff the constraint was upgraded
  *
  *  possible return values for *result:
  *    SCIP_DIDNOTFIND : the linear constraint data was not upgraded to a more specific constraint
  *    SCIP_SUCCESS    : the linear constraint data was upgraded to the more specific constraint stored in *upgdcons
  */
-#define DECL_LINCONSUPGD(x) RETCODE x (SCIP* scip, LINCONSDATA* linconsdata, CONS** upgdcons, \
+#define DECL_LINCONSUPGD(x) RETCODE x (SCIP* scip, CONS* cons, int nvars, VAR** vars, Real* vals, Real lhs, Real rhs, \
+            Bool local, \
             int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
             int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
-            Bool integral, RESULT* result)
+            Bool integral, CONS** upgdcons, Bool* upgraded)
 
 
 
@@ -219,6 +226,14 @@ RETCODE SCIPincludeConsHdlrLinear(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** includes a linear constraint update method into the linear constraint handler */
+extern
+RETCODE SCIPincludeLinconsUpgrade(
+   SCIP*            scip,               /**< SCIP data structure */
+   DECL_LINCONSUPGD((*linconsupgd)),    /**< method to call for upgrading linear constraint */
+   int              priority            /**< priority of upgrading method */
+   );
+
 /** creates and captures a linear constraint */
 extern
 RETCODE SCIPcreateConsLinear(
@@ -226,8 +241,8 @@ RETCODE SCIPcreateConsLinear(
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
    int              len,                /**< number of nonzeros in the constraint */
-   VAR**            var,                /**< array with variables of constraint entries */
-   Real*            val,                /**< array with coefficients of constraint entries */
+   VAR**            vars,               /**< array with variables of constraint entries */
+   Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             separate,           /**< should the constraint be separated during LP processing? */

@@ -39,7 +39,7 @@
  */
 
 static
-DECL_BRANCHEXLP(branchExlpMostinf)
+DECL_BRANCHEXECLP(branchExeclpMostinf)
 {
    VAR** lpcands;
    Real* lpcandsfrac;
@@ -54,7 +54,7 @@ DECL_BRANCHEXLP(branchExlpMostinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   debugMessage("Exlp method of mostinf branching\n");
+   debugMessage("Execlp method of mostinf branching\n");
 
    /* get branching candidates */
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands) );
@@ -101,7 +101,7 @@ RETCODE SCIPincludeBranchruleMostinf(
    )
 {
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
-                  NULL, NULL, NULL, branchExlpMostinf, NULL,
+                  NULL, NULL, NULL, branchExeclpMostinf, NULL,
                   NULL) );
 
    return SCIP_OKAY;

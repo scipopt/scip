@@ -71,7 +71,7 @@ DECL_NODESELFREE(SCIPnodeselFreeBfs)
 }
 
 static
-DECL_NODESELSLCT(SCIPnodeselSlctBfs)
+DECL_NODESELSELECT(SCIPnodeselSelectBfs)
 {
    NODESELDATA* nodeseldata;
    int plungedepth;
@@ -182,7 +182,7 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
-                  SCIPnodeselFreeBfs, NULL, NULL, SCIPnodeselSlctBfs, SCIPnodeselCompBfs,
+                  SCIPnodeselFreeBfs, NULL, NULL, SCIPnodeselSelectBfs, SCIPnodeselCompBfs,
                   nodeseldata, FALSE) );
 
    return SCIP_OKAY;

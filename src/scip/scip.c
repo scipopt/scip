@@ -285,8 +285,8 @@ RETCODE SCIPcreate(
 
    (*scip)->stage = SCIP_STAGE_INIT;
 
-   CHECK_OKAY( SCIPsetCreate(&(*scip)->set, *scip) );
    CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
+   CHECK_OKAY( SCIPsetCreate(&(*scip)->set, *scip) );
    (*scip)->origprob = NULL;
    (*scip)->stat = NULL;
    (*scip)->transprob = NULL;
@@ -315,8 +315,8 @@ RETCODE SCIPfree(
    CHECK_OKAY( SCIPfreeProb(*scip) );
    assert((*scip)->stage == SCIP_STAGE_INIT);
 
-   CHECK_OKAY( SCIPmemFree(&(*scip)->mem) );
    CHECK_OKAY( SCIPsetFree(&(*scip)->set) );
+   CHECK_OKAY( SCIPmemFree(&(*scip)->mem) );
 
    freeMemory(scip);
 
@@ -368,8 +368,8 @@ RETCODE SCIPincludeReader(
    const char*      name,               /**< name of reader */
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
-   DECL_READERFREE((*readerfree)),      /**< destructor of reader */
-   DECL_READERREAD((*readerread)),      /**< read method */
+   DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
+   DECL_READERREAD  ((*readerread)),    /**< read method */
    READERDATA*      readerdata          /**< reader data */
    )
 {
@@ -391,18 +391,21 @@ RETCODE SCIPincludeConsHdlr(
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
-   DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
-   DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
-   DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
-   DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
-   DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
-   DECL_CONSENLP((*consenlp)),          /**< enforcing constraints for LP solutions */
-   DECL_CONSENPS((*consenps)),          /**< enforcing constraints for pseudo solutions */
-   DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
-   DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
+   DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
+   DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
+   DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
+   DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
+   DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -410,9 +413,10 @@ RETCODE SCIPincludeConsHdlr(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeConsHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, name, desc, sepapriority, enfopriority, chckpriority, propfreq, needscons,
-                  consfree, consinit, consexit, consdele, constran, conssepa, consenlp, consenps, conschck, consprop,
-                  conshdlrdata) );
+   CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, 
+                  needscons, 
+                  consfree, consinit, consexit, consdelete, constrans, conssepa, consenfolp, consenfops, conscheck,
+                  consprop, consenable, consdisable, conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
    
    return SCIP_OKAY;
@@ -443,10 +447,10 @@ RETCODE SCIPincludeHeur(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
-   DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
-   DECL_HEURINIT((*heurinit)),          /**< initialise primal heuristic */
-   DECL_HEUREXIT((*heurexit)),          /**< deinitialise primal heuristic */
-   DECL_HEUREXEC((*heurexec)),          /**< execution method of primal heuristic */
+   DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
+   DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
+   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
+   DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
@@ -483,11 +487,11 @@ RETCODE SCIPincludeEventhdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
-   DECL_EVENTFREE((*eventfree)),        /**< destructor of event handler */
-   DECL_EVENTINIT((*eventinit)),        /**< initialise event handler */
-   DECL_EVENTEXIT((*eventexit)),        /**< deinitialise event handler */
-   DECL_EVENTDELE((*eventdele)),        /**< free specific event data */
-   DECL_EVENTEXEC((*eventexec)),        /**< execute event handler */
+   DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
+   DECL_EVENTINIT   ((*eventinit)),     /**< initialise event handler */
+   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialise event handler */
+   DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
+   DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
@@ -496,7 +500,7 @@ RETCODE SCIPincludeEventhdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeEventHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPeventhdlrCreate(&eventhdlr, name, desc, 
-                  eventfree, eventinit, eventexit, eventdele, eventexec,
+                  eventfree, eventinit, eventexit, eventdelete, eventexec,
                   eventhdlrdata) );
    CHECK_OKAY( SCIPsetIncludeEventHdlr(scip->set, eventhdlr) );
    
@@ -525,11 +529,11 @@ RETCODE SCIPincludeNodesel(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
-   DECL_NODESELFREE((*nodeselfree)),    /**< destructor of node selector */
-   DECL_NODESELINIT((*nodeselinit)),    /**< initialise node selector */
-   DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
-   DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
-   DECL_NODESELCOMP((*nodeselcomp)),    /**< node comparison method */
+   DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
+   DECL_NODESELINIT ((*nodeselinit)),   /**< initialise node selector */
+   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialise node selector */
+   DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata,        /**< node selector data */
    Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    )
@@ -539,7 +543,7 @@ RETCODE SCIPincludeNodesel(
    CHECK_OKAY( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPnodeselCreate(&nodesel, name, desc,
-                  nodeselfree, nodeselinit, nodeselexit, nodeselslct, nodeselcomp, nodeseldata, lowestboundfirst) );
+                  nodeselfree, nodeselinit, nodeselexit, nodeselselect, nodeselcomp, nodeseldata, lowestboundfirst) );
    CHECK_OKAY( SCIPsetIncludeNodesel(scip->set, nodesel) );
    
    return SCIP_OKAY;
@@ -551,11 +555,11 @@ RETCODE SCIPincludeBranchrule(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
-   DECL_BRANCHFREE((*branchfree)),      /**< destructor of branching rule */
-   DECL_BRANCHINIT((*branchinit)),      /**< initialise branching rule */
-   DECL_BRANCHEXIT((*branchexit)),      /**< deinitialise branching rule */
-   DECL_BRANCHEXLP((*branchexlp)),      /**< branching execution method for fractional LP solutions */
-   DECL_BRANCHEXPS((*branchexps)),      /**< branching execution method for not completely fixed pseudo solutions */
+   DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
+   DECL_BRANCHINIT  ((*branchinit)),    /**< initialise branching rule */
+   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialise branching rule */
+   DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
@@ -564,7 +568,7 @@ RETCODE SCIPincludeBranchrule(
    CHECK_OKAY( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchruleCreate(&branchrule, name, desc, priority,
-                  branchfree, branchinit, branchexit, branchexlp, branchexps, branchruledata) );
+                  branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
    CHECK_OKAY( SCIPsetIncludeBranchrule(scip->set, branchrule) );
    
    return SCIP_OKAY;
@@ -576,10 +580,10 @@ RETCODE SCIPincludeDisp(
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
-   DECL_DISPFREE((*dispfree)),          /**< destructor of display column */
-   DECL_DISPINIT((*dispinit)),          /**< initialise display column */
-   DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
-   DECL_DISPOUTP((*dispoutp)),          /**< output method */
+   DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
+   DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
+   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
+   DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */
    int              priority,           /**< priority of display column */
@@ -591,7 +595,7 @@ RETCODE SCIPincludeDisp(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPdispCreate(&disp, name, desc, header, dispfree, dispinit, dispexit, dispoutp, dispdata,
+   CHECK_OKAY( SCIPdispCreate(&disp, name, desc, header, dispfree, dispinit, dispexit, dispoutput, dispdata,
                   width, priority, position, stripline) );
    CHECK_OKAY( SCIPsetIncludeDisp(scip->set, disp) );
    

@@ -39,7 +39,7 @@
  */
 
 static
-DECL_BRANCHEXLP(branchExlpLeastinf)
+DECL_BRANCHEXECLP(branchExeclpLeastinf)
 {
    VAR** lpcands;
    Real* lpcandsfrac;
@@ -54,7 +54,7 @@ DECL_BRANCHEXLP(branchExlpLeastinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   debugMessage("Exlp method of leastinf branching\n");
+   debugMessage("Execlp method of leastinf branching\n");
 
    /* get branching candidates */
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands) );
@@ -101,7 +101,7 @@ RETCODE SCIPincludeBranchruleLeastinf(
    )
 {
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
-                  NULL, NULL, NULL, branchExlpLeastinf, NULL,
+                  NULL, NULL, NULL, branchExeclpLeastinf, NULL,
                   NULL) );
 
    return SCIP_OKAY;

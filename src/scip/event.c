@@ -34,11 +34,11 @@ struct EventHdlr
 {
    char*            name;               /**< name of event handler */
    char*            desc;               /**< description of event handler */
-   DECL_EVENTFREE((*eventfree));        /**< destructor of event handler */
-   DECL_EVENTINIT((*eventinit));        /**< initialise event handler */
-   DECL_EVENTEXIT((*eventexit));        /**< deinitialise event handler */
-   DECL_EVENTDELE((*eventdele));        /**< free specific event data */
-   DECL_EVENTEXEC((*eventexec));        /**< execute event handler */
+   DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
+   DECL_EVENTINIT   ((*eventinit));     /**< initialise event handler */
+   DECL_EVENTEXIT   ((*eventexit));     /**< deinitialise event handler */
+   DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
+   DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */
    unsigned int     initialized:1;      /**< is event handler initialized? */
 };
@@ -63,11 +63,11 @@ RETCODE SCIPeventhdlrCreate(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
-   DECL_EVENTFREE((*eventfree)),        /**< destructor of event handler */
-   DECL_EVENTINIT((*eventinit)),        /**< initialise event handler */
-   DECL_EVENTEXIT((*eventexit)),        /**< deinitialise event handler */
-   DECL_EVENTDELE((*eventdele)),        /**< free specific event data */
-   DECL_EVENTEXEC((*eventexec)),        /**< execute event handler */
+   DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
+   DECL_EVENTINIT   ((*eventinit)),     /**< initialise event handler */
+   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialise event handler */
+   DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
+   DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
@@ -82,7 +82,7 @@ RETCODE SCIPeventhdlrCreate(
    (*eventhdlr)->eventfree = eventfree;
    (*eventhdlr)->eventinit = eventinit;
    (*eventhdlr)->eventexit = eventexit;
-   (*eventhdlr)->eventdele = eventdele;
+   (*eventhdlr)->eventdelete = eventdelete;
    (*eventhdlr)->eventexec = eventexec;
    (*eventhdlr)->eventhdlrdata = eventhdlrdata;
    (*eventhdlr)->initialized = FALSE;
@@ -683,9 +683,9 @@ RETCODE SCIPeventfilterFree(
    for( i = 0; i < (*eventfilter)->len; ++i )
    {
       assert((*eventfilter)->eventhdlrs[i] != NULL);
-      if( (*eventfilter)->eventhdlrs[i]->eventdele != NULL )
+      if( (*eventfilter)->eventhdlrs[i]->eventdelete != NULL )
       {
-         CHECK_OKAY( (*eventfilter)->eventhdlrs[i]->eventdele(set->scip, (*eventfilter)->eventhdlrs[i],
+         CHECK_OKAY( (*eventfilter)->eventhdlrs[i]->eventdelete(set->scip, (*eventfilter)->eventhdlrs[i],
                         &(*eventfilter)->eventdatas[i]) );
       }
    }

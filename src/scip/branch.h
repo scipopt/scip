@@ -69,7 +69,7 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
  *    SCIP_SEPARATED  : a cutting plane was generated (only if "lpvalid" is TRUE)
  *    SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
+#define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
 
 /** branching execution method for not completely fixed pseudo solutions
  *
@@ -84,7 +84,7 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
  *    SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
  *    SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
+#define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
 
 
 
@@ -155,11 +155,11 @@ RETCODE SCIPbranchruleCreate(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
-   DECL_BRANCHFREE((*branchfree)),      /**< destructor of branching rule */
-   DECL_BRANCHINIT((*branchinit)),      /**< initialise branching rule */
-   DECL_BRANCHEXIT((*branchexit)),      /**< deinitialise branching rule */
-   DECL_BRANCHEXLP((*branchexlp)),      /**< branching execution method for fractional LP solutions */
-   DECL_BRANCHEXPS((*branchexps)),      /**< branching execution method for not completely fixed pseudo solutions */
+   DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
+   DECL_BRANCHINIT  ((*branchinit)),    /**< initialise branching rule */
+   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialise branching rule */
+   DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    );
 

@@ -31,6 +31,7 @@
 #include "disp_default.h"
 #include "cons_integral.h"
 #include "cons_linear.h"
+#include "cons_setcover.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
 #include "branch_mostinf.h"
@@ -80,9 +81,9 @@ DECL_EVENTEXIT(eventExitTest)
 }
 
 static
-DECL_EVENTDELE(eventDeleTest)
+DECL_EVENTDELETE(eventDeleteTest)
 {
-   /*printf("dele test event handler\n");*/
+   /*printf("delete test event handler\n");*/
 
    return SCIP_OKAY;
 }
@@ -104,7 +105,7 @@ RETCODE includeTestEventHdlr(
    )
 {
    CHECK_OKAY( SCIPincludeEventhdlr(scip, "testeventhdlr", "test event handler description",
-                  eventFreeTest, eventInitTest, eventExitTest, eventDeleTest, eventExecTest, NULL) );
+                  eventFreeTest, eventInitTest, eventExitTest, eventDeleteTest, eventExecTest, NULL) );
 
    return SCIP_OKAY;
 }
@@ -129,7 +130,7 @@ static const Real  row_lhs [] = {      0.0,      0.0 };
 static const Real  row_rhs [] = {      4.0,      3.0 };
 #endif
 
-#if 1
+#if 0
 static const int   nrows = 3;
 static const int   nvars = 2;
 
@@ -183,6 +184,24 @@ static const Real  row_lhs [] = {           1.0,      0.0,      0.0 };
 static const Real  row_rhs [] = {      100000.0, 100000.0,     30.0 };
 #endif
 
+#if 1
+static const int   nrows = 3;
+static const int   nvars = 3;
+
+static const OBJSENSE objsen  = SCIP_OBJSENSE_MINIMIZE;
+static const char* var_name[] = { "var1"  , "var2",   "var3"  };       /* min -2x1 +x2 + 3x3 */
+static const Real  var_obj [] = { -2.0    ,  +1.0 ,     +3.0  };       /*   0 <= x1 <=   1 integer */
+static const Real  var_lb  [] = {  0.0    ,   0.0 ,      0.0  };       /*   0 <= x2 <=   1 integer */
+static const Real  var_ub  [] = {  1.0    ,   1.0 ,      1.0  };       /*   0 <= x3 <=   1 integer */
+
+static const char* row_name[] = { "lin1"       , "lin2"  , "lin3"   }; /* such that */
+static const int   row_len [] = {             3,        1,        2 }; /*   lin1: 1 <=  x1 +x2 +x3       */
+static const int   row_idx [] = {   0,   1,   2,        1,   0,   1 }; /*   lin2: 0 <=     -x2           */
+static const Real  row_val [] = { 1.0, 1.0, 1.0,     -1.0, 1.0, 1.0 }; /*   lin3: 0 <=  x1 +x2     <= 30 */
+static const Real  row_lhs [] = {           1.0,      0.0,      0.0 };
+static const Real  row_rhs [] = {        1e+100,   1e+100,     30.0 };
+#endif
+
 
 static
 RETCODE runSCIP(
@@ -228,6 +247,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
@@ -268,7 +288,7 @@ RETCODE runSCIP(
          pos++;
       }
       CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, row_name[r], row_len[r], rowvars, rowvals,
-                     row_lhs[r], row_rhs[r], TRUE, FALSE) );
+                     row_lhs[r], row_rhs[r], TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) ); /* add as a global constraint */
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
    }
@@ -360,6 +380,7 @@ main(
    todoMessage("avoid addition of identical rows");
    todoMessage("avoid addition of identical constraints");
    todoMessage("cuts created at the current node, that are not sharp at the end of the node's solving loop can be removed");
+   todoMessage("pricing for pseudo solutions");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

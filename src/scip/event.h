@@ -115,7 +115,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *    eventhdlr       : the event handler itself
  *    eventdata       : pointer to the event data to free
  */
-#define DECL_EVENTDELE(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr, EVENTDATA** eventdata)
+#define DECL_EVENTDELETE(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr, EVENTDATA** eventdata)
 
 /** execution method of event handler
  *
@@ -187,11 +187,11 @@ RETCODE SCIPeventhdlrCreate(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
-   DECL_EVENTFREE((*eventfree)),        /**< destructor of event handler */
-   DECL_EVENTINIT((*eventinit)),        /**< initialise event handler */
-   DECL_EVENTEXIT((*eventexit)),        /**< deinitialise event handler */
-   DECL_EVENTDELE((*eventdele)),        /**< free specific event data */
-   DECL_EVENTEXEC((*eventexec)),        /**< execute event handler */
+   DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
+   DECL_EVENTINIT   ((*eventinit)),     /**< initialise event handler */
+   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialise event handler */
+   DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
+   DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    );
 

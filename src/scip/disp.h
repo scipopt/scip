@@ -61,7 +61,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *    disp            : the display column itself
  *    file            : file stream for output
  */
-#define DECL_DISPOUTP(x) RETCODE x (SCIP* scip, DISP* disp, FILE* file)
+#define DECL_DISPOUTPUT(x) RETCODE x (SCIP* scip, DISP* disp, FILE* file)
 
 
 
@@ -81,10 +81,10 @@ RETCODE SCIPdispCreate(
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
-   DECL_DISPFREE((*dispfree)),          /**< destructor of display column */
-   DECL_DISPINIT((*dispinit)),          /**< initialise display column */
-   DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
-   DECL_DISPOUTP((*dispoutp)),          /**< output method */
+   DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
+   DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
+   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
+   DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */
    int              priority,           /**< priority of display column */

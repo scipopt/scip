@@ -66,7 +66,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *    NULL    : problem is solved, because tree is empty
  *    non-NULL: node to be solved next
  */
-#define DECL_NODESELSLCT(x) RETCODE x (SCIP* scip, NODESEL* nodesel, NODE** selnode)
+#define DECL_NODESELSELECT(x) RETCODE x (SCIP* scip, NODESEL* nodesel, NODE** selnode)
 
 /** node comparison method of node selector
  *
@@ -177,11 +177,11 @@ RETCODE SCIPnodeselCreate(
    NODESEL**        nodesel,            /**< pointer to store node selector */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
-   DECL_NODESELFREE((*nodeselfree)),    /**< destructor of node selector */
-   DECL_NODESELINIT((*nodeselinit)),    /**< initialise node selector */
-   DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
-   DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
-   DECL_NODESELCOMP((*nodeselcomp)),    /**< node comparison method */
+   DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
+   DECL_NODESELINIT ((*nodeselinit)),   /**< initialise node selector */
+   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialise node selector */
+   DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata,        /**< node selector data */
    Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    );

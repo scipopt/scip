@@ -49,11 +49,11 @@ struct BranchRule
    char*            name;               /**< name of branching rule */
    char*            desc;               /**< description of branching rule */
    int              priority;           /**< priority of the branching rule */
-   DECL_BRANCHFREE((*branchfree));      /**< destructor of branching rule */
-   DECL_BRANCHINIT((*branchinit));      /**< initialise branching rule */
-   DECL_BRANCHEXIT((*branchexit));      /**< deinitialise branching rule */
-   DECL_BRANCHEXLP((*branchexlp));      /**< branching execution method for fractional LP solutions */
-   DECL_BRANCHEXPS((*branchexps));      /**< branching execution method for not completely fixed pseudo solutions */
+   DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
+   DECL_BRANCHINIT  ((*branchinit));    /**< initialise branching rule */
+   DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialise branching rule */
+   DECL_BRANCHEXECLP((*branchexeclp));  /**< branching execution method for fractional LP solutions */
+   DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
    unsigned int     initialized:1;      /**< is branching rule initialized? */
 };
@@ -364,11 +364,11 @@ RETCODE SCIPbranchruleCreate(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
-   DECL_BRANCHFREE((*branchfree)),      /**< destructor of branching rule */
-   DECL_BRANCHINIT((*branchinit)),      /**< initialise branching rule */
-   DECL_BRANCHEXIT((*branchexit)),      /**< deinitialise branching rule */
-   DECL_BRANCHEXLP((*branchexlp)),      /**< branching execution method for fractional LP solutions */
-   DECL_BRANCHEXPS((*branchexps)),      /**< branching execution method for not completely fixed pseudo solutions */
+   DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
+   DECL_BRANCHINIT  ((*branchinit)),    /**< initialise branching rule */
+   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialise branching rule */
+   DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
@@ -383,8 +383,8 @@ RETCODE SCIPbranchruleCreate(
    (*branchrule)->branchfree = branchfree;
    (*branchrule)->branchinit = branchinit;
    (*branchrule)->branchexit = branchexit;
-   (*branchrule)->branchexlp = branchexlp;
-   (*branchrule)->branchexps = branchexps;
+   (*branchrule)->branchexeclp = branchexeclp;
+   (*branchrule)->branchexecps = branchexecps;
    (*branchrule)->branchruledata = branchruledata;
    (*branchrule)->initialized = FALSE;
 
@@ -478,9 +478,9 @@ RETCODE SCIPbranchruleExecLPSol(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   if( branchrule->branchexlp != NULL )
+   if( branchrule->branchexeclp != NULL )
    {
-      CHECK_OKAY( branchrule->branchexlp(scip, branchrule, result) );
+      CHECK_OKAY( branchrule->branchexeclp(scip, branchrule, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
@@ -510,9 +510,9 @@ RETCODE SCIPbranchruleExecPseudoSol(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   if( branchrule->branchexps != NULL )
+   if( branchrule->branchexecps != NULL )
    {
-      CHECK_OKAY( branchrule->branchexps(scip, branchrule, result) );
+      CHECK_OKAY( branchrule->branchexecps(scip, branchrule, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM

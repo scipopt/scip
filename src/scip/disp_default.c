@@ -164,7 +164,7 @@
  */
 
 static
-DECL_DISPOUTP(SCIPdispOutpSolfound)
+DECL_DISPOUTPUT(SCIPdispOutputSolfound)
 {
    SOL* sol;
    Longint nodenum;
@@ -186,7 +186,7 @@ DECL_DISPOUTP(SCIPdispOutpSolfound)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpNodenum)
+DECL_DISPOUTPUT(SCIPdispOutputNodenum)
 {
    Longint nodenum;
 
@@ -201,7 +201,7 @@ DECL_DISPOUTP(SCIPdispOutpNodenum)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpNodesleft)
+DECL_DISPOUTPUT(SCIPdispOutputNodesleft)
 {
    int nnodes;
 
@@ -216,7 +216,7 @@ DECL_DISPOUTP(SCIPdispOutpNodesleft)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpLpiterations)
+DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
 {
    int lpiterations;
 
@@ -231,7 +231,7 @@ DECL_DISPOUTP(SCIPdispOutpLpiterations)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpActdepth)
+DECL_DISPOUTPUT(SCIPdispOutputActdepth)
 {
    int actdepth;
 
@@ -246,7 +246,7 @@ DECL_DISPOUTP(SCIPdispOutpActdepth)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpMemused)
+DECL_DISPOUTPUT(SCIPdispOutputMemused)
 {
    Longint memused;
 
@@ -261,7 +261,7 @@ DECL_DISPOUTP(SCIPdispOutpMemused)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpMaxdepth)
+DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
 {
    int maxdepth;
 
@@ -276,7 +276,7 @@ DECL_DISPOUTP(SCIPdispOutpMaxdepth)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpActcols)
+DECL_DISPOUTPUT(SCIPdispOutputActcols)
 {
    int actcols;
 
@@ -291,7 +291,7 @@ DECL_DISPOUTP(SCIPdispOutpActcols)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpActrows)
+DECL_DISPOUTPUT(SCIPdispOutputActrows)
 {
    int actrows;
 
@@ -306,7 +306,7 @@ DECL_DISPOUTP(SCIPdispOutpActrows)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpActconss)
+DECL_DISPOUTPUT(SCIPdispOutputActconss)
 {
    int actconss;
 
@@ -321,7 +321,7 @@ DECL_DISPOUTP(SCIPdispOutpActconss)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpPoolsize)
+DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
 {
    int poolsize;
 
@@ -336,7 +336,7 @@ DECL_DISPOUTP(SCIPdispOutpPoolsize)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpActdualbound)
+DECL_DISPOUTPUT(SCIPdispOutputActdualbound)
 {
    Real actdualbound;
 
@@ -351,7 +351,7 @@ DECL_DISPOUTP(SCIPdispOutpActdualbound)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpAvgdualbound)
+DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
 {
    Real avgdualbound;
 
@@ -366,7 +366,7 @@ DECL_DISPOUTP(SCIPdispOutpAvgdualbound)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpDualbound)
+DECL_DISPOUTPUT(SCIPdispOutputDualbound)
 {
    Real dualbound;
 
@@ -381,7 +381,7 @@ DECL_DISPOUTP(SCIPdispOutpDualbound)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpPrimalbound)
+DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
 {
    Real primalbound;
 
@@ -399,7 +399,7 @@ DECL_DISPOUTP(SCIPdispOutpPrimalbound)
 }
 
 static
-DECL_DISPOUTP(SCIPdispOutpGap)
+DECL_DISPOUTPUT(SCIPdispOutputGap)
 {
    Real dualbound;
    Real primalbound;
@@ -440,52 +440,52 @@ RETCODE SCIPincludeDispDefault(
    )
 {
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_SOLFOUND, DISP_DESC_SOLFOUND, DISP_HEAD_SOLFOUND,
-                  NULL, NULL, NULL, SCIPdispOutpSolfound, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputSolfound, NULL, 
                   DISP_WIDT_SOLFOUND, DISP_PRIO_SOLFOUND, DISP_POSI_SOLFOUND, DISP_STRI_SOLFOUND) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_NODENUM, DISP_DESC_NODENUM, DISP_HEAD_NODENUM,
-                  NULL, NULL, NULL, SCIPdispOutpNodenum, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputNodenum, NULL, 
                   DISP_WIDT_NODENUM, DISP_PRIO_NODENUM, DISP_POSI_NODENUM, DISP_STRI_NODENUM) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_NODESLEFT, DISP_DESC_NODESLEFT, DISP_HEAD_NODESLEFT,
-                  NULL, NULL, NULL, SCIPdispOutpNodesleft, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputNodesleft, NULL, 
                   DISP_WIDT_NODESLEFT, DISP_PRIO_NODESLEFT, DISP_POSI_NODESLEFT, DISP_STRI_NODESLEFT) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_LPITERATIONS, DISP_DESC_LPITERATIONS, DISP_HEAD_LPITERATIONS,
-                  NULL, NULL, NULL, SCIPdispOutpLpiterations, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputLpiterations, NULL, 
                   DISP_WIDT_LPITERATIONS, DISP_PRIO_LPITERATIONS, DISP_POSI_LPITERATIONS, DISP_STRI_LPITERATIONS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MEMUSED, DISP_DESC_MEMUSED, DISP_HEAD_MEMUSED,
-                  NULL, NULL, NULL, SCIPdispOutpMemused, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputMemused, NULL, 
                   DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDEPTH, DISP_DESC_ACTDEPTH, DISP_HEAD_ACTDEPTH,
-                  NULL, NULL, NULL, SCIPdispOutpActdepth, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputActdepth, NULL, 
                   DISP_WIDT_ACTDEPTH, DISP_PRIO_ACTDEPTH, DISP_POSI_ACTDEPTH, DISP_STRI_ACTDEPTH) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MAXDEPTH, DISP_DESC_MAXDEPTH, DISP_HEAD_MAXDEPTH,
-                  NULL, NULL, NULL, SCIPdispOutpMaxdepth, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputMaxdepth, NULL, 
                   DISP_WIDT_MAXDEPTH, DISP_PRIO_MAXDEPTH, DISP_POSI_MAXDEPTH, DISP_STRI_MAXDEPTH) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCOLS, DISP_DESC_ACTCOLS, DISP_HEAD_ACTCOLS,
-                  NULL, NULL, NULL, SCIPdispOutpActcols, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputActcols, NULL, 
                   DISP_WIDT_ACTCOLS, DISP_PRIO_ACTCOLS, DISP_POSI_ACTCOLS, DISP_STRI_ACTCOLS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTROWS, DISP_DESC_ACTROWS, DISP_HEAD_ACTROWS,
-                  NULL, NULL, NULL, SCIPdispOutpActrows, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputActrows, NULL, 
                   DISP_WIDT_ACTROWS, DISP_PRIO_ACTROWS, DISP_POSI_ACTROWS, DISP_STRI_ACTROWS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCONSS, DISP_DESC_ACTCONSS, DISP_HEAD_ACTCONSS,
-                  NULL, NULL, NULL, SCIPdispOutpActconss, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputActconss, NULL, 
                   DISP_WIDT_ACTCONSS, DISP_PRIO_ACTCONSS, DISP_POSI_ACTCONSS, DISP_STRI_ACTCONSS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_POOLSIZE, DISP_DESC_POOLSIZE, DISP_HEAD_POOLSIZE,
-                  NULL, NULL, NULL, SCIPdispOutpPoolsize, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputPoolsize, NULL, 
                   DISP_WIDT_POOLSIZE, DISP_PRIO_POOLSIZE, DISP_POSI_POOLSIZE, DISP_STRI_POOLSIZE) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDUALBOUND, DISP_DESC_ACTDUALBOUND, DISP_HEAD_ACTDUALBOUND,
-                  NULL, NULL, NULL, SCIPdispOutpActdualbound, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputActdualbound, NULL, 
                   DISP_WIDT_ACTDUALBOUND, DISP_PRIO_ACTDUALBOUND, DISP_POSI_ACTDUALBOUND, DISP_STRI_ACTDUALBOUND) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_AVGDUALBOUND, DISP_DESC_AVGDUALBOUND, DISP_HEAD_AVGDUALBOUND,
-                  NULL, NULL, NULL, SCIPdispOutpAvgdualbound, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputAvgdualbound, NULL, 
                   DISP_WIDT_AVGDUALBOUND, DISP_PRIO_AVGDUALBOUND, DISP_POSI_AVGDUALBOUND, DISP_STRI_AVGDUALBOUND) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_DUALBOUND, DISP_DESC_DUALBOUND, DISP_HEAD_DUALBOUND,
-                  NULL, NULL, NULL, SCIPdispOutpDualbound, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputDualbound, NULL, 
                   DISP_WIDT_DUALBOUND, DISP_PRIO_DUALBOUND, DISP_POSI_DUALBOUND, DISP_STRI_DUALBOUND) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_PRIMALBOUND, DISP_DESC_PRIMALBOUND, DISP_HEAD_PRIMALBOUND,
-                  NULL, NULL, NULL, SCIPdispOutpPrimalbound, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputPrimalbound, NULL, 
                   DISP_WIDT_PRIMALBOUND, DISP_PRIO_PRIMALBOUND, DISP_POSI_PRIMALBOUND, DISP_STRI_PRIMALBOUND) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_GAP, DISP_DESC_GAP, DISP_HEAD_GAP,
-                  NULL, NULL, NULL, SCIPdispOutpGap, NULL, 
+                  NULL, NULL, NULL, SCIPdispOutputGap, NULL, 
                   DISP_WIDT_GAP, DISP_PRIO_GAP, DISP_POSI_GAP, DISP_STRI_GAP) );
 
    return SCIP_OKAY;
