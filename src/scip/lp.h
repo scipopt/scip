@@ -122,6 +122,7 @@ struct Col
    int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    Longint          obsoletenode;       /**< last node where this column was removed due to aging */
+   int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     objchanged:1;       /**< TRUE iff objective value changed, and data of LP solver has to be updated */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
@@ -135,6 +136,7 @@ struct Row
 {
    char*            name;               /**< name of the row */
    COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
+   int*             cols_probindex;     /**< copy of cols[i]->var->probindex for avoiding expensive dereferencing */
    Real*            vals;               /**< coefficients of row entries */
    int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
@@ -868,6 +870,15 @@ RETCODE SCIPlpGetBInvRow(
    Real*            coef                /**< pointer to store the coefficients of the row */
    );
 
+/** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A) */
+extern
+RETCODE SCIPlpGetBInvARow(
+   LP*              lp,                 /**< LP data */
+   int              r,                  /**< row number */
+   Real*            binvrow,            /**< row in B^-1 from prior call to SCIPlpGetBInvRow(), or NULL */
+   Real*            coef                /**< pointer to store the coefficients of the row */
+   );
+
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
  *  LP row are swapped in the summation
  */
@@ -894,7 +905,7 @@ RETCODE SCIPlpCalcMIR(
    VAR**            vars,               /**< active variables in the problem */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation */
-   REALARRAY*       mircoef,            /**< array to store MIR coefficients indexed by variables' probindex */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
    );

@@ -66,7 +66,7 @@
 
 /* Pricing */
 
-#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
+#define SCIP_DEFAULT_USEPRICING      FALSE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS      128 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 2048 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */

@@ -109,7 +109,15 @@ DECL_HEUREXEC(SCIPheurExecDiving)
    Real objval;
    Real bestfrac;
    Real frac;
+   Bool bestcandmayrounddown;
+   Bool bestcandmayroundup;
+   Bool bestcandroundup;
+   Bool mayrounddown;
+   Bool mayroundup;
+   Bool roundup;
    int nlpcands;
+   int actdepth;
+   int maxdepth;
    int maxdivedepth;
    int divedepth;
    int bestcand;
@@ -125,6 +133,12 @@ DECL_HEUREXEC(SCIPheurExecDiving)
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only try to dive, if we are in the lower 20% of the tree */
+   actdepth = SCIPgetActDepth(scip);
+   maxdepth = SCIPgetMaxDepth(scip);
+   if( actdepth < 0.8*maxdepth )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -150,8 +164,10 @@ DECL_HEUREXEC(SCIPheurExecDiving)
    }
    searchbound = MIN(searchubbound, searchavgbound);
 
-   /* calculate the maximal diving depth: 10 * number of integer variables */
-   maxdivedepth = 10*(SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
+   /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
+   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   maxdivedepth = MIN(maxdivedepth, maxdepth);
+   maxdivedepth *= 10;
 
    /* start diving */
    CHECK_OKAY( SCIPstartDive(scip) );
@@ -164,25 +180,82 @@ DECL_HEUREXEC(SCIPheurExecDiving)
    debugMessage("executing diving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
       SCIPgetActDepth(scip), nlpcands, SCIPgetDualBound(scip), SCIPretransformObj(scip, searchbound));
 
-   /* dive as long we are in the given objective limits and fractional variables exist */
+   /* dive as long we are in the given objective limits and fractional variables exist
+    * if the last rounding was in a direction, that never destroys feasibility, we continue in any case
+    */
    divedepth = 0;
-   while( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && divedepth < maxdivedepth && objval < searchbound )
+   bestcandmayrounddown = FALSE;
+   bestcandmayroundup = FALSE;
+   while( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+      && (bestcandmayrounddown || bestcandmayroundup || (divedepth < maxdivedepth && objval < searchbound)) )
    {
       divedepth++;
 
       todoMessage("use a better variable selection/rounding criteria in diving (e.g. history depending)");
 
-      /* choose variable fixing: round least fractional variable in corresponding direction */
+      /* choose variable fixing:
+       * - prefer variables that may not be rounded without destroying LP feasibility:
+       *   - of these variables, round least fractional variable in corresponding direction
+       * - if all remaining fractional variables may be rounded without destroying LP feasibility:
+       *   - round variable in the feasible direction, that is closest to the rounded value
+       */
       bestcand = -1;
+      bestcandmayrounddown = TRUE;
+      bestcandmayroundup = TRUE;
       bestfrac = 1.0;
       for( c = 0; c < nlpcands; ++c )
       {
-         frac = lpcandsfrac[c];
-         frac = MIN(frac, 1.0-frac);
-         if( frac < bestfrac )
+         var = lpcands[c];
+         mayrounddown = SCIPvarMayRoundDown(var);
+         mayroundup = SCIPvarMayRoundUp(var);
+         if( mayrounddown || mayroundup )
          {
-            bestcand = c;
-            bestfrac = frac;
+            /* the candidate may be rounded */
+            if( bestcandmayrounddown || bestcandmayroundup )
+            {
+               frac = lpcandsfrac[c];
+               roundup = FALSE;
+               if( (mayrounddown && mayroundup) || divedepth < 10 )
+               {
+                  if( frac > 0.5 )
+                  {
+                     frac = MIN(frac, 1.0-frac);
+                     roundup = TRUE;
+                  }
+               }
+               else if( mayroundup )
+               {
+                  frac = 1.0 - frac;
+                  roundup = TRUE;
+               }
+               if( frac < bestfrac )
+               {
+                  bestcand = c;
+                  bestfrac = frac;
+                  bestcandmayrounddown = mayrounddown;
+                  bestcandmayroundup = mayroundup;
+                  bestcandroundup = roundup;
+               }
+            }
+         }
+         else
+         {
+            /* the candidate may not be rounded */
+            frac = lpcandsfrac[c];
+            roundup = FALSE;
+            if( frac > 0.5 )
+            {
+               frac = 1.0-frac;
+               roundup = TRUE;
+            }
+            if( bestcandmayrounddown || bestcandmayroundup || frac < bestfrac )
+            {
+               bestcand = c;
+               bestfrac = frac;
+               bestcandmayrounddown = FALSE;
+               bestcandmayroundup = FALSE;
+               bestcandroundup = roundup;
+            }
          }
       }
       assert(bestcand != -1);
@@ -196,19 +269,23 @@ DECL_HEUREXEC(SCIPheurExecDiving)
       }
 
       /* apply rounding of best candidate */
-      if( lpcandsfrac[bestcand] >= 0.5 )
+      if( bestcandroundup )
       {
          /* round variable up */
-         debugMessage("  var <%s>: sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-            SCIPvarGetName(var), lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
+         debugMessage("  dive %d/%d: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+            divedepth, maxdivedepth,
+            SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
+            lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
             SCIPceil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
          CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPceil(scip, lpcandssol[bestcand])) );
       }
       else
       {
          /* round variable down */
-         debugMessage("  var <%s>: sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-            SCIPvarGetName(var), lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
+         debugMessage("  dive %d/%d: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+            divedepth, maxdivedepth,
+            SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
+            lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
             SCIPgetVarLbDive(scip, var), SCIPfloor(scip, lpcandssol[bestcand]));
          CHECK_OKAY( SCIPchgVarUbDive(scip, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
       }
@@ -249,6 +326,8 @@ DECL_HEUREXEC(SCIPheurExecDiving)
 
    /* end diving */
    CHECK_OKAY( SCIPendDive(scip) );
+
+   debugMessage("diving heuristic finished\n");
 
    return SCIP_OKAY;
 }

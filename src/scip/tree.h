@@ -149,7 +149,9 @@ struct Tree
    DOMCHGDYN**      siblingsdomchg;     /**< domain changes of the sibling nodes */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
-   Real             actpseudoobjval;    /**< actual pseudosolution value with all variables set to their best bounds */
+   Real             actpseudoobjval;    /**< actual pseudo solution value with all variables set to their best bounds,
+                                         *   ignoring variables, with infinite best bound */
+   int              actpseudoobjvalinf; /**< number of variables with infinite best bound in actual pseudo solution */
    int              pathlen;            /**< length of the actual path (== depth of the current node + 1) */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
@@ -429,6 +431,13 @@ extern
 Real SCIPtreeGetAvgLowerbound(
    TREE*            tree,               /**< branch-and-bound tree */
    Real             upperbound          /**< global upper bound */
+   );
+
+/** gets the pseudo objective value of the active node */
+extern
+Real SCIPtreeGetActPseudoobjval(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 #endif

@@ -249,6 +249,7 @@ RETCODE ensureRowSize(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->cols, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->cols_probindex, row->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->vals, row->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->linkpos, row->size, newsize) );
       row->size = newsize;
@@ -717,6 +718,7 @@ RETCODE rowAddCoeff(
    assert(memhdr != NULL);
    assert(col != NULL);
    assert(col->var != NULL);
+   assert(col->var_probindex == col->var->probindex);
    assert(!SCIPsetIsZero(set, val));
    /*assert(rowSearchCoeff(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
@@ -740,6 +742,7 @@ RETCODE rowAddCoeff(
    if( colpos != NULL )
       *colpos = row->len;
    row->cols[row->len] = col;
+   row->cols_probindex[row->len] = col->var_probindex;
    row->vals[row->len] = val;
    row->linkpos[row->len] = linkpos;
    if( linkpos == -1 )
@@ -789,8 +792,11 @@ RETCODE rowDelCoeffPos(
    
    if( pos < row->len-1 )
    {
+      assert(row->cols_probindex[row->len-1] == row->cols[row->len-1]->var_probindex);
+
       /* move last coefficient to position of deleted coefficient */
       row->cols[pos] = row->cols[row->len-1];
+      row->cols_probindex[pos] = row->cols_probindex[row->len-1];
       row->vals[pos] = row->vals[row->len-1];
       row->linkpos[pos] = row->linkpos[row->len-1];
 
@@ -1122,6 +1128,7 @@ RETCODE SCIPcolCreate(
    (*col)->strongitlim = -1;
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
+   (*col)->var_probindex = var->probindex;
    (*col)->sorted = TRUE;
    (*col)->objchanged = FALSE;
    (*col)->lbchanged = FALSE;
@@ -1246,6 +1253,7 @@ RETCODE SCIPcolDelCoeff(
    if( col->linkpos[pos] != -1 )
    {
       assert(row->cols[col->linkpos[pos]] == col);
+      assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
       assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
       CHECK_OKAY( rowDelCoeffPos(row, set, lp, col->linkpos[pos]) );
    }
@@ -1294,6 +1302,7 @@ RETCODE SCIPcolChgCoeff(
       if( col->linkpos[pos] != -1 )
       {
          assert(row->cols[col->linkpos[pos]] == col);
+         assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
          CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, col->linkpos[pos], val) );
       }
@@ -1346,6 +1355,7 @@ RETCODE SCIPcolIncCoeff(
       if( col->linkpos[pos] != -1 )
       {
          assert(row->cols[col->linkpos[pos]] == col);
+         assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
          CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, col->linkpos[pos], col->vals[pos] + incval) );
       }
@@ -1912,14 +1922,21 @@ RETCODE SCIProwCreate(
       int i;
 
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->cols, col, len) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->cols_probindex, len) );
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->vals, val, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->linkpos, len) );
       for( i = 0; i < len; ++i )
+      {
+         assert(col[i]->var != NULL);
+         assert(col[i]->var_probindex == col[i]->var->probindex);
+         (*row)->cols_probindex[i] = col[i]->var_probindex;
          (*row)->linkpos[i] = -1;
+      }
    }
    else
    {
       (*row)->cols = NULL;
+      (*row)->cols_probindex = NULL;
       (*row)->vals = NULL;
       (*row)->linkpos = NULL;
    }
@@ -1991,6 +2008,7 @@ RETCODE SCIProwFree(
 
    freeBlockMemoryArray(memhdr, &(*row)->name, strlen((*row)->name)+1);
    freeBlockMemoryArrayNull(memhdr, &(*row)->cols, (*row)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*row)->cols_probindex, (*row)->size);
    freeBlockMemoryArrayNull(memhdr, &(*row)->vals, (*row)->size);
    freeBlockMemoryArrayNull(memhdr, &(*row)->linkpos, (*row)->size);
    freeBlockMemory(memhdr, row);
@@ -2227,6 +2245,7 @@ RETCODE SCIProwDelCoeff(
    }
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] == col);
+   assert(row->cols_probindex[pos] == col->var_probindex);
 
    /* if column knows of the row, remove the row from the column's row vector */
    if( row->linkpos[pos] != -1 )
@@ -2275,6 +2294,7 @@ RETCODE SCIProwChgCoeff(
       /* modifify already existing coefficient */
       assert(0 <= pos && pos < row->len);
       assert(row->cols[pos] == col);
+      assert(row->cols_probindex[pos] == col->var_probindex);
 
       /* if column knows of the row, change the corresponding coefficient in the column */
       if( row->linkpos[pos] != -1 )
@@ -2327,6 +2347,7 @@ RETCODE SCIProwIncCoeff(
       /* modifify already existing coefficient */
       assert(0 <= pos && pos < row->len);
       assert(row->cols[pos] == col);
+      assert(row->cols_probindex[pos] == col->var_probindex);
 
       /* if column knows of the row, change the corresponding coefficient in the column */
       if( row->linkpos[pos] != -1 )
@@ -2401,7 +2422,7 @@ void SCIProwSort(
       int i;
 
       /* sort coefficients */
-      SCIPbsortPtrDblInt((void**)(row->cols), row->vals, row->linkpos, row->len, &cmpCol);
+      SCIPbsortPtrDblIntInt((void**)(row->cols), row->vals, row->cols_probindex, row->linkpos, row->len, &cmpCol);
 
       /* update links */
       for( i = 0; i < row->len; ++i )
@@ -2764,6 +2785,7 @@ RETCODE SCIProwMakeRational(
 
    assert(row != NULL);
    assert(row->len == 0 || row->cols != NULL);
+   assert(row->len == 0 || row->cols_probindex != NULL);
    assert(row->len == 0 || row->vals != NULL);
    assert(maxdnom >= 1);
    assert(success != NULL);
@@ -2880,14 +2902,31 @@ RETCODE SCIProwMakeRational(
          }
       }
    }
+   else
+   {
+      /* all coefficients are integral: we have nothing to do */
+      *success = TRUE;
+   }
 
    /* clean up the row sides */
    if( *success )
    {
-      if( SCIPsetIsIntegral(set, row->lhs) )
-         row->lhs = SCIPsetFloor(set, row->lhs);
-      if( SCIPsetIsIntegral(set, row->rhs) )
-         row->rhs = SCIPsetFloor(set, row->rhs);
+      if( !contvars )
+      {
+         /* no continous variables exist in the row, all coefficients of the new row are integral -> round sides */
+         if( !SCIPsetIsInfinity(set, -row->lhs) )
+            row->lhs = SCIPsetCeil(set, row->lhs);
+         if( !SCIPsetIsInfinity(set, row->rhs) )
+            row->rhs = SCIPsetFloor(set, row->rhs);
+      }
+      else
+      {
+         /* the sides may be fractional, but if they are very close to integral, round them */
+         if( !SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsIntegral(set, row->lhs) )
+            row->lhs = SCIPsetFloor(set, row->lhs);
+         if( !SCIPsetIsInfinity(set, row->rhs) && SCIPsetIsIntegral(set, row->rhs) )
+            row->rhs = SCIPsetFloor(set, row->rhs);
+      }
    }
 
    return SCIP_OKAY;
@@ -3982,6 +4021,25 @@ RETCODE SCIPlpGetBInvRow(
    return SCIP_OKAY;
 }
 
+/** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A) */
+RETCODE SCIPlpGetBInvARow(
+   LP*              lp,                 /**< LP data */
+   int              r,                  /**< row number */
+   Real*            binvrow,            /**< row in B^-1 from prior call to SCIPlpGetBInvRow(), or NULL */
+   Real*            coef                /**< pointer to store the coefficients of the row */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(0 <= r && r < lp->nrows);  /* the basis matrix is nrows x nrows */
+   assert(coef != NULL);
+
+   CHECK_OKAY( SCIPlpiGetBInvARow(lp->lpi, r, binvrow, coef) );
+
+   return SCIP_OKAY;
+}
+
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
  *  LP row are swapped in the summation
  */
@@ -4023,6 +4081,7 @@ RETCODE SCIPlpSumRows(
          row = lp->rows[r];
          assert(row != NULL);
          assert(row->len == 0 || row->cols != NULL);
+         assert(row->len == 0 || row->cols_probindex != NULL);
          assert(row->len == 0 || row->vals != NULL);
 
          /* add the row coefficients to the sum */
@@ -4032,7 +4091,9 @@ RETCODE SCIPlpSumRows(
             assert(row->cols[i]->var != NULL);
             assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
             assert(row->cols[i]->var->data.col == row->cols[i]);
-            idx = row->cols[i]->var->probindex;
+            assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
+            assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
+            idx = row->cols_probindex[i];
             assert(0 <= idx && idx < nvars);
             SCIPrealarrayIncVal(sumcoef, set, idx, weights[r] * row->vals[i]);
          }
@@ -4065,64 +4126,36 @@ RETCODE SCIPlpSumRows(
    return SCIP_OKAY;
 }
 
-/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
- * rows cannot participate in a MIR cut.
- */
-RETCODE SCIPlpCalcMIR(
-   LP*              lp,                 /**< LP data */
+/** builds a weighted sum of rows, and decides whether to use the left or right hand side of the rows in summation */
+static
+void sumMIRRow(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< LP data */
    int              nvars,              /**< number of active variables in the problem */
-   VAR**            vars,               /**< active variables in the problem */
-   Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation */
-   REALARRAY*       mircoef,            /**< array to store MIR coefficients indexed by variables' probindex */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
-   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   int*             slacksign,          /**< stores the sign of the row's slack variable in summation */
+   Bool*            emptyrow            /**< pointer to store whether the returned row is empty */
    )
 {
    ROW* row;
-   VAR* var;
    Real rowactivity;
-   Real rhs;
-   Real downrhs;
-   Real cutrhs;
-   Real f0;
-   Real fj;
-   Real aj;
-   Real downaj;
-   Real cutaj;
-   Real onedivoneminusf0;  /* 1/(1-f0) */
-   Bool emptyrow;
-   int* slacksign;
-   int* varsign;
-   int r;
-   int v;
-   int i;
    int idx;
+   int r;
+   int i;
 
    assert(lp != NULL);
-   assert(vars != NULL);
    assert(weights != NULL);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
-   assert(success != NULL);
+   assert(slacksign != NULL);
+   assert(emptyrow != NULL);
 
-   todoMessage("test, if a column based summation is faster");
-
-   debugMessage("\n\n\ncalculating MIR cut\n");
-
-   *success = FALSE;
-
-   /* allocate temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &slacksign, lp->nrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &varsign, nvars) );
-
-   /* calculate the row summation */
-   SCIPrealarrayClear(mircoef);
-   CHECK_OKAY( SCIPrealarrayExtend(mircoef, set, 0, nvars-1) );
-   rhs = 0.0;
-   emptyrow = TRUE;
+   clearMemoryArray(mircoef, nvars);
+   *mirrhs = 0.0;
+   *emptyrow = TRUE;
    for( r = 0; r < lp->nrows; ++r )
    {
       if( !SCIPsetIsZero(set, weights[r]) )
@@ -4130,6 +4163,7 @@ RETCODE SCIPlpCalcMIR(
          row = lp->rows[r];
          assert(row != NULL);
          assert(row->len == 0 || row->cols != NULL);
+         assert(row->len == 0 || row->cols_probindex != NULL);
          assert(row->len == 0 || row->vals != NULL);
 
          /* check, if row is modifiable */
@@ -4143,7 +4177,7 @@ RETCODE SCIPlpCalcMIR(
              * and treat it implicitly as  a*x + s == rhs. We have to remember, which sign the implicit slack variable
              * has.
              */
-            emptyrow = FALSE;
+            *emptyrow = FALSE;
             rowactivity = SCIProwGetLPActivity(row, stat);
             assert(SCIPsetIsFeasGE(set, rowactivity, row->lhs));
             assert(SCIPsetIsFeasLE(set, rowactivity, row->rhs));
@@ -4151,17 +4185,13 @@ RETCODE SCIPlpCalcMIR(
             if( rowactivity < (row->lhs + row->rhs)/2.0 )
             {
                slacksign[r] = -1;
-               rhs += weights[r] * row->lhs;
+               *mirrhs += weights[r] * row->lhs;
             }
             else
             {
                slacksign[r] = +1;
-               rhs += weights[r] * row->rhs;
+               *mirrhs += weights[r] * row->rhs;
             }
-
-            debugMessage("row <%s>: act=%g [%g,%g], weight=%g, slacksign=%d: ",
-               row->name, rowactivity, row->lhs, row->rhs, weights[r], slacksign[r]);
-            debug(SCIProwPrint(row, NULL));
 
             /* add the row coefficients to the sum */
             for( i = 0; i < row->len; ++i )
@@ -4170,23 +4200,256 @@ RETCODE SCIPlpCalcMIR(
                assert(row->cols[i]->var != NULL);
                assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
                assert(row->cols[i]->var->data.col == row->cols[i]);
-               idx = row->cols[i]->var->probindex;
+               assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
+               assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
+               idx = row->cols_probindex[i];
                assert(0 <= idx && idx < nvars);
-               SCIPrealarrayIncVal(mircoef, set, idx, weights[r] * row->vals[i]);
+               mircoef[idx] += weights[r] * row->vals[i];
             }
          }
       }
    }
+}
+
+/** Transform equation  a*x == b, lb <= x <= ub  into standard form
+ *    a*x' == b, 0 <= x' <= ub'.
+ *  Transform variables:
+ *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       if x^_j is closer to lb
+ *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
+ *  and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
+ */
+static
+void transformMIRRow(
+   int              nvars,              /**< number of active variables in the problem */
+   VAR**            vars,               /**< active variables in the problem */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   int*             varsign             /**< stores the sign of the transformed variable in summation */
+   )
+{
+   VAR* var;
+   int idx;
+   int v;
+
+   assert(vars != NULL);
+   assert(mircoef != NULL);
+   assert(mirrhs != NULL);
+   assert(varsign != NULL);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+      idx = var->probindex;
+      assert(0 <= idx && idx < nvars);
+
+      if( var->varstatus == SCIP_VARSTATUS_COLUMN && var->data.col->primsol > (var->dom.lb + var->dom.ub)/2 )
+      {
+         varsign[idx] = -1;
+         *mirrhs -= mircoef[idx] * var->dom.ub;
+      }
+      else
+      {
+         varsign[idx] = +1;
+         *mirrhs -= mircoef[idx] * var->dom.lb;
+      }
+   }
+}
+
+/** Calculate fractionalities  f_0 := b - down(b), f_j := a_j - down(a_j) , and derive MIR cut
+ *    a~*x' <= down(b)
+ *  integers : a~_j = down(a_j)                      , if f_j <= f0
+ *             a~_j = down(a_j) + (f_j - f0)/(1 - f0), if f_j >  f0
+ *  continous: a~_j = 0                              , if a_j >= 0
+ *             a~_j = a_j/(1 - f0)                   , if a_j <  0
+ *  Keep in mind, that the varsign has to be implicitly incorporated into a~_j.
+ *  Transform inequality back to a°*x <= down(b):
+ *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       if x^_j is closer to lb
+ *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
+ *    a°_j :=  a~_j, if x^_j is closer to lb
+ *    a°_j := -a~_j, if x^_j is closer to ub
+ *  and move the constant terms
+ *    -a~_j * lb_j == -a°_j * lb_j, or
+ *     a~_j * ub_j == -a°_j * ub_j
+ *  to the rhs.
+ */
+static
+void roundMIRRow(
+   const SET*       set,                /**< global SCIP settings */
+   int              nvars,              /**< number of active variables in the problem */
+   VAR**            vars,               /**< active variables in the problem */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   int*             varsign,            /**< stores the sign of the transformed variable in summation */
+   Real             f0                  /**< fracional value of rhs */
+   )
+{
+   VAR* var;
+   Real onedivoneminusf0;
+   Real aj;
+   Real downaj;
+   Real cutaj;
+   Real fj;
+   int idx;
+   int v;
+
+   assert(vars != NULL);
+   assert(mircoef != NULL);
+   assert(mirrhs != NULL);
+   assert(varsign != NULL);
+   assert(0.0 < f0 && f0 < 1.0);
+
+   onedivoneminusf0 = 1.0 / (1.0 - f0);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+      idx = var->probindex;
+      assert(0 <= idx && idx < nvars);
+
+      /* calculate the coefficient in the retransformed cut */
+      aj = varsign[idx] * mircoef[idx];
+      if( var->vartype != SCIP_VARTYPE_CONTINOUS )
+      {
+         /* integer variable */
+         downaj = SCIPsetFloor(set, aj);
+         fj = aj - downaj;
+         if( SCIPsetIsSumLE(set, fj, f0) )
+            cutaj = varsign[idx] * downaj;
+         else
+            cutaj = varsign[idx] * (downaj + (fj - f0) * onedivoneminusf0);
+      }
+      else
+      {
+         /* continous variable */
+         if( SCIPsetIsSumGE(set, aj, 0.0) )
+            cutaj = 0.0;
+         else
+            cutaj = varsign[idx] * aj * onedivoneminusf0;
+      }
+      mircoef[idx] = cutaj;
+
+      /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
+      if( varsign[idx] == +1 )
+         *mirrhs += cutaj * var->dom.lb;
+      else
+         *mirrhs += cutaj * var->dom.ub;
+   }
+}
+
+/** substitute negatively aggregated slack variables:
+ *  - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continous
+ *    slack variable is a_j > 0, which leads to a°_j = 0, so we can ignore the slack variable in
+ *    the resulting cut
+ *  - if row was aggregated with a negative factor (weight * slacksign), the a_j for the continous
+ *    slack variable is a_j < 0, which leads to a°_j = a_j/(1 - f0), so we have to subtract 
+ *    a°_j times the row to the cut to eliminate the slack variable
+ */
+static
+void substituteMIRRow(
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< LP data */
+   Real*            weights,            /**< row weights in row summation */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   int*             slacksign,          /**< stores the sign of the row's slack variable in summation */
+   Real             f0                  /**< fracional value of rhs */
+   )
+{
+   ROW* row;
+   Real onedivoneminusf0;
+   Real mul;
+   int idx;
+   int r;
+   int i;
+
+   assert(lp != NULL);
+   assert(weights != NULL);
+   assert(mircoef != NULL);
+   assert(mirrhs != NULL);
+   assert(slacksign != NULL);
+   assert(0.0 < f0 && f0 < 1.0);
+
+   onedivoneminusf0 = 1.0 / (1.0 - f0);
+   for( r = 0; r < lp->nrows; ++r )
+   {
+      if( SCIPsetIsNegative(set, slacksign[r] * weights[r]) )
+      {
+         row = lp->rows[r];
+         assert(row != NULL);
+         assert(row->len == 0 || row->cols != NULL);
+         assert(row->len == 0 || row->cols_probindex != NULL);
+         assert(row->len == 0 || row->vals != NULL);
+
+         mul = weights[r] * onedivoneminusf0;
+
+         /* subtract the row coefficients multiplied with a°_j from the cut */
+         for( i = 0; i < row->len; ++i )
+         {
+            assert(row->cols[i] != NULL);
+            assert(row->cols[i]->var != NULL);
+            assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+            assert(row->cols[i]->var->data.col == row->cols[i]);
+            assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
+            assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
+            idx = row->cols_probindex[i];
+            mircoef[idx] -= mul * row->vals[i];
+         }
+         if( slacksign[r] == +1 )
+            *mirrhs -= mul * row->rhs;
+         else
+            *mirrhs -= mul * row->lhs;
+      }
+   }
+
+   /* set rhs to zero, if it's very close to */
+   if( SCIPsetIsZero(set, *mirrhs) )
+      *mirrhs = 0.0;
+}
+
+/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ * rows cannot participate in a MIR cut.
+ */
+RETCODE SCIPlpCalcMIR(
+   LP*              lp,                 /**< LP data */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   int              nvars,              /**< number of active variables in the problem */
+   VAR**            vars,               /**< active variables in the problem */
+   Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   Real*            weights,            /**< row weights in row summation */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   )
+{
+   int* slacksign;
+   int* varsign;
+   Real rhs;
+   Real downrhs;
+   Real f0;
+   Bool emptyrow;
+
+   assert(lp != NULL);
+   assert(vars != NULL);
+   assert(weights != NULL);
+   assert(mircoef != NULL);
+   assert(mirrhs != NULL);
+   assert(success != NULL);
+
+   todoMessage("test, if a column based summation is faster");
+
+   *success = FALSE;
+
+   /* allocate temporary memory */
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &slacksign, lp->nrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &varsign, nvars) );
+
+   /* calculate the row summation */
+   sumMIRRow(set, stat, lp, nvars, weights, mircoef, &rhs, slacksign, &emptyrow);
    if( emptyrow )
       goto TERMINATE;
-
-#ifdef DEBUG
-   printf("result of summation:");
-   for( i = 0; i < nvars; ++i )
-      if( SCIPrealarrayGetVal(mircoef, i) != 0.0 )
-         printf(" %+gx%d", SCIPrealarrayGetVal(mircoef, i), i);
-   printf(" <= %g\n", rhs);
-#endif
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
     *   a*x' == b, 0 <= x' <= ub'.
@@ -4195,37 +4458,7 @@ RETCODE SCIPlpCalcMIR(
     *   x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
     * and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
     */
-   for( v = 0; v < nvars; ++v )
-   {
-      var = vars[v];
-      assert(var != NULL);
-      idx = var->probindex;
-      assert(0 <= idx && idx < nvars);
-
-      if( SCIPvarGetLPSol(var) < (var->dom.lb + var->dom.ub)/2 )
-      {
-         varsign[idx] = +1;
-         rhs -= SCIPrealarrayGetVal(mircoef, idx) * var->dom.lb;
-      }
-      else
-      {
-         varsign[idx] = -1;
-         rhs -= SCIPrealarrayGetVal(mircoef, idx) * var->dom.ub;
-      }
-#ifdef DEBUG
-      if( SCIPrealarrayGetVal(mircoef, idx) != 0.0 )
-         printf("var <%s>: primsol=%g [%g,%g] -> varsign=%d\n", 
-            var->name, SCIPvarGetLPSol(var), var->dom.lb, var->dom.ub, varsign[idx]);
-#endif
-   }
-
-#ifdef DEBUG
-   printf("result of transformation:");
-   for( i = 0; i < nvars; ++i )
-      if( SCIPrealarrayGetVal(mircoef, i) != 0.0 )
-         printf(" %+gx%d", SCIPrealarrayGetVal(mircoef, i), i);
-   printf(" <= %g\n", rhs);
-#endif
+   transformMIRRow(nvars, vars, mircoef, &rhs, varsign);
 
    /* Calculate fractionalities  f_0 := b - down(b), f_j := a_j - down(a_j) , and derive MIR cut
     *   a~*x' <= down(b)
@@ -4249,54 +4482,8 @@ RETCODE SCIPlpCalcMIR(
    if( f0 < minfrac )
       goto TERMINATE;
 
-   onedivoneminusf0 = 1.0 / (1.0 - f0);
-   cutrhs = downrhs;
-
-   debugMessage("f0=%g, 1/(1-f0)=%g, cutrhs=%g\n", f0, onedivoneminusf0, cutrhs);
-
-   for( v = 0; v < nvars; ++v )
-   {
-      var = vars[v];
-      assert(var != NULL);
-      idx = var->probindex;
-      assert(0 <= idx && idx < nvars);
-
-      /* calculate the coefficient in the retransformed cut */
-      aj = varsign[idx] * SCIPrealarrayGetVal(mircoef, idx);
-      if( var->vartype != SCIP_VARTYPE_CONTINOUS )
-      {
-         /* integer variable */
-         downaj = SCIPsetFloor(set, aj);
-         fj = aj - downaj;
-         if( SCIPsetIsSumLE(set, fj, f0) )
-            cutaj = varsign[idx] * downaj;
-         else
-            cutaj = varsign[idx] * (downaj + (fj - f0) * onedivoneminusf0);
-      }
-      else
-      {
-         /* continous variable */
-         if( SCIPsetIsSumGE(set, aj, 0.0) )
-            cutaj = 0.0;
-         else
-            cutaj = varsign[idx] * aj * onedivoneminusf0;
-      }
-      CHECK_OKAY( SCIPrealarraySetVal(mircoef, set, idx, cutaj) );
-
-      /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
-      if( varsign[idx] == +1 )
-         cutrhs += cutaj * var->dom.lb;
-      else
-         cutrhs += cutaj * var->dom.ub;
-   }
-
-#ifdef DEBUG
-   printf("result of rounding:");
-   for( i = 0; i < nvars; ++i )
-      if( SCIPrealarrayGetVal(mircoef, i) != 0.0 )
-         printf(" %+gx%d", SCIPrealarrayGetVal(mircoef, i), i);
-   printf(" <= %g\n", cutrhs);
-#endif
+   *mirrhs = downrhs;
+   roundMIRRow(set, nvars, vars, mircoef, mirrhs, varsign, f0);
 
    /* substitute negatively aggregated slack variables:
     * - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continous
@@ -4306,58 +4493,14 @@ RETCODE SCIPlpCalcMIR(
     *   slack variable is a_j < 0, which leads to a°_j = a_j/(1 - f0), so we have to subtract 
     *   a°_j times the row to the cut to eliminate the slack variable
     */
-   for( r = 0; r < lp->nrows; ++r )
-   {
-      if( SCIPsetIsNegative(set, slacksign[r] * weights[r]) )
-      {
-         Real mul;
+   substituteMIRRow(set, lp, weights, mircoef, mirrhs, slacksign, f0);
 
-         row = lp->rows[r];
-         assert(row != NULL);
-         assert(row->len == 0 || row->cols != NULL);
-         assert(row->len == 0 || row->vals != NULL);
-
-         mul = weights[r] * onedivoneminusf0;
-
-         /* subtract the row coefficients multiplied with a°_j from the cut */
-         for( i = 0; i < row->len; ++i )
-         {
-            assert(row->cols[i] != NULL);
-            assert(row->cols[i]->var != NULL);
-            assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-            assert(row->cols[i]->var->data.col == row->cols[i]);
-            idx = row->cols[i]->var->probindex;
-            assert(0 <= idx && idx < nvars);
-            SCIPrealarrayIncVal(mircoef, set, idx, -mul * row->vals[i]);
-         }
-         if( slacksign[r] == +1 )
-            cutrhs -= mul * row->rhs;
-         else
-            cutrhs -= mul * row->lhs;
-      }
-   }
-
-   /* set rhs to zero, if it's very close to */
-   if( SCIPsetIsZero(set, cutrhs) )
-      cutrhs = 0.0;
-   
-#ifdef DEBUG
-   printf("result of substituting:");
-   for( i = 0; i < nvars; ++i )
-      if( SCIPrealarrayGetVal(mircoef, i) != 0.0 )
-         printf(" %+gx%d", SCIPrealarrayGetVal(mircoef, i), i);
-   printf(" <= %g\n", cutrhs);
-#endif
-
-   *mirrhs = cutrhs;
    *success = TRUE;
 
  TERMINATE:
    /* free temporary memory */
    SCIPsetReleaseBufferArray(set, &varsign);
    SCIPsetReleaseBufferArray(set, &slacksign);
-
-   debugMessage("\n\n");
 
    return SCIP_OKAY;
 }

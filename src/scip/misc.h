@@ -374,4 +374,15 @@ void SCIPbsortPtrDblInt(
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
+/** bubble sort of four joint arrays of pointers/Reals/Ints/Ints, sorted by first */
+extern
+void SCIPbsortPtrDblIntInt(
+   void**           ptrarray,           /**< pointer array to be sorted */
+   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   int*             intarray1,          /**< first int array to be permuted in the same way */
+   int*             intarray2,          /**< second int array to be permuted in the same way */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   );
+
 #endif

@@ -507,7 +507,7 @@ extern
 RETCODE SCIPlpiGetBInvARow(
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
-   const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
+   const Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    Real*            val                 /**< vector to return coefficients */
    );
 

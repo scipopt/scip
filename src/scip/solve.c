@@ -299,6 +299,7 @@ RETCODE solveNodeLP(
       /* update lower bound w.r.t. the the LP solution */
       tree->actnode->lowerbound = SCIPlpGetObjval(lp);
       tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+      debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
       mustsepar &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE);
@@ -393,6 +394,7 @@ RETCODE solveNodeLP(
       tree->actnode->lowerbound = SCIPlpGetObjval(lp);
       tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
    }
+   debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
 
    /* issue LPSOLVED event */
    assert(lp->solved);
@@ -798,7 +800,7 @@ RETCODE SCIPsolveCIP(
       }
       else
       {
-         debugMessage("actual pseudosolution: obj=%g", tree->actpseudoobjval);
+         debugMessage("actual pseudosolution: obj=%g", SCIPtreeGetActPseudoobjval(tree, set));
          debug(SCIPprobPrintPseudoSol(prob, set));
          
          /* check, if we want to solve the LP at the selected node */
@@ -808,7 +810,7 @@ RETCODE SCIPsolveCIP(
          /* solve at least the root LP, if there are continous variables present */
          tree->actnodehaslp |= (actnode->depth == 0 && prob->ncont > 0);
          /* don't solve the node if its cut off by the pseudo objective value anyway */
-         tree->actnodehaslp &= SCIPsetIsLT(set, tree->actpseudoobjval, primal->upperbound);
+         tree->actnodehaslp &= SCIPsetIsLT(set, SCIPtreeGetActPseudoobjval(tree, set), primal->upperbound);
          
          /* external node solving loop */
          initiallpsolved = FALSE;
@@ -837,8 +839,10 @@ RETCODE SCIPsolveCIP(
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             
             /* update lower bound w.r.t. the pseudo solution */
-            tree->actnode->lowerbound = MAX(tree->actnode->lowerbound, tree->actpseudoobjval);
+            tree->actnode->lowerbound = MAX(tree->actnode->lowerbound, SCIPtreeGetActPseudoobjval(tree, set));
             tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+            debugMessage(" -> new lower bound: %g (pseudoobj: %g)\n", 
+               tree->actnode->lowerbound, SCIPtreeGetActPseudoobjval(tree, set));
             
             /* check for infeasible node by bounding */
             if( SCIPsetIsGE(set, tree->actnode->lowerbound, primal->upperbound) )
@@ -876,7 +880,7 @@ RETCODE SCIPsolveCIP(
             }
             else
             {
-               CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, stat, tree, NULL) );
+               CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, set, stat, tree, NULL) );
                CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
                tree->npssolsfound += primal->nsolsfound - oldnsolsfound;
             }
@@ -901,9 +905,12 @@ RETCODE SCIPsolveCIP(
       }
 
       /* call primal heuristics */
-      for( h = 0; h < set->nheurs; ++h )
+      if( SCIPtreeGetNNodes(tree) > 0 )
       {
-         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actnode->depth, tree->actnodehaslp, &result) );
+         for( h = 0; h < set->nheurs; ++h )
+         {
+            CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actnode->depth, tree->actnodehaslp, &result) );
+         }
       }
       
       /* display node information line */

@@ -130,6 +130,7 @@ RETCODE SCIPsolCreateLPSol(
 RETCODE SCIPsolCreatePseudoSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -141,7 +142,7 @@ RETCODE SCIPsolCreatePseudoSol(
    debugMessage("creating solution from pseudo solution\n");
 
    CHECK_OKAY( SCIPsolCreate(sol, memhdr, stat, heur) );
-   CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, memhdr, stat, tree) );
+   CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, memhdr, set, stat, tree) );
 
    return SCIP_OKAY;
 }
@@ -150,6 +151,7 @@ RETCODE SCIPsolCreatePseudoSol(
 RETCODE SCIPsolCreateActSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
@@ -166,7 +168,7 @@ RETCODE SCIPsolCreateActSol(
    }
    else
    {
-      CHECK_OKAY( SCIPsolCreatePseudoSol(sol, memhdr, stat, tree, heur) );
+      CHECK_OKAY( SCIPsolCreatePseudoSol(sol, memhdr, set, stat, tree, heur) );
    }
 
    return SCIP_OKAY;
@@ -235,6 +237,7 @@ RETCODE SCIPsolLinkLPSol(
 RETCODE SCIPsolLinkPseudoSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree                /**< branch-and-bound tree */
    )
@@ -259,7 +262,7 @@ RETCODE SCIPsolLinkPseudoSol(
    }
 
    /* link solution to pseudo solution */
-   sol->obj = tree->actpseudoobjval;
+   sol->obj = SCIPtreeGetActPseudoobjval(tree, set);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    sol->nodenum = stat->nnodes;
 
@@ -272,6 +275,7 @@ RETCODE SCIPsolLinkPseudoSol(
 RETCODE SCIPsolLinkActSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
@@ -287,7 +291,7 @@ RETCODE SCIPsolLinkActSol(
    }
    else
    {
-      CHECK_OKAY( SCIPsolLinkPseudoSol(sol, memhdr, stat, tree) );
+      CHECK_OKAY( SCIPsolLinkPseudoSol(sol, memhdr, set, stat, tree) );
    }
 
    return SCIP_OKAY;

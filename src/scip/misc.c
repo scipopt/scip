@@ -1820,3 +1820,97 @@ void SCIPbsortPtrDblInt(
       firstpos = sortpos+1;
    }
 }
+
+/** bubble sort of four joint arrays of pointers/Reals/Ints/Ints, sorted by first */
+void SCIPbsortPtrDblIntInt(
+   void**           ptrarray,           /**< pointer array to be sorted */
+   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   int*             intarray1,          /**< first int array to be permuted in the same way */
+   int*             intarray2,          /**< second int array to be permuted in the same way */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int actpos;
+   int sortpos;
+   void* tmpptr;
+   Real tmpdbl;
+   int tmpint1;
+   int tmpint2;
+
+   assert(len == 0 || ptrarray != NULL);
+   assert(len == 0 || dblarray != NULL);
+   assert(len == 0 || intarray1 != NULL);
+   assert(len == 0 || intarray2 != NULL);
+
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      actpos = firstpos;
+      sortpos = firstpos;
+      while( actpos < lastpos )
+      {
+         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
+            actpos++;
+         if( actpos >= lastpos )
+            break;
+         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
+         tmpptr = ptrarray[actpos];
+         tmpdbl = dblarray[actpos];
+         tmpint1 = intarray1[actpos];
+         tmpint2 = intarray2[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos+1];
+            dblarray[actpos] = dblarray[actpos+1];
+            intarray1[actpos] = intarray1[actpos+1];
+            intarray2[actpos] = intarray2[actpos+1];
+            actpos++;
+         }
+         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
+         ptrarray[actpos] = tmpptr;
+         dblarray[actpos] = tmpdbl;
+         intarray1[actpos] = tmpint1;
+         intarray2[actpos] = tmpint2;
+         sortpos = actpos;
+         actpos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      actpos = lastpos;
+      sortpos = lastpos;
+      while( actpos > firstpos )
+      {
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
+            actpos--;
+         if( actpos <= firstpos )
+            break;
+         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
+         tmpptr = ptrarray[actpos];
+         tmpdbl = dblarray[actpos];
+         tmpint1 = intarray1[actpos];
+         tmpint2 = intarray2[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos-1];
+            dblarray[actpos] = dblarray[actpos-1];
+            intarray1[actpos] = intarray1[actpos-1];
+            intarray2[actpos] = intarray2[actpos-1];
+            actpos--;
+         }
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
+         ptrarray[actpos] = tmpptr;
+         dblarray[actpos] = tmpdbl;
+         intarray1[actpos] = tmpint1;
+         intarray2[actpos] = tmpint2;
+         sortpos = actpos;
+         actpos--;
+      }
+      firstpos = sortpos+1;
+   }
+}

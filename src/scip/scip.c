@@ -2148,6 +2148,21 @@ RETCODE SCIPgetLPBInvRow(
    return SCIP_OKAY;
 }
 
+/** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A) */
+RETCODE SCIPgetLPBInvARow(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              r,                  /**< row number */
+   Real*            binvrow,            /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
+   Real*            coef                /**< pointer to store the coefficients of the row */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPBInvARow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPlpGetBInvARow(scip->lp, r, binvrow, coef) );
+
+   return SCIP_OKAY;
+}
+
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
  *  LP row are swapped in the summation
  */
@@ -2173,7 +2188,7 @@ RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation */
-   REALARRAY*       mircoef,            /**< array to store MIR coefficients indexed by variables' probindex */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
    )
@@ -2955,7 +2970,7 @@ RETCODE SCIPcreatePseudoSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreatePseudoSol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolCreatePseudoSol(sol, scip->mem->solvemem, scip->stat, scip->tree, heur) );
+   CHECK_OKAY( SCIPsolCreatePseudoSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, heur) );
 
    return SCIP_OKAY;
 }
@@ -2969,7 +2984,7 @@ RETCODE SCIPcreateActSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateActSol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolCreateActSol(sol, scip->mem->solvemem, scip->stat, scip->tree, scip->lp, heur) );
+   CHECK_OKAY( SCIPsolCreateActSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, heur) );
 
    return SCIP_OKAY;
 }
@@ -3014,7 +3029,7 @@ RETCODE SCIPlinkPseudoSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPlinkPseudoSol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolLinkPseudoSol(sol, scip->mem->solvemem, scip->stat, scip->tree) );
+   CHECK_OKAY( SCIPsolLinkPseudoSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree) );
 
    return SCIP_OKAY;
 }
@@ -3027,7 +3042,7 @@ RETCODE SCIPlinkActSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPlinkActSol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolLinkActSol(sol, scip->mem->solvemem, scip->stat, scip->tree, scip->lp) );
+   CHECK_OKAY( SCIPsolLinkActSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -3130,7 +3145,8 @@ Real SCIPgetSolObj(
          return SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, scip->lp->objval));
       }
       else
-         return SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, scip->tree->actpseudoobjval));
+         return SCIPprobExternObjval(scip->origprob, 
+            SCIPprobExternObjval(scip->transprob, SCIPtreeGetActPseudoobjval(scip->tree, scip->set)));
    }
 }
 
@@ -3153,7 +3169,7 @@ Real SCIPgetSolTransObj(
          return scip->lp->objval;
       }
       else
-         return scip->tree->actpseudoobjval;
+         return SCIPtreeGetActPseudoobjval(scip->tree, scip->set);
    }
 }
 

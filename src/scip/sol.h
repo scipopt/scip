@@ -82,6 +82,7 @@ extern
 RETCODE SCIPsolCreatePseudoSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -92,6 +93,7 @@ extern
 RETCODE SCIPsolCreateActSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
@@ -119,6 +121,7 @@ extern
 RETCODE SCIPsolLinkPseudoSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree                /**< branch-and-bound tree */
    );
@@ -128,6 +131,7 @@ extern
 RETCODE SCIPsolLinkActSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */

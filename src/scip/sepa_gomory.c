@@ -35,55 +35,19 @@
 
 
 
-/* locally defined separator data */
-struct SepaData
-{
-   REALARRAY*       cutcoef;            /**< array for storing the coefficients of the actual row summation */
-};
-
-
-
-
-/*
- * local methods
- */
-
-
-
-
-
 /*
  * Callback methods
  */
 
 static
-DECL_SEPAFREE(SCIPsepaFreeGomory)
-{
-   SEPADATA* sepadata;
-
-   assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
-   assert(scip != NULL);
-
-   /* free separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-   CHECK_OKAY( SCIPfreeRealarray(scip, &sepadata->cutcoef) );
-   SCIPfreeMemory(scip, &sepadata);
-   SCIPsepaSetData(sepa, NULL);
-
-   return SCIP_OKAY;
-}
-
-static
 DECL_SEPAEXEC(SCIPsepaExecGomory)
 {
-   SEPADATA* sepadata;
    VAR** vars;
    COL** cols;
    ROW** rows;
+   Real* varsol;
    Real* binvrow;
-   REALARRAY* cutcoef;
+   Real* cutcoef;
    Real cutrhs;
    Bool success;
    Longint maxdnom;
@@ -106,12 +70,6 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    /* only call separator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
-
-   /* get separator's data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-   cutcoef = sepadata->cutcoef;
-   assert(cutcoef != NULL);
 
    /* get variables data */
    CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -139,8 +97,10 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    *result = SCIP_DIDNOTFIND;
 
    /* allocate temporary memory */
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &cutcoef, nvars) );
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &basisind, nrows) );
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &binvrow, nrows) );
+   varsol = NULL; /* allocate this later, if needed */
 
    /* get basis indices */
    CHECK_OKAY( SCIPgetLPBasisInd(scip, basisind) );
@@ -182,6 +142,18 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   int cutlen;
                   int v;
 
+                  /* if this is the first successful cut, get the LP solution for all COLUMN variables */
+                  if( varsol == NULL )
+                  {
+                     CHECK_OKAY( SCIPcaptureBufferArray(scip, &varsol, nvars) );
+                     for( v = 0; v < nvars; ++v )
+                     {
+                        if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
+                           varsol[v] = SCIPvarGetLPSol(vars[v]);
+                     }
+                  }
+                  assert(varsol != NULL);
+
                   /* get temporary memory for storing the cut as sparse row */
                   CHECK_OKAY( SCIPcaptureBufferArray(scip, &cutcols, nvars) );
                   CHECK_OKAY( SCIPcaptureBufferArray(scip, &cutvals, nvars) );
@@ -192,11 +164,11 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   cutsqrnorm = 0.0;
                   for( v = 0; v < nvars; ++v )
                   {
-                     val = SCIPgetRealarrayVal(scip, cutcoef, v);
+                     val = cutcoef[v];
                      if( !SCIPisZero(scip, val) )
                      {
                         assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
-                        cutact += val * SCIPvarGetLPSol(vars[v]);
+                        cutact += val * varsol[v];
                         cutsqrnorm += SQR(val);
                         cutcols[cutlen] = SCIPvarGetCol(vars[v]);
                         cutvals[cutlen] = val;
@@ -217,8 +189,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
                                  TRUE, FALSE, TRUE) );
-                     debugMessage("found potential gomory cut <%s>: activity=%f, rhs=%f:", cutname, cutact, cutrhs);
-                     debug(SCIProwPrint(cut, NULL));
+                     /*debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f:", cutname, cutact, cutrhs);
+                       debug(SCIProwPrint(cut, NULL));*/
 
                      /* try to scale the cut to integral values */
                      CHECK_OKAY( SCIPmakeRowRational(scip, cut, maxdnom, &success) );
@@ -233,7 +205,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                            && SCIPisFeasGT(scip, cutact, cutrhs)
                            && SCIPisCutViolated(scip, cutact/cutnorm, cutrhs/cutnorm) )
                         {
-                           debugMessage("found integral gomory cut <%s>: activity=%f, rhs=%f:", cutname, cutact, cutrhs);
+                           debugMessage(" -> found integral gomory cut <%s>: activity=%f, rhs=%f:",
+                              cutname, cutact, cutrhs);
                            debug(SCIProwPrint(cut, NULL));
                            CHECK_OKAY( SCIPaddCut(scip, cut, (cutact-cutrhs)/cutnorm/(cutlen+1)) );
                            *result = SCIP_SEPARATED;
@@ -254,8 +227,15 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    }
 
    /* free temporary memory */
+   if( varsol != NULL )
+   {
+      CHECK_OKAY( SCIPreleaseBufferArray(scip, &varsol) );
+   }
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &binvrow) );
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &basisind) );
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &cutcoef) );
+
+   debugMessage("end searching gomory cuts\n");
 
    return SCIP_OKAY;
 }
@@ -272,16 +252,10 @@ RETCODE SCIPincludeSepaGomory(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   SEPADATA* sepadata;
-
-   /* allocate and initialise separator data; this has to be freed in the destructor */
-   CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
-   CHECK_OKAY( SCIPcreateRealarray(scip, &sepadata->cutcoef) );
-
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-                  SCIPsepaFreeGomory, NULL, NULL, SCIPsepaExecGomory,
-                  sepadata) );
+                  NULL, NULL, NULL, SCIPsepaExecGomory,
+                  NULL) );
 
    return SCIP_OKAY;
 }

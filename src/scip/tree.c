@@ -977,13 +977,41 @@ RETCODE SCIPnodeAddBoundchg(
       if( var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN )
       {
          Real pseudoobjval;
+         int pseudoobjvalinf;
 
          pseudoobjval = tree->actpseudoobjval;
-         if( var->obj > 0.0 && boundtype == SCIP_BOUNDTYPE_LOWER )
-            pseudoobjval += (newbound - oldbound) * var->obj;
-         else if( var->obj < 0.0 && boundtype == SCIP_BOUNDTYPE_UPPER )
-            pseudoobjval += (newbound - oldbound) * var->obj;
-         node->lowerbound = MAX(node->lowerbound, pseudoobjval);
+         pseudoobjvalinf = tree->actpseudoobjvalinf;
+         if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsPositive(set, var->obj) )
+         {
+            assert(!SCIPsetIsInfinity(set, oldbound));
+            assert(!SCIPsetIsInfinity(set, newbound));
+            if( SCIPsetIsInfinity(set, -oldbound) )
+               pseudoobjvalinf--;
+            else
+               pseudoobjval -= oldbound * var->obj;
+            assert(pseudoobjvalinf >= 0);
+            if( SCIPsetIsInfinity(set, -newbound) )
+               pseudoobjvalinf++;
+            else
+               pseudoobjval += newbound * var->obj;
+         }
+         else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsNegative(set, var->obj) )
+         {
+            assert(!SCIPsetIsInfinity(set, -oldbound));
+            assert(!SCIPsetIsInfinity(set, -newbound));
+            if( SCIPsetIsInfinity(set, oldbound) )
+               pseudoobjvalinf--;
+            else
+               pseudoobjval -= oldbound * var->obj;
+            assert(pseudoobjvalinf >= 0);
+            if( SCIPsetIsInfinity(set, newbound) )
+               pseudoobjvalinf++;
+            else
+               pseudoobjval += newbound * var->obj;
+         }
+         assert(pseudoobjvalinf >= 0);
+         if( pseudoobjvalinf == 0 )
+            node->lowerbound = MAX(node->lowerbound, pseudoobjval);
       }
 
       return SCIP_OKAY;
@@ -1949,7 +1977,7 @@ RETCODE SCIPnodeActivate(
          if( tree->actnodehaslp )
          {
             todoMessage("decide: old active node becomes fork or subroot");
-            if( tree->actnode->depth % 25 == 0 ) /* ????????????? */
+            if( tree->actnode->depth > 0 && tree->actnode->depth % 25 == 0 ) /* ????????????? */
             {
                /* convert old active node into a subroot node */
                CHECK_OKAY( actnodeToSubroot(memhdr, set, stat, tree, lp) );
@@ -2125,6 +2153,7 @@ RETCODE SCIPtreeCreate(
    )
 {
    VAR* var;
+   Real pseudosol;
    int v;
 
    assert(tree != NULL);
@@ -2155,10 +2184,18 @@ RETCODE SCIPtreeCreate(
 
    /* calculate root pseudo solution value */
    (*tree)->actpseudoobjval = 0.0;
+   (*tree)->actpseudoobjvalinf = 0;
    for( v = 0; v < prob->nvars; ++v )
    {
       var = prob->vars[v];
-      (*tree)->actpseudoobjval += SCIPvarGetPseudoSol(var) * var->obj;
+      if( !SCIPsetIsZero(set, var->obj) )
+      {
+         pseudosol = SCIPvarGetPseudoSol(var);
+         if( SCIPsetIsInfinity(set, ABS(pseudosol)) )
+            (*tree)->actpseudoobjvalinf++;
+         else
+            (*tree)->actpseudoobjval += pseudosol * var->obj;
+      }
    }
    
    (*tree)->pathnlpcols = NULL;
@@ -2408,10 +2445,35 @@ RETCODE SCIPtreeBoundChanged(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(tree != NULL);
-      if( var->obj > 0.0 && boundtype == SCIP_BOUNDTYPE_LOWER )
-         tree->actpseudoobjval += (newbound - oldbound) * var->obj;
-      else if( var->obj < 0.0 && boundtype == SCIP_BOUNDTYPE_UPPER )
-         tree->actpseudoobjval += (newbound - oldbound) * var->obj;
+      assert(tree->actpseudoobjvalinf >= 0);
+      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsPositive(set, var->obj) )
+      {
+         assert(!SCIPsetIsInfinity(set, oldbound));
+         assert(!SCIPsetIsInfinity(set, newbound));
+         if( SCIPsetIsInfinity(set, -oldbound) )
+            tree->actpseudoobjvalinf--;
+         else
+            tree->actpseudoobjval -= oldbound * var->obj;
+         assert(tree->actpseudoobjvalinf >= 0);
+         if( SCIPsetIsInfinity(set, -newbound) )
+            tree->actpseudoobjvalinf++;
+         else
+            tree->actpseudoobjval += newbound * var->obj;
+      }
+      else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsNegative(set, var->obj) )
+      {
+         assert(!SCIPsetIsInfinity(set, -oldbound));
+         assert(!SCIPsetIsInfinity(set, -newbound));
+         if( SCIPsetIsInfinity(set, oldbound) )
+            tree->actpseudoobjvalinf--;
+         else
+            tree->actpseudoobjval -= oldbound * var->obj;
+         assert(tree->actpseudoobjvalinf >= 0);
+         if( SCIPsetIsInfinity(set, newbound) )
+            tree->actpseudoobjvalinf++;
+         else
+            tree->actpseudoobjval += newbound * var->obj;
+      }
       break;
 
    case SCIP_VARSTATUS_ORIGINAL:
@@ -2649,3 +2711,25 @@ Real SCIPtreeGetAvgLowerbound(
 
    return nnodes == 0 ? 0.0 : lowerboundsum/nnodes;
 }
+
+/** gets the pseudo objective value of the active node */
+Real SCIPtreeGetActPseudoobjval(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->actpseudoobjvalinf >= 0);
+   assert(set != NULL);
+
+   if( tree->actnode != NULL )
+   {
+      if( tree->actpseudoobjvalinf > 0 )
+         return -set->infinity;
+      else
+         return tree->actnode->lowerbound;
+   }
+   else
+      return SCIP_INVALID;
+}
+
