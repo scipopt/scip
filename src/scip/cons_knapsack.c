@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.17 2004/03/10 17:00:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.18 2004/03/10 17:27:33 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -194,11 +194,11 @@ static
 RETCODE dynProgKnapsack(
    SCIP*            scip,               /**< SCIP data structure */
    int              nitems,             /**< number of available items */
-   VAR**            items,              /**< knapsack item variables */
+   int*             items,              /**< item numbers */
    int*             weights,            /**< item weights */
    Real*            profits,            /**< item profits */
    int              capacity,           /**< capacity of knapsack */
-   VAR**            covervars,          /**< array to store negated solution */
+   int*             covervars,          /**< array to store negated solution */
    int*             ncovervars,         /**< pointer to store number of items in negated solution */
    Real*            solval              /**< pointer to store optimal solution value */
 ) 
@@ -207,7 +207,6 @@ RETCODE dynProgKnapsack(
    int d;
    int j;
 
-   assert(items != NULL);
    assert(weights != NULL);
    assert(profits != NULL);
    assert(covervars != NULL);
@@ -266,18 +265,22 @@ RETCODE separateCovers(
    )
 {
    CONSDATA* consdata;
-   VAR** fixedones;
-   VAR** items;
+   int* items;
    int* weights;
    Real* profits;
+   int i;
+   int nitems;
+   int* fixedones;
+   int nfixedones;
+   int capacity;
+   int* covervars;
+   int ncovervars;
    Real infeasibility;
    Real solval;
    Real solvalsum;
    Real transsol;
-   int nitems;
-   int nfixedones;
-   int capacity;
-   int i;
+   int coverweight;
+   int fixedonesweight;
 
    assert(separated != NULL);
 
@@ -302,13 +305,14 @@ RETCODE separateCovers(
    nfixedones = 0;
    solvalsum = 0.0;
    capacity = -(int)(consdata->capacity+0.5) - 1;
+   fixedonesweight = 0;
    for( i = 0; i < consdata->nvars; i++ )
    {
       solval = SCIPgetVarSol(scip, consdata->vars[i]);
       solvalsum += solval;
       if( !SCIPisIntegral(scip, solval) )
       {
-         items[nitems] = consdata->vars[i];
+         items[nitems] = i;
          weights[nitems] = (int)(consdata->weights[i]+0.5);
          profits[nitems] = 1.0 - solval;
          nitems++;
@@ -316,15 +320,16 @@ RETCODE separateCovers(
       }
       else if( solval > 0.5 )
       {
-         fixedones[nfixedones] = consdata->vars[i];
+         fixedones[nfixedones] = i;
          nfixedones++;
          capacity += (int)(consdata->weights[i]+0.5);
+         fixedonesweight += (int)(consdata->weights[i]+0.5);
       }
    }
 
    if( capacity >= 0)
    {
-      VAR** covervars;
+      int* covervars;
       int ncovervars;
 
       /* solve separation knapsack with dynamic programming */
@@ -339,16 +344,33 @@ RETCODE separateCovers(
          ROW* row;
          char name[MAXSTRLEN];
 
+         /* remove unnecessary items from cover to get a minimal cover */
+         coverweight = 0;
+         for( i = 0; i < ncovervars; i++)
+            coverweight += consdata->weights[covervars[i]];
+                  
+         for( i = 0; i < nfixedones; i++)
+         {
+            if( coverweight + fixedonesweight - consdata->weights[fixedones[i]] > consdata->capacity )
+            {
+               fixedonesweight -= consdata->weights[fixedones[i]];
+               fixedones[i] = fixedones[nfixedones-1];
+               nfixedones--;
+               i--;
+            }        
+         }
+        
+         /* create LP row */
          sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
          CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), ncovervars+nfixedones-1.0, 
                         SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
          for( i = 0; i < ncovervars; i++)
          {
-            CHECK_OKAY( SCIPaddVarToRow(scip, row, covervars[i], 1.0) );
+            CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[covervars[i]], 1.0) );
          }
          for( i = 0; i < nfixedones; i++)
          {
-            CHECK_OKAY( SCIPaddVarToRow(scip, row, fixedones[i], 1.0) );
+            CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[fixedones[i]], 1.0) );
          }
          
          debugMessage("found cover cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
