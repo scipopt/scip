@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.23 2003/04/25 14:23:54 bzfpfend Exp $
+# $Id: Makefile,v 1.24 2003/04/29 12:48:26 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -117,7 +117,7 @@ LIBOBJ		=	branch.o \
 			reader_mps.o \
 			retcode.o \
 			scip.o \
-			sepa.o \
+			sepastore.o \
 			set.o \
 			sol.o \
 			solve.o \

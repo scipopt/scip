@@ -15,18 +15,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa.h
- * @brief  methods and datastructures for separating cuts
+/**@file   sepastore.h
+ * @brief  methods and datastructures for storing separated cuts
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SEPA_H__
-#define __SEPA_H__
+#ifndef __SEPASTORE_H__
+#define __SEPASTORE_H__
 
 
-typedef struct Sepa SEPA;               /**< storage for separated variables */
+typedef struct Sepastore SEPASTORE;     /**< storage for separated variables */
 
 
 #include "def.h"
@@ -39,20 +39,20 @@ typedef struct Sepa SEPA;               /**< storage for separated variables */
 
 /** creates separation storage */
 extern
-RETCODE SCIPsepaCreate(
-   SEPA**           sepa                /**< pointer to store separation storage */
+RETCODE SCIPsepastoreCreate(
+   SEPASTORE**      sepastore           /**< pointer to store separation storage */
    );
 
 /** frees separation storage */
 extern
-RETCODE SCIPsepaFree(
-   SEPA**           sepa                /**< pointer to store separation storage */
+RETCODE SCIPsepastoreFree(
+   SEPASTORE**      sepastore           /**< pointer to store separation storage */
    );
 
 /** adds cut to separation storage and captures it */
 extern
-RETCODE SCIPsepaAddCut(
-   SEPA*            sepa,               /**< separation storage */
+RETCODE SCIPsepastoreAddCut(
+   SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
@@ -63,8 +63,8 @@ RETCODE SCIPsepaAddCut(
 
 /** adds cuts to the LP and clears separation storage */
 extern
-RETCODE SCIPsepaApplyCuts(
-   SEPA*            sepa,               /**< separation storage */
+RETCODE SCIPsepastoreApplyCuts(
+   SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
@@ -73,8 +73,8 @@ RETCODE SCIPsepaApplyCuts(
 
 /** clears the separation storage without adding the cuts to the LP */
 extern
-RETCODE SCIPsepaClearCuts(
-   SEPA*            sepa,               /**< separation storage */
+RETCODE SCIPsepastoreClearCuts(
+   SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< LP data */
@@ -82,14 +82,14 @@ RETCODE SCIPsepaClearCuts(
 
 /** get number of cuts in the separation storage */
 extern
-int SCIPsepaGetNCuts(
-   SEPA*            sepa                /**< separation storage */
+int SCIPsepastoreGetNCuts(
+   SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get total number of cuts found so far */
 extern
-int SCIPsepaGetNCutsFound(
-   SEPA*            sepa                /**< separation storage */
+int SCIPsepastoreGetNCutsFound(
+   SEPASTORE*       sepastore           /**< separation storage */
    );
 
 

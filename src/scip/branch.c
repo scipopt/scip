@@ -182,16 +182,16 @@ RETCODE SCIPbranchcandGetLPCands(
 {
    assert(branchcand != NULL);
    assert(stat != NULL);
-   assert(branchcand->validlpcandslp <= stat->nlp);
+   assert(branchcand->validlpcandslp <= stat->lpcount);
    assert(lp != NULL);
    assert(lp->solved);
    assert(lp->flushed);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
-   debugMessage("getting LP branching candidates: validlp=%d, nlp=%d\n", branchcand->validlpcandslp, stat->nlp);
+   debugMessage("getting LP branching candidates: validlp=%d, lpcount=%d\n", branchcand->validlpcandslp, stat->lpcount);
 
    /* check, if the actual LP branching candidate array is invalid */
-   if( branchcand->validlpcandslp < stat->nlp )
+   if( branchcand->validlpcandslp < stat->lpcount )
    {
       VAR* var;
       COL* col;
@@ -235,7 +235,7 @@ RETCODE SCIPbranchcandGetLPCands(
          }
       }
 
-      branchcand->validlpcandslp = stat->nlp;
+      branchcand->validlpcandslp = stat->lpcount;
    }
 
    debugMessage(" -> %d fractional variables\n", branchcand->nlpcands);

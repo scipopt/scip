@@ -15,8 +15,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa.c
- * @brief  methods and datastructures for separating cuts
+/**@file   sepastore.c
+ * @brief  methods and datastructures for storing separated cuts
  * @author Tobias Achterberg
  */
 
@@ -24,7 +24,7 @@
 
 #include <assert.h>
 
-#include "sepa.h"
+#include "sepastore.h"
 #include "prob.h"
 #include "stat.h"
 #include "var.h"
@@ -33,7 +33,7 @@
 
 
 /** storage for separated cuts */
-struct Sepa
+struct Sepastore
 {
    ROW**            cuts;               /**< array with separated cuts sorted by score */
    Real*            score;              /**< score for each separated cut (e.g. violation/(eucnorm * #nonzeros)) */
@@ -49,25 +49,25 @@ struct Sepa
 
 /** resizes cuts and score arrays to be able to store at least num entries */
 static
-RETCODE sepaEnsureCutsMem(
-   SEPA*            sepa,               /**< separation storage */
+RETCODE sepastoreEnsureCutsMem(
+   SEPASTORE*       sepastore,          /**< separation storage */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
    )
 {
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
    assert(set != NULL);
 
-   if( num > sepa->cutssize )
+   if( num > sepastore->cutssize )
    {
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&sepa->cuts, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(&sepa->score, newsize) );
-      sepa->cutssize = newsize;
+      ALLOC_OKAY( reallocMemoryArray(&sepastore->cuts, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&sepastore->score, newsize) );
+      sepastore->cutssize = newsize;
    }
-   assert(num <= sepa->cutssize);
+   assert(num <= sepastore->cutssize);
 
    return SCIP_OKAY;
 }
@@ -76,40 +76,40 @@ RETCODE sepaEnsureCutsMem(
 
 
 /** creates separation storage */
-RETCODE SCIPsepaCreate(
-   SEPA**           sepa                /**< pointer to store separation storage */
+RETCODE SCIPsepastoreCreate(
+   SEPASTORE**           sepastore                /**< pointer to store separation storage */
    )
 {
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
    
-   ALLOC_OKAY( allocMemory(sepa) );
+   ALLOC_OKAY( allocMemory(sepastore) );
    
-   (*sepa)->cuts = NULL;
-   (*sepa)->score = NULL;
-   (*sepa)->cutssize = 0;
-   (*sepa)->ncuts = 0;
-   (*sepa)->ncutsfound = 0;
+   (*sepastore)->cuts = NULL;
+   (*sepastore)->score = NULL;
+   (*sepastore)->cutssize = 0;
+   (*sepastore)->ncuts = 0;
+   (*sepastore)->ncutsfound = 0;
 
    return SCIP_OKAY;
 }
 
 /** frees separation storage */
-RETCODE SCIPsepaFree(
-   SEPA**           sepa                /**< pointer to store separation storage */
+RETCODE SCIPsepastoreFree(
+   SEPASTORE**           sepastore                /**< pointer to store separation storage */
    )
 {
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
 
-   freeMemoryArrayNull(&(*sepa)->cuts);
-   freeMemoryArrayNull(&(*sepa)->score);
-   freeMemory(sepa);
+   freeMemoryArrayNull(&(*sepastore)->cuts);
+   freeMemoryArrayNull(&(*sepastore)->score);
+   freeMemory(sepastore);
 
    return SCIP_OKAY;
 }
 
 /** adds cut to separation storage and captures it */
-RETCODE SCIPsepaAddCut(
-   SEPA*            sepa,               /**< separation storage */
+RETCODE SCIPsepastoreAddCut(
+   SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
@@ -122,63 +122,63 @@ RETCODE SCIPsepaAddCut(
    int c;
    int i;
 
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
    assert(set != NULL);
    assert(cut != NULL);
 
    /* update statistics of total number of found cuts */
-   sepa->ncutsfound++;
+   sepastore->ncutsfound++;
 
    /* get maximum of separated cuts at this node */
    maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
-   assert(sepa->ncuts <= maxsepacuts);
+   assert(sepastore->ncuts <= maxsepacuts);
    if( maxsepacuts == 0 )
       return SCIP_OKAY;
 
    /* get enough memory to store the cut */
-   CHECK_OKAY( sepaEnsureCutsMem(sepa, set, sepa->ncuts+1) );
-   assert(sepa->ncuts <= sepa->cutssize);
+   CHECK_OKAY( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
+   assert(sepastore->ncuts <= sepastore->cutssize);
 
    /* check, if cut belongs to the best "maxsepacuts" separation cuts */
-   if( sepa->ncuts < maxsepacuts || score > sepa->score[maxsepacuts-1] )
+   if( sepastore->ncuts < maxsepacuts || score > sepastore->score[maxsepacuts-1] )
    {
-      debugMessage("adding cut to separation storage of size %d/%d\n", sepa->ncuts, maxsepacuts);
+      debugMessage("adding cut to separation storage of size %d/%d\n", sepastore->ncuts, maxsepacuts);
 
       /* capture the cut */
       SCIProwCapture(cut);
 
       /* search the correct position of the cut in the cuts array */
-      for( c = 0; c < sepa->ncuts && score <= sepa->score[c]; ++c )
+      for( c = 0; c < sepastore->ncuts && score <= sepastore->score[c]; ++c )
       {
       }
-      assert(c <= sepa->ncuts);
+      assert(c <= sepastore->ncuts);
       assert(c < maxsepacuts);
 
       /* if the array consists of "maxsepacuts" cuts, release the worst cut */
-      if( sepa->ncuts == maxsepacuts )
+      if( sepastore->ncuts == maxsepacuts )
       {
-         CHECK_OKAY( SCIProwRelease(&sepa->cuts[sepa->ncuts-1], memhdr, set, lp) );
-         sepa->ncuts--;
+         CHECK_OKAY( SCIProwRelease(&sepastore->cuts[sepastore->ncuts-1], memhdr, set, lp) );
+         sepastore->ncuts--;
       }
-      assert(sepa->ncuts < maxsepacuts);
+      assert(sepastore->ncuts < maxsepacuts);
 
       /* insert cut in the sorted arrays */
-      for( i = sepa->ncuts; i > c; --i )
+      for( i = sepastore->ncuts; i > c; --i )
       {
-         sepa->cuts[i] = sepa->cuts[i-1];
-         sepa->score[i] = sepa->score[i-1];
+         sepastore->cuts[i] = sepastore->cuts[i-1];
+         sepastore->score[i] = sepastore->score[i-1];
       }
-      sepa->cuts[c] = cut;
-      sepa->score[c] = score;
-      sepa->ncuts++;
+      sepastore->cuts[c] = cut;
+      sepastore->score[c] = score;
+      sepastore->ncuts++;
    }
 
    return SCIP_OKAY;
 }
 
 /** adds cuts to the LP and clears separation storage */
-RETCODE SCIPsepaApplyCuts(
-   SEPA*            sepa,               /**< separation storage */
+RETCODE SCIPsepastoreApplyCuts(
+   SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
@@ -187,33 +187,33 @@ RETCODE SCIPsepaApplyCuts(
 {
    int c;
 
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
    assert(set != NULL);
    assert(lp != NULL);
 
-   debugMessage("applying %d cuts\n", sepa->ncuts);
+   debugMessage("applying %d cuts\n", sepastore->ncuts);
 
-   for( c = 0; c < sepa->ncuts; ++c )
+   for( c = 0; c < sepastore->ncuts; ++c )
    {
       debugMessage("apply cut: ");
-      debug( SCIProwPrint(sepa->cuts[c], NULL) );
+      debug( SCIProwPrint(sepastore->cuts[c], NULL) );
 
       /* add cut to the LP and capture it */
-      CHECK_OKAY( SCIPlpAddRow(lp, set, sepa->cuts[c]) );
+      CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[c]) );
 
       /* release the row */
-      CHECK_OKAY( SCIProwRelease(&sepa->cuts[c], memhdr, set, lp) );
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[c], memhdr, set, lp) );
    }
 
    /* clear the separation storage */
-   sepa->ncuts = 0;
+   sepastore->ncuts = 0;
 
    return SCIP_OKAY;
 }
 
 /** clears the separation storage without adding the cuts to the LP */
-RETCODE SCIPsepaClearCuts(
-   SEPA*            sepa,               /**< separation storage */
+RETCODE SCIPsepastoreClearCuts(
+   SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< LP data */
@@ -221,38 +221,38 @@ RETCODE SCIPsepaClearCuts(
 {
    int c;
 
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
 
-   debugMessage("clearing %d cuts\n", sepa->ncuts);
+   debugMessage("clearing %d cuts\n", sepastore->ncuts);
 
-   for( c = 0; c < sepa->ncuts; ++c )
+   for( c = 0; c < sepastore->ncuts; ++c )
    {
       /* release the row */
-      CHECK_OKAY( SCIProwRelease(&sepa->cuts[c], memhdr, set, lp) );
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[c], memhdr, set, lp) );
    }
 
    /* clear the separation storage */
-   sepa->ncuts = 0;
+   sepastore->ncuts = 0;
 
    return SCIP_OKAY;
 }
 
 /** get number of cuts in the separation storage */
-int SCIPsepaGetNCuts(
-   SEPA*            sepa                /**< separation storage */
+int SCIPsepastoreGetNCuts(
+   SEPASTORE*            sepastore                /**< separation storage */
    )
 {
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
 
-   return sepa->ncuts;
+   return sepastore->ncuts;
 }
 
 /** get total number of cuts found so far */
-int SCIPsepaGetNCutsFound(
-   SEPA*            sepa                /**< separation storage */
+int SCIPsepastoreGetNCutsFound(
+   SEPASTORE*            sepastore                /**< separation storage */
    )
 {
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
 
-   return sepa->ncutsfound;
+   return sepastore->ncutsfound;
 }

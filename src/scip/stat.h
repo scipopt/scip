@@ -42,13 +42,15 @@ struct Stat
    int              marked_nvaridx;     /**< number of used variable indices before solving started */
    int              marked_ncolidx;     /**< number of used column indices before solving started */
    int              marked_nrowidx;     /**< number of used row indices before solving started */
-   int              nlp;                /**< number of LPs solved (primal + dual) */
-   int              nprimallp;          /**< number of primal LPs solved */
-   int              nduallp;            /**< number of dual LPs solved */
+   int              lpcount;            /**< internal LP counter, where all SCIPlpSolve() calls are counted */
+   int              nlps;               /**< number of LPs solved (primal + dual) with at least 1 iteration */
+   int              nprimallps;         /**< number of primal LPs solved */
+   int              nduallps;           /**< number of dual LPs solved */
    int              nlpiterations;      /**< number of simplex iterations (primal + dual) */
    int              nprimallpiterations;/**< number of iterations in primal simplex */
    int              nduallpiterations;  /**< number of iterations in dual simplex */
    int              nstrongbranch;      /**< number of strong branching calls */
+   int              nseparounds;        /**< number of separation rounds performed in actual node */
    Longint          nnodes;             /**< number of nodes processed (including active node) */
    Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
    Longint          lastdispnode;       /**< last node for which an information line was displayed */

@@ -1564,12 +1564,12 @@ Real SCIPcolGetRedcost(
    )
 {
    assert(col != NULL);
-   assert(col->validredcostlp <= stat->nlp);
+   assert(col->validredcostlp <= stat->lpcount);
 
-   if( col->validredcostlp < stat->nlp )
+   if( col->validredcostlp < stat->lpcount )
       colCalcRedcost(col);
    assert(col->redcost < SCIP_INVALID);
-   col->validredcostlp = stat->nlp;
+   col->validredcostlp = stat->lpcount;
 
    return col->redcost;
 }
@@ -1625,12 +1625,12 @@ Real SCIPcolGetFarkas(
    )
 {
    assert(col != NULL);
-   assert(col->validfarkaslp <= stat->nlp);
+   assert(col->validfarkaslp <= stat->lpcount);
 
-   if( col->validfarkaslp < stat->nlp )
+   if( col->validfarkaslp < stat->lpcount )
       colCalcFarkas(col);
    assert(col->farkas < SCIP_INVALID);
-   col->validfarkaslp = stat->nlp;
+   col->validfarkaslp = stat->lpcount;
 
    return col->farkas;
 }
@@ -1662,11 +1662,11 @@ RETCODE SCIPcolGetStrongbranch(
    assert(down != NULL);
    assert(up != NULL);
 
-   if( col->validstronglp != stat->nlp || itlim > col->strongitlim )
+   if( col->validstronglp != stat->lpcount || itlim > col->strongitlim )
    {
       debugMessage("calling strong branching for variable <%s> with %d iterations\n", col->var->name, itlim);
       stat->nstrongbranch++;
-      col->validstronglp = stat->nlp;
+      col->validstronglp = stat->lpcount;
       col->strongitlim = itlim;
       CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, 1, itlim, &col->strongdown, &col->strongup) );
       col->strongdown = MIN(col->strongdown, upperbound);
@@ -2379,12 +2379,12 @@ Real SCIProwGetLPActivity(
    )
 {
    assert(row != NULL);
-   assert(row->validactivitylp <= stat->nlp);
+   assert(row->validactivitylp <= stat->lpcount);
 
-   if( row->validactivitylp != stat->nlp )
+   if( row->validactivitylp != stat->lpcount )
       rowCalcLPActivity(row);
    assert(row->activity < SCIP_INVALID);
-   row->validactivitylp = stat->nlp;
+   row->validactivitylp = stat->lpcount;
 
    return row->activity;
 }
@@ -3801,7 +3801,8 @@ RETCODE SCIPlpSolvePrimal(
    assert(set != NULL);
    assert(stat != NULL);
 
-   debugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", stat->nprimallp+1, stat->nlp+1, lp->ncols, lp->nrows);
+   debugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", 
+      stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
@@ -3858,11 +3859,16 @@ RETCODE SCIPlpSolvePrimal(
 
    lp->solved = TRUE;
 
-   stat->nlp++;
-   stat->nprimallp++;
+   stat->lpcount++;
+
    CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
-   stat->nlpiterations += iterations;
-   stat->nprimallpiterations += iterations;
+   if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
+   {
+      stat->nlps++;
+      stat->nprimallps++;
+      stat->nlpiterations += iterations;
+      stat->nprimallpiterations += iterations;
+   }
 
    debugMessage("solving primal LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);
 
@@ -3886,7 +3892,8 @@ RETCODE SCIPlpSolveDual(
    assert(set != NULL);
    assert(stat != NULL);
 
-   debugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", stat->nduallp+1, stat->nlp+1, lp->ncols, lp->nrows);
+   debugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", 
+      stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
@@ -3942,11 +3949,16 @@ RETCODE SCIPlpSolveDual(
 
    lp->solved = TRUE;
 
-   stat->nlp++;
-   stat->nduallp++;
+   stat->lpcount++;
+
    CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
-   stat->nlpiterations += iterations;
-   stat->nduallpiterations += iterations;
+   if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
+   {
+      stat->nlps++;
+      stat->nduallps++;
+      stat->nlpiterations += iterations;
+      stat->nduallpiterations += iterations;
+   }
 
    debugMessage("solving dual LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);
 
@@ -4040,7 +4052,7 @@ RETCODE SCIPlpGetSol(
    {
       lpicols[c]->primsol = primsol[c];
       lpicols[c]->redcost = redcost[c];
-      lpicols[c]->validredcostlp = stat->nlp;
+      lpicols[c]->validredcostlp = stat->lpcount;
       debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
          lpicols[c]->var->name, lpicols[c]->primsol, lpicols[c]->redcost);
    }
@@ -4049,7 +4061,7 @@ RETCODE SCIPlpGetSol(
    {
       lpirows[r]->dualsol = dualsol[r];
       lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
-      lpirows[r]->validactivitylp = stat->nlp;
+      lpirows[r]->validactivitylp = stat->lpcount;
       debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
          lpirows[r]->name, lpirows[r]->dualsol, lpirows[r]->activity);
    }
@@ -4127,7 +4139,7 @@ RETCODE SCIPlpGetUnboundedSol(
    {
       lp->lpirows[r]->dualsol = SCIP_INVALID;
       lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
-      lp->lpirows[r]->validactivitylp = stat->nlp;
+      lp->lpirows[r]->validactivitylp = stat->lpcount;
       /*debugMessage(" row <%s>: activity=%f\n", lp->lpirows[r]->name, lp->lpirows[r]->activity);*/
    }
 

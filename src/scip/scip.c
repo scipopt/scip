@@ -45,7 +45,7 @@ struct Scip
    TREE*            tree;               /**< branch and bound tree */
    LP*              lp;                 /**< LP data */
    PRICE*           price;              /**< storage for priced variables */
-   SEPA*            sepa;               /**< storage for separated cuts */
+   SEPASTORE*       sepastore;          /**< storage for separated cuts */
    BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    CUTPOOL*         cutpool;            /**< global cut pool */
    PRIMAL*          primal;             /**< primal data and solution storage */
@@ -86,7 +86,7 @@ RETCODE checkStage(
       assert(scip->transprob == NULL);
       assert(scip->lp == NULL);
       assert(scip->price == NULL);
-      assert(scip->sepa == NULL);
+      assert(scip->sepastore == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
@@ -108,7 +108,7 @@ RETCODE checkStage(
       assert(scip->transprob == NULL);
       assert(scip->lp == NULL);
       assert(scip->price == NULL);
-      assert(scip->sepa == NULL);
+      assert(scip->sepastore == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
@@ -143,7 +143,7 @@ RETCODE checkStage(
       assert(scip->transprob != NULL);
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
-      assert(scip->sepa != NULL);
+      assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
@@ -165,7 +165,7 @@ RETCODE checkStage(
       assert(scip->transprob != NULL);
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
-      assert(scip->sepa != NULL);
+      assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
@@ -187,7 +187,7 @@ RETCODE checkStage(
       assert(scip->transprob != NULL);
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
-      assert(scip->sepa != NULL);
+      assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
@@ -295,7 +295,7 @@ RETCODE SCIPcreate(
    (*scip)->tree = NULL;
    (*scip)->lp = NULL;
    (*scip)->price = NULL;
-   (*scip)->sepa = NULL;
+   (*scip)->sepastore = NULL;
    (*scip)->branchcand = NULL;
    (*scip)->cutpool = NULL;
    (*scip)->primal = NULL;
@@ -1310,7 +1310,7 @@ RETCODE SCIPsolve(
       /* init solve data structures */
       CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
       CHECK_OKAY( SCIPpriceCreate(&scip->price) );
-      CHECK_OKAY( SCIPsepaCreate(&scip->sepa) );
+      CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
       CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
       CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
       CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
@@ -1366,7 +1366,7 @@ RETCODE SCIPsolve(
       /* continue solution process */
       infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_NORMAL, "");
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                     scip->lp, scip->price, scip->sepa, scip->branchcand, scip->cutpool, scip->primal,
+                     scip->lp, scip->price, scip->sepastore, scip->branchcand, scip->cutpool, scip->primal,
                      scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
@@ -1446,7 +1446,7 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
       CHECK_OKAY( SCIPeventqueueFree(&scip->eventqueue) );
       CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
-      CHECK_OKAY( SCIPsepaFree(&scip->sepa) );
+      CHECK_OKAY( SCIPsepastoreFree(&scip->sepastore) );
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
 
@@ -2566,7 +2566,7 @@ RETCODE SCIPaddCut(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPsepaAddCut(scip->sepa, scip->mem->solvemem, scip->set, scip->lp,
+   CHECK_OKAY( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->lp,
                   cut, score, (scip->tree->actnode->depth == 0)) );
    
    return SCIP_OKAY;
@@ -3433,6 +3433,16 @@ int SCIPgetNNodesLeft(
    return SCIPtreeGetNNodes(scip->tree);
 }
 
+/** gets total number of LPs solved so far */
+int SCIPgetNLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNLPs", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nlps;
+}
+
 /** gets total number of simplex iterations used so far */
 int SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
@@ -3441,6 +3451,16 @@ int SCIPgetNLPIterations(
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPIterations", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nlpiterations;
+}
+
+/** gets number of separation rounds performed so far at the current node */
+int SCIPgetNSepaRounds(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNSepaRounds", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nseparounds;
 }
 
 /** gets depth of active node, or -1 if no active node exists */
@@ -3748,7 +3768,13 @@ void printSolutionStatistics(
    if( SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
       fprintf(file, "  Primal Bound     :            -\n");
    else
-      fprintf(file, "  Primal Bound     : %25.19e\n", primalbound);
+   {
+      fprintf(file, "  Primal Bound     : %25.19e", primalbound);
+      if( scip->primal->nsols == 0 )
+         fprintf(file, "   (user objective limit)\n");
+      else
+         fprintf(file, "   (after %lld nodes)\n", SCIPsolGetNodenum(scip->primal->sols[0]));
+   } 
    if( SCIPsetIsInfinity(scip->set, ABS(dualbound)) )
       fprintf(file, "  Dual Bound       :            -\n");
    else
@@ -3788,12 +3814,12 @@ void printLPStatistics(
    assert(file != NULL);
 
    fprintf(file, "LP                 :        Calls   Iterations   AvgIter\n");
-   fprintf(file, "  primal LP        : %12d %12d %9.1f\n", scip->stat->nprimallp, scip->stat->nprimallpiterations,
-      scip->stat->nprimallp > 0 ? (Real)scip->stat->nprimallpiterations/(Real)scip->stat->nprimallp : 0);
-   fprintf(file, "  dual LP          : %12d %12d %9.1f\n", scip->stat->nduallp, scip->stat->nduallpiterations,
-      scip->stat->nduallp > 0 ? (Real)scip->stat->nduallpiterations/(Real)scip->stat->nduallp : 0);
-   fprintf(file, "  total            : %12d %12d %9.1f\n", scip->stat->nlp, scip->stat->nlpiterations,
-      scip->stat->nlp > 0 ? (Real)scip->stat->nlpiterations/(Real)scip->stat->nlp : 0);
+   fprintf(file, "  primal LP        : %12d %12d %9.1f\n", scip->stat->nprimallps, scip->stat->nprimallpiterations,
+      scip->stat->nprimallps > 0 ? (Real)scip->stat->nprimallpiterations/(Real)scip->stat->nprimallps : 0);
+   fprintf(file, "  dual LP          : %12d %12d %9.1f\n", scip->stat->nduallps, scip->stat->nduallpiterations,
+      scip->stat->nduallps > 0 ? (Real)scip->stat->nduallpiterations/(Real)scip->stat->nduallps : 0);
+   fprintf(file, "  total            : %12d %12d %9.1f\n", scip->stat->nlps, scip->stat->nlpiterations,
+      scip->stat->nlps > 0 ? (Real)scip->stat->nlpiterations/(Real)scip->stat->nlps : 0);
    fprintf(file, "  strong branching : %12d            -         -\n", scip->stat->nstrongbranch);
 }
 

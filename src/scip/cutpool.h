@@ -34,7 +34,7 @@ typedef struct Cutpool CUTPOOL;         /**< storage for pooled cuts */
 #include "set.h"
 #include "mem.h"
 #include "lp.h"
-#include "sepa.h"
+#include "sepastore.h"
 
 
 /** creates cut pool */
@@ -90,7 +90,7 @@ RETCODE SCIPcutpoolSeparate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< actual LP data */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    Bool             root,               /**< are we at the root node? */
    RESULT*          result              /**< pointer to store the result of the separation call */
    );

@@ -80,7 +80,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "heur.h"
 #include "sort.h"
 #include "price.h"
-#include "sepa.h"
+#include "sepastore.h"
 #include "cutpool.h"
 #include "primal.h"
 
@@ -1491,9 +1491,21 @@ int SCIPgetNNodesLeft(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets total number of LPs solved so far */
+extern
+int SCIPgetNLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets total number of simplex iterations used so far */
 extern
 int SCIPgetNLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of separation rounds performed so far at the current node */
+extern
+int SCIPgetNSepaRounds(
    SCIP*            scip                /**< SCIP data structure */
    );
 

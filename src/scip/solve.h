@@ -35,7 +35,7 @@
 #include "tree.h"
 #include "lp.h"
 #include "price.h"
-#include "sepa.h"
+#include "sepastore.h"
 #include "cutpool.h"
 #include "primal.h"
 
@@ -59,7 +59,7 @@ RETCODE SCIPsolveCIP(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal,             /**< primal data */

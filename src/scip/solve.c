@@ -181,7 +181,7 @@ RETCODE solveNodeInitialLP(
    /* init root node LP */
    if( tree->actnode->depth == 0 )
    {
-      assert(stat->nlp == 0);
+      assert(stat->lpcount == 0);
       CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp) );
    }
 
@@ -210,7 +210,7 @@ RETCODE solveNodeLP(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal,             /**< primal data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -235,7 +235,7 @@ RETCODE solveNodeLP(
    assert(tree->actnode != NULL);
    assert(lp != NULL);
    assert(price != NULL);
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
    assert(cutpool != NULL);
    assert(primal != NULL);
    assert(set->nconshdlrs == 0 || conshdlrs_sepa != NULL);
@@ -247,6 +247,7 @@ RETCODE solveNodeLP(
    assert(lp->solved);
 
    /* price-and-cut loop */
+   stat->nseparounds = 0;
    mustprice = TRUE;
    mustsepar = TRUE;
    cutoff = FALSE;
@@ -311,10 +312,10 @@ RETCODE solveNodeLP(
 
          /* global cut pool separation */
          debugMessage("global cut pool separation\n");
-         assert(SCIPsepaGetNCuts(sepa) == 0);
-         CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepa, root, &result) );
+         assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+         CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepastore, root, &result) );
          cutoff |= (result == SCIP_CUTOFF);
-         enoughcuts |= (SCIPsepaGetNCuts(sepa) >= SCIPsetGetMaxsepacuts(set, root)/2);
+         enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
 
          /* constraint separation */
          debugMessage("constraint separation\n");
@@ -330,11 +331,11 @@ RETCODE solveNodeLP(
             separateagain = FALSE;
             for( h = 0; h < set->nconshdlrs && !cutoff && !enoughcuts; ++h )
             {
-               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, sepa, tree->actnode->depth,
+               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, sepastore, tree->actnode->depth,
                               &result) );
                separateagain |= (result == SCIP_CONSADDED);
                cutoff |= (result == SCIP_CUTOFF);
-               enoughcuts |= (SCIPsepaGetNCuts(sepa) >= SCIPsetGetMaxsepacuts(set, root)/2);
+               enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
             }
          }
          
@@ -347,12 +348,12 @@ RETCODE solveNodeLP(
          if( cutoff )
          {
             /* the found cuts are of no use, because the node is infeasible anyway */
-            CHECK_OKAY( SCIPsepaClearCuts(sepa, memhdr, set, lp) );
+            CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
          }
          else
          {
             /* apply found cuts */
-            CHECK_OKAY( SCIPsepaApplyCuts(sepa, memhdr, set, tree, lp) );
+            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, tree, lp) );
 
             mustprice |= !lp->solved;
             mustsepar = !lp->solved;
@@ -362,6 +363,9 @@ RETCODE solveNodeLP(
             CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
          }
          assert(lp->solved);
+
+         /* increase separation round counter */
+         stat->nseparounds++;
       }
 
       if( tree->actnode->depth == 0 )
@@ -450,7 +454,7 @@ RETCODE enforceConstraints(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -499,11 +503,11 @@ RETCODE enforceConstraints(
       resolved = FALSE;
       for( h = 0; h < set->nconshdlrs && !resolved; ++h )
       {
-         assert(SCIPsepaGetNCuts(sepa) == 0);
+         assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
          if( tree->actnodehaslp )
          {
-            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, prob, sepa, &result) );
+            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, prob, sepastore, &result) );
          }
          else
          {
@@ -513,12 +517,12 @@ RETCODE enforceConstraints(
          {
          case SCIP_FEASIBLE:
             assert(tree->nchildren == 0);
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             break;
 
          case SCIP_INFEASIBLE:
             assert(tree->nchildren == 0);
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             break;
 
@@ -526,7 +530,7 @@ RETCODE enforceConstraints(
             assert(tree->nchildren == 0);
 
             /* the found cuts are of no use, because the node is infeasible anyway */
-            CHECK_OKAY( SCIPsepaClearCuts(sepa, memhdr, set, lp) );
+            CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
 
             *infeasible = TRUE;
             resolved = TRUE;
@@ -544,7 +548,7 @@ RETCODE enforceConstraints(
             }
 
             /* apply found cuts */
-            CHECK_OKAY( SCIPsepaApplyCuts(sepa, memhdr, set, tree, lp) );
+            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, tree, lp) );
 
             *infeasible = TRUE;
             *solveagain = TRUE;
@@ -553,7 +557,7 @@ RETCODE enforceConstraints(
 
          case SCIP_CONSADDED:
             assert(tree->nchildren == 0);
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             resolved = TRUE;
             enforceagain = TRUE; /* the newly added constraints have to be enforced themselves */
@@ -561,7 +565,7 @@ RETCODE enforceConstraints(
 
          case SCIP_REDUCEDDOM:
             assert(tree->nchildren == 0);
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             *solveagain = TRUE;
             resolved = TRUE;
@@ -569,7 +573,7 @@ RETCODE enforceConstraints(
 
          case SCIP_BRANCHED:
             assert(tree->nchildren >= 1);
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             resolved = TRUE;
             break;
@@ -577,7 +581,7 @@ RETCODE enforceConstraints(
          case SCIP_SOLVELP:
             assert(!tree->actnodehaslp);
             assert(tree->nchildren == 0);
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             assert(!enforceagain);
             *infeasible = TRUE;
             *solveagain = TRUE;
@@ -601,7 +605,7 @@ RETCODE enforceConstraints(
          *infeasible, *solveagain, resolved, enforceagain);
    }
    while( enforceagain );
-   assert(SCIPsepaGetNCuts(sepa) == 0);
+   assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
    if( *infeasible && !resolved )
    {
@@ -670,7 +674,7 @@ RETCODE SCIPsolveCIP(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal,             /**< primal data */
@@ -697,7 +701,7 @@ RETCODE SCIPsolveCIP(
    assert(tree != NULL);
    assert(lp != NULL);
    assert(price != NULL);
-   assert(sepa != NULL);
+   assert(sepastore != NULL);
    assert(branchcand != NULL);
    assert(cutpool != NULL);
    assert(primal != NULL);
@@ -772,7 +776,7 @@ RETCODE SCIPsolveCIP(
          for( h = 0; h < set->nconshdlrs && !cutoff; ++h )
          {
             CHECK_OKAY( SCIPconshdlrPropagate(conshdlrs_enfo[h], memhdr, set, prob, actnode->depth, &result) );
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             propagain |= (result == SCIP_REDUCEDDOM);
             cutoff |= (result == SCIP_CUTOFF);
          }
@@ -815,14 +819,14 @@ RETCODE SCIPsolveCIP(
                   assert(lp->solved);
                   initiallpsolved = TRUE;
                }
-               assert(SCIPsepaGetNCuts(sepa) == 0);
+               assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
                /* continue solving the LP with price and cut */
-               CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepa, cutpool, primal, branchcand, 
+               CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepastore, cutpool, primal, branchcand, 
                               eventfilter, eventqueue, conshdlrs_sepa) );
                assert(lp->solved);
             }
-            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             
             /* update lower bound w.r.t. the pseudo solution */
             tree->actnode->lowerbound = MAX(tree->actnode->lowerbound, tree->actpseudoobjval);
@@ -837,12 +841,12 @@ RETCODE SCIPsolveCIP(
             else
             {
                /* enforce constraints */
-               CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, sepa, branchcand, primal, eventqueue,
+               CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, sepastore, branchcand, primal, eventqueue,
                               conshdlrs_enfo, &infeasible, &solveagain) );
             }
          }
          while( solveagain );
-         assert(SCIPsepaGetNCuts(sepa) == 0);
+         assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
          if( !infeasible )
          {
@@ -890,7 +894,7 @@ RETCODE SCIPsolveCIP(
       }
       
       /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, actnode->depth == 0) );
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, (actnode->depth == 0) && infeasible) );
       
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
          SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));

@@ -66,9 +66,10 @@ void SCIPstatMark(
    assert(stat->marked_nvaridx == -1);
    assert(stat->marked_ncolidx == -1);
    assert(stat->marked_nrowidx == -1);
-   assert(stat->nlp == 0);
-   assert(stat->nprimallp == 0);
-   assert(stat->nduallp == 0);
+   assert(stat->lpcount == 0);
+   assert(stat->nlps == 0);
+   assert(stat->nprimallps == 0);
+   assert(stat->nduallps == 0);
 
    stat->marked_nvaridx = stat->nvaridx;
    stat->marked_ncolidx = stat->ncolidx;
@@ -88,13 +89,15 @@ void SCIPstatReset(
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
-   stat->nlp = 0;
-   stat->nprimallp = 0;
-   stat->nduallp = 0;
+   stat->lpcount = 0;
+   stat->nlps = 0;
+   stat->nprimallps = 0;
+   stat->nduallps = 0;
    stat->nlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
    stat->nstrongbranch = 0;
+   stat->nseparounds = 0;
    stat->nnodes = 0;
    stat->nboundchanges = 0;
    stat->lastdispnode = 0;

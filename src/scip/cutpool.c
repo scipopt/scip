@@ -366,7 +366,7 @@ RETCODE cutpoolDelCut(
    assert(cutpool->firstunprocessed <= cutpool->ncuts);
    assert(memhdr != NULL);
    assert(stat != NULL);
-   assert(cutpool->processedlp <= stat->nlp);
+   assert(cutpool->processedlp <= stat->lpcount);
    assert(cut != NULL);
    assert(cut->row != NULL);
 
@@ -388,8 +388,8 @@ RETCODE cutpoolDelCut(
    {
       cutpool->cuts[pos] = cutpool->cuts[cutpool->ncuts-1];
       cutpool->cuts[pos]->pos = pos;
-      assert(cutpool->cuts[pos]->processedlp <= stat->nlp);
-      if( cutpool->cuts[pos]->processedlp < stat->nlp )
+      assert(cutpool->cuts[pos]->processedlp <= stat->lpcount);
+      if( cutpool->cuts[pos]->processedlp < stat->lpcount )
          cutpool->firstunprocessed = MIN(cutpool->firstunprocessed, pos);
    }
    else
@@ -438,7 +438,7 @@ RETCODE SCIPcutpoolSeparate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< actual LP data */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    Bool             root,               /**< are we at the root node? */
    RESULT*          result              /**< pointer to store the result of the separation call */
    )
@@ -450,11 +450,11 @@ RETCODE SCIPcutpoolSeparate(
 
    assert(cutpool != NULL);
    assert(stat != NULL);
-   assert(cutpool->processedlp <= stat->nlp);
+   assert(cutpool->processedlp <= stat->lpcount);
    assert(cutpool->firstunprocessed <= cutpool->ncuts);
    assert(result != NULL);
 
-   if( cutpool->processedlp < stat->nlp )
+   if( cutpool->processedlp < stat->lpcount )
       cutpool->firstunprocessed = 0;
    if( cutpool->firstunprocessed == cutpool->ncuts )
    {
@@ -470,21 +470,21 @@ RETCODE SCIPcutpoolSeparate(
       cutpool, cutpool->ncuts, cutpool->firstunprocessed);
 
    /* remember the current total number of found cuts */
-   oldncutsfound = SCIPsepaGetNCutsFound(sepa);
+   oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
    /* process all unprocessed cuts in the pool */
    for( c = cutpool->firstunprocessed; c < cutpool->ncuts; ++c )
    {
       cut = cutpool->cuts[c];
       assert(cut != NULL);
-      assert(cut->processedlp <= stat->nlp);
+      assert(cut->processedlp <= stat->lpcount);
       assert(cut->pos == c);
 
-      if( cut->processedlp < stat->nlp )
+      if( cut->processedlp < stat->lpcount )
       {
          ROW* row;
 
-         cut->processedlp = stat->nlp;
+         cut->processedlp = stat->lpcount;
          row = cut->row;
 
          debugMessage("separating cut <%s> from the cut pool\n", SCIProwGetName(row));
@@ -498,7 +498,7 @@ RETCODE SCIPcutpoolSeparate(
             if( !SCIPsetIsFeasible(set, feasibility) )
             {
                /* insert cut in separation storage */
-               CHECK_OKAY( SCIPsepaAddCut(sepa, memhdr, set, lp, row,
+               CHECK_OKAY( SCIPsepastoreAddCut(sepastore, memhdr, set, lp, row,
                               -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1), root ) );
                found = TRUE;
             }
@@ -514,11 +514,11 @@ RETCODE SCIPcutpoolSeparate(
       }
    }
    
-   cutpool->processedlp = stat->nlp;
+   cutpool->processedlp = stat->lpcount;
    cutpool->firstunprocessed = cutpool->ncuts;
 
    /* update the number of found cuts */
-   cutpool->ncutsfound += SCIPsepaGetNCutsFound(sepa) - oldncutsfound;
+   cutpool->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
 
    if( found )
       *result = SCIP_SEPARATED;

@@ -1124,7 +1124,7 @@ RETCODE SCIPconshdlrSeparate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    int              actdepth,           /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -1179,7 +1179,7 @@ RETCODE SCIPconshdlrSeparate(
          conss = &(conshdlr->sepaconss[firstcons]);
          
          /* remember the current total number of found cuts */
-         oldncutsfound = SCIPsepaGetNCutsFound(sepa);
+         oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
          /* because the during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1198,7 +1198,7 @@ RETCODE SCIPconshdlrSeparate(
          conshdlr->lastnsepaconss = conshdlr->nsepaconss;
 
          /* update the number of found cuts */
-         conshdlr->ncutsfound += SCIPsepaGetNCutsFound(sepa) - oldncutsfound;
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_SEPARATED
@@ -1228,7 +1228,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   SEPA*            sepa,               /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -1281,7 +1281,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          conss = &(conshdlr->enfoconss[firstcons]);
 
          /* remember the current total number of found cuts */
-         oldncutsfound = SCIPsepaGetNCutsFound(sepa);
+         oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
          /* because the during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1300,7 +1300,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          /* update the number of found cuts */
-         conshdlr->ncutsfound += SCIPsepaGetNCutsFound(sepa) - oldncutsfound;
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
