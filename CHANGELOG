@@ -57,6 +57,9 @@ installation:
 - the compiler is now also represented in the LP solver library names
   (e.g. you have to rename the softlink "libcplex.linux.x86.a" to "libcplex.linux.x86.gnu.a")
 
+interface:
+- added methods SCIPgetVarsLogicor() and SCIPgetNVarsLogicor() in logic or constraint handler
+
 parameters:
 - lp/colagelimit and lp/rowagelimit may now be set to -1 to disable deletion of columns/rows due to aging
 - default setting for lp/colagelimit and lp/rowagelimit is now -1
