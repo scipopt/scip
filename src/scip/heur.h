@@ -179,5 +179,11 @@ Bool SCIPheurIsInitialized(
    HEUR*            heur                /**< primal heuristic */
    );
 
+/** gets time in seconds used in this heuristic */
+extern
+Real SCIPheurGetTime(
+   HEUR*            heur                /**< primal heuristic */
+   );
+
 
 #endif

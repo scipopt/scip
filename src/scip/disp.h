@@ -117,7 +117,7 @@ RETCODE SCIPdispExit(
 extern
 RETCODE SCIPdispOutput(
    DISP*            disp,               /**< display column */
-   SCIP*            scip                /**< SCIP data structure */   
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** gets name of display column */
@@ -170,6 +170,14 @@ extern
 void SCIPdispDecimal(
    FILE*            file,               /**< output stream */
    Longint          val,                /**< value to display */
+   int              width               /**< width to fit into */
+   );
+
+/** displays a time value fitting in a given width */
+extern
+void SCIPdispTime(
+   FILE*            file,               /**< output stream */
+   Real             val,                /**< value in seconds to display */
    int              width               /**< width to fit into */
    );
 

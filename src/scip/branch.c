@@ -462,18 +462,18 @@ RETCODE SCIPbranchruleExit(
 /** executes branching rule for fractional LP solution */
 RETCODE SCIPbranchruleExecLPSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(branchrule != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexeclp != NULL )
    {
-      CHECK_OKAY( branchrule->branchexeclp(scip, branchrule, result) );
+      CHECK_OKAY( branchrule->branchexeclp(set->scip, branchrule, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
@@ -494,18 +494,18 @@ RETCODE SCIPbranchruleExecLPSol(
 /** executes branching rule for not completely fixed pseudo solution */
 RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(branchrule != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecps != NULL )
    {
-      CHECK_OKAY( branchrule->branchexecps(scip, branchrule, result) );
+      CHECK_OKAY( branchrule->branchexecps(set->scip, branchrule, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM

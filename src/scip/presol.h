@@ -146,7 +146,7 @@ RETCODE SCIPpresolExit(
 extern
 RETCODE SCIPpresolExec(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */

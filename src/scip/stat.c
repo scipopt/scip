@@ -42,8 +42,12 @@ RETCODE SCIPstatCreate(
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
 
-   SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT);
-   SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT);
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->lppricingtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIPstatReset(*stat);
 
@@ -60,6 +64,10 @@ RETCODE SCIPstatFree(
 
    SCIPclockFree(&(*stat)->solvingtime);
    SCIPclockFree(&(*stat)->presolvingtime);
+   SCIPclockFree(&(*stat)->primallptime);
+   SCIPclockFree(&(*stat)->duallptime);
+   SCIPclockFree(&(*stat)->strongbranchtime);
+   SCIPclockFree(&(*stat)->lppricingtime);
 
    freeMemory(stat);
 
@@ -107,6 +115,8 @@ void SCIPstatReset(
    stat->nduallpiterations = 0;
    stat->nstrongbranch = 0;
    stat->nseparounds = 0;
+   stat->nlppricings = 0;
+   stat->nlppricingvars = 0;
    stat->nnodes = 0;
    stat->nboundchanges = 0;
    stat->lastdispnode = 0;
@@ -116,6 +126,10 @@ void SCIPstatReset(
 
    SCIPclockReset(stat->solvingtime);
    SCIPclockReset(stat->presolvingtime);
+   SCIPclockReset(stat->primallptime);
+   SCIPclockReset(stat->duallptime);
+   SCIPclockReset(stat->strongbranchtime);
+   SCIPclockReset(stat->lppricingtime);
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;

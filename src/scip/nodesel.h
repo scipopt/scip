@@ -211,7 +211,7 @@ RETCODE SCIPnodeselExit(
 extern
 RETCODE SCIPnodeselSelect(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    NODE**           selnode             /**< pointer to store node to be processed next */
    );
 
@@ -219,7 +219,7 @@ RETCODE SCIPnodeselSelect(
 extern
 int SCIPnodeselCompare(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    NODE*            node1,              /**< first node to compare */
    NODE*            node2               /**< second node to compare */
    );

@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "sepa.h"
+#include "clock.h"
 
 
 /** separators data */

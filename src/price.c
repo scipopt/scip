@@ -287,6 +287,8 @@ RETCODE priceProbVars(
    int maxpricevars;
    
    assert(price != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
@@ -304,6 +306,11 @@ RETCODE priceProbVars(
    
    todoMessage("test pricing: is abortpricevars a good idea? -> like strong branching, lookahead, ...");
 
+   stat->nlppricings++;
+
+   /* start timing */
+   SCIPclockStart(stat->lppricingtime, set->clocktype);
+   
    /* price already existing problem variables */
    for( v = 0; v < prob->nvars && price->nfoundvars < abortpricevars; ++v )
    {
@@ -323,10 +330,12 @@ RETCODE priceProbVars(
             if( SCIPsetIsNegative(set, var->actdom.ub) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, tree, lp, branchcand, eventqueue, var) );
+               stat->nlppricingvars++;
             }
             else if( SCIPsetIsPositive(set, var->obj) )
             {
                CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->actdom.lb, root) );
+               stat->nlppricingvars++;
             }
          }
          else if( SCIPsetIsPositive(set, var->actdom.ub) )
@@ -334,10 +343,12 @@ RETCODE priceProbVars(
             if( SCIPsetIsPositive(set, var->actdom.lb) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, tree, lp, branchcand, eventqueue, var) );
+               stat->nlppricingvars++;
             }
             else if( SCIPsetIsNegative(set, var->obj) )
             {
                CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->actdom.ub, root) );
+               stat->nlppricingvars++;
             }
          }
          break;
@@ -363,6 +374,7 @@ RETCODE priceProbVars(
             if( SCIPsetIsPositive(set, var->actdom.lb) || SCIPsetIsNegative(set, var->actdom.ub) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, tree, lp, branchcand, eventqueue, var) );
+               stat->nlppricingvars++;
                added = TRUE;
             }
             else
@@ -374,6 +386,7 @@ RETCODE priceProbVars(
                if( !SCIPsetIsZero(set, bestbound) )
                {
                   CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, var->obj * var->actdom.lb, root) );
+                  stat->nlppricingvars++;
                   added = TRUE;
                }
             }
@@ -414,6 +427,7 @@ RETCODE priceProbVars(
                if( !SCIPsetIsPositive(set, feasibility) )
                {
                   CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -feasibility / (col->len+1), root) );
+                  stat->nlppricingvars++;
                }
             }
          }
@@ -425,6 +439,9 @@ RETCODE priceProbVars(
          break;
       }
    }
+
+   /* stop timing */
+   SCIPclockStop(stat->lppricingtime);
 
    return SCIP_OKAY;
 }

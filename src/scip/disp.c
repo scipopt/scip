@@ -174,14 +174,14 @@ RETCODE SCIPdispExit(
 /** output display column to screen */
 RETCODE SCIPdispOutput(
    DISP*            disp,               /**< display column */
-   SCIP*            scip                /**< SCIP data structure */   
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
    assert(disp->dispoutput != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
 
-   CHECK_OKAY( disp->dispoutput(scip, disp, stdout) );
+   CHECK_OKAY( disp->dispoutput(set->scip, disp, stdout) );
 
    return SCIP_OKAY;
 }
@@ -296,7 +296,7 @@ RETCODE SCIPdispPrintLine(
          {
             if( stripline )
                printf("|");
-            CHECK_OKAY( SCIPdispOutput(set->disps[i], set->scip) );
+            CHECK_OKAY( SCIPdispOutput(set->disps[i], set) );
             stripline = set->disps[i]->stripline;
          }
       }
@@ -344,19 +344,12 @@ RETCODE SCIPdispAutoActivate(
          width += actwidth;
       }
       else
-         disps[i]->active = FALSE;
-   }
-
-   if( set->verblevel >= SCIP_VERBLEVEL_FULL )
-   {
-      for( i = 0; i < set->ndisps; ++i )
       {
-         if( !disps[i]->active )
-         {
-            char s[MAXSTRLEN];
-            sprintf(s, "deactivated display column <%s>\n", disps[i]->name);
-            infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
-         }
+         char s[MAXSTRLEN];
+         
+         disps[i]->active = FALSE;
+         sprintf(s, "deactivated display column <%s>", disps[i]->name);
+         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
       }
    }
 
@@ -367,8 +360,8 @@ RETCODE SCIPdispAutoActivate(
 }
 
 static
-const char powerchar[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E'};
-#define MAXPOWER 6
+const char decpowerchar[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E'};
+#define MAXDECPOWER 6
 
 /** displays an integer in decimal form fitting in a given width */
 void SCIPdispDecimal(
@@ -392,7 +385,7 @@ void SCIPdispDecimal(
    {
       char format[MAXSTRLEN];
       Longint maxval;
-      int power;
+      int decpower;
       int i;
 
       maxval = 1;
@@ -400,16 +393,67 @@ void SCIPdispDecimal(
          maxval *= 10;
       if( val < 0 )
          maxval /= 10;
-      power = 0;
-      while( ABS(val) >= maxval && power < MAXPOWER )
+      decpower = 0;
+      while( ABS(val) >= maxval && decpower < MAXDECPOWER )
       {
-         power++;
+         decpower++;
          val /= 1000;
       }
-      sprintf(format, "%%%dlld%c", width-1, powerchar[power]);
+      sprintf(format, "%%%dlld%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
-         fprintf(file, "-%c", powerchar[power]);
+         fprintf(file, "-%c", decpowerchar[decpower]);
+      else
+         fprintf(file, format, val);
+   }
+}
+
+static
+const char timepowerchar[] = {'s', 'm', 'h', 'd', 'y'};
+const Real timepowerval[] = {1.0, 60.0, 60.0, 24.0, 365.0};
+#define MAXTIMEPOWER 4
+
+/** displays a time value fitting in a given width */
+void SCIPdispTime(
+   FILE*            file,               /**< output stream */
+   Real             val,                /**< value in seconds to display */
+   int              width               /**< width to fit into */
+   )
+{
+   assert(width >= 1);
+
+   if( width == 1 )
+   {
+      if( val < 0.0 )
+         fprintf(file, "-");
+      else if( val < 10.0 )
+         fprintf(file, "%.0f", val);
+      else
+         fprintf(file, "+");
+   }
+   else
+   {
+      char format[MAXSTRLEN];
+      Longint maxval;
+      int timepower;
+      int i;
+
+      maxval = 1;
+      for( i = 0; i < width-1; ++i )
+         maxval *= 10;
+      if( val < 0.0 )
+         maxval /= 10;
+      maxval--; /* for safety against rounding errors */
+      timepower = 0;
+      while( ABS(val) > maxval && timepower < MAXTIMEPOWER )
+      {
+         timepower++;
+         val /= timepowerval[timepower];
+      }
+      sprintf(format, "%%%d.0f%c", width-1, timepowerchar[timepower]);
+
+      if( width == 2 && val < 0.0 )
+         fprintf(file, "-%c", timepowerchar[timepower]);
       else
          fprintf(file, format, val);
    }

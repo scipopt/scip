@@ -53,6 +53,8 @@ struct Stat
    int              nduallpiterations;  /**< number of iterations in dual simplex */
    int              nstrongbranch;      /**< number of strong branching calls */
    int              nseparounds;        /**< number of separation rounds performed in actual node */
+   int              nlppricings;        /**< number of times, the problem variables were priced */
+   int              nlppricingvars;     /**< number of times, a problem variable was priced into the LP */
    Longint          nnodes;             /**< number of nodes processed (including active node) */
    Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
    Longint          lastdispnode;       /**< last node for which an information line was displayed */
@@ -61,6 +63,10 @@ struct Stat
    int              plungedepth;        /**< actual plunging depth (successive times, a child was selected as next node) */
    CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
+   CLOCK*           primallptime;       /**< primal LP solution time */
+   CLOCK*           duallptime;         /**< dual LP solution time */
+   CLOCK*           strongbranchtime;   /**< strong branching time */
+   CLOCK*           lppricingtime;      /**< LP pricing time */
 };
 
 

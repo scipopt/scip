@@ -201,7 +201,7 @@ RETCODE SCIPpresolExit(
 /** executes presolver */
 RETCODE SCIPpresolExec(
    PRESOL*          presol,             /**< presolver */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
@@ -227,7 +227,7 @@ RETCODE SCIPpresolExec(
 
    assert(presol != NULL);
    assert(presol->presolexec != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
    assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
    assert(nchgvartypes != NULL);
@@ -266,17 +266,17 @@ RETCODE SCIPpresolExec(
    presol->lastnchgsides = *nchgsides;
 
    /* start timing */
-   CHECK_OKAY( SCIPstartClock(scip, presol->clock) );
+   SCIPclockStart(presol->clock, set->clocktype);
 
    /* call external method */
-   CHECK_OKAY( presol->presolexec(scip, presol, nrounds,
+   CHECK_OKAY( presol->presolexec(set->scip, presol, nrounds,
                   nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
                   nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
                   nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
                   ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    /* stop timing */
-   CHECK_OKAY( SCIPstopClock(scip, presol->clock) );
+   SCIPclockStop(presol->clock);
 
    /* count the new changes */
    presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;

@@ -186,7 +186,7 @@ RETCODE SCIPbranchruleExit(
 extern
 RETCODE SCIPbranchruleExecLPSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -194,7 +194,7 @@ RETCODE SCIPbranchruleExecLPSol(
 extern
 RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

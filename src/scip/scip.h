@@ -2148,22 +2148,19 @@ RETCODE SCIPsetClockTime(
 /** gets the current total SCIP time in seconds */
 extern
 Real SCIPgetTotalTime(
-   SCIP*            scip,               /**< SCIP data structure */
-   CLOCK*           clock               /**< clock timer */
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets the current solving time in seconds */
 extern
 Real SCIPgetSolvingTime(
-   SCIP*            scip,               /**< SCIP data structure */
-   CLOCK*           clock               /**< clock timer */
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets the current presolving time in seconds */
 extern
 Real SCIPgetPresolvingTime(
-   SCIP*            scip,               /**< SCIP data structure */
-   CLOCK*           clock               /**< clock timer */
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /**@} */

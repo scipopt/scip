@@ -675,7 +675,7 @@ RETCODE SCIPsolveCIP(
       assert(set->buffer->firstfree == 0);
 
       /* select next node to process */
-      CHECK_OKAY( SCIPnodeselSelect(set->nodesel, set->scip, &actnode) );
+      CHECK_OKAY( SCIPnodeselSelect(set->nodesel, set, &actnode) );
       assert(set->buffer->firstfree == 0);
 
       if( actnode != NULL )

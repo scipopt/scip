@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "heur.h"
+#include "clock.h"
 
 
 /** primal heuristics data */
@@ -41,6 +42,7 @@ struct Heur
    DECL_HEUREXIT    ((*heurexit));      /**< deinitialise primal heuristic */
    DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    HEURDATA*        heurdata;           /**< primal heuristics local data */
+   CLOCK*           clock;              /**< heuristic execution time */
    int              ncalls;             /**< number of times, this heuristic was called */
    int              nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
    unsigned int     pseudonodes:1;      /**< call heuristic at nodes where only a pseudo solution exist? */
@@ -83,6 +85,7 @@ RETCODE SCIPheurCreate(
    (*heur)->heurexit = heurexit;
    (*heur)->heurexec = heurexec;
    (*heur)->heurdata = heurdata;
+   CHECK_OKAY( SCIPclockCreate(&(*heur)->clock, SCIP_CLOCKTYPE_DEFAULT) );
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
    (*heur)->initialized = FALSE;
@@ -107,6 +110,7 @@ RETCODE SCIPheurFree(
       CHECK_OKAY( (*heur)->heurfree(scip, *heur) );
    }
 
+   SCIPclockFree(&(*heur)->clock);
    freeMemoryArray(&(*heur)->name);
    freeMemoryArray(&(*heur)->desc);
    freeMemory(heur);
@@ -134,9 +138,12 @@ RETCODE SCIPheurInit(
    if( heur->heurinit != NULL )
    {
       CHECK_OKAY( heur->heurinit(scip, heur) );
-      heur->ncalls = 0;
-      heur->nsolsfound = 0;
    }
+
+   SCIPclockReset(heur->clock);
+
+   heur->ncalls = 0;
+   heur->nsolsfound = 0;
    heur->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -212,7 +219,16 @@ RETCODE SCIPheurExec(
 
       oldnsolsfound = primal->nsolsfound;
 
+      /* start timing */
+      SCIPclockStart(heur->clock, set->clocktype);
+
+      /* call external method */
       CHECK_OKAY( heur->heurexec(set->scip, heur, result) );
+
+      /* stop timing */
+      SCIPclockStop(heur->clock);
+
+      /* evaluate result */
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
@@ -316,3 +332,14 @@ Bool SCIPheurIsInitialized(
 
    return heur->initialized;
 }
+
+/** gets time in seconds used in this heuristic */
+Real SCIPheurGetTime(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return SCIPclockGetTime(heur->clock);
+}
+

@@ -100,6 +100,7 @@ typedef struct Lp LP;                   /**< actual LP data */
 #include "var.h"
 #include "cons.h"
 #include "sol.h"
+#include "clock.h"
 
 
 
@@ -395,6 +396,7 @@ Real SCIPcolGetFarkas(
 extern
 RETCODE SCIPcolGetStrongbranch(
    COL*             col,                /**< LP column */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Real             upperbound,         /**< actual global upper bound */

@@ -36,6 +36,14 @@
 #define DISP_POSI_SOLFOUND      0
 #define DISP_STRI_SOLFOUND      FALSE
 
+#define DISP_NAME_TIME          "time"
+#define DISP_DESC_TIME          "total solution time"
+#define DISP_HEAD_TIME          "time"
+#define DISP_WIDT_TIME          5
+#define DISP_PRIO_TIME          1000
+#define DISP_POSI_TIME          50
+#define DISP_STRI_TIME          TRUE
+
 #define DISP_NAME_NODENUM       "nodenum"
 #define DISP_DESC_NODENUM       "number of processed nodes"
 #define DISP_HEAD_NODENUM       "node"
@@ -72,7 +80,7 @@
 #define DISP_DESC_ACTDEPTH      "depth of actual node"
 #define DISP_HEAD_ACTDEPTH      "depth"
 #define DISP_WIDT_ACTDEPTH      5
-#define DISP_PRIO_ACTDEPTH      1000
+#define DISP_PRIO_ACTDEPTH      500
 #define DISP_POSI_ACTDEPTH      2000
 #define DISP_STRI_ACTDEPTH      TRUE
 
@@ -205,6 +213,18 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
    }
    else
       fprintf(file, " ");
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_DISPOUTPUT(SCIPdispOutputTime)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_TIME) == 0);
+   assert(scip != NULL);
+
+   SCIPdispTime(file, SCIPgetSolvingTime(scip), DISP_WIDT_TIME); /*????????????????*/
 
    return SCIP_OKAY;
 }
@@ -454,6 +474,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_SOLFOUND, DISP_DESC_SOLFOUND, DISP_HEAD_SOLFOUND,
                   NULL, NULL, NULL, SCIPdispOutputSolfound, NULL, 
                   DISP_WIDT_SOLFOUND, DISP_PRIO_SOLFOUND, DISP_POSI_SOLFOUND, DISP_STRI_SOLFOUND) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_TIME, DISP_DESC_TIME, DISP_HEAD_TIME,
+                  NULL, NULL, NULL, SCIPdispOutputTime, NULL, 
+                  DISP_WIDT_TIME, DISP_PRIO_TIME, DISP_POSI_TIME, DISP_STRI_TIME) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_NODENUM, DISP_DESC_NODENUM, DISP_HEAD_NODENUM,
                   NULL, NULL, NULL, SCIPdispOutputNodenum, NULL, 
                   DISP_WIDT_NODENUM, DISP_PRIO_NODENUM, DISP_POSI_NODENUM, DISP_STRI_NODENUM) );

@@ -603,16 +603,16 @@ RETCODE SCIPnodeselExit(
 /** select next node to be processed */
 RETCODE SCIPnodeselSelect(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    NODE**           selnode             /**< pointer to store node to be processed next */
    )
 {
    assert(nodesel != NULL);
    assert(nodesel->nodeselselect != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
    assert(selnode != NULL);
 
-   CHECK_OKAY( nodesel->nodeselselect(scip, nodesel, selnode) );
+   CHECK_OKAY( nodesel->nodeselselect(set->scip, nodesel, selnode) );
 
    return SCIP_OKAY;
 }
@@ -620,18 +620,18 @@ RETCODE SCIPnodeselSelect(
 /** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
 int SCIPnodeselCompare(
    NODESEL*         nodesel,            /**< node selector */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    NODE*            node1,              /**< first node to compare */
    NODE*            node2               /**< second node to compare */
    )
 {
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
    assert(node1 != NULL);
    assert(node2 != NULL);
 
-   return nodesel->nodeselcomp(scip, nodesel, node1, node2);
+   return nodesel->nodeselcomp(set->scip, nodesel, node1, node2);
 }
 
 /** gets name of node selector */

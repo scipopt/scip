@@ -152,7 +152,7 @@ Bool readerIsApplicable(
 /** reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
 RETCODE SCIPreaderRead(
    READER*          reader,             /**< reader */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    const char*      filename,           /**< name of the input file */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -165,7 +165,7 @@ RETCODE SCIPreaderRead(
 
    assert(reader != NULL);
    assert(reader->readerread != NULL);
-   assert(scip != NULL);
+   assert(set != NULL);
    assert(filename != NULL);
    assert(result != NULL);
 
@@ -177,7 +177,7 @@ RETCODE SCIPreaderRead(
    if( readerIsApplicable(reader, extension) )
    {
       /* call reader to read problem */
-      CHECK_OKAY( reader->readerread(scip, reader, filename, result) );
+      CHECK_OKAY( reader->readerread(set->scip, reader, filename, result) );
    }
    else
       *result = SCIP_DIDNOTRUN;

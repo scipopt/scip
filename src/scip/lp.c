@@ -1638,6 +1638,7 @@ Real SCIPcolGetFarkas(
 /** gets strong branching information on a column variable */
 RETCODE SCIPcolGetStrongbranch(
    COL*             col,                /**< LP column */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Real             upperbound,         /**< actual global upper bound */
@@ -1653,6 +1654,7 @@ RETCODE SCIPcolGetStrongbranch(
    assert(col->primsol < SCIP_INVALID);
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
+   assert(set != NULL);
    assert(stat != NULL);
    assert(lp != NULL);
    assert(lp->solved);
@@ -1665,12 +1667,20 @@ RETCODE SCIPcolGetStrongbranch(
    if( col->validstronglp != stat->lpcount || itlim > col->strongitlim )
    {
       debugMessage("calling strong branching for variable <%s> with %d iterations\n", col->var->name, itlim);
+
+      /* start timing */
+      SCIPclockStart(stat->strongbranchtime, set->clocktype);
+      
+      /* call LPI strong branching */
       stat->nstrongbranch++;
       col->validstronglp = stat->lpcount;
       col->strongitlim = itlim;
       CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, 1, itlim, &col->strongdown, &col->strongup) );
       col->strongdown = MIN(col->strongdown, upperbound);
       col->strongup = MIN(col->strongup, upperbound);
+      
+      /* start timing */
+      SCIPclockStop(stat->strongbranchtime);
    }
    assert(col->strongdown < SCIP_INVALID);
    assert(col->strongup < SCIP_INVALID);
@@ -4697,8 +4707,14 @@ RETCODE SCIPlpSolvePrimal(
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
+   /* start timing */
+   SCIPclockStart(stat->primallptime, set->clocktype);
+
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
+
+   /* stop timing */
+   SCIPclockStop(stat->primallptime);
 
    /* check for primal and dual feasibility */
    CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
@@ -4828,8 +4844,14 @@ RETCODE SCIPlpSolveDual(
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
+   /* start timing */
+   SCIPclockStart(stat->duallptime, set->clocktype);
+
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
+
+   /* stop timing */
+   SCIPclockStop(stat->duallptime);
 
    /* check for primal and dual feasibility */
    CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );

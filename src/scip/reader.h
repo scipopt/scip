@@ -62,6 +62,7 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
 #include "scip.h"
 #include "retcode.h"
 #include "result.h"
+#include "set.h"
 
 
 /** creates a reader */
@@ -87,7 +88,7 @@ RETCODE SCIPreaderFree(
 extern
 RETCODE SCIPreaderRead(
    READER*          reader,             /**< reader */
-   SCIP*            scip,               /**< SCIP data structure */   
+   const SET*       set,                /**< global SCIP settings */
    const char*      filename,           /**< name of the input file */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
