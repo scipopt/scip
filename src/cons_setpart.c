@@ -377,6 +377,36 @@ RETCODE setpartconsUnlockAllCoefs(
    return SCIP_OKAY;
 }
 
+/** deletes coefficient at given position from set partitioning constraint object */
+static
+RETCODE setpartconsDelCoefPos(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETPARTCONS*     setpartcons,        /**< set partitioning constraint object */
+   int              pos                 /**< position of coefficient to delete */
+   )
+{
+   VAR* var;
+
+   assert(setpartcons != NULL);
+   assert(0 <= pos && pos < setpartcons->nvars);
+
+   var = setpartcons->vars[pos];
+   assert(var != NULL);
+   assert(setpartcons->transformed ^ (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL));
+
+   if( setpartcons->transformed )
+   {
+      /* drop bound change events and unlock the rounding of variable */
+      CHECK_OKAY( setpartconsUnlockCoef(scip, setpartcons, NULL, pos) );
+   }
+
+   /* move the last variable to the free slot */
+   setpartcons->vars[pos] = setpartcons->vars[setpartcons->nvars-1];
+   setpartcons->nvars--;
+
+   return SCIP_OKAY;
+}
+
 /** creates a set partitioning constraint data object */
 static
 RETCODE setpartconsCreate(
@@ -1390,7 +1420,7 @@ RETCODE branchPseudo(
 
    *result = SCIP_BRANCHED;
 
-#if DEBUG
+#ifdef DEBUG
    {
       int nchildren;
       CHECK_OKAY( SCIPgetChildren(scip, NULL, &nchildren) );
@@ -1551,21 +1581,192 @@ DECL_CONSCHECK(consCheckSetpart)
    return SCIP_OKAY;
 }
 
+
+
+
+/*
+ * Presolving
+ */
+
+/** deletes all zero-fixed variables */
+static
+RETCODE setpartconsApplyFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETPARTCONS*     setpartcons         /**< set partitioning constraint object */
+   )
+{
+   VAR* var;
+   int v;
+
+   assert(setpartcons != NULL);
+
+   if( setpartcons->nfixedzeros >= 1 )
+   {
+      assert(setpartcons->vars != NULL);
+
+      v = 0;
+      while( v < setpartcons->nvars )
+      {
+         var = setpartcons->vars[v];
+         if( SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+         {
+            CHECK_OKAY( setpartconsDelCoefPos(scip, setpartcons, v) );
+         }
+         else
+            ++v;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 static
 DECL_CONSPRESOL(consPresolSetpart)
 {
+   CONS* cons;
+   CONSDATA* consdata;
+   SETPARTCONS* setpartcons;
+   int c;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   /* process constraints */
    *result = SCIP_DIDNOTFIND;
 
-   todoMessage("set partitioning presolving");
+   /* process constraints */
+   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      setpartcons = consdata->setpartcons;
+      assert(setpartcons != NULL);
+
+      debugMessage("presolving set partitioning constraint <%s>\n", SCIPconsGetName(cons));
+
+      /* remove all variables that are fixed to zero */
+      CHECK_OKAY( setpartconsApplyFixings(scip, setpartcons) );
+
+      /* check for infeasibility due to more than one variable fixed to one */
+      if( setpartcons->nfixedones >= 2 )
+      {
+         debugMessage("set partitioning constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      /* check, if we can fix all other variables to zero, because a variable fixed to one exists
+       *  -> if the constraint is not modifiable, we can delete it (which is done later)
+       */
+      if( setpartcons->nfixedones == 1 )
+      {
+         VAR* var;
+         int v;
+
+         debugMessage("set partitioning constraint <%s> has a variable fixed to 1.0\n", SCIPconsGetName(cons));
+         for( v = 0; v < setpartcons->nvars; ++v )
+         {
+            var = setpartcons->vars[v];
+            if( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && !SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+            {
+               CHECK_OKAY( SCIPfixVar(scip, var, 0.0) );
+               (*nfixedvars)++;
+               *result = SCIP_SUCCESS;
+            }
+         }
+      }
+
+      if( !setpartcons->modifiable )
+      {
+         /* constraint is redundant, if one variable is fixed to one; the others are already fixed to zero */
+         if( setpartcons->nfixedones == 1 )
+         {
+            debugMessage("set partitioning constraint <%s> is redundant\n", SCIPconsGetName(cons));
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            (*ndelconss)++;
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+
+         /* check for infeasibility: are all variables fixed to zero? */
+         if( setpartcons->nfixedzeros == setpartcons->nvars )
+         {
+            debugMessage("set partitioning constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         /* fix variable and delete constraint, if constraint consists only of a single non-fixed variable */
+         if( setpartcons->nfixedzeros == setpartcons->nvars - 1 )
+         {
+            VAR* var;
+            Bool found;
+            int v;
+
+            /* search unfixed variable */
+            found = FALSE;
+            for( v = 0; v < setpartcons->nvars && !found; ++v )
+            {
+               var = setpartcons->vars[v];
+               found = !SCIPisZero(scip, SCIPvarGetUbGlobal(var));
+            }
+            assert(found);
+            debugMessage("set partitioning constraint <%s>: fix <%s> == 1\n", SCIPconsGetName(cons), SCIPvarGetName(var));
+            CHECK_OKAY( SCIPfixVar(scip, var, 1.0) );
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            (*nfixedvars)++;
+            (*ndelconss)++;
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+
+         /* aggregate variable and delete constraint, if constraint consists only of two non-fixed variables */
+         if( setpartcons->nfixedzeros == setpartcons->nvars - 2 )
+         {
+            VAR* var;
+            VAR* var1;
+            VAR* var2;
+            int v;
+
+            /* search unfixed variable */
+            var1 = NULL;
+            var2 = NULL;
+            for( v = 0; v < setpartcons->nvars && var2 == NULL; ++v )
+            {
+               var = setpartcons->vars[v];
+               if( !SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+               {
+                  if( var1 == NULL )
+                     var1 = var;
+                  else
+                     var2 = var;
+               }
+            }
+            assert(var1 != NULL && var2 != NULL);
+            debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+            CHECK_OKAY( SCIPaggregateVar(scip, var1, var2, -1.0, 1.0) );
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            (*naggrvars)++;
+            (*ndelconss)++;
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+      }
+   }
    
    return SCIP_OKAY;
 }
+
+
+
+
+/*
+ * variable usage counting
+ */
 
 static
 DECL_CONSENABLE(consEnableSetpart)

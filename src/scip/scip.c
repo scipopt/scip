@@ -1522,11 +1522,6 @@ RETCODE SCIPdelCons(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       assert(scip->stage == SCIP_STAGE_SOLVING || cons->node == NULL);
-      /* if constraint is active, deactivate it */
-      if( cons->active )
-      {
-         CHECK_OKAY( SCIPconsDeactivate(cons, scip->set) );
-      }
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
       return SCIP_OKAY;
 
@@ -1624,11 +1619,13 @@ RETCODE SCIPdisableConsLocal(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPprobDelCons(scip->origprob, scip->mem->probmem, scip->set, cons) );
+      assert(cons->node == NULL);
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPprobDelCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      assert(cons->node == NULL);
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
@@ -1636,7 +1633,7 @@ RETCODE SCIPdisableConsLocal(
       if( cons->node == NULL && scip->tree->actnode == scip->tree->root )
       {
          assert(scip->tree->actnode->depth == 0);
-         CHECK_OKAY( SCIPprobDelCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+         CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
       }
       else
       {
@@ -1844,15 +1841,15 @@ RETCODE SCIPpresolve(
       SCIPprobResetMaxNConss(scip->transprob);
       for( i = 0; i < scip->set->nconshdlrs; ++i )
       {
-         int nactiveconss;
+         int nconss;
 
-         nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[i]);
-         if( nactiveconss > 0 )
+         nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[i]);
+         if( nconss > 0 )
          {
-            sprintf(s, " %5d constraints of type <%s>", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+            sprintf(s, " %5d constraints of type <%s>", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[i]));
             infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          }
-         SCIPconshdlrResetNMaxNActiveConss(scip->set->conshdlrs[i]);
+         SCIPconshdlrResetNMaxNConss(scip->set->conshdlrs[i]);
       }
 
       /* switch stage to SOLVING */
@@ -4315,20 +4312,20 @@ int SCIPgetPlungeDepth(
 }
 
 /** gets total number of active constraints at the current node */
-int SCIPgetNActiveConss(
+int SCIPgetNConss(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int nactiveconss;
+   int nconss;
    int h;
 
-   CHECK_ABORT( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNConss", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   nactiveconss = 0;
+   nconss = 0;
    for( h = 0; h < scip->set->nconshdlrs; ++h )
-      nactiveconss += SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[h]);
+      nconss += SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
 
-   return nactiveconss;
+   return nconss;
 }
 
 /** gets total number of enabled constraints at the current node */
@@ -4526,12 +4523,19 @@ void printPresolvingStatistics(
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CONSHDLR* conshdlr;
-      int maxnactiveconss;
+      int maxnconss;
       
       conshdlr = scip->set->conshdlrs[i];
-      maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
+      maxnconss = SCIPconshdlrGetMaxNConss(conshdlr);
       if( SCIPconshdlrDoesPresolve(conshdlr)
-         && (maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr)) )
+         && (maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr)
+            || SCIPconshdlrGetNFixedVars(conshdlr) > 0
+            || SCIPconshdlrGetNAggrVars(conshdlr) > 0
+            || SCIPconshdlrGetNChgBds(conshdlr) > 0
+            || SCIPconshdlrGetNAddHoles(conshdlr) > 0
+            || SCIPconshdlrGetNDelConss(conshdlr) > 0
+            || SCIPconshdlrGetNChgCoefs(conshdlr) > 0
+            || SCIPconshdlrGetNChgSides(conshdlr) > 0) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          fprintf(file, " %12d %12d %12d %12d %12d %12d %12d\n",
@@ -4563,11 +4567,11 @@ void printConstraintStatistics(
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CONSHDLR* conshdlr;
-      int maxnactiveconss;
+      int maxnconss;
       
       conshdlr = scip->set->conshdlrs[i];
-      maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
-      if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
+      maxnconss = SCIPconshdlrGetMaxNConss(conshdlr);
+      if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          fprintf(file, " %12d %12lld %12d %12d %12d %9d %9d\n",
@@ -4576,8 +4580,8 @@ void printConstraintStatistics(
             SCIPconshdlrGetNSepaCalls(conshdlr), 
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
-            SCIPconshdlrGetNActiveConss(conshdlr),
-            maxnactiveconss);
+            SCIPconshdlrGetNConss(conshdlr),
+            maxnconss);
       }
    }
 }

@@ -1160,7 +1160,7 @@ RETCODE branchPseudo(
 
    *result = SCIP_BRANCHED;
 
-#if DEBUG
+#ifdef DEBUG
    {
       int nchildren;
       CHECK_OKAY( SCIPgetChildren(scip, NULL, &nchildren) );

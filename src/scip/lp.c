@@ -3435,11 +3435,11 @@ RETCODE lpFlushAddRows(
       if( SCIPsetIsInfinity(set, -row->lhs) )
          lhs[pos] = -infinity;
       else
-         lhs[pos] = row->lhs + row->constant;
+         lhs[pos] = row->lhs - row->constant;
       if( SCIPsetIsInfinity(set, row->rhs) )
          rhs[pos] = infinity;
       else
-         rhs[pos] = row->rhs + row->constant;
+         rhs[pos] = row->rhs - row->constant;
       beg[pos] = nnonz;
       name[pos] = row->name;
 
@@ -3625,11 +3625,11 @@ RETCODE lpFlushChgRows(
             if( SCIPsetIsInfinity(set, -row->lhs) )
                lhs[nchg] = -infinity;
             else
-               lhs[nchg] = row->lhs + row->constant;
+               lhs[nchg] = row->lhs - row->constant;
             if( SCIPsetIsInfinity(set, row->rhs) )
                rhs[nchg] = infinity;
             else
-               rhs[nchg] = row->rhs + row->constant;
+               rhs[nchg] = row->rhs - row->constant;
             nchg++;
             row->lhschanged = FALSE;
             row->rhschanged = FALSE;

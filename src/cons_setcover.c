@@ -378,6 +378,36 @@ RETCODE setcoverconsUnlockAllCoefs(
    return SCIP_OKAY;
 }
 
+/** deletes coefficient at given position from set covering constraint object */
+static
+RETCODE setcoverconsDelCoefPos(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons,       /**< set covering constraint object */
+   int              pos                 /**< position of coefficient to delete */
+   )
+{
+   VAR* var;
+
+   assert(setcovercons != NULL);
+   assert(0 <= pos && pos < setcovercons->nvars);
+
+   var = setcovercons->vars[pos];
+   assert(var != NULL);
+   assert(setcovercons->transformed ^ (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL));
+
+   if( setcovercons->transformed )
+   {
+      /* drop bound change events and unlock the rounding of variable */
+      CHECK_OKAY( setcoverconsUnlockCoef(scip, setcovercons, NULL, pos) );
+   }
+
+   /* move the last variable to the free slot */
+   setcovercons->vars[pos] = setcovercons->vars[setcovercons->nvars-1];
+   setcovercons->nvars--;
+
+   return SCIP_OKAY;
+}
+
 /** creates a set covering constraint data object */
 static
 RETCODE setcoverconsCreate(
@@ -1144,7 +1174,7 @@ RETCODE branchPseudo(
 
    *result = SCIP_BRANCHED;
 
-#if DEBUG
+#ifdef DEBUG
    {
       int nchildren;
       CHECK_OKAY( SCIPgetChildren(scip, NULL, &nchildren) );
@@ -1305,21 +1335,130 @@ DECL_CONSCHECK(consCheckSetcover)
    return SCIP_OKAY;
 }
 
+
+
+
+/*
+ * Presolving
+ */
+
+/** deletes all zero-fixed variables */
+static
+RETCODE setcoverconsApplyFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons        /**< set covering constraint object */
+   )
+{
+   VAR* var;
+   int v;
+
+   assert(setcovercons != NULL);
+
+   if( setcovercons->nfixedzeros >= 1 )
+   {
+      assert(setcovercons->vars != NULL);
+
+      v = 0;
+      while( v < setcovercons->nvars )
+      {
+         var = setcovercons->vars[v];
+         if( SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+         {
+            CHECK_OKAY( setcoverconsDelCoefPos(scip, setcovercons, v) );
+         }
+         else
+            ++v;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 static
 DECL_CONSPRESOL(consPresolSetcover)
 {
+   CONS* cons;
+   CONSDATA* consdata;
+   SETCOVERCONS* setcovercons;
+   int c;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   /* process constraints */
    *result = SCIP_DIDNOTFIND;
 
-   todoMessage("set covering presolving");
+   /* process constraints */
+   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      setcovercons = consdata->setcovercons;
+      assert(setcovercons != NULL);
+
+      debugMessage("presolving set covering constraint <%s>\n", SCIPconsGetName(cons));
+
+      /* remove all variables that are fixed to zero */
+      CHECK_OKAY( setcoverconsApplyFixings(scip, setcovercons) );
+
+      /* check for redundancy due to fixed variables */
+      if( setcovercons->nfixedones >= 1 )
+      {
+         debugMessage("set covering constraint <%s> is redundant\n", SCIPconsGetName(cons));
+         CHECK_OKAY( SCIPdelCons(scip, cons) );
+         (*ndelconss)++;
+         *result = SCIP_SUCCESS;
+         continue;
+      }
+
+      if( !setcovercons->modifiable )
+      {
+         /* check for infeasibility: are all variables fixed to zero? */
+         if( setcovercons->nfixedzeros == setcovercons->nvars )
+         {
+            debugMessage("set covering constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         /* fix variable and delete constraint, if constraint consists only of a single non-fixed variable */
+         if( setcovercons->nfixedzeros == setcovercons->nvars - 1 )
+         {
+            VAR* var;
+            Bool found;
+            int v;
+
+            /* search unfixed variable */
+            found = FALSE;
+            for( v = 0; v < setcovercons->nvars && !found; ++v )
+            {
+               var = setcovercons->vars[v];
+               found = !SCIPisZero(scip, SCIPvarGetUbGlobal(var));
+            }
+            assert(found);
+            debugMessage("set covering constraint <%s>: fix <%s> == 1\n", SCIPconsGetName(cons), SCIPvarGetName(var));
+            CHECK_OKAY( SCIPfixVar(scip, var, 1.0) );
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            (*nfixedvars)++;
+            (*ndelconss)++;
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+      }
+   }
    
    return SCIP_OKAY;
 }
+
+
+
+
+/*
+ * variable usage counting
+ */
 
 static
 DECL_CONSENABLE(consEnableSetcover)

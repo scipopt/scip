@@ -1263,7 +1263,7 @@ RETCODE linconsTightenVarBounds(
             }
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
             ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisLE(scip, ub, newub));
+            assert(SCIPisFeasLE(scip, ub, newub));
             (*nchgbds)++;
             *result = SCIP_REDUCEDDOM;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
@@ -1285,7 +1285,7 @@ RETCODE linconsTightenVarBounds(
             }
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
             lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisGE(scip, lb, newlb));
+            assert(SCIPisFeasGE(scip, lb, newlb));
             (*nchgbds)++;
             *result = SCIP_REDUCEDDOM;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
@@ -1311,7 +1311,7 @@ RETCODE linconsTightenVarBounds(
             }
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
             lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisGE(scip, lb, newlb));
+            assert(SCIPisFeasGE(scip, lb, newlb));
             (*nchgbds)++;
             *result = SCIP_REDUCEDDOM;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
@@ -1333,7 +1333,7 @@ RETCODE linconsTightenVarBounds(
             }
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
             ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisLE(scip, ub, newub));
+            assert(SCIPisFeasLE(scip, ub, newub));
             (*nchgbds)++;
             *result = SCIP_REDUCEDDOM;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
@@ -2535,6 +2535,8 @@ RETCODE linconsFixVariables(
          ub = SCIPvarGetUbGlobal(var);
          if( SCIPisEQ(scip, lb, ub) )
          {
+            debugMessage("converting variable <%s> with fixed bounds [%g,%g] into fixed variable\n",
+               SCIPvarGetName(var), lb, ub);
             CHECK_OKAY( SCIPfixVar(scip, var, lb) );
             (*nfixedvars)++;
             *result = SCIP_SUCCESS;
@@ -2575,8 +2577,9 @@ DECL_CONSPRESOL(consPresolLinear)
 
    /*debugMessage("Presol method of linear constraints\n");*/
 
-   /* process constraints */
    *result = SCIP_DIDNOTFIND;
+
+   /* process constraints */
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
@@ -2700,7 +2703,7 @@ DECL_CONSPRESOL(consPresolLinear)
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
                CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
-               *nupgdconss++;
+               (*nupgdconss)++;
             }
          }
       }

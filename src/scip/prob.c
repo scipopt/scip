@@ -645,10 +645,16 @@ RETCODE SCIPprobDelCons(
    assert(cons != NULL);
    assert(cons->node == NULL);
    assert(0 <= cons->arraypos && cons->arraypos < prob->nconss);
-   assert(!cons->active || cons->updatedeactivate);
-   assert(!cons->enabled || cons->updatedeactivate);
    assert(prob->conss != NULL);
    assert(prob->conss[cons->arraypos] == cons);
+
+   /* deactivate constraint, if it is currently active */
+   if( cons->active && !cons->updatedeactivate )
+   {
+      CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+   }
+   assert(!cons->active || cons->updatedeactivate);
+   assert(!cons->enabled || cons->updatedeactivate);
 
    /* remove constraint's name from the namespace */
    CHECK_OKAY( SCIPhashtableRemove(prob->consnames, memhdr, (void*)cons) );

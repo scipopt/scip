@@ -1869,7 +1869,7 @@ int SCIPgetPlungeDepth(
 
 /** gets total number of active constraints at the current node */
 extern
-int SCIPgetNActiveConss(
+int SCIPgetNConss(
    SCIP*            scip                /**< SCIP data structure */
    );
 
