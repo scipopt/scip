@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.1 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.2 2005/02/03 12:59:49 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -85,7 +85,7 @@ RETCODE applyProbing(
    assert(SCIPvarGetLbLocal(vars[probingpos]) < 0.5);
    assert(SCIPvarGetUbLocal(vars[probingpos]) > 0.5);
 
-   debugMessage("applying probing on variable <%s> == %d\n", SCIPvarGetName(vars[probingpos]), probingdir);
+   /*debugMessage("applying probing on variable <%s> == %d\n", SCIPvarGetName(vars[probingpos]), probingdir);*/
 
    /* start probing mode */
    CHECK_OKAY( SCIPstartProbing(scip) );
@@ -112,6 +112,7 @@ RETCODE applyProbing(
       {
          lbs[i] = SCIPvarGetLbLocal(vars[i]);
          ubs[i] = SCIPvarGetUbLocal(vars[i]);
+#if 0
 #ifdef DEBUG
          if( !SCIPisEQ(scip, lbs[i], SCIPvarGetLbGlobal(vars[i]))
             || !SCIPisEQ(scip, ubs[i], SCIPvarGetUbGlobal(vars[i])) )
@@ -119,11 +120,12 @@ RETCODE applyProbing(
             debugMessage("  -> <%s>[%g,%g]\n", SCIPvarGetName(vars[i]), lbs[i], ubs[i]);
          }
 #endif
+#endif
       }
    }
    else
    {
-      debugMessage("  -> probing determined a cutoff\n");
+      /*debugMessage("  -> probing determined a cutoff\n");*/
    }
 
    /* exit probing mode */
@@ -221,8 +223,11 @@ DECL_PRESOLEXEC(presolExecProbing)
    for( i = 0; i < nbinvars && !cutoff; ++i )
    {
       Bool localcutoff;
+      int j;
 
-      assert(SCIPvarIsActive(vars[i]));
+      /* ignore variables, that were fixed or aggregated in prior probings */
+      if( !SCIPvarIsActive(vars[i]) )
+         continue;
 
       /* apply probing for fixing the variable to zero */
       CHECK_OKAY( applyProbing(scip, presoldata, vars, nvars, i, FALSE, zerolbs, zeroubs, &localcutoff) );
@@ -253,6 +258,79 @@ DECL_PRESOLEXEC(presolExecProbing)
          (*nfixedvars)++;
          if( cutoff )
             break;
+         continue; /* don't analyze probing deductions, because the variable is already fixed */
+      }
+
+      /* analyze probing deductions */
+      for( j = 0; j < nbinvars && !cutoff; ++j )
+      {
+         Bool fixed;
+         Bool redundant;
+         Bool aggregated;
+
+         if( j == i )
+            continue;
+
+         if( zeroubs[j] < 0.5 && oneubs[j] < 0.5 )
+         {
+            /* in both probings, variable j is deduced to 0: fix variable to 0 */
+            debugMessage("fixing variable <%s> to 0\n", SCIPvarGetName(vars[j]));
+            CHECK_OKAY( SCIPfixVar(scip, vars[j], 0.0, &cutoff, &fixed) );
+            if( fixed )
+               (*nfixedvars)++;
+         }
+         else if( zerolbs[j] > 0.5 && onelbs[j] > 0.5 )
+         {
+            /* in both probings, variable j is deduced to 1: fix variable to 1 */
+            debugMessage("fixing variable <%s> to 1\n", SCIPvarGetName(vars[j]));
+            CHECK_OKAY( SCIPfixVar(scip, vars[j], 1.0, &cutoff, &fixed) );
+            if( fixed )
+               (*nfixedvars)++;
+         }
+         else if( zeroubs[j] < 0.5 && onelbs[j] > 0.5 )
+         {
+            /* variable j is always deduced to the same value as probing variable i:
+             * both variables can be aggregated with x_i - x_j == 0
+             */
+            debugMessage("aggregating variables <%s> == <%s>\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+            CHECK_OKAY( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, -1.0, 0.0, &cutoff, &redundant, &aggregated) );
+            if( aggregated )
+               (*naggrvars)++;
+         }
+         else if( zerolbs[j] > 0.5 && oneubs[j] < 0.5 )
+         {
+            /* variable j is always deduced to the opposite value of probing variable i:
+             * both variables can be aggregated with x_i + x_j == 1
+             */
+            debugMessage("aggregating variables <%s> == 1 - <%s>\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+            CHECK_OKAY( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, 1.0, 1.0, &cutoff, &redundant, &aggregated) );
+            if( aggregated )
+               (*naggrvars)++;
+         }
+         else if( zeroubs[j] < 0.5 )
+         {
+            /* insert implication: x_i == 0  =>  x_j == 0 */
+            debugMessage("found implication <%s> == 0  =>  <%s> == 0\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+            /*???????????????????*/
+         }
+         else if( zerolbs[j] > 0.5 )
+         {
+            /* insert implication: x_i == 0  =>  x_j == 1 */
+            debugMessage("found implication <%s> == 0  =>  <%s> == 1\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+            /*???????????????????*/
+         }
+         else if( oneubs[j] < 0.5 )
+         {
+            /* insert implication: x_i == 1  =>  x_j == 0 */
+            debugMessage("found implication <%s> == 1  =>  <%s> == 0\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+            /*???????????????????*/
+         }
+         else if( onelbs[j] > 0.5 )
+         {
+            /* insert implication: x_i == 1  =>  x_j == 1 */
+            debugMessage("found implication <%s> == 1  =>  <%s> == 1\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+            /*???????????????????*/
+         }
       }
    }
 
