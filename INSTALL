@@ -70,14 +70,6 @@ Here is what you have to do to get SCIP running:
    - "COMP=gnu" to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
-   ******************************************************************************
-   If you are compiling SCIP in optimized mode and use it as a callable library,
-   make sure that the double alignment flag of the compiler ("-malign-double" for
-   GNU C compiler) is set to equal values in both, SCIP and your code. Otherwise,
-   the size of SCIP's data structures used in your code wouldn't correspond to
-   the data structure sizes in the SCIP callable library.
-   ******************************************************************************
-
 3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
    (e.g. "bin/scip.linux.x86.gnu.dbg.cpx")
 
