@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.4 2005/02/09 10:50:33 bzfberth Exp $
+# $Id: Makefile,v 1.5 2005/02/09 10:57:53 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
@@ -141,6 +141,15 @@ SCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(SCIPLIB).a
 
 
 #-----------------------------------------------------------------------------
+# OBJSCIP Library
+#-----------------------------------------------------------------------------
+
+OBJSCIPLIBNAME	=	objscip
+OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
+OBJSCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(OBJSCIPLIB).a
+
+
+#-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
 
@@ -176,15 +185,16 @@ depend:
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
 ifeq ($(LINKER),C)
+$(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
 		$(CC) $(CFLAGS) $(MAINXXX) \
 		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
 		$(LDFLAGS) -o $@
 endif
 ifeq ($(LINKER),CPP)
+$(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
 		$(CXX) $(CXXFLAGS) $(MAINXXX) \
-		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
+		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
 		$(LDFLAGS) -o $@
 endif
 
