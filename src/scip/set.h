@@ -563,17 +563,6 @@ Real SCIPsetRelDiff(
    Real             val2                /**< second value to be compared */
    );
 
-/** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
- *  successful
- */
-extern
-Bool SCIPsetRealToRational(
-   const SET*       set,                /**< global SCIP settings */
-   Real             val,                /**< real value to convert into rational number */
-   Longint          maxdnom,            /**< maximal denominator allowed */
-   Longint*         nominator,          /**< pointer to store the nominator of the rational number */
-   Longint*         denominator         /**< pointer to store the denominator of the rational number */
-   );
 
 
 #ifndef NDEBUG

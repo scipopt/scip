@@ -432,9 +432,22 @@ Longint SCIPcalcGreComDiv(
 /** calculates the smallest common multiple of the two given values */
 extern
 Longint SCIPcalcSmaComMul(
-   Longint          val1,               /**< first value of greatest common devisor calculation */
-   Longint          val2                /**< second value of greatest common devisor calculation */
+   Longint          val1,               /**< first value of smallest common multiple calculation */
+   Longint          val2                /**< second value of smallest common multiple calculation */
    );
+
+/** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
+ *  successful
+ */
+extern
+Bool SCIPrealToRational(
+   Real             val,                /**< real value to convert into rational number */
+   Real             epsilon,            /**< maximal allowed difference between rational and real value */
+   Longint          maxdnom,            /**< maximal denominator allowed */
+   Longint*         nominator,          /**< pointer to store the nominator of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator of the rational number */
+   );
+
 
 
 

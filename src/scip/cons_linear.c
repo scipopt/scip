@@ -1925,6 +1925,218 @@ DECL_CONSDELETE(consDeleteLinear)
    return SCIP_OKAY;
 }
 
+/** scales a linear constraint with a constant scalar */
+static
+void linconsScale(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint to scale */
+   Real             scalar              /**< value to scale constraint with */
+   )
+{
+   Real newval;
+   int i;
+
+   assert(lincons != NULL);
+
+   /* scale the sides */
+   if( scalar < 0.0 )
+   {
+      Real lhs;
+      lhs = lincons->lhs;
+      lincons->lhs = -lincons->rhs;
+      lincons->rhs = -lhs;
+   }
+   if( !SCIPisInfinity(scip, -lincons->lhs) )
+   {
+      lincons->lhs *= ABS(scalar);
+      if( SCIPisIntegral(scip, lincons->lhs) )
+         lincons->lhs = SCIPfloor(scip, lincons->lhs);
+   }
+   if( !SCIPisInfinity(scip, lincons->rhs) )
+   {
+      lincons->rhs *= ABS(scalar);
+      if( SCIPisIntegral(scip, lincons->rhs) )
+         lincons->rhs = SCIPfloor(scip, lincons->rhs);
+   }
+
+   /* scale the coefficients */
+   for( i = 0; i < lincons->nvars; ++i )
+   {
+      lincons->vals[i] *= scalar;
+      if( SCIPisIntegral(scip, lincons->vals[i]) )
+         lincons->vals[i] = SCIPfloor(scip, lincons->vals[i]);
+   }
+
+   lincons->validactivities = FALSE;
+}
+
+/** normalizes a linear constraint with the following rules:
+ *  - multiplication with +1 or -1:
+ *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
+ *      if the actual rule doesn't determine the sign):
+ *        1. the number of positive coefficients must not be smaller than the number of negative coefficients
+ *        2. the right hand side must not be infinite
+ *        3. the absolute value of the right hand side must be greater than that of the left hand side
+ *        4. multiply with +1
+ *  - rationals to integrals
+ *      Try to identify a rational representation of the fractional coefficients, and multiply all coefficients
+ *      by the smallest common multiple of all denominators to get integral coefficients.
+ *      Forbid large denominators due to numerical stability.
+ *  - division by greatest common divisor
+ *      If all coefficients are integral, divide them by the greatest common divisor.
+ */
+static
+RETCODE linconsNormalize(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons             /**< linear constraint to normalize */
+   )
+{
+   VAR** vars;
+   Real* vals;
+   Longint scm;
+   Longint nominator;
+   Longint denominator;
+   Longint gcd;
+   Longint maxmult;
+   Real epsilon;
+   Real feastol;
+   Bool success;
+   int nvars;
+   int mult;
+   int nposcoeffs;
+   int nnegcoeffs;
+   int i;
+
+   assert(lincons != NULL);
+
+   /* coefficients of modifiable constraint must not be changed */
+   if( lincons->modifiable )
+      return SCIP_OKAY;
+
+   vars = lincons->vars;
+   vals = lincons->vals;
+   nvars = lincons->nvars;
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+
+   /* calculate the maximal multiplier for common divisor calculation:
+    *   |p/q - val| < epsilon  and  q < feastol/epsilon  =>  |p - q*val| < feastol
+    * which means, a value of feastol/epsilon should be used as maximal multiplier
+    */
+   epsilon = SCIPepsilon(scip);
+   feastol = SCIPfeastol(scip);
+   maxmult = (Longint)(feastol/epsilon + feastol);
+
+   /*
+    * multiplication with +1 or -1
+    */
+   mult = 0;
+   
+   if( mult == 0 )
+   {
+      /* 1. the number of positive coefficients must not be smaller than the number of negative coefficients */
+      nposcoeffs = 0;
+      nnegcoeffs = 0;
+      for( i = 0; i < nvars; ++i )
+      {
+         if( vals[i] > 0.0 )
+            nposcoeffs++;
+         else
+            nnegcoeffs++;
+      }
+      if( nposcoeffs > nnegcoeffs )
+         mult = +1;
+      else if( nposcoeffs < nnegcoeffs )
+         mult = -1;
+   }
+
+   if( mult == 0 )
+   {
+      /* 2. the right hand side must not be infinite */
+      if( SCIPisInfinity(scip, -lincons->lhs) )
+         mult = +1;
+      else if( SCIPisInfinity(scip, lincons->rhs) )
+         mult = -1;
+   }
+
+   if( mult == 0 )
+   {
+      /* 3. the absolute value of the right hand side must be greater than that of the left hand side */
+      if( SCIPisGT(scip, ABS(lincons->rhs), ABS(lincons->lhs)) )
+         mult = +1;
+      else if( SCIPisLT(scip, ABS(lincons->rhs), ABS(lincons->lhs)) )
+         mult = -1;
+   }
+   
+   if( mult == 0 )
+   {
+      /* 4. multiply with +1 */
+      mult = +1;
+   }
+
+   assert(mult == +1 || mult == -1);
+   if( mult == -1 )
+   {
+      /* scale the constraint with -1 */
+      debugMessage("multiply linear constraint with -1.0\n");
+      debug(linconsPrint(scip, lincons, NULL));
+      linconsScale(scip, lincons, -1.0);
+   }
+
+   /*
+    * rationals to integrals
+    */
+   success = TRUE;
+   scm = 1;
+   for( i = 0; i < nvars && success && scm <= maxmult; ++i )
+   {
+      if( !SCIPisIntegral(scip, vals[i]) )
+      {
+         success = SCIPrealToRational(vals[i], epsilon, maxmult, &nominator, &denominator);
+         if( success )
+            scm = SCIPcalcSmaComMul(scm, denominator);
+      }
+   }
+   assert(scm >= 1);
+   success &= (scm <= maxmult);
+   if( success && scm != 1 )
+   {
+      /* scale the constraint with the smallest common multiple of all denominators */
+      debugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
+      debug(linconsPrint(scip, lincons, NULL));
+      linconsScale(scip, lincons, (Real)scm);
+   }
+
+   /*
+    * division by greatest common divisor
+    */
+   if( success && nvars >= 1 )
+   {
+      /* all coefficients are integral: divide them by their greatest common divisor */
+      assert(SCIPisIntegral(scip, vals[0]));
+      gcd = (Longint)(ABS(vals[0]) + feastol);
+      assert(gcd >= 1);
+      for( i = 1; i < nvars && gcd > 1; ++i )
+      {
+         assert(SCIPisIntegral(scip, vals[i]));
+         gcd = SCIPcalcGreComDiv(gcd, (Longint)(ABS(vals[i]) + feastol));
+      }
+
+      if( gcd > 1 )
+      {
+         /* divide the constaint by the greatest common divisor of the coefficients */
+         debugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
+         debug(linconsPrint(scip, lincons, NULL));
+         linconsScale(scip, lincons, 1.0/(Real)gcd);
+      }
+   }
+   
+   debugMessage("normalized constraint:\n");
+   debug(linconsPrint(scip, lincons, NULL));
+
+   return SCIP_OKAY;
+}
+
 static
 DECL_CONSTRANS(consTransLinear)
 {
@@ -1951,13 +2163,14 @@ DECL_CONSTRANS(consTransLinear)
    CHECK_OKAY( SCIPallocBlockMemory(scip, &targetdata) );
    targetdata->row = NULL;
 
-   todoMessage("normalize linear constraints");
-
    /* create linear constraint object */
    lincons = sourcedata->lincons;
    CHECK_OKAY( linconsCreateTransformed(scip, &targetdata->lincons,
                   lincons->nvars, lincons->vars, lincons->vals, lincons->lhs, lincons->rhs,
                   lincons->local, lincons->modifiable, lincons->removeable) );
+
+   /* normalize constraint */
+   CHECK_OKAY( linconsNormalize(scip, targetdata->lincons) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -3687,8 +3900,8 @@ RETCODE SCIPincludeLinconsUpgrade(
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("Linear constraint handler not found");
-      return SCIP_INVALIDCALL;
+      errorMessage("linear constraint handler not found");
+      return SCIP_PLUGINNOTFOUND;
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3708,18 +3921,18 @@ RETCODE SCIPcreateConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              nvars,              /**< number of variables in the constraint */
+   int              nvars,              /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of row */
-   Real             rhs,                /**< right hand side of row */
+   Real             lhs,                /**< left hand side of constraint */
+   Real             rhs,                /**< right hand side of constraint */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -3731,8 +3944,8 @@ RETCODE SCIPcreateConsLinear(
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("Linear constraint handler not found");
-      return SCIP_INVALIDCALL;
+      errorMessage("linear constraint handler not found");
+      return SCIP_PLUGINNOTFOUND;
    }
 
    /* create the constraint specific data */
@@ -3928,6 +4141,8 @@ RETCODE SCIPupgradeConsLinear(
    Real val;
    Real lb;
    Real ub;
+   Real poscoeffsum;
+   Real negcoeffsum;
    Bool integral;
    Bool upgraded;
    int nposbin;
@@ -3978,7 +4193,11 @@ RETCODE SCIPupgradeConsLinear(
    if( lincons->modifiable )
       return SCIP_OKAY;
 
-   /* calculate some statistics on linear constraint */
+
+   /* 
+    * calculate some statistics on linear constraint
+    */
+
    nposbin = 0;
    nnegbin = 0;
    nposint = 0;
@@ -3994,6 +4213,8 @@ RETCODE SCIPupgradeConsLinear(
    ncoeffspfrac = 0;
    ncoeffsnfrac = 0;
    integral = TRUE;
+   poscoeffsum = 0.0;
+   negcoeffsum = 0.0;
    for( i = 0; i < lincons->nvars; ++i )
    {
       var = lincons->vars[i];
@@ -4029,8 +4250,7 @@ RETCODE SCIPupgradeConsLinear(
             nnegimpl++;
          break;
       case SCIP_VARTYPE_CONTINOUS:
-         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral &= (SCIPisIntegral(scip, val) && SCIPisEQ(scip, lb, ub));
+         integral &= (SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb));
          if( val >= 0.0 )
             nposcont++;
          else
@@ -4058,13 +4278,24 @@ RETCODE SCIPupgradeConsLinear(
          else
             ncoeffsnfrac++;
       }
+      if( SCIPisPositive(scip, val) )
+         poscoeffsum += val;
+      else
+         negcoeffsum += val;
    }
+
+
+
+   /*
+    * call the upgrading methods
+    */
 
    debugMessage("upgrading linear constraint <%s> (%d upgrade methods):\n", 
       SCIPconsGetName(cons), conshdlrdata->nlinconsupgrades);
-   debugMessage(" +bin=%d -bin=%d +int=%d -int=%d +impl=%d -impl=%d +cont=%d -cont=%d +1=%d -1=%d +I=%d -I=%d +F=%d -F=%d integral=%d\n",
+   debugMessage(" +bin=%d -bin=%d +int=%d -int=%d +impl=%d -impl=%d +cont=%d -cont=%d +1=%d -1=%d +I=%d -I=%d +F=%d -F=%d possum=%g negsum=%g integral=%d\n",
       nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
-      ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac, integral);
+      ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
+      poscoeffsum, negcoeffsum, integral);
 
    /* try all upgrading methods in priority order */
    for( i = 0; i < conshdlrdata->nlinconsupgrades && *upgdcons == NULL; ++i )
@@ -4073,7 +4304,8 @@ RETCODE SCIPupgradeConsLinear(
                      lincons->vars, lincons->vals, lincons->lhs, lincons->rhs, 
                      lincons->local, lincons->removeable,
                      nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
-                     ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac, integral,
+                     ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
+                     poscoeffsum, negcoeffsum, integral,
                      upgdcons) );
    }
 

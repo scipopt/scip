@@ -2084,8 +2084,8 @@ Longint SCIPcalcGreComDiv(
 
 /** calculates the smallest common multiple of the two given values */
 Longint SCIPcalcSmaComMul(
-   Longint          val1,               /**< first value of greatest common devisor calculation */
-   Longint          val2                /**< second value of greatest common devisor calculation */
+   Longint          val1,               /**< first value of smallest common multiple calculation */
+   Longint          val2                /**< second value of smallest common multiple calculation */
    )
 {
    Longint gcd;
@@ -2096,6 +2096,71 @@ Longint SCIPcalcSmaComMul(
    gcd = SCIPcalcGreComDiv(val1, val2);
    
    return val1/gcd * val2;
+}
+
+/** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
+ *  successful
+ */
+Bool SCIPrealToRational(
+   Real             val,                /**< real value to convert into rational number */
+   Real             epsilon,            /**< maximal allowed difference between rational and real value */
+   Longint          maxdnom,            /**< maximal denominator allowed */
+   Longint*         nominator,          /**< pointer to store the nominator of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator of the rational number */
+   )
+{
+   Real a;
+   Real b;
+   Real g0;
+   Real g1;
+   Real gx;
+   Real h0;
+   Real h1;
+   Real hx;
+
+   assert(nominator != NULL);
+   assert(denominator != NULL);
+
+   b = val;
+   a = EPSFLOOR(b, epsilon);
+   g0 = a;
+   g1 = 1.0;
+   h0 = 1.0;
+   h1 = 0.0;
+
+   while( !EPSEQ(val, g0/h0, epsilon) )
+   {
+      assert(EPSGT(b, a, epsilon));
+      assert(h0 >= 0.0);
+      assert(h1 >= 0.0);
+
+      b = 1.0 / (b - a);
+      a = EPSFLOOR(b, epsilon);
+
+      assert(a >= 0.0);
+
+      gx = g0;
+      hx = h0;
+
+      g0 = a * g0 + g1;
+      h0 = a * h0 + h1;
+
+      g1 = gx;
+      h1 = hx;
+      
+      if( h0 > maxdnom )
+         return FALSE;
+   }
+
+   if( ABS(g0) > (LONGINT_MAX >> 4) || h0 > (LONGINT_MAX >> 4) )
+      return FALSE;
+
+   assert(h0 >= 0.0);
+
+   *nominator = (Longint)g0;
+   *denominator = (Longint)h0;
+
+   return TRUE;
 }
 
 

@@ -34,32 +34,34 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
 /** upgrading method for linear constraints into more specific constraints
  *
  *  input:
- *    scip            : SCIP main data structure
- *    cons            : the linear constraint to upgrade
- *    nvars           : number of variables in the constraint
- *    vars            : array with constraint variables
- *    vals            : array with constraint coefficients
- *    lhs             : left hand side of linear constraint
- *    rhs             : right hand side of linear constraint
- *    local           : TRUE iff linear constraint is only locally valid
- *    removeable      : TRUE iff separated rows of linear constraint should be removed from LP due to aging or cleanup
- *    nposbin         : number of binary variables with positive coefficient
- *    nnegbin         : number of binary variables with negative coefficient
- *    nposint         : number of integer variables with positive coefficient
- *    nnegint         : number of integer variables with negative coefficient
- *    nposimpl        : number of implicit integer variables with positive coefficient
- *    nnegimpl        : number of implicit integer variables with negative coefficient
- *    nposcont        : number of continous variables with positive coefficient
- *    nnegcont        : number of continous variables with negative coefficient
- *    ncoeffspone     : number of +1 coefficients
- *    ncoeffsnone     : number of -1 coefficients
- *    ncoeffspint     : number of positive integral coefficients other than +1
- *    ncoeffsnint     : number of negative integral coefficients other than -1
- *    ncoeffspfrac    : number of positive fractional coefficients
- *    ncoeffsnfrac    : number of negative fractional coefficients
- *    integral        : TRUE iff constraints activity value is always integral
- *    upgdcons        : pointer to store the upgraded constraint
- *    upgraded        : pointer to store TRUE iff the constraint was upgraded
+ *  - scip            : SCIP main data structure
+ *  - cons            : the linear constraint to upgrade
+ *  - nvars           : number of variables in the constraint
+ *  - vars            : array with constraint variables
+ *  - vals            : array with constraint coefficients
+ *  - lhs             : left hand side of linear constraint
+ *  - rhs             : right hand side of linear constraint
+ *  - local           : TRUE iff linear constraint is only locally valid
+ *  - removeable      : TRUE iff separated rows of linear constraint should be removed from LP due to aging or cleanup
+ *  - nposbin         : number of binary variables with positive coefficient
+ *  - nnegbin         : number of binary variables with negative coefficient
+ *  - nposint         : number of integer variables with positive coefficient
+ *  - nnegint         : number of integer variables with negative coefficient
+ *  - nposimpl        : number of implicit integer variables with positive coefficient
+ *  - nnegimpl        : number of implicit integer variables with negative coefficient
+ *  - nposcont        : number of continous variables with positive coefficient
+ *  - nnegcont        : number of continous variables with negative coefficient
+ *  - ncoeffspone     : number of +1 coefficients
+ *  - ncoeffsnone     : number of -1 coefficients
+ *  - ncoeffspint     : number of positive integral coefficients other than +1
+ *  - ncoeffsnint     : number of negative integral coefficients other than -1
+ *  - ncoeffspfrac    : number of positive fractional coefficients
+ *  - ncoeffsnfrac    : number of negative fractional coefficients
+ *  - poscoeffsum     : sum of all positive coefficients
+ *  - negcoeffsum     : sum of all negative coefficients
+ *  - integral        : TRUE iff constraints activity value is always integral
+ *  - upgdcons        : pointer to store the upgraded constraint
+ *  - upgraded        : pointer to store TRUE iff the constraint was upgraded
  *
  *  possible return values for *result:
  *    SCIP_DIDNOTFIND : the linear constraint data was not upgraded to a more specific constraint
@@ -69,7 +71,7 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
             Bool local, Bool removeable, \
             int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
             int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
-            Bool integral, CONS** upgdcons)
+            Real poscoeffsum, Real negcoeffsum, Bool integral, CONS** upgdcons)
 
 
 #include "scip.h"
@@ -100,18 +102,18 @@ RETCODE SCIPcreateConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the constraint */
+   int              nvars,              /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of row */
-   Real             rhs,                /**< right hand side of row */
+   Real             lhs,                /**< left hand side of constraint */
+   Real             rhs,                /**< right hand side of constraint */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
 /** adds coefficient in linear constraint */

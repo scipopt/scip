@@ -32,9 +32,9 @@
 
 #define CONSHDLR_NAME          "setppc"
 #define CONSHDLR_DESC          "set partitioning / packing / covering constraint"
-#define CONSHDLR_SEPAPRIORITY   +700200
-#define CONSHDLR_ENFOPRIORITY   +700200
-#define CONSHDLR_CHECKPRIORITY  -700200
+#define CONSHDLR_SEPAPRIORITY   +700000
+#define CONSHDLR_ENFOPRIORITY   +700000
+#define CONSHDLR_CHECKPRIORITY  -700000
 #define CONSHDLR_SEPAFREQ             4
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE
@@ -42,7 +42,7 @@
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
 
-#define LINCONSUPGD_PRIORITY    +700200
+#define LINCONSUPGD_PRIORITY    +700000
 
 #define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
