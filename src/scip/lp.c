@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.150 2004/10/13 14:36:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.151 2004/10/13 17:41:56 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7993,6 +7993,8 @@ RETCODE lpSolve(
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
+   Bool solvedagain;
+
    assert(lp != NULL);
    assert(lp->flushed);
    assert(set != NULL);
@@ -8000,6 +8002,9 @@ RETCODE lpSolve(
 
    checkLinks(lp);
 
+   solvedagain = FALSE;
+
+ SOLVEAGAIN:
    /* call simplex */
    CHECK_OKAY( lpSolveStable(lp, set, stat, fastmip, fromscratch, useprimal, lperror) );
 
@@ -8059,17 +8064,28 @@ RETCODE lpSolve(
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
    }
+   else if( !solvedagain )
+   {
+      useprimal = !useprimal;
+      solvedagain = TRUE;
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s simplex\n", 
+         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
+      goto SOLVEAGAIN;
+   }
    else
    {
-      errorMessage("unknown return status of %s simplex (internal status: %d)\n", 
-         lp->lastwasprimal ? "primal" : "dual", SCIPlpiGetInternalStatus(lp->lpi));
+      errorMessage("(node %lld) error or unknown return status of %s simplex in LP %d (internal status: %d)\n", 
+         stat->nnodes, lp->lastwasprimal ? "primal" : "dual", stat->nlps, SCIPlpiGetInternalStatus(lp->lpi));
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       return SCIP_LPERROR;
    }
 
    lp->solved = TRUE;
 
-   debugMessage("solving %s LP returned solstat=%d\n", lp->lastwasprimal ? "primal" : "dual", lp->lpsolstat);
+   debugMessage("solving %s LP returned solstat=%d (internal status: %d, pfeas=%d, dfeas=%d)\n",
+      lp->lastwasprimal ? "primal" : "dual", lp->lpsolstat, SCIPlpiGetInternalStatus(lp->lpi),
+      SCIPlpiIsPrimalFeasible(lp->lpi), SCIPlpiIsDualFeasible(lp->lpi));
 
    return SCIP_OKAY;
 }

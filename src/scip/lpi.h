@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.42 2004/10/05 09:00:54 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.43 2004/10/13 17:41:56 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -405,27 +405,51 @@ RETCODE SCIPlpiGetBasisFeasibility(
    Bool*            dualfeasible        /**< stores dual feasibility status */
    );
 
-/** returns TRUE iff LP is primal unbounded */
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point) */
+extern 
+Bool SCIPlpiHasPrimalRay(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is proven to be primal unbounded */
 extern 
 Bool SCIPlpiIsPrimalUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    );
 
-/** returns TRUE iff LP is primal infeasible */
+/** returns TRUE iff LP is proven to be primal infeasible */
 extern 
 Bool SCIPlpiIsPrimalInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    );
 
-/** returns TRUE iff LP is dual unbounded */
+/** returns TRUE iff LP is proven to be primal feasible */
+extern 
+Bool SCIPlpiIsPrimalFeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point) */
+extern 
+Bool SCIPlpiHasDualRay(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is proven to be dual unbounded */
 extern 
 Bool SCIPlpiIsDualUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    );
 
-/** returns TRUE iff LP is dual infeasible */
+/** returns TRUE iff LP is proven to be dual infeasible */
 extern 
 Bool SCIPlpiIsDualInfeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is proven to be dual feasible */
+extern 
+Bool SCIPlpiIsDualFeasible(
    LPI*             lpi                 /**< LP interface structure */
    );
 

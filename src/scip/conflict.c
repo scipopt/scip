@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.64 2004/10/05 16:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.65 2004/10/13 17:41:55 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1828,8 +1828,7 @@ RETCODE conflictAnalyzeLPAltpoly(
    (*iterations) += iter;
 
    /* check, if the LP is stable and we have a primal feasible solution */
-   if( SCIPlpiIsStable(conflict->lpi)
-      && (SCIPlpiIsOptimal(conflict->lpi) || SCIPlpiIsPrimalUnbounded(conflict->lpi)) )
+   if( SCIPlpiIsStable(conflict->lpi) && SCIPlpiIsPrimalFeasible(conflict->lpi) )
    {
       COL* col;
       Real* psol;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.73 2004/10/12 14:06:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.74 2004/10/13 17:41:56 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1790,6 +1790,8 @@ RETCODE SCIPlpiSolvePrimal(
    )
 {
    int retval;
+   int primalfeasible;
+   int dualfeasible;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
@@ -1815,14 +1817,17 @@ RETCODE SCIPlpiSolvePrimal(
    }
 
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-   debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+   debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d\n", lpi->solstat, primalfeasible, dualfeasible);
 
-   if( lpi->solstat == CPX_STAT_INForUNBD )
+   if( lpi->solstat == CPX_STAT_INForUNBD
+      || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible)
+      || (lpi->solstat == CPX_STAT_UNBOUNDED && !primalfeasible) )
    {
       if( getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON )
       {
          /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
-         debugMessage("CPLEX returned INForUNBD -> calling CPLEX primal simplex again without presolve\n");
+         debugMessage("presolver may have solved the problem -> calling CPLEX primal simplex again without presolve\n");
          
          /* switch off preprocessing */
          setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
@@ -1862,6 +1867,8 @@ RETCODE SCIPlpiSolveDual(
    )
 {
    int retval;
+   int primalfeasible;
+   int dualfeasible;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
@@ -1887,14 +1894,17 @@ RETCODE SCIPlpiSolveDual(
    }
 
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-   debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+   debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d\n", lpi->solstat, primalfeasible, dualfeasible);
 
-   if( lpi->solstat == CPX_STAT_INForUNBD )
+   if( lpi->solstat == CPX_STAT_INForUNBD
+      || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible)
+      || (lpi->solstat == CPX_STAT_UNBOUNDED && !primalfeasible) )
    {
       if( getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON )
       {
          /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
-         debugMessage("CPLEX returned INForUNBD -> calling CPLEX dual simplex again without presolve\n");
+         debugMessage("presolver may have solved the problem -> calling CPLEX dual simplex again without presolve\n");
          
          /* switch off preprocessing */
          setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
@@ -2153,7 +2163,20 @@ RETCODE SCIPlpiGetBasisFeasibility(
    return SCIP_OKAY;
 }
 
-/** returns TRUE iff LP is primal unbounded */
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point) */
+Bool SCIPlpiHasPrimalRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   return (lpi->solstat == CPX_STAT_UNBOUNDED);
+}
+
+/** returns TRUE iff LP is proven to be primal unbounded */
 Bool SCIPlpiIsPrimalUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -2170,14 +2193,34 @@ Bool SCIPlpiIsPrimalUnbounded(
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
-    * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
-    * result as instability, s.t. the problem is resolved from scratch
+    * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we cannot conclude,
+    * that the problem is unbounded
     */
-   return (primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD));
+   return ((primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD))
+      || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED);
 }
 
-/** returns TRUE iff LP is primal infeasible */
+/** returns TRUE iff LP is proven to be primal infeasible */
 Bool SCIPlpiIsPrimalInfeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   int dualfeasible;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   debugMessage("checking for primal infeasibility\n");
+
+   ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
+
+   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible));
+}
+
+/** returns TRUE iff LP is proven to be primal feasible */
+Bool SCIPlpiIsPrimalFeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -2188,18 +2231,27 @@ Bool SCIPlpiIsPrimalInfeasible(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   debugMessage("checking for primal infeasibility\n");
+   debugMessage("checking for primal feasibility\n");
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
-
-   /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
-    * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
-    * result as instability, s.t. the problem is resolved from scratch
-    */
-   return (lpi->solstat == CPX_STAT_INFEASIBLE || (!primalfeasible && lpi->solstat == CPX_STAT_INForUNBD));
+   
+   return primalfeasible;
 }
 
-/** returns TRUE iff LP is dual unbounded */
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point) */
+Bool SCIPlpiHasDualRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   return (lpi->solstat == CPX_STAT_INFEASIBLE);
+}
+
+/** returns TRUE iff LP is proven to be dual unbounded */
 Bool SCIPlpiIsDualUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -2215,11 +2267,30 @@ Bool SCIPlpiIsDualUnbounded(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible));
+   return (dualfeasible && (lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD));
 }
 
-/** returns TRUE iff LP is dual infeasible */
+/** returns TRUE iff LP is proven to be dual infeasible */
 Bool SCIPlpiIsDualInfeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   int primalfeasible;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   debugMessage("checking for dual infeasibility\n");
+
+   ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
+
+   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
+}
+
+/** returns TRUE iff LP is proven to be dual feasible */
+Bool SCIPlpiIsDualFeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -2230,11 +2301,11 @@ Bool SCIPlpiIsDualInfeasible(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   debugMessage("checking for dual infeasibility\n");
+   debugMessage("checking for dual feasibility\n");
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
-
-   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && !dualfeasible));
+   
+   return dualfeasible;
 }
 
 /** returns TRUE iff LP was solved to optimality */
