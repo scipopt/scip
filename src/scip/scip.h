@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.190 2004/12/10 14:23:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.191 2004/12/14 12:35:03 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -949,6 +949,8 @@ RETCODE SCIPincludeBranchrule(
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
+   DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
+   DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.7 2004/07/14 14:05:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.8 2004/12/14 12:35:03 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -110,6 +110,36 @@ DECL_BRANCHEXIT(branchExitXxx)
 #endif
 
 
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+#if 0
+static
+DECL_BRANCHINITSOL(branchInitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx branching rule not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define branchInitsolXxx NULL
+#endif
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+#if 0
+static
+DECL_BRANCHEXITSOL(branchExitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx branching rule not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define branchExitsolXxx NULL
+#endif
+
+
 /** branching execution method for fractional LP solutions */
 #if 0
 static
@@ -160,7 +190,9 @@ RETCODE SCIPincludeBranchruleXxx(
 
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-         branchFreeXxx, branchInitXxx, branchExitXxx, branchExeclpXxx, branchExecpsXxx,
+         branchFreeXxx, branchInitXxx, branchExitXxx,
+         branchInitsolXxx, branchExitsolXxx,
+         branchExeclpXxx, branchExecpsXxx,
          branchruledata) );
 
    /* add xxx branching rule parameters */

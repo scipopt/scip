@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.19 2004/11/29 12:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.20 2004/12/14 12:35:03 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -174,6 +174,14 @@ DECL_BRANCHFREE(branchFreeRelpscost)
 
 /** deinitialization method of branching rule (called before transformed problem is freed) */
 #define branchExitRelpscost NULL
+
+
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+#define branchInitsolRelpscost NULL
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+#define branchExitsolRelpscost NULL
 
 
 #define MINMAXDEPTH   20
@@ -707,7 +715,7 @@ RETCODE SCIPincludeBranchruleRelpscost(
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, 
+         branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, branchInitsolRelpscost, branchExitsolRelpscost, 
          branchExeclpRelpscost, branchExecpsRelpscost,
          branchruledata) );
 

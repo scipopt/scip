@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.31 2004/10/05 11:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.32 2004/12/14 12:35:02 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -148,6 +148,8 @@ RETCODE SCIPbranchruleCreate(
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
+   DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
+   DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
@@ -170,6 +172,20 @@ RETCODE SCIPbranchruleInit(
 /** deinitializes branching rule */
 extern
 RETCODE SCIPbranchruleExit(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** informs branching rule that the branch and bound process is being started */
+extern
+RETCODE SCIPbranchruleInitsol(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** informs branching rule that the branch and bound process data is being freed */
+extern
+RETCODE SCIPbranchruleExitsol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip                /**< SCIP data structure */   
    );

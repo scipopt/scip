@@ -29,6 +29,7 @@ interface:
   s.t. one can include the include files without NDEBUG and use the optimized library
 - new method SCIPprintMemoryDiagnostic()
 - new methods SCIPfindObj...() and SCIPgetObj...() in C++ wrapper interface to get the corresponding plugin object
+- new branching rule plugin methods INITSOL and EXITSOL
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm

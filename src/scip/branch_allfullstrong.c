@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.14 2004/11/29 12:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.15 2004/12/14 12:35:02 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -425,6 +425,14 @@ DECL_BRANCHINIT(branchInitAllfullstrong)
 #define branchExitAllfullstrong NULL
 
 
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+#define branchInitsolAllfullstrong NULL
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+#define branchExitsolAllfullstrong NULL
+
+
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
@@ -481,6 +489,7 @@ RETCODE SCIPincludeBranchruleAllfullstrong(
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeAllfullstrong, branchInitAllfullstrong, branchExitAllfullstrong, 
+         branchInitsolAllfullstrong, branchExitsolAllfullstrong, 
          branchExeclpAllfullstrong, branchExecpsAllfullstrong,
          branchruledata) );
 

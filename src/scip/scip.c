@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.236 2004/12/10 14:23:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.237 2004/12/14 12:35:03 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1863,6 +1863,8 @@ RETCODE SCIPincludeBranchrule(
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
+   DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
+   DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
@@ -1873,7 +1875,8 @@ RETCODE SCIPincludeBranchrule(
    CHECK_OKAY( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth, 
-         maxbounddist, branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
+         maxbounddist, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
+         branchexeclp, branchexecps, branchruledata) );
    CHECK_OKAY( SCIPsetIncludeBranchrule(scip->set, branchrule) );
    
    return SCIP_OKAY;
@@ -3526,7 +3529,7 @@ RETCODE initSolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int h;
+   int i;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -3562,15 +3565,21 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPprobInitSolve(scip->transprob, scip->set) );
 
    /* inform constraint handlers that the branch and bound process starts now */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitsol(scip->set->conshdlrs[h], scip) );
+      CHECK_OKAY( SCIPconshdlrInitsol(scip->set->conshdlrs[i], scip) );
+   }
+   
+   /* inform branching rules that the branch and bound process starts now */
+   for( i = 0; i < scip->set->nbranchrules; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleInitsol(scip->set->branchrules[i], scip) );
    }
    
    /* inform primal heuristics that the branch and bound process starts now */
-   for( h = 0; h < scip->set->nheurs; ++h )
+   for( i = 0; i < scip->set->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurInitsol(scip->set->heurs[h], scip->set) );
+      CHECK_OKAY( SCIPheurInitsol(scip->set->heurs[i], scip->set) );
    }
 
    /* remember number of constraints */
@@ -3617,7 +3626,7 @@ RETCODE freeSolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int h;
+   int i;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -3650,9 +3659,15 @@ RETCODE freeSolve(
    CHECK_OKAY( SCIPcutpoolClear(scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
 
    /* deinitialize constraint handlers */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExitsol(scip->set->conshdlrs[h], scip) );
+      CHECK_OKAY( SCIPconshdlrExitsol(scip->set->conshdlrs[i], scip) );
+   }
+
+   /* deinitialize branching rules */
+   for( i = 0; i < scip->set->nbranchrules; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleExitsol(scip->set->branchrules[i], scip) );
    }
 
    /* we have to free the tree prior to the problem deinitialization, because the rows stored in the forks and

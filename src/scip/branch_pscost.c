@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.6 2004/11/29 12:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.7 2004/12/14 12:35:03 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -52,6 +52,14 @@
 
 /** deinitialization method of branching rule (called before transformed problem is freed) */
 #define branchExitPscost NULL
+
+
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+#define branchInitsolPscost NULL
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+#define branchExitsolPscost NULL
 
 
 /** branching execution method for fractional LP solutions */
@@ -165,7 +173,7 @@ RETCODE SCIPincludeBranchrulePscost(
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchFreePscost, branchInitPscost, branchExitPscost, 
+         branchFreePscost, branchInitPscost, branchExitPscost, branchInitsolPscost, branchExitsolPscost, 
          branchExeclpPscost, branchExecpsPscost,
          branchruledata) );
 

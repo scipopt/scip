@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.c,v 1.13 2004/10/28 14:30:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.c,v 1.14 2004/12/14 12:35:02 bzfpfend Exp $"
 
 /**@file   branch_leastinf.c
  * @brief  least infeasible LP branching rule
@@ -42,6 +42,27 @@
  * Callback methods
  */
 
+/** destructor of branching rule to free user data (called when SCIP is exiting) */
+#define branchFreeLeastinf NULL
+
+
+/** initialization method of branching rule (called after problem was transformed) */
+#define branchInitLeastinf NULL
+
+
+/** deinitialization method of branching rule (called before transformed problem is freed) */
+#define branchExitLeastinf NULL
+
+
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+#define branchInitsolLeastinf NULL
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+#define branchExitsolLeastinf NULL
+
+
+/** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpLeastinf)
 {  /*lint --e{715}*/
@@ -103,6 +124,9 @@ DECL_BRANCHEXECLP(branchExeclpLeastinf)
 }
 
 
+/** branching execution method for not completely fixed pseudo solutions */
+#define branchExecpsLeastinf NULL
+
 
 
 
@@ -115,10 +139,17 @@ RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   BRANCHRULEDATA* branchruledata;
+
+   /* create inference branching rule data */
+   branchruledata = NULL;
+
+   /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         NULL, NULL, NULL, branchExeclpLeastinf, NULL,
-         NULL) );
+         branchFreeLeastinf, branchInitLeastinf, branchExitLeastinf, branchInitsolLeastinf, branchExitsolLeastinf, 
+         branchExeclpLeastinf, branchExecpsLeastinf,
+         branchruledata) );
 
    return SCIP_OKAY;
 }

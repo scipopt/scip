@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.6 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.7 2004/12/14 12:35:03 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -54,6 +54,28 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - branchrule      : the branching rule itself
  */
 #define DECL_BRANCHEXIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
+
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The branching rule may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
+ */
+#define DECL_BRANCHINITSOL(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The branching rule should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
+ */
+#define DECL_BRANCHEXITSOL(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
 /** branching execution method for fractional LP solutions
  *

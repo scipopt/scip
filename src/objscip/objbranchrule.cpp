@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.10 2004/12/14 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.11 2004/12/14 12:35:03 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -107,6 +107,40 @@ DECL_BRANCHEXIT(branchExitObj)
 }
 
 
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+static
+DECL_BRANCHINITSOL(branchInitsolObj)
+{  /*lint --e{715}*/
+   BRANCHRULEDATA* branchruledata;
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->objbranchrule != NULL);
+
+   /* call virtual method of branchrule object */
+   CHECK_OKAY( branchruledata->objbranchrule->scip_initsol(scip, branchrule) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+static
+DECL_BRANCHEXITSOL(branchExitsolObj)
+{  /*lint --e{715}*/
+   BRANCHRULEDATA* branchruledata;
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->objbranchrule != NULL);
+
+   /* call virtual method of branchrule object */
+   CHECK_OKAY( branchruledata->objbranchrule->scip_exitsol(scip, branchrule) );
+
+   return SCIP_OKAY;
+}
+
+
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpObj)
@@ -163,7 +197,8 @@ RETCODE SCIPincludeObjBranchrule(
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
-         branchFreeObj, branchInitObj, branchExitObj, branchExeclpObj, branchExecpsObj,
+         branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
+         branchExeclpObj, branchExecpsObj,
          branchruledata) );
 
    return SCIP_OKAY;

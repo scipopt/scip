@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.55 2004/11/26 14:22:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.56 2004/12/14 12:35:02 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -727,6 +727,8 @@ RETCODE SCIPbranchruleCreate(
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
+   DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
+   DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
@@ -748,6 +750,8 @@ RETCODE SCIPbranchruleCreate(
    (*branchrule)->branchfree = branchfree;
    (*branchrule)->branchinit = branchinit;
    (*branchrule)->branchexit = branchexit;
+   (*branchrule)->branchinitsol = branchinitsol;
+   (*branchrule)->branchexitsol = branchexitsol;
    (*branchrule)->branchexeclp = branchexeclp;
    (*branchrule)->branchexecps = branchexecps;
    (*branchrule)->branchruledata = branchruledata;
@@ -859,6 +863,40 @@ RETCODE SCIPbranchruleExit(
       CHECK_OKAY( branchrule->branchexit(scip, branchrule) );
    }
    branchrule->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs branching rule that the branch and bound process is being started */
+RETCODE SCIPbranchruleInitsol(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(branchrule != NULL);
+
+   /* call solving process initialization method of branching rule */
+   if( branchrule->branchinitsol != NULL )
+   {
+      CHECK_OKAY( branchrule->branchinitsol(scip, branchrule) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs branching rule that the branch and bound process data is being freed */
+RETCODE SCIPbranchruleExitsol(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(branchrule != NULL);
+
+   /* call solving process deinitialization method of branching rule */
+   if( branchrule->branchexitsol != NULL )
+   {
+      CHECK_OKAY( branchrule->branchexitsol(scip, branchrule) );
+   }
 
    return SCIP_OKAY;
 }
