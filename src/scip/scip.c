@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.276 2005/02/25 14:27:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.277 2005/02/28 13:26:22 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3449,7 +3449,7 @@ RETCODE transformProb(
    infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
    /* call init methods of plugins */
-   CHECK_OKAY( SCIPsetInitPlugins(scip->set) );
+   CHECK_OKAY( SCIPsetInitPlugins(scip->set, scip->mem->solvemem, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -3488,7 +3488,7 @@ RETCODE initPresolve(
          scip->primal, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue) );
 
    /* inform plugins that the presolving is abound to begin */
-   CHECK_OKAY( SCIPsetInitprePlugins(scip->set, unbounded, infeasible) );
+   CHECK_OKAY( SCIPsetInitprePlugins(scip->set, scip->mem->solvemem, scip->stat, unbounded, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -3509,7 +3509,7 @@ RETCODE exitPresolve(
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
    /* inform plugins that the presolving is finished, and perform final modifications */
-   CHECK_OKAY( SCIPsetExitprePlugins(scip->set, unbounded, infeasible) );
+   CHECK_OKAY( SCIPsetExitprePlugins(scip->set, scip->mem->solvemem, scip->stat, unbounded, infeasible) );
 
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
@@ -3649,7 +3649,7 @@ RETCODE presolveRound(
          continue;
 
       CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat, 
-            scip->transprob, onlydelayed, scip->stat->npresolrounds,
+            onlydelayed, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
@@ -3889,7 +3889,7 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPprobInitSolve(scip->transprob, scip->set) );
 
    /* inform plugins that the branch and bound process starts now */
-   CHECK_OKAY( SCIPsetInitsolPlugins(scip->set) );
+   CHECK_OKAY( SCIPsetInitsolPlugins(scip->set, scip->mem->solvemem, scip->stat) );
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -3962,7 +3962,7 @@ RETCODE freeSolve(
    CHECK_OKAY( SCIPcutpoolClear(scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
 
    /* inform plugins that the branch and bound process is finished */
-   CHECK_OKAY( SCIPsetExitsolPlugins(scip->set) );
+   CHECK_OKAY( SCIPsetExitsolPlugins(scip->set, scip->mem->solvemem, scip->stat) );
 
    /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
@@ -4001,7 +4001,7 @@ RETCODE freeTransform(
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING);
 
    /* call exit methods of plugins */
-   CHECK_OKAY( SCIPsetExitPlugins(scip->set) );
+   CHECK_OKAY( SCIPsetExitPlugins(scip->set, scip->mem->solvemem, scip->stat) );
 
    /* switch stage to FREETRANS */
    scip->set->stage = SCIP_STAGE_FREETRANS;
@@ -9979,8 +9979,8 @@ RETCODE SCIPcheckSolOrig(
    {
       if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
       {
-         CHECK_OKAY( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->solvemem, scip->set, scip->stat, 
-               scip->origprob, sol, TRUE, TRUE, &result) );
+         CHECK_OKAY( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->solvemem, scip->set, scip->stat, sol,
+               TRUE, TRUE, &result) );
          if( result != SCIP_FEASIBLE )
          {
             *feasible = FALSE;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.29 2005/02/25 14:27:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.30 2005/02/28 13:26:23 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -69,14 +69,15 @@ struct Cons
    unsigned int     obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int     deleted:1;          /**< TRUE iff constraint was globally deleted */
    unsigned int     update:1;           /**< TRUE iff constraint has to be updated in update phase */
+   unsigned int     updateinsert:1;     /**< TRUE iff constraint has to be inserted in the conss array */
    unsigned int     updateactivate:1;   /**< TRUE iff constraint has to be activated in update phase */
    unsigned int     updatedeactivate:1; /**< TRUE iff constraint has to be deactivated in update phase */
    unsigned int     updateenable:1;     /**< TRUE iff constraint has to be enabled in update phase */
    unsigned int     updatedisable:1;    /**< TRUE iff constraint has to be disabled in update phase */
    unsigned int     updatepropenable:1; /**< TRUE iff constraint's propagation has to be enabled in update phase */
    unsigned int     updatepropdisable:1;/**< TRUE iff constraint's propagation has to be disabled in update phase */
-   unsigned int     updatedelete:1;     /**< TRUE iff constraint has to be deleted in update phase */
    unsigned int     updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
+   unsigned int     updatefree:1;       /**< TRUE iff constraint has to be freed in update phase */
 };
 
 /** tracks additions and removals of the set of active constraints */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.56 2005/02/16 17:46:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.57 2005/02/28 13:26:23 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -858,7 +858,7 @@ RETCODE SCIPsolCheck(
 
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, prob, sol, 
+      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
             checkintegrality, checklprows, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 

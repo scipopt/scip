@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.143 2005/02/24 11:02:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.144 2005/02/28 13:26:23 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2033,7 +2033,9 @@ DISP* SCIPsetFindDisp(
 
 /** calls init methods of all plugins */
 RETCODE SCIPsetInitPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2050,7 +2052,7 @@ RETCODE SCIPsetInitPlugins(
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], set) );
+      CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], blkmem, set, stat) );
    }
 
    /* conflict handlers */
@@ -2119,7 +2121,9 @@ RETCODE SCIPsetInitPlugins(
 
 /** calls exit methods of all plugins */
 RETCODE SCIPsetExitPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2136,7 +2140,7 @@ RETCODE SCIPsetExitPlugins(
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], set) );
+      CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], blkmem, set, stat) );
    }
 
    /* conflict handlers */
@@ -2205,6 +2209,8 @@ RETCODE SCIPsetExitPlugins(
 /** calls initpre methods of all plugins */
 RETCODE SCIPsetInitprePlugins(
    SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat,               /**< dynamic problem statistics */
    Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
    Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
@@ -2237,7 +2243,7 @@ RETCODE SCIPsetInitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitpre(set->conshdlrs[i], set, &result) );
+      CHECK_OKAY( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2259,6 +2265,8 @@ RETCODE SCIPsetInitprePlugins(
 /** calls exitpre methods of all plugins */
 RETCODE SCIPsetExitprePlugins(
    SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat,               /**< dynamic problem statistics */
    Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
    Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
@@ -2291,7 +2299,7 @@ RETCODE SCIPsetExitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExitpre(set->conshdlrs[i], set, &result) );
+      CHECK_OKAY( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2312,7 +2320,9 @@ RETCODE SCIPsetExitprePlugins(
 
 /** calls initsol methods of all plugins */
 RETCODE SCIPsetInitsolPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2329,7 +2339,7 @@ RETCODE SCIPsetInitsolPlugins(
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitsol(set->conshdlrs[i], set) );
+      CHECK_OKAY( SCIPconshdlrInitsol(set->conshdlrs[i], blkmem, set, stat) );
    }
    
    /* conflict handlers */
@@ -2391,7 +2401,9 @@ RETCODE SCIPsetInitsolPlugins(
 
 /** calls exitsol methods of all plugins */
 RETCODE SCIPsetExitsolPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2408,7 +2420,7 @@ RETCODE SCIPsetExitsolPlugins(
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExitsol(set->conshdlrs[i], set) );
+      CHECK_OKAY( SCIPconshdlrExitsol(set->conshdlrs[i], blkmem, set, stat) );
    }
    
    /* conflict handlers */

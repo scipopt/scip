@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.173 2005/02/22 19:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.174 2005/02/28 13:26:23 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -97,7 +97,6 @@ RETCODE propagationRound(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    int              depth,              /**< depth level to use for propagator frequency checks */
    Bool             onlydelayed,        /**< should only delayed propagators be called? */
    Bool*            delayed,            /**< pointer to store whether a propagator was delayed */
@@ -147,7 +146,7 @@ RETCODE propagationRound(
       if( onlydelayed && !SCIPconshdlrWasPropagationDelayed(set->conshdlrs[i]) )
          continue;
 
-      CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[i], blkmem, set, stat, prob, depth, onlydelayed, &result) );
+      CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[i], blkmem, set, stat, depth, onlydelayed, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
@@ -230,13 +229,13 @@ RETCODE SCIPpropagateDomains(
       propround++;
 
       /* perform the propagation round by calling the propagators and constraint handlers */
-      CHECK_OKAY( propagationRound(blkmem, set, stat, prob, depth, FALSE, &delayed, &propagain, cutoff) );
+      CHECK_OKAY( propagationRound(blkmem, set, stat, depth, FALSE, &delayed, &propagain, cutoff) );
 
       /* if the propagation will be terminated, call the delayed propagators */
       while( delayed && !propagain && !(*cutoff) )
       {
          /* call the delayed propagators and constraint handlers */
-         CHECK_OKAY( propagationRound(blkmem, set, stat, prob, depth, TRUE, &delayed, &propagain, cutoff) );
+         CHECK_OKAY( propagationRound(blkmem, set, stat, depth, TRUE, &delayed, &propagain, cutoff) );
       }
    }
    while( propagain && !(*cutoff) && propround < maxproprounds );
@@ -632,6 +631,7 @@ RETCODE initRootLP(
    int v;
    int h;
 
+   assert(prob != NULL);
    assert(lp != NULL);
    assert(SCIPlpGetNCols(lp) == 0);
    assert(SCIPlpGetNRows(lp) == 0);
@@ -664,7 +664,7 @@ RETCODE initRootLP(
    debugMessage("init root LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, prob) );
+      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat) );
    }
    CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
@@ -747,7 +747,6 @@ RETCODE separationRound(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    LP*              lp,                 /**< LP data */
    SEPASTORE*       sepastore,          /**< separation storage */
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers sorted by separation priority */
@@ -808,8 +807,7 @@ RETCODE separationRound(
       if( onlydelayed && !SCIPconshdlrWasSeparationDelayed(set->conshdlrs[i]) )
          continue;
 
-      CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[i], blkmem, set, stat, prob, sepastore, actdepth, onlydelayed, 
-            &result) );
+      CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *separateagain = *separateagain || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
@@ -1112,7 +1110,7 @@ RETCODE priceAndCutLoop(
             && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
          {
             /* apply a separation round */
-            CHECK_OKAY( separationRound(blkmem, set, stat, prob, lp, sepastore, conshdlrs_sepa, actdepth, delayedsepa, 
+            CHECK_OKAY( separationRound(blkmem, set, stat, lp, sepastore, conshdlrs_sepa, actdepth, delayedsepa, 
                   &delayedsepa, &separateagain, &enoughcuts, cutoff) );
 
             if( !(*cutoff) && !lp->flushed )
@@ -1387,7 +1385,6 @@ RETCODE enforceConstraints(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    SEPASTORE*       sepastore,          /**< separation storage */
@@ -1409,7 +1406,6 @@ RETCODE enforceConstraints(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(SCIPtreeGetFocusNode(tree) != NULL);
-   assert(prob != NULL);
    assert(conshdlrs_enfo != NULL);
    assert(branched != NULL);
    assert(cutoff != NULL);
@@ -1452,11 +1448,11 @@ RETCODE enforceConstraints(
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
-         CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], blkmem, set, stat, prob, tree, sepastore, &result) );
+         CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], blkmem, set, stat, tree, sepastore, &result) );
       }
       else
       {
-         CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], blkmem, set, stat, prob, tree, objinfeasible, 
+         CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], blkmem, set, stat, tree, objinfeasible, 
                &result) );
          if( SCIPsepastoreGetNCuts(sepastore) != 0 )
          {
@@ -1906,7 +1902,7 @@ RETCODE solveNode(
          }
          
          /* call constraint enforcement */
-         CHECK_OKAY( enforceConstraints(blkmem, set, stat, prob, tree, lp, sepastore, conshdlrs_enfo,
+         CHECK_OKAY( enforceConstraints(blkmem, set, stat, tree, lp, sepastore, conshdlrs_enfo,
                &branched, cutoff, infeasible, &propagateagain, &solvelpagain) );
          assert(branched == (tree->nchildren > 0));
          assert(!branched || (!(*cutoff) && *infeasible && !propagateagain && !solvelpagain));

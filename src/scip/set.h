@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.83 2005/02/24 11:02:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.84 2005/02/28 13:26:23 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -522,19 +522,25 @@ DISP* SCIPsetFindDisp(
 /** calls init methods of all plugins */
 extern
 RETCODE SCIPsetInitPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls exit methods of all plugins */
 extern
 RETCODE SCIPsetExitPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls initpre methods of all plugins */
 extern
 RETCODE SCIPsetInitprePlugins(
    SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat,               /**< dynamic problem statistics */
    Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
    Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
@@ -543,6 +549,8 @@ RETCODE SCIPsetInitprePlugins(
 extern
 RETCODE SCIPsetExitprePlugins(
    SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat,               /**< dynamic problem statistics */
    Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
    Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
@@ -550,13 +558,17 @@ RETCODE SCIPsetExitprePlugins(
 /** calls initsol methods of all plugins */
 extern
 RETCODE SCIPsetInitsolPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls exitsol methods of all plugins */
 extern
 RETCODE SCIPsetExitsolPlugins(
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   BLKMEM*          blkmem,             /**< block memory */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calculate memory size for dynamically allocated arrays */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.19 2005/02/25 14:27:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.20 2005/02/28 13:26:22 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -528,7 +528,7 @@ Bool SCIPconsIsLocked(
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
 #define SCIPconsIsPropagationEnabled(cons)      \
    (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
-#define SCIPconsIsDeleted(cons)         ((cons)->deleted || (cons)->updatedelete)
+#define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial

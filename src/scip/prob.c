@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.69 2005/02/16 17:46:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.70 2005/02/28 13:26:22 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -195,22 +195,6 @@ RETCODE SCIPprobFree(
    assert(*prob != NULL);
    assert(set != NULL);
    
-   /* free user problem data */
-   if( (*prob)->transformed )
-   {
-      if( (*prob)->probdeltrans != NULL )
-      {
-         CHECK_OKAY( (*prob)->probdeltrans(set->scip, &(*prob)->probdata) );
-      }
-   }
-   else
-   {
-      if( (*prob)->probdelorig != NULL )
-      {
-         CHECK_OKAY( (*prob)->probdelorig(set->scip, &(*prob)->probdata) );
-      }
-   }
-
    /* remove all constraints from the problem */
    while( (*prob)->nconss > 0 )
    {
@@ -232,8 +216,6 @@ RETCODE SCIPprobFree(
       }
    }
 
-   freeMemoryArray(&(*prob)->name);
-
    /* free constraint array */
    freeMemoryArrayNull(&(*prob)->conss);
    
@@ -254,10 +236,27 @@ RETCODE SCIPprobFree(
    }
    freeMemoryArrayNull(&(*prob)->fixedvars);
 
+   /* free user problem data */
+   if( (*prob)->transformed )
+   {
+      if( (*prob)->probdeltrans != NULL )
+      {
+         CHECK_OKAY( (*prob)->probdeltrans(set->scip, &(*prob)->probdata) );
+      }
+   }
+   else
+   {
+      if( (*prob)->probdelorig != NULL )
+      {
+         CHECK_OKAY( (*prob)->probdelorig(set->scip, &(*prob)->probdata) );
+      }
+   }
+
    /* free hash tables for names */
    SCIPhashtableFree(&(*prob)->varnames);
    SCIPhashtableFree(&(*prob)->consnames);
 
+   freeMemoryArray(&(*prob)->name);
    freeMemory(prob);
    
    return SCIP_OKAY;
