@@ -83,11 +83,16 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
  *  which means that a valid LP solution exists.
  *
+ *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
+ *  method should process only the useful constraints in most runs, and only occasionally the remaining
+ *  nconss - nusefulconss constraints.
+ *
  *  input:
  *    scip            : SCIP main data structure
  *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    nusefulconss    : number of useful (non-obsolete) constraints to process
  *    result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
@@ -96,7 +101,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane
  *    SCIP_DIDNOTRUN  : the separator was skipped
  */
-#define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
+                                    RESULT* result)
 
 /** constraint enforcing method of constraint handler for LP solutions
  *
@@ -118,11 +124,16 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  constraint handler has to branch, to reduce a variable's domain, to create a cutting plane, or to add an
  *  additional constraint that cuts off the solution -- otherwise, the infeasibility cannot be resolved.
  *
+ *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The enforcing
+ *  method should process the useful constraints first, and only if no violation was found, the remaining
+ *  nconss - nusefulconss constraints must be enforced.
+ *
  *  input:
  *    scip            : SCIP main data structure
  *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    nusefulconss    : number of useful (non-obsolete) constraints to process
  *    result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
@@ -134,7 +145,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSENLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
+                                    RESULT* result)
 
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
@@ -148,11 +160,16 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  called in decreasing order of their enforcing priorities until the first constraint handler returned with
  *  the value SCIP_BRANCHED, SCIP_REDUCEDDOM, or SCIP_CONSADDED.
  *
+ *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The enforcing
+ *  method should process the useful constraints first, and only if no violation was found, the remaining
+ *  nconss - nusefulconss constraints must be enforced.
+ *
  *  input:
  *    scip            : SCIP main data structure
  *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    nusefulconss    : number of useful (non-obsolete) constraints to process
  *    result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
@@ -163,7 +180,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSENPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
+                                    RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
@@ -201,11 +219,16 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 
 /** domain propagation method of constraint handler
  *
+ *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The propagation
+ *  method should process only the useful constraints in most runs, and only occasionally the remaining
+ *  nconss - nusefulconss constraints.
+ *
  *  input:
  *    scip            : SCIP main data structure
  *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    nusefulconss    : number of useful (non-obsolete) constraints to process
  *    result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
@@ -214,7 +237,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
  *    SCIP_DIDNOTRUN  : the propagator was skipped
  */
-#define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
+                                    RESULT* result)
 
 
 
@@ -236,6 +260,7 @@ struct Cons
    CONSDATA*        consdata;           /**< data for this specific constraint */
    NODE*            node;               /**< node where this constraint was created, or NULL if it's a global constraint */
    int              nuses;              /**< number of times, this constraint is referenced */
+   int              age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    int              sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
    int              enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int              chckconsspos;       /**< position of constraint in the handler's chckconss array */
@@ -248,6 +273,13 @@ struct Cons
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
    unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
+   unsigned int     obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
+   unsigned int     update:1;           /**< TRUE iff constraint has to be updated in update phase */
+   unsigned int     updateactivate:1;   /**< TRUE iff constraint has to be activated in update phase */
+   unsigned int     updatedeactivate:1; /**< TRUE iff constraint has to be deactivated in update phase */
+   unsigned int     updateenable:1;     /**< TRUE iff constraint has to be enabled in update phase */
+   unsigned int     updatedisable:1;    /**< TRUE iff constraint has to be disabled in update phase */
+   unsigned int     updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
 };
 
 /** tracks additions and removals of the set of active constraints */
@@ -327,7 +359,9 @@ RETCODE SCIPconshdlrExit(
 extern
 RETCODE SCIPconshdlrSeparate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -337,7 +371,9 @@ RETCODE SCIPconshdlrSeparate(
 extern
 RETCODE SCIPconshdlrEnforceLPSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -347,7 +383,9 @@ RETCODE SCIPconshdlrEnforceLPSol(
 extern
 RETCODE SCIPconshdlrEnforcePseudoSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -355,7 +393,9 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
 extern
 RETCODE SCIPconshdlrCheck(
    CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
@@ -366,7 +406,9 @@ RETCODE SCIPconshdlrCheck(
 extern
 RETCODE SCIPconshdlrPropagate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -495,36 +537,10 @@ RETCODE SCIPconsRelease(
  */
 extern
 RETCODE SCIPconsDelete(
-   CONS**           cons,               /**< pointer to constraint to delete */
+   CONS*            cons,               /**< constraint to delete */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
-   );
-
-/** activates constraint */
-extern
-RETCODE SCIPconsActivate(
-   CONS*            cons,               /**< constraint */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-/** deactivates constraint */
-extern
-RETCODE SCIPconsDeactivate(
-   CONS*            cons                /**< constraint */
-   );
-
-/** enables constraint's separation, enforcing, and propagation capabilities */
-extern
-RETCODE SCIPconsEnable(
-   CONS*            cons,               /**< constraint */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-/** disables constraint's separation, enforcing, and propagation capabilities */
-extern
-RETCODE SCIPconsDisable(
-   CONS*            cons                /**< constraint */
    );
 
 /** copies original constraint into transformed constraint, that is captured */
@@ -534,6 +550,59 @@ RETCODE SCIPconsTransform(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    CONS*            origcons            /**< original constraint */
+   );
+
+/** activates constraint or marks constraint to be activated in next update */
+extern
+RETCODE SCIPconsActivate(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** deactivates constraint or marks constraint to be deactivated in next update */
+extern
+RETCODE SCIPconsDeactivate(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
+extern
+RETCODE SCIPconsEnable(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
+extern
+RETCODE SCIPconsDisable(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
+ *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
+ *  deduced;
+ *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
+ *  in next update,
+ */
+extern
+RETCODE SCIPconsIncAge(
+   CONS*            cons,               /**< constraint */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob                /**< problem data */
+   );
+
+/** resets age of constraint to zero; should be called in constraint separation, if a cut was found for this constraint,
+ *  in constraint enforcing, if the constraint was violated, and in constraint propagation, if a domain reduction was
+ *  deduced;
+ *  if it was obsolete, makes constraint useful again or marks constraint to be made useful again in next update
+ */
+extern
+RETCODE SCIPconsResetAge(
+   CONS*            cons,               /**< constraint */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** returns the name of the constraint */

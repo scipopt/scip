@@ -870,7 +870,7 @@ RETCODE SCIPnodeDisableCons(
    case SCIP_NODETYPE_ACTNODE:
       assert(node == tree->actnode);
       CHECK_OKAY( SCIPconssetchgdynAddDisabledCons(tree->actnodeconssetchg, memhdr, set, cons) );
-      CHECK_OKAY( SCIPconsDisable(cons) );
+      CHECK_OKAY( SCIPconsDisable(cons, set) );
       return SCIP_OKAY;
 
    case SCIP_NODETYPE_SIBLING:

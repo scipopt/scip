@@ -228,8 +228,8 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
+   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
@@ -359,11 +359,7 @@ main(
    todoMessage("implement remaining events");
    todoMessage("avoid addition of identical rows");
    todoMessage("avoid addition of identical constraints");
-
-   todoMessage("aging of non-check constraints (mark activation node in cons struct)");
-   todoMessage(" -> if too old, remove cons from addedconss array of node, free consdata immediately");
-   todoMessage(" -> it is now possible, that a constraint from disabledconss array is deactivated");
-   todoMessage("    -> in this case, remove cons from disabledconss array when this case is detected");
+   todoMessage("cuts created at the current node, that are not sharp at the end of the node's solving loop can be removed");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

@@ -211,6 +211,7 @@ RETCODE SCIPprobTransform(
 /** activates constraints in the problem */
 RETCODE SCIPprobActivate(
    PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {
@@ -230,7 +231,9 @@ RETCODE SCIPprobActivate(
 
 /** deactivates constraints in the problem */
 RETCODE SCIPprobDeactivate(
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    int c;
@@ -240,7 +243,7 @@ RETCODE SCIPprobDeactivate(
 
    for( c = 0; c < prob->nconss; ++c )
    {
-      CHECK_OKAY( SCIPconsDeactivate(prob->conss[c]) );
+      CHECK_OKAY( SCIPconsDeactivate(prob->conss[c], set) );
    }
 
    return SCIP_OKAY;
@@ -524,14 +527,10 @@ RETCODE SCIPprobDelCons(
    /* if constraint is active, deactivate it */
    if( cons->active )
    {
-      CHECK_OKAY( SCIPconsDeactivate(cons) );
+      CHECK_OKAY( SCIPconsDeactivate(cons, set) );
    }
-   assert(!cons->active);
-   assert(!cons->enabled);
-   assert(cons->sepaconsspos == -1);
-   assert(cons->enfoconsspos == -1);
-   assert(cons->chckconsspos == -1);
-   assert(cons->propconsspos == -1);
+   assert(!cons->active || cons->updatedeactivate);
+   assert(!cons->enabled || cons->updatedeactivate);
 
    /* remove constraint's name from the namespace */
    CHECK_OKAY( SCIPhashtableRemove(prob->consnames, memhdr, (void*)cons) );

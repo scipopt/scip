@@ -214,6 +214,10 @@ void * duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, c
  */
 void freeBlockMemory_call(MEMHDR* mem, void** ptr, size_t size, const char *filename, int line);
 
+/* get the number of used bytes in block memory */
+long long getBlockMemoryUsed(MEMHDR *mem);
+
+
 
 
 #else
@@ -239,6 +243,8 @@ void freeBlockMemory_call(MEMHDR* mem, void** ptr, size_t size, const char *file
 #define freeBlockMemoryArrayNull(mem,ptr,num)             freeMemoryArrayNull(ptr)
 #define freeBlockMemorySize(mem,ptr,size)                 freeMemory(ptr)
 #define freeBlockMemorySizeNull(mem,ptr,size)             freeMemoryNull(ptr)
+
+#define getBlockMemoryUsed(mem)              0
 
 #ifndef NDEBUG
 #define blockMemorySize(mem,ptr)             0

@@ -136,6 +136,8 @@ RETCODE SCIPsepaAddCut(
    /* check, if cut belongs to the best "maxsepacuts" separation cuts */
    if( sepa->ncuts < maxsepacuts || score > sepa->score[maxsepacuts-1] )
    {
+      debugMessage("adding cut to separation storage of size %d/%d\n", sepa->ncuts, maxsepacuts);
+
       /* capture the cut */
       SCIProwCapture(cut);
 
@@ -183,6 +185,8 @@ RETCODE SCIPsepaApplyCuts(
    assert(set != NULL);
    assert(lp != NULL);
 
+   debugMessage("applying %d cuts\n", sepa->ncuts);
+
    for( c = 0; c < sepa->ncuts; ++c )
    {
       debugMessage("apply cut: ");
@@ -191,6 +195,32 @@ RETCODE SCIPsepaApplyCuts(
       /* add cut to the LP and capture it */
       CHECK_OKAY( SCIPlpAddRow(lp, set, sepa->cuts[c]) );
 
+      /* release the row */
+      CHECK_OKAY( SCIProwRelease(&sepa->cuts[c], memhdr, set, lp) );
+   }
+
+   /* clear the separation storage */
+   sepa->ncuts = 0;
+
+   return SCIP_OKAY;
+}
+
+/** clears the separation storage without adding the cuts to the LP */
+RETCODE SCIPsepaClearCuts(
+   SEPA*            sepa,               /**< separation storage */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< LP data */
+   )
+{
+   int c;
+
+   assert(sepa != NULL);
+
+   debugMessage("clearing %d cuts\n", sepa->ncuts);
+
+   for( c = 0; c < sepa->ncuts; ++c )
+   {
       /* release the row */
       CHECK_OKAY( SCIProwRelease(&sepa->cuts[c], memhdr, set, lp) );
    }

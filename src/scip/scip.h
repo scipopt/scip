@@ -387,7 +387,7 @@ RETCODE SCIPaddCons(
 extern
 RETCODE SCIPdelCons(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons                /**< pointer to constraint to delete */
+   CONS*            cons                /**< constraint to delete */
    );
 
 /** finds constraint of given name in the problem */
@@ -602,6 +602,26 @@ extern
 RETCODE SCIPreleaseCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons                /**< pointer to constraint */
+   );
+
+/** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
+ *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
+ *  deduced.
+ */
+extern
+RETCODE SCIPincConsAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   );
+
+/** resets age of constraint to zero; should be called in constraint separation, if a cut was found for this constraint,
+ *  in constraint enforcing, if the constraint was violated, and in constraint propagation, if a domain reduction was
+ *  deduced.
+ */
+extern
+RETCODE SCIPresetConsAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
    );
 
 /**@} */
@@ -1712,6 +1732,13 @@ Bool SCIPisFeasible(
 extern
 MEMHDR* SCIPmemhdr(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the total number of bytes used in block memory */
+extern
+RETCODE SCIPgetMemUsed(
+   SCIP*            scip,               /**< SCIP data structure */
+   Longint*         memused             /**< pointer to store the number of used block memory bytes */
    );
 
 /** calculate memory size for dynamically allocated arrays */

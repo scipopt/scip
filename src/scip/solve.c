@@ -37,8 +37,8 @@ RETCODE initRootLP(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   LP*              lp,                 /**< LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< LP data */
    )
 {
    VAR* var;
@@ -84,8 +84,8 @@ RETCODE solveLP(
 {
    assert(lp != NULL);
 
-   debugMessage("solving LP: primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
-      lp->primalfeasible, lp->dualfeasible, lp->solved);
+   debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
+      lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
    if( !lp->solved )
    {
       if( lp->dualfeasible || !lp->primalfeasible )
@@ -137,7 +137,52 @@ RETCODE solveLP(
    return SCIP_OKAY;
 }
 
-/** solve a single node with price and cut */
+/** load and solve the initial LP of a node */
+static
+RETCODE solveNodeInitialLP(
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< LP data */
+   EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
+   )
+{
+   EVENT event;
+
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+   assert(lp != NULL);
+
+   /* load the LP into the solver and load the LP state */
+   debugMessage("loading LP\n");
+   CHECK_OKAY( SCIPtreeLoadLP(tree, memhdr, set, lp) );
+   
+   /* init root node LP */
+   if( tree->actnode->depth == 0 )
+   {
+      assert(stat->nlp == 0);
+      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp) );
+   }
+
+   /* only the bounds and the constraint list may have been changed since the LP state node
+    * -> dual simplex is applicable as first solver
+    */
+   debugMessage("node: solve initial LP\n");
+   CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+   assert(lp->solved);
+
+   /* issue FIRSTLPSOLVED event */
+   CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
+   CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
+   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+
+   return SCIP_OKAY;
+}
+
+/** solve the actual LP of a node with price and cut */
 static
 RETCODE solveNodeLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -176,29 +221,14 @@ RETCODE solveNodeLP(
    assert(primal != NULL);
    assert(set->nconshdlrs == 0 || conshdlrs_sepa != NULL);
 
-   /* load the LP into the solver and load the LP state */
-   debugMessage("loading LP\n");
-   CHECK_OKAY( SCIPtreeLoadLP(tree, memhdr, set, lp) );
-   
-   /* init root node LP */
    root = (tree->actnode->depth == 0);
-   if( root )
-   {
-      assert(stat->nlp == 0);
-      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, lp, tree) );
-   }
 
    /* only the bounds and the constraint list may have been changed since the LP state node
     * -> dual simplex is applicable as first solver
     */
-   debugMessage("node: solve LP\n");
+   debugMessage("node: solve LP with price and cut\n");
    CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
    assert(lp->solved);
-
-   /* issue FIRSTLPSOLVED event */
-   CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
-   CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
-   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
    /* price-and-cut loop */
    mustprice = TRUE;
@@ -276,7 +306,7 @@ RETCODE solveNodeLP(
             separateagain = FALSE;
             for( h = 0; h < set->nconshdlrs && SCIPsepaGetNCuts(sepa) == 0; ++h )
             {
-               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], set, &result) );
+               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, &result) );
                separateagain |= (result == SCIP_CONSADDED);
             }
          }
@@ -373,6 +403,7 @@ RETCODE enforceConstraints(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
+   SEPA*            sepa,               /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -421,27 +452,35 @@ RETCODE enforceConstraints(
       resolved = FALSE;
       for( h = 0; h < set->nconshdlrs && !resolved; ++h )
       {
+         assert(SCIPsepaGetNCuts(sepa) == 0);
+
          if( tree->actnodehaslp )
          {
-            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], set, &result) );
+            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, prob, &result) );
          }
          else
          {
-            CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], set, &result) );
+            CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, prob, &result) );
          }
          switch( result )
          {
          case SCIP_FEASIBLE:
             assert(tree->nchildren == 0);
+            assert(SCIPsepaGetNCuts(sepa) == 0);
             break;
 
          case SCIP_INFEASIBLE:
             assert(tree->nchildren == 0);
+            assert(SCIPsepaGetNCuts(sepa) == 0);
             *infeasible = TRUE;
             break;
 
          case SCIP_CUTOFF:
             assert(tree->nchildren == 0);
+
+            /* the found cuts are of no use, because the node is infeasible anyway */
+            CHECK_OKAY( SCIPsepaClearCuts(sepa, memhdr, set, lp) );
+
             *infeasible = TRUE;
             resolved = TRUE;
             break;
@@ -456,6 +495,10 @@ RETCODE enforceConstraints(
                errorMessage(s);
                return SCIP_INVALIDRESULT;
             }
+
+            /* apply found cuts */
+            CHECK_OKAY( SCIPsepaApplyCuts(sepa, memhdr, set, tree, lp) );
+
             *infeasible = TRUE;
             *solveagain = TRUE;
             resolved = TRUE;
@@ -463,6 +506,7 @@ RETCODE enforceConstraints(
 
          case SCIP_CONSADDED:
             assert(tree->nchildren == 0);
+            assert(SCIPsepaGetNCuts(sepa) == 0);
             *infeasible = TRUE;
             resolved = TRUE;
             enforceagain = TRUE; /* the newly added constraints have to be enforced themselves */
@@ -470,6 +514,7 @@ RETCODE enforceConstraints(
 
          case SCIP_REDUCEDDOM:
             assert(tree->nchildren == 0);
+            assert(SCIPsepaGetNCuts(sepa) == 0);
             *infeasible = TRUE;
             *solveagain = TRUE;
             resolved = TRUE;
@@ -477,6 +522,7 @@ RETCODE enforceConstraints(
 
          case SCIP_BRANCHED:
             assert(tree->nchildren >= 1);
+            assert(SCIPsepaGetNCuts(sepa) == 0);
             *infeasible = TRUE;
             resolved = TRUE;
             break;
@@ -497,6 +543,7 @@ RETCODE enforceConstraints(
          *infeasible, *solveagain, resolved, enforceagain);
    }
    while( enforceagain );
+   assert(SCIPsepaGetNCuts(sepa) == 0);
 
    if( *infeasible && !resolved )
    {
@@ -665,7 +712,8 @@ RETCODE SCIPsolveCIP(
          propagain = FALSE;
          for( h = 0; h < set->nconshdlrs && !cutoff; ++h )
          {
-            CHECK_OKAY( SCIPconshdlrPropagate(conshdlrs_enfo[h], set, actnode->depth, &result) );
+            CHECK_OKAY( SCIPconshdlrPropagate(conshdlrs_enfo[h], memhdr, set, prob, actnode->depth, &result) );
+            assert(SCIPsepaGetNCuts(sepa) == 0);
             propagain |= (result == SCIP_REDUCEDDOM);
             cutoff |= (result == SCIP_CUTOFF);
          }
@@ -691,6 +739,15 @@ RETCODE SCIPsolveCIP(
          /* don't solve the node if its cut off by the pseudo objective value anyway */
          tree->actnodehaslp &= SCIPsetIsLT(set, tree->actpseudoobjval, primal->upperbound);
          
+         /* check, if we want to solve the LP at this node */
+         if( tree->actnodehaslp )
+         {
+            /* load and solve the initial LP of the node */
+            CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, eventfilter) );
+            assert(lp->solved);
+         }
+         assert(SCIPsepaGetNCuts(sepa) == 0);
+
          /* external node solving loop */
          do
          {
@@ -700,7 +757,7 @@ RETCODE SCIPsolveCIP(
             /* check, if we want to solve the LP at this node */
             if( tree->actnodehaslp )
             {
-               /* solve the LP */
+               /* continue solving the LP with price and cut */
                CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepa, cutpool, primal, branchcand, 
                               eventfilter, eventqueue, conshdlrs_sepa) );
                assert(lp->solved);
@@ -720,12 +777,13 @@ RETCODE SCIPsolveCIP(
             else
             {
                /* enforce constraints */
-               CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, branchcand, primal, eventqueue,
+               CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, sepa, branchcand, primal, eventqueue,
                               conshdlrs_enfo, &infeasible, &solveagain) );
             }
          }
          while( solveagain );
-         
+         assert(SCIPsepaGetNCuts(sepa) == 0);
+
          if( !infeasible )
          {
             SOL* sol;

@@ -1624,7 +1624,7 @@ RETCODE separateConstraints(
 
    *found = FALSE;
 
-   /*debugMessage("separating %d linear constraints at %p\n", nconss, conss);*/
+   debugMessage("separating %d linear constraints at %p\n", nconss, conss);
    for( c = 0; c < nconss; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
@@ -1633,6 +1633,16 @@ RETCODE separateConstraints(
 
       CHECK_OKAY( SCIPlinconsSeparate(scip, consdata->lincons, &violated) );
       *found |= violated;
+
+      /* update age of constraint */
+      if( violated )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, conss[c]) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPincConsAge(scip, conss[c]) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1662,7 +1672,7 @@ RETCODE checkConstraints(
 
    *found = FALSE;
 
-   /*debugMessage("checking solution %p for %d linear constraints at %p\n", sol, nconss, conss);*/
+   debugMessage("checking solution %p for %d linear constraints at %p\n", sol, nconss, conss);
    for( c = 0; c < nconss && !(*found); ++c )
    {
       /*debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
@@ -1671,6 +1681,16 @@ RETCODE checkConstraints(
 
       CHECK_OKAY( SCIPlinconsCheck(scip, consdata->lincons, sol, chcklprows, &violated) );
       *found |= violated;
+
+      /* update age of constraint */
+      if( violated )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, conss[c]) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPincConsAge(scip, conss[c]) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1741,8 +1761,8 @@ DECL_CONSSEPA(consSepaLinear)
 
    /*debugMessage("Sepa method of linear constraints\n");*/
 
-   /* separate violated constraints */
-   CHECK_OKAY( separateConstraints(scip, conshdlr, conss, nconss, &found) );
+   /* separate violated constraints; only process useful ones */
+   CHECK_OKAY( separateConstraints(scip, conshdlr, conss, nusefulconss, &found) );
 
    if( found )
       *result = SCIP_SEPARATED;
@@ -1767,7 +1787,15 @@ DECL_CONSENLP(consEnlpLinear)
    /* check for violated constraints */
 
    /* LP is processed at current node -> we can add violated linear constraints to the LP */
-   CHECK_OKAY( separateConstraints(scip, conshdlr, conss, nconss, &found) );
+
+   /* process useful constraints first */
+   CHECK_OKAY( separateConstraints(scip, conshdlr, conss, nusefulconss, &found) );
+
+   /* if no violation was found, process obsolete constraints */
+   if( !found )
+   {
+      CHECK_OKAY( separateConstraints(scip, conshdlr, &conss[nusefulconss], nconss - nusefulconss, &found) );
+   }
    
    if( found )
       *result = SCIP_SEPARATED;
@@ -1849,14 +1877,16 @@ DECL_CONSPROP(consPropLinear)
    CHECK_OKAY( SCIPgetActDepth(scip, &actdepth) );
    tightenbounds = (actdepth % (propfreq * TIGHTENBOUNDSFREQ) == 0);
 
+   /* process useful constraints */
    *result = SCIP_DIDNOTFIND;
-   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+   for( c = 0; c < nusefulconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
       assert(cons != NULL);
       consdata = SCIPconsGetConsData(cons);
       assert(consdata != NULL);
 
+      /* tighten the variable's bounds */
       if( tightenbounds )
       {
          CHECK_OKAY( SCIPlinconsTightenBounds(scip, consdata->lincons, result) );
@@ -1877,6 +1907,7 @@ DECL_CONSPROP(consPropLinear)
 #endif
       }
 
+      /* check constraint for infeasibility and redundancy */
       CHECK_OKAY( SCIPlinconsGetActivityBounds(scip, consdata->lincons, &minactivity, &maxactivity) );
       CHECK_OKAY( SCIPlinconsGetLhs(consdata->lincons, &lhs) );
       CHECK_OKAY( SCIPlinconsGetRhs(consdata->lincons, &rhs) );
@@ -1885,12 +1916,14 @@ DECL_CONSPROP(consPropLinear)
       {
          debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
             SCIPconsGetName(cons), minactivity, maxactivity, lhs, rhs);
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          *result = SCIP_CUTOFF;
       }
       else if( SCIPisGE(scip, minactivity, lhs) && SCIPisLE(scip, maxactivity, rhs) )
       {
          debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
             SCIPconsGetName(cons), minactivity, maxactivity, lhs, rhs);
+         CHECK_OKAY( SCIPincConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       }
    }

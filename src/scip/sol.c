@@ -560,7 +560,9 @@ RETCODE SCIPsolGetVal(
 /** checks primal CIP solution for feasibility */
 RETCODE SCIPsolCheck(
    SOL*             sol,                /**< primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether solution is feasible */
@@ -575,7 +577,7 @@ RETCODE SCIPsolCheck(
    *feasible = TRUE;
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], set, sol, chckintegrality, chcklprows, &result) );
+      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, prob, sol, chckintegrality, chcklprows, &result) );
       *feasible &= (result == SCIP_FEASIBLE);
    }
 

@@ -104,13 +104,16 @@ RETCODE SCIPprobTransform(
 extern
 RETCODE SCIPprobActivate(
    PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 
 /** deactivates constraints in the problem */
 extern
 RETCODE SCIPprobDeactivate(
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 

@@ -350,7 +350,7 @@ RETCODE SCIPprimalTrySolMove(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(*sol, set, chckintegrality, chcklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, prob, chckintegrality, chcklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -404,7 +404,7 @@ RETCODE SCIPprimalTrySolCopy(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(sol, set, chckintegrality, chcklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, chckintegrality, chcklprows, &feasible) );
    }
    else
       feasible = FALSE;

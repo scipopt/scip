@@ -187,7 +187,9 @@ RETCODE SCIPsolGetVal(
 extern
 RETCODE SCIPsolCheck(
    SOL*             sol,                /**< primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether solution is feasible */

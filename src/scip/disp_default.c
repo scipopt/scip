@@ -60,6 +60,14 @@
 #define DISP_POSI_LPITERATIONS  1000
 #define DISP_STRI_LPITERATIONS  TRUE
 
+#define DISP_NAME_MEMUSED       "memused"
+#define DISP_DESC_MEMUSED       "total number of bytes used in block memory"
+#define DISP_HEAD_MEMUSED       "mem"
+#define DISP_WIDT_MEMUSED       5
+#define DISP_PRIO_MEMUSED       20000
+#define DISP_POSI_MEMUSED       1500
+#define DISP_STRI_MEMUSED       TRUE
+
 #define DISP_NAME_ACTDEPTH      "actdepth"
 #define DISP_DESC_ACTDEPTH      "depth of actual node"
 #define DISP_HEAD_ACTDEPTH      "depth"
@@ -144,7 +152,7 @@
 #define DISP_DESC_GAP           "current relative primal-dual gap"
 #define DISP_HEAD_GAP           "gap"
 #define DISP_WIDT_GAP           8
-#define DISP_PRIO_GAP           50000
+#define DISP_PRIO_GAP           60000
 #define DISP_POSI_GAP           20000
 #define DISP_STRI_GAP           TRUE
 
@@ -233,6 +241,21 @@ DECL_DISPOUTP(SCIPdispOutpActdepth)
 
    CHECK_OKAY( SCIPgetActDepth(scip, &actdepth) );
    SCIPdispDecimal(file, actdepth, DISP_WIDT_ACTDEPTH);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_DISPOUTP(SCIPdispOutpMemused)
+{
+   Longint memused;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMUSED) == 0);
+   assert(scip != NULL);
+
+   CHECK_OKAY( SCIPgetMemUsed(scip, &memused) );
+   SCIPdispDecimal(file, memused, DISP_WIDT_MEMUSED);
 
    return SCIP_OKAY;
 }
@@ -428,6 +451,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_LPITERATIONS, DISP_DESC_LPITERATIONS, DISP_HEAD_LPITERATIONS,
                   NULL, NULL, NULL, SCIPdispOutpLpiterations, NULL, 
                   DISP_WIDT_LPITERATIONS, DISP_PRIO_LPITERATIONS, DISP_POSI_LPITERATIONS, DISP_STRI_LPITERATIONS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MEMUSED, DISP_DESC_MEMUSED, DISP_HEAD_MEMUSED,
+                  NULL, NULL, NULL, SCIPdispOutpMemused, NULL, 
+                  DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDEPTH, DISP_DESC_ACTDEPTH, DISP_HEAD_ACTDEPTH,
                   NULL, NULL, NULL, SCIPdispOutpActdepth, NULL, 
                   DISP_WIDT_ACTDEPTH, DISP_PRIO_ACTDEPTH, DISP_POSI_ACTDEPTH, DISP_STRI_ACTDEPTH) );

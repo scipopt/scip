@@ -100,7 +100,8 @@ struct Set
    Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of separated cuts at the root node */
-   int              agelimit;           /**< maximum age a cut can reach before it is deleted from the global cut pool */
+   int              cutagelimit;        /**< maximum age a cut can reach before it is deleted from the global cut pool */
+   int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes */

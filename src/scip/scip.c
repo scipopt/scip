@@ -883,24 +883,23 @@ RETCODE SCIPaddCons(
  */
 RETCODE SCIPdelCons(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons                /**< pointer to constraint to delete */
+   CONS*            cons                /**< constraint to delete */
    )
 {
    assert(cons != NULL);
-   assert(*cons != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert((*cons)->node == NULL);
+      assert(cons->node == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
-      assert(scip->stage == SCIP_STAGE_SOLVING || (*cons)->node == NULL);
+      assert(scip->stage == SCIP_STAGE_SOLVING || cons->node == NULL);
       CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
       return SCIP_OKAY;
 
@@ -1069,7 +1068,7 @@ RETCODE SCIPsolve(
       CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
       CHECK_OKAY( SCIPpriceCreate(&scip->price) );
       CHECK_OKAY( SCIPsepaCreate(&scip->sepa) );
-      CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->agelimit) );
+      CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
       CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
       CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
 
@@ -1080,7 +1079,7 @@ RETCODE SCIPsolve(
       CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, &scip->transprob) );
 
       /* activate constraints in the problem */
-      CHECK_OKAY( SCIPprobActivate(scip->transprob, scip->set) );
+      CHECK_OKAY( SCIPprobActivate(scip->transprob, scip->mem->solvemem, scip->set) );
 
       /* create primal solution storage */
       CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->lp) );
@@ -1165,7 +1164,7 @@ RETCODE SCIPfreeSolve(
                      scip->branchcand, scip->eventqueue) );
 
       /* deactivate constraints in the problem */
-      CHECK_OKAY( SCIPprobDeactivate(scip->transprob) );
+      CHECK_OKAY( SCIPprobDeactivate(scip->transprob, scip->mem->solvemem, scip->set) );
 
       /* clear the LP */
       CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
@@ -1593,6 +1592,38 @@ RETCODE SCIPreleaseCons(
       errorMessage("invalid SCIP stage");
       return SCIP_ERROR;
    }
+}
+
+/** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
+ *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
+ *  deduced.
+ */
+RETCODE SCIPincConsAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconsIncAge(cons, scip->mem->solvemem, scip->set, scip->transprob) );
+
+   return SCIP_OKAY;
+}
+
+/** resets age of constraint to zero; should be called in constraint separation, if a cut was found for this constraint,
+ *  in constraint enforcing, if the constraint was violated, and in constraint propagation, if a domain reduction was
+ *  deduced.
+ */
+RETCODE SCIPresetConsAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconsResetAge(cons, scip->set) );
+
+   return SCIP_OKAY;
 }
 
 
@@ -3612,6 +3643,35 @@ MEMHDR* SCIPmemhdr(
       errorMessage("Unknown SCIP stage");
       return NULL;
    }
+}
+
+/** returns the total number of bytes used in block memory */
+RETCODE SCIPgetMemUsed(
+   SCIP*            scip,               /**< SCIP data structure */
+   Longint*         memused             /**< pointer to store the number of used block memory bytes */
+   )
+{
+   assert(memused != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetMemUsed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_PROBLEM:
+      *memused = getBlockMemoryUsed(scip->mem->probmem);
+      break;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      *memused = getBlockMemoryUsed(scip->mem->probmem) + getBlockMemoryUsed(scip->mem->solvemem);
+      break;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** calculate memory size for dynamically allocated arrays */

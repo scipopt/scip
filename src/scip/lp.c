@@ -437,7 +437,8 @@ RETCODE colAddCoeff(
 
    checkLinks(lp);
 
-   debugMessage("adding coefficient %g * <%s> at position %d to column <%s>\n", val, row->name, col->len, col->var->name);
+   /*debugMessage("adding coefficient %g * <%s> at position %d to column <%s>\n", val, row->name, col->len, 
+     col->var->name);*/
 
    if( col->len > 0 )
       col->sorted &= (col->rows[col->len-1]->index < row->index);
@@ -483,7 +484,8 @@ RETCODE colDelCoeffPos(
    row = col->rows[pos];
    val = col->vals[pos];
 
-   debugMessage("deleting coefficient %g * <%s> at position %d from column <%s>\n", val, row->name, pos, col->var->name);
+   /*debugMessage("deleting coefficient %g * <%s> at position %d from column <%s>\n", val, row->name, pos, 
+     col->var->name);*/
 
    if( col->linkpos[pos] == -1 )
       col->nunlinked--;
@@ -526,8 +528,8 @@ RETCODE colChgCoeffPos(
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
 
-   debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
-      col->vals[pos], col->rows[pos]->name, pos, col->var->name, val);
+   /*debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
+     col->vals[pos], col->rows[pos]->name, pos, col->var->name, val);*/
 
    if( SCIPsetIsZero(set, val) )
    {
@@ -695,7 +697,7 @@ RETCODE rowAddCoeff(
 
    checkLinks(lp);
 
-   debugMessage("adding coefficient %g * <%s> at position %d to row <%s>\n", val, col->var->name, row->len, row->name);
+   /*debugMessage("adding coefficient %g * <%s> at position %d to row <%s>\n", val, col->var->name, row->len, row->name);*/
 
    if( row->nlocks > 0 )
    {
@@ -753,7 +755,7 @@ RETCODE rowDelCoeffPos(
    col = row->cols[pos];
    val = row->vals[pos];
    
-   debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n", val, col->var->name, pos, row->name);
+   /*debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n", val, col->var->name, pos, row->name);*/
 
    if( row->nlocks > 0 )
    {
@@ -809,8 +811,8 @@ RETCODE rowChgCoeffPos(
    assert(row->cols[pos] != NULL);
    assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
 
-   debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
-      row->vals[pos], row->cols[pos]->var->name, pos, row->name, val);
+   /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
+     row->vals[pos], row->cols[pos]->var->name, pos, row->name, val);*/
 
    if( row->nlocks > 0 )
    {
@@ -3732,7 +3734,7 @@ RETCODE SCIPlpAddCol(
    assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(col->var->data.col == col);
    
-   debugMessage("adding column <%s> to LP\n", col->var->name);
+   debugMessage("adding column <%s> to LP (%d rows, %d cols)\n", col->var->name, lp->nrows, lp->ncols);
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
    lp->cols[lp->ncols] = col;
    col->lppos = lp->ncols;
@@ -3759,7 +3761,7 @@ RETCODE SCIPlpAddRow(
 
    SCIProwCapture(row);
 
-   debugMessage("adding row <%s> to LP\n", row->name);
+   debugMessage("adding row <%s> to LP (%d rows, %d cols)\n", row->name, lp->nrows, lp->ncols);
    CHECK_OKAY( ensureRowsSize(lp, set, lp->nrows+1) );
    lp->rows[lp->nrows] = row;
    row->lppos = lp->nrows;
@@ -4214,8 +4216,8 @@ RETCODE SCIPlpGetSol(
       lp->lpicols[c]->primsol = primsol[c];
       lp->lpicols[c]->redcost = redcost[c];
       lp->lpicols[c]->validredcostlp = stat->nlp;
-      debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
-         lp->lpicols[c]->var->name, lp->lpicols[c]->primsol, lp->lpicols[c]->redcost);
+      /*debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
+        lp->lpicols[c]->var->name, lp->lpicols[c]->primsol, lp->lpicols[c]->redcost);*/
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -4223,8 +4225,8 @@ RETCODE SCIPlpGetSol(
       lp->lpirows[r]->dualsol = dualsol[r];
       lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
       lp->lpirows[r]->validactivitylp = stat->nlp;
-      debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
-         lp->lpirows[r]->name, lp->lpirows[r]->dualsol, lp->lpirows[r]->activity);
+      /*debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
+        lp->lpirows[r]->name, lp->lpirows[r]->dualsol, lp->lpirows[r]->activity);*/
    }
 
    /* free temporary memory */
@@ -4292,8 +4294,8 @@ RETCODE SCIPlpGetUnboundedSol(
       lp->lpicols[c]->primsol = primsol[c] + rayscale * ray[c];
       lp->lpicols[c]->redcost = SCIP_INVALID;
       lp->lpicols[c]->validredcostlp = -1;
-      debugMessage(" col <%s>: basesol=%f, ray=%f, unbdsol=%f\n", 
-         lp->lpicols[c]->var->name, primsol[c], ray[c], lp->lpicols[c]->primsol);
+      /*debugMessage(" col <%s>: basesol=%f, ray=%f, unbdsol=%f\n", 
+        lp->lpicols[c]->var->name, primsol[c], ray[c], lp->lpicols[c]->primsol);*/
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -4301,7 +4303,7 @@ RETCODE SCIPlpGetUnboundedSol(
       lp->lpirows[r]->dualsol = SCIP_INVALID;
       lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
       lp->lpirows[r]->validactivitylp = stat->nlp;
-      debugMessage(" row <%s>: activity=%f\n", lp->lpirows[r]->name, lp->lpirows[r]->activity);
+      /*debugMessage(" row <%s>: activity=%f\n", lp->lpirows[r]->name, lp->lpirows[r]->activity);*/
    }
 
 
@@ -4341,7 +4343,7 @@ RETCODE SCIPlpGetDualfarkas(
    debugMessage("LP is infeasible:\n");
    for( r = 0; r < lp->nlpirows; ++r )
    {
-      debugMessage(" row <%s>: dualfarkas=%f\n", lp->lpirows[r]->name, dualfarkas[r]);
+      /*debugMessage(" row <%s>: dualfarkas=%f\n", lp->lpirows[r]->name, dualfarkas[r]);*/
       lp->lpirows[r]->dualfarkas = dualfarkas[r];
    }
 

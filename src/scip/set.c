@@ -52,7 +52,7 @@
 #define SCIP_DEFAULT_PATHGROWINIT      256
 
 
-/* LP solving */
+/* LP Solving */
 
 #define SCIP_DEFAULT_LPSOLVEFREQ         3 /**< frequency for solving LP at the nodes */
 #define SCIP_DEFAULT_LPSOLVEDEPTH  INT_MAX /**< maximal depth for solving LPs */
@@ -70,7 +70,12 @@
 
 #define SCIP_DEFAULT_MAXSEPACUTS       128 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_MAXSEPACUTSROOT  4092 /**< maximal separated cuts at the root node */
-#define SCIP_DEFAULT_AGELIMIT          128 /**< maximum age a cut can reach before it is deleted from global cut pool */
+#define SCIP_DEFAULT_CUTAGELIMIT       128 /**< maximum age a cut can reach before it is deleted from global cut pool */
+
+
+/* Constraint Settings */
+
+#define SCIP_DEFAULT_CONSAGELIMIT      128 /**< maximum age an unnecessary constraint can reach before it is deleted */
 
 
 /* Primal Solutions */
@@ -80,12 +85,12 @@
 
 /* Tree */
 
-#define SCIP_DEFAULT_NODELIMIT /*LONGINT_MAX*/ 100000 /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT LONGINT_MAX /**< maximal number of nodes to create */
 
 
 /* Display */
 
-#define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPWIDTH         134 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
@@ -171,7 +176,8 @@ RETCODE SCIPsetCreate(
    (*set)->abortpricevarsfac = SCIP_DEFAULT_ABORTPRICEVARSFAC;
    (*set)->maxsepacuts = SCIP_DEFAULT_MAXSEPACUTS;
    (*set)->maxsepacutsroot = SCIP_DEFAULT_MAXSEPACUTSROOT;
-   (*set)->agelimit = SCIP_DEFAULT_AGELIMIT;
+   (*set)->cutagelimit = SCIP_DEFAULT_CUTAGELIMIT;
+   (*set)->consagelimit = SCIP_DEFAULT_CONSAGELIMIT;
    (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
    (*set)->nodelimit = SCIP_DEFAULT_NODELIMIT;
    (*set)->lpsolvefreq = SCIP_DEFAULT_LPSOLVEFREQ;

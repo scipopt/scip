@@ -336,11 +336,12 @@ struct block_header
 
 struct memory_header
 {
+   BLKHDR*          blockhash[BLOCKHASH_SIZE]; /**< hash table with memory blocks */
    int              initChunkSize;      /**< number of elements in the first chunk */
    int              clearUnusedBlocks;  /**< TRUE iff unused blocks should be deleted */
    int              garbageFactor;      /**< garbage collector is called, if at least garbageFactor * avg. chunksize 
                                          *   elements are free */
-   BLKHDR*          blockhash[BLOCKHASH_SIZE]; /**< hash table with memory blocks */
+   long long        memused;            /**< total number of used bytes in the memory header */
 };
 
 
@@ -1090,11 +1091,12 @@ createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
    allocMemory(&mem);
    if( mem != NULL )
    {
+      for( i = 0; i < BLOCKHASH_SIZE; ++i )
+	 mem->blockhash[i] = NULL;
       mem->initChunkSize = initChunkSize;
       mem->clearUnusedBlocks = clearUnusedBlocks;
       mem->garbageFactor = garbageFactor;
-      for( i = 0; i < BLOCKHASH_SIZE; ++i )
-	 mem->blockhash[i] = NULL;
+      mem->memused = 0;
    }
    else
       errorMessage_call("Error! Insufficient memory for memory header.", filename, line);
@@ -1128,6 +1130,7 @@ clearBlockMemory_call(MEMHDR *mem, const char *filename, int line)
 	 }
 	 mem->blockhash[i] = NULL;
       }
+      mem->memused = 0;
    }
    else
       errorMessage_call("Tried to clear null block.", filename, line);
@@ -1200,6 +1203,8 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
       errorMessage_call("Error! Insufficient memory for new chunk.", filename, line);
    debugMessage("[%s:%4d] alloced %8ld bytes in %p\n", filename, line, (long)size, ptr);
 
+   mem->memused += size;
+
    checkMem(mem);
 
    return ptr;
@@ -1227,7 +1232,7 @@ reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, 
    if( newptr != NULL )
       copyMemorySize(newptr, ptr, MIN(oldsize, newsize));
    freeBlockMemory_call(mem, &ptr, oldsize, filename, line);
-   
+
    return newptr;
 }
 
@@ -1359,11 +1364,22 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       {
 	 garbageCollection(blk);
       }
+
+      mem->memused -= size;
+      assert(mem->memused >= 0);
    }
    else
       errorMessage_call("Tried to free null block pointer.", filename, line);
 
    checkMem(mem);
+}
+
+long long
+getBlockMemoryUsed(MEMHDR *mem)
+{
+   assert(mem != NULL);
+
+   return mem->memused;
 }
 
 #ifndef NDEBUG

@@ -71,6 +71,15 @@ RETCODE SCIPsepaApplyCuts(
    LP*              lp                  /**< LP data */
    );
 
+/** clears the separation storage without adding the cuts to the LP */
+extern
+RETCODE SCIPsepaClearCuts(
+   SEPA*            sepa,               /**< separation storage */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< LP data */
+   );
+
 /** get number of cuts in the separation storage */
 extern
 int SCIPsepaGetNCuts(
