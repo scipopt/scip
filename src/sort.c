@@ -268,11 +268,11 @@ void* hashlistRetrieve(                 /**< retrieves element with given key fr
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
-   int              keyval,             /**< hash value of key */
+   unsigned int     keyval,             /**< hash value of key */
    void*            key                 /**< key to retrieve */
    )
 {
-   int actkeyval;
+   unsigned int actkeyval;
    void* actkey;
 
    assert(hashkeyeq != NULL);
@@ -379,8 +379,8 @@ RETCODE SCIPhashtableInsert(            /**< inserts element in hash table (mult
    )
 {
    void* key;
-   int keyval;
-   int hashval;
+   unsigned int keyval;
+   unsigned int hashval;
 
    assert(hashtable != NULL);
    assert(hashtable->lists != NULL);
@@ -407,8 +407,8 @@ void* SCIPhashtableRetrieve(            /**< retrieve element with key from hash
    void*            key                 /**< key to retrieve */
    )
 {
-   int keyval;
-   int hashval;
+   unsigned int keyval;
+   unsigned int hashval;
 
    assert(hashtable != NULL);
    assert(hashtable->lists != NULL);
@@ -433,8 +433,8 @@ RETCODE SCIPhashtableRemove(            /**< removes existing element from the h
    )
 {
    void* key;
-   int keyval;
-   int hashval;
+   unsigned int keyval;
+   unsigned int hashval;
 
    assert(hashtable != NULL);
    assert(hashtable->lists != NULL);
@@ -456,6 +456,46 @@ RETCODE SCIPhashtableRemove(            /**< removes existing element from the h
    return SCIP_OKAY;
 }
 
+void SCIPhashtablePrintStatistics(      /**< prints statistics about hash table usage */
+   HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   HASHLIST* hashlist;
+   int usedslots;
+   int maxslotsize;
+   int sumslotsize;
+   int slotsize;
+   int i;
+
+   assert(hashtable != NULL);
+
+   usedslots = 0;
+   maxslotsize = 0;
+   sumslotsize = 0;
+   for( i = 0; i < hashtable->nlists; ++i )
+   {
+      hashlist = hashtable->lists[i];
+      if( hashlist != NULL )
+      {
+         usedslots++;
+         slotsize = 0;
+         while( hashlist != NULL )
+         {
+            slotsize++;
+            hashlist = hashlist->next;
+         }
+         maxslotsize = MAX(maxslotsize, slotsize);
+         sumslotsize += slotsize;
+      }
+   }
+
+   printf("%d hash entries, used %d/%d slots (%.1f%%)",
+      sumslotsize, usedslots, hashtable->nlists, 100.0*(Real)usedslots/(Real)(hashtable->nlists));
+   if( usedslots > 0 )
+      printf(", avg. %.1f entries/used slot, max. %d entries in slot", (Real)sumslotsize/(Real)usedslots, maxslotsize);
+   printf("\n");
+}
+
 
 /** returns TRUE iff both keys (i.e. strings) are equal */
 DECL_HASHKEYEQ(SCIPhashKeyEqString)
@@ -466,18 +506,34 @@ DECL_HASHKEYEQ(SCIPhashKeyEqString)
    return (strcmp(string1, string2) == 0);
 }
 
+static
+const int strhashshift[28] = { 
+   0, 16,  8, 24,  4, 20, 12, /*28, */
+   2, 18, 10, 26,  6, 22, 14, /*30, */
+   1, 17,  9, 25,  5, 21, 13, /*29, */
+   3, 19, 11, 27,  7, 23, 15  /*31  */
+};
+
 /** returns the hash value of the key (i.e. string) */
 DECL_HASHKEYVAL(SCIPhashKeyValString)
 {
    const char* string = (const char*)key;
-   int sum;
-   int len;
+   unsigned int sum;
+   unsigned int val;
    int i;
 
    sum = 0;
-   len = strlen(string);
-   for( i = 0; i < len; ++i )
-      sum += (int)string[i];
+   i = 0;
+   while( *string != '\0' )
+   {
+      assert(0 <= i && i < 28);
+      val = (unsigned int)(*string);
+      val <<= strhashshift[i];
+      sum += val;
+      i++;
+      i %= 28;
+      string++;
+   }
 
    return sum;
 }

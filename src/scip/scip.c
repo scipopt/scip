@@ -229,10 +229,10 @@ void SCIPprintVersion(                  /**< prints a version information line t
 #else
    fprintf(file, " [memory: standard]");
 #endif
-#ifdef NDEBUG
-   fprintf(file, " [mode: optimized]");
+#ifndef NDEBUG
+   fprintf(file, " [mode: debug]");
 #else
-   fprintf(file, " [mode: debugging]");
+   fprintf(file, " [mode: optimized]");
 #endif
    fprintf(file, " [LP solver: %s]\n", SCIPlpiGetSolverName());
 }
@@ -315,8 +315,7 @@ RETCODE SCIPreadProb(                   /**< reads problem from file and initial
    const char*      filename            /**< problem file name */
    )
 {
-   RETCODE retcode;
-   Bool read;
+   RESULT result;
    int i;
    char s[255];
 
@@ -325,27 +324,40 @@ RETCODE SCIPreadProb(                   /**< reads problem from file and initial
    CHECK_OKAY( checkStage(scip, "SCIPreadProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* try all readers until one could read the file */
-   read = FALSE;
-   for( i = 0; i < scip->set->nreaders && !read; ++i )
+   result = SCIP_DIDNOTRUN;
+   for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( retcode = SCIPreaderRead(scip->set->readers[i], scip, filename) );
-      read = (retcode != SCIP_DIDNOTRUN);
+      CHECK_OKAY( SCIPreaderRead(scip->set->readers[i], scip, filename, &result) );
    }
 
-   if( !read )
+   switch( result )
    {
-      printf("No reader for input file <%s> available\n", filename);
+   case SCIP_DIDNOTRUN:
+      failureMessage("No reader for input file <%s> available\n", filename);
+      return SCIP_READERR;
+
+   case SCIP_SUCCESS:
+      assert(scip->origprob != NULL);
+      
+      sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
+         scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
+         scip->origprob->ncons);
+      infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+
+      printf(" var names :  ");
+      SCIPhashtablePrintStatistics(scip->origprob->varnames);
+      printf(" cons names:  ");
+      SCIPhashtablePrintStatistics(scip->origprob->consnames);
+
+      return SCIP_OKAY;
+
+   default:
+      assert(i < scip->set->nreaders);
+      sprintf(s, "invalid result code <%d> from reader <%s> reading file <%s>", 
+         result, SCIPreaderGetName(scip->set->readers[i]), filename);
+      errorMessage(s);
       return SCIP_READERR;
    }
-
-   assert(scip->origprob != NULL);
-
-   sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
-      scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
-      scip->origprob->ncons);
-   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
-
-   return SCIP_OKAY;
 }
 
 RETCODE SCIPfreeProb(                   /**< frees problem and solution process data */
@@ -442,7 +454,7 @@ RETCODE SCIPsolve(                      /**< solves problem */
 
    case SCIP_STAGE_SOLVING:
       /* continue solution process */
-      CHECK_OKAY( SCIPsolveCIP(scip->set, scip->mem->solvemem, scip->stat, scip->transprob, scip->tree, 
+      CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
                      scip->lp, scip->price, scip->sepa, scip->cutpool, scip->primal) );
 
       /* detect, whether problem is solved */
@@ -921,6 +933,7 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
@@ -937,7 +950,7 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeConsHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, name, desc, sepapriority, enfopriority, chckpriority,
+   CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, name, desc, sepapriority, enfopriority, chckpriority, needscons,
                   consfree, consinit, consexit, consdele, constran, conssepa, consenfo, conschck, consprop,
                   conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
@@ -1295,6 +1308,53 @@ RETCODE SCIPchgUb(                      /**< changes upper bound of variable in 
       errorMessage("invalid SCIP stage");
       return SCIP_ERROR;
    }
+}
+
+RETCODE SCIPchgType(                    /**< changes type of variable in the problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   VARTYPE          vartype             /**< new type of variable */
+   )
+{
+   assert(var != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPchgType", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      if( var->probindex >= 0 )
+      {
+         CHECK_OKAY( SCIPprobChgVarType(scip->origprob, var, vartype) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPvarChgType(var, vartype) );
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      {
+         errorMessage("cannot change type of original variables while solving the problem");
+         return SCIP_INVALIDCALL;
+      }
+      if( var->probindex >= 0 )
+      {
+         CHECK_OKAY( SCIPprobChgVarType(scip->transprob, var, vartype) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPvarChgType(var, vartype) );
+      }
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }   
 }
 
 RETCODE SCIPgetChildren(                /**< gets children of active node */
@@ -1668,7 +1728,17 @@ Real SCIPepsilon(                       /**< returns value treated as zero */
    return scip->set->epsilon;
 }
 
-Bool SCIPisEQ(                          /**< checks, if values are in range of epsZero */
+Real SCIPsumepsilon(                    /**< returns value treated as zero for sums of floating point values */
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return scip->set->sumepsilon;
+}
+
+Bool SCIPisEQ(                          /**< checks, if values are in range of epsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1680,7 +1750,7 @@ Bool SCIPisEQ(                          /**< checks, if values are in range of e
    return SCIPsetIsEQ(scip->set, val1, val2);
 }
 
-Bool SCIPisL(                           /**< checks, if val1 is (more than epsZero) lower than val2 */
+Bool SCIPisL(                           /**< checks, if val1 is (more than epsilon) lower than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1692,7 +1762,7 @@ Bool SCIPisL(                           /**< checks, if val1 is (more than epsZe
    return SCIPsetIsL(scip->set, val1, val2);
 }
 
-Bool SCIPisLE(                          /**< checks, if val1 is not (more than epsZero) greater than val2 */
+Bool SCIPisLE(                          /**< checks, if val1 is not (more than epsilon) greater than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1704,7 +1774,7 @@ Bool SCIPisLE(                          /**< checks, if val1 is not (more than e
    return SCIPsetIsLE(scip->set, val1, val2);
 }
 
-Bool SCIPisG(                           /**< checks, if val1 is (more than epsZero) greater than val2 */
+Bool SCIPisG(                           /**< checks, if val1 is (more than epsilon) greater than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1716,7 +1786,7 @@ Bool SCIPisG(                           /**< checks, if val1 is (more than epsZe
    return SCIPsetIsG(scip->set, val1, val2);
 }
 
-Bool SCIPisGE(                          /**< checks, if val1 is not (more than epsZero) lower than val2 */
+Bool SCIPisGE(                          /**< checks, if val1 is not (more than epsilon) lower than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1728,18 +1798,7 @@ Bool SCIPisGE(                          /**< checks, if val1 is not (more than e
    return SCIPsetIsGE(scip->set, val1, val2);
 }
 
-Bool SCIPisInfinity(                    /**< checks, if value is (positive) infinite */
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against infinity */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetIsInfinity(scip->set, val);
-}
-
-Bool SCIPisZero(                        /**< checks, if value is in range epsZero of 0.0 */
+Bool SCIPisZero(                        /**< checks, if value is in range epsilon of 0.0 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -1750,7 +1809,7 @@ Bool SCIPisZero(                        /**< checks, if value is in range epsZer
    return SCIPsetIsZero(scip->set, val);
 }
 
-Bool SCIPisPos(                         /**< checks, if value is greater than epsZero */
+Bool SCIPisPos(                         /**< checks, if value is greater than epsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -1761,7 +1820,7 @@ Bool SCIPisPos(                         /**< checks, if value is greater than ep
    return SCIPsetIsPos(scip->set, val);
 }
 
-Bool SCIPisNeg(                         /**< checks, if value is lower than -epsZero */
+Bool SCIPisNeg(                         /**< checks, if value is lower than -epsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -1770,6 +1829,110 @@ Bool SCIPisNeg(                         /**< checks, if value is lower than -eps
    assert(scip->set != NULL);
 
    return SCIPsetIsNeg(scip->set, val);
+}
+
+Bool SCIPisSumEQ(                       /**< checks, if values are in range of sumepsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumEQ(scip->set, val1, val2);
+}
+
+Bool SCIPisSumL(                        /**< checks, if val1 is (more than sumepsilon) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumL(scip->set, val1, val2);
+}
+
+Bool SCIPisSumLE(                       /**< checks, if val1 is not (more than sumepsilon) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumLE(scip->set, val1, val2);
+}
+
+Bool SCIPisSumG(                        /**< checks, if val1 is (more than sumepsilon) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumG(scip->set, val1, val2);
+}
+
+Bool SCIPisSumGE(                       /**< checks, if val1 is not (more than sumepsilon) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumGE(scip->set, val1, val2);
+}
+
+Bool SCIPisSumZero(                     /**< checks, if value is in range sumepsilon of 0.0 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumZero(scip->set, val);
+}
+
+Bool SCIPisSumPos(                      /**< checks, if value is greater than sumepsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumPos(scip->set, val);
+}
+
+Bool SCIPisSumNeg(                      /**< checks, if value is lower than -sumepsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsSumNeg(scip->set, val);
+}
+
+Bool SCIPisInfinity(                    /**< checks, if value is (positive) infinite */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against infinity */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsInfinity(scip->set, val);
 }
 
 Real SCIPfloor(                         /**< rounds value down to the next integer */

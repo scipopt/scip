@@ -122,6 +122,13 @@ RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and ca
    );
 
 extern
+RETCODE SCIPprobChgVarType(             /**< changes the type of a variable in the problem */
+   PROB*            prob,               /**< problem data */
+   VAR*             var,                /**< variable to add */
+   VARTYPE          vartype             /**< new type of variable */
+   );
+
+extern
 RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */

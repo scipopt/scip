@@ -893,6 +893,13 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to active node, c
    }
 }
 
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 NODETYPE SCIPnodeGetType(               /**< gets the type of the node */
    NODE*            node                /**< node */
    )
@@ -919,6 +926,8 @@ Real SCIPnodeGetLowerBound(             /**< gets the lower bound of the node */
 
    return node->lowerbound;
 }
+
+#endif
 
 
 
@@ -1740,7 +1749,7 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
 
    (*tree)->root = NULL;
 
-   CHECK_OKAY( SCIPnodepqCreate(&(*tree)->leaves) );
+   CHECK_OKAY( SCIPnodepqCreate(&(*tree)->leaves, set) );
 
    (*tree)->path = NULL;
    (*tree)->actnode = NULL;

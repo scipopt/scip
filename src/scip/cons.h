@@ -39,10 +39,6 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
- *
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
  */
 #define DECL_CONSFREE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
@@ -51,10 +47,6 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
- *
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
  */
 #define DECL_CONSINIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
@@ -63,10 +55,6 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
- *
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
  */
 #define DECL_CONSEXIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
@@ -76,10 +64,6 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
  *    consdata        : pointer to the constraint data to free
- *
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
  */
 #define DECL_CONSDELE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONSDATA** consdata)
 
@@ -90,10 +74,6 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    scip            : SCIP main data structure
  *    sourcedata      : constraint data to transform
  *    targetdata      : pointer to constraint data where to store transformed data
- *
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
  */
 #define DECL_CONSTRAN(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONSDATA* sourcedata, CONSDATA** targetdata)
 
@@ -107,14 +87,14 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    result          : pointer to store the result of the separation call
  *
- *  possible return values:
+ *  possible return values for *result:
  *    SCIP_SEPARATED  : at least one cutting plane was generated
- *    SCIP_FAILURE    : the separator searched, but didn't found a cutting plane
+ *    SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane
  *    SCIP_DIDNOTRUN  : the separator was skipped
- *    neg. values     : error codes
  */
-#define DECL_CONSSEPA(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss)
+#define DECL_CONSSEPA(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
 
 /** constraint enforcing method of constraint handler
  *
@@ -140,23 +120,23 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    result          : pointer to store the result of the enforcing call
  *
- *  possible return values:
+ *  possible return values for *result:
  *    SCIP_BRANCHED   : at least one constraint of the handler is infeasible, and branching was applied
  *    SCIP_REDUCEDDOM : at least one constraint of the handler is infeasible, and a domain was reduced
  *    SCIP_SEPARATED  : at least one constraint of the handler is infeasible, and a cutting plane was generated
  *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
- *    neg. values     : error codes
  */
-#define DECL_CONSENFO(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss)
+#define DECL_CONSENFO(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
  *  The given solution has to be checked for feasibility.
  *  
  *  The check methods of the active constraint handlers are called in decreasing order of their check
- *  priorities until the first constraint handler returned with the value SCIP_INFEASIBLE.
+ *  priorities until the first constraint handler returned with the result SCIP_INFEASIBLE.
  *  The integrality constraint handler has a check priority of zero. A constraint handler which can
  *  (or wants) to check its constraints only for integral solutions should have a negative check priority
  *  (e.g. the alldiff-constraint can only operate on integral solutions).
@@ -170,13 +150,13 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    sol             : the solution to check feasibility for
+ *    result          : pointer to store the result of the feasibility checking call
  *
- *  possible return values:
+ *  possible return values for *result:
  *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
- *    neg. values     : error codes
  */
-#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, SOL* sol)
+#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, SOL* sol, RESULT* result)
 
 /** domain propagation method of constraint handler
  *  input:
@@ -184,21 +164,24 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
- *  possible return values:
+ *    result          : pointer to store the result of the propagation call
+ *
+ *  possible return values for *result:
  *    SCIP_REDUCEDDOM : at least one domain reduction was found
- *    SCIP_FAILURE    : the propagator searched and did not find any domain reductions
+ *    SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
  *    SCIP_DIDNOTRUN  : the propagator was skipped
- *    neg. values     : error codes
  */
-#define DECL_CONSPROP(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss)
+#define DECL_CONSPROP(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
 
 
 
 #include "scip.h"
 #include "retcode.h"
+#include "result.h"
 #include "mem.h"
 #include "lp.h"
 #include "sol.h"
+
 
 
 /** linked list of constraints */
@@ -226,6 +209,7 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
@@ -259,13 +243,30 @@ RETCODE SCIPconshdlrExit(               /**< calls exit method of constraint han
 extern
 RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 extern
 RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+extern
+RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of constraint handler */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   SOL*             sol,                /**< primal CIP solution */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+extern
+RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constraint handler */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 extern

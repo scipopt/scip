@@ -223,6 +223,12 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to actual node, c
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 extern
 NODETYPE SCIPnodeGetType(               /**< gets the type of the node */
    NODE*            node                /**< node */
@@ -237,6 +243,20 @@ extern
 Real SCIPnodeGetLowerBound(             /**< gets the lower bound of the node */
    NODE*            node                /**< node */
    );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPnodeGetType(node)           ( (node)->nodetype )
+#define SCIPnodeGetDepth(node)          ( (node)->depth )
+#define SCIPnodeGetLowerBound(node)     ( (node)->lowerbound )
+
+
+#endif
+
 
 
 /*

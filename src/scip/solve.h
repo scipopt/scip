@@ -43,8 +43,8 @@
 
 extern
 RETCODE SCIPsolveCIP(                   /**< main solving loop */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */

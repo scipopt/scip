@@ -35,6 +35,7 @@
 #define CONSHDLR_SEPAPRIORITY  -1000000
 #define CONSHDLR_ENFOPRIORITY         0
 #define CONSHDLR_CHCKPRIORITY         0
+#define CONSHDLR_NEEDSCONS        FALSE /**< the constraint handler is called without constraints */
 
 
 
@@ -57,6 +58,7 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
    assert(scip != NULL);
    assert(conss == NULL);
    assert(nconss == 0);
+   assert(result != NULL);
 
    debugMessage("Enfo method of integrality constraint\n");
 
@@ -82,11 +84,13 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
          CHECK_OKAY( SCIPcreateChild(scip, &node) );
          CHECK_OKAY( SCIPchgNodeLb(scip, node, var, SCIPceil(scip, primsol)) );
 
-         return SCIP_BRANCHED;
+         *result = SCIP_BRANCHED;
+         return SCIP_OKAY;
       }
    }
 
-   return SCIP_FEASIBLE;
+   *result = SCIP_FEASIBLE;
+   return SCIP_OKAY;
 }
 
 static
@@ -114,7 +118,7 @@ RETCODE SCIPincludeConsHdlrIntegral(      /**< creates the handler for integrali
    )
 {
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY,
+                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY, CONSHDLR_NEEDSCONS,
                   NULL, NULL, NULL, 
                   NULL, NULL, 
                   NULL, SCIPconsEnfoIntegral, SCIPconsChckIntegral, NULL,

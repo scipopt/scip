@@ -32,30 +32,18 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
 
 
 /** destructor of display column to free user data (called when SCIP is exiting)
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
  */
 #define DECL_DISPFREE(x) RETCODE x (DISP* disp, SCIP* scip)
 
 /** initialization method of display column (called at problem creation)
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
  */
 #define DECL_DISPINIT(x) RETCODE x (DISP* disp, SCIP* scip)
 
 /** deinitialization method of display column (called at problem destruction)
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
  */
 #define DECL_DISPEXIT(x) RETCODE x (DISP* disp, SCIP* scip)
 
 /** output method of display column to output file stream 'file'
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
  */
 #define DECL_DISPOUTP(x) RETCODE x (DISP* disp, SCIP* scip, FILE* file)
 

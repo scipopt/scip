@@ -64,20 +64,6 @@ typedef enum Stage STAGE;
 typedef struct Scip SCIP;               /**< SCIP main data structure */
 
 
-#include <stdio.h>
-
-#include "def.h"
-#include "retcode.h"
-#include "memory.h"
-#include "message.h"
-#include "reader.h"
-#include "cons.h"
-#include "var.h"
-#include "lp.h"
-#include "tree.h"
-#include "nodesel.h"
-#include "disp.h"
-
 
 #define CHECK_SCIP(x) { RETCODE _retcode_; \
                         if( (_retcode_ = (x)) != SCIP_OKAY ) \
@@ -105,6 +91,22 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #define SCIPfreeBlockMemorySize(scip,ptr,size)  freeBlockMemorySize(SCIPmemhdr(scip), (ptr), (size))
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
                                                 freeBlockMemorySizeNull(SCIPmemhdr(scip), (ptr), (size))
+
+
+#include <stdio.h>
+
+#include "def.h"
+#include "retcode.h"
+#include "result.h"
+#include "memory.h"
+#include "message.h"
+#include "reader.h"
+#include "cons.h"
+#include "var.h"
+#include "lp.h"
+#include "tree.h"
+#include "nodesel.h"
+#include "disp.h"
 
 
 extern
@@ -316,6 +318,7 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
@@ -458,6 +461,13 @@ RETCODE SCIPchgUb(                      /**< changes upper bound of variable in 
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
+   );
+
+extern
+RETCODE SCIPchgType(                    /**< changes type of variable in the problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   VARTYPE          vartype             /**< new type of variable */
    );
 
 extern
@@ -620,62 +630,120 @@ Real SCIPepsilon(                       /**< returns value treated as zero */
    );
 
 extern
-Bool SCIPisEQ(                          /**< checks, if values are in range of epsZero */
+Real SCIPsumepsilon(                    /**< returns value treated as zero for sums of floating point values */
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+extern
+Bool SCIPisEQ(                          /**< checks, if values are in range of epsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisL(                           /**< checks, if val1 is (more than epsZero) lower than val2 */
+Bool SCIPisL(                           /**< checks, if val1 is (more than epsilon) lower than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisLE(                          /**< checks, if val1 is not (more than epsZero) greater than val2 */
+Bool SCIPisLE(                          /**< checks, if val1 is not (more than epsilon) greater than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisG(                           /**< checks, if val1 is (more than epsZero) greater than val2 */
+Bool SCIPisG(                           /**< checks, if val1 is (more than epsilon) greater than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisGE(                          /**< checks, if val1 is not (more than epsZero) lower than val2 */
+Bool SCIPisGE(                          /**< checks, if val1 is not (more than epsilon) lower than val2 */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisZero(                        /**< checks, if value is in range epsilon of 0.0 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisPos(                         /**< checks, if value is greater than epsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisNeg(                         /**< checks, if value is lower than -epsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisSumEQ(                       /**< checks, if values are in range of sumepsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisSumL(                        /**< checks, if val1 is (more than sumepsilon) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisSumLE(                       /**< checks, if val1 is not (more than sumepsilon) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisSumG(                        /**< checks, if val1 is (more than sumepsilon) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisSumGE(                       /**< checks, if val1 is not (more than sumepsilon) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisSumZero(                     /**< checks, if value is in range sumepsilon of 0.0 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisSumPos(                      /**< checks, if value is greater than sumepsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisSumNeg(                      /**< checks, if value is lower than -sumepsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
    );
 
 extern
 Bool SCIPisInfinity(                    /**< checks, if value is (positive) infinite */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against infinity */
-   );
-
-extern
-Bool SCIPisZero(                        /**< checks, if value is in range epsZero of 0.0 */
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   );
-
-extern
-Bool SCIPisPos(                         /**< checks, if value is greater than epsZero */
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   );
-
-extern
-Bool SCIPisNeg(                         /**< checks, if value is lower than -epsZero */
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
    );
 
 extern

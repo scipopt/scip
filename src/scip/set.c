@@ -55,7 +55,7 @@
 
 /* Pricing */
 
-#define SCIP_DEFAULT_USEPRICING      FALSE /**< activate pricing of variables */
+#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS       32 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 1024 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 5.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -76,13 +76,13 @@
 /* Tree */
 
 /*#define SCIP_DEFAULT_NODELIMIT     INT_MAX*/ /**< maximal number of nodes to create */
-#define SCIP_DEFAULT_NODELIMIT     1000000 /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT        1000 /**< maximal number of nodes to create */
 
 
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ        10000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ            1 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -123,6 +123,7 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->scip = scip;
    (*set)->verblevel = SCIP_DEFAULT_VERBLEVEL;
    (*set)->epsilon = SCIP_DEFAULT_EPSILON;
+   (*set)->sumepsilon = SCIP_DEFAULT_SUMEPSILON;
    (*set)->infinity = SCIP_DEFAULT_INFINITY;
    (*set)->feastol = SCIP_DEFAULT_FEASTOL;
    (*set)->memGrowFac = SCIP_DEFAULT_MEMGROWFAC;
@@ -487,7 +488,7 @@ RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
 }
 
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -499,7 +500,7 @@ Bool SCIPsetIsEQ(                       /**< checks, if values are in range of e
    Real             val2                /**< second value to be compared */
    )
 {
-   return( ABS(val1-val2) < set->epsilon );
+   return( ABS(val1-val2) <= set->epsilon );
 }
 
 Bool SCIPsetIsL(                        /**< checks, if val1 is (more than epsilon) lower than val2 */
@@ -538,14 +539,6 @@ Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than e
    return( val1 >= val2 - set->epsilon );
 }
 
-Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against infinity */
-   )
-{
-   return( val >= set->infinity );
-}
-
 Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilon of 0.0 */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
@@ -568,6 +561,83 @@ Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -eps
    )
 {
    return( val < -set->epsilon );
+}
+
+Bool SCIPsetIsSumEQ(                    /**< checks, if values are in range of sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   return( ABS(val1-val2) <= set->sumepsilon );
+}
+
+Bool SCIPsetIsSumL(                     /**< checks, if val1 is (more than sumepsilon) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   return( val1 < val2 - set->sumepsilon );
+}
+
+Bool SCIPsetIsSumLE(                    /**< checks, if val1 is not (more than sumepsilon) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   return( val1 <= val2 + set->sumepsilon );
+}
+
+Bool SCIPsetIsSumG(                     /**< checks, if val1 is (more than sumepsilon) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   return( val1 > val2 + set->sumepsilon );
+}
+
+Bool SCIPsetIsSumGE(                    /**< checks, if val1 is not (more than sumepsilon) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   return( val1 >= val2 - set->sumepsilon );
+}
+
+Bool SCIPsetIsSumZero(                  /**< checks, if value is in range sumepsilon of 0.0 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   return( ABS(val) <= set->sumepsilon );
+}
+
+Bool SCIPsetIsSumPos(                   /**< checks, if value is greater than sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   return( val > set->sumepsilon );
+}
+
+Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   return( val < -set->sumepsilon );
+}
+
+Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against infinity */
+   )
+{
+   return( val >= set->infinity );
 }
 
 Bool SCIPsetIsFeasible(                 /**< checks, if value is non-negative within the LP feasibility bounds */

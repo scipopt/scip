@@ -39,6 +39,7 @@ typedef enum VerbLevel VERBLEVEL;
 
 
 #define errorMessage(msg)               errorMessage_call((msg), __FILE__, __LINE__)
+#define failureMessage                  printf("failure: "); printf
 
 #ifdef TODOMESSAGE
 #define todoMessage(msg)                todoMessage_call((msg), __FILE__, __LINE__)

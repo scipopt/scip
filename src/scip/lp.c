@@ -695,7 +695,7 @@ void rowDelNorms(                       /**< update row norms after deletion of 
 
    /* update squared euclidean norm */
    row->sqrnorm -= SQR(absval);
-   assert(SCIPsetIsGE(set, row->sqrnorm, 0.0));
+   row->sqrnorm = MAX(row->sqrnorm, 0.0);
 
    /* update maximum norm */
    if( row->nummaxval > 0 )
@@ -2185,7 +2185,6 @@ RETCODE lpFlushDelCols(                 /**< applies all cached column removals 
       CHECK_OKAY( SCIPlpiDelCols(lp->lpi, lp->lpifirstchgcol, lp->nlpicols-1) );
       for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
       {
-         assert(!lp->lpicols[i]->inlp);
          lp->lpicols[i]->lpipos = -1;
          lp->lpicols[i]->primsol = 0.0;
          lp->lpicols[i]->redcost = SCIP_INVALID;
@@ -2203,8 +2202,8 @@ RETCODE lpFlushDelCols(                 /**< applies all cached column removals 
 static
 RETCODE lpFlushAddCols(                 /**< applies all cached column additions to the LP solver */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    Real* obj;
@@ -2223,10 +2222,6 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    int naddcoefs;
    int i;
    int lpipos;
-#if 0 /* ??? */
-   int tmpsizecols;
-   int tmpsizecoefs;
-#endif
 
    assert(lp != NULL);
    assert(lp->lpifirstchgcol == lp->nlpicols);
@@ -2249,19 +2244,6 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    assert(naddcols > 0);
 
    /* get temporary memory for changes */
-#if 0 /* ??? */
-   tmpsizecols = SCIPsetCalcMemGrowSize(set, naddcols);     /* use standard sizes to reuse memory more often */
-   tmpsizecoefs = SCIPsetCalcMemGrowSize(set, naddcoefs);
-   assert(tmpsizecols >= naddcols);
-   assert(tmpsizecoefs >= naddcoefs);
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, obj, tmpsizecols) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, lb, tmpsizecols) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ub, tmpsizecols) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, beg, tmpsizecols) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ind, tmpsizecoefs) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, val, tmpsizecoefs) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, name, tmpsizecols) );
-#else
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, obj, naddcols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, lb, naddcols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, ub, naddcols) );
@@ -2269,7 +2251,6 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, naddcoefs) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, val, naddcoefs) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, name, naddcols) );
-#endif
    
    /* fill temporary memory with column data */
    nnonz = 0;
@@ -2333,15 +2314,6 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    lp->lpifirstchgcol = lp->nlpicols;
 
    /* free temporary memory */
-#if 0 /* ??? */
-   freeBlockMemoryArray(memhdr, obj, tmpsizecols);
-   freeBlockMemoryArray(memhdr, lb, tmpsizecols);
-   freeBlockMemoryArray(memhdr, ub, tmpsizecols);
-   freeBlockMemoryArray(memhdr, beg, tmpsizecols);
-   freeBlockMemoryArray(memhdr, ind, tmpsizecoefs);
-   freeBlockMemoryArray(memhdr, val, tmpsizecoefs);
-   freeBlockMemoryArray(memhdr, name, tmpsizecols);
-#else
    SCIPsetReleaseBufferArray(set, name);
    SCIPsetReleaseBufferArray(set, val);
    SCIPsetReleaseBufferArray(set, ind);
@@ -2349,7 +2321,7 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    SCIPsetReleaseBufferArray(set, ub);
    SCIPsetReleaseBufferArray(set, lb);
    SCIPsetReleaseBufferArray(set, obj);
-#endif
+
    return SCIP_OKAY;
 }
 
@@ -2381,7 +2353,6 @@ RETCODE lpFlushDelRows(                 /**< applies all cached row removals to 
       CHECK_OKAY( SCIPlpiDelRows(lp->lpi, lp->lpifirstchgrow, lp->nlpirows-1) );
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
       {
-         assert(!lp->lpirows[i]->inlp);
          lp->lpirows[i]->lpipos = -1;
          lp->lpirows[i]->dualsol = 0.0;
          lp->lpirows[i]->activity = SCIP_INVALID;
@@ -2398,8 +2369,8 @@ RETCODE lpFlushDelRows(                 /**< applies all cached row removals to 
 static
 RETCODE lpFlushAddRows(                 /**< applies all cached row additions and removals to the LP solver */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    Real* lhs;
@@ -2416,10 +2387,6 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    int naddcoefs;
    int i;
    int lpipos;
-#if 0 /* ??? */
-   int tmpsizerows;
-   int tmpsizecoefs;
-#endif
 
    assert(lp != NULL);
    assert(lp->lpifirstchgrow == lp->nlpirows);
@@ -2441,25 +2408,12 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    assert(naddrows > 0);
 
    /* get temporary memory for changes */
-#if 0 /* ??? */
-   tmpsizerows = SCIPsetCalcMemGrowSize(set, naddrows);     /* use standard sizes to reuse memory more often */
-   tmpsizecoefs = SCIPsetCalcMemGrowSize(set, naddcoefs);
-   assert(tmpsizerows >= naddrows);
-   assert(tmpsizecoefs >= naddcoefs);
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, lhs, tmpsizerows) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rhs, tmpsizerows) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, beg, tmpsizerows) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ind, tmpsizecoefs) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, val, tmpsizecoefs) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, name, tmpsizerows) );
-#else
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, lhs, naddrows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, rhs, naddrows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, beg, naddrows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, naddcoefs) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, val, naddcoefs) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, name, naddrows) );
-#endif
    
    /* fill temporary memory with row data */
    nnonz = 0;
@@ -2516,21 +2470,12 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    lp->lpifirstchgrow = lp->nlpirows;
 
    /* free temporary memory */
-#if 0 /* ??? */
-   freeBlockMemoryArray(memhdr, lhs, tmpsizerows);
-   freeBlockMemoryArray(memhdr, rhs, tmpsizerows);
-   freeBlockMemoryArray(memhdr, beg, tmpsizerows);
-   freeBlockMemoryArray(memhdr, ind, tmpsizecoefs);
-   freeBlockMemoryArray(memhdr, val, tmpsizecoefs);
-   freeBlockMemoryArray(memhdr, name, tmpsizerows);
-#else
    SCIPsetReleaseBufferArray(set, name);
    SCIPsetReleaseBufferArray(set, val);
    SCIPsetReleaseBufferArray(set, ind);
    SCIPsetReleaseBufferArray(set, beg);
    SCIPsetReleaseBufferArray(set, rhs);
    SCIPsetReleaseBufferArray(set, lhs);
-#endif
    
    return SCIP_OKAY;
 }
@@ -2538,8 +2483,8 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
 static
 RETCODE lpFlushChgcols(                 /**< applies all cached column changes to the LP */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    COL* col;
@@ -2549,9 +2494,6 @@ RETCODE lpFlushChgcols(                 /**< applies all cached column changes t
    Real* ub;
    int i;
    int nchg;
-#if 0 /* ??? */
-   int tmpsizecols;
-#endif
 
    assert(lp != NULL);
    assert(memhdr != NULL);
@@ -2560,17 +2502,9 @@ RETCODE lpFlushChgcols(                 /**< applies all cached column changes t
       return SCIP_OKAY;
 
    /* get temporary memory for changes */
-#if 0 /* ??? */
-   tmpsizecols = SCIPsetCalcMemGrowSize(set, lp->ncols);   /* use standard sizes to reuse memory more often */
-   assert(tmpsizecols >= lp->ncols);
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ind, tmpsizecols) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, lb, tmpsizecols) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ub, tmpsizecols) );
-#else
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, lp->ncols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, lb, lp->ncols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, ub, lp->ncols) );
-#endif
 
    /* collect all cached bound changes */
    nchg = 0;
@@ -2609,15 +2543,9 @@ RETCODE lpFlushChgcols(                 /**< applies all cached column changes t
    lp->nchgcols = 0;
 
    /* free temporary memory */
-#if 0 /* ??? */
-   freeBlockMemoryArray(memhdr, ind, tmpsizecols);
-   freeBlockMemoryArray(memhdr, lb, tmpsizecols);
-   freeBlockMemoryArray(memhdr, ub, tmpsizecols);
-#else
    SCIPsetReleaseBufferArray(set, ub);
    SCIPsetReleaseBufferArray(set, lb);
    SCIPsetReleaseBufferArray(set, ind);
-#endif
 
    return SCIP_OKAY;
 }
@@ -2625,8 +2553,8 @@ RETCODE lpFlushChgcols(                 /**< applies all cached column changes t
 static
 RETCODE lpFlushChgrows(                 /**< applies all cached row changes to the LP */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    ROW* row;
@@ -2635,9 +2563,6 @@ RETCODE lpFlushChgrows(                 /**< applies all cached row changes to t
    Real* rhs;
    int i;
    int nchg;
-#if 0 /* ??? */ 
-   int tmpsizerows;
-#endif
 
    assert(lp != NULL);
    assert(memhdr != NULL);
@@ -2646,17 +2571,9 @@ RETCODE lpFlushChgrows(                 /**< applies all cached row changes to t
       return SCIP_OKAY;
 
    /* get temporary memory for changes */
-#if 0
-   tmpsizerows = SCIPsetCalcMemGrowSize(set, lp->nrows);   /* use standard sizes to reuse memory more often */
-   assert(tmpsizerows >= lp->nrows);
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ind, tmpsizerows) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, lhs, tmpsizerows) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rhs, tmpsizerows) );
-#else
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, lp->nrows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, lhs, lp->nrows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, rhs, lp->nrows) );
-#endif
 
    /* collect all cached left and right hand side changes */
    nchg = 0;
@@ -2690,15 +2607,9 @@ RETCODE lpFlushChgrows(                 /**< applies all cached row changes to t
    lp->nchgrows = 0;
 
    /* free temporary memory */
-#if 0 /* ??? */
-   freeBlockMemoryArray(memhdr, ind, tmpsizerows);
-   freeBlockMemoryArray(memhdr, lhs, tmpsizerows);
-   freeBlockMemoryArray(memhdr, rhs, tmpsizerows);
-#else
    SCIPsetReleaseBufferArray(set, rhs);
    SCIPsetReleaseBufferArray(set, lhs);
    SCIPsetReleaseBufferArray(set, ind);
-#endif
 
    return SCIP_OKAY;
 }
@@ -2706,8 +2617,8 @@ RETCODE lpFlushChgrows(                 /**< applies all cached row changes to t
 static
 RETCODE lpFlush(                        /**< applies all cached changes to the LP solver */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(lp != NULL);
@@ -2730,10 +2641,10 @@ RETCODE lpFlush(                        /**< applies all cached changes to the L
 
    CHECK_OKAY( lpFlushDelCols(lp) );
    CHECK_OKAY( lpFlushDelRows(lp) );
-   CHECK_OKAY( lpFlushChgcols(lp, set, memhdr) );
-   CHECK_OKAY( lpFlushChgrows(lp, set, memhdr) );
-   CHECK_OKAY( lpFlushAddCols(lp, set, memhdr) );
-   CHECK_OKAY( lpFlushAddRows(lp, set, memhdr) );
+   CHECK_OKAY( lpFlushChgcols(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushChgrows(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushAddCols(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushAddRows(lp, memhdr, set) );
 
    lp->flushed = TRUE;
 
@@ -3037,7 +2948,7 @@ RETCODE SCIPlpSetState(                 /**< loads LP state (like basis informat
    assert(memhdr != NULL);
    assert(lpistate != NULL);
 
-   lpFlush(lp, set, memhdr);
+   lpFlush(lp, memhdr, set);
 
    CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, set, lpistate) );
    lp->primalfeasible = TRUE;
@@ -3080,8 +2991,8 @@ RETCODE SCIPlpSetUpperbound(            /**< sets the upper objective limit of t
 
 RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simplex algorithm */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
 {
@@ -3097,7 +3008,7 @@ RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simpl
    debugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", stat->nprimallp+1, stat->nlp+1, lp->ncols, lp->nrows);
 
    /* flush changes to the LP solver */
-   CHECK_OKAY( lpFlush(lp, set, memhdr) );
+   CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
@@ -3164,8 +3075,8 @@ RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simpl
 
 RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex algorithm */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
 {
@@ -3181,7 +3092,7 @@ RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex
    debugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", stat->nduallp+1, stat->nlp+1, lp->ncols, lp->nrows);
 
    /* flush changes to the LP solver */
-   CHECK_OKAY( lpFlush(lp, set, memhdr) );
+   CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
@@ -3268,8 +3179,8 @@ Real SCIPlpGetObjval(                   /**< gets objective value of last soluti
 
 RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
 {
@@ -3343,8 +3254,8 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
 
 RETCODE SCIPlpGetUnboundedSol(          /**< stores LP solution with infinite objective value in the columns and rows */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
 {
@@ -3419,8 +3330,8 @@ RETCODE SCIPlpGetUnboundedSol(          /**< stores LP solution with infinite ob
 
 RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers for infeasibility proof in rows */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    Real* dualfarkas;

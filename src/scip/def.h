@@ -35,8 +35,25 @@
 
 
 
-#define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) < SCIP_OKAY ) return _restat_; }
+#ifndef NDEBUG
+#define CHECK_OKAY(x) { int _restat_;                                                                       \
+                        if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                        {                                                                                   \
+                          printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
+                          return _restat_;                                                                  \
+                        }                                                                                   \
+                      }
+#define ALLOC_OKAY(x) { if( NULL == (x) )                                                                   \
+                        {                                                                                   \
+                          printf("[%s:%d] No memory in function call\n", __FILE__, __LINE__);               \
+                          return SCIP_NOMEMORY;                                                             \
+                        }                                                                                   \
+                      }
+#else
+#define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
 #define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
+#endif
+
 
 #ifndef SQR
 #define SQR(x)        ((x)*(x))
@@ -93,13 +110,13 @@ typedef double Real;                    /**< type used for floating point values
 
 #define SCIP_SAFEMEMORY                 /**< use memory leakage detection in debug mode */
 #define SCIP_BLOCKMEMORY                /**< use block memory */
-#define SCIP_HASHSIZE_NAMES       32749
-#define SCIP_HASHSIZE_CUTPOOLS    32749
+#define SCIP_HASHSIZE_NAMES      131101 /**< size of hash table in name tables */
+#define SCIP_HASHSIZE_CUTPOOLS   131101 /**< size of hash table in cut pools */
 
 
 
 /*
- * Debugging
+ * Global debugging settings
  */
 
 /*#define DEBUG 1*/

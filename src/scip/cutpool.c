@@ -127,15 +127,18 @@ static
 DECL_HASHKEYVAL(hashKeyValCut)
 {
    ROW* row;
+   unsigned int keyval;
 
    row = (ROW*)key;
    assert(row != NULL);
 
-   return
-      + 0x010000000 * row->nummaxval
-      + 0x001000000 * row->len
-      + 0x000001000 * row->minidx
-      + 0x000000001 * row->maxidx;
+   keyval =
+      + row->nummaxval << 29
+      + row->len << 22
+      + row->minidx << 11
+      + row->maxidx;
+
+   return keyval;
 }
 
 
@@ -486,7 +489,7 @@ RETCODE SCIPcutpoolSeparate(            /**< separates cuts of the cut pool */
    if( found )
       return SCIP_SEPARATED;
    else
-      return SCIP_FAILURE;
+      return SCIP_DIDNOTFIND;
 }
 
 int SCIPcutpoolGetNCuts(                /**< get number of cuts in the cut pool */

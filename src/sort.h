@@ -55,7 +55,7 @@ typedef struct HashTable HASHTABLE;     /**< hash table */
 #define DECL_HASHKEYEQ(x) Bool x (void* key1, void* key2)
 
 /** returns the hash value of the key */
-#define DECL_HASHKEYVAL(x) int x (void* key)
+#define DECL_HASHKEYVAL(x) unsigned int x (void* key)
 
 
 #if 0 /* PRIORITY QUEUE NOT NEEDED */
@@ -127,6 +127,11 @@ RETCODE SCIPhashtableRemove(            /**< removes existing element from the h
    HASHTABLE*       hashtable,          /**< hash table */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to remove from the table */
+   );
+
+extern
+void SCIPhashtablePrintStatistics(      /**< prints statistics about hash table usage */
+   HASHTABLE*       hashtable           /**< hash table */
    );
 
 extern

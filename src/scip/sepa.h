@@ -27,7 +27,7 @@
 #define __SEPA_H__
 
 
-typedef struct Sepa SEPA;               /**< storage for sepad variables */
+typedef struct Sepa SEPA;               /**< storage for separated variables */
 
 
 #include "def.h"

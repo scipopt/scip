@@ -115,8 +115,8 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
    /* release problem variables */
    for( v = 0; v < (*prob)->nvars; ++v )
    {
-      assert((*prob)->vars[v]->inprob);
-      (*prob)->vars[v]->inprob = FALSE;
+      assert((*prob)->vars[v]->probindex >= 0);
+      (*prob)->vars[v]->probindex = -1;
       CHECK_OKAY( SCIPvarRelease(&(*prob)->vars[v], memhdr, set, lp) );
    }
    freeMemoryArrayNull((*prob)->vars);
@@ -224,11 +224,10 @@ RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the prob
  * problem modification
  */
 
-RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
+static
+RETCODE probInsertVar(                  /**< insert var at the correct position in vars array, depending on its type */
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var                 /**< variable to add */
+   VAR*             var                 /**< variable to insert */
    )
 {
    int insertpos;
@@ -237,41 +236,57 @@ RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and ca
    int contstart;
 
    assert(prob != NULL);
-   assert(set != NULL);
+   assert(prob->vars != NULL);
+   assert(prob->nvars < prob->varssize);
    assert(var != NULL);
-   assert(!var->inprob);
+   assert(var->probindex == -1);
 
-   CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
-
-   /* insert variable at the correct position, depending on its type */
    insertpos = prob->nvars;
    intstart = prob->nbin;
    implstart = intstart + prob->nint;
    contstart = implstart + prob->nimpl;
+
    if( var->vartype == SCIP_VARTYPE_CONTINOUS )
       prob->ncont++;
    else
    {
-      prob->vars[insertpos] = prob->vars[contstart];
-      insertpos = contstart;
+      if( insertpos > contstart )
+      {
+         prob->vars[insertpos] = prob->vars[contstart];
+         prob->vars[insertpos]->probindex = insertpos;
+         insertpos = contstart;
+      }
+      assert(insertpos == contstart);
+
       if( var->vartype == SCIP_VARTYPE_IMPLINT )
          prob->nimpl++;
       else
       {
-         prob->vars[insertpos] = prob->vars[implstart];
-         insertpos = implstart;
+         if( insertpos > implstart )
+         {
+            prob->vars[insertpos] = prob->vars[implstart];
+            prob->vars[insertpos]->probindex = insertpos;
+            insertpos = implstart;
+         }
+         assert(insertpos == implstart);
+
          if( var->vartype == SCIP_VARTYPE_INTEGER )
             prob->nint++;
          else
          {
             assert(var->vartype == SCIP_VARTYPE_BINARY);
-            prob->vars[insertpos] = prob->vars[intstart];
-            insertpos = intstart;
+            if( insertpos > intstart )
+            {
+               prob->vars[insertpos] = prob->vars[intstart];
+               prob->vars[insertpos]->probindex = insertpos;
+               insertpos = intstart;
+            }
+            assert(insertpos == intstart);
+
             prob->nbin++;
          }
       }
    }
-
    prob->nvars++;
 
    assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
@@ -281,10 +296,114 @@ RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and ca
       || (var->vartype == SCIP_VARTYPE_CONTINOUS && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
 
    prob->vars[insertpos] = var;
+   var->probindex = insertpos;
 
-   /* capture variable and mark it to be in problem */
+   return SCIP_OKAY;
+}
+
+static
+RETCODE probRemoveVar(                  /**< removes variable from vars array */
+   PROB*            prob,               /**< problem data */
+   VAR*             var                 /**< variable to remove */
+   )
+{
+   int freepos;
+   int intstart;
+   int implstart;
+   int contstart;
+
+   assert(prob != NULL);
+   assert(var != NULL);
+   assert(var->probindex >= 0);
+   assert(prob->vars != NULL);
+   assert(prob->vars[var->probindex] == var);
+
+   intstart = prob->nbin;
+   implstart = intstart + prob->nint;
+   contstart = implstart + prob->nimpl;
+
+   switch( var->vartype )
+   {
+   case SCIP_VARTYPE_BINARY:
+      assert(0 <= var->probindex && var->probindex < intstart);
+      prob->nbin--;
+      break;
+   case SCIP_VARTYPE_INTEGER:
+      assert(intstart <= var->probindex && var->probindex < implstart);
+      prob->nint--;
+      break;
+   case SCIP_VARTYPE_IMPLINT:
+      assert(implstart <= var->probindex && var->probindex < contstart);
+      prob->nimpl--;
+      break;
+   case SCIP_VARTYPE_CONTINOUS:
+      assert(contstart <= var->probindex && var->probindex < prob->nvars);
+      prob->ncont--;
+      break;
+   default:
+      errorMessage("invalid variable type");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* move last binary, last integer, last implicit, and last continous variable forward to fill the free slot */
+   freepos = var->probindex;
+   if( freepos < intstart-1 )
+   {
+      /* move last binary variable to free slot */
+      prob->vars[freepos] = prob->vars[intstart-1];
+      prob->vars[freepos]->probindex = freepos;
+      freepos = intstart-1;
+   }
+   if( freepos < implstart-1 )
+   {
+      /* move last integer variable to free slot */
+      prob->vars[freepos] = prob->vars[implstart-1];
+      prob->vars[freepos]->probindex = freepos;
+      freepos = implstart-1;
+   }
+   if( freepos < contstart-1 )
+   {
+      /* move last implicit integer variable to free slot */
+      prob->vars[freepos] = prob->vars[contstart-1];
+      prob->vars[freepos]->probindex = freepos;
+      freepos = contstart-1;
+   }
+   if( freepos < prob->nvars-1 )
+   {
+      /* move last implicit integer variable to free slot */
+      prob->vars[freepos] = prob->vars[prob->nvars-1];
+      prob->vars[freepos]->probindex = freepos;
+      freepos = prob->nvars-1;
+   }
+   assert(freepos == prob->nvars-1);
+
+   prob->nvars--;
+   var->probindex = -1;
+
+   assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory buffer */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable to add */
+   )
+{
+   assert(prob != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(var->probindex == -1);
+
+   CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
+
+   /* insert variable in vars array and mark it to be in problem */
+   CHECK_OKAY( probInsertVar(prob, var) );
+
+   /* capture variable */
    SCIPvarCapture(var);
-   var->inprob = TRUE;
 
    /* add variable's name to the namespace */
    CHECK_OKAY( SCIPhashtableInsert(prob->varnames, memhdr, (void*)var) );
@@ -295,6 +414,31 @@ RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and ca
    return SCIP_OKAY;
 }
 
+RETCODE SCIPprobChgVarType(             /**< changes the type of a variable in the problem */
+   PROB*            prob,               /**< problem data */
+   VAR*             var,                /**< variable to add */
+   VARTYPE          vartype             /**< new type of variable */
+   )
+{
+   assert(prob != NULL);
+   assert(var != NULL);
+   assert(var->probindex >= 0);
+
+   if( var->vartype == vartype )
+      return SCIP_OKAY;
+
+   /* temporarily remove variable from problem */
+   CHECK_OKAY( probRemoveVar(prob, var) );
+
+   /* change the type of the variable */
+   CHECK_OKAY( SCIPvarChgType(var, vartype) );
+
+   /* reinsert variable into problem */
+   CHECK_OKAY( probInsertVar(prob, var) );
+
+   return SCIP_OKAY;
+}
+   
 RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */

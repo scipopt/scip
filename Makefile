@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.16 2003/02/18 15:20:47 bzfpfend Exp $
+# $Id: Makefile,v 1.17 2003/02/20 14:10:18 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -196,6 +196,10 @@ lint:		$(LIBSRC) $(OBJSRC)
 
 doc:		
 		cd doc; $(DOXY) scip.dxy
+
+tmpcheck:
+		cd check; \
+		/bin/sh ./tmpcheck.sh $(TEST).test $(BINARY);
 
 test:		
 		cd check; \

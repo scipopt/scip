@@ -35,37 +35,50 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
 
 
 /** destructor of reader to free user data (called when SCIP is exiting)
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
+ *
+ *  input:
+ *    reader          : the reader itself
+ *    scip            : SCIP main data structure
  */
 #define DECL_READERFREE(x) RETCODE x (READER* reader, SCIP* scip)
 
 /** initialization method of reader (called at problem creation)
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
+ *
+ *  input:
+ *    reader          : the reader itself
+ *    scip            : SCIP main data structure
  */
 #define DECL_READERINIT(x) RETCODE x (READER* reader, SCIP* scip)
 
 /** deinitialization method of reader (called at problem destruction)
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
+ *
+ *  input:
+ *    reader          : the reader itself
+ *    scip            : SCIP main data structure
  */
 #define DECL_READEREXIT(x) RETCODE x (READER* reader, SCIP* scip)
 
-/** problem reading method of reader from file, if filename is NULL, read from stdin
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
+/** problem reading method of reader
+ *
+ *  input:
+ *    reader          : the reader itself
+ *    scip            : SCIP main data structure
+ *    filename        : full path and name of file to read, or NULL if stdin should be used
+ *    result          : pointer to store the result of the propagation call
+ *
+ *  possible return values for *result:
+ *    SCIP_SUCCESS    : the reader read the file correctly
+ *    SCIP_DIDNOTRUN  : the reader is not responsible for given input file
+ *
+ *  If the reader detected an error in the input file, it should return with SCIP_READERR or SCIP_NOFILE.
  */
-#define DECL_READERREAD(x) RETCODE x (READER* reader, SCIP* scip, const char* filename)
+#define DECL_READERREAD(x) RETCODE x (READER* reader, SCIP* scip, const char* filename, RESULT* result)
 
 
 
 #include "scip.h"
 #include "retcode.h"
+#include "result.h"
 
 
 extern
@@ -103,7 +116,8 @@ extern
 RETCODE SCIPreaderRead(                 /**< reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
    READER*          reader,             /**< reader */
    SCIP*            scip,               /**< SCIP data structure */   
-   const char*      filename            /**< name of the input file */
+   const char*      filename,           /**< name of the input file */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 extern

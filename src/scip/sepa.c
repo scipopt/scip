@@ -146,7 +146,7 @@ RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and 
       /* if the array consists of "maxsepacuts" cuts, release the worst cut */
       if( sepa->ncuts == maxsepacuts )
       {
-         CHECK_OKAY( SCIProwRelease(&sepa->cuts[sepa->ncuts], memhdr, set, lp) );
+         CHECK_OKAY( SCIProwRelease(&sepa->cuts[sepa->ncuts-1], memhdr, set, lp) );
          sepa->ncuts--;
       }
       assert(sepa->ncuts < maxsepacuts);

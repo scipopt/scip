@@ -260,8 +260,8 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
 RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices problem variables, and adds some columns
                                            with negative reduced costs to the LP */
    PRICE*           price,              /**< pricing storage */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    LP*              lp,                 /**< LP data */
@@ -349,7 +349,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             /* a column not in LP must have zero in its bounds */
             assert(col->var->dom.lb <= 0.0 && 0.0 <= col->var->dom.ub);
 
-            if( lp->lpsolstat == SCIP_INFEASIBLE )
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
             {
                /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
                 * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
@@ -388,7 +388,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    }
 
    /* call external pricer algorithms */
-   if( lp->lpsolstat == SCIP_INFEASIBLE )
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       todoMessage("external farkas pricing");
    }
@@ -404,11 +404,11 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       assert(var->varstatus == SCIP_VARSTATUS_LOOSE);
 
       /* add variable to problem, if needed */
-      if( !var->inprob )
+      if( var->probindex == -1 )
       {
          CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, var) );
       }
-      assert(var->inprob);
+      assert(var->probindex >= 0);
       assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
       /* transform loose variable into column variable */
@@ -432,11 +432,11 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       var = price->vars[v];
 
       /* add variable to problem, if needed */
-      if( !var->inprob )
+      if( var->probindex == -1 )
       {
          CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, var) );
       }
-      assert(var->inprob);
+      assert(var->probindex >= 0);
       assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
       /* transform variable into column variable, if needed */

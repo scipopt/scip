@@ -64,6 +64,7 @@ typedef struct LinCons LINCONS;         /**< externally stored linear constraint
 #define CONSHDLR_SEPAPRIORITY  +1000000
 #define CONSHDLR_ENFOPRIORITY  -1000000
 #define CONSHDLR_CHCKPRIORITY  -1000000
+#define CONSHDLR_NEEDSCONS         TRUE /**< the constraint handler should only be called, if linear constraints exist */
 
 
 /** externally stored linear constraint */
@@ -265,21 +266,22 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
    CONSHDLR*        conshdlr,           /**< linear constraint handler */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< array of constraints to process */
-   int              nconss              /**< number of constraints to process */
+   int              nconss,             /**< number of constraints to process */
+   Bool*            found               /**< pointer to store information, if a violated constraint has been found */
    )
 {
    CONS* cons;
    CONSDATA* consdata;
    int c;
-   Bool found;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(nconss == 0 || conss != NULL);
    assert(nconss >= 0);
+   assert(found != NULL);
 
-   found = FALSE;
+   *found = FALSE;
 
    debugMessage("applying %d linear constraints at %p\n", nconss, conss);
    for( c = 0; c < nconss; ++c )
@@ -305,7 +307,7 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
             {
                /* insert LP row as cut */
                CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
-               found = TRUE;
+               *found = TRUE;
             }
          }
       }
@@ -340,15 +342,12 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
 
             /* insert LP row as cut */
             CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
-            found = TRUE;
+            *found = TRUE;
          }
       }
    }
 
-   if( found )
-      return SCIP_SEPARATED;
-   else
-      return SCIP_FEASIBLE;
+   return SCIP_OKAY;
 }
 
 
@@ -444,38 +443,47 @@ DECL_CONSTRAN(SCIPconsTranLinear)
 static
 DECL_CONSSEPA(SCIPconsSepaLinear)
 {
-   RETCODE retcode;
+   Bool found;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
+   assert(result != NULL);
 
    debugMessage("Sepa method of linear constraints\n");
 
-   /* call enforcing method */
-   CHECK_OKAY( retcode = applyConstraints(conshdlr, scip, conss, nconss) );
+   /* check for violated constraints */
+   CHECK_OKAY( applyConstraints(conshdlr, scip, conss, nconss, &found) );
 
-   /* if enforcing method returned SCIP_FEASIBLE, then the separation was not successful */
-   if( retcode == SCIP_FEASIBLE )
-      return SCIP_FAILURE;
+   if( found )
+      *result = SCIP_SEPARATED;
    else
-   {
-      assert(retcode == SCIP_SEPARATED);
-      return SCIP_SEPARATED;
-   }
+      *result = SCIP_DIDNOTFIND;
+
+   return SCIP_OKAY;
 }
 
 static
 DECL_CONSENFO(SCIPconsEnfoLinear)
 {
+   Bool found;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
+   assert(result != NULL);
 
    debugMessage("Enfo method of linear constraints\n");
 
-   /* call enforcing method */
-   return applyConstraints(conshdlr, scip, conss, nconss);
+   /* check for violated constraints */
+   CHECK_OKAY( applyConstraints(conshdlr, scip, conss, nconss, &found) );
+
+   if( found )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
 }
 
 static
@@ -484,6 +492,7 @@ DECL_CONSCHCK(SCIPconsChckLinear)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
+   assert(result != NULL);
 
    todoMessage("Chck method of linear constraints");
 
@@ -496,6 +505,7 @@ DECL_CONSPROP(SCIPconsPropLinear)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
+   assert(result != NULL);
 
    todoMessage("Prop method of linear constraints");
 
@@ -514,7 +524,7 @@ RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear cons
    )
 {
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY,
+                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY, CONSHDLR_NEEDSCONS,
                   SCIPconsFreeLinear, SCIPconsInitLinear, SCIPconsExitLinear, 
                   SCIPconsDeleLinear, SCIPconsTranLinear, 
                   SCIPconsSepaLinear, SCIPconsEnfoLinear, SCIPconsChckLinear, SCIPconsPropLinear,

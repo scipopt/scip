@@ -69,8 +69,8 @@ extern
 RETCODE SCIPpriceVars(                  /**< calls all external pricers, prices problem variables, and adds some columns
                                            with negative reduced costs to the LP */
    PRICE*           price,              /**< pricing storage */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    LP*              lp,                 /**< LP data */

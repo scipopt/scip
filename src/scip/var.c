@@ -680,10 +680,10 @@ RETCODE SCIPvarCreate(                  /**< creates and captures an original pr
    (*var)->dom.ub = ub;
    (*var)->obj = obj;
    (*var)->index = stat->nvaridx++;
+   (*var)->probindex = -1;
    (*var)->nuses = 0;
    (*var)->vartype = vartype;
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL;
-   (*var)->inprob = FALSE;
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -715,10 +715,10 @@ RETCODE SCIPvarCreateTransformed(       /**< creates and captures a loose variab
    (*var)->dom.ub = ub;
    (*var)->obj = obj;
    (*var)->index = stat->nvaridx++;
+   (*var)->probindex = -1;
    (*var)->nuses = 0;
    (*var)->vartype = vartype;
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE;
-   (*var)->inprob = FALSE;
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -738,7 +738,7 @@ RETCODE SCIPvarFree(                    /**< frees a variable */
    assert(*var != NULL);
    assert((*var)->varstatus != SCIP_VARSTATUS_COLUMN || (VAR**)(&(*var)->data.col->var) != var);
    assert((*var)->nuses == 0);
-   assert(!(*var)->inprob);
+   assert((*var)->probindex == -1);
 
    debugMessage("free variable <%s> with status=%d\n", (*var)->name, (*var)->varstatus);
    switch( (*var)->varstatus )
@@ -947,14 +947,14 @@ RETCODE SCIPvarAggregate(               /**< converts variable into aggregated v
    return SCIP_OKAY;
 }
 
-RETCODE SCIPvarChgType(                 /**< changes type of variable */
+RETCODE SCIPvarChgType(                 /**< changes type of variable; cannot be called, if var belongs to a problem */
    VAR*             var,                /**< problem variable to change */
    VARTYPE          vartype             /**< new type of variable */
    )
 {
    assert(var != NULL);
 
-   if( var->inprob )
+   if( var->probindex >= 0 )
    {
       errorMessage("cannot change type of variable already in the problem");
       return SCIP_INVALIDDATA;
@@ -1145,7 +1145,7 @@ RETCODE SCIPvarChgObj(                  /**< changes objective value of variable
 
    debugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
 
-   if( var->inprob )
+   if( var->probindex >= 0 )
    {
       errorMessage("cannot change the objective value of a variable already in the problem");
       return SCIP_INVALIDDATA;

@@ -1126,7 +1126,7 @@ RETCODE readBounds(
                 */
                if (mpsinputField1(mpsi)[1] == 'I')
                {
-                  CHECK_OKAY( SCIPvarChgType(var, SCIP_VARTYPE_INTEGER) );
+                  CHECK_OKAY( SCIPchgType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
 
                CHECK_OKAY( SCIPchgLb(scip, var, val) );
@@ -1136,7 +1136,7 @@ RETCODE readBounds(
                 */
                if (mpsinputField1(mpsi)[1] == 'I')
                {
-                  CHECK_OKAY( SCIPvarChgType(var, SCIP_VARTYPE_INTEGER) );
+                  CHECK_OKAY( SCIPchgType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
 
                CHECK_OKAY( SCIPchgUb(scip, var, val) );               
@@ -1196,7 +1196,7 @@ RETCODE readBounds(
 static
 RETCODE readMPS(
    SCIP*            scip,               /**< SCIP data structure */   
-   const char*      filename
+   const char*      filename            /**< name of the input file */
    )
 {
    FILE*     fp;
@@ -1212,7 +1212,7 @@ RETCODE readMPS(
       sprintf(s, "cannot open file <%s>", filename);
       errorMessage(s);
       perror(filename);
-      return SCIP_READERR;
+      return SCIP_NOFILE;
    }   
 
    CHECK_OKAY( mpsinputCreate(&mpsi, fp) );
@@ -1280,8 +1280,11 @@ DECL_READERREAD(SCIPreaderReadMPS)
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
+   assert(result != NULL);
 
    CHECK_OKAY( readMPS(scip, filename) );
+
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

@@ -161,7 +161,7 @@ allocMemory_call(size_t size, const char *filename, int line)
 {
    void   *ptr = NULL;
 
-   /* debugMessage("malloc %ld bytes [%s:%d]\n", (long)size, filename, line); ??? */
+   debugMessage("malloc %ld bytes [%s:%d]\n", (long)size, filename, line);
    size = MAX(size, 1);
    ptr = malloc(size);
 
@@ -742,8 +742,8 @@ createChunk(BLKHDR * blk)
    newchunk->arraypos = -1;
    newchunk->block = blk;
 
-   /* debugMessage("allocated new chunk %p: %d elements with size %ld\n", 
-      newchunk, newchunk->storeSize, (long)(newchunk->elemSize)); ??? */
+   debugMessage("allocated new chunk %p: %d elements with size %ld\n", 
+      newchunk, newchunk->storeSize, (long)(newchunk->elemSize));
 
    /* add new memory to the lazy free list */
    for( i = 0; i < newchunk->storeSize - 1; ++i )
@@ -1200,7 +1200,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
    ptr = allocBlockElement(*blkptr);
    if( ptr == NULL )
       errorMessage_call("Error! Insufficient memory for new chunk.", filename, line);
-   /* debugMessage("[%s:%4d] alloced %8ld bytes in %p\n", filename, line, (long)size, ptr); ??? */
+   debugMessage("[%s:%4d] alloced %8ld bytes in %p\n", filename, line, (long)size, ptr);
 
    checkMem(mem);
 
@@ -1329,7 +1329,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       alignSize(&size);
       hashNumber = getHashNumber(size);
 
-      /* debugMessage("[%s:%4d] free    %8ld bytes in %p\n", filename, line, (long)size, *ptr ); ??? */
+      debugMessage("[%s:%4d] free    %8ld bytes in %p\n", filename, line, (long)size, *ptr );
       /* find correspoding block header */
       blk = mem->blockhash[hashNumber];
       while( blk != NULL && blk->elemSize != (int)size )

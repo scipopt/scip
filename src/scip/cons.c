@@ -51,6 +51,7 @@ struct ConsHdlr
    int              consssize;          /**< size of constraints array (available slots in conss array) */
    int              nconss;             /**< number of active constraints (used slots in conss array) */
    int              nmodelconss;        /**< number of model constraints (stored in the first positions in conss array) */
+   unsigned int     needscons:1;        /**< should the constraint handler be skipped, if no constraints are available? */
    unsigned int     initialized:1;      /**< is constraint handler initialized? */
 };
 
@@ -215,6 +216,7 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
@@ -233,6 +235,7 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    (*conshdlr)->sepapriority = sepapriority;
    (*conshdlr)->enfopriority = enfopriority;
    (*conshdlr)->chckpriority = chckpriority;
+   (*conshdlr)->needscons = needscons;
    (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
    (*conshdlr)->consexit = consexit;
@@ -328,36 +331,128 @@ RETCODE SCIPconshdlrExit(               /**< calls exit method of constraint han
 
 RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(result != NULL);
 
-   if( conshdlr->conssepa != NULL )
+   if( conshdlr->conssepa != NULL && (!conshdlr->needscons || conshdlr->nconss > 0) )
    {
       debugMessage("separate constraints of handler <%s>\n", conshdlr->name);
-      return conshdlr->conssepa(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss);
+      CHECK_OKAY( conshdlr->conssepa(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss, result) );
+      if( *result != SCIP_SEPARATED
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN )
+      {
+         char s[255];
+         sprintf(s, "separation method of constraint handler <%s> returned invalid result <%d>", 
+            conshdlr->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
    }
    else
-      return SCIP_DIDNOTRUN;
+      *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(result != NULL);
 
-   if( conshdlr->consenfo != NULL )
+   if( conshdlr->consenfo != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
    {
       debugMessage("enforcing constraints of handler <%s>\n", conshdlr->name);
-      return conshdlr->consenfo(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss);
+      CHECK_OKAY( conshdlr->consenfo(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
+      if( *result != SCIP_BRANCHED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_SEPARATED
+         && *result != SCIP_INFEASIBLE
+         && *result != SCIP_FEASIBLE )
+      {
+         char s[255];
+         sprintf(s, "enforcing method of constraint handler <%s> returned invalid result <%d>", 
+            conshdlr->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
    }
    else
-      return SCIP_FEASIBLE;
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of constraint handler */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   SOL*             sol,                /**< primal CIP solution */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   if( conshdlr->conschck != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
+   {
+      debugMessage("checking constraints of handler <%s>\n", conshdlr->name);
+      CHECK_OKAY( conshdlr->conschck(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, sol, result) );
+      if( *result != SCIP_INFEASIBLE
+         && *result != SCIP_FEASIBLE )
+      {
+         char s[255];
+         sprintf(s, "feasibility check of constraint handler <%s> returned invalid result <%d>", 
+            conshdlr->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constraint handler */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   if( conshdlr->consprop != NULL && (!conshdlr->needscons || conshdlr->nconss > 0) )
+   {
+      debugMessage("propagating constraints of handler <%s>\n", conshdlr->name);
+      CHECK_OKAY( conshdlr->consprop(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss, result) );
+      if( *result != SCIP_REDUCEDDOM
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN )
+      {
+         char s[255];
+         sprintf(s, "propagation method of constraint handler <%s> returned invalid result <%d>", 
+            conshdlr->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
 }
 
 const char* SCIPconshdlrGetName(        /**< gets name of constraint handler */

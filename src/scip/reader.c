@@ -208,7 +208,8 @@ Bool readerIsApplicable(                /**< returns TRUE, if reader is responsi
 RETCODE SCIPreaderRead(                 /**< reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
    READER*          reader,             /**< reader */
    SCIP*            scip,               /**< SCIP data structure */   
-   const char*      filename            /**< name of the input file */
+   const char*      filename,           /**< name of the input file */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    RETCODE retcode;
@@ -221,26 +222,27 @@ RETCODE SCIPreaderRead(                 /**< reads problem data from file with g
    assert(reader->readerread != NULL);
    assert(scip != NULL);
    assert(filename != NULL);
+   assert(result != NULL);
 
    /* get path, name and extension from filename */
    ALLOC_OKAY( duplicateMemoryArray(tmpfilename, filename, strlen(filename)+1) );
    splitFilename(tmpfilename, &path, &name, &extension);
 
    /* check, if reader is applicable on the given file */
-   if( !readerIsApplicable(reader, extension) )
-      retcode = SCIP_DIDNOTRUN;
-   else
+   if( readerIsApplicable(reader, extension) )
    {
       /* create new problem */
       CHECK_OKAY( SCIPcreateProb(scip, name) );
 
       /* call reader to read problem */
-      retcode = reader->readerread(reader, scip, filename);
+      CHECK_OKAY( reader->readerread(reader, scip, filename, result) );
    }
+   else
+      *result = SCIP_DIDNOTRUN;
 
    freeMemoryArray(tmpfilename);
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 const char* SCIPreaderGetName(          /**< gets name of reader */

@@ -59,6 +59,7 @@ struct Set
    SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    VERBLEVEL        verblevel;          /**< verbosity level of output */
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
+   Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
    Real             infinity;           /**< values larger than this are considered infinity */
    Real             feastol;            /**< LP feasibility tolerance */
    Real             memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
@@ -187,7 +188,7 @@ RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
    );
 
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -229,12 +230,6 @@ Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than e
    );
 
 extern
-Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against infinity */
-   );
-
-extern
 Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilon of 0.0 */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
@@ -253,15 +248,62 @@ Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -eps
    );
 
 extern
-Real SCIPsetFloor(                      /**< rounds value down to the next integer */
+Bool SCIPsetIsSumEQ(                    /**< checks, if values are in range of sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumL(                     /**< checks, if val1 is (more than sumepsilon) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumLE(                    /**< checks, if val1 is not (more than sumepsilon) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumG(                     /**< checks, if val1 is (more than sumepsilon) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumGE(                    /**< checks, if val1 is not (more than sumepsilon) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumZero(                  /**< checks, if value is in range sumepsilon of 0.0 */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 extern
-Real SCIPsetCeil(                       /**< rounds value up to the next integer */
+Bool SCIPsetIsSumPos(                   /**< checks, if value is greater than sumepsilon */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against infinity */
    );
 
 extern
@@ -294,15 +336,25 @@ Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within
  * speed up the algorithms.
  */
 
-#define SCIPsetIsEQ(set, val1, val2)    ( ABS((val1)-(val2)) < (set)->epsilon )
+#define SCIPsetIsEQ(set, val1, val2)    ( ABS((val1)-(val2)) <= (set)->epsilon )
 #define SCIPsetIsL(set, val1, val2)     ( (val1) < (val2) - (set)->epsilon )
 #define SCIPsetIsLE(set, val1, val2)    ( (val1) <= (val2) + (set)->epsilon )
 #define SCIPsetIsG(set, val1, val2)     ( (val1) > (val2) + (set)->epsilon )
 #define SCIPsetIsGE(set, val1, val2)    ( (val1) >= (val2) - (set)->epsilon )
-#define SCIPsetIsInfinity(set, val)     ( (val) >= (set)->infinity )
 #define SCIPsetIsZero(set, val)         ( ABS(val) <= (set)->epsilon )
 #define SCIPsetIsPos(set, val)          ( (val) > (set)->epsilon )
 #define SCIPsetIsNeg(set, val)          ( (val) < -(set)->epsilon )
+
+#define SCIPsetIsSumEQ(set, val1, val2) ( ABS((val1)-(val2)) <= (set)->sumepsilon )
+#define SCIPsetIsSumL(set, val1, val2)  ( (val1) < (val2) - (set)->sumepsilon )
+#define SCIPsetIsSumLE(set, val1, val2) ( (val1) <= (val2) + (set)->sumepsilon )
+#define SCIPsetIsSumG(set, val1, val2)  ( (val1) > (val2) + (set)->sumepsilon )
+#define SCIPsetIsSumGE(set, val1, val2) ( (val1) >= (val2) - (set)->sumepsilon )
+#define SCIPsetIsSumZero(set, val)      ( ABS(val) <= (set)->sumepsilon )
+#define SCIPsetIsSumPos(set, val)       ( (val) > (set)->sumepsilon )
+#define SCIPsetIsSumNeg(set, val)       ( (val) < -(set)->sumepsilon )
+
+#define SCIPsetIsInfinity(set, val)     ( (val) >= (set)->infinity )
 #define SCIPsetIsFeasible(set, val)     ( (val) >= -(set)->feastol )
 #define SCIPsetFloor(set, val)          ( floor((val) + (set)->feastol) )
 #define SCIPsetCeil(set, val)           ( ceil((val) - (set)->feastol) )

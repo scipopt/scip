@@ -92,20 +92,27 @@ void nodepqUpdateLowerbound(            /**< updates the cached minimal lower bo
    assert(nodepq != NULL);
    assert(node != NULL);
 
-   if( SCIPsetIsLE(set, node->lowerbound, nodepq->lowerbound) )
+   debugMessage("update queue's lower bound: nodebound=%g, queuebound=%g, nlowerbounds=%d\n",
+      node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds);
+   if( nodepq->lowerbound < SCIP_INVALID )
    {
-      if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
-         nodepq->nlowerbounds++;
-      else
+      if( SCIPsetIsLE(set, node->lowerbound, nodepq->lowerbound) )
       {
-         nodepq->lowerbound = node->lowerbound;
-         nodepq->nlowerbounds = 1;
+         if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
+            nodepq->nlowerbounds++;
+         else
+         {
+            nodepq->lowerbound = node->lowerbound;
+            nodepq->nlowerbounds = 1;
+         }
       }
    }
+   debugMessage(" -> new queuebound=%g, nlowerbounds=%d\n", nodepq->lowerbound, nodepq->nlowerbounds);
 }
 
 RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
-   NODEPQ**         nodepq              /**< pointer to a node priority queue */
+   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(nodepq != NULL);
@@ -115,7 +122,7 @@ RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
    (*nodepq)->size = 0;
    (*nodepq)->slots = NULL;
    (*nodepq)->lowerboundsum = 0.0;
-   (*nodepq)->lowerbound = SCIP_INVALID;
+   (*nodepq)->lowerbound = set->infinity;
    (*nodepq)->nlowerbounds = 0;
 
    return SCIP_OKAY;
@@ -199,7 +206,7 @@ RETCODE SCIPnodepqInsert(               /**< inserts node into node priority que
 
 static
 Bool nodepqDelPos(                      /**< deletes node at given position from the node priority queue;
-                                           returns TRUE, if the parent fell down to the free position */
+                                         *   returns TRUE, if the parent fell down to the free position */
    NODEPQ*          nodepq,             /**< pointer to a node priority queue */
    const SET*       set,                /**< global SCIP settings */
    int              rempos              /**< queue position of node to remove */
@@ -231,12 +238,15 @@ Bool nodepqDelPos(                      /**< deletes node at given position from
       node = nodepq->slots[rempos];
       assert(SCIPsetIsGE(set, node->lowerbound, nodepq->lowerbound));
 
+      debugMessage("update queue's lower bound after removal: nodebound=%g, queuebound=%g, nlowerbounds=%d\n",
+         node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds);
       if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
       {
          nodepq->nlowerbounds--;
          if( nodepq->nlowerbounds == 0 )
             nodepq->lowerbound = SCIP_INVALID;
       }
+      debugMessage(" -> new queuebound=%g, nlowerbounds=%d\n", nodepq->lowerbound, nodepq->nlowerbounds);
    }
 
    /* remove node of the tree and get a free slot,

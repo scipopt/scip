@@ -111,10 +111,10 @@ struct Var
    DOM              dom;                /**< domain of variable */
    Real             obj;                /**< objective function value of variable */
    int              index;              /**< consecutively numbered variable identifier */
+   int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int              nuses;              /**< number of times, this variable is referenced */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
-   unsigned int     inprob:1;           /**< TRUE iff variable is stored in a problem object */
 };
 
 
@@ -312,7 +312,7 @@ RETCODE SCIPvarAggregate(               /**< converts variable into aggregated v
    );
 
 extern
-RETCODE SCIPvarChgType(                 /**< changes type of variable */
+RETCODE SCIPvarChgType(                 /**< changes type of variable; cannot be called, if var belongs to a problem */
    VAR*             var,                /**< problem variable to change */
    VARTYPE          vartype             /**< new type of variable */
    );

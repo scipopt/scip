@@ -588,16 +588,16 @@ RETCODE SCIPlpSetUpperbound(            /**< sets the upper objective limit of t
 extern
 RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simplex algorithm */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
 extern
 RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex algorithm */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
@@ -614,24 +614,24 @@ Real SCIPlpGetObjval(                   /**< gets objective value of last soluti
 extern
 RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
 extern
 RETCODE SCIPlpGetUnboundedSol(          /**< stores LP solution with infinite objective value in the columns and rows */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
 extern
 RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers for infeasibility proof in rows */
    LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 extern

@@ -40,7 +40,7 @@
 #define DISP_NAME_NODENUM       "nodenum"
 #define DISP_DESC_NODENUM       "number of processed nodes"
 #define DISP_HEAD_NODENUM       "node"
-#define DISP_WIDT_NODENUM       9
+#define DISP_WIDT_NODENUM       10
 #define DISP_PRIO_NODENUM       100000
 #define DISP_POSI_NODENUM       100
 #define DISP_STRI_NODENUM       TRUE
@@ -180,7 +180,7 @@ DECL_DISPOUTP(SCIPdispOutpNodenum)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetNodenum(scip, &nodenum) );
-   fprintf(file, "%8d ", nodenum);
+   fprintf(file, "%9d ", nodenum);
 
    return SCIP_OKAY;
 }

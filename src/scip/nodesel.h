@@ -33,30 +33,32 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 
 /** destructor of node selector to free user data (called when SCIP is exiting)
- *  possible return values:
- *    SCIP_OKAY       : normal termination
- *    neg. values     : error codes
+ *
+ *  input:
+ *    nodesel         : the node selector itself
+ *    scip            : SCIP main data structure
  */
 #define DECL_NODESELFREE(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
 /** initialization method of node selector (called at problem creation)
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
+ *
+ *  input:
+ *    nodesel         : the node selector itself
+ *    scip            : SCIP main data structure
  */
 #define DECL_NODESELINIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
 /** deinitialization method of node selector (called at problem destruction)
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
  */
 #define DECL_NODESELEXIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
 /** node selection method of node selector
- *  possible return values:
- *    SCIP_OKAY   : normal termination
- *    neg. values : error codes
+ *
+ *  input:
+ *    nodesel         : the node selector itself
+ *    scip            : SCIP main data structure
+ *    selnode         : pointer to store the selected node
+ *
  *  possible return values for *selnode:
  *    NULL    : problem is solved, because tree is empty
  *    non-NULL: node to be solved next
@@ -64,6 +66,11 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 #define DECL_NODESELSLCT(x) RETCODE x (NODESEL* nodesel, SCIP* scip, NODE** selnode)
 
 /** node comparison method of node selector
+ *
+ *  input:
+ *    nodesel         : the node selector itself
+ *    scip            : SCIP main data structure
+ *
  *  possible return values:
  *    < 0: node1 comes before (is better than) node2
  *    = 0: both nodes have the same value
@@ -83,7 +90,8 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 extern
 RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
-   NODEPQ**         nodepq              /**< pointer to a node priority queue */
+   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 extern
