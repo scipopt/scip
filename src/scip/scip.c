@@ -2546,25 +2546,26 @@ RETCODE SCIPchgVarType(
 RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to fix */
-   Real             fixedval            /**< value to fix variable at */
+   Real             fixedval,           /**< value to fix variable at */
+   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    )
 {
    assert(var != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPfixVar", FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
-   CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
-
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
+      CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
+      *infeasible = (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval));
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-                     scip->branchcand, scip->eventqueue, fixedval) );
+                     scip->branchcand, scip->eventqueue, fixedval, infeasible) );
       return SCIP_OKAY;
 
    default:

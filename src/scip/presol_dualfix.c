@@ -42,6 +42,7 @@ static
 DECL_PRESOLEXEC(presolExecDualfix)
 {
    VAR** vars;
+   Bool infeasible;
    int nvars;
    int v;
 
@@ -65,7 +66,13 @@ DECL_PRESOLEXEC(presolExecDualfix)
       {
          debugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
             SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetLbGlobal(vars[v]));
-         CHECK_OKAY( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v])) );
+         CHECK_OKAY( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), &infeasible) );
+         if( infeasible )
+         {
+            debugMessage(" -> infeasible fixing\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
          (*nfixedvars)++;
          *result = SCIP_SUCCESS;
       }
@@ -73,7 +80,13 @@ DECL_PRESOLEXEC(presolExecDualfix)
       {
          debugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
             SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetUbGlobal(vars[v]));
-         CHECK_OKAY( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v])) );
+         CHECK_OKAY( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), &infeasible) );
+         if( infeasible )
+         {
+            debugMessage(" -> infeasible fixing\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
          (*nfixedvars)++;
          *result = SCIP_SUCCESS;
       }

@@ -682,7 +682,9 @@ DOMCHG** SCIPdomchgdynGetDomchgPtr(
  * methods for variables 
  */
 
-/** creates a variable */
+/** creates a variable; if the variable is not of type CONTINOUS, fractional bounds are automatically tightened to
+ *  the next integral value
+ */
 static
 RETCODE varCreate(
    VAR**            var,                /**< pointer to variable data */
@@ -1193,8 +1195,6 @@ int SCIPvarGetNLocksDown(
    assert(var != NULL);
    assert(var->nlocksdown >= 0);
 
-   debugMessage("get down locks of <%s>\n", var->name);
-
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1242,8 +1242,6 @@ int SCIPvarGetNLocksUp(
 
    assert(var != NULL);
    assert(var->nlocksup >= 0);
-
-   debugMessage("get up locks of <%s>\n", var->name);
 
    switch( var->varstatus )
    {
@@ -1329,7 +1327,8 @@ RETCODE SCIPvarFix(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             fixedval            /**< value to fix variable at */
+   Real             fixedval,           /**< value to fix variable at */
+   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    )
 {
    assert(var != NULL);
@@ -1337,9 +1336,17 @@ RETCODE SCIPvarFix(
    assert(var->glbdom.ub == var->actdom.ub);
    assert(SCIPsetIsLE(set, var->glbdom.lb, fixedval));
    assert(SCIPsetIsLE(set, fixedval, var->glbdom.ub));
-   assert(var->vartype == SCIP_VARTYPE_CONTINOUS || SCIPsetIsIntegral(set, fixedval));
+   assert(infeasible != NULL);
 
-   debugMessage("fix variable <%s> to %g\n", var->name, fixedval);
+   debugMessage("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
+
+   if( var->vartype != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(set, fixedval) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   *infeasible = FALSE;
 
    switch( var->varstatus )
    {
@@ -1349,7 +1356,8 @@ RETCODE SCIPvarFix(
          errorMessage("Cannot fix an untransformed original variable");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, fixedval) );
+      CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, fixedval,
+                     infeasible) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -1387,7 +1395,7 @@ RETCODE SCIPvarFix(
       assert(SCIPsetIsZero(set, var->obj));
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       CHECK_OKAY( SCIPvarFix(var->data.aggregate.var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
-                     (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+                     (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible) );
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -1399,6 +1407,182 @@ RETCODE SCIPvarFix(
       abort();
    }
    
+   return SCIP_OKAY;
+}
+
+/** tightens the bounds of both variables in aggregation x = a*y + c */
+static
+RETCODE varUpdateAggregationBounds(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
+   Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   )
+{
+   Real varlb;
+   Real varub;
+   Real aggvarlb;
+   Real aggvarub;
+   Bool aggvarbdschanged;
+
+   assert(var != NULL);
+   assert(aggvar != NULL);
+   assert(!SCIPsetIsZero(set, scalar));
+   assert(infeasible != NULL);
+
+   debugMessage("updating bounds of variables in aggregation <%s> == %g*<%s> %+g\n",
+      var->name, scalar, aggvar->name, constant);
+   debugMessage("  old bounds: <%s> [%g,%g]   <%s> [%g,%g]\n",
+      var->name, var->glbdom.lb, var->glbdom.ub, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub);
+
+   /* loop as long additional changes may be found */
+   do
+   {
+      aggvarbdschanged = FALSE;
+
+      /* update the bounds of the aggregated variable x in x = a*y + c */
+      if( scalar > 0.0 )
+      {
+         if( SCIPsetIsInfinity(set, -aggvar->glbdom.lb) )
+            varlb = -set->infinity;
+         else
+            varlb = aggvar->glbdom.lb * scalar + constant;
+         if( SCIPsetIsInfinity(set, aggvar->glbdom.ub) )
+            varub = set->infinity;
+         else
+            varub = aggvar->glbdom.ub * scalar + constant;
+      }
+      else
+      {
+         if( SCIPsetIsInfinity(set, -aggvar->glbdom.lb) )
+            varub = set->infinity;
+         else
+            varub = aggvar->glbdom.lb * scalar + constant;
+         if( SCIPsetIsInfinity(set, aggvar->glbdom.ub) )
+            varlb = -set->infinity;
+         else
+            varlb = aggvar->glbdom.ub * scalar + constant;
+      }
+      varlb = MAX(varlb, var->glbdom.lb);
+      varub = MIN(varub, var->glbdom.ub);
+      SCIPvarAdjustLb(var, set, &varlb);
+      SCIPvarAdjustUb(var, set, &varub);
+
+      /* check the new bounds */
+      if( SCIPsetIsGT(set, varlb, varub) )
+      {
+         /* the aggregation is infeasible */
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+      else if( SCIPsetIsEQ(set, varlb, varub) )
+      {
+         /* the aggregated variable is fixed -> fix both variables */
+         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, varlb, infeasible) );
+         if( !(*infeasible) )
+         {
+            CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, 
+                           (varlb-constant)/scalar, infeasible) );
+         }
+         return SCIP_OKAY;
+      }
+      else
+      {
+         if( SCIPsetIsGT(set, varlb, var->glbdom.lb) )
+         {
+            CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, varlb) );
+            CHECK_OKAY( SCIPvarChgLbGlobal(var, set, varlb) );
+         }
+         if( SCIPsetIsLT(set, varub, var->glbdom.ub) )
+         {
+            CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, varub) );
+            CHECK_OKAY( SCIPvarChgUbGlobal(var, set, varub) );
+         }
+
+         /* update the hole list of the aggregation variable */
+         todoMessage("update hole list of aggregation variable");
+      }
+
+      /* update the bounds of the aggregation variable y in x = a*y + c  ->  y = (x-c)/a */
+      if( scalar > 0.0 )
+      {
+         if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
+            aggvarlb = -set->infinity;
+         else
+            aggvarlb = (var->glbdom.lb - constant) / scalar;
+         if( SCIPsetIsInfinity(set, var->glbdom.ub) )
+            aggvarub = set->infinity;
+         else
+            aggvarub = (var->glbdom.ub - constant) / scalar;
+      }
+      else
+      {
+         if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
+            aggvarub = set->infinity;
+         else
+            aggvarub = (var->glbdom.lb - constant) / scalar;
+         if( SCIPsetIsInfinity(set, var->glbdom.ub) )
+            aggvarlb = -set->infinity;
+         else
+            aggvarlb = (var->glbdom.ub - constant) / scalar;
+      }
+      aggvarlb = MAX(aggvarlb, aggvar->glbdom.lb);
+      aggvarub = MIN(aggvarub, aggvar->glbdom.ub);
+      SCIPvarAdjustLb(aggvar, set, &aggvarlb);
+      SCIPvarAdjustUb(aggvar, set, &aggvarub);
+
+      /* check the new bounds */
+      if( SCIPsetIsGT(set, aggvarlb, aggvarub) )
+      {
+         /* the aggregation is infeasible */
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+      else if( SCIPsetIsEQ(set, aggvarlb, aggvarub) )
+      {
+         /* the aggregation variable is fixed -> fix both variables */
+         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, aggvarlb, 
+                        infeasible) );
+         if( !(*infeasible) )
+         {
+            CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, 
+                           aggvarlb * scalar + constant, infeasible) );
+         }
+         return SCIP_OKAY;
+      }
+      else
+      {
+         if( SCIPsetIsGT(set, aggvarlb, aggvar->glbdom.lb) )
+         {
+            CHECK_OKAY( SCIPvarChgLbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarlb) );
+            CHECK_OKAY( SCIPvarChgLbGlobal(aggvar, set, aggvarlb) );
+            aggvarbdschanged = TRUE;
+         }
+         if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
+         {
+            CHECK_OKAY( SCIPvarChgUbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarub) );
+            CHECK_OKAY( SCIPvarChgUbGlobal(aggvar, set, aggvarub) );
+            aggvarbdschanged = TRUE;
+         }
+
+         /* update the hole list of the aggregation variable */
+         todoMessage("update hole list of aggregation variable");
+      }
+   }
+   while( aggvarbdschanged );
+
+   debugMessage("  new bounds: <%s> [%g,%g]   <%s> [%g,%g]\n",
+      var->name, var->glbdom.lb, var->glbdom.ub, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub);
+
    return SCIP_OKAY;
 }
 
@@ -1419,10 +1603,6 @@ RETCODE SCIPvarAggregate(
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
-   Real varlb;
-   Real varub;
-   Real aggvarlb;
-   Real aggvarub;
    Real obj;
    int nlocksdown;
    int nlocksup;
@@ -1435,7 +1615,8 @@ RETCODE SCIPvarAggregate(
    assert(!SCIPsetIsZero(set, scalar));
    assert(infeasible != NULL);
 
-   debugMessage("aggregate variable <%s> == %g*<%s> %+g\n", var->name, scalar, aggvar->name, constant);
+   debugMessage("aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
+      scalar, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub, constant);
 
    *infeasible = FALSE;
 
@@ -1453,6 +1634,12 @@ RETCODE SCIPvarAggregate(
 
    case SCIP_VARSTATUS_LOOSE:
       assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
+
+      /* tighten the bounds of aggregated and aggregation variable */
+      CHECK_OKAY( varUpdateAggregationBounds(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
+                     aggvar, scalar, constant, infeasible) );
+      if( *infeasible )
+         return SCIP_OKAY;
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
@@ -1483,62 +1670,6 @@ RETCODE SCIPvarAggregate(
 
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
       varAddRoundLocks(var, nlocksdown, nlocksup);
-
-      /* update the bounds of the aggregation variable y in x = a*y + c  ->  y = x/a - c/a */
-      if( scalar > 0.0 )
-      {
-         if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-            aggvarlb = -set->infinity;
-         else
-            aggvarlb = var->glbdom.lb / scalar - constant / scalar;
-         if( SCIPsetIsInfinity(set, var->glbdom.ub) )
-            aggvarub = set->infinity;
-         else
-            aggvarub = var->glbdom.ub / scalar - constant / scalar;
-      }
-      else
-      {
-         if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-            aggvarub = set->infinity;
-         else
-            aggvarub = var->glbdom.lb / scalar - constant / scalar;
-         if( SCIPsetIsInfinity(set, var->glbdom.ub) )
-            aggvarlb = -set->infinity;
-         else
-            aggvarlb = var->glbdom.ub / scalar - constant / scalar;
-      }
-      SCIPvarAdjustLb(aggvar, set, &aggvarlb);
-      SCIPvarAdjustUb(aggvar, set, &aggvarub);
-      aggvarlb = MAX(aggvarlb, aggvar->glbdom.lb);
-      aggvarub = MIN(aggvarub, aggvar->glbdom.ub);
-
-      /* check the new bounds */
-      if( SCIPsetIsGT(set, aggvarlb, aggvarub) )
-      {
-         /* the aggregation is infeasible */
-         *infeasible = TRUE;
-      }
-      else if( SCIPsetIsEQ(set, aggvarlb, aggvarub) )
-      {
-         /* the aggregation variable is fixed */
-         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, aggvarlb) );
-      }
-      else
-      {
-         if( SCIPsetIsGT(set, aggvarlb, aggvar->glbdom.lb) )
-         {
-            CHECK_OKAY( SCIPvarChgLbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarlb) );
-            CHECK_OKAY( SCIPvarChgLbGlobal(aggvar, set, aggvarlb) );
-         }
-         if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
-         {
-            CHECK_OKAY( SCIPvarChgUbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarub) );
-            CHECK_OKAY( SCIPvarChgUbGlobal(aggvar, set, aggvarub) );
-         }
-
-         /* update the hole list of the aggregation variable */
-         todoMessage("update hole list of aggregation variable");
-      }
 
       /* update flags of aggregation variable */
       aggvar->removeable &= var->removeable;
@@ -1604,7 +1735,7 @@ RETCODE SCIPvarMultiaggregate(
 
    /* check, if we are in one of the simple cases */
    if( naggvars == 0 )
-      return SCIPvarFix(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, constant);
+      return SCIPvarFix(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, constant, infeasible);
    else if( naggvars == 1)
       return SCIPvarAggregate(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, 
          aggvars[0], scalars[0], constant, infeasible);
@@ -1699,7 +1830,7 @@ RETCODE SCIPvarChgType(
    }
    
    var->vartype = vartype;
-
+   
    return SCIP_OKAY;
 }
 
@@ -1925,8 +2056,9 @@ RETCODE varProcessChgLbGlobal(
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
-            assert(SCIPsetIsEQ(set, parentvar->glbdom.lb,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, -parentvar->glbdom.lb) && SCIPsetIsInfinity(set, -oldbound))
+               || SCIPsetIsEQ(set, parentvar->glbdom.lb,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -1934,8 +2066,9 @@ RETCODE varProcessChgLbGlobal(
          {
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
-            assert(SCIPsetIsEQ(set, parentvar->glbdom.ub,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, parentvar->glbdom.ub) && SCIPsetIsInfinity(set, -oldbound))
+               || SCIPsetIsEQ(set, parentvar->glbdom.ub,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -1997,8 +2130,9 @@ RETCODE varProcessChgUbGlobal(
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change upper bound of y */
-            assert(SCIPsetIsEQ(set, parentvar->glbdom.ub,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, parentvar->glbdom.ub) && SCIPsetIsInfinity(set, oldbound))
+               || SCIPsetIsEQ(set, parentvar->glbdom.ub,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2006,8 +2140,9 @@ RETCODE varProcessChgUbGlobal(
          {
             /* a < 0 -> change lower bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
-            assert(SCIPsetIsEQ(set, parentvar->glbdom.lb,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, -parentvar->glbdom.lb) && SCIPsetIsInfinity(set, oldbound))
+               || SCIPsetIsEQ(set, parentvar->glbdom.lb,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2068,16 +2203,18 @@ RETCODE SCIPvarChgLbGlobal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         assert(SCIPsetIsEQ(set, var->glbdom.lb,
-                   var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
+            || SCIPsetIsEQ(set, var->glbdom.lb,
+               var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change upper bound of y */
-         assert(SCIPsetIsEQ(set, var->glbdom.lb,
-                   var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
+            || SCIPsetIsEQ(set, var->glbdom.lb,
+               var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -2147,16 +2284,18 @@ RETCODE SCIPvarChgUbGlobal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         assert(SCIPsetIsEQ(set, var->glbdom.ub,
-                   var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
+            || SCIPsetIsEQ(set, var->glbdom.ub,
+               var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change upper bound of y */
-         assert(SCIPsetIsEQ(set, var->glbdom.ub,
-                   var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
+            || SCIPsetIsEQ(set, var->glbdom.ub,
+               var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbGlobal(var->data.aggregate.var, set,
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -2343,8 +2482,9 @@ RETCODE varProcessChgLbLocal(
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
-            assert(SCIPsetIsEQ(set, parentvar->actdom.lb,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, -parentvar->actdom.lb) && SCIPsetIsInfinity(set, -oldbound))
+               || SCIPsetIsEQ(set, parentvar->actdom.lb,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2352,8 +2492,9 @@ RETCODE varProcessChgLbLocal(
          {
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
-            assert(SCIPsetIsEQ(set, parentvar->actdom.ub,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, parentvar->actdom.ub) && SCIPsetIsInfinity(set, -oldbound))
+               || SCIPsetIsEQ(set, parentvar->actdom.ub,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2424,8 +2565,9 @@ RETCODE varProcessChgUbLocal(
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change upper bound of x */
-            assert(SCIPsetIsEQ(set, parentvar->actdom.ub,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, parentvar->actdom.ub) && SCIPsetIsInfinity(set, oldbound))
+               || SCIPsetIsEQ(set, parentvar->actdom.ub,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2433,8 +2575,9 @@ RETCODE varProcessChgUbLocal(
          {
             /* a < 0 -> change lower bound of x */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
-            assert(SCIPsetIsEQ(set, parentvar->actdom.lb,
-                      oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, -parentvar->actdom.lb) && SCIPsetIsInfinity(set, oldbound))
+               || SCIPsetIsEQ(set, parentvar->actdom.lb,
+                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2504,16 +2647,18 @@ RETCODE SCIPvarChgLbLocal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         assert(SCIPsetIsEQ(set, var->actdom.lb,
-                   var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, -var->actdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->actdom.lb))
+            || SCIPsetIsEQ(set, var->actdom.lb,
+               var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change upper bound of y */
-         assert(SCIPsetIsEQ(set, var->actdom.lb,
-                   var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, -var->actdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->actdom.ub))
+            || SCIPsetIsEQ(set, var->actdom.lb,
+               var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -2592,16 +2737,18 @@ RETCODE SCIPvarChgUbLocal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change upper bound of y */
-         assert(SCIPsetIsEQ(set, var->actdom.ub,
-                   var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->actdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->actdom.ub))
+            || SCIPsetIsEQ(set, var->actdom.ub,
+               var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change lower bound of y */
-         assert(SCIPsetIsEQ(set, var->actdom.ub,
-                   var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->actdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->actdom.lb))
+            || SCIPsetIsEQ(set, var->actdom.ub,
+               var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }

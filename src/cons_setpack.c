@@ -1113,18 +1113,19 @@ RETCODE branchLP(
 static
 RETCODE branchPseudo(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr,           /**< set packing constraint handler */
+   CONSHDLR*        conshdlr,           /**< set partitioning constraint handler */
    RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
    )
 {
    CONSHDLRDATA* conshdlrdata;
    INTARRAY* varuses;
    VAR** pseudocands;
-   VAR** sortcands;
+   VAR** branchcands;
    VAR* var;
    NODE* node;
+   int* canduses;
    int npseudocands;
-   int nsortcands;
+   int maxnbranchcands;
    int nbranchcands;
    int uses;
    int i;
@@ -1146,31 +1147,42 @@ RETCODE branchPseudo(
    if( npseudocands == 0 )
       return SCIP_OKAY;
 
+   /* choose the maximal number of branching variables */
+   maxnbranchcands = conshdlrdata->npseudobranches-1;
+   assert(maxnbranchcands >= 1);
+
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &sortcands, npseudocands) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &branchcands, maxnbranchcands) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &canduses, maxnbranchcands) );
    
-   /* sort fractional variables by number of uses in enabled set packing constraints */
-   nsortcands = 0;
+   /* sort fractional variables by number of uses in enabled set partitioning constraints */
+   nbranchcands = 0;
    for( i = 0; i < npseudocands; ++i )
    {
       var = pseudocands[i];
       uses = SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var));
       if( uses > 0 )
       {
-         for( j = nsortcands; j > 0 && uses > SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(sortcands[j-1])); --j )
+         if( nbranchcands < maxnbranchcands || uses > canduses[nbranchcands-1] )
          {
-            sortcands[j] = sortcands[j-1];
+            for( j = MIN(nbranchcands, maxnbranchcands-1); j > 0 && uses > canduses[j-1]; --j )
+            {
+               branchcands[j] = branchcands[j-1];
+               canduses[j] = canduses[j-1];
+            }
+            assert(0 <= j && j <= nbranchcands && j < maxnbranchcands);
+            branchcands[j] = var;
+            canduses[j] = uses;
+            if( nbranchcands < maxnbranchcands )
+               nbranchcands++;
          }
-         assert(0 <= j && j <= nsortcands);
-         sortcands[j] = var;
-         nsortcands++;
       }
    }
-   assert(nsortcands <= npseudocands);
+   assert(nbranchcands <= maxnbranchcands);
 
-   if( nsortcands == 0 )
+   if( nbranchcands == 0 )
    {
-      /* none of the unfixed variables is member of a set packing constraint
+      /* none of the unfixed variables is member of a set partitioning constraint
        * -> we are not responsible for doing the branching
        */
       return SCIP_OKAY;
@@ -1180,23 +1192,21 @@ RETCODE branchPseudo(
     * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
     * - create an additional child node x_0 = ... = x_n-1 = 0
     */
-   nbranchcands = MIN(nsortcands, conshdlrdata->npseudobranches-1);
-   assert(nbranchcands >= 1);
    for( i = 0; i < nbranchcands; ++i )
    {            
       /* create child with x_0 = ... = x_i-1 = 0, x_i = 1 */
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
       for( j = 0; j < i; ++j )
       {
-         CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[j], 0.0) );
+         CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );
       }
-      CHECK_OKAY( SCIPchgVarLbNode(scip, node, sortcands[i], 1.0) );
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[i], 1.0) );
    }
    /* create child with x_0 = ... = x_n = 0 */
    CHECK_OKAY( SCIPcreateChild(scip, &node) );
    for( i = 0; i < nbranchcands; ++i )
    {
-      CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
+      CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
    }
 
    *result = SCIP_BRANCHED;
@@ -1205,15 +1215,17 @@ RETCODE branchPseudo(
    {
       int nchildren;
       CHECK_OKAY( SCIPgetChildren(scip, NULL, &nchildren) );
-      debugMessage("branched on set cover constraint in pseudo solution: %d children\n", nchildren);
+      debugMessage("branched on pseudo solution: %d children\n", nchildren);
    }
 #endif
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &sortcands) );
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &canduses) );
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &branchcands) );
 
    return SCIP_OKAY;
 }
+
 
 
 
@@ -1407,6 +1419,7 @@ DECL_CONSPRESOL(consPresolSetpack)
    CONS* cons;
    CONSDATA* consdata;
    SETPACKCONS* setpackcons;
+   Bool infeasible;
    int c;
 
    assert(conshdlr != NULL);
@@ -1456,7 +1469,8 @@ DECL_CONSPRESOL(consPresolSetpack)
             var = setpackcons->vars[v];
             if( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && !SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
             {
-               CHECK_OKAY( SCIPfixVar(scip, var, 0.0) );
+               CHECK_OKAY( SCIPfixVar(scip, var, 0.0, &infeasible) );
+               assert(!infeasible);
                (*nfixedvars)++;
                *result = SCIP_SUCCESS;
             }

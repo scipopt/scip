@@ -124,7 +124,6 @@
 #define DISP_POSI_CUTS          3400
 #define DISP_STRI_CUTS          TRUE
 
-#if 0
 #define DISP_NAME_SEPAROUNDS    "separounds"
 #define DISP_DESC_SEPAROUNDS    "number of separation rounds performed at the actual node"
 #define DISP_HEAD_SEPAROUNDS    "sepa"
@@ -132,7 +131,6 @@
 #define DISP_PRIO_SEPAROUNDS    10
 #define DISP_POSI_SEPAROUNDS    3500
 #define DISP_STRI_SEPAROUNDS    TRUE
-#endif
 
 #define DISP_NAME_POOLSIZE      "poolsize"
 #define DISP_DESC_POOLSIZE      "number of LP rows in the cut pool"
@@ -343,7 +341,6 @@ DECL_DISPOUTPUT(SCIPdispOutputCuts)
    return SCIP_OKAY;
 }
 
-#if 0
 static
 DECL_DISPOUTPUT(SCIPdispOutputSeparounds)
 {
@@ -355,7 +352,6 @@ DECL_DISPOUTPUT(SCIPdispOutputSeparounds)
 
    return SCIP_OKAY;
 }
-#endif
 
 static
 DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
@@ -491,11 +487,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CUTS, DISP_DESC_CUTS, DISP_HEAD_CUTS,
                   NULL, NULL, NULL, SCIPdispOutputCuts, NULL, 
                   DISP_WIDT_CUTS, DISP_PRIO_CUTS, DISP_POSI_CUTS, DISP_STRI_CUTS) );
-#if 0
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_SEPAROUNDS, DISP_DESC_SEPAROUNDS, DISP_HEAD_SEPAROUNDS,
                   NULL, NULL, NULL, SCIPdispOutputSeparounds, NULL, 
                   DISP_WIDT_SEPAROUNDS, DISP_PRIO_SEPAROUNDS, DISP_POSI_SEPAROUNDS, DISP_STRI_SEPAROUNDS) );
-#endif
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_POOLSIZE, DISP_DESC_POOLSIZE, DISP_HEAD_POOLSIZE,
                   NULL, NULL, NULL, SCIPdispOutputPoolsize, NULL, 
                   DISP_WIDT_POOLSIZE, DISP_PRIO_POOLSIZE, DISP_POSI_POOLSIZE, DISP_STRI_POOLSIZE) );

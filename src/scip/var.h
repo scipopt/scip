@@ -394,7 +394,8 @@ RETCODE SCIPvarFix(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             fixedval            /**< value to fix variable at */
+   Real             fixedval,           /**< value to fix variable at */
+   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    );
 
 /** converts variable into aggregated variable */

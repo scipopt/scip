@@ -2432,7 +2432,12 @@ RETCODE linconsConvertEquality(
          {
             debugMessage("linear equality <%s>: fix <%s> == %g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), fixval);
-            CHECK_OKAY( SCIPfixVar(scip, var, fixval) );
+            CHECK_OKAY( SCIPfixVar(scip, var, fixval, &infeasible) );
+            if( infeasible )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
             (*nfixedvars)++;
          }
 
@@ -2787,6 +2792,7 @@ RETCODE linconsFixVariables(
    Real lb;
    Real ub;
    Bool fixed;
+   Bool infeasible;
    int v;
 
    assert(scip != NULL);
@@ -2810,7 +2816,12 @@ RETCODE linconsFixVariables(
          {
             debugMessage("converting variable <%s> with fixed bounds [%g,%g] into fixed variable\n",
                SCIPvarGetName(var), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, var, lb) );
+            CHECK_OKAY( SCIPfixVar(scip, var, lb, &infeasible) );
+            if( infeasible )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
             (*nfixedvars)++;
             *result = SCIP_SUCCESS;
             fixed = TRUE;
@@ -3466,6 +3477,8 @@ DECL_CONSPRESOL(consPresolLinear)
 
          /* check for fixed variables */
          CHECK_OKAY( linconsFixVariables(scip, lincons, nfixedvars, result, &conschanged) );
+         if( *result == SCIP_CUTOFF )
+            continue;
 
          /* check constraint for infeasibility and redundancy */
          linconsGetActivityBounds(scip, lincons, &minactivity, &maxactivity);

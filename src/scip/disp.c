@@ -347,6 +347,19 @@ RETCODE SCIPdispAutoActivate(
          disps[i]->active = FALSE;
    }
 
+   if( set->verblevel >= SCIP_VERBLEVEL_FULL )
+   {
+      for( i = 0; i < set->ndisps; ++i )
+      {
+         if( !disps[i]->active )
+         {
+            char s[MAXSTRLEN];
+            sprintf(s, "deactivated display column <%s>\n", disps[i]->name);
+            infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+         }
+      }
+   }
+
    /* free temporary memory */
    freeMemoryArray(&disps);
 

@@ -977,7 +977,8 @@ extern
 RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to fix */
-   Real             fixedval            /**< value to fix variable at */
+   Real             fixedval,           /**< value to fix variable at */
+   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    );
 
 /** converts variable into aggregated variable; this changes the vars array returned from

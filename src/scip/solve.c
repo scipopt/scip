@@ -219,12 +219,13 @@ RETCODE solveNodeLP(
 
          /* if the LP is unbounded, we can stop pricing */
          mustprice &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
-
+#if 0
          if( tree->actnode->depth == 0 )
          {
             /* display node information line for root node */
             CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
          }
+#endif
       }
       assert(lp->solved);
 
@@ -469,6 +470,8 @@ RETCODE enforceConstraints(
             }
          }
          assert(set->buffer->firstfree == 0);
+         debugMessage("enforcing of <%s> returned result %d\n", SCIPconshdlrGetName(conshdlrs_enfo[h]), result);
+
          switch( result )
          {
          case SCIP_FEASIBLE:
