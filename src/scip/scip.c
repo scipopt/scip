@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.145 2004/04/06 16:08:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.144 2004/04/06 16:05:44 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7933,6 +7933,18 @@ RETCODE SCIPprintStatistics(
       printLPStatistics(scip, file);
       printTreeStatistics(scip, file);
       printSolutionStatistics(scip, file);
+      
+      { /*????????????????????????????????*/
+         /**@todo remove this! */
+         int v;
+         for( v = 0; v < scip->transprob->nvars; ++v )
+         {
+            printf(" <%s>: %4lld branchings, %6lld inferences  ->  %g inferences/branching\n",
+               SCIPvarGetName(scip->transprob->vars[v]), SCIPvarGetNBranchings(scip->transprob->vars[v]),
+               SCIPvarGetNInferences(scip->transprob->vars[v]), SCIPvarGetAvgInferences(scip->transprob->vars[v]));
+         }
+      }
+
       return SCIP_OKAY;
 
    default:
