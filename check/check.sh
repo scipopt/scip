@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.13 2004/10/22 13:02:48 bzfpfend Exp $
+# $Id: check.sh,v 1.14 2004/11/03 17:24:05 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -29,7 +29,9 @@ ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
 RESFILE=results/check.$TSTNAME.$BINID.$SETNAME.res
 TEXFILE=results/check.$TSTNAME.$BINID.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
-SETFILE=settings/$SETNAME.set
+SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
+
+SETTINGS=settings/$SETNAME.set
 
 uname -a >$OUTFILE
 uname -a >$ERRFILE
@@ -42,13 +44,15 @@ do
     then
         echo @01 $i ===========
 	echo @01 $i ===========                >> $ERRFILE
-	echo set load $SETFILE                 >  $TMPFILE
+	echo set load $SETTINGS                >  $TMPFILE
 	echo set limits time $TIMELIMIT        >> $TMPFILE
 	echo set limits nodes $NODELIMIT       >> $TMPFILE
 	echo set limits memory $MEMLIMIT       >> $TMPFILE
 	echo set timing clocktype 1            >> $TMPFILE
 	echo set display verblevel 3           >> $TMPFILE
 	echo set display freq 10000            >> $TMPFILE
+	echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+	echo set save $SETFILE                 >> $TMPFILE
 	echo read $i                           >> $TMPFILE
 	echo optimize                          >> $TMPFILE
 	echo display statistics                >> $TMPFILE
