@@ -1176,7 +1176,7 @@ RETCODE SCIPbranchLP(                   /**< calls branching rules to branch on 
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &nlpcands) );
    if( nlpcands == 0 )
    {
       *result = SCIP_FEASIBLE;
