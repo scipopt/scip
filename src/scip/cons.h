@@ -35,7 +35,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 
 
 
-/** destructor of constraint handler to free user data (called when SCIP is exiting)
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting)
  *
  *  input:
  *    scip            : SCIP main data structure
@@ -73,10 +73,10 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  input:
  *    scip            : SCIP main data structure
  *    conshdlr        : the constraint handler itself
- *    sourcedata      : constraint data to transform
- *    targetdata      : pointer to constraint data where to store transformed data
+ *    sourcecons      : source constraint to transform
+ *    targetcons      : pointer to store created target constraint
  */
-#define DECL_CONSTRAN(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONSDATA* sourcedata, CONSDATA** targetdata)
+#define DECL_CONSTRAN(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* sourcecons, CONS** targetcons)
 
 /** separation method of constraint handler
  *
@@ -613,13 +613,37 @@ const char* SCIPconsGetName(
 
 /** returns the constraint handler of the constraint */
 extern
-CONSHDLR* SCIPconsGetConsHdlr(
+CONSHDLR* SCIPconsGetHdlr(
    CONS*            cons                /**< constraint */
    );
 
 /** returns the constraint data field of the constraint */
 extern
-CONSDATA* SCIPconsGetConsData(
+CONSDATA* SCIPconsGetData(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint should be separated during LP processing */
+extern
+Bool SCIPconsIsSeparated(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint should be enforced during node processing */
+extern
+Bool SCIPconsIsEnforced(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint should be checked for feasibility */
+extern
+Bool SCIPconsIsChecked(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint should be propagated during node processing */
+extern
+Bool SCIPconsIsPropagated(
    CONS*            cons                /**< constraint */
    );
 

@@ -27,6 +27,41 @@
 
 
 typedef struct LinCons LINCONS;         /**< linear constraint */
+typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update method */
+
+
+
+/** upgrading method for linear constraints into more specific constraints
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    linconsdata     : data of the linear constraint that should be upgraded
+ *    upgdcons        : pointer to store the upgraded constraint
+ *    nposbin         : number of binary variables with positive coefficient
+ *    nnegbin         : number of binary variables with negative coefficient
+ *    nposint         : number of integer variables with positive coefficient
+ *    nnegint         : number of integer variables with negative coefficient
+ *    nposimpl        : number of implicit integer variables with positive coefficient
+ *    nnegimpl        : number of implicit integer variables with negative coefficient
+ *    nposcont        : number of continous variables with positive coefficient
+ *    nnegcont        : number of continous variables with negative coefficient
+ *    ncoeffspone     : number of +1 coefficients
+ *    ncoeffsnone     : number of -1 coefficients
+ *    ncoeffspint     : number of positive integral coefficients other than +1
+ *    ncoeffsnint     : number of negative integral coefficients other than -1
+ *    ncoeffspfrac    : number of positive fractional coefficients
+ *    ncoeffsnfrac    : number of negative fractional coefficients
+ *    integral        : TRUE iff constraints activity value is always integral
+ *    result          : pointer to store the result of the upgrade call
+ *
+ *  possible return values for *result:
+ *    SCIP_DIDNOTFIND : the linear constraint data was not upgraded to a more specific constraint
+ *    SCIP_SUCCESS    : the linear constraint data was upgraded to the more specific constraint stored in *upgdcons
+ */
+#define DECL_LINCONSUPGD(x) RETCODE x (SCIP* scip, LINCONSDATA* linconsdata, CONS** upgdcons, \
+            int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
+            int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
+            Bool integral, RESULT* result)
 
 
 
@@ -244,5 +279,11 @@ RETCODE SCIPchgRhsConsLinear(
    Real             rhs                 /**< new right hand side */
    );
 
+/** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
+extern
+RETCODE SCIPupgradeConsLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons                /**< pointer to constraint to convert */
+   );
 
 #endif

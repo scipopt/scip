@@ -1744,22 +1744,22 @@ RETCODE SCIPconsTransform(
    CONS*            origcons            /**< original constraint */
    )
 {
-   CONSDATA* consdata;
-
    assert(transcons != NULL);
    assert(memhdr != NULL);
    assert(origcons != NULL);
 
-   /* transform constraint data */
-   consdata = NULL;
    if( origcons->conshdlr->constran != NULL )
    {
-      CHECK_OKAY( origcons->conshdlr->constran(set->scip, origcons->conshdlr, origcons->consdata, &consdata) );
+      /* use constraints own method to transform constraint */
+      CHECK_OKAY( origcons->conshdlr->constran(set->scip, origcons->conshdlr, origcons, transcons) );
    }
-
-   /* create new constraint with transformed data */
-   CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, consdata,
-                  origcons->separate, origcons->enforce, origcons->check, origcons->propagate, FALSE) );
+   else
+   {
+      /* create new constraint with empty constraint data */
+      CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL,
+                     origcons->separate, origcons->enforce, origcons->check, origcons->propagate, FALSE) );
+   }
+   assert(*transcons != NULL);
 
    return SCIP_OKAY;
 }
@@ -1947,7 +1947,7 @@ const char* SCIPconsGetName(
 }
 
 /** returns the constraint handler of the constraint */
-CONSHDLR* SCIPconsGetConsHdlr(
+CONSHDLR* SCIPconsGetHdlr(
    CONS*            cons                /**< constraint */
    )
 {
@@ -1957,13 +1957,53 @@ CONSHDLR* SCIPconsGetConsHdlr(
 }
 
 /** returns the constraint data field of the constraint */
-CONSDATA* SCIPconsGetConsData(
+CONSDATA* SCIPconsGetData(
    CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
    return cons->consdata;
+}
+
+/** returns TRUE iff constraint should be separated during LP processing */
+Bool SCIPconsIsSeparated(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->separate;
+}
+
+/** returns TRUE iff constraint should be enforced during node processing */
+Bool SCIPconsIsEnforced(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->enforce;
+}
+
+/** returns TRUE iff constraint should be checked for feasibility */
+Bool SCIPconsIsChecked(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->check;
+}
+
+/** returns TRUE iff constraint should be propagated during node processing */
+Bool SCIPconsIsPropagated(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->propagate;
 }
 
 /** returns TRUE iff constraint is belonging to original problem */

@@ -81,15 +81,31 @@ typedef enum BaseStat BASESTAT;
 
 
 
+
 /*
- * LP interface methods needed by SCIP's internal methods
+ * Miscellaneous Methods
  */
+
+/**@name Miscellaneous Methods */
+/**@{ */
 
 /** gets name and version of LP solver */
 extern
 const char* SCIPlpiGetSolverName(
    void
    );
+
+/**@} */
+
+
+
+
+/*
+ * LPI Creation and Destruction Methods
+ */
+
+/**@name LPI Creation and Destruction Methods */
+/**@{ */
 
 /** creates an LP problem object */
 extern 
@@ -103,6 +119,18 @@ extern
 RETCODE SCIPlpiFree(
    LPI**            lpi                 /**< pointer to an LP interface structure */
    );
+
+/**@} */
+
+
+
+
+/*
+ * Modification Methods
+ */
+
+/**@name Modification Methods */
+/**@{ */
 
 /** adds columns to the LP */
 extern 
@@ -127,6 +155,15 @@ RETCODE SCIPlpiDelCols(
    int              lastcol             /**< last column to be deleted */
    );
 
+/** deletes columns from LP */
+extern 
+RETCODE SCIPlpiDelColset(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of columns
+                                         *   input:  1 if column should be deleted, 0 if not
+                                         *   output: new position of column, -1 if column was deleted */
+   );
+
 /** adds rows to the LP */
 extern 
 RETCODE SCIPlpiAddRows(
@@ -147,6 +184,15 @@ RETCODE SCIPlpiDelRows(
    LPI*             lpi,                /**< LP interface structure */
    int              firstrow,           /**< first row to be deleted */
    int              lastrow             /**< last row to be deleted */
+   );
+
+/** deletes rows from LP */
+extern 
+RETCODE SCIPlpiDelRowset(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of rows
+                                         *   input:  1 if row should be deleted, 0 if not
+                                         *   output: new position of row, -1 if row was deleted */
    );
 
 /** changes lower and upper bounds of columns */
@@ -176,81 +222,104 @@ RETCODE SCIPlpiChgObjsen(
    OBJSEN           objsen              /**< new objective sense */
    );
 
-/** gets integer parameter of LP */
-extern 
-RETCODE SCIPlpiGetIntpar(
-   LPI*             lpi,                /**< LP interface structure */
-   LPPARAM          type,               /**< parameter number */
-   int*             ival                /**< buffer to store the parameter value */
-   );
-
-/** sets integer parameter of LP */
-extern 
-RETCODE SCIPlpiSetIntpar(
-   LPI*             lpi,                /**< LP interface structure */
-   LPPARAM          type,               /**< parameter number */
-   int              ival                /**< parameter value */
-   );
-
-/** gets floating point parameter of LP */
-extern 
-RETCODE SCIPlpiGetRealpar(
-   LPI*             lpi,                /**< LP interface structure */
-   LPPARAM          type,               /**< parameter number */
-   Real*            dval                /**< buffer to store the parameter value */
-   );
-
-/** sets floating point parameter of LP */
-extern 
-RETCODE SCIPlpiSetRealpar(
-   LPI*             lpi,                /**< LP interface structure */
-   LPPARAM          type,               /**< parameter number */
-   Real             dval                /**< parameter value */
-   );
-
-/** returns value treated as infinity in the LP solver */
+/** changes objective values of columns in the LP */
 extern
-Real SCIPlpiInfinity(
+RETCODE SCIPlpiChgObj(
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncols,              /**< number of columns to change objective value for */
+   int*             cols,               /**< column indices to change objective value for */
+   Real*            vals                /**< new objective values for columns */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * Data Accessing Methods
+ */
+
+/**@name Data Accessing Methods */
+/**@{ */
+
+/** gets the number of rows in the LP */
+extern
+RETCODE SCIPlpiGetNRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nrows               /**< pointer to store the number of rows */
+   );
+
+/** gets the number of columns in the LP */
+extern
+RETCODE SCIPlpiGetNCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             ncols               /**< pointer to store the number of cols */
+   );
+
+/** gets the number of nonzero elements in the LP constraint matrix */
+extern
+RETCODE SCIPlpiGetNNonz(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nnonz               /**< pointer to store the number of nonzeros */
+   );
+
+/** gets columns from LP problem object; the arrays have to be large enough to store all values;
+ *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+extern
+RETCODE SCIPlpiGetCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get from LP */
+   int              lastcol,            /**< last column to get from LP */
+   Real*            lb,                 /**< buffer to store the lower bound vector, or NULL */
+   Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
+   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*             beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
+   int*             ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   );
+
+/** gets rows from LP problem object; the arrays have to be large enough to store all values.
+ *  Either both, lhs and rhs, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+extern
+RETCODE SCIPlpiGetRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstrow,           /**< first row to get from LP */
+   int              lastrow,            /**< last row to get from LP */
+   Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
+   Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
+   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*             beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
+   int*             ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * Solving Methods
+ */
+
+/**@name Solving Methods */
+/**@{ */
+
+/** calls primal simplex to solve the LP */
+extern 
+RETCODE SCIPlpiSolvePrimal(
    LPI*             lpi                 /**< LP interface structure */
    );
 
-/** checks if given value is treated as infinity in the LP solver */
-extern
-Bool SCIPlpiIsInfinity(
-   LPI*             lpi,                /**< LP interface structure */
-   Real             val
-   );
-
-/** gets objective value of solution */
-extern
-RETCODE SCIPlpiGetObjval(
-   LPI*             lpi,                /**< LP interface structure */
-   Real*            objval              /**< stores the objective value */
-   );
-
-/** gets primal and dual solution vectors */
+/** calls dual simplex to solve the LP */
 extern 
-RETCODE SCIPlpiGetSol(
-   LPI*             lpi,                /**< LP interface structure */
-   Real*            objval,             /**< stores the objective value */
-   Real*            primsol,            /**< primal solution vector */
-   Real*            dualsol,            /**< dual solution vector */
-   Real*            activity,           /**< row activity vector */
-   Real*            redcost             /**< reduced cost vector */
-   );
-
-/** gets primal ray for unbounded LPs */
-extern 
-RETCODE SCIPlpiGetPrimalRay(
-   LPI*             lpi,                /**< LP interface structure */
-   Real*            ray                 /**< primal ray */
-   );
-
-/** gets dual farkas proof for infeasibility */
-extern
-RETCODE SCIPlpiGetDualfarkas(
-   LPI*             lpi,                /**< LP interface structure */
-   Real*            dualfarkas          /**< dual farkas row multipliers */
+RETCODE SCIPlpiSolveDual(
+   LPI*             lpi                 /**< LP interface structure */
    );
 
 /** performs strong branching iterations on all candidates */
@@ -264,17 +333,17 @@ RETCODE SCIPlpiStrongbranch(
    Real*            up                  /**< stores dual bound after branching candidate up */
    );
 
-/** calls primal simplex to solve the LP */
-extern 
-RETCODE SCIPlpiSolvePrimal(
-   LPI*             lpi                 /**< LP interface structure */
-   );
+/**@} */
 
-/** calls dual simplex to solve the LP */
-extern 
-RETCODE SCIPlpiSolveDual(
-   LPI*             lpi                 /**< LP interface structure */
-   );
+
+
+
+/*
+ * Solution Information Methods
+ */
+
+/**@name Solution Information Methods */
+/**@{ */
 
 /** gets information about primal and dual feasibility of the LP basis */
 extern 
@@ -326,119 +395,49 @@ Bool SCIPlpiIsTimelimExc(
    LPI*             lpi                 /**< LP interface structure */
    );
 
-/** stores LP state (like basis information) into lpistate object */
+/** gets objective value of solution */
 extern
-RETCODE SCIPlpiGetState(
+RETCODE SCIPlpiGetObjval(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   Real*            objval              /**< stores the objective value */
    );
 
-/** loads LP state (like basis information) into solver */
-extern
-RETCODE SCIPlpiSetState(
+/** gets primal and dual solution vectors */
+extern 
+RETCODE SCIPlpiGetSol(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   Real*            objval,             /**< stores the objective value */
+   Real*            primsol,            /**< primal solution vector */
+   Real*            dualsol,            /**< dual solution vector */
+   Real*            activity,           /**< row activity vector */
+   Real*            redcost             /**< reduced cost vector */
    );
 
-/** frees LP state information */
-extern
-RETCODE SCIPlpiFreeState(
+/** gets primal ray for unbounded LPs */
+extern 
+RETCODE SCIPlpiGetPrimalRay(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   Real*            ray                 /**< primal ray */
    );
 
+/** gets dual farkas proof for infeasibility */
+extern
+RETCODE SCIPlpiGetDualfarkas(
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            dualfarkas          /**< dual farkas row multipliers */
+   );
+
+/**@} */
 
 
 
 
 /*
- * LP interface methods needed by external SCIP features
+ * LP Basis Methods
  */
 
-/** gets the number of rows in the LP */
-extern
-RETCODE SCIPlpiGetNRows(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             nrows               /**< pointer to store the number of rows */
-   );
-
-/** gets the number of columns in the LP */
-extern
-RETCODE SCIPlpiGetNCols(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             ncols               /**< pointer to store the number of cols */
-   );
-
-/** gets the number of nonzero elements in the LP constraint matrix */
-extern
-RETCODE SCIPlpiGetNNonzeros(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             nnonzeros           /**< pointer to store the number of nonzeros */
-   );
-
-/** gets columns from LP problem object; the arrays have to be large enough to store all values;
- *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
- *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
- */
-extern
-RETCODE SCIPlpiGetCols(
-   LPI*             lpi,                /**< LP interface structure */
-   int              firstcol,           /**< first column to get from LP */
-   int              lastcol,            /**< last column to get from LP */
-   Real*            lb,                 /**< buffer to store the lower bound vector, or NULL */
-   Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
-   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
-   int*             beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*             ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
-   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
-   );
-
-/** gets rows from LP problem object; the arrays have to be large enough to store all values.
- *  Either both, lhs and rhs, have to be NULL, or both have to be non-NULL,
- *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
- */
-extern
-RETCODE SCIPlpiGetRows(
-   LPI*             lpi,                /**< LP interface structure */
-   int              firstrow,           /**< first row to get from LP */
-   int              lastrow,            /**< last row to get from LP */
-   Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
-   Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
-   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
-   int*             beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*             ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
-   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
-   );
-
-/** deletes columns from LP */
-extern 
-RETCODE SCIPlpiDelColset(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             dstat               /**< deletion status of columns
-                                         *   input:  1 if column should be deleted, 0 if not
-                                         *   output: new position of column, -1 if column was deleted */
-   );
-
-/** deletes rows from LP */
-extern 
-RETCODE SCIPlpiDelRowset(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             dstat               /**< deletion status of rows
-                                         *   input:  1 if row should be deleted, 0 if not
-                                         *   output: new position of row, -1 if row was deleted */
-   );
-
-/** changes objective values of columns in the LP */
-extern
-RETCODE SCIPlpiChgObj(
-   LPI*             lpi,                /**< LP interface structure */
-   int              ncols,              /**< number of columns to change objective value for */
-   int*             cols,               /**< column indices to change objective value for */
-   Real*            vals                /**< new objective values for columns */
-   );
+/**@name LP Basis Methods */
+/**@{ */
 
 /** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
 extern
@@ -480,18 +479,40 @@ RETCODE SCIPlpiGetBinvARow(
    Real*            val                 /**< vector to return coefficients */
    );
 
-/** reads LP from a file */
+/**@} */
+
+
+
+
+/*
+ * LP State Methods
+ */
+
+/**@name LP State Methods */
+/**@{ */
+
+/** stores LP state (like basis information) into lpistate object */
 extern
-RETCODE SCIPlpiReadLP(
+RETCODE SCIPlpiGetState(
    LPI*             lpi,                /**< LP interface structure */
-   const char*      fname               /**< file name */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
-/** writes LP to a file */
-extern 
-RETCODE SCIPlpiWriteLP(
+/** loads LP state (like basis information) into solver */
+extern
+RETCODE SCIPlpiSetState(
    LPI*             lpi,                /**< LP interface structure */
-   const char*      fname               /**< file name */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   );
+
+/** frees LP state information */
+extern
+RETCODE SCIPlpiFreeState(
+   LPI*             lpi,                /**< LP interface structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
 /** reads LP state (like basis information from a file */
@@ -507,6 +528,104 @@ RETCODE SCIPlpiWriteState(
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    );
+
+/**@} */
+
+
+
+
+/*
+ * Parameter Methods
+ */
+
+/**@name Parameter Methods */
+/**@{ */
+
+/** gets integer parameter of LP */
+extern 
+RETCODE SCIPlpiGetIntpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   int*             ival                /**< buffer to store the parameter value */
+   );
+
+/** sets integer parameter of LP */
+extern 
+RETCODE SCIPlpiSetIntpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   int              ival                /**< parameter value */
+   );
+
+/** gets floating point parameter of LP */
+extern 
+RETCODE SCIPlpiGetRealpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   Real*            dval                /**< buffer to store the parameter value */
+   );
+
+/** sets floating point parameter of LP */
+extern 
+RETCODE SCIPlpiSetRealpar(
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   Real             dval                /**< parameter value */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * Numerical Methods
+ */
+
+/**@name Numerical Methods */
+/**@{ */
+
+/** returns value treated as infinity in the LP solver */
+extern
+Real SCIPlpiInfinity(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** checks if given value is treated as infinity in the LP solver */
+extern
+Bool SCIPlpiIsInfinity(
+   LPI*             lpi,                /**< LP interface structure */
+   Real             val
+   );
+
+/**@} */
+
+
+
+
+/*
+ * File Interface Methods
+ */
+
+/**@name File Interface Methods */
+/**@{ */
+
+/** reads LP from a file */
+extern
+RETCODE SCIPlpiReadLP(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   );
+
+/** writes LP to a file */
+extern 
+RETCODE SCIPlpiWriteLP(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   );
+
+/**@} */
+
 
 
 #endif

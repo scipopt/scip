@@ -118,11 +118,52 @@ struct EventData
    int              varpos;             /**< position of variable in vars array */
 };
 
+/** constraint handler data */
+struct ConsHdlrData
+{
+   LINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
+   int              linconsupgradessize;/**< size of linconsupgrade array */
+   int              nlinconsupgrades;   /**< number of linear constraint upgrade methods */
+};
+
+/** linear constraint update method */
+struct LinConsUpgrade
+{
+   DECL_LINCONSUPGD((*linconsupgd));    /**< method to call for upgrading linear constraint */
+   int              priority;           /**< priority of upgrading method */
+};
+
+
 
 
 /*
  * memory growing methods for dynamically allocated arrays
  */
+
+/** ensures, that linconsupgrades array can store at least num entries */
+static
+RETCODE conshdlrdataEnsureLinconsupgradesSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLRDATA*    conshdlrdata,       /**< linear constraint handler data */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->nlinconsupgrades <= conshdlrdata->linconsupgradessize);
+   
+   if( num > conshdlrdata->linconsupgradessize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, num);
+      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->linconsupgrades, conshdlrdata->linconsupgradessize,
+                     newsize) );
+      conshdlrdata->linconsupgradessize = newsize;
+   }
+   assert(num <= conshdlrdata->linconsupgradessize);
+
+   return SCIP_OKAY;
+}
 
 /** ensures, that vars and vals arrays can store at least num entries */
 static
@@ -154,6 +195,81 @@ RETCODE linconsdataEnsureVarsSize(
 
    return SCIP_OKAY;
 }
+
+
+
+
+/*
+ * local methods for managing linear constraint update methods
+ */
+
+/** creates constaint handler data for linear constraint handler */
+static
+RETCODE conshdlrdataCreate(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   )
+{
+   assert(conshdlrdata != NULL);
+
+   CHECK_OKAY( SCIPallocBlockMemory(scip, conshdlrdata) );
+   (*conshdlrdata)->linconsupgrades = NULL;
+   (*conshdlrdata)->linconsupgradessize = 0;
+   (*conshdlrdata)->nlinconsupgrades = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees constraint handler data for linear constraint handler */
+static
+void conshdlrdataFree(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
+   )
+{
+   int i;
+
+   assert(conshdlrdata != NULL);
+   assert(*conshdlrdata != NULL);
+
+   for( i = 0; i < (*conshdlrdata)->nlinconsupgrades; ++i )
+   {
+      SCIPfreeBlockMemory(scip, &(*conshdlrdata)->linconsupgrades[i]);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
+
+   SCIPfreeBlockMemory(scip, conshdlrdata);
+}
+
+/** adds a linear constraint update method to the constraint handler's data */
+static
+RETCODE conshdlrdataIncludeUpgrade(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   LINCONSUPGRADE*  linconsupgrade      /**< linear constraint upgrade method */
+   )
+{
+   int i;
+
+   assert(conshdlrdata != NULL);
+   assert(linconsupgrade != NULL);
+
+   CHECK_OKAY( conshdlrdataEnsureLinconsupgradesSize(scip, conshdlrdata, conshdlrdata->nlinconsupgrades+1) );
+
+   for( i = conshdlrdata->nlinconsupgrades;
+        i > 0 && conshdlrdata->linconsupgrades[i-1]->priority < linconsupgrade->priority; --i )
+   {
+      conshdlrdata->linconsupgrades[i] = conshdlrdata->linconsupgrades[i-1];
+   }
+   assert(0 <= i && i <= conshdlrdata->nlinconsupgrades);
+   conshdlrdata->linconsupgrades[i] = linconsupgrade;
+   conshdlrdata->nlinconsupgrades++;
+
+   return SCIP_OKAY;
+}
+
+
+
 
 /*
  * linconsdata local methods
@@ -1628,7 +1744,7 @@ RETCODE separateConstraints(
    for( c = 0; c < nconss; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      consdata = SCIPconsGetConsData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       CHECK_OKAY( SCIPlinconsSeparate(scip, consdata->lincons, &violated) );
@@ -1676,7 +1792,7 @@ RETCODE checkConstraints(
    for( c = 0; c < nconss && !(*found); ++c )
    {
       /*debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      consdata = SCIPconsGetConsData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       CHECK_OKAY( SCIPlinconsCheck(scip, consdata->lincons, sol, chcklprows, &violated) );
@@ -1704,6 +1820,26 @@ RETCODE checkConstraints(
  */
 
 static
+DECL_CONSFREE(consFreeLinear)
+{
+   CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdataFree(scip, &conshdlrdata);
+
+   SCIPconshdlrSetData(conshdlr, NULL);
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_CONSDELE(consDeleLinear)
 {
    assert(conshdlr != NULL);
@@ -1724,6 +1860,8 @@ DECL_CONSDELE(consDeleLinear)
 static
 DECL_CONSTRAN(consTranLinear)
 {
+   CONSDATA* sourcedata;
+   CONSDATA* targetdata;
    LINCONSDATA* linconsdata;
 
    /*debugMessage("Tran method of linear constraints\n");*/
@@ -1732,19 +1870,31 @@ DECL_CONSTRAN(consTranLinear)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(SCIPstage(scip) == SCIP_STAGE_INITSOLVE);
+   assert(sourcecons != NULL);
+   assert(targetcons != NULL);
+
+   sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
    assert(sourcedata->lincons != NULL);
    assert(!sourcedata->lincons->islprow);  /* in original problem, there cannot be LP rows */
    assert(sourcedata->lincons->data.linconsdata != NULL);
-   assert(targetdata != NULL);
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, targetdata) );
+   /* create constraint data for target constraint */
+   CHECK_OKAY( SCIPallocBlockMemory(scip, &targetdata) );
    
    linconsdata = sourcedata->lincons->data.linconsdata;
 
-   CHECK_OKAY( SCIPlinconsCreate(scip, &(*targetdata)->lincons, linconsdata->name, 
+   CHECK_OKAY( SCIPlinconsCreate(scip, &targetdata->lincons, linconsdata->name, 
                   linconsdata->nvars, linconsdata->vars, linconsdata->vals, linconsdata->lhs, linconsdata->rhs,
                   linconsdata->local, linconsdata->modifiable) );
+
+   /* create target constraint */
+   CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+                  SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
+                  SCIPconsIsPropagated(sourcecons)) );
+
+   /* try to upgrade target linear constraint into more specific constraint */
+   CHECK_OKAY( SCIPupgradeConsLinear(scip, targetcons) );
 
    return SCIP_OKAY;
 }
@@ -1883,7 +2033,7 @@ DECL_CONSPROP(consPropLinear)
    {
       cons = conss[c];
       assert(cons != NULL);
-      consdata = SCIPconsGetConsData(cons);
+      consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
       /* tighten the variable's bounds */
@@ -1998,20 +2148,25 @@ RETCODE SCIPincludeConsHdlrLinear(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   CONSHDLRDATA* conshdlrdata;
+
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
                   NULL, eventExecLinear,
                   NULL) );
 
+   /* create constraint handler data */
+   CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
+
    /* include constraint handler in SCIP */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  NULL, NULL, NULL,
+                  consFreeLinear, NULL, NULL,
                   consDeleLinear, consTranLinear, 
                   consSepaLinear, consEnlpLinear, consEnpsLinear, consChckLinear, consPropLinear,
-                  NULL) );
+                  conshdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -2073,13 +2228,13 @@ RETCODE SCIPaddCoefConsLinear(
 
    /*debugMessage("adding coefficient %g * <%s> to linear constraint <%s>\n", val, var->name, SCIPconsGetName(cons));*/
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear");
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetConsData(cons);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    CHECK_OKAY( SCIPlinconsAddCoef(scip, consdata->lincons, var, val) );
@@ -2100,13 +2255,13 @@ RETCODE SCIPgetLhsConsLinear(
    assert(scip != NULL);
    assert(lhs != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear");
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetConsData(cons);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    CHECK_OKAY( SCIPlinconsGetLhs(consdata->lincons, lhs) );
@@ -2127,13 +2282,13 @@ RETCODE SCIPgetRhsConsLinear(
    assert(scip != NULL);
    assert(rhs != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear");
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetConsData(cons);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    CHECK_OKAY( SCIPlinconsGetRhs(consdata->lincons, rhs) );
@@ -2153,13 +2308,13 @@ RETCODE SCIPchgLhsConsLinear(
    assert(cons != NULL);
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear");
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetConsData(cons);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    CHECK_OKAY( SCIPlinconsChgLhs(scip, consdata->lincons, lhs) );
@@ -2179,16 +2334,184 @@ RETCODE SCIPchgRhsConsLinear(
    assert(cons != NULL);
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear");
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetConsData(cons);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    CHECK_OKAY( SCIPlinconsChgRhs(scip, consdata->lincons, rhs) );
+
+   return SCIP_OKAY;
+}
+
+/** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
+RETCODE SCIPupgradeConsLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons                /**< pointer to constraint to convert */
+   )
+{
+   CONSHDLR* conshdlr;
+   CONSHDLRDATA* conshdlrdata;
+   CONSDATA* consdata;
+   LINCONSDATA* linconsdata;
+   CONS* upgdcons;
+   RESULT result;
+   VAR* var;
+   Real val;
+   Real lb;
+   Real ub;
+   int nposbin;
+   int nnegbin;
+   int nposint;
+   int nnegint;
+   int nposimpl;
+   int nnegimpl;
+   int nposcont;
+   int nnegcont;
+   int ncoeffspone;
+   int ncoeffsnone;
+   int ncoeffspint;
+   int ncoeffsnint;
+   int ncoeffspfrac;
+   int ncoeffsnfrac;
+   Bool integral;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(*cons != NULL);
+
+   conshdlr = SCIPconsGetHdlr(*cons);
+   if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear");
+      return SCIP_INVALIDDATA;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   consdata = SCIPconsGetData(*cons);
+   assert(consdata != NULL);
+   assert(consdata->lincons != NULL);
+
+   if( consdata->lincons->islprow )
+   {
+      errorMessage("cannot upgrade linear constraint that is already stored as LP row");
+      return SCIP_INVALIDDATA;
+   }
+
+   linconsdata = consdata->lincons->data.linconsdata;
+   assert(linconsdata != NULL);
+
+   /* calculate some statistics on linear constraint */
+   nposbin = 0;
+   nnegbin = 0;
+   nposint = 0;
+   nnegint = 0;
+   nposimpl = 0;
+   nnegimpl = 0;
+   nposcont = 0;
+   nnegcont = 0;
+   ncoeffspone = 0;
+   ncoeffsnone = 0;
+   ncoeffspint = 0;
+   ncoeffsnint = 0;
+   ncoeffspfrac = 0;
+   ncoeffsnfrac = 0;
+   integral = TRUE;
+   for( i = 0; i < linconsdata->nvars; ++i )
+   {
+      var = linconsdata->vars[i];
+      val = linconsdata->vals[i];
+      lb = SCIPvarGetLb(var);
+      ub = SCIPvarGetUb(var);
+      assert(!SCIPisZero(scip, val));
+
+      switch( SCIPvarGetType(var) )
+      {
+      case SCIP_VARTYPE_BINARY:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral &= SCIPisIntegral(scip, val);
+         if( val >= 0.0 )
+            nposbin++;
+         else
+            nnegbin++;
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral &= SCIPisIntegral(scip, val);
+         if( val >= 0.0 )
+            nposint++;
+         else
+            nnegint++;
+         break;
+      case SCIP_VARTYPE_IMPLINT:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral &= SCIPisIntegral(scip, val);
+         if( val >= 0.0 )
+            nposimpl++;
+         else
+            nnegimpl++;
+         break;
+      case SCIP_VARTYPE_CONTINOUS:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral &= (SCIPisIntegral(scip, val) && SCIPisEQ(scip, lb, ub));
+         if( val >= 0.0 )
+            nposcont++;
+         else
+            nnegcont++;
+         break;
+      default:
+         errorMessage("unknown variable type");
+         return SCIP_INVALIDDATA;
+      }
+      if( SCIPisEQ(scip, val, 1.0) )
+         ncoeffspone++;
+      else if( SCIPisEQ(scip, val, -1.0) )
+         ncoeffsnone++;
+      else if( SCIPisIntegral(scip, val) )
+      {
+         if( SCIPisPositive(scip, val) )
+            ncoeffspint++;
+         else
+            ncoeffsnint++;
+      }
+      else
+      {
+         if( SCIPisPositive(scip, val) )
+            ncoeffspfrac++;
+         else
+            ncoeffsnfrac++;
+      }
+   }
+
+   printf("upgrading linear constraint <%s>: +bin=%d -bin=%d +int=%d -int=%d +impl=%d -impl=%d +cont=%d -cont=%d +1=%d -1=%d +I=%d -I=%d +F=%d -F=%d integral=%d\n",
+      SCIPconsGetName(*cons), nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
+      ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac, integral);
+
+   /* try all upgrading methods in priority order */
+   upgdcons = NULL;
+   result = SCIP_DIDNOTFIND;
+   for( i = 0; i < conshdlrdata->nlinconsupgrades && result == SCIP_DIDNOTFIND; ++i )
+   {
+      CHECK_OKAY( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, linconsdata, &upgdcons,
+                     nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
+                     ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac, integral, &result) );
+      assert((result == SCIP_DIDNOTFIND && upgdcons == NULL) || (result == SCIP_SUCCESS && upgdcons != NULL));
+   }
+
+   /* if upgrading was successful, release the old constraint and use the upgraded constraint instead */
+   if( result == SCIP_SUCCESS )
+   {
+      assert(upgdcons != NULL);
+      CHECK_OKAY( SCIPreleaseCons(scip, cons) );
+      *cons = upgdcons;
+   }
 
    return SCIP_OKAY;
 }

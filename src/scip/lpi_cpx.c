@@ -842,7 +842,10 @@ RETCODE SCIPlpiChgSides(
    /* change row sides */
    CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, n, ind, lpi->senarray) );
    CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, lpi->rhsarray) );
-   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
+   if( rngcount > 0 )
+   {
+      CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
+   }
 
    return SCIP_OKAY;
 }
