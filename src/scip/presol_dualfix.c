@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.7 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.8 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -31,7 +31,7 @@
 
 #define PRESOL_NAME            "dualfix"
 #define PRESOL_DESC            "roundable variables dual fixing"
-#define PRESOL_PRIORITY        +0100000
+#define PRESOL_PRIORITY         +100000
 
 
 

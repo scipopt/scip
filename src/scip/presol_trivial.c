@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.7 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.8 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -30,7 +30,7 @@
 
 
 #define PRESOL_NAME            "trivial"
-#define PRESOL_DESC            "trivial presolver: round fractional bounds on integers, fix vars with equal bounds"
+#define PRESOL_DESC            "trivial presolver: round fractional bounds on integers, fix variables with equal bounds"
 #define PRESOL_PRIORITY        +9000000
 
 

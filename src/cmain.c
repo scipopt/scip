@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.68 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.69 2003/11/24 12:12:42 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -172,6 +172,8 @@ main(
    /**@todo variable event PSSOLCHANGED, update pseudo activities in constraints to speed up checking of pseudo solutions */
    /**@todo branching rule acting as a filter by temporary changing the branching priority of variables and returning 
     *       SCIP_DIDNOTFIND to let the next branching rule select the branching variable */
+   /**@todo in the documentation, make a clear distinction between external "user" methods and internal methods in
+    *       the .h files */
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

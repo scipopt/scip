@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.53 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.54 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  LP management methods and datastructures
@@ -118,6 +118,7 @@ struct Col
    Real             farkas;             /**< value in dual farkas infeasibility proof */
    Real             strongdown;         /**< strong branching information for downwards branching */
    Real             strongup;           /**< strong branching information for upwards branching */
+   Longint          obsoletenode;       /**< last node where this column was removed due to aging */
    int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
@@ -129,7 +130,6 @@ struct Col
    int              validstronglp;      /**< lp number for which strong branching values are valid */
    int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
-   Longint          obsoletenode;       /**< last node where this column was removed due to aging */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     objchanged:1;       /**< TRUE iff objective value changed, and data of LP solver has to be updated */
@@ -159,6 +159,9 @@ struct Row
    Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
+   Longint          validpsactivitybdchg; /**< bound change number for which pseudo activity value is valid */
+   Longint          validactivitybdsbdchg;/**< bound change number for which activity bound values are valid */
+   Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
@@ -171,10 +174,7 @@ struct Row
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int              numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int              validactivitylp;    /**< lp number for which activity value is valid */
-   Longint          validpsactivitybdchg; /**< bound change number for which pseudo activity value is valid */
-   Longint          validactivitybdsbdchg;/**< bound change number for which activity bound values are valid */
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
-   Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
    unsigned int     delaysort:1;        /**< should the row sorting be delayed and done in a lazy fashion? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
@@ -329,48 +329,6 @@ RETCODE SCIPcolChgUb(
    Real             newub               /**< new upper bound value */
    );
 
-/** gets lower bound of column */
-extern
-Real SCIPcolGetLb(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets upper bound of column */
-extern
-Real SCIPcolGetUb(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets variable this column represents */
-extern
-VAR* SCIPcolGetVar(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets position of column in actual LP, or -1 if it is not in LP */
-extern
-int SCIPcolGetLPPos(
-   COL*             col                 /**< LP column */
-   );
-
-/** returns TRUE iff column is member of actual LP */
-extern
-Bool SCIPcolIsInLP(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets best bound of column with respect to the objective function */
-extern
-Real SCIPcolGetBestBound(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets the primal LP solution of a column */
-extern
-Real SCIPcolGetPrimsol(
-   COL*             col                 /**< LP column */
-   );
-
 /** gets the reduced costs of a column in last LP or after recalculation */
 extern
 Real SCIPcolGetRedcost(
@@ -405,6 +363,61 @@ RETCODE SCIPcolGetStrongbranch(
    Real*            up                  /**< stores dual bound after branching column up */
    );
 
+/** output column to file stream */
+extern
+void SCIPcolPrint(
+   COL*             col,                /**< LP column */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** gets lower bound of column */
+extern
+Real SCIPcolGetLb(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets upper bound of column */
+extern
+Real SCIPcolGetUb(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets best bound of column with respect to the objective function */
+extern
+Real SCIPcolGetBestBound(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets the primal LP solution of a column */
+extern
+Real SCIPcolGetPrimsol(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets variable this column represents */
+extern
+VAR* SCIPcolGetVar(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets position of column in actual LP, or -1 if it is not in LP */
+extern
+int SCIPcolGetLPPos(
+   COL*             col                 /**< LP column */
+   );
+
+/** returns TRUE iff column is member of actual LP */
+extern
+Bool SCIPcolIsInLP(
+   COL*             col                 /**< LP column */
+   );
+
 /** get number of nonzero entries in column vector */
 extern
 int SCIPcolGetNNonz(
@@ -423,12 +436,26 @@ Real* SCIPcolGetVals(
    COL*             col                 /**< LP column */
    );
 
-/** output column to file stream */
-extern
-void SCIPcolPrint(
-   COL*             col,                /**< LP column */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   );
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcolGetLb(col)               ((col)->lb)
+#define SCIPcolGetUb(col)               ((col)->ub)
+#define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)
+#define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
+#define SCIPcolGetVar(col)              ((col)->var)
+#define SCIPcolGetLPPos(col)            ((col)->lppos)
+#define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
+#define SCIPcolGetNNonz(col)            ((col)->len)
+#define SCIPcolGetRows(col)             ((col)->rows)
+#define SCIPcolGetVals(col)             ((col)->vals)
+
+#endif
+
+
 
 
 /*

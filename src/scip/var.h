@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.43 2003/11/21 10:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.44 2003/11/24 12:12:44 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  Methods and datastructures for problem variables
@@ -137,8 +137,8 @@ struct DomChgBoth
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
    unsigned int     nboundchgs:30;      /**< number of bound changes */
    BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
-   int              nholechgs;          /**< number of hole list changes */
    HOLECHG*         holechgs;           /**< array with changes in hole lists */
+   int              nholechgs;          /**< number of hole list changes */
 };
 
 /** tracks changes of the variable's domains (dynamic arrays) */
@@ -147,8 +147,8 @@ struct DomChgDyn
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
    unsigned int     nboundchgs:30;      /**< number of bound changes */
    BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
-   int              nholechgs;          /**< number of hole list changes */
    HOLECHG*         holechgs;           /**< array with changes in hole lists */
+   int              nholechgs;          /**< number of hole list changes */
    int              boundchgssize;      /**< size of bound changes array */
    int              holechgssize;       /**< size of hole changes array */
 };

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.79 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.80 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1653,56 +1653,11 @@ RETCODE SCIPcolChgUb(
    return SCIP_OKAY;
 }
 
-/** gets lower bound of column */
-Real SCIPcolGetLb(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->lb;
-}
-
-/** gets upper bound of column */
-Real SCIPcolGetUb(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->ub;
-}
-
-/** gets best bound of column with respect to the objective function */
-Real SCIPcolGetBestBound(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   if( col->obj >= 0.0 )
-      return col->lb;
-   else
-      return col->ub;
-}
-
-/** gets the primal LP solution of a column */
-Real SCIPcolGetPrimsol(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   if( col->lppos >= 0 )
-      return col->primsol;
-   else
-      return 0.0;
-}
-
 /** calculates the reduced costs of a column */
 static
 void colCalcRedcost(
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    )
 {
    ROW* row;
@@ -1711,6 +1666,7 @@ void colCalcRedcost(
    assert(col != NULL);
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
+   assert(stat != NULL);
 
    col->redcost = col->obj;
    for( r = 0; r < col->len; ++r )
@@ -1719,6 +1675,7 @@ void colCalcRedcost(
       assert(row->dualsol < SCIP_INVALID);
       col->redcost -= col->vals[r] * row->dualsol;
    }
+   col->validredcostlp = stat->lpcount;
 }
 
 /** gets the reduced costs of a column in last LP or after recalculation */
@@ -1728,12 +1685,13 @@ Real SCIPcolGetRedcost(
    )
 {
    assert(col != NULL);
+   assert(stat != NULL);
    assert(col->validredcostlp <= stat->lpcount);
 
    if( col->validredcostlp < stat->lpcount )
-      colCalcRedcost(col);
+      colCalcRedcost(col, stat);
+   assert(col->validredcostlp == stat->lpcount);
    assert(col->redcost < SCIP_INVALID);
-   col->validredcostlp = stat->lpcount;
 
    return col->redcost;
 }
@@ -1759,7 +1717,8 @@ Real SCIPcolGetFeasibility(
 /** calculates the farkas value of a column */
 static
 void colCalcFarkas(
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    )
 {
    ROW* row;
@@ -1768,6 +1727,7 @@ void colCalcFarkas(
    assert(col != NULL);
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
+   assert(stat != NULL);
 
    col->farkas = 0.0;
    for( r = 0; r < col->len; ++r )
@@ -1780,6 +1740,7 @@ void colCalcFarkas(
       col->farkas *= col->ub;
    else
       col->farkas *= col->lb;
+   col->validfarkaslp = stat->lpcount;
 }
 
 /** gets the farkas value of a column in last LP (which must be infeasible) */
@@ -1789,12 +1750,13 @@ Real SCIPcolGetFarkas(
    )
 {
    assert(col != NULL);
+   assert(stat != NULL);
    assert(col->validfarkaslp <= stat->lpcount);
 
    if( col->validfarkaslp < stat->lpcount )
-      colCalcFarkas(col);
+      colCalcFarkas(col, stat);
+   assert(col->validfarkaslp == stat->lpcount);
    assert(col->farkas < SCIP_INVALID);
-   col->validfarkaslp = stat->lpcount;
 
    return col->farkas;
 }
@@ -1870,6 +1832,88 @@ RETCODE SCIPcolGetStrongbranch(
    return SCIP_OKAY;
 }
 
+/** output column to file stream */
+void SCIPcolPrint(
+   COL*             col,                /**< LP column */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int r;
+
+   assert(col != NULL);
+   assert(col->var != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   /* print bounds */
+   fprintf(file, "[%f,%f], ", col->lb, col->ub);
+
+   /* print coefficients */
+   if( col->len == 0 )
+      fprintf(file, "<empty>");
+   for( r = 0; r < col->len; ++r )
+   {
+      assert(col->rows[r] != NULL);
+      assert(col->rows[r]->name != NULL);
+      fprintf(file, "%+f%s ", col->vals[r], col->rows[r]->name);
+   }
+   fprintf(file, "\n");
+}
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** gets lower bound of column */
+Real SCIPcolGetLb(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->lb;
+}
+
+/** gets upper bound of column */
+Real SCIPcolGetUb(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->ub;
+}
+
+/** gets best bound of column with respect to the objective function */
+Real SCIPcolGetBestBound(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   if( col->obj >= 0.0 )
+      return col->lb;
+   else
+      return col->ub;
+}
+
+/** gets the primal LP solution of a column */
+Real SCIPcolGetPrimsol(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   if( col->lppos >= 0 )
+      return col->primsol;
+   else
+      return 0.0;
+}
+
 /** gets variable this column represents */
 VAR* SCIPcolGetVar(
    COL*             col                 /**< LP column */
@@ -1930,34 +1974,7 @@ Real* SCIPcolGetVals(
    return col->vals;
 }
 
-/** output column to file stream */
-void SCIPcolPrint(
-   COL*             col,                /**< LP column */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   int r;
-
-   assert(col != NULL);
-   assert(col->var != NULL);
-
-   if( file == NULL )
-      file = stdout;
-
-   /* print bounds */
-   fprintf(file, "[%f,%f], ", col->lb, col->ub);
-
-   /* print coefficients */
-   if( col->len == 0 )
-      fprintf(file, "<empty>");
-   for( r = 0; r < col->len; ++r )
-   {
-      assert(col->rows[r] != NULL);
-      assert(col->rows[r]->name != NULL);
-      fprintf(file, "%+f%s ", col->vals[r], col->rows[r]->name);
-   }
-   fprintf(file, "\n");
-}
+#endif
 
 
 
@@ -2876,21 +2893,22 @@ void SCIProwForceSort(
 /** recalculates the actual activity of a row */
 static
 void rowCalcLPActivity(
-   ROW*             row                 /**< LP row */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
    )
 {
-   COL* col;
    int c;
 
    assert(row != NULL);
+   assert(stat != NULL);
 
    row->activity = row->constant;
    for( c = 0; c < row->len; ++c )
    {
-      col = row->cols[c];
-      assert(col->primsol < SCIP_INVALID);
-      row->activity += row->vals[c] * col->primsol;
+      assert(row->cols[c]->primsol < SCIP_INVALID);
+      row->activity += row->vals[c] * row->cols[c]->primsol;
    }
+   row->validactivitylp = stat->lpcount;
 }
 
 /** returns the activity of a row in the actual LP solution */
@@ -2900,12 +2918,13 @@ Real SCIProwGetLPActivity(
    )
 {
    assert(row != NULL);
+   assert(stat != NULL);
    assert(row->validactivitylp <= stat->lpcount);
 
    if( row->validactivitylp != stat->lpcount )
-      rowCalcLPActivity(row);
+      rowCalcLPActivity(row, stat);
+   assert(row->validactivitylp == stat->lpcount);
    assert(row->activity < SCIP_INVALID);
-   row->validactivitylp = stat->lpcount;
 
    return row->activity;
 }
@@ -2928,12 +2947,14 @@ Real SCIProwGetLPFeasibility(
 /** calculates the actual pseudo activity of a row */
 static
 void rowCalcPseudoActivity(
-   ROW*             row                 /**< row data */
+   ROW*             row,                /**< row data */
+   STAT*            stat                /**< problem statistics */
    )
 {
    int i;
 
    assert(row != NULL);
+   assert(stat != NULL);
 
    row->pseudoactivity = row->constant;
    for( i = 0; i < row->len; ++i )
@@ -2944,6 +2965,7 @@ void rowCalcPseudoActivity(
 
       row->pseudoactivity += SCIPcolGetBestBound(row->cols[i]) * row->vals[i];
    }
+   row->validpsactivitybdchg = stat->nboundchanges;
 }
 
 /** returns the pseudo activity of a row in the actual pseudo solution */
@@ -2953,13 +2975,14 @@ Real SCIProwGetPseudoActivity(
    )
 {
    assert(row != NULL);
+   assert(stat != NULL);
    assert(row->validpsactivitybdchg <= stat->nboundchanges);
 
    /* check, if activity bounds has to be calculated */
    if( row->validpsactivitybdchg != stat->nboundchanges )
-      rowCalcPseudoActivity(row);
+      rowCalcPseudoActivity(row, stat);
+   assert(row->validpsactivitybdchg == stat->nboundchanges);
    assert(row->pseudoactivity < SCIP_INVALID);
-   row->validpsactivitybdchg = stat->nboundchanges;
 
    return row->pseudoactivity;
 }
@@ -3033,7 +3056,8 @@ RETCODE SCIProwGetSolFeasibility(
 static
 void rowCalcActivityBounds(
    ROW*             row,                /**< row data */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics data */
    )
 {
    COL* col;
@@ -3044,6 +3068,7 @@ void rowCalcActivityBounds(
    
    assert(row != NULL);
    assert(!SCIPsetIsInfinity(set, ABS(row->constant)));
+   assert(stat != NULL);
    
    /* calculate activity bounds */
    mininfinite = FALSE;
@@ -3079,6 +3104,7 @@ void rowCalcActivityBounds(
       row->minactivity = -set->infinity;
    if( maxinfinite )
       row->maxactivity = set->infinity;
+   row->validactivitybdsbdchg = stat->nboundchanges;
 }
 
 /** returns the minimal activity of a row w.r.t. the column's bounds */
@@ -3094,10 +3120,10 @@ Real SCIProwGetMinActivity(
 
    /* check, if activity bounds has to be calculated */
    if( row->validactivitybdsbdchg != stat->nboundchanges )
-      rowCalcActivityBounds(row, set);
+      rowCalcActivityBounds(row, set, stat);
+   assert(row->validactivitybdsbdchg == stat->nboundchanges);
    assert(row->minactivity < SCIP_INVALID);
    assert(row->maxactivity < SCIP_INVALID);
-   row->validactivitybdsbdchg = stat->nboundchanges;
 
    return row->minactivity;
 }
@@ -3115,10 +3141,10 @@ Real SCIProwGetMaxActivity(
 
    /* check, if activity bounds has to be calculated */
    if( row->validactivitybdsbdchg != stat->nboundchanges )
-      rowCalcActivityBounds(row, set);
+      rowCalcActivityBounds(row, set, stat);
+   assert(row->validactivitybdsbdchg == stat->nboundchanges);
    assert(row->minactivity < SCIP_INVALID);
    assert(row->maxactivity < SCIP_INVALID);
-   row->validactivitybdsbdchg = stat->nboundchanges;
 
    return row->maxactivity;
 }
@@ -3155,7 +3181,41 @@ Real SCIProwGetMinval(
    return row->minval;
 }
 
+/** output row to file stream */
+void SCIProwPrint(
+   ROW*             row,                /**< LP row */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
 
+   assert(row != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   /* print left hand side */
+   fprintf(file, "%g <= ", row->lhs);
+
+   /* print coefficients */
+   if( row->len == 0 )
+      fprintf(file, "0 ");
+   for( i = 0; i < row->len; ++i )
+   {
+      assert(row->cols[i] != NULL);
+      assert(row->cols[i]->var != NULL);
+      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
+      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+      fprintf(file, "%+g%s ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+   }
+
+   /* print constant */
+   if( ABS(row->constant) > SCIP_DEFAULT_EPSILON )
+      fprintf(file, "%+g ", row->constant);
+
+   /* print right hand side */
+   fprintf(file, "<= %g\n", row->rhs);
+}
 
 
 #ifndef NDEBUG
@@ -3285,43 +3345,6 @@ Bool SCIProwIsInLP(
 }
 
 #endif
-
-
-/** output row to file stream */
-void SCIProwPrint(
-   ROW*             row,                /**< LP row */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   int i;
-
-   assert(row != NULL);
-
-   if( file == NULL )
-      file = stdout;
-
-   /* print left hand side */
-   fprintf(file, "%g <= ", row->lhs);
-
-   /* print coefficients */
-   if( row->len == 0 )
-      fprintf(file, "0 ");
-   for( i = 0; i < row->len; ++i )
-   {
-      assert(row->cols[i] != NULL);
-      assert(row->cols[i]->var != NULL);
-      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
-      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-      fprintf(file, "%+g%s ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
-   }
-
-   /* print constant */
-   if( ABS(row->constant) > SCIP_DEFAULT_EPSILON )
-      fprintf(file, "%+g ", row->constant);
-
-   /* print right hand side */
-   fprintf(file, "<= %g\n", row->rhs);
-}
 
 
 
@@ -5173,9 +5196,9 @@ RETCODE SCIPlpSolve(
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
-#if 0
+#if 0 /*???????????????????????*/
    if( stat->nnodes <= 10 )
-   { /*???????????????????????*/
+   {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
@@ -5281,9 +5304,7 @@ RETCODE SCIPlpSolveAndEval(
             }
             else
             {
-               char s[MAXSTRLEN];
-               sprintf(s, "Numerical troubles at node %lld in LP %d", stat->nnodes, stat->nlps);
-               warningMessage(s);
+               warningMessage("Numerical troubles at node %lld in LP %d\n", stat->nnodes, stat->nlps);
             }
          }
          debugMessage(" -> LP objective value: %g\n", lp->objval);
@@ -5354,7 +5375,6 @@ Real SCIPlpGetObjval(
    return lp->objval;
 }
 
-
 /** stores the LP solution in the columns and rows */
 RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< actual LP data */
@@ -5370,6 +5390,9 @@ RETCODE SCIPlpGetSol(
    Real* dualsol;
    Real* activity;
    Real* redcost;
+   int nlpicols;
+   int nlpirows;
+   int lpcount;
    int c;
    int r;
 
@@ -5392,12 +5415,16 @@ RETCODE SCIPlpGetSol(
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
+   nlpicols = lp->nlpicols;
+   nlpirows = lp->nlpirows;
+   lpcount = stat->lpcount;
 
-   for( c = 0; c < lp->nlpicols; ++c )
+   /* copy primal solution and reduced costs into columns */
+   for( c = 0; c < nlpicols; ++c )
    {
       lpicols[c]->primsol = primsol[c];
       lpicols[c]->redcost = redcost[c];
-      lpicols[c]->validredcostlp = stat->lpcount;
+      lpicols[c]->validredcostlp = lpcount;
       if( infeasible != NULL )
          *infeasible = *infeasible
             || SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->lb)
@@ -5406,11 +5433,12 @@ RETCODE SCIPlpGetSol(
          SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost);
    }
 
-   for( r = 0; r < lp->nlpirows; ++r )
+   /* copy dual solution and activities into rows */
+   for( r = 0; r < nlpirows; ++r )
    {
       lpirows[r]->dualsol = dualsol[r];
-      lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
-      lpirows[r]->validactivitylp = stat->lpcount;
+      lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+      lpirows[r]->validactivitylp = lpcount;
       if( infeasible != NULL )
          *infeasible = *infeasible
             || SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->lhs)
@@ -5436,11 +5464,16 @@ RETCODE SCIPlpGetUnboundedSol(
    STAT*            stat                /**< problem statistics */
    )
 {
+   COL** lpicols;
+   ROW** lpirows;
    Real* primsol;
    Real* activity;
    Real* ray;
    Real rayobjval;
    Real rayscale;
+   int nlpicols;
+   int nlpirows;
+   int lpcount;
    int c;
    int r;
 
@@ -5463,13 +5496,19 @@ RETCODE SCIPlpGetUnboundedSol(
    /* get primal unbounded ray */
    CHECK_OKAY( SCIPlpiGetPrimalRay(lp->lpi, ray) );
    
+   lpicols = lp->lpicols;
+   lpirows = lp->lpirows;
+   nlpicols = lp->nlpicols;
+   nlpirows = lp->nlpirows;
+   lpcount = stat->lpcount;
+
    /* calculate the objective value decrease of the ray */
    rayobjval = 0.0;
-   for( c = 0; c < lp->nlpicols; ++c )
+   for( c = 0; c < nlpicols; ++c )
    {
-      assert(lp->lpicols[c] != NULL);
-      assert(lp->lpicols[c]->var != NULL);
-      rayobjval += ray[c] * lp->lpicols[c]->obj;
+      assert(lpicols[c] != NULL);
+      assert(lpicols[c]->var != NULL);
+      rayobjval += ray[c] * lpicols[c]->obj;
    }
    assert(SCIPsetIsNegative(set, rayobjval));
 
@@ -5479,23 +5518,22 @@ RETCODE SCIPlpGetUnboundedSol(
    /* calculate the unbounded point: x' = x + rayscale * ray */
    debugMessage("unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
 
-   for( c = 0; c < lp->nlpicols; ++c )
+   for( c = 0; c < nlpicols; ++c )
    {
-      lp->lpicols[c]->primsol = primsol[c] + rayscale * ray[c];
-      lp->lpicols[c]->redcost = SCIP_INVALID;
-      lp->lpicols[c]->validredcostlp = -1;
+      lpicols[c]->primsol = primsol[c] + rayscale * ray[c];
+      lpicols[c]->redcost = SCIP_INVALID;
+      lpicols[c]->validredcostlp = -1;
       /*debugMessage(" col <%s>: basesol=%f, ray=%f, unbdsol=%f\n", 
-        SCIPvarGetName(lp->lpicols[c]->var), primsol[c], ray[c], lp->lpicols[c]->primsol);*/
+        SCIPvarGetName(lpicols[c]->var), primsol[c], ray[c], lpicols[c]->primsol);*/
    }
 
-   for( r = 0; r < lp->nlpirows; ++r )
+   for( r = 0; r < nlpirows; ++r )
    {
-      lp->lpirows[r]->dualsol = SCIP_INVALID;
-      lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
-      lp->lpirows[r]->validactivitylp = stat->lpcount;
-      /*debugMessage(" row <%s>: activity=%f\n", lp->lpirows[r]->name, lp->lpirows[r]->activity);*/
+      lpirows[r]->dualsol = SCIP_INVALID;
+      lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+      lpirows[r]->validactivitylp = lpcount;
+      /*debugMessage(" row <%s>: activity=%f\n", lpirows[r]->name, lpirows[r]->activity);*/
    }
-
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &ray);
@@ -5512,7 +5550,9 @@ RETCODE SCIPlpGetDualfarkas(
    const SET*       set                 /**< global SCIP settings */
    )
 {
+   ROW** lpirows;
    Real* dualfarkas;
+   int nlpirows;
    int r;
 
    assert(lp != NULL);
@@ -5528,12 +5568,15 @@ RETCODE SCIPlpGetDualfarkas(
    /* get dual farkas infeasibility proof */
    CHECK_OKAY( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
 
+   lpirows = lp->lpirows;
+   nlpirows = lp->nlpirows;
+
    /* store infeasibility proof in rows */
    debugMessage("LP is infeasible:\n");
-   for( r = 0; r < lp->nlpirows; ++r )
+   for( r = 0; r < nlpirows; ++r )
    {
-      /*debugMessage(" row <%s>: dualfarkas=%f\n", lp->lpirows[r]->name, dualfarkas[r]);*/
-      lp->lpirows[r]->dualfarkas = dualfarkas[r];
+      /*debugMessage(" row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);*/
+      lpirows[r]->dualfarkas = dualfarkas[r];
    }
 
    /* free temporary memory */
@@ -5566,6 +5609,8 @@ RETCODE SCIPlpUpdateAges(
 {
    COL** lpicols;
    ROW** lpirows;
+   int nlpicols;
+   int nlpirows;
    int c;
    int r;
 
@@ -5579,8 +5624,10 @@ RETCODE SCIPlpUpdateAges(
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
+   nlpicols = lp->nlpicols;
+   nlpirows = lp->nlpirows;
 
-   for( c = 0; c < lp->nlpicols; ++c )
+   for( c = 0; c < nlpicols; ++c )
    {
       assert(lpicols[c] == lp->cols[c]);
       if( lpicols[c]->primsol == 0.0 )  /* non-basic columns to remove are exactly at 0.0 */
@@ -5591,7 +5638,7 @@ RETCODE SCIPlpUpdateAges(
          SCIPvarGetName(lpicols[c]->var), lpicols[c]->primsol, lpicols[c]->age);
    }
 
-   for( r = 0; r < lp->nlpirows; ++r )
+   for( r = 0; r < nlpirows; ++r )
    {
       assert(lpirows[r] == lp->rows[r]);
       if( SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)

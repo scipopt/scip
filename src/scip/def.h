@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.38 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.39 2003/11/24 12:12:42 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -82,6 +82,11 @@
 #ifndef MAX
 #define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
 #define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#endif
+
+#ifndef MAX3
+#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))
+#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))
 #endif
 
 #define EPSEQ(x,y,eps)    (ABS((x)-(y)) <= (eps))

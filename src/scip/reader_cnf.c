@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.11 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.12 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -32,7 +32,7 @@
 
 
 #define READER_NAME             "cnfreader"
-#define READER_DESC             "cnf file reader"
+#define READER_DESC             "file reader for SAT problems in conjunctive normal form"
 #define READER_EXTENSION        "cnf"
 
 
@@ -56,10 +56,7 @@ void readWarning(
    const char*      warningmsg          /**< warning message */
    )
 {
-   char s[MAXSTRLEN];
-
-   sprintf(s, "warning in line <%d>: %s", linecount, warningmsg);
-   warningMessage(s);
+   warningMessage("Line <%d>: %s\n", linecount, warningmsg);
 }
 
 /** reads the next non-empty non-comment line of a cnf file */
@@ -281,15 +278,13 @@ RETCODE readCnf(
    /* check for additional literals */
    if( clauselen > 0 )
    {
-      sprintf(s, "found %d additional literals after last clause", clauselen);
-      warningMessage(s);
+      warningMessage("found %d additional literals after last clause\n", clauselen);
    }
 
    /* check number of clauses */
    if( clausenum != nclauses )
    {
-      sprintf(s, "expected %d clauses, but found %d", nclauses, clausenum);
-      warningMessage(s);
+      warningMessage("expected %d clauses, but found %d\n", nclauses, clausenum);
    }
 
  TERMINATE:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.12 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.13 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods and datastructures for handling parameter settings
@@ -154,10 +154,8 @@ RETCODE paramCheckBool(
 
    if( value != TRUE && value != FALSE )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).",
+      warningMessage("Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n",
          value, param->name);
-      warningMessage(s);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -176,10 +174,8 @@ RETCODE paramCheckInt(
 
    if( value < param->data.intparam.minvalue || value > param->data.intparam.maxvalue )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Invalid value <%d> for int parameter <%s>. Must be in range [%d,%d].",
+      warningMessage("Invalid value <%d> for int parameter <%s>. Must be in range [%d,%d].\n",
          value, param->name, param->data.intparam.minvalue, param->data.intparam.maxvalue);
-      warningMessage(s);
       return SCIP_PARAMETERWRONGVAL;
    }
    
@@ -198,10 +194,8 @@ RETCODE paramCheckLongint(
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Invalid value <%lld> for longint parameter <%s>. Must be in range [%lld,%lld].",
+      warningMessage("Invalid value <%lld> for longint parameter <%s>. Must be in range [%lld,%lld].\n",
          value, param->name, param->data.longintparam.minvalue, param->data.longintparam.maxvalue);
-      warningMessage(s);
       return SCIP_PARAMETERWRONGVAL;
    }
    
@@ -220,10 +214,8 @@ RETCODE paramCheckReal(
 
    if( !(value >= param->data.realparam.minvalue && value <= param->data.realparam.maxvalue) )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Invalid real parameter value <%g>. Must be in range [%g,%g].",
+      warningMessage("Invalid real parameter value <%g>. Must be in range [%g,%g].\n",
          value, param->data.realparam.minvalue, param->data.realparam.maxvalue);
-      warningMessage(s);
       return SCIP_PARAMETERWRONGVAL;
    }
    
@@ -242,9 +234,7 @@ RETCODE paramCheckChar(
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Invalid char parameter value <%x>.", (int)value);
-      warningMessage(s);
+      warningMessage("Invalid char parameter value <%x>.\n", (int)value);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -258,10 +248,8 @@ RETCODE paramCheckChar(
 
       if( *c != value )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "Invalid char parameter value <%c>. Must be in set {%s}.",
+         warningMessage("Invalid char parameter value <%c>. Must be in set {%s}.\n",
             value, param->data.charparam.allowedvalues);
-         warningMessage(s);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -283,7 +271,7 @@ RETCODE paramCheckString(
 
    if( value == NULL )
    {
-      warningMessage("Cannot assign a NULL string to a string parameter.");
+      warningMessage("Cannot assign a NULL string to a string parameter.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -291,9 +279,7 @@ RETCODE paramCheckString(
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "Invalid character <%x> in string parameter at position %d.", (int)value[i], i);
-         warningMessage(s);
+         warningMessage("Invalid character <%x> in string parameter at position %d.\n", (int)value[i], i);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -1786,9 +1772,7 @@ RETCODE paramsetParse(
    param = SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param == NULL )
    {
-      char s[2*MAXSTRLEN];
-      sprintf(s, "unknown parameter <%s>", paramname);
-      warningMessage(s);
+      warningMessage("unknown parameter <%s>\n", paramname);
       return SCIP_OKAY;
    }
 

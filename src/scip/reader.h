@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.11 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.12 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   reader.h
  * @brief  interface for input file readers
@@ -94,6 +94,19 @@ RETCODE SCIPreaderRead(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets user data of reader */
+extern
+READERDATA* SCIPreaderGetData(
+   READER*          reader              /**< reader */
+   );
+
+/** sets user data of reader; user has to free old data in advance! */
+extern
+void SCIPreaderSetData(
+   READER*          reader,             /**< reader */
+   READERDATA*      readerdata          /**< new reader user data */
+   );
+
 /** gets name of reader */
 extern
 const char* SCIPreaderGetName(
@@ -106,17 +119,10 @@ const char* SCIPreaderGetDesc(
    READER*          reader              /**< reader */
    );
 
-/** gets user data of reader */
+/** gets file extension of reader */
 extern
-READERDATA* SCIPreaderGetData(
+const char* SCIPreaderGetExtension(
    READER*          reader              /**< reader */
-   );
-
-/** sets user data of reader; user has to free old data in advance! */
-extern
-void SCIPreaderSetData(
-   READER*          reader,             /**< reader */
-   READERDATA*      readerdata          /**< new reader user data */
    );
 
 

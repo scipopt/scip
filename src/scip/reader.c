@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.15 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.16 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -148,6 +148,27 @@ RETCODE SCIPreaderRead(
    return SCIP_OKAY;
 }
 
+/** gets user data of reader */
+READERDATA* SCIPreaderGetData(
+   READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   return reader->readerdata;
+}
+
+/** sets user data of reader; user has to free old data in advance! */
+void SCIPreaderSetData(
+   READER*          reader,             /**< reader */
+   READERDATA*      readerdata          /**< new reader user data */
+   )
+{
+   assert(reader != NULL);
+
+   reader->readerdata = readerdata;
+}
+
 /** gets name of reader */
 const char* SCIPreaderGetName(
    READER*          reader              /**< reader */
@@ -168,24 +189,13 @@ const char* SCIPreaderGetDesc(
    return reader->desc;
 }
 
-/** gets user data of reader */
-READERDATA* SCIPreaderGetData(
+/** gets file extension of reader */
+const char* SCIPreaderGetExtension(
    READER*          reader              /**< reader */
    )
 {
    assert(reader != NULL);
 
-   return reader->readerdata;
-}
-
-/** sets user data of reader; user has to free old data in advance! */
-void SCIPreaderSetData(
-   READER*          reader,             /**< reader */
-   READERDATA*      readerdata          /**< new reader user data */
-   )
-{
-   assert(reader != NULL);
-
-   reader->readerdata = readerdata;
+   return reader->extension;
 }
 

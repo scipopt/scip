@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.6 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.7 2003/11/24 12:12:42 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -141,7 +141,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
    {
       printf(" %-20s ", SCIPbranchruleGetName(sorted[i]));
       if( strlen(SCIPbranchruleGetName(sorted[i])) > 20 )
-         printf("\n                  --> ");
+         printf("\n %20s ", "-->");
       printf("%8d  ", SCIPbranchruleGetPriority(sorted[i]));
       printf(SCIPbranchruleGetDesc(sorted[i]));
       printf("\n");
@@ -176,7 +176,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
    {
       printf(" %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
       if( strlen(SCIPconshdlrGetName(conshdlrs[i])) > 20 )
-         printf("\n                  --> ");
+         printf("\n %20s ", "-->");
       printf("%8d %8d %8d %8d %8d  ",
          SCIPconshdlrGetCheckPriority(conshdlrs[i]),
          SCIPconshdlrGetEnfoPriority(conshdlrs[i]),
@@ -186,6 +186,236 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
       printf(SCIPconshdlrGetDesc(conshdlrs[i]));
       printf("\n");
    }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display displaycols command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
+{
+   DISP** disps;
+   int ndisps;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   disps = SCIPgetDisps(scip);
+   ndisps = SCIPgetNDisps(scip);
+
+   /* display list of display columns */
+   printf("\n");
+   printf(" display column       header           position width priority status  description\n");
+   printf(" --------------       ------           -------- ----- -------- ------  -----------\n");
+   for( i = 0; i < ndisps; ++i )
+   {
+      printf(" %-20s ", SCIPdispGetName(disps[i]));
+      if( strlen(SCIPdispGetName(disps[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%-16s ", SCIPdispGetHeader(disps[i]));
+      if( strlen(SCIPdispGetHeader(disps[i])) > 16 )
+         printf("\n %20s %16s ", "", "-->");
+      printf("%8d ", SCIPdispGetPosition(disps[i]));
+      printf("%5d ", SCIPdispGetWidth(disps[i]));
+      printf("%8d ", SCIPdispGetPriority(disps[i]));
+      switch( SCIPdispGetStatus(disps[i]) )
+      {
+      case SCIP_DISPSTATUS_OFF:
+         printf("%6s  ", "off");
+         break;
+      case SCIP_DISPSTATUS_AUTO:
+         printf("%6s  ", "auto");
+         break;
+      case SCIP_DISPSTATUS_ON:
+         printf("%6s  ", "on");
+         break;
+      default:
+         printf("%6s  ", "???");
+         break;
+      }
+      printf(SCIPdispGetDesc(disps[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display heuristics command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
+{
+   HEUR** heurs;
+   int nheurs;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   heurs = SCIPgetHeurs(scip);
+   nheurs = SCIPgetNHeurs(scip);
+
+   /* display list of primal heuristics */
+   printf("\n");
+   printf(" primal heuristic     c priority freq  description\n");
+   printf(" ----------------     - -------- ----  -----------\n");
+   for( i = 0; i < nheurs; ++i )
+   {
+      printf(" %-20s ", SCIPheurGetName(heurs[i]));
+      if( strlen(SCIPheurGetName(heurs[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%c ", SCIPheurGetDispchar(heurs[i]));
+      printf("%8d ", SCIPheurGetPriority(heurs[i]));
+      printf("%4d  ", SCIPheurGetFreq(heurs[i]));
+      printf(SCIPheurGetDesc(heurs[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display nodeselectors command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors)
+{
+   NODESEL** nodesels;
+   int nnodesels;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   nodesels = SCIPgetNodesels(scip);
+   nnodesels = SCIPgetNNodesels(scip);
+
+   /* display list of node selectors */
+   printf("\n");
+   printf(" node selector        std priority memsave prio  description\n");
+   printf(" -------------        ------------ ------------  -----------\n");
+   for( i = 0; i < nnodesels; ++i )
+   {
+      printf(" %-20s ", SCIPnodeselGetName(nodesels[i]));
+      if( strlen(SCIPnodeselGetName(nodesels[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%12d ", SCIPnodeselGetStdPriority(nodesels[i]));
+      printf("%12d  ", SCIPnodeselGetMemsavePriority(nodesels[i]));
+      printf(SCIPnodeselGetDesc(nodesels[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display presolvers command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
+{
+   PRESOL** presols;
+   int npresols;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   presols = SCIPgetPresols(scip);
+   npresols = SCIPgetNPresols(scip);
+
+   /* display list of presolvers */
+   printf("\n");
+   printf(" presolver            priority  description\n");
+   printf(" ---------            --------  -----------\n");
+   for( i = 0; i < npresols; ++i )
+   {
+      printf(" %-20s ", SCIPpresolGetName(presols[i]));
+      if( strlen(SCIPpresolGetName(presols[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%8d  ", SCIPpresolGetPriority(presols[i]));
+      printf(SCIPpresolGetDesc(presols[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display readers command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
+{
+   READER** readers;
+   int nreaders;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   readers = SCIPgetReaders(scip);
+   nreaders = SCIPgetNReaders(scip);
+
+   /* display list of readers */
+   printf("\n");
+   printf(" file reader          extension  description\n");
+   printf(" -----------          ---------  -----------\n");
+   for( i = 0; i < nreaders; ++i )
+   {
+      printf(" %-20s ", SCIPreaderGetName(readers[i]));
+      if( strlen(SCIPreaderGetName(readers[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%9s  ", SCIPreaderGetExtension(readers[i]));
+      printf(SCIPreaderGetDesc(readers[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display separators command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
+{
+   SEPA** sepas;
+   int nsepas;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   sepas = SCIPgetSepas(scip);
+   nsepas = SCIPgetNSepas(scip);
+
+   /* display list of separators */
+   printf("\n");
+   printf(" separator            priority freq  description\n");
+   printf(" ---------            -------- ----  -----------\n");
+   for( i = 0; i < nsepas; ++i )
+   {
+      printf(" %-20s ", SCIPsepaGetName(sepas[i]));
+      if( strlen(SCIPsepaGetName(sepas[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%8d ", SCIPsepaGetPriority(sepas[i]));
+      printf("%4d  ", SCIPsepaGetFreq(sepas[i]));
+      printf(SCIPsepaGetDesc(sepas[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display solution command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
+{
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -683,11 +913,74 @@ RETCODE SCIPincludeDialogDefault(
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* display displaycols */
+   if( !SCIPdialogHasEntry(submenu, "displaycols") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayDisplaycols, NULL,
+                     "displaycols", "display display column settings", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display heuristics */
+   if( !SCIPdialogHasEntry(submenu, "heuristics") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayHeuristics, NULL,
+                     "heuristics", "display primal heuristics settings", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display nodeselectors */
+   if( !SCIPdialogHasEntry(submenu, "nodeselectors") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayNodeselectors, NULL,
+                     "nodeselectors", "display node selectors settings", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display presolvers */
+   if( !SCIPdialogHasEntry(submenu, "presolvers") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayPresolvers, NULL,
+                     "presolvers", "display presolvers settings", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display readers */
+   if( !SCIPdialogHasEntry(submenu, "readers") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayReaders, NULL,
+                     "readers", "display file readers settings", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display separators */
+   if( !SCIPdialogHasEntry(submenu, "separators") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplaySeparators, NULL,
+                     "separators", "display cut separators settings", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display solution */
+   if( !SCIPdialogHasEntry(submenu, "solution") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplaySolution, NULL,
+                     "solution", "display best primal solution", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
    /* display statistics */
    if( !SCIPdialogHasEntry(submenu, "statistics") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayStatistics, NULL,
-                     "statistics", "display solution statistics", FALSE, NULL) );
+                     "statistics", "display problem and optimization statistics", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

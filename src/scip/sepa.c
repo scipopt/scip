@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.25 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.26 2003/11/24 12:12:44 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -259,6 +259,26 @@ RETCODE SCIPsepaExec(
    return SCIP_OKAY;
 }
 
+/** gets user data of separator */
+SEPADATA* SCIPsepaGetData(
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->sepadata;
+}
+
+/** sets user data of separator; user has to free old data in advance! */
+void SCIPsepaSetData(
+   SEPA*            sepa,               /**< separator */
+   SEPADATA*        sepadata            /**< new separator user data */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepadata = sepadata;
+}
 
 /** gets name of separator */
 const char* SCIPsepaGetName(
@@ -280,25 +300,14 @@ const char* SCIPsepaGetDesc(
    return sepa->desc;
 }
 
-/** gets user data of separator */
-SEPADATA* SCIPsepaGetData(
+/** gets priority of separator */
+int SCIPsepaGetPriority(
    SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
 
-   return sepa->sepadata;
-}
-
-/** sets user data of separator; user has to free old data in advance! */
-void SCIPsepaSetData(
-   SEPA*            sepa,               /**< separator */
-   SEPADATA*        sepadata            /**< new separator user data */
-   )
-{
-   assert(sepa != NULL);
-
-   sepa->sepadata = sepadata;
+   return sepa->priority;
 }
 
 /** gets frequency of separator */

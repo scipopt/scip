@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.10 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.11 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods and datastructures for presolvers
@@ -300,6 +300,27 @@ RETCODE SCIPpresolExec(
    return SCIP_OKAY;
 }
 
+/** gets user data of presolver */
+PRESOLDATA* SCIPpresolGetData(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->presoldata;
+}
+
+/** sets user data of presolver; user has to free old data in advance! */
+void SCIPpresolSetData(
+   PRESOL*          presol,             /**< presolver */
+   PRESOLDATA*      presoldata          /**< new presolver user data */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presoldata = presoldata;
+}
+
 /** gets name of presolver */
 const char* SCIPpresolGetName(
    PRESOL*          presol              /**< presolver */
@@ -328,27 +349,6 @@ int SCIPpresolGetPriority(
    assert(presol != NULL);
 
    return presol->priority;
-}
-
-/** gets user data of presolver */
-PRESOLDATA* SCIPpresolGetData(
-   PRESOL*          presol              /**< presolver */
-   )
-{
-   assert(presol != NULL);
-
-   return presol->presoldata;
-}
-
-/** sets user data of presolver; user has to free old data in advance! */
-void SCIPpresolSetData(
-   PRESOL*          presol,             /**< presolver */
-   PRESOLDATA*      presoldata          /**< new presolver user data */
-   )
-{
-   assert(presol != NULL);
-
-   presol->presoldata = presoldata;
 }
 
 /** is presolver initialized? */

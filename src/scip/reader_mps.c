@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.34 2003/11/21 10:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.35 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -32,7 +32,7 @@
 
 
 #define READER_NAME             "mpsreader"
-#define READER_DESC             "mps file reader"
+#define READER_DESC             "file reader for MIPs in IBM's Mathematical Programming System format"
 #define READER_EXTENSION        "mps"
 
 

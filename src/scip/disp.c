@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.22 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.23 2003/11/24 12:12:42 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -197,26 +197,6 @@ RETCODE SCIPdispOutput(
    return SCIP_OKAY;
 }
 
-/** gets name of display column */
-const char* SCIPdispGetName(
-   DISP*            disp                /**< display column */
-   )
-{
-   assert(disp != NULL);
-
-   return disp->name;
-}
-
-/** gets description of display column */
-const char* SCIPdispGetDesc(
-   DISP*            disp                /**< display column */
-   )
-{
-   assert(disp != NULL);
-
-   return disp->desc;
-}
-
 /** gets user data of display column */
 DISPDATA* SCIPdispGetData(
    DISP*            disp                /**< display column */
@@ -238,6 +218,56 @@ void SCIPdispSetData(
    disp->dispdata = dispdata;
 }
 
+/** gets name of display column */
+const char* SCIPdispGetName(
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->name;
+}
+
+/** gets description of display column */
+const char* SCIPdispGetDesc(
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->desc;
+}
+
+/** gets head line of display column */
+const char* SCIPdispGetHeader(
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->header;
+}
+
+/** gets width of display column */
+int SCIPdispGetWidth(
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->width;
+}
+
+/** gets priority of display column */
+int SCIPdispGetPriority(
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->priority;
+}
+
 /** gets position of display column */
 int SCIPdispGetPosition(
    DISP*            disp                /**< display column */
@@ -246,6 +276,16 @@ int SCIPdispGetPosition(
    assert(disp != NULL);
 
    return disp->position;
+}
+
+/** gets status of display column */
+DISPSTATUS SCIPdispGetStatus(
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->dispstatus;
 }
 
 /** is display column initialized? */

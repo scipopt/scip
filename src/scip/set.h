@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.54 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.55 2003/11/24 12:12:44 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  global SCIP settings
@@ -597,14 +597,6 @@ int SCIPsetGetMaxsepacuts(
    Bool             root                /**< are we at the root node? */
    );
 
-/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
-extern
-Real SCIPsetRelDiff(
-   const SET*       set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   );
-
 
 
 #ifndef NDEBUG
@@ -612,6 +604,14 @@ Real SCIPsetRelDiff(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
+extern
+Real SCIPsetRelDiff(
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
 
 /** checks, if values are in range of epsilon */
 extern
@@ -942,6 +942,7 @@ Real SCIPsetFrac(
  * speed up the algorithms.
  */
 
+#define SCIPsetRelDiff(set, val1, val2)    ( (val1-val2)/(MAX3(1.0,ABS(val1),ABS(val2))) )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->epsilon) )

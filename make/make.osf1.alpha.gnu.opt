@@ -1,7 +1,7 @@
-#--- $Id: make.osf1.alpha.gnu.opt,v 1.1 2003/11/21 09:18:58 bzfpfend Exp $
-CPPFLAGS        +=      -DNDEBUG -DWITH_READLINE
+#--- $Id: make.osf1.alpha.gnu.opt,v 1.2 2003/11/24 12:12:41 bzfpfend Exp $
+CPPFLAGS        +=      -DNDEBUG # -DWITH_READLINE
 CFLAGS		=	-O6 -mcpu=ev6 -g
 CXXFLAGS	=	-O6 -mcpu=ev6 -g
 ARFLAGS		=	crs
-LDFLAGS		+=	-lreadline -lcurses -static
+LDFLAGS		+=	-lcurses -pthread -static # -lreadline
 

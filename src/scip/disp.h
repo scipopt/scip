@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.15 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.16 2003/11/24 12:12:42 bzfpfend Exp $"
 
 /**@file   disp.h
  * @brief  methods and datastructures for displaying runtime statistics
@@ -132,18 +132,6 @@ RETCODE SCIPdispOutput(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** gets name of display column */
-extern
-const char* SCIPdispGetName(
-   DISP*            disp                /**< display column */
-   );
-
-/** gets description of display column */
-extern
-const char* SCIPdispGetDesc(
-   DISP*            disp                /**< display column */
-   );
-
 /** gets user data of display column */
 extern
 DISPDATA* SCIPdispGetData(
@@ -157,9 +145,45 @@ void SCIPdispSetData(
    DISPDATA*        dispdata            /**< new display column user data */
    );
 
+/** gets name of display column */
+extern
+const char* SCIPdispGetName(
+   DISP*            disp                /**< display column */
+   );
+
+/** gets description of display column */
+extern
+const char* SCIPdispGetDesc(
+   DISP*            disp                /**< display column */
+   );
+
+/** gets head line of display column */
+extern
+const char* SCIPdispGetHeader(
+   DISP*            disp                /**< display column */
+   );
+
+/** gets width of display column */
+extern
+int SCIPdispGetWidth(
+   DISP*            disp                /**< display column */
+   );
+
+/** gets priority of display column */
+extern
+int SCIPdispGetPriority(
+   DISP*            disp                /**< display column */
+   );
+
 /** gets position of display column */
 extern
 int SCIPdispGetPosition(
+   DISP*            disp                /**< display column */
+   );
+
+/** gets status of display column */
+extern
+DISPSTATUS SCIPdispGetStatus(
    DISP*            disp                /**< display column */
    );
 

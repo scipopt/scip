@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86.gnu.prf,v 1.1 2003/11/21 09:18:58 bzfpfend Exp $
-#Analyse der Performance-Datei: gprof bin/scip.seq.linux.x86.gnu.prf.cpx gmon.out
+#--- $Id: make.linux.x86.gnu.prf,v 1.2 2003/11/24 12:12:41 bzfpfend Exp $
+#analysis of performance file: gprof bin/scip.linux.x86.gnu.prf.cpx gmon.out
 CPPFLAGS	+=	-DNDEBUG -DWITH_READLINE
 CFLAGS		=	-O2 -march=pentium4 -g -pg
 CXXFLAGS	=	-O2 -march=pentium4 -g -pg

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.103 2003/11/21 10:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.104 2003/11/24 12:12:44 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2382,6 +2382,7 @@ RETCODE presolve(
       lastnchgsides = nchgsides;
 
       /* call included presolvers */
+      /**@todo call presolvers in priority order -> see branching rules for an example */
       for( i = 0; i < scip->set->npresols && *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED; ++i )
       {
          CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, nrounds, 
@@ -5728,7 +5729,7 @@ RETCODE SCIPprintSol(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPprintSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( file == NULL )
       file = stdout;
@@ -5750,7 +5751,7 @@ RETCODE SCIPprintTransSol(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPprintSolTrans", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintSolTrans", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( file == NULL )
       file = stdout;
@@ -5769,16 +5770,32 @@ SOL* SCIPgetBestSol(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetBestSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( scip->primal->nsols > 0 ) 
+   switch( scip->stage )
    {
-      assert(scip->primal->sols != NULL);
-      assert(scip->primal->sols[0] != NULL);
-      return scip->primal->sols[0];
-   }
-   else
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_FREESOLVE:
       return NULL;
+
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      if( scip->primal->nsols > 0 ) 
+      {
+         assert(scip->primal->sols != NULL);
+         assert(scip->primal->sols[0] != NULL);
+         return scip->primal->sols[0];
+      }
+      return NULL;
+
+   default:
+      errorMessage("Unknown SCIP stage\n");
+      abort();
+   }
 }
 
 /** outputs best feasible primal solution found so far to file stream */
@@ -5789,7 +5806,7 @@ RETCODE SCIPprintBestSol(
 {
    SOL* sol;
 
-   CHECK_OKAY( checkStage(scip, "SCIPprintBestSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    sol = SCIPgetBestSol(scip);
 
@@ -5814,7 +5831,7 @@ RETCODE SCIPprintBestTransSol(
 {
    SOL* sol;
 
-   CHECK_OKAY( checkStage(scip, "SCIPprintBestTransSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintBestTransSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    sol = SCIPgetBestSol(scip);
 

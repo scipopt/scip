@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.17 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.18 2003/11/24 12:12:43 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  methods and datastructures for primal heuristics
@@ -134,6 +134,19 @@ RETCODE SCIPheurExec(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets user data of primal heuristic */
+extern
+HEURDATA* SCIPheurGetData(
+   HEUR*            heur                /**< primal heuristic */
+   );
+
+/** sets user data of primal heuristic; user has to free old data in advance! */
+extern
+void SCIPheurSetData(
+   HEUR*            heur,               /**< primal heuristic */
+   HEURDATA*        heurdata            /**< new primal heuristic user data */
+   );
+
 /** gets name of primal heuristic */
 extern
 const char* SCIPheurGetName(
@@ -152,17 +165,10 @@ char SCIPheurGetDispchar(
    HEUR*            heur                /**< primal heuristic */
    );
 
-/** gets user data of primal heuristic */
+/** gets priority of primal heuristic */
 extern
-HEURDATA* SCIPheurGetData(
+int SCIPheurGetPriority(
    HEUR*            heur                /**< primal heuristic */
-   );
-
-/** sets user data of primal heuristic; user has to free old data in advance! */
-extern
-void SCIPheurSetData(
-   HEUR*            heur,               /**< primal heuristic */
-   HEURDATA*        heurdata            /**< new primal heuristic user data */
    );
 
 /** gets frequency of primal heuristic */

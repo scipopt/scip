@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.6 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.7 2003/11/24 12:12:42 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -46,6 +46,34 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);
 /** dialog execution method for the display conshdlrs command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs);
+
+/** dialog execution method for the display displaycols command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols);
+
+/** dialog execution method for the display heuristics command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
+
+/** dialog execution method for the display nodeselectors command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors);
+
+/** dialog execution method for the display presolvers command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers);
+
+/** dialog execution method for the display readers command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders);
+
+/** dialog execution method for the display separators command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
+
+/** dialog execution method for the display solution command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
 
 /** dialog execution method for the display statistics command */
 extern

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.51 2003/11/21 10:35:31 bzfpfend Exp $
+# $Id: Makefile,v 1.52 2003/11/24 12:12:41 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -39,6 +39,7 @@ ARCH            :=      $(shell uname -m | \
 			-e s/9000..../hppa/ \
 			-e s/00........../pwr4/)
 OSTYPE		:=	$(shell uname -s | tr A-Z a-z)
+MACHINENAME	:=	$(shell uname -n | tr A-Z a-z)
 
 
 #-----------------------------------------------------------------------------

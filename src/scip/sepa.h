@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.19 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.20 2003/11/24 12:12:44 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  methods and datastructures for separators
@@ -134,6 +134,19 @@ RETCODE SCIPsepaExec(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets user data of separator */
+extern
+SEPADATA* SCIPsepaGetData(
+   SEPA*            sepa                /**< separator */
+   );
+
+/** sets user data of separator; user has to free old data in advance! */
+extern
+void SCIPsepaSetData(
+   SEPA*            sepa,               /**< separator */
+   SEPADATA*        sepadata            /**< new separator user data */
+   );
+
 /** gets name of separator */
 extern
 const char* SCIPsepaGetName(
@@ -146,17 +159,10 @@ const char* SCIPsepaGetDesc(
    SEPA*            sepa                /**< separator */
    );
 
-/** gets user data of separator */
+/** gets priority of separator */
 extern
-SEPADATA* SCIPsepaGetData(
+int SCIPsepaGetPriority(
    SEPA*            sepa                /**< separator */
-   );
-
-/** sets user data of separator; user has to free old data in advance! */
-extern
-void SCIPsepaSetData(
-   SEPA*            sepa,               /**< separator */
-   SEPADATA*        sepadata            /**< new separator user data */
    );
 
 /** gets frequency of separator */

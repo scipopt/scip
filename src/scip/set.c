@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.71 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.72 2003/11/24 12:12:44 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  global SCIP settings
@@ -1092,6 +1092,8 @@ RETCODE SCIPsetIncludePresol(
    PRESOL*          presol              /**< presolver */
    )
 {
+   int i;
+
    assert(set != NULL);
    assert(presol != NULL);
 
@@ -1102,7 +1104,11 @@ RETCODE SCIPsetIncludePresol(
    }
    assert(set->npresols < set->presolssize);
    
-   set->presols[set->npresols] = presol;
+   for( i = set->npresols; i > 0 && SCIPpresolGetPriority(presol) > SCIPpresolGetPriority(set->presols[i-1]); --i )
+   {
+      set->presols[i] = set->presols[i-1];
+   }
+   set->presols[i] = presol;
    set->npresols++;
 
    return SCIP_OKAY;
@@ -1134,6 +1140,8 @@ RETCODE SCIPsetIncludeSepa(
    SEPA*            sepa                /**< separator */
    )
 {
+   int i;
+
    assert(set != NULL);
    assert(sepa != NULL);
    assert(!SCIPsepaIsInitialized(sepa));
@@ -1145,7 +1153,11 @@ RETCODE SCIPsetIncludeSepa(
    }
    assert(set->nsepas < set->sepassize);
    
-   set->sepas[set->nsepas] = sepa;
+   for( i = set->nsepas; i > 0 && SCIPsepaGetPriority(sepa) > SCIPsepaGetPriority(set->sepas[i-1]); --i )
+   {
+      set->sepas[i] = set->sepas[i-1];
+   }
+   set->sepas[i] = sepa;
    set->nsepas++;
 
    return SCIP_OKAY;
@@ -1177,6 +1189,8 @@ RETCODE SCIPsetIncludeHeur(
    HEUR*            heur                /**< primal heuristic */
    )
 {
+   int i;
+
    assert(set != NULL);
    assert(heur != NULL);
    assert(!SCIPheurIsInitialized(heur));
@@ -1188,7 +1202,11 @@ RETCODE SCIPsetIncludeHeur(
    }
    assert(set->nheurs < set->heurssize);
    
-   set->heurs[set->nheurs] = heur;
+   for( i = set->nheurs; i > 0 && SCIPheurGetPriority(heur) > SCIPheurGetPriority(set->heurs[i-1]); --i )
+   {
+      set->heurs[i] = set->heurs[i-1];
+   }
+   set->heurs[i] = heur;
    set->nheurs++;
 
    return SCIP_OKAY;
@@ -1263,6 +1281,8 @@ RETCODE SCIPsetIncludeNodesel(
    NODESEL*         nodesel             /**< node selector */
    )
 {
+   int i;
+
    assert(set != NULL);
    assert(nodesel != NULL);
    assert(!SCIPnodeselIsInitialized(nodesel));
@@ -1274,7 +1294,12 @@ RETCODE SCIPsetIncludeNodesel(
    }
    assert(set->nnodesels < set->nodeselssize);
    
-   set->nodesels[set->nnodesels] = nodesel;
+   for( i = set->nnodesels; i > 0 && SCIPnodeselGetStdPriority(nodesel) > SCIPnodeselGetStdPriority(set->nodesels[i-1]);
+        --i )
+   {
+      set->nodesels[i] = set->nodesels[i-1];
+   }
+   set->nodesels[i] = nodesel;
    set->nnodesels++;
 
    return SCIP_OKAY;
@@ -1677,6 +1702,14 @@ int SCIPsetGetMaxsepacuts(
       return set->maxsepacuts;
 }
 
+   
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
 Real SCIPsetRelDiff(
    const SET*       set,                /**< global SCIP settings */
@@ -1697,14 +1730,6 @@ Real SCIPsetRelDiff(
    
    return (val1-val2)/quot;
 }
-
-   
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** checks, if values are in range of epsilon */
 Bool SCIPsetIsEQ(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.5 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.6 2003/11/24 12:12:42 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  user interface dialog
@@ -124,6 +124,8 @@ RETCODE readLine(
    s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
    if( s != NULL )
       *s = '\0';
+
+   return SCIP_OKAY;
 }
 
 /** puts the given string on the command history */
@@ -133,6 +135,7 @@ RETCODE addHistory(
    )
 {
    /* nothing to do here */
+   return SCIP_OKAY;
 }
 
 #endif

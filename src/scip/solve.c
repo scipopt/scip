@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.67 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.68 2003/11/24 12:12:44 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -386,6 +386,7 @@ RETCODE solveNodeLP(
             }
             
             /* separate LP, if no cuts have been found by the constraint handlers */
+            /**@todo call separators in priority order -> see branching rules for an example */
             if( SCIPsepastoreGetNCuts(sepastore) == 0 )
             {
                for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts; ++s )
@@ -865,6 +866,7 @@ RETCODE primalHeuristics(
    {
       actdepth = SCIPnodeGetDepth(tree->actnode);
       lpforkdepth = tree->actlpfork != NULL ? SCIPnodeGetDepth(tree->actlpfork) : -1;
+      /**@todo call heuristics in priority order -> see branching rules for an example */
       for( h = 0; h < set->nheurs; ++h )
       {
          CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actdepth, lpforkdepth, tree->actnodehaslp, &result) );
