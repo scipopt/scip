@@ -101,6 +101,12 @@ int SCIPcutpoolGetNCuts(
    CUTPOOL*         cutpool             /**< cut pool */
    );
 
+/** gets time in seconds used for separating cuts from the pool */
+extern
+Real SCIPcutpoolGetTime(
+   CUTPOOL*         cutpool             /**< cut pool */
+   );
+
 /** get number of times, the cut pool was separated */
 extern
 int SCIPcutpoolGetNCalls(

@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "cons.h"
+#include "clock.h"
 
 
 /** constraint handler */
@@ -78,9 +79,15 @@ struct ConsHdlr
    int              nenabledconss;      /**< total number of enabled constraints of the handler */
    int              lastnsepaconss;     /**< number of already separated constraints after last conshdlrResetSepa() call */
    int              lastnenfoconss;     /**< number of already enforced constraints after last conshdlrResetEnfo() call */
+   CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
+   CLOCK*           sepatime;           /**< time used for separation of this constraint handler */
+   CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
+   CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
+   CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
    int              nsepacalls;         /**< number of times, the separator was called */
    int              nenfolpcalls;       /**< number of times, the LP enforcer was called */
    int              nenfopscalls;       /**< number of times, the pseudo enforcer was called */
+   int              npropcalls;         /**< number of times, the propagator was called */
    int              ncutsfound;         /**< total number of cuts found by this constraint handler */
    Longint          nbranchings;        /**< number of times, the constraint handler performed a branching */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
@@ -1083,9 +1090,17 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nenabledconss = 0;
    (*conshdlr)->lastnsepaconss = 0;
    (*conshdlr)->lastnenfoconss = 0;
+
+   SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT);
+   SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT);
+   SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT);
+   SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT);
+   SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT);
+
    (*conshdlr)->nsepacalls = 0;
    (*conshdlr)->nenfolpcalls = 0;
    (*conshdlr)->nenfopscalls = 0;
+   (*conshdlr)->npropcalls = 0;
    (*conshdlr)->ncutsfound = 0;
    (*conshdlr)->nbranchings = 0;
    (*conshdlr)->needscons = needscons;
@@ -1112,6 +1127,12 @@ RETCODE SCIPconshdlrFree(
    {
       CHECK_OKAY( (*conshdlr)->consfree(scip, *conshdlr) );
    }
+
+   SCIPclockFree(&(*conshdlr)->presoltime);
+   SCIPclockFree(&(*conshdlr)->sepatime);
+   SCIPclockFree(&(*conshdlr)->enfolptime);
+   SCIPclockFree(&(*conshdlr)->enfopstime);
+   SCIPclockFree(&(*conshdlr)->proptime);
 
    freeMemoryArray(&(*conshdlr)->name);
    freeMemoryArray(&(*conshdlr)->desc);
@@ -1146,9 +1167,15 @@ RETCODE SCIPconshdlrInit(
    if( conshdlr->consinit != NULL )
    {
       CHECK_OKAY( conshdlr->consinit(scip, conshdlr) );
+      SCIPclockReset(conshdlr->presoltime);
+      SCIPclockReset(conshdlr->sepatime);
+      SCIPclockReset(conshdlr->enfolptime);
+      SCIPclockReset(conshdlr->enfopstime);
+      SCIPclockReset(conshdlr->proptime);
       conshdlr->nsepacalls = 0;
       conshdlr->nenfolpcalls = 0;
       conshdlr->nenfopscalls = 0;
+      conshdlr->npropcalls = 0;
       conshdlr->ncutsfound = 0;
       conshdlr->maxnconss = conshdlr->nconss;
       conshdlr->lastnfixedvars = 0;
@@ -1270,9 +1297,15 @@ RETCODE SCIPconshdlrSeparate(
           */
          conshdlrDelayUpdates(conshdlr);
 
+         /* start timing */
+         SCIPclockStart(conshdlr->sepatime, set->clocktype);
+
          /* call external method */
          CHECK_OKAY( conshdlr->conssepa(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
          debugMessage(" -> separating returned result <%d>\n", *result);
+
+         /* stop timing */
+         SCIPclockStop(conshdlr->sepatime);
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
@@ -1373,9 +1406,15 @@ RETCODE SCIPconshdlrEnforceLPSol(
           */
          conshdlrDelayUpdates(conshdlr);
 
+         /* start timing */
+         SCIPclockStart(conshdlr->enfolptime, set->clocktype);
+
          /* call external method */
          CHECK_OKAY( conshdlr->consenfolp(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
          debugMessage(" -> enforcing returned result <%d>\n", *result);
+
+         /* stop timing */
+         SCIPclockStop(conshdlr->enfolptime);
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
@@ -1476,9 +1515,15 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
           */
          conshdlrDelayUpdates(conshdlr);
 
+         /* start timing */
+         SCIPclockStart(conshdlr->enfopstime, set->clocktype);
+
          /* call external method */
          CHECK_OKAY( conshdlr->consenfops(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
          debugMessage(" -> enforcing returned result <%d>\n", *result);
+
+         /* stop timing */
+         SCIPclockStop(conshdlr->enfopstime);
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
@@ -1600,11 +1645,17 @@ RETCODE SCIPconshdlrPropagate(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->proptime, set->clocktype);
+
       /* call external method */
       CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conshdlr->propconss, conshdlr->npropconss, 
                      conshdlr->nusefulpropconss, result) );
       debugMessage(" -> propagation returned result <%d>\n", *result);
       
+      /* stop timing */
+      SCIPclockStop(conshdlr->proptime);
+
       /* perform the cached constraint updates */
       CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
 
@@ -1620,6 +1671,8 @@ RETCODE SCIPconshdlrPropagate(
          errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
+      if( *result != SCIP_DIDNOTRUN )
+         conshdlr->npropcalls++;
    }
 
    return SCIP_OKAY;
@@ -1707,6 +1760,9 @@ RETCODE SCIPconshdlrPresolve(
       conshdlr->lastnchgcoefs = *nchgcoefs;
       conshdlr->lastnchgsides = *nchgsides;
 
+      /* start timing */
+      SCIPclockStart(conshdlr->presoltime, set->clocktype);
+
       /* call external method */
       CHECK_OKAY( conshdlr->conspresol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, nrounds,
                      nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
@@ -1714,6 +1770,9 @@ RETCODE SCIPconshdlrPresolve(
                      nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
                      ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
       
+      /* stop timing */
+      SCIPclockStop(conshdlr->presoltime);
+
       /* count the new changes */
       conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
       conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
@@ -1817,6 +1876,56 @@ int SCIPconshdlrGetNEnabledConss(
    return conshdlr->nenabledconss;
 }
 
+/** gets time in seconds used for presolving in this constraint handler */
+Real SCIPconshdlrGetPresolTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->presoltime);
+}
+
+/** gets time in seconds used for separation in this constraint handler */
+Real SCIPconshdlrGetSepaTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->sepatime);
+}
+
+/** gets time in seconds used for LP enforcement in this constraint handler */
+Real SCIPconshdlrGetEnfoLPTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->enfolptime);
+}
+
+/** gets time in seconds used for pseudo enforcement in this constraint handler */
+Real SCIPconshdlrGetEnfoPSTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->enfopstime);
+}
+
+/** gets time in seconds used for propagation in this constraint handler */
+Real SCIPconshdlrGetPropTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->proptime);
+}
+
 /** gets number of calls to the constraint handler's separation method */
 int SCIPconshdlrGetNSepaCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -1845,6 +1954,16 @@ int SCIPconshdlrGetNEnfoPSCalls(
    assert(conshdlr != NULL);
 
    return conshdlr->nenfopscalls;
+}
+
+/** gets number of calls to the constraint handler's propagation method */
+int SCIPconshdlrGetNPropCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->npropcalls;
 }
 
 /** gets total number of cuts found by this constraint handler */

@@ -70,6 +70,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "cutpool.h"
 #include "primal.h"
 #include "paramset.h"
+#include "clock.h"
 
 
 
@@ -1910,6 +1911,13 @@ RETCODE SCIPupdateNodeLowerBound(
 /**@name Statistic Methods */
 /**@{ */
 
+/** gets clock time, when this solution was found */
+extern
+Real SCIPgetSolTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol                 /**< primal solution */
+   );
+
 /** gets number of processed nodes, including the active node */
 extern
 Longint SCIPgetNodenum(
@@ -2059,6 +2067,103 @@ extern
 RETCODE SCIPprintStatistics(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * timing methods
+ */
+
+/**@name Timing Methods */
+/**@{ */
+
+/** creates a clock using the default clock type */
+extern
+RETCODE SCIPcreateClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   );
+
+/** creates a clock counting the CPU user seconds */
+extern
+RETCODE SCIPcreateCPUClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   );
+
+/** creates a clock counting the wall clock seconds */
+extern
+RETCODE SCIPcreateWallClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   );
+
+/** frees a clock */
+extern
+RETCODE SCIPfreeClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   );
+
+/** resets the time measurement of a clock to zero and completely stops the clock */
+extern
+RETCODE SCIPresetClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   );
+
+/** starts the time measurement of a clock */
+extern
+RETCODE SCIPstartClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   );
+
+/** stops the time measurement of a clock */
+extern
+RETCODE SCIPstopClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   );
+
+/** gets the measured time of a clock in seconds */
+extern
+Real SCIPgetClockTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   );
+
+/** sets the measured time of a clock to the given value in seconds */
+extern
+RETCODE SCIPsetClockTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock,              /**< clock timer */
+   Real             sec                 /**< time in seconds to set the clock's timer to */
+   );
+
+/** gets the current total SCIP time in seconds */
+extern
+Real SCIPgetTotalTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   );
+
+/** gets the current solving time in seconds */
+extern
+Real SCIPgetSolvingTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   );
+
+/** gets the current presolving time in seconds */
+extern
+Real SCIPgetPresolvingTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
    );
 
 /**@} */

@@ -107,6 +107,10 @@
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
+/* Timing */
+
+#define SCIP_DEFAULT_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
+
 
 
 /** calculate memory size for dynamically allocated arrays */
@@ -335,6 +339,10 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "global_CleanupRows", "should new basic rows be removed after LP solving?",
                   &(*set)->cleanuprows, SCIP_DEFAULT_CLEANUPROWS,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_ClockType", "default clock type (0: CPU user seconds, 1: wall clock time)",
+                  &(*set)->clocktype, SCIP_DEFAULT_CLOCKTYPE, 0, 1,
                   NULL, NULL) );
 
    return SCIP_OKAY;

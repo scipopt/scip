@@ -41,6 +41,7 @@ typedef struct Cut CUT;
 /** storage for pooled cuts */
 struct Cutpool
 {
+   CLOCK*           clock;              /**< separation time */
    HASHTABLE*       hashtable;          /**< hash table to identify already stored cuts */
    CUT**            cuts;               /**< stored cuts of the pool */
    int              cutssize;           /**< size of cuts array */
@@ -246,6 +247,8 @@ RETCODE SCIPcutpoolCreate(
 
    ALLOC_OKAY( allocMemory(cutpool) );
 
+   CHECK_OKAY( SCIPclockCreate(&(*cutpool)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+
    CHECK_OKAY( SCIPhashtableCreate(&(*cutpool)->hashtable, SCIP_HASHSIZE_CUTPOOLS,
                   hashGetKeyCut, hashKeyEqCut, hashKeyValCut) );
 
@@ -274,6 +277,9 @@ RETCODE SCIPcutpoolFree(
 
    assert(cutpool != NULL);
    assert(*cutpool != NULL);
+
+   /* free clock */
+   SCIPclockFree(&(*cutpool)->clock);
 
    /* free hash table */
    SCIPhashtableFree(&(*cutpool)->hashtable, memhdr);
@@ -469,6 +475,9 @@ RETCODE SCIPcutpoolSeparate(
    debugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
       cutpool, cutpool->ncuts, cutpool->firstunprocessed);
 
+   /* start timing */
+   SCIPclockStart(cutpool->clock, set->clocktype);
+
    /* remember the current total number of found cuts */
    oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
@@ -520,6 +529,9 @@ RETCODE SCIPcutpoolSeparate(
    /* update the number of found cuts */
    cutpool->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
 
+   /* stop timing */
+   SCIPclockStop(cutpool->clock);
+
    if( found )
       *result = SCIP_SEPARATED;
 
@@ -534,6 +546,16 @@ int SCIPcutpoolGetNCuts(
    assert(cutpool != NULL);
 
    return cutpool->ncuts;
+}
+
+/** gets time in seconds used for separating cuts from the pool */
+Real SCIPcutpoolGetTime(
+   CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return SCIPclockGetTime(cutpool->clock);
 }
 
 /** get number of times, the cut pool was separated */

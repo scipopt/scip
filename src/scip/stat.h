@@ -31,6 +31,8 @@ typedef struct Stat STAT;               /**< problem and runtime specific statis
 
 #include "def.h"
 #include "retcode.h"
+#include "set.h"
+#include "clock.h"
 
 
 /** problem and runtime specific statistics */
@@ -57,13 +59,16 @@ struct Stat
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */
    int              plungedepth;        /**< actual plunging depth (successive times, a child was selected as next node) */
+   CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
+   CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
 };
 
 
 /** creates problem statistics data */
 extern
 RETCODE SCIPstatCreate(
-   STAT**           stat                /**< pointer to problem statistics data */
+   STAT**           stat,               /**< pointer to problem statistics data */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** frees problem statistics data */

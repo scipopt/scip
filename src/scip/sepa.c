@@ -40,6 +40,7 @@ struct Sepa
    DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialise separator */
    DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
    SEPADATA*        sepadata;           /**< separators local data */
+   CLOCK*           clock;              /**< separation time */
    int              ncalls;             /**< number of times, this separator was called */
    int              ncutsfound;         /**< number of cutting planes found so far by this separator */
    unsigned int     initialized:1;      /**< is separator initialized? */
@@ -77,6 +78,7 @@ RETCODE SCIPsepaCreate(
    (*sepa)->sepaexit = sepaexit;
    (*sepa)->sepaexec = sepaexec;
    (*sepa)->sepadata = sepadata;
+   CHECK_OKAY( SCIPclockCreate(&(*sepa)->clock, SCIP_CLOCKTYPE_DEFAULT) );
    (*sepa)->ncalls = 0;
    (*sepa)->ncutsfound = 0;
    (*sepa)->initialized = FALSE;
@@ -101,6 +103,7 @@ RETCODE SCIPsepaFree(
       CHECK_OKAY( (*sepa)->sepafree(scip, *sepa) );
    }
 
+   SCIPclockFree(&(*sepa)->clock);
    freeMemoryArray(&(*sepa)->name);
    freeMemoryArray(&(*sepa)->desc);
    freeMemory(sepa);
@@ -128,9 +131,12 @@ RETCODE SCIPsepaInit(
    if( sepa->sepainit != NULL )
    {
       CHECK_OKAY( sepa->sepainit(scip, sepa) );
-      sepa->ncalls = 0;
-      sepa->ncutsfound = 0;
    }
+
+   SCIPclockReset(sepa->clock);
+
+   sepa->ncalls = 0;
+   sepa->ncutsfound = 0;
    sepa->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -187,7 +193,16 @@ RETCODE SCIPsepaExec(
 
       oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
+      /* start timing */
+      SCIPclockStart(sepa->clock, set->clocktype);
+
+      /* call external separation method */
       CHECK_OKAY( sepa->sepaexec(set->scip, sepa, result) );
+
+      /* stop timing */
+      SCIPclockStop(sepa->clock);
+
+      /* evaluate result */
       if( *result != SCIP_CUTOFF
          && *result != SCIP_SEPARATED
          && *result != SCIP_REDUCEDDOM
@@ -252,6 +267,16 @@ int SCIPsepaGetFreq(
    assert(sepa != NULL);
 
    return sepa->freq;
+}
+
+/** gets time in seconds used in this separator */
+Real SCIPsepaGetTime(
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return SCIPclockGetTime(sepa->clock);
 }
 
 /** gets the number of times, the separator was called and tried to find a solution */

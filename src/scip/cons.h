@@ -570,6 +570,36 @@ int SCIPconshdlrGetNEnabledConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for presolving in this constraint handler */
+extern
+Real SCIPconshdlrGetPresolTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets time in seconds used for separation in this constraint handler */
+extern
+Real SCIPconshdlrGetSepaTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets time in seconds used for LP enforcement in this constraint handler */
+extern
+Real SCIPconshdlrGetEnfoLPTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets time in seconds used for pseudo enforcement in this constraint handler */
+extern
+Real SCIPconshdlrGetEnfoPSTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets time in seconds used for propagation in this constraint handler */
+extern
+Real SCIPconshdlrGetPropTime(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets number of calls to the constraint handler's separation method */
 extern
 int SCIPconshdlrGetNSepaCalls(
@@ -585,6 +615,12 @@ int SCIPconshdlrGetNEnfoLPCalls(
 /** gets number of calls to the constraint handler's pseudo enforcing method */
 extern
 int SCIPconshdlrGetNEnfoPSCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's propagation method */
+extern
+int SCIPconshdlrGetNPropCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

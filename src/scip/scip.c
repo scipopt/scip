@@ -39,6 +39,7 @@ struct Scip
    STAGE            stage;              /**< SCIP operation stage */
    SET*             set;                /**< global SCIP settings */
    MEM*             mem;                /**< block memory buffers */
+   CLOCK*           totaltime;          /**< total SCIP running time */
    PROB*            origprob;           /**< original problem data */
    PROB*            transprob;          /**< transformed problem after presolve */
    STAT*            stat;               /**< dynamic problem statistics */
@@ -289,6 +290,8 @@ RETCODE SCIPcreate(
 
    CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
    CHECK_OKAY( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
+   CHECK_OKAY( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIPclockStart((*scip)->totaltime, (*scip)->set->clocktype);
    (*scip)->origprob = NULL;
    (*scip)->stat = NULL;
    (*scip)->transprob = NULL;
@@ -317,6 +320,7 @@ RETCODE SCIPfree(
    CHECK_OKAY( SCIPfreeProb(*scip) );
    assert((*scip)->stage == SCIP_STAGE_INIT);
 
+   SCIPclockFree(&(*scip)->totaltime);
    CHECK_OKAY( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    CHECK_OKAY( SCIPmemFree(&(*scip)->mem) );
 
@@ -1054,7 +1058,7 @@ RETCODE SCIPcreateProb(
 
    scip->stage = SCIP_STAGE_PROBLEM;
    
-   CHECK_OKAY( SCIPstatCreate(&scip->stat) );
+   CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->set) );
    CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelete, probtrans, probdata) );
    
    return SCIP_OKAY;
@@ -1970,8 +1974,14 @@ RETCODE SCIPpresolve(
    /* switch stage to PRESOLVING */
    scip->stage = SCIP_STAGE_PRESOLVING;
 
+   /* start presolving timer */
+   SCIPclockStart(scip->stat->presolvingtime, scip->set->clocktype);
+
    /* presolve problem */
    CHECK_OKAY( presolve(scip, &result) );
+
+   /* stop presolving time */
+   SCIPclockStop(scip->stat->presolvingtime);
 
    /* create primal solution storage */
    CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->lp) );
@@ -2017,6 +2027,10 @@ RETCODE SCIPpresolve(
       scip->stage = SCIP_STAGE_SOLVED;
    }
 
+   /* display timing statistics */
+   sprintf(s, "Presolving Time: %.2f", SCIPclockGetTime(scip->stat->presolvingtime));
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL, s);
+
    return SCIP_OKAY;
 }
 
@@ -2029,6 +2043,9 @@ RETCODE SCIPsolve(
    int i;
 
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   /* start solving timer */
+   SCIPclockStart(scip->stat->solvingtime, scip->set->clocktype);
 
    switch( scip->stage )
    {
@@ -2067,21 +2084,28 @@ RETCODE SCIPsolve(
          infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          sprintf(s, "Solution Nodes     : %lld", scip->stat->nnodes);
          infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+         sprintf(s, "Solution Time      : %.2f", SCIPclockGetTime(scip->stat->solvingtime));
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          if( scip->primal->nsols > 0 )
          {
             sprintf(s, "Objective          : %25.19e", SCIPgetPrimalBound(scip));
             infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          }
       }
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_SOLVED:
-      return SCIP_OKAY;
+      break;
 
    default:
       errorMessage("invalid SCIP stage");
       return SCIP_ERROR;
    }
+
+   /* stop solving timer */
+   SCIPclockStop(scip->stat->solvingtime);
+
+   return SCIP_OKAY;
 }
 
 /** frees all solution process data, only original problem is kept */
@@ -3989,6 +4013,17 @@ Real SCIPretransformObj(
    return SCIPprobExternObjval(scip->origprob, scip->set, SCIPprobExternObjval(scip->transprob, scip->set, obj));
 }
 
+/** gets clock time, when this solution was found */
+Real SCIPgetSolTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol                 /**< primal solution */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetSolTime", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsolGetTime(sol);
+}
+
 /** gets node number, where this solution was found */
 Longint SCIPgetSolNodenum(
    SCIP*            scip,               /**< SCIP data structure */
@@ -4687,13 +4722,29 @@ void printPresolvingStatistics(
    FILE*            file                /**< output file */
    )
 {
+   int nfixedvars;
+   int naggrvars;
+   int nchgbds;
+   int nholes;
+   int ndelconss;
+   int nupgdconss;
+   int nchgsides;
+   int nchgcoefs;
    int i;
 
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Presolving         :   Fixed Vars   Aggr. Vars  Chg. Bounds  Added Holes    Del. Cons   Chg. Sides   Chg. Coefs\n");
+   fprintf(file, "Presolving         :   Fixed Vars   Aggr. Vars  Chg. Bounds  Added Holes    Del. Cons   Chg. Sides   Chg. Coefs         Time\n");
+
+   nfixedvars = 0;
+   naggrvars = 0;
+   nchgbds = 0;
+   nholes = 0;
+   ndelconss = 0;
+   nchgsides = 0;
+   nchgcoefs = 0;
 
    /* presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
@@ -4702,14 +4753,23 @@ void printPresolvingStatistics(
       
       presol = scip->set->presols[i];
       fprintf(file, "  %-17.17s:", SCIPpresolGetName(presol));
-      fprintf(file, " %12d %12d %12d %12d %12d %12d %12d\n",
+      fprintf(file, " %12d %12d %12d %12d %12d %12d %12d %12.2f\n",
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
          SCIPpresolGetNChgBds(presol),
          SCIPpresolGetNAddHoles(presol),
          SCIPpresolGetNDelConss(presol),
          SCIPpresolGetNChgSides(presol),
-         SCIPpresolGetNChgCoefs(presol));
+         SCIPpresolGetNChgCoefs(presol),
+         SCIPpresolGetTime(presol));
+
+      nfixedvars += SCIPpresolGetNFixedVars(presol);
+      naggrvars += SCIPpresolGetNAggrVars(presol);
+      nchgbds += SCIPpresolGetNChgBds(presol);
+      nholes += SCIPpresolGetNAddHoles(presol);
+      ndelconss += SCIPpresolGetNDelConss(presol);
+      nchgsides += SCIPpresolGetNChgSides(presol);
+      nchgcoefs += SCIPpresolGetNChgCoefs(presol);
    }
 
    /* constraint handler presolving methods statistics */
@@ -4731,16 +4791,37 @@ void printPresolvingStatistics(
             || SCIPconshdlrGetNChgCoefs(conshdlr) > 0) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12d %12d %12d %12d %12d %12d %12d\n",
+         fprintf(file, " %12d %12d %12d %12d %12d %12d %12d %12.2f\n",
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
             SCIPconshdlrGetNChgBds(conshdlr),
             SCIPconshdlrGetNAddHoles(conshdlr),
             SCIPconshdlrGetNDelConss(conshdlr),
             SCIPconshdlrGetNChgSides(conshdlr),
-            SCIPconshdlrGetNChgCoefs(conshdlr));
+            SCIPconshdlrGetNChgCoefs(conshdlr),
+            SCIPconshdlrGetPresolTime(conshdlr));
+         
+         nfixedvars += SCIPconshdlrGetNFixedVars(conshdlr);
+         naggrvars += SCIPconshdlrGetNAggrVars(conshdlr);
+         nchgbds += SCIPconshdlrGetNChgBds(conshdlr);
+         nholes += SCIPconshdlrGetNAddHoles(conshdlr);
+         ndelconss += SCIPconshdlrGetNDelConss(conshdlr);
+         nchgsides += SCIPconshdlrGetNChgSides(conshdlr);
+         nchgcoefs += SCIPconshdlrGetNChgCoefs(conshdlr);
       }
    }
+
+   /* print total */
+   fprintf(file, "  total            :");
+   fprintf(file, " %12d %12d %12d %12d %12d %12d %12d %12.2f\n",
+      nfixedvars,
+      naggrvars,
+      nchgbds,
+      nholes,
+      ndelconss,
+      nchgsides,
+      nchgcoefs,
+      SCIPclockGetTime(scip->stat->presolvingtime));
 }
 
 static
@@ -4755,7 +4836,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Constraints        :         Cuts   Branchings    #Separate      #EnfoLP      #EnfoPS   ActCons   MaxCons\n");
+   fprintf(file, "Constraints        :         Cuts   Branchings    #Separate   #Propagate      #EnfoLP      #EnfoPS   ActCons   MaxCons\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -4767,14 +4848,35 @@ void printConstraintStatistics(
       if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12d %12lld %12d %12d %12d %9d %9d\n",
+         fprintf(file, " %12d %12lld %12d %12d %12d %12d %9d %9d\n",
             SCIPconshdlrGetNCutsFound(conshdlr), 
             SCIPconshdlrGetNBranchings(conshdlr),
             SCIPconshdlrGetNSepaCalls(conshdlr), 
+            SCIPconshdlrGetNPropCalls(conshdlr), 
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
             SCIPconshdlrGetNConss(conshdlr),
             maxnconss);
+      }
+   }
+
+   fprintf(file, "Constraint Timings :                               Separate    Propagate       EnfoLP       EnfoPS\n");
+
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   {
+      CONSHDLR* conshdlr;
+      int maxnconss;
+      
+      conshdlr = scip->set->conshdlrs[i];
+      maxnconss = SCIPconshdlrGetMaxNConss(conshdlr);
+      if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
+      {
+         fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
+         fprintf(file, "                           %12.2f %12.2f %12.2f %12.2f\n",
+            SCIPconshdlrGetSepaTime(conshdlr), 
+            SCIPconshdlrGetPropTime(conshdlr), 
+            SCIPconshdlrGetEnfoLPTime(conshdlr), 
+            SCIPconshdlrGetEnfoPSTime(conshdlr));
       }
    }
 }
@@ -4791,13 +4893,19 @@ void printSeparatorStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Separators         :         Cuts        Calls\n");
-   fprintf(file, "  cut pool         : %12d %12d   (maximal pool size: %d)\n",
-      SCIPcutpoolGetNCutsFound(scip->cutpool), SCIPcutpoolGetNCalls(scip->cutpool), SCIPcutpoolGetMaxNCuts(scip->cutpool));
+   fprintf(file, "Separators         :         Cuts        Calls         Time\n");
+   fprintf(file, "  cut pool         : %12d %12d %12.2f   (maximal pool size: %d)\n",
+      SCIPcutpoolGetNCutsFound(scip->cutpool),
+      SCIPcutpoolGetNCalls(scip->cutpool), 
+      SCIPcutpoolGetTime(scip->cutpool), 
+      SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
    for( i = 0; i < scip->set->nsepas; ++i )
-      fprintf(file, "  %-17.17s: %12d %12d\n", SCIPsepaGetName(scip->set->sepas[i]),
-         SCIPsepaGetNCutsFound(scip->set->sepas[i]), SCIPsepaGetNCalls(scip->set->sepas[i]));
+      fprintf(file, "  %-17.17s: %12d %12d %12.2f\n",
+         SCIPsepaGetName(scip->set->sepas[i]),
+         SCIPsepaGetNCutsFound(scip->set->sepas[i]), 
+         SCIPsepaGetNCalls(scip->set->sepas[i]),
+         SCIPsepaGetTime(scip->set->sepas[i]));
 }
 
 static
@@ -4865,7 +4973,8 @@ void printSolutionStatistics(
             fprintf(file, "   (user objective limit)\n");
             fprintf(file, "  Best Solution    : %25.19e", bestsol);
          }
-         fprintf(file, "   (after %lld nodes)\n", SCIPsolGetNodenum(scip->primal->sols[0]));
+         fprintf(file, "   (after %lld nodes, %.2f seconds)\n", 
+            SCIPsolGetNodenum(scip->primal->sols[0]), SCIPsolGetTime(scip->primal->sols[0]));
       }
    }
    if( SCIPsetIsInfinity(scip->set, ABS(dualbound)) )
@@ -4941,6 +5050,7 @@ RETCODE SCIPprintStatistics(
 
    case SCIP_STAGE_SOLVING:
       fprintf(file, "SCIP Status        : problem solving\n");
+      fprintf(file, "Solving Time       : %12.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       printPresolvingStatistics(scip, file);
@@ -4956,6 +5066,7 @@ RETCODE SCIPprintStatistics(
 
    case SCIP_STAGE_SOLVED:
       fprintf(file, "SCIP Status        : problem is solved\n");
+      fprintf(file, "Solving Time       : %12.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       printPresolvingStatistics(scip, file);
@@ -4973,6 +5084,162 @@ RETCODE SCIPprintStatistics(
       errorMessage("invalid SCIP stage");
       return SCIP_INVALIDCALL;
    }
+}
+
+
+
+
+/*
+ * timing methods
+ */
+
+/** creates a clock using the default clock type */
+RETCODE SCIPcreateClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcreateClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPclockCreate(clock, SCIP_CLOCKTYPE_DEFAULT) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a clock counting the CPU user seconds */
+RETCODE SCIPcreateCPUClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcreateCPUClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPclockCreate(clock, SCIP_CLOCKTYPE_CPU) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a clock counting the wall clock seconds */
+RETCODE SCIPcreateWallClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcreateWallClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPclockCreate(clock, SCIP_CLOCKTYPE_WALL) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a clock */
+RETCODE SCIPfreeClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK**          clock               /**< pointer to clock timer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPfreeClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockFree(clock);
+
+   return SCIP_OKAY;
+}
+
+/** resets the time measurement of a clock to zero and completely stops the clock */
+RETCODE SCIPresetClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPresetClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockReset(clock);
+
+   return SCIP_OKAY;
+}
+
+/** starts the time measurement of a clock */
+RETCODE SCIPstartClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPstartClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockStart(clock, scip->set->clocktype);
+
+   return SCIP_OKAY;
+}
+
+/** stops the time measurement of a clock */
+RETCODE SCIPstopClock(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPstopClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockStop(clock);
+
+   return SCIP_OKAY;
+}
+
+/** gets the measured time of a clock in seconds */
+Real SCIPgetClockTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetClockTime", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPclockGetTime(clock);
+}
+
+/** sets the measured time of a clock to the given value in seconds */
+RETCODE SCIPsetClockTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock,              /**< clock timer */
+   Real             sec                 /**< time in seconds to set the clock's timer to */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetClockTime", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockSetTime(clock, sec);
+
+   return SCIP_OKAY;
+}
+
+/** gets the current total SCIP time in seconds */
+Real SCIPgetTotalTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetTotalTime", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPclockGetTime(scip->totaltime);
+}
+
+/** gets the current solving time in seconds */
+Real SCIPgetSolvingTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetSolvingTime", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPclockGetTime(scip->stat->solvingtime);
+}
+
+/** gets the current presolving time in seconds */
+Real SCIPgetPresolvingTime(
+   SCIP*            scip,               /**< SCIP data structure */
+   CLOCK*           clock               /**< clock timer */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPresolvingTime", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPclockGetTime(scip->stat->presolvingtime);
 }
 
 

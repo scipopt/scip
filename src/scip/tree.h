@@ -25,7 +25,7 @@
 #ifndef __TREE_H__
 #define __TREE_H__
 
-enum Nodetype
+enum NodeType
 {
    SCIP_NODETYPE_ACTNODE  = 0,          /**< the active node, whose data is stored in the dynamic data object */
    SCIP_NODETYPE_SIBLING  = 1,          /**< unsolved sibling of the active node */
@@ -36,7 +36,7 @@ enum Nodetype
    SCIP_NODETYPE_FORK     = 6,          /**< fork with solved LP and added rows and columns */
    SCIP_NODETYPE_SUBROOT  = 7           /**< fork with solved LP and arbitrarily changed rows and columns */
 };
-typedef enum Nodetype NODETYPE;         /**< type of node */
+typedef enum NodeType NODETYPE;         /**< type of node */
 
 typedef struct Actnode ACTNODE;         /**< data for the actual node */
 typedef struct Child CHILD;             /**< data for child nodes */

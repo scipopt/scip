@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "presol.h"
+#include "clock.h"
 
 
 /** presolver */
@@ -39,6 +40,7 @@ struct Presol
    DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialise presolver */
    DECL_PRESOLEXEC  ((*presolexec));    /**< presolving execution method */
    PRESOLDATA*      presoldata;         /**< presolver data */
+   CLOCK*           clock;              /**< presolving time */
    unsigned int     initialized:1;      /**< is presolver initialized? */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
@@ -93,6 +95,7 @@ RETCODE SCIPpresolCreate(
    (*presol)->presolexit = presolexit;
    (*presol)->presolexec = presolexec;
    (*presol)->presoldata = presoldata;
+   CHECK_OKAY( SCIPclockCreate(&(*presol)->clock, SCIP_CLOCKTYPE_DEFAULT) );
    (*presol)->initialized = FALSE;
 
    return SCIP_OKAY;
@@ -114,6 +117,7 @@ RETCODE SCIPpresolFree(
       CHECK_OKAY( (*presol)->presolfree(scip, *presol) );
    }
 
+   SCIPclockFree(&(*presol)->clock);
    freeMemoryArray(&(*presol)->name);
    freeMemoryArray(&(*presol)->desc);
    freeMemory(presol);
@@ -137,6 +141,8 @@ RETCODE SCIPpresolInit(
       errorMessage(s);
       return SCIP_INVALIDCALL;
    }
+
+   SCIPclockReset(presol->clock);
 
    presol->lastnfixedvars = 0;
    presol->lastnaggrvars = 0;
@@ -259,12 +265,18 @@ RETCODE SCIPpresolExec(
    presol->lastnchgcoefs = *nchgcoefs;
    presol->lastnchgsides = *nchgsides;
 
+   /* start timing */
+   CHECK_OKAY( SCIPstartClock(scip, presol->clock) );
+
    /* call external method */
    CHECK_OKAY( presol->presolexec(scip, presol, nrounds,
                   nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
                   nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
                   nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
                   ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+   /* stop timing */
+   CHECK_OKAY( SCIPstopClock(scip, presol->clock) );
 
    /* count the new changes */
    presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
@@ -342,6 +354,16 @@ Bool SCIPpresolIsInitialized(
    assert(presol != NULL);
 
    return presol->initialized;
+}
+
+/** gets time in seconds used in this presolver */
+Real SCIPpresolGetTime(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return SCIPclockGetTime(presol->clock);
 }
 
 /** gets number of variables fixed in presolver */

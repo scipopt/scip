@@ -155,6 +155,12 @@ int SCIPsepaGetFreq(
    SEPA*            sepa                /**< separator */
    );
 
+/** gets time in seconds used in this separator */
+extern
+Real SCIPsepaGetTime(
+   SEPA*            sepa                /**< separator */
+   );
+
 /** gets the number of times, the separator was called and tried to find a solution */
 extern
 int SCIPsepaGetNCalls(

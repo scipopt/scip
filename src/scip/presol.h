@@ -191,6 +191,12 @@ Bool SCIPpresolIsInitialized(
    PRESOL*          presol              /**< presolver */
    );
 
+/** gets time in seconds used in this presolver */
+extern
+Real SCIPpresolGetTime(
+   PRESOL*          presol              /**< presolver */
+   );
+
 /** gets number of variables fixed in presolver */
 extern
 int SCIPpresolGetNFixedVars(

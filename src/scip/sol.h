@@ -200,6 +200,12 @@ Real SCIPsolGetObj(
    SOL*             sol                 /**< primal CIP solution */
    );
 
+/** gets clock time, when this solution was found */
+extern
+Real SCIPsolGetTime(
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** gets node number, where this solution was found */
 extern
 Longint SCIPsolGetNodenum(

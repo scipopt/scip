@@ -44,6 +44,7 @@ struct Sol
                                          *   is valid; otherwise the value has to be retrieved from the origin */
    HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
    Real             obj;                /**< objective value of solution */
+   Real             time;               /**< clock time, when the solution was discovered */
    Longint          nodenum;            /**< last node number, where this solution was modified */
    unsigned int     solorigin:2;        /**< origin of solution: where to retrieve uncached elements */
 };
@@ -67,6 +68,7 @@ RETCODE SCIPsolCreate(
    (*sol)->valid = NULL;
    (*sol)->heur = heur;
    (*sol)->obj = 0.0;
+   (*sol)->time = SCIPclockGetTime(stat->solvingtime);
    (*sol)->nodenum = stat->nnodes;
    (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
 
@@ -98,6 +100,7 @@ RETCODE SCIPsolCopy(
    }
    (*sol)->heur = sourcesol->heur;
    (*sol)->obj = sourcesol->obj;
+   (*sol)->time = sourcesol->time;
    (*sol)->nodenum = sourcesol->nodenum;
    (*sol)->solorigin = sourcesol->solorigin;
 
@@ -226,6 +229,7 @@ RETCODE SCIPsolLinkLPSol(
    /* link solution to LP solution */
    sol->obj = SCIPlpGetObjval(lp);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
+   sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    
    debugMessage(" -> objective value: %g\n", sol->obj);
@@ -264,6 +268,7 @@ RETCODE SCIPsolLinkPseudoSol(
    /* link solution to pseudo solution */
    sol->obj = SCIPtreeGetActPseudoobjval(tree, set);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
+   sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
 
    debugMessage(" -> objective value: %g\n", sol->obj);
@@ -313,6 +318,7 @@ RETCODE SCIPsolClear(
       CHECK_OKAY( SCIPboolarrayFree(&sol->valid) );
       sol->solorigin = SCIP_SOLORIGIN_ZERO;
    }
+   sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
 
    return SCIP_OKAY;
@@ -422,6 +428,7 @@ RETCODE SCIPsolSetVal(
       {
          CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, var->index, val) );
          sol->obj += var->obj * (val - oldval);
+         sol->time = SCIPclockGetTime(stat->solvingtime);
          sol->nodenum = stat->nnodes;
       }
       return SCIP_OKAY;
@@ -475,6 +482,7 @@ RETCODE SCIPsolIncVal(
       CHECK_OKAY( solUnlinkVar(sol, set, var) );
       CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, set, var->index, incval) );
       sol->obj += var->obj * incval;
+      sol->time = SCIPclockGetTime(stat->solvingtime);
       sol->nodenum = stat->nnodes;
       return SCIP_OKAY;
 
@@ -596,6 +604,16 @@ Real SCIPsolGetObj(
    assert(sol != NULL);
 
    return sol->obj;
+}
+
+/** gets clock time, when this solution was found */
+Real SCIPsolGetTime(
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->time;
 }
 
 /** gets node number, where this solution was found */

@@ -30,15 +30,21 @@
 
 /** creates problem statistics data */
 RETCODE SCIPstatCreate(
-   STAT**           stat                /**< pointer to problem statistics data */
+   STAT**           stat,               /**< pointer to problem statistics data */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(stat != NULL);
+   assert(set != NULL);
 
    ALLOC_OKAY( allocMemory(stat) );
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
+
+   SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT);
+   SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT);
+
    SCIPstatReset(*stat);
 
    return SCIP_OKAY;
@@ -51,6 +57,9 @@ RETCODE SCIPstatFree(
 {
    assert(stat != NULL);
    assert(*stat != NULL);
+
+   SCIPclockFree(&(*stat)->solvingtime);
+   SCIPclockFree(&(*stat)->presolvingtime);
 
    freeMemory(stat);
 
@@ -104,6 +113,9 @@ void SCIPstatReset(
    stat->ndisplines = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
+
+   SCIPclockReset(stat->solvingtime);
+   SCIPclockReset(stat->presolvingtime);
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
