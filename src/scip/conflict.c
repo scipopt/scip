@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.76 2004/11/15 10:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.77 2004/11/17 12:53:48 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1039,7 +1039,7 @@ RETCODE conflictAddClause(
          if( *success )
          {
 #ifdef DEBUG
-            debugMessage(" -> conflict clause:");
+            debugMessage(" -> conflict clause (valid:%d, active:%d):", validdepth, d);
             for( i = 0; i < *nliterals; ++i )
                printf(" <%s>", SCIPvarGetName(conflictset[i]));
             printf("\n");
@@ -1588,6 +1588,9 @@ RETCODE conflictAnalyze(
              */
             assert(bdchgdepth >= validdepth);
             validdepth = bdchgdepth;
+
+            debugMessage("couldn't resolve bound change on <%s> -> new valid depth: %d\n",
+               SCIPvarGetName(actvar), validdepth);
          }
          else
          {
@@ -3286,6 +3289,7 @@ RETCODE conflictAnalyzeLP(
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
+   Bool             diving,             /**< are we in strong branching or diving mode? */
    int*             iterations,         /**< pointer to store the total number of LP iterations used */
    int*             nclauses,           /**< pointer to store the number of generated conflict clauses */
    int*             nliterals,          /**< pointer to store the number of literals in generated conflict clauses */
@@ -3295,17 +3299,15 @@ RETCODE conflictAnalyzeLP(
 {
    LPI* lpi;
    VAR** vars;
-   VAR* var;
    Real* curvarlbs;
    Real* curvarubs;
    int* lbchginfoposs;
    int* ubchginfoposs;
-   Real lb;
-   Real ub;
    Real objval;
    int nvars;
    int maxsize;
    int v;
+   int currentdepth;
    Bool valid;
 
    assert(set != NULL);
@@ -3347,8 +3349,10 @@ RETCODE conflictAnalyzeLP(
          return SCIP_OKAY;
    }
 
-   debugMessage("analyzing conflict on infeasible LP (infeasible: %d, objlimexc: %d, optimal:%d)\n",
-      SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi));
+   currentdepth = SCIPtreeGetCurrentDepth(tree);
+
+   debugMessage("analyzing conflict on infeasible LP (infeasible: %d, objlimexc: %d, optimal:%d) in depth %d\n",
+      SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), currentdepth);
 
    /* get active problem variables */
    vars = prob->vars;
@@ -3382,6 +3386,10 @@ RETCODE conflictAnalyzeLP(
    valid = FALSE;
    for( v = 0; v < prob->nbinvars; ++v )
    {
+      VAR* var;
+      Real lb;
+      Real ub;
+
       var = vars[v];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
       
@@ -3397,6 +3405,8 @@ RETCODE conflictAnalyzeLP(
          lbchginfoposs[v] = var->nlbchginfos;
       if( !SCIPsetIsEQ(set, curvarubs[v], ub) )
          ubchginfoposs[v] = var->nubchginfos;
+      assert(diving || lbchginfoposs[v] < var->nlbchginfos);
+      assert(diving || ubchginfoposs[v] < var->nubchginfos);
 
       valid = valid || (v < prob->nbinvars && (curvarlbs[v] > 0.5 || curvarubs[v] < 0.5));
       /*debugMessage(" -> binary variable <%s> [%g,%g], bdchg=(%d,%d)\n", SCIPvarGetName(var), curvarlbs[v], curvarubs[v],
@@ -3430,29 +3440,6 @@ RETCODE conflictAnalyzeLP(
       int iter;
       int nloops;
       int r;
-
-      /* get current bounds and current positions in lb/ubchginfos arrays of non-binary variables */
-      for( v = prob->nbinvars; v < nvars; ++v )
-      {
-         var = vars[v];
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-         curvarlbs[v] = SCIPvarGetLbLP(var);
-         curvarubs[v] = SCIPvarGetUbLP(var);
-         lbchginfoposs[v] = var->nlbchginfos-1;
-         ubchginfoposs[v] = var->nubchginfos-1;
-         
-         /* check, if last bound changes were due to strong branching or diving */
-         lb = SCIPvarGetLbLocal(var);
-         ub = SCIPvarGetUbLocal(var);
-         if( !SCIPsetIsEQ(set, curvarlbs[v], lb) )
-            lbchginfoposs[v] = var->nlbchginfos;
-         if( !SCIPsetIsEQ(set, curvarubs[v], ub) )
-            ubchginfoposs[v] = var->nubchginfos;
-
-         /*debugMessage(" -> non-binary variable <%s> [%g,%g], bdchg=(%d,%d)\n", SCIPvarGetName(var), curvarlbs[v], curvarubs[v],
-           lbchginfoposs[v], ubchginfoposs[v]);*/
-      }
 
       /* get infinity value of LP solver */
       lpiinfinity = SCIPlpiInfinity(lpi);
@@ -3508,10 +3495,68 @@ RETCODE conflictAnalyzeLP(
          CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgnewlhss, sidechgnewrhss) );
       }
 
-#if 1 /*??????????????????????????*/
-      /* undo strong branching and diving bound changes on non-binary variables */
+      /* get current bounds and current positions in lb/ubchginfos arrays of non-binary variables */
       for( v = prob->nbinvars; v < nvars; ++v )
       {
+         VAR* var;
+
+         var = vars[v];
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+
+         curvarlbs[v] = SCIPvarGetLbLP(var);
+         curvarubs[v] = SCIPvarGetUbLP(var);
+         lbchginfoposs[v] = var->nlbchginfos-1;
+         ubchginfoposs[v] = var->nubchginfos-1;
+         
+         /*debugMessage(" -> non-binary variable <%s> [%g,%g], bdchg=(%d,%d)\n", SCIPvarGetName(var), curvarlbs[v], curvarubs[v],
+           lbchginfoposs[v], ubchginfoposs[v]);*/
+
+         /* bound change has to be undone, if it is a strong branching/diving bound change */
+         assert(diving || SCIPsetIsEQ(set, curvarlbs[v], SCIPvarGetLbLocal(var)));
+         assert(diving || SCIPsetIsEQ(set, curvarubs[v], SCIPvarGetUbLocal(var)));
+         if( diving )
+         {
+            Real lb;
+            Real ub;
+            Bool changed;
+
+            lb = SCIPvarGetLbLocal(var);
+            ub = SCIPvarGetUbLocal(var);
+            changed = FALSE;
+            if( !SCIPsetIsEQ(set, curvarlbs[v], lb) )
+            {
+               if( lbchginfoposs[v] >= 0 )
+                  curvarlbs[v] = var->lbchginfos[lbchginfoposs[v]].newbound;
+               else
+                  curvarlbs[v] = SCIPvarGetLbGlobal(var);
+               changed = TRUE;
+            }
+            if( !SCIPsetIsEQ(set, curvarubs[v], ub) )
+            {
+               if( ubchginfoposs[v] >= 0 )
+                  curvarubs[v] = var->ubchginfos[ubchginfoposs[v]].newbound;
+               else
+                  curvarubs[v] = SCIPvarGetUbGlobal(var);
+               changed = TRUE;
+            }
+
+            /* insert bound change in LPI bound change arrays */
+            if( changed )
+            {
+               CHECK_OKAY( addBdchg(set, var, curvarlbs[v], curvarubs[v], 
+                     &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs) );
+               debugMessage(" -> undoing strong branching/diving bound change on non-binary variable <%s>: [%g,%g], bdchg=(%d,%d)\n", 
+                  SCIPvarGetName(var), curvarlbs[v], curvarubs[v], lbchginfoposs[v], ubchginfoposs[v]);
+            }
+         }
+      }
+
+#if 0 /*?????????????????????????*/
+      /* undo current depth's bound changes on non-binary variables without inference information */
+      for( v = prob->nbinvars; v < nvars; ++v )
+      {
+         int lbpos;
+         int ubpos;
          Bool changed;
 
          var = vars[v];
@@ -3519,22 +3564,48 @@ RETCODE conflictAnalyzeLP(
          assert(-1 <= lbchginfoposs[v] && lbchginfoposs[v] <= var->nlbchginfos);
          assert(-1 <= ubchginfoposs[v] && ubchginfoposs[v] <= var->nubchginfos);
 
-         /* bound change has to be undone, if it is a strong branching/diving bound change */
-         changed = FALSE;
-         if( lbchginfoposs[v] == var->nlbchginfos )
+         /* bound change has to be undone, if it is a strong branching/diving bound change, or
+          * if no inference information is available in the corresponding bound change information data
+          */
+
+         /* calculate position of new active lower bound change */
+         lbpos = lbchginfoposs[v];
+         while( lbpos == var->nlbchginfos
+            || (lbpos >= 0
+               && SCIPbdchginfoGetDepth(&var->lbchginfos[lbpos]) == currentdepth
+               && !bdchginfoIsUseable(&var->lbchginfos[lbpos])) )
          {
-            lbchginfoposs[v]--;
-            if( lbchginfoposs[v] >= 0 )
-               curvarlbs[v] = var->lbchginfos[lbchginfoposs[v]].newbound;
+            lbpos--;
+         }
+         assert(-1 <= lbpos && lbpos < var->nlbchginfos);
+            
+         /* calculate position of new active upper bound change */
+         ubpos = ubchginfoposs[v];
+         while( ubpos == var->nubchginfos
+            || (ubpos >= 0
+               && SCIPbdchginfoGetDepth(&var->ubchginfos[ubpos]) == currentdepth
+               && !bdchginfoIsUseable(&var->ubchginfos[ubpos])) )
+         {
+            ubpos--;
+         }
+         assert(-1 <= ubpos && ubpos < var->nubchginfos);
+
+         /* change bounds and bound change positions if necessary */
+         changed = FALSE;
+         if( lbpos < lbchginfoposs[v] )
+         {
+            lbchginfoposs[v] = lbpos;
+            if( lbpos >= 0 )
+               curvarlbs[v] = var->lbchginfos[lbpos].newbound;
             else
                curvarlbs[v] = SCIPvarGetLbGlobal(var);
             changed = TRUE;
          }
-         if( ubchginfoposs[v] == var->nubchginfos )
+         if( ubpos < ubchginfoposs[v] )
          {
-            ubchginfoposs[v]--;
-            if( ubchginfoposs[v] >= 0 )
-               curvarubs[v] = var->ubchginfos[ubchginfoposs[v]].newbound;
+            ubchginfoposs[v] = ubpos;
+            if( ubpos >= 0 )
+               curvarubs[v] = var->ubchginfos[ubpos].newbound;
             else
                curvarubs[v] = SCIPvarGetUbGlobal(var);
             changed = TRUE;
@@ -3545,7 +3616,7 @@ RETCODE conflictAnalyzeLP(
          {
             CHECK_OKAY( addBdchg(set, var, curvarlbs[v], curvarubs[v], 
                   &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs) );
-            debugMessage(" -> undoing strong branching/diving bound change on non-binary variable <%s>: [%g,%g], bdchg=(%d,%d)\n", 
+            debugMessage(" -> undoing bound change on non-binary variable <%s> without inference info: [%g,%g], bdchg=(%d,%d)\n", 
                SCIPvarGetName(var), curvarlbs[v], curvarubs[v], lbchginfoposs[v], ubchginfoposs[v]);
          }
       }
@@ -3560,63 +3631,75 @@ RETCODE conflictAnalyzeLP(
 
          debugMessage("infeasible LP conflict analysis loop %d (changed col bounds: %d)\n", nloops, nbdchgs);
 
-#if 0 /*?????????????????????*/
-         /* undo bound changes on non-binary variables without inference information */
-         for( v = prob->nbinvars; v < nvars; ++v )
+#if 1 /*?????????????????????*/
+         /* undo bound changes on non-binary variables in current depth without inference information */
+         if( !diving )
          {
-            int lbpos;
-            int ubpos;
-            Bool changed;
+            for( v = prob->nbinvars; v < nvars; ++v )
+            {
+               VAR* var;
+               int lbpos;
+               int ubpos;
+               Bool changed;
 
-            var = vars[v];
-            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-            assert(-1 <= lbchginfoposs[v] && lbchginfoposs[v] <= var->nlbchginfos);
-            assert(-1 <= ubchginfoposs[v] && ubchginfoposs[v] <= var->nubchginfos);
+               var = vars[v];
+               assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+               assert(-1 <= lbchginfoposs[v] && lbchginfoposs[v] < var->nlbchginfos);
+               assert(-1 <= ubchginfoposs[v] && ubchginfoposs[v] < var->nubchginfos);
 
-            /* bound change has to be undone, if it is a strong branching/diving bound change, or
-             * if no inference information is available in the corresponding bound change information data
-             */
+               /* bound change has to be undone, if it is a strong branching/diving bound change, or
+                * if no inference information is available in the corresponding bound change information data
+                */
 
-            /* calculate position of new active lower bound change */
-            lbpos = lbchginfoposs[v];
-            while( lbpos == var->nlbchginfos || (lbpos >= 0 && !bdchginfoIsUseable(&var->lbchginfos[lbpos])) )
-               lbpos--;
-            assert(-1 <= lbpos && lbpos < var->nlbchginfos);
+               /* calculate position of new active lower bound change */
+               lbpos = lbchginfoposs[v];
+               while( lbpos >= 0
+                  && SCIPbdchginfoGetDepth(&var->lbchginfos[lbpos]) == currentdepth
+                  && !bdchginfoIsUseable(&var->lbchginfos[lbpos]) )
+               {
+                  lbpos--;
+               }
+               assert(-1 <= lbpos && lbpos < var->nlbchginfos);
             
-            /* calculate position of new active upper bound change */
-            ubpos = ubchginfoposs[v];
-            while( ubpos == var->nubchginfos || (ubpos >= 0 && !bdchginfoIsUseable(&var->ubchginfos[ubpos])) )
-               ubpos--;
-            assert(-1 <= ubpos && ubpos < var->nubchginfos);
+               /* calculate position of new active upper bound change */
+               ubpos = ubchginfoposs[v];
+               while( ubpos >= 0
+                  && SCIPbdchginfoGetDepth(&var->ubchginfos[ubpos]) == currentdepth
+                  && !bdchginfoIsUseable(&var->ubchginfos[ubpos]) )
+               {
+                  ubpos--;
+               }
+               assert(-1 <= ubpos && ubpos < var->nubchginfos);
 
-            /* change bounds and bound change positions if necessary */
-            changed = FALSE;
-            if( lbpos < lbchginfoposs[v] )
-            {
-               lbchginfoposs[v] = lbpos;
-               if( lbpos >= 0 )
-                  curvarlbs[v] = var->lbchginfos[lbpos].newbound;
-               else
-                  curvarlbs[v] = SCIPvarGetLbGlobal(var);
-               changed = TRUE;
-            }
-            if( ubpos < ubchginfoposs[v] )
-            {
-               ubchginfoposs[v] = ubpos;
-               if( ubpos >= 0 )
-                  curvarubs[v] = var->ubchginfos[ubpos].newbound;
-               else
-                  curvarubs[v] = SCIPvarGetUbGlobal(var);
-               changed = TRUE;
-            }
+               /* change bounds and bound change positions if necessary */
+               changed = FALSE;
+               if( lbpos < lbchginfoposs[v] )
+               {
+                  lbchginfoposs[v] = lbpos;
+                  if( lbpos >= 0 )
+                     curvarlbs[v] = var->lbchginfos[lbpos].newbound;
+                  else
+                     curvarlbs[v] = SCIPvarGetLbGlobal(var);
+                  changed = TRUE;
+               }
+               if( ubpos < ubchginfoposs[v] )
+               {
+                  ubchginfoposs[v] = ubpos;
+                  if( ubpos >= 0 )
+                     curvarubs[v] = var->ubchginfos[ubpos].newbound;
+                  else
+                     curvarubs[v] = SCIPvarGetUbGlobal(var);
+                  changed = TRUE;
+               }
 
-            /* insert bound change in LPI bound change arrays */
-            if( changed )
-            {
-               CHECK_OKAY( addBdchg(set, var, curvarlbs[v], curvarubs[v], 
-                     &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs) );
-               debugMessage(" -> undoing bound change on non-binary variable <%s> without inference info: [%g,%g], bdchg=(%d,%d)\n", 
-                  SCIPvarGetName(var), curvarlbs[v], curvarubs[v], lbchginfoposs[v], ubchginfoposs[v]);
+               /* insert bound change in LPI bound change arrays */
+               if( changed )
+               {
+                  CHECK_OKAY( addBdchg(set, var, curvarlbs[v], curvarubs[v], 
+                        &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs) );
+                  debugMessage(" -> undoing bound change on non-binary variable <%s> without inference info: [%g,%g], bdchg=(%d,%d)\n", 
+                     SCIPvarGetName(var), curvarlbs[v], curvarubs[v], lbchginfoposs[v], ubchginfoposs[v]);
+               }
             }
          }
 #endif
@@ -3774,7 +3857,7 @@ RETCODE SCIPconflictAnalyzeLP(
    conflict->nlpcalls++;
 
    /* perform conflict analysis */
-   CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp,
+   CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, SCIPlpDiving(lp),
          &iterations, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
    conflict->nlpiterations += iterations;
    conflict->nlpconfclauses += nclauses;
@@ -3965,9 +4048,10 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
          conflict->nsbiterations += iter;
+         debugMessage(" -> resolved downwards strong branching LP in %d iterations\n", iter);
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp,
+         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, TRUE, 
                &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
          conflict->nsbiterations += iter;
          conflict->nsbconfclauses += nclauses;
@@ -4013,9 +4097,10 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
          conflict->nsbiterations += iter;
+         debugMessage(" -> resolved upwards strong branching LP in %d iterations\n", iter);
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp,
+         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, TRUE, 
                &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
          conflict->nsbiterations += iter;
          conflict->nsbconfclauses += nclauses;

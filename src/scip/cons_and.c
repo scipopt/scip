@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.36 2004/10/26 18:24:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.37 2004/11/17 12:56:09 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -364,19 +364,22 @@ RETCODE consdataSwitchWatchedvars(
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
 
    /* if one watched variable is equal to the old other watched variable, just switch positions */
-   if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
+   if( watchedvar1 >= 0 )
    {
-      int tmp;
-      
-      tmp = consdata->watchedvar1;
-      consdata->watchedvar1 = consdata->watchedvar2;
-      consdata->watchedvar2 = tmp;
-      tmp = consdata->filterpos1;
-      consdata->filterpos1 = consdata->filterpos2;
-      consdata->filterpos2 = tmp;
+      if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
+      {
+         int tmp;
+         
+         tmp = consdata->watchedvar1;
+         consdata->watchedvar1 = consdata->watchedvar2;
+         consdata->watchedvar2 = tmp;
+         tmp = consdata->filterpos1;
+         consdata->filterpos1 = consdata->filterpos2;
+         consdata->filterpos2 = tmp;
+      }
+      assert(watchedvar1 != consdata->watchedvar2);
+      assert(watchedvar2 != consdata->watchedvar1);
    }
-   assert(watchedvar1 != consdata->watchedvar2);
-   assert(watchedvar2 != consdata->watchedvar1);
 
    /* drop lower bound tighten events on old watched variables */
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.29 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.30 2004/11/17 12:49:11 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -384,6 +384,12 @@ COL* SCIPvarGetCol(
    VAR*             var                 /**< problem variable */
    );
 
+/** returns whether the variable is a COLUMN variable that is member of the current LP */
+extern
+Bool SCIPvarIsInLP(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** gets aggregation variable y of an aggregated variable x = a*y + c */
 extern
 VAR* SCIPvarGetAggrVar(
@@ -621,6 +627,7 @@ Real* SCIPvarGetUbimplInferbounds(
 #define SCIPvarGetProbindex(var)        (var)->probindex
 #define SCIPvarGetTransVar(var)         (var)->data.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
+#define SCIPvarIsInLP(var)              ((var)->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP((var)->data.col))
 #define SCIPvarGetAggrVar(var)          (var)->data.aggregate.var
 #define SCIPvarGetAggrScalar(var)       (var)->data.aggregate.scalar
 #define SCIPvarGetAggrConstant(var)     (var)->data.aggregate.constant
