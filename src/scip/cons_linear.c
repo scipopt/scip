@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.89 2004/03/12 08:54:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.90 2004/03/15 17:51:11 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2996,7 +2996,7 @@ RETCODE tightenSides(
 
 /** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
  *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continouos variable  li <= xi <= ui
- *  let minact := min{a*x}, maxact := max{a*x}
+ *  let minact := min{a*x + ai*xi}, maxact := max{a*x + ai*xi}
  *  (i) ai >= 0:
  *      if  minact + ai >= lhs  and  maxact - ai <= rhs:
  *       - a deviation from the lower/upper bound of xi would make the left/right hand side redundant
