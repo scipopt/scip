@@ -122,7 +122,8 @@ struct Node
       SUBROOT*      subroot;            /**< data for subroot nodes */
    } data;
    NODE*            parent;             /**< parent node in the tree */
-   CONSLIST*        conslist;           /**< list of constraints created at this node */
+   CONSLIST*        addedconss;         /**< list of constraints created at this node */
+   CONSLIST*        deletedconss;       /**< list of constraints disabled at this node (e.g. due to redundancy) */
    DOMCHG*          domchg;             /**< domain changes at this node or NULL */
    Real             lowerbound;         /**< lower (dual) LP bound of subtree */
    unsigned int     depth:16;           /**< depth in the tree */
@@ -319,24 +320,6 @@ RETCODE SCIPtreeLoadLP(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
-   );
-
-/** adds local constraint to the active node and captures it */
-extern
-RETCODE SCIPtreeAddLocalCons(
-   TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   CONS*            cons                /**< constraint to add */
-   );
-
-/** adds global constraint to the problem and captures it */
-extern
-RETCODE SCIPtreeAddGlobalCons(
-   TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   CONS*            cons                /**< constraint to add */
    );
 
 /** branches on a variable; if solution value x' is fractional, two child nodes are created

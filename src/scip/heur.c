@@ -97,7 +97,7 @@ RETCODE SCIPheurFree(
    /* call destructor of primal heuristic */
    if( (*heur)->heurfree != NULL )
    {
-      CHECK_OKAY( (*heur)->heurfree(*heur, scip) );
+      CHECK_OKAY( (*heur)->heurfree(scip, *heur) );
    }
 
    freeMemoryArray(&(*heur)->name);
@@ -126,7 +126,7 @@ RETCODE SCIPheurInit(
 
    if( heur->heurinit != NULL )
    {
-      CHECK_OKAY( heur->heurinit(heur, scip) );
+      CHECK_OKAY( heur->heurinit(scip, heur) );
    }
    heur->initialized = TRUE;
 
@@ -152,7 +152,7 @@ RETCODE SCIPheurExit(
 
    if( heur->heurexit != NULL )
    {
-      CHECK_OKAY( heur->heurexit(heur, scip) );
+      CHECK_OKAY( heur->heurexit(scip, heur) );
    }
    heur->initialized = FALSE;
 
@@ -178,7 +178,7 @@ RETCODE SCIPheurExec(
    if( actdepth % heur->freq == 0 )
    {
       debugMessage("executing primal heuristic <%s>\n", heur->name);
-      CHECK_OKAY( heur->heurexec(heur, set->scip, result) );
+      CHECK_OKAY( heur->heurexec(set->scip, heur, result) );
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )

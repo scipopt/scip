@@ -34,34 +34,34 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
 /** destructor of primal heuristic to free user data (called when SCIP is exiting)
  *
  *  input:
- *    heur            : the primal heuristic itself
  *    scip            : SCIP main data structure
+ *    heur            : the primal heuristic itself
  */
-#define DECL_HEURFREE(x) RETCODE x (HEUR* heur, SCIP* scip)
+#define DECL_HEURFREE(x) RETCODE x (SCIP* scip, HEUR* heur)
 
 /** initialization method of primal heuristic (called when problem solving starts)
  *
  *  input:
- *    heur            : the primal heuristic itself
  *    scip            : SCIP main data structure
+ *    heur            : the primal heuristic itself
  */
-#define DECL_HEURINIT(x) RETCODE x (HEUR* heur, SCIP* scip)
+#define DECL_HEURINIT(x) RETCODE x (SCIP* scip, HEUR* heur)
 
 /** deinitialization method of primal heuristic (called when problem solving exits)
  *
  *  input:
- *    heur            : the primal heuristic itself
  *    scip            : SCIP main data structure
+ *    heur            : the primal heuristic itself
  */
-#define DECL_HEUREXIT(x) RETCODE x (HEUR* heur, SCIP* scip)
+#define DECL_HEUREXIT(x) RETCODE x (SCIP* scip, HEUR* heur)
 
 /** execution method of primal heuristic
  *
  *  Searches for feasible primal solutions. The method is called in the node processing loop.
  *
  *  input:
- *    heur            : the primal heuristic itself
  *    scip            : SCIP main data structure
+ *    heur            : the primal heuristic itself
  *    result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
@@ -69,7 +69,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *    SCIP_DIDNOTFIND : the heuristic searched, but didn't found a feasible solution
  *    SCIP_DIDNOTRUN  : the heuristic was skipped
  */
-#define DECL_HEUREXEC(x) RETCODE x (HEUR* heur, SCIP* scip, RESULT* result)
+#define DECL_HEUREXEC(x) RETCODE x (SCIP* scip, HEUR* heur, RESULT* result)
 
 
 

@@ -36,16 +36,16 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
 /** destructor of reader to free user data (called when SCIP is exiting)
  *
  *  input:
- *    reader          : the reader itself
  *    scip            : SCIP main data structure
+ *    reader          : the reader itself
  */
-#define DECL_READERFREE(x) RETCODE x (READER* reader, SCIP* scip)
+#define DECL_READERFREE(x) RETCODE x (SCIP* scip, READER* reader)
 
 /** problem reading method of reader
  *
  *  input:
- *    reader          : the reader itself
  *    scip            : SCIP main data structure
+ *    reader          : the reader itself
  *    filename        : full path and name of file to read, or NULL if stdin should be used
  *    result          : pointer to store the result of the propagation call
  *
@@ -55,7 +55,7 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
  *
  *  If the reader detected an error in the input file, it should return with SCIP_READERR or SCIP_NOFILE.
  */
-#define DECL_READERREAD(x) RETCODE x (READER* reader, SCIP* scip, const char* filename, RESULT* result)
+#define DECL_READERREAD(x) RETCODE x (SCIP* scip, READER* reader, const char* filename, RESULT* result)
 
 
 

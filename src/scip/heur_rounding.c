@@ -124,7 +124,7 @@ RETCODE updateActivities(
       rowpos = SCIProwGetLPPos(row);
       assert(-1 <= rowpos && rowpos < nlprows);
       
-      if( rowpos >= 0 && SCIProwIsModel(row) )
+      if( rowpos >= 0 && !SCIProwIsLocal(row) )
       {
          Real oldactivity;
          Real newactivity;
@@ -391,7 +391,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &violrows, nlprows) );
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &violrowpos, nlprows) );
 
-   /* get the activities for all rows belonging to model constraints */
+   /* get the activities for all globally valid rows */
    for( r = 0; r < nlprows; ++r )
    {
       ROW* row;
@@ -399,7 +399,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
       row = lprows[r];
       assert(SCIProwGetLPPos(row) == r);
 
-      if( SCIProwIsModel(row) )
+      if( !SCIProwIsLocal(row) )
       {
          CHECK_OKAY( SCIPgetRowActivity(scip, row, &activities[r]) );
          assert(SCIPisFeasGE(scip, activities[r], SCIProwGetLhs(row)));
@@ -457,7 +457,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
          else
             newsolval = SCIPceil(scip, oldsolval);
 
-         /* update row activities of model rows */
+         /* update row activities of globally valid rows */
          CHECK_OKAY( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
                         var, oldsolval, newsolval) );
 
@@ -516,7 +516,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
          debugMessage("rounding heuristic step 2: var <%s>, oldval=%g, newval=%g\n",
             SCIPvarGetName(roundvar), oldsolval, newsolval);
          
-         /* update row activities of model rows */
+         /* update row activities of globally valid rows */
          CHECK_OKAY( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
                         roundvar, oldsolval, newsolval) );
          

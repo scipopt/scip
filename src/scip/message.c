@@ -55,7 +55,8 @@ void infoMessage(
    const char*      msg                 /**< message to print */
    )
 {
-   assert(verblevel > SCIP_VERBLEVEL_NONE);
+   assert(msgverblevel > SCIP_VERBLEVEL_NONE);
+   assert(msgverblevel <= SCIP_VERBLEVEL_FULL);
    assert(verblevel <= SCIP_VERBLEVEL_FULL);
 
    if( msgverblevel <= verblevel )

@@ -108,7 +108,7 @@ RETCODE SCIPdispFree(
    /* call destructor of display column */
    if( (*disp)->dispfree != NULL )
    {
-      CHECK_OKAY( (*disp)->dispfree(*disp, scip) );
+      CHECK_OKAY( (*disp)->dispfree(scip, *disp) );
    }
 
    freeMemoryArray(&(*disp)->name);
@@ -138,7 +138,7 @@ RETCODE SCIPdispInit(
 
    if( disp->dispinit != NULL )
    {
-      CHECK_OKAY( disp->dispinit(disp, scip) );
+      CHECK_OKAY( disp->dispinit(scip, disp) );
    }
    disp->initialized = TRUE;
 
@@ -164,7 +164,7 @@ RETCODE SCIPdispExit(
 
    if( disp->dispexit != NULL )
    {
-      CHECK_OKAY( disp->dispexit(disp, scip) );
+      CHECK_OKAY( disp->dispexit(scip, disp) );
    }
    disp->initialized = FALSE;
 
@@ -181,7 +181,7 @@ RETCODE SCIPdispOutput(
    assert(disp->dispoutp != NULL);
    assert(scip != NULL);
 
-   CHECK_OKAY( disp->dispoutp(disp, scip, stdout) );
+   CHECK_OKAY( disp->dispoutp(scip, disp, stdout) );
 
    return SCIP_OKAY;
 }
@@ -246,6 +246,9 @@ RETCODE SCIPdispPrintLine(
 {
    assert(set != NULL);
    assert(stat != NULL);
+
+   if( set->verblevel < SCIP_VERBLEVEL_NORMAL )
+      return SCIP_OKAY;
 
    if( forcedisplay
       || (stat->nnodes != stat->lastdispnode

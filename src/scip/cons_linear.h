@@ -48,16 +48,8 @@ RETCODE SCIPlinconsCreate(
    Real*            val,                /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< does linear constraint is a model constraint? */
+   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable          /**< is constraint modifiable during node processing (sbj. to column generation)? */
-   );
-
-/** creates a linear constraint object from an LP row */
-extern
-RETCODE SCIPlinconsCreateLPRow(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS**        lincons,            /**< pointer to store the linear constraint */
-   ROW*             row                 /**< LP row to create linear constraint from */
    );
 
 /** frees a linear constraint object */
@@ -203,16 +195,12 @@ RETCODE SCIPcreateConsLinear(
    Real*            val,                /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< is constraint necessary for feasibility? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
-   );
-
-/** creates and captures a linear constraint from an LP row, captures the row */
-extern
-RETCODE SCIPcreateConsLinearLPRow(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   ROW*             row                 /**< LP row */
    );
 
 /** adds coefficient in linear constraint */

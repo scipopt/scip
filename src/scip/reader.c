@@ -84,7 +84,7 @@ RETCODE SCIPreaderFree(
    /* call destructor of reader */
    if( (*reader)->readerfree != NULL )
    {
-      CHECK_OKAY( (*reader)->readerfree(*reader, scip) );
+      CHECK_OKAY( (*reader)->readerfree(scip, *reader) );
    }
 
    freeMemoryArray(&(*reader)->name);
@@ -180,7 +180,7 @@ RETCODE SCIPreaderRead(
       CHECK_OKAY( SCIPcreateProb(scip, name) );
 
       /* call reader to read problem */
-      CHECK_OKAY( reader->readerread(reader, scip, filename, result) );
+      CHECK_OKAY( reader->readerread(scip, reader, filename, result) );
    }
    else
       *result = SCIP_DIDNOTRUN;

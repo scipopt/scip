@@ -199,7 +199,7 @@ RETCODE SCIPnodepqInsert(
    pos = nodepq->len;
    nodepq->len++;
    nodepq->lowerboundsum += node->lowerbound;
-   while( pos > 0 && nodesel->nodeselcomp(nodesel, scip, node, nodepq->slots[PQ_PARENT(pos)]) < 0 )
+   while( pos > 0 && nodesel->nodeselcomp(scip, nodesel, node, nodepq->slots[PQ_PARENT(pos)]) < 0 )
    {
       nodepq->slots[pos] = nodepq->slots[PQ_PARENT(pos)];
       pos = PQ_PARENT(pos);
@@ -282,7 +282,7 @@ Bool nodepqDelPos(
    /* try to move parents downwards to insert last node */
    parentfelldown = FALSE;
    parentpos = PQ_PARENT(freepos);
-   while( freepos > 0 && nodesel->nodeselcomp(nodesel, scip, lastnode, nodepq->slots[parentpos]) < 0 )
+   while( freepos > 0 && nodesel->nodeselcomp(scip, nodesel, lastnode, nodepq->slots[parentpos]) < 0 )
    {
       nodepq->slots[freepos] = nodepq->slots[parentpos];
       freepos = parentpos;
@@ -299,10 +299,10 @@ Bool nodepqDelPos(
          assert(childpos < nodepq->len);
          brotherpos = PQ_RIGHTCHILD(freepos);
          if( brotherpos < nodepq->len
-            && nodesel->nodeselcomp(nodesel, scip, nodepq->slots[brotherpos], nodepq->slots[childpos]) < 0 )
+            && nodesel->nodeselcomp(scip, nodesel, nodepq->slots[brotherpos], nodepq->slots[childpos]) < 0 )
             childpos = brotherpos;
          /* exit search loop if better child is not better than last node */
-         if( nodesel->nodeselcomp(nodesel, scip, lastnode, nodepq->slots[childpos]) <= 0 )
+         if( nodesel->nodeselcomp(scip, nodesel, lastnode, nodepq->slots[childpos]) <= 0 )
             break;
          /* move better child upwards, free slot is now the better child's slot */
          nodepq->slots[freepos] = nodepq->slots[childpos];
@@ -535,7 +535,7 @@ RETCODE SCIPnodeselFree(
    /* call destructor of node selector */
    if( (*nodesel)->nodeselfree != NULL )
    {
-      CHECK_OKAY( (*nodesel)->nodeselfree(*nodesel, scip) );
+      CHECK_OKAY( (*nodesel)->nodeselfree(scip, *nodesel) );
    }
 
    freeMemoryArray(&(*nodesel)->name);
@@ -564,7 +564,7 @@ RETCODE SCIPnodeselInit(
 
    if( nodesel->nodeselinit != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselinit(nodesel, scip) );
+      CHECK_OKAY( nodesel->nodeselinit(scip, nodesel) );
    }
    nodesel->initialized = TRUE;
 
@@ -590,7 +590,7 @@ RETCODE SCIPnodeselExit(
 
    if( nodesel->nodeselexit != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselexit(nodesel, scip) );
+      CHECK_OKAY( nodesel->nodeselexit(scip, nodesel) );
    }
    nodesel->initialized = FALSE;
 
@@ -609,7 +609,7 @@ RETCODE SCIPnodeselSelect(
    assert(scip != NULL);
    assert(selnode != NULL);
 
-   CHECK_OKAY( nodesel->nodeselslct(nodesel, scip, selnode) );
+   CHECK_OKAY( nodesel->nodeselslct(scip, nodesel, selnode) );
 
    return SCIP_OKAY;
 }
@@ -628,7 +628,7 @@ int SCIPnodeselCompare(
    assert(node1 != NULL);
    assert(node2 != NULL);
 
-   return nodesel->nodeselcomp(nodesel, scip, node1, node2);
+   return nodesel->nodeselcomp(scip, nodesel, node1, node2);
 }
 
 /** gets name of node selector */

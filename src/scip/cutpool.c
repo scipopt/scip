@@ -110,14 +110,14 @@ DECL_HASHKEYEQ(hashKeyEqCut)
    /* compare the columns of the rows */
    for( i = 0; i < row1->len; ++i )
    {
-      if( row1->col[i] != row2->col[i] )
+      if( row1->cols[i] != row2->cols[i] )
          return FALSE;
    }
 
    /* compare the coefficients of the rows */
    for( i = 0; i < row1->len; ++i )
    {
-      if( ABS(row1->val[i] - row2->val[i]) > SCIP_DEFAULT_EPSILON )
+      if( ABS(row1->vals[i] - row2->vals[i]) > SCIP_DEFAULT_EPSILON )
          return FALSE;
    }
 

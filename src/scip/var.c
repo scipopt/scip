@@ -980,15 +980,22 @@ RETCODE SCIPvarTransform(
    )
 {
    char name[255];
+   VARTYPE vartype;
 
    assert(origvar != NULL);
    assert(origvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
    assert(origvar->data.transvar == NULL);
    assert(transvar != NULL);
 
+   /* convert 0/1 integer variables into binary variables */
+   vartype = origvar->vartype;
+   if( vartype == SCIP_VARTYPE_INTEGER && SCIPsetIsEQ(set, origvar->dom.lb, 0.0) && SCIPsetIsEQ(set, origvar->dom.ub, 1.0) )
+      vartype = SCIP_VARTYPE_BINARY;
+
+   /* create transformed variable */
    sprintf(name, "t_%s", origvar->name);
    CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
-                  name, origvar->dom.lb, origvar->dom.ub, objsense * origvar->obj, origvar->vartype) );
+                  name, origvar->dom.lb, origvar->dom.ub, objsense * origvar->obj, vartype) );
 
    CHECK_OKAY( holelistDuplicate(&(*transvar)->dom.holelist, memhdr, set, origvar->dom.holelist) );
 

@@ -119,7 +119,6 @@ RETCODE SCIPprobCreate(
    (*prob)->ncont = 0;
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
-   (*prob)->nmodelconss = 0;
 
    return SCIP_OKAY;
 }
@@ -204,14 +203,6 @@ RETCODE SCIPprobTransform(
       CHECK_OKAY( SCIPconsTransform(&targetcons, memhdr, set, source->conss[c]) );
       CHECK_OKAY( SCIPprobAddCons(*target, memhdr, set, targetcons) );
       CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
-   }
-
-   /* add transformed model constraints to the constraint handlers' probconss arrays */
-   for( c = 0; c < (*target)->nmodelconss; ++c )
-   {
-      targetcons = (*target)->conss[c];
-      assert(targetcons != NULL);
-      CHECK_OKAY( SCIPconshdlrAddProbCons(SCIPconsGetConsHdlr(targetcons), set, targetcons) );
    }
 
    return SCIP_OKAY;
@@ -478,32 +469,6 @@ RETCODE SCIPprobChgVarType(
    return SCIP_OKAY;
 }
 
-/** inserts constraint into the problems constraint array */
-static
-void probInsertCons(
-   PROB*            prob,               /**< problem data */
-   CONS*            cons                /**< constraint to add */
-   )
-{
-   assert(prob != NULL);
-   assert(prob->nmodelconss <= prob->nconss);
-   assert(prob->nconss < prob->consssize);
-   assert(cons != NULL);
-
-   if( SCIPconsIsModel(cons) )
-   {
-      prob->conss[prob->nconss] = prob->conss[prob->nmodelconss];
-      prob->conss[prob->nmodelconss] = cons;
-      prob->nmodelconss++;
-      prob->nconss++;
-   }
-   else
-   {
-      prob->conss[prob->nconss] = cons;
-      prob->nconss++;
-   }
-}
-
 /** adds constraint to the problem and captures it */
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
@@ -518,7 +483,8 @@ RETCODE SCIPprobAddCons(
 
    /* add the constraint to the problem's constraint array */
    CHECK_OKAY( probEnsureConssMem(prob, set, prob->nconss+1) );
-   probInsertCons(prob, cons);
+   prob->conss[prob->nconss] = cons;
+   prob->nconss++;
 
    /* capture constraint */
    SCIPconsCapture(cons);

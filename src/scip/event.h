@@ -87,35 +87,35 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
 /** destructor of event handler to free user data (called when SCIP is exiting)
  *
  *  input:
- *    eventhdlr       : the event handler itself
  *    scip            : SCIP main data structure
+ *    eventhdlr       : the event handler itself
  */
-#define DECL_EVENTFREE(x) RETCODE x (EVENTHDLR* eventhdlr, SCIP* scip)
+#define DECL_EVENTFREE(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
 
 /** initialization method of event handler (called when problem solving starts)
  *
  *  input:
- *    eventhdlr       : the event handler itself
  *    scip            : SCIP main data structure
+ *    eventhdlr       : the event handler itself
  */
-#define DECL_EVENTINIT(x) RETCODE x (EVENTHDLR* eventhdlr, SCIP* scip)
+#define DECL_EVENTINIT(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
 
 /** deinitialization method of event handler (called when problem solving exits)
  *
  *  input:
- *    eventhdlr       : the event handler itself
  *    scip            : SCIP main data structure
+ *    eventhdlr       : the event handler itself
  */
-#define DECL_EVENTEXIT(x) RETCODE x (EVENTHDLR* eventhdlr, SCIP* scip)
+#define DECL_EVENTEXIT(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
 
 /** frees specific event data
  *
  *  input:
- *    eventhdlr       : the event handler itself
  *    scip            : SCIP main data structure
+ *    eventhdlr       : the event handler itself
  *    eventdata       : pointer to the event data to free
  */
-#define DECL_EVENTDELE(x) RETCODE x (EVENTHDLR* eventhdlr, SCIP* scip, EVENTDATA** eventdata)
+#define DECL_EVENTDELE(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr, EVENTDATA** eventdata)
 
 /** execution method of event handler
  *
@@ -125,12 +125,12 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *  given event handler and event data.
  *
  *  input:
- *    eventhdlr       : the event handler itself
  *    scip            : SCIP main data structure
+ *    eventhdlr       : the event handler itself
  *    event           : event to process
  *    eventdata       : user data for the event
  */
-#define DECL_EVENTEXEC(x) RETCODE x (EVENTHDLR* eventhdlr, SCIP* scip, EVENT* event, EVENTDATA* eventdata)
+#define DECL_EVENTEXEC(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr, EVENT* event, EVENTDATA* eventdata)
 
 
 

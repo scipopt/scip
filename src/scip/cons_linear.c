@@ -87,7 +87,7 @@ struct LinConsData
    int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
    int              varssize;           /**< size of the vars- and vals-arrays */
    int              nvars;              /**< number of nonzeros in constraint */
-   unsigned int     model:1;            /**< does linear constraint data belongs to a model constraint? */
+   unsigned int     local:1;            /**< is linear constraint only valid locally? */
    unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
    unsigned int     transformed:1;      /**< does the linear constraint data belongs to the transformed problem? */
    unsigned int     validactivitybds:1; /**< are the activity bounds minactivity/maxactivity valid? */
@@ -221,7 +221,7 @@ RETCODE linconsdataCreate(
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< does linear constraint data belongs to a model constraint? */
+   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable          /**< is data modifiable during node processing (subject to column generation)? */
    )
 {
@@ -264,7 +264,7 @@ RETCODE linconsdataCreate(
    (*linconsdata)->maxactivityinf = -1;
    (*linconsdata)->varssize = nvars;
    (*linconsdata)->nvars = nvars;
-   (*linconsdata)->model = model;
+   (*linconsdata)->local = local;
    (*linconsdata)->modifiable = modifiable;
    (*linconsdata)->transformed = FALSE;
    (*linconsdata)->validactivitybds = FALSE;
@@ -283,7 +283,7 @@ RETCODE linconsdataCreateTransformed(
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< does linear constraint data belongs to a model constraint? */
+   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    )
 {
@@ -293,7 +293,7 @@ RETCODE linconsdataCreateTransformed(
    assert(linconsdata != NULL);
 
    /* create linear constraint data */
-   CHECK_OKAY( linconsdataCreate(scip, linconsdata, name, nvars, vars, vals, lhs, rhs, model, modifiable) );
+   CHECK_OKAY( linconsdataCreate(scip, linconsdata, name, nvars, vars, vals, lhs, rhs, local, modifiable) );
 
    /* allocate the additional needed eventdatas array */
    assert((*linconsdata)->eventdatas == NULL);
@@ -409,7 +409,7 @@ RETCODE linconsdataAddCoef(
       CHECK_OKAY( linconsdataCatchEvent(scip, linconsdata, eventhdlr, linconsdata->nvars-1) );
    }
 
-   if( linconsdata->model )
+   if( !linconsdata->local )
    {
       if( SCIPisPositive(scip, val) )
       {
@@ -503,7 +503,7 @@ RETCODE linconsdataToRow(
    assert(row != NULL);
 
    CHECK_OKAY( SCIPcreateRow(scip, row, linconsdata->name, 0, NULL, NULL, linconsdata->lhs, linconsdata->rhs,
-                  linconsdata->model, linconsdata->modifiable) );
+                  linconsdata->local, linconsdata->modifiable) );
    
    for( v = 0; v < linconsdata->nvars; ++v )
    {
@@ -809,7 +809,7 @@ RETCODE SCIPlinconsCreate(
    Real*            val,                /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< does linear constraint is a model constraint? */
+   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable          /**< is constraint modifiable during node processing (sbj. to column generation)? */
    )
 {
@@ -822,46 +822,25 @@ RETCODE SCIPlinconsCreate(
    (*lincons)->islprow = FALSE;
    if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
    {
+      if( local )
+      {
+         errorMessage("problem constraint cannot be local");
+         return SCIP_INVALIDDATA;
+      }
+
       /* create constraint in original problem */
       CHECK_OKAY( linconsdataCreate(scip, &(*lincons)->data.linconsdata, name, len, var, val, lhs, rhs,
-                     model, modifiable) );
+                     local, modifiable) );
    }
    else
    {
       /* create constraint in transformed problem */
       CHECK_OKAY( linconsdataCreateTransformed(scip, &(*lincons)->data.linconsdata, name, len, var, val, lhs, rhs, 
-                     model, modifiable) );
+                     local, modifiable) );
    }
 
    /* forbid rounding of variables */
-   if( model )
-   {
-      CHECK_OKAY( SCIPlinconsForbidRounding(scip, *lincons) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** creates a linear constraint object from an LP row */
-RETCODE SCIPlinconsCreateLPRow(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS**        lincons,            /**< pointer to store the linear constraint */
-   ROW*             row                 /**< LP row to create linear constraint from */
-   )
-{
-   assert(lincons != NULL);
-   assert(row != NULL);
-
-   CHECK_OKAY( SCIPallocBlockMemory(scip, lincons) );
-
-   (*lincons)->islprow = TRUE;
-   (*lincons)->data.row = row;
-
-   /* capture the row, because we need it as data storage */
-   CHECK_OKAY( SCIPcaptureRow(scip, row) );
-
-   /* forbid rounding of variables */
-   if( SCIProwIsModel(row) )
+   if( !local )
    {
       CHECK_OKAY( SCIPlinconsForbidRounding(scip, *lincons) );
    }
@@ -1203,7 +1182,7 @@ RETCODE SCIPlinconsChgLhs(
       linconsdata = lincons->data.linconsdata;
       assert(linconsdata != NULL);
 
-      updaterounding = (linconsdata->model && SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, -linconsdata->lhs));
+      updaterounding = (!linconsdata->local && SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, -linconsdata->lhs));
       if( updaterounding )
       {
          CHECK_OKAY( SCIPlinconsAllowRounding(scip, lincons) );
@@ -1241,7 +1220,7 @@ RETCODE SCIPlinconsChgRhs(
       linconsdata = lincons->data.linconsdata;
       assert(linconsdata != NULL);
 
-      updaterounding = (linconsdata->model && SCIPisInfinity(scip, rhs) != SCIPisInfinity(scip, linconsdata->lhs));
+      updaterounding = (!linconsdata->local && SCIPisInfinity(scip, rhs) != SCIPisInfinity(scip, linconsdata->lhs));
       if( updaterounding )
       {
          CHECK_OKAY( SCIPlinconsAllowRounding(scip, lincons) );
@@ -1745,7 +1724,7 @@ DECL_CONSTRAN(consTranLinear)
 
    CHECK_OKAY( SCIPlinconsCreate(scip, &(*targetdata)->lincons, linconsdata->name, 
                   linconsdata->nvars, linconsdata->vars, linconsdata->vals, linconsdata->lhs, linconsdata->rhs,
-                  linconsdata->model, linconsdata->modifiable) );
+                  linconsdata->local, linconsdata->modifiable) );
 
    return SCIP_OKAY;
 }
@@ -2014,7 +1993,11 @@ RETCODE SCIPcreateConsLinear(
    Real*            val,                /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< is constraint necessary for feasibility? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    )
 {
@@ -2033,40 +2016,10 @@ RETCODE SCIPcreateConsLinear(
 
    /* create the constraint specific data */
    CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
-   CHECK_OKAY( SCIPlinconsCreate(scip, &consdata->lincons, name, len, var, val, lhs, rhs, model, modifiable) );
+   CHECK_OKAY( SCIPlinconsCreate(scip, &consdata->lincons, name, len, var, val, lhs, rhs, local, modifiable) );
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, model) );
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a linear constraint from an LP row, captures the row */
-RETCODE SCIPcreateConsLinearLPRow(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   ROW*             row                 /**< LP row */
-   )
-{
-   CONSHDLR* conshdlr;
-   CONSDATA* consdata;
-
-   assert(scip != NULL);
-
-   /* find the linear constraint handler */
-   CHECK_OKAY( SCIPfindConsHdlr(scip, CONSHDLR_NAME, &conshdlr) );
-   if( conshdlr == NULL )
-   {
-      errorMessage("Linear constraint handler not found");
-      return SCIP_INVALIDCALL;
-   }
-
-   /* create the constraint specific data */
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
-   CHECK_OKAY( SCIPlinconsCreateLPRow(scip, &consdata->lincons, row) );
-
-   /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, SCIProwGetName(row), conshdlr, consdata, SCIProwIsModel(row)) );
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, propagate) );
 
    return SCIP_OKAY;
 }

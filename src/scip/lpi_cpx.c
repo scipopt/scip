@@ -1635,7 +1635,7 @@ RETCODE SCIPlpiGetBase(
 
    CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, cstat, rstat) );
 
-   /* because the basis status values are equally defined in SCIP as in CPLEX, they don't need to be transformed */
+   /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
    assert(SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
    assert(SCIP_BASESTAT_BASIC == CPX_BASIC);
    assert(SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
@@ -1658,7 +1658,7 @@ RETCODE SCIPlpiSetBase(
 
    invalidateSolution(lpi);
 
-   /* because the basis status values are equally defined in SCIP as in CPLEX, they don't need to be transformed */
+   /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
    assert(SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
    assert(SCIP_BASESTAT_BASIC == CPX_BASIC);
    assert(SCIP_BASESTAT_UPPER == CPX_AT_UPPER);

@@ -46,7 +46,7 @@
 static
 DECL_EVENTFREE(eventFreeTest)
 {
-   printf("free test event handler\n");
+   /*printf("free test event handler\n");*/
 
    return SCIP_OKAY;
 }
@@ -54,7 +54,7 @@ DECL_EVENTFREE(eventFreeTest)
 static
 DECL_EVENTINIT(eventInitTest)
 {
-   printf("init test event handler\n");
+   /*printf("init test event handler\n");*/
 
    CHECK_OKAY( SCIPcatchEvent(scip, 
                   /* SCIP_EVENTTYPE_NODEACTIVATED
@@ -74,7 +74,7 @@ DECL_EVENTINIT(eventInitTest)
 static
 DECL_EVENTEXIT(eventExitTest)
 {
-   printf("exit test event handler\n");
+   /*printf("exit test event handler\n");*/
 
    return SCIP_OKAY;
 }
@@ -82,7 +82,7 @@ DECL_EVENTEXIT(eventExitTest)
 static
 DECL_EVENTDELE(eventDeleTest)
 {
-   printf("dele test event handler\n");
+   /*printf("dele test event handler\n");*/
 
    return SCIP_OKAY;
 }
@@ -93,7 +93,7 @@ DECL_EVENTEXEC(eventExecTest)
    EVENTTYPE eventtype;
 
    CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
-   printf("exec test event handler: eventtype=0x%x\n", eventtype);
+   /*printf("exec test event handler: eventtype=0x%x\n", eventtype);*/
 
    return SCIP_OKAY;
 }
@@ -215,12 +215,13 @@ RETCODE runSCIP(
     *********/
 
    printf("\nsetup SCIP\n");
+   printf("==========\n\n");
 
    /* initialize SCIP */
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* change settings */
-   CHECK_OKAY( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
+   CHECK_OKAY( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_HIGH) );
 
    /* include user defined callbacks */
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );
@@ -286,6 +287,7 @@ RETCODE runSCIP(
    }
 
    printf("\nread problem <%s>\n", argv[1]);
+   printf("============\n\n");
    CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
 #endif
 
@@ -296,21 +298,23 @@ RETCODE runSCIP(
 
    /* solve problem */
    printf("\nsolve problem\n");
+   printf("=============\n\n");
    CHECK_OKAY( SCIPsolve(scip) );
 
 #if 0
    /* free solution process */
    printf("\nfree problem solution\n");
+   printf("=====================\n\n");
    CHECK_OKAY( SCIPfreeSolve(scip) );
 
    /* solve problem again */
    printf("\nsolve problem again\n");
+   printf("===================\n\n");
    CHECK_OKAY( SCIPsolve(scip) );
 #endif
 
-   printf("\n");
-   printf("primal solution:\n");
-   printf("----------------\n");
+   printf("\nprimal solution:\n");
+   printf("================\n\n");
    CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
 
 #ifndef NDEBUG
@@ -323,6 +327,7 @@ RETCODE runSCIP(
     ********************/
 
    printf("\nfree SCIP\n");
+   printf("=========\n\n");
 
    /* free SCIP */
    CHECK_OKAY( SCIPfree(&scip) );
@@ -351,8 +356,9 @@ main(
 {
    RETCODE retcode;
 
-   todoMessage("switch DECL_ callback definition to have SCIP* scip as the first parameter");
    todoMessage("implement remaining events");
+   todoMessage("avoid addition of identical rows");
+   todoMessage("avoid addition of identical constraints");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

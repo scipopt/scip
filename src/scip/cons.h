@@ -36,45 +36,45 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 /** destructor of constraint handler to free user data (called when SCIP is exiting)
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  */
-#define DECL_CONSFREE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
+#define DECL_CONSFREE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
 /** initialization method of constraint handler (called when problem solving starts)
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  */
-#define DECL_CONSINIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
+#define DECL_CONSINIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
 /** deinitialization method of constraint handler (called when problem solving exits)
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  */
-#define DECL_CONSEXIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
+#define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
 /** frees specific constraint data
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  *    consdata        : pointer to the constraint data to free
  */
-#define DECL_CONSDELE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONSDATA** consdata)
+#define DECL_CONSDELE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONSDATA** consdata)
 
 /** transforms constraint data into data belonging to the transformed problem
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  *    sourcedata      : constraint data to transform
  *    targetdata      : pointer to constraint data where to store transformed data
  */
-#define DECL_CONSTRAN(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONSDATA* sourcedata, CONSDATA** targetdata)
+#define DECL_CONSTRAN(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONSDATA* sourcedata, CONSDATA** targetdata)
 
 /** separation method of constraint handler
  *
@@ -82,18 +82,19 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  which means that a valid LP solution exists.
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
  *    SCIP_SEPARATED  : at least one cutting plane was generated
+ *    SCIP_CONSADDED  : at least one additional constraint was generated
  *    SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane
  *    SCIP_DIDNOTRUN  : the separator was skipped
  */
-#define DECL_CONSSEPA(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
 
 /** constraint enforcing method of constraint handler for LP solutions
  *
@@ -103,8 +104,8 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  cutting plane.
  *
  *  The enforcing methods of the active constraint handlers are called in decreasing order of their enforcing
- *  priorities until the first constraint handler returned with the value SCIP_BRANCHED, SCIP_REDUCEDDOM, or
- *  SCIP_SEPARATED. 
+ *  priorities until the first constraint handler returned with the value SCIP_BRANCHED, SCIP_REDUCEDDOM,
+ *  SCIP_SEPARATED, or SCIP_CONSADDED.
  *  The integrality constraint handler has an enforcing priority of zero. A constraint handler which can
  *  (or wants) to enforce its constraints only for integral solutions should have a negative enforcing priority
  *  (e.g. the alldiff-constraint can only operate on integral solutions).
@@ -112,12 +113,12 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  solutions must have an enforcing priority greater than zero (e.g. the SOS-constraint incorporates
  *  SOS-branching on non-integral solutions).
  *  If the solution is integral and one of the constraints of the constraint handler is violated, the
- *  constraint handler has to branch, to reduce a variable's domain, or to create a cutting plane -- otherwise,
- *  the infeasibility cannot be resolved.
+ *  constraint handler has to branch, to reduce a variable's domain, to create a cutting plane, or to add an
+ *  additional constraint that cuts off the solution -- otherwise, the infeasibility cannot be resolved.
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    result          : pointer to store the result of the enforcing call
@@ -127,10 +128,11 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied to resolve infeasibility
  *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced to resolve infeasibility
  *    SCIP_SEPARATED  : at least one constraint is infeasible, and a cutting plane was generated to resolve infeasibility
+ *    SCIP_CONSADDED  : at least one constraint is infeasible, and a constraint was generated to resolve infeasibility
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENLP(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSENLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
 
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
@@ -142,11 +144,11 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *
  *  Like in the enforcing method for LP solutions, the enforcing methods of the active constraint handlers are
  *  called in decreasing order of their enforcing priorities until the first constraint handler returned with
- *  the value SCIP_BRANCHED or SCIP_REDUCEDDOM.
+ *  the value SCIP_BRANCHED, SCIP_REDUCEDDOM, or SCIP_CONSADDED.
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    result          : pointer to store the result of the enforcing call
@@ -155,10 +157,11 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
  *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied to resolve infeasibility
  *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced to resolve infeasibility
+ *    SCIP_CONSADDED  : at least one constraint is infeasible, and a constraint was generated to resolve infeasibility
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENPS(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSENPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
@@ -178,8 +181,8 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  'chcklprows' is FALSE.
  *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    sol             : the solution to check feasibility for
@@ -191,13 +194,14 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, SOL* sol, \
+#define DECL_CONSCHCK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, SOL* sol, \
                                     Bool chckintegrality, Bool chcklprows, RESULT* result)
 
 /** domain propagation method of constraint handler
+ *
  *  input:
- *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    result          : pointer to store the result of the propagation call
@@ -208,7 +212,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
  *    SCIP_DIDNOTRUN  : the propagator was skipped
  */
-#define DECL_CONSPROP(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
 
 
 
@@ -291,7 +295,7 @@ RETCODE SCIPconshdlrExit(
    SCIP*            scip                /**< SCIP data structure */   
    );
 
-/** calls separator method of constraint handler */
+/** calls separator method of constraint handler to separate all constraints added after last conshdlrReset() call */
 extern
 RETCODE SCIPconshdlrSeparate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -299,7 +303,9 @@ RETCODE SCIPconshdlrSeparate(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls enforcing method of constraint handler for LP solutions */
+/** calls enforcing method of constraint handler for LP solution for all constraints added after last
+ *  conshdlrReset() call
+ */
 extern
 RETCODE SCIPconshdlrEnforceLPSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -307,7 +313,9 @@ RETCODE SCIPconshdlrEnforceLPSol(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls enforcing method of constraint handler for pseudo solutions */
+/** calls enforcing method of constraint handler for pseudo solution for all constraints added after last
+ *  conshdlrReset() call
+ */
 extern
 RETCODE SCIPconshdlrEnforcePseudoSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -335,12 +343,16 @@ RETCODE SCIPconshdlrPropagate(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** adds constraint to constraint handler's problem constraint array */
+/** resets separation to start with first constraint in the next call */
 extern
-RETCODE SCIPconshdlrAddProbCons(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   const SET*       set,                /**< global SCIP settings */
-   CONS*            cons                /**< model constraint of initial problem to add */
+void SCIPconshdlrResetSepa(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** resets enforcement to start with first constraint in the next call */
+extern
+void SCIPconshdlrResetEnfo(
+   CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets name of constraint handler */
@@ -362,13 +374,7 @@ void SCIPconshdlrSetData(
    CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
-/** gets constraints array of constraint handler */
-extern
-CONS** SCIPconshdlrGetConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
-/** gets number of constraints in constraints array of constraint handler */
+/** gets number of active constraints of constraint handler */
 extern
 int SCIPconshdlrGetNConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -398,7 +404,12 @@ Bool SCIPconshdlrIsInitialized(
  * Constraint methods
  */
 
-/** creates and captures a constraint */
+/** creates and captures a constraint
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  may be declared feasible even if it violates this particular constraint.
+ *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
+ *  local constraint is redundant due to the variable's local bounds.
+ */
 extern
 RETCODE SCIPconsCreate(
    CONS**           cons,               /**< pointer to constraint */
@@ -406,8 +417,11 @@ RETCODE SCIPconsCreate(
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             original,           /**< is constraint belonging to the original problem? */
-   Bool             model               /**< is constraint necessary for feasibility? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             original            /**< is constraint belonging to the original problem? */
    );
 
 /** frees a constraint */
@@ -478,11 +492,7 @@ Bool SCIPconsIsOriginal(
    CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint is necessary for feasibility */
-extern
-Bool SCIPconsIsModel(
-   CONS*            cons                /**< constraint */
-   );
+
 
 
 /*

@@ -404,7 +404,7 @@ RETCODE SCIPbranchruleFree(
    /* call destructor of branching rule */
    if( (*branchrule)->branchfree != NULL )
    {
-      CHECK_OKAY( (*branchrule)->branchfree(*branchrule, scip) );
+      CHECK_OKAY( (*branchrule)->branchfree(scip, *branchrule) );
    }
 
    freeMemoryArray(&(*branchrule)->name);
@@ -433,7 +433,7 @@ RETCODE SCIPbranchruleInit(
 
    if( branchrule->branchinit != NULL )
    {
-      CHECK_OKAY( branchrule->branchinit(branchrule, scip) );
+      CHECK_OKAY( branchrule->branchinit(scip, branchrule) );
    }
    branchrule->initialized = TRUE;
 
@@ -459,7 +459,7 @@ RETCODE SCIPbranchruleExit(
 
    if( branchrule->branchexit != NULL )
    {
-      CHECK_OKAY( branchrule->branchexit(branchrule, scip) );
+      CHECK_OKAY( branchrule->branchexit(scip, branchrule) );
    }
    branchrule->initialized = FALSE;
 
@@ -480,7 +480,7 @@ RETCODE SCIPbranchruleExecLPSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexlp != NULL )
    {
-      CHECK_OKAY( branchrule->branchexlp(branchrule, scip, result) );
+      CHECK_OKAY( branchrule->branchexlp(scip, branchrule, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
@@ -512,7 +512,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexps != NULL )
    {
-      CHECK_OKAY( branchrule->branchexps(branchrule, scip, result) );
+      CHECK_OKAY( branchrule->branchexps(scip, branchrule, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM

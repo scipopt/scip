@@ -99,8 +99,8 @@ typedef struct Lp LP;                   /**< actual LP data */
 struct Col
 {
    VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
-   ROW**            row;                /**< rows of column entries, that may have a nonzero dual solution value */
-   Real*            val;                /**< coefficients of column entries */
+   ROW**            rows;               /**< rows of column entries, that may have a nonzero dual solution value */
+   Real*            vals;               /**< coefficients of column entries */
    int*             linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
@@ -126,8 +126,8 @@ struct Col
 struct Row
 {
    char*            name;               /**< name of the row */
-   COL**            col;                /**< columns of row entries, that may have a nonzero primal solution value */
-   Real*            val;                /**< coefficients of row entries */
+   COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
+   Real*            vals;               /**< coefficients of row entries */
    int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    Real             lhs;                /**< left hand side of row */
@@ -162,7 +162,7 @@ struct Row
    unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
    unsigned int     rhschanged:1;       /**< was right hand side changed, and has data of LP solver to be updated? */
    unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
-   unsigned int     model:1;            /**< does row belongs to a model constraint? */
+   unsigned int     local:1;            /**< is row only valid locally? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int     nlocks:23;          /**< number of sealed locks of an unmodifiable row */
 };
@@ -391,7 +391,7 @@ RETCODE SCIProwCreate(
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< does row belongs to a model constraint? */
+   Bool             local,              /**< is row only valid locally? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
@@ -544,9 +544,9 @@ int SCIProwGetIndex(
    ROW*             row                 /**< LP row */
    );
 
-/** returns TRUE iff row belongs to a model constraint */
+/** returns TRUE iff row is only valid locally */
 extern
-Bool SCIProwIsModel(
+Bool SCIProwIsLocal(
    ROW*             row                 /**< LP row */
    );
 

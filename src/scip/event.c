@@ -104,7 +104,7 @@ RETCODE SCIPeventhdlrFree(
    /* call destructor of event handler */
    if( (*eventhdlr)->eventfree != NULL )
    {
-      CHECK_OKAY( (*eventhdlr)->eventfree(*eventhdlr, scip) );
+      CHECK_OKAY( (*eventhdlr)->eventfree(scip, *eventhdlr) );
    }
 
    freeMemoryArray(&(*eventhdlr)->name);
@@ -133,7 +133,7 @@ RETCODE SCIPeventhdlrInit(
 
    if( eventhdlr->eventinit != NULL )
    {
-      CHECK_OKAY( eventhdlr->eventinit(eventhdlr, scip) );
+      CHECK_OKAY( eventhdlr->eventinit(scip, eventhdlr) );
    }
    eventhdlr->initialized = TRUE;
 
@@ -159,7 +159,7 @@ RETCODE SCIPeventhdlrExit(
 
    if( eventhdlr->eventexit != NULL )
    {
-      CHECK_OKAY( eventhdlr->eventexit(eventhdlr, scip) );
+      CHECK_OKAY( eventhdlr->eventexit(scip, eventhdlr) );
    }
    eventhdlr->initialized = FALSE;
 
@@ -182,7 +182,7 @@ RETCODE SCIPeventhdlrExec(
 
    debugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, event, event->eventtype);
 
-   CHECK_OKAY( eventhdlr->eventexec(eventhdlr, set->scip, event, eventdata) );
+   CHECK_OKAY( eventhdlr->eventexec(set->scip, eventhdlr, event, eventdata) );
 
    return SCIP_OKAY;
 }
@@ -685,7 +685,7 @@ RETCODE SCIPeventfilterFree(
       assert((*eventfilter)->eventhdlrs[i] != NULL);
       if( (*eventfilter)->eventhdlrs[i]->eventdele != NULL )
       {
-         CHECK_OKAY( (*eventfilter)->eventhdlrs[i]->eventdele((*eventfilter)->eventhdlrs[i], set->scip,
+         CHECK_OKAY( (*eventfilter)->eventhdlrs[i]->eventdele(set->scip, (*eventfilter)->eventhdlrs[i],
                         &(*eventfilter)->eventdatas[i]) );
       }
    }

@@ -572,7 +572,8 @@ RETCODE SCIPnodeCreate(
 
    ALLOC_OKAY( allocBlockMemory(memhdr, node) );
    (*node)->parent = NULL;
-   (*node)->conslist = NULL;
+   (*node)->addedconss = NULL;
+   (*node)->deletedconss = NULL;
    (*node)->domchg = NULL;
    (*node)->lowerbound = -set->infinity;
    (*node)->depth = 0;
@@ -730,7 +731,8 @@ RETCODE SCIPnodeFree(
    }
 
    /* free common data */
-   SCIPconslistFree(&((*node)->conslist), memhdr, set);
+   SCIPconslistFree(&((*node)->addedconss), memhdr, set);
+   SCIPconslistFree(&((*node)->deletedconss), memhdr, set);
    SCIPdomchgFree(&((*node)->domchg), memhdr);
    CHECK_OKAY( nodeReleaseParent(*node, memhdr, set, tree, lp) );
 
@@ -820,7 +822,7 @@ RETCODE SCIPnodeAddCons(
    assert(node != NULL);
 
    /* add the constraint to the node's constraint list and capture it */
-   CHECK_OKAY( SCIPconslistAdd(&(node->conslist), memhdr, cons) );
+   CHECK_OKAY( SCIPconslistAdd(&(node->addedconss), memhdr, cons) );
 
    /* if the node is on the active path, add the constraint to the active constraints
     * of the constraint handler
@@ -2035,14 +2037,7 @@ RETCODE SCIPtreeFree(
    assert((*tree)->actnode == NULL);
 
    debugMessage("free tree\n");
-#ifdef SCIP_BLOCKMEMORY
-   /* we don't need to free the nodes and domain changes, because they are stored in block memory
-    * we just need to free the queue data structure
-    */
-   /* SCIPnodepqDestroy(&(*tree)->leaves); */
-   todoMessage("don't free the tree, but in some way release all variables and constraints");
-#endif
-   /* #else */
+
    /* free node queue */
    CHECK_OKAY( SCIPnodepqFree(&(*tree)->leaves, memhdr, set, *tree, lp) );
    
@@ -2108,40 +2103,6 @@ RETCODE SCIPtreeCutoff(
          CHECK_OKAY( SCIPnodeFree(&node, memhdr, set, tree, lp) );
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** adds local constraint to the active node and captures it */
-RETCODE SCIPtreeAddLocalCons(
-   TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   CONS*            cons                /**< constraint to add */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->actnode != NULL);
-
-   /* add constraint to active node and capture it */
-   CHECK_OKAY( SCIPnodeAddCons(tree->actnode, memhdr, set, cons) );
-
-   return SCIP_OKAY;
-}
-
-/** adds global constraint to the problem and captures it */
-RETCODE SCIPtreeAddGlobalCons(
-   TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   CONS*            cons                /**< constraint to add */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->root != NULL);
-
-   /* add constraint to root node and capture it */
-   CHECK_OKAY( SCIPnodeAddCons(tree->root, memhdr, set, cons) );
 
    return SCIP_OKAY;
 }

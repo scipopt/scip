@@ -35,10 +35,11 @@ enum Result
    SCIP_UNBOUNDED   =   4,            /**< an unboundness was detected */
    SCIP_CUTOFF      =   5,            /**< the current node is infeasible and can be cut off */
    SCIP_SEPARATED   =   6,            /**< the method added a cutting plane */
-   SCIP_REDUCEDDOM  =   7,            /**< the method reduced the domain of a variable */
-   SCIP_BRANCHED    =   8,            /**< the method created a branching */
-   SCIP_FOUNDSOL    =   9,            /**< the method found a feasible primal solution */
-   SCIP_SUCCESS     =  10             /**< the method was successfully executed */  
+   SCIP_CONSADDED   =   7,            /**< the method added a constraint */
+   SCIP_REDUCEDDOM  =   8,            /**< the method reduced the domain of a variable */
+   SCIP_BRANCHED    =   9,            /**< the method created a branching */
+   SCIP_FOUNDSOL    =  10,            /**< the method found a feasible primal solution */
+   SCIP_SUCCESS     =  11             /**< the method was successfully executed */  
 };
 typedef enum Result RESULT;           /**< result codes for SCIP callback methods */
 

@@ -34,32 +34,32 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
 /** destructor of branching method to free user data (called when SCIP is exiting)
  *
  *  input:
- *    branchrule      : the branching rule itself
  *    scip            : SCIP main data structure
+ *    branchrule      : the branching rule itself
  */
-#define DECL_BRANCHFREE(x) RETCODE x (BRANCHRULE* branchrule, SCIP* scip)
+#define DECL_BRANCHFREE(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
 /** initialization method of branching rule (called when problem solving starts)
  *
  *  input:
- *    branchrule      : the branching rule itself
  *    scip            : SCIP main data structure
+ *    branchrule      : the branching rule itself
  */
-#define DECL_BRANCHINIT(x) RETCODE x (BRANCHRULE* branchrule, SCIP* scip)
+#define DECL_BRANCHINIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
 /** deinitialization method of branching rule (called when problem solving exits)
  *
  *  input:
- *    branchrule      : the branching rule itself
  *    scip            : SCIP main data structure
+ *    branchrule      : the branching rule itself
  */
-#define DECL_BRANCHEXIT(x) RETCODE x (BRANCHRULE* branchrule, SCIP* scip)
+#define DECL_BRANCHEXIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
 /** branching execution method for fractional LP solutions
  *
  *  input:
- *    branchrule      : the branching rule itself
  *    scip            : SCIP main data structure
+ *    branchrule      : the branching rule itself
  *    result          : pointer to store the result of the branching call
  *
  *  possible return values for *result:
@@ -69,13 +69,13 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
  *    SCIP_SEPARATED  : a cutting plane was generated (only if "lpvalid" is TRUE)
  *    SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXLP(x) RETCODE x (BRANCHRULE* branchrule, SCIP* scip, RESULT* result)
+#define DECL_BRANCHEXLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
 
 /** branching execution method for not completely fixed pseudo solutions
  *
  *  input:
- *    branchrule      : the branching rule itself
  *    scip            : SCIP main data structure
+ *    branchrule      : the branching rule itself
  *    result          : pointer to store the result of the branching call
  *
  *  possible return values for *result:
@@ -84,7 +84,7 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
  *    SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
  *    SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXPS(x) RETCODE x (BRANCHRULE* branchrule, SCIP* scip, RESULT* result)
+#define DECL_BRANCHEXPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
 
 
 

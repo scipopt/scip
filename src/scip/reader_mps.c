@@ -555,7 +555,7 @@ RETCODE readName(
       // Sometimes the name is omitted.
       mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
 
-      printf("Problem name   : %s\n", mpsinputProbname(mpsi));
+      /*printf("Problem name   : %s\n", mpsinputProbname(mpsi));*/
  
       // This hat to be a new section
       if (!mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL))
@@ -667,7 +667,7 @@ RETCODE readRows(
    {
       if (mpsinputField0(mpsi) != NULL)
       {
-         printf("Objective name : %s\n", mpsinputObjname(mpsi));
+         /*printf("Objective name : %s\n", mpsinputObjname(mpsi));*/
 
          if (strcmp(mpsinputField0(mpsi), "COLUMNS"))
             break;
@@ -693,15 +693,15 @@ RETCODE readRows(
          {
          case 'G' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, SCIPinfinity(scip), TRUE, FALSE) );
+                           0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
             break;
          case 'E' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, 0.0, TRUE, FALSE) );
+                           0.0, 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
             break;
          case 'L' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL,
-                           -SCIPinfinity(scip), 0.0, TRUE, FALSE) );
+                           -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
@@ -838,7 +838,7 @@ RETCODE readRhs(
    {
       if (mpsinputField0(mpsi) != NULL)
       {
-         printf("RHS name       : %s\n", rhsname);
+         /*printf("RHS name       : %s\n", rhsname);*/
 
          if (!strcmp(mpsinputField0(mpsi), "RANGES"))
             mpsinputSetSection(mpsi, MPS_RANGES);
@@ -952,7 +952,7 @@ RETCODE readRanges(
    {
       if (mpsinputField0(mpsi) != NULL)
       {
-         printf("Range name     : %s\n", rngname);
+         /*printf("Range name     : %s\n", rngname);*/
 
          if (!strcmp(mpsinputField0(mpsi), "BOUNDS"))
             mpsinputSetSection(mpsi, MPS_BOUNDS);
@@ -1077,7 +1077,7 @@ RETCODE readBounds(
    {
       if (mpsinputField0(mpsi) != 0)
       {
-         printf("Bound name     : %s\n", bndname);
+         /*printf("Bound name     : %s\n", bndname);*/
 
          if (strcmp(mpsinputField0(mpsi), "ENDATA"))
             break;
@@ -1259,7 +1259,7 @@ RETCODE readMPS(
    {
       CHECK_OKAY( SCIPsetObjsense(scip, mpsinputObjsense(mpsi)) );
 
-      printf("Objective sense: %s\n", (mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE) ? "Minimize" : "Maximize"); 
+      /*printf("Objective sense: %s\n", (mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE) ? "Minimize" : "Maximize");*/
    }
    mpsinputFree(&mpsi);
 

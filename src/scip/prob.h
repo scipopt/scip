@@ -52,7 +52,7 @@ struct Prob
    VAR**            fixedvars;          /**< array with fixed and aggregated variables */
    VAR**            vars;               /**< array with active variables ordered binary, integer, implicit, continous */
    HASHTABLE*       varnames;           /**< hash table storing variable's names */
-   CONS**           conss;              /**< array with constraints of the problem ordered model, non-model */
+   CONS**           conss;              /**< array with constraints of the problem */
    HASHTABLE*       consnames;          /**< hash table storing constraints' names */
    OBJSENSE         objsense;           /**< objective sense */
    Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
@@ -67,7 +67,6 @@ struct Prob
    int              ncont;              /**< number of continous variables */
    int              consssize;          /**< available slots in conss array */
    int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
-   int              nmodelconss;        /**< number of model constraints in the problem (stored in first slots of conss) */
 };
 
 

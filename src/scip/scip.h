@@ -376,10 +376,11 @@ RETCODE SCIPfindCons(
  * local subproblem methods
  */
 
-/** adds local constraint to the actual subproblem */
+/** adds local constraint to the given node (and all of its subnodes) */
 extern
-RETCODE SCIPaddLocalCons(
+RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to add constraint to, or NULL for active node */
    CONS*            cons                /**< constraint to add */
    );
 
@@ -443,7 +444,7 @@ RETCODE SCIPgetVarSol(
    Real*            solval              /**< pointer to store the solution value */
    );
 
-/**< changes lower bound of variable in the given node; if possible, adjust bound to integral value */
+/** changes lower bound of variable in the given node; if possible, adjust bound to integral value */
 extern
 RETCODE SCIPchgVarLbNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -452,7 +453,7 @@ RETCODE SCIPchgVarLbNode(
    Real             newbound            /**< new value for bound */
    );
 
-/**< changes upper bound of variable in the given node; if possible, adjust bound to integral value */
+/** changes upper bound of variable in the given node; if possible, adjust bound to integral value */
 extern
 RETCODE SCIPchgVarUbNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -461,8 +462,8 @@ RETCODE SCIPchgVarUbNode(
    Real             newbound            /**< new value for bound */
    );
 
-/**< depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
- *   if possible, adjust bound to integral value
+/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
+ *  if possible, adjust bound to integral value
  */
 extern
 RETCODE SCIPchgVarLb(
@@ -471,8 +472,8 @@ RETCODE SCIPchgVarLb(
    Real             newbound            /**< new value for bound */
    );
 
-/**< depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
- *   if possible, adjust bound to integral value
+/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
+ *  if possible, adjust bound to integral value
  */
 extern
 RETCODE SCIPchgVarUb(
@@ -496,7 +497,12 @@ RETCODE SCIPchgVarType(
  * constraint methods
  */
 
-/** creates and captures a constraint of the given constraint handler */
+/** creates and captures a constraint of the given constraint handler
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  may be declared feasible even if it violates this particular constraint.
+ *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
+ *  local constraint is redundant due to the variable's local bounds.
+ */
 extern
 RETCODE SCIPcreateCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -504,7 +510,10 @@ RETCODE SCIPcreateCons(
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             model               /**< is constraint necessary for feasibility? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate           /**< should the constraint be propagated during node processing? */
    );
 
 /** increases usage counter of constraint */
@@ -576,7 +585,7 @@ RETCODE SCIPcreateRow(
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< does row belongs to a model constraint? */
+   Bool             local,              /**< is row only valid locally? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
@@ -779,9 +788,9 @@ RETCODE SCIPcreateChild(
    NODE**           node                /**< pointer to node data structure */
    );
 
-/**< branches on a variable; if solution value x' is fractional, two child nodes are created
- *   (x <= floor(x'), x >= ceil(x')), if solution value is integral, three child nodes are created
- *   (x <= x'-1, x == x', x >= x'+1)
+/** branches on a variable; if solution value x' is fractional, two child nodes are created
+ *  (x <= floor(x'), x >= ceil(x')), if solution value is integral, three child nodes are created
+ *  (x <= x'-1, x == x', x >= x'+1)
  */
 extern
 RETCODE SCIPbranchVar(

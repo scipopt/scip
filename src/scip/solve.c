@@ -254,6 +254,8 @@ RETCODE solveNodeLP(
       /* separation (has not to be done completely, because we just want to increase the lower bound) */
       if( mustsepar )
       {
+         Bool separateagain;
+
          assert(lp->solved);
 
          /* global cut pool separation */
@@ -263,10 +265,22 @@ RETCODE solveNodeLP(
 
          /* constraint separation */
          debugMessage("constraint separation\n");
-         for( h = 0; h < set->nconshdlrs && SCIPsepaGetNCuts(sepa) == 0; ++h )
+
+         /* reset the constraint handler's separation calls */
+         for( h = 0; h < set->nconshdlrs; ++h )
+            SCIPconshdlrResetSepa(set->conshdlrs[h]);
+         
+         /* try separating constraints until a constraint handler found a cut */
+         do
          {
-            CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], set, &result) );
+            separateagain = FALSE;
+            for( h = 0; h < set->nconshdlrs && SCIPsepaGetNCuts(sepa) == 0; ++h )
+            {
+               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], set, &result) );
+               separateagain |= (result == SCIP_CONSADDED);
+            }
          }
+         while( separateagain && (SCIPsepaGetNCuts(sepa) == 0) );
          
          /* cut separation */
          if( SCIPsepaGetNCuts(sepa) == 0 )
@@ -369,6 +383,7 @@ RETCODE enforceConstraints(
 {
    RESULT result;
    Bool resolved;
+   Bool enforceagain;
    int h;
 
    assert(set != NULL);
@@ -383,7 +398,6 @@ RETCODE enforceConstraints(
    /* enforce constraints: branching, separating, reducing domains */
    assert(!(*infeasible));
    assert(!(*solveagain));
-   resolved = FALSE;
 
    todoMessage("avoid checking the same pseudosolution twice");
 
@@ -392,69 +406,97 @@ RETCODE enforceConstraints(
     */
    debugMessage("enforcing constraints\n");
 
-   for( h = 0; h < set->nconshdlrs && !resolved; ++h )
+   /* reset the constraint handler's enforcement calls */
+   for( h = 0; h < set->nconshdlrs; ++h )
+      SCIPconshdlrResetEnfo(set->conshdlrs[h]);
+
+   /* enforce constraints until a handler resolved an infeasibility with cutting off the node, branching, 
+    * reducing a domain, or separating a cut
+    * if a constraint handler introduced new constraints to enforce his constraints, the newly added constraints
+    * have to be enforced themselves
+    */
+   do
    {
-      if( tree->actnodehaslp )
+      enforceagain = FALSE;
+      resolved = FALSE;
+      for( h = 0; h < set->nconshdlrs && !resolved; ++h )
       {
-         CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], set, &result) );
-      }
-      else
-      {
-         CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], set, &result) );
-      }
-      switch( result )
-      {
-      case SCIP_CUTOFF:
-         assert(tree->nchildren == 0);
-         *infeasible = TRUE;
-         resolved = TRUE;
-         break;
-      case SCIP_BRANCHED:
-         assert(tree->nchildren >= 1);
-         *infeasible = TRUE;
-         resolved = TRUE;
-         break;
-      case SCIP_REDUCEDDOM:
-         assert(tree->nchildren == 0);
-         *infeasible = TRUE;
-         *solveagain = TRUE;
-         resolved = TRUE;
-         break;
-      case SCIP_SEPARATED:
-         assert(tree->nchildren == 0);
-         if( !tree->actnodehaslp )
+         if( tree->actnodehaslp )
          {
-            char s[255];
-            sprintf(s, "enforcing method of constraint handler <%s> separated cuts, but LP is not processed",
-               SCIPconshdlrGetName(conshdlrs_enfo[h]));
-            errorMessage(s);
-            return SCIP_INVALIDRESULT;
+            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], set, &result) );
          }
-         *infeasible = TRUE;
-         *solveagain = TRUE;
-         resolved = TRUE;
-         break;
-      case SCIP_INFEASIBLE:
-         assert(tree->nchildren == 0);
-         *infeasible = TRUE;
-         break;
-      case SCIP_FEASIBLE:
-         assert(tree->nchildren == 0);
-         break;
-      default:
+         else
          {
-            char s[255];
-            sprintf(s, "invalid result code <%d> from enforcing method of constraint handler <%s>",
-               result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
-            errorMessage(s);
-            return SCIP_INVALIDRESULT;
+            CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], set, &result) );
          }
-         break;
+         switch( result )
+         {
+         case SCIP_FEASIBLE:
+            assert(tree->nchildren == 0);
+            break;
+
+         case SCIP_INFEASIBLE:
+            assert(tree->nchildren == 0);
+            *infeasible = TRUE;
+            break;
+
+         case SCIP_CUTOFF:
+            assert(tree->nchildren == 0);
+            *infeasible = TRUE;
+            resolved = TRUE;
+            break;
+
+         case SCIP_SEPARATED:
+            assert(tree->nchildren == 0);
+            if( !tree->actnodehaslp )
+            {
+               char s[255];
+               sprintf(s, "enforcing method of constraint handler <%s> separated cuts, but LP is not processed",
+                  SCIPconshdlrGetName(conshdlrs_enfo[h]));
+               errorMessage(s);
+               return SCIP_INVALIDRESULT;
+            }
+            *infeasible = TRUE;
+            *solveagain = TRUE;
+            resolved = TRUE;
+            break;
+
+         case SCIP_CONSADDED:
+            assert(tree->nchildren == 0);
+            *infeasible = TRUE;
+            resolved = TRUE;
+            enforceagain = TRUE; /* the newly added constraints have to be enforced themselves */
+            break;
+
+         case SCIP_REDUCEDDOM:
+            assert(tree->nchildren == 0);
+            *infeasible = TRUE;
+            *solveagain = TRUE;
+            resolved = TRUE;
+            break;
+
+         case SCIP_BRANCHED:
+            assert(tree->nchildren >= 1);
+            *infeasible = TRUE;
+            resolved = TRUE;
+            break;
+
+         default:
+            {
+               char s[255];
+               sprintf(s, "invalid result code <%d> from enforcing method of constraint handler <%s>",
+                  result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
+               errorMessage(s);
+               return SCIP_INVALIDRESULT;
+            }
+            break;
+         }
+         assert(!(*solveagain) || (resolved && *infeasible));
       }
-      assert(!(*solveagain) || (resolved && *infeasible));
+      debugMessage(" -> enforcing result: infeasible=%d, solveagain=%d, resolved=%d, enforceagain=%d\n",
+         *infeasible, *solveagain, resolved, enforceagain);
    }
-   debugMessage(" -> enforcing result: infeasible=%d, solveagain=%d, resolved=%d\n",
-      *infeasible, *solveagain, resolved);
+   while( enforceagain );
 
    if( *infeasible && !resolved )
    {

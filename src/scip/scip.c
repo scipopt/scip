@@ -657,15 +657,16 @@ RETCODE SCIPreadProb(
    case SCIP_SUCCESS:
       assert(scip->origprob != NULL);
       
-      sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d (%d model) constraints",
+      sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
          scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
-         scip->origprob->nconss, scip->origprob->nmodelconss);
+         scip->origprob->nconss);
       infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
-
+#if 0
       printf(" var names :  ");
       SCIPhashtablePrintStatistics(scip->origprob->varnames);
       printf(" cons names:  ");
       SCIPhashtablePrintStatistics(scip->origprob->consnames);
+#endif
 
       return SCIP_OKAY;
 
@@ -872,7 +873,7 @@ RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPtreeAddGlobalCons(scip->tree, scip->mem->solvemem, scip->set, cons) );
+      CHECK_OKAY( SCIPnodeAddCons(scip->tree->root, scip->mem->solvemem, scip->set, cons) );
       return SCIP_OKAY;
 
    default:
@@ -922,17 +923,21 @@ RETCODE SCIPfindCons(
  * local subproblem methods
  */
 
-/** adds local constraint to the actual subproblem */
-RETCODE SCIPaddLocalCons(
+/** adds local constraint to the given node (and all of its subnodes) */
+RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to add constraint to, or NULL for active node */
    CONS*            cons                /**< constraint to add */
    )
 {
    assert(cons != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPaddLocalCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPtreeAddLocalCons(scip->tree, scip->mem->solvemem, scip->set, cons) );
+   if( node == NULL )
+      node = scip->tree->actnode;
+
+   CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, cons) );
    
    return SCIP_OKAY;
 }
@@ -949,6 +954,9 @@ RETCODE SCIPsolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   char s[255];
+   int i;
+
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    switch( scip->stage )
@@ -989,6 +997,20 @@ RETCODE SCIPsolve(
       /* presolve problem */
       todoMessage("problem presolving");
 
+      /* print presolved problem statistics */
+      sprintf(s, "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
+         scip->transprob->nvars, scip->transprob->nbin, scip->transprob->nint, scip->transprob->nimpl,
+         scip->transprob->ncont, scip->transprob->nconss);
+      infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+
+      for( i = 0; i < scip->set->nconshdlrs; ++i )
+         if( SCIPconshdlrGetNConss(scip->set->conshdlrs[i]) > 0 )
+         {
+            sprintf(s, " %5d constraints of type <%s>", 
+               SCIPconshdlrGetNConss(scip->set->conshdlrs[i]), SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+            infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+         }
+
       /* create branch-and-bound tree */
       CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->transprob) );
       
@@ -999,6 +1021,7 @@ RETCODE SCIPsolve(
 
    case SCIP_STAGE_SOLVING:
       /* continue solution process */
+      infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_NORMAL, "");
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
                      scip->lp, scip->price, scip->sepa, scip->branchcand, scip->cutpool, scip->primal,
                      scip->eventfilter, scip->eventqueue) );
@@ -1376,14 +1399,22 @@ RETCODE SCIPchgVarType(
  * constraint methods
  */
 
-/** creates and captures a constraint of the given constraint handler */
+/** creates and captures a constraint of the given constraint handler
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  may be declared feasible even if it violates this particular constraint.
+ *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
+ *  local constraint is redundant due to the variable's local bounds.
+ */
 RETCODE SCIPcreateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to constraint */
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             model               /**< is constraint necessary for feasibility? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate           /**< should the constraint be propagated during node processing? */
    )
 {
    assert(cons != NULL);
@@ -1395,13 +1426,15 @@ RETCODE SCIPcreateCons(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, model, TRUE) );
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, separate, enforce, check, propagate,
+                     TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata, model, FALSE) );
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata, separate, enforce, check, propagate,
+                     FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -1547,7 +1580,7 @@ RETCODE SCIPcreateRow(
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model,              /**< does row belongs to a model constraint? */
+   Bool             local,              /**< is row only valid locally? */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    )
 {
@@ -1556,7 +1589,7 @@ RETCODE SCIPcreateRow(
    CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                  name, len, col, val, lhs, rhs, model, modifiable) );
+                  name, len, col, val, lhs, rhs, local, modifiable) );
 
    return SCIP_OKAY;
 }
@@ -2486,8 +2519,6 @@ RETCODE SCIPcatchEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    )
 {
-   todoMessage("catching events must be possible anytime -> which memory block to use in the event filter?");
-
    CHECK_OKAY( checkStage(scip, "SCIPcatchEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPeventfilterAdd(scip->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );

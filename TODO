@@ -1,7 +1,3 @@
-zu beachten:
-- wenn man eine Row loescht (bei Subroot oder von den neuen Rows im active node), dann muss diese als Linear Constraint
-  in die Constraintliste eingetragen werden, falls es sich um eine model-row handelt
-
 
 kurzfristig:
 - sind verschiedene Cut-Pools noetig oder reicht ein globaler Cut-Pool erzeugt ueber zusaetzliche linear constraints
