@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.20 2004/04/06 13:09:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.21 2004/04/28 14:59:02 bzfwolte Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -87,6 +87,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    Real* binvrow;
    Real* cutcoef;
    Real cutrhs;
+   Real cutact;
    Real maxscale;
    Longint maxdnom;
    int* basisind;
@@ -205,14 +206,13 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                CHECK_OKAY( SCIPgetLPBInvRow(scip, i, binvrow) );
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               CHECK_OKAY( SCIPcalcMIR(scip, 0.05, binvrow, cutcoef, &cutrhs, &success) );
+               CHECK_OKAY( SCIPcalcMIR(scip, 0.05, binvrow, 1.0, cutcoef, &cutrhs, &cutact, &success) );
 
                /* if successful, convert dense cut into sparse row, and add the row as a cut */
-               if( success )
+               if( success && SCIPisCutViolated(scip, cutact, cutrhs) )
                {
                   COL** cutcols;
                   Real* cutvals;
-                  Real cutact;
                   Real cutsqrnorm;
                   Real cutnorm;
                   Real val;

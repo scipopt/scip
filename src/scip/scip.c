@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.154 2004/04/27 15:50:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.155 2004/04/28 14:59:01 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5669,15 +5669,17 @@ RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   Real             scale,              /**< additional scaling factor multiplied to all rows */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob->nvars, scip->transprob->vars,
-                  minfrac, weights, mircoef, mirrhs, success) );
+                  minfrac, weights, scale, mircoef, mirrhs, cutactivity, success) );
 
    return SCIP_OKAY;
 }
