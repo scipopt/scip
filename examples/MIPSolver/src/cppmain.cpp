@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.2 2005/01/18 09:26:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.3 2005/02/02 19:45:47 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library
@@ -176,14 +176,7 @@ RETCODE runSCIP(
 
    CHECK_OKAY( SCIPfree(&scip) );
 
-
-   /*****************************
-    * Local Memory Deallocation *
-    *****************************/
-
-#ifndef NDEBUG
-   memoryCheckEmpty();
-#endif
+   checkEmptyMemory();
 
    return SCIP_OKAY;
 }
