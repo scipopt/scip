@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.24 2004/03/19 09:41:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.25 2004/03/30 12:51:40 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -115,6 +115,7 @@ RETCODE SCIPbranchruleCreate(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
+   int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -173,6 +174,13 @@ void SCIPbranchruleSetPriority(
    int              priority            /**< new priority of the branching rule */
    );
 
+/** sets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
+extern
+void SCIPbranchruleSetMaxdepth(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SET*             set,                /**< global SCIP settings */
+   int              maxdepth            /**< new maxdepth of the branching rule */
+   );
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.4 2004/02/04 17:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.5 2004/03/30 12:51:41 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -31,6 +31,7 @@
 #define BRANCHRULE_NAME            "xxx"
 #define BRANCHRULE_DESC            "branching rule template"
 #define BRANCHRULE_PRIORITY        0
+#define BRANCHRULE_MAXDEPTH      -1
 
 
 
@@ -158,7 +159,7 @@ RETCODE SCIPincludeBranchruleXxx(
    /* TODO: (optional) create branching rule specific data here */
 
    /* include branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
                   branchFreeXxx, branchInitXxx, branchExitXxx, branchExeclpXxx, branchExecpsXxx,
                   branchruledata) );
 

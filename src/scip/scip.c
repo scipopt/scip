@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.135 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.136 2004/03/30 12:51:50 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1492,6 +1492,7 @@ RETCODE SCIPincludeBranchrule(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
+   int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -1504,7 +1505,7 @@ RETCODE SCIPincludeBranchrule(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority,
+   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth,
                   branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
    CHECK_OKAY( SCIPsetIncludeBranchrule(scip->set, branchrule) );
    
@@ -1556,6 +1557,20 @@ RETCODE SCIPsetBranchrulePriority(
    CHECK_OKAY( checkStage(scip, "SCIPsetBranchrulePriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIPbranchruleSetPriority(branchrule, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
+/** sets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
+RETCODE SCIPsetBranchruleMaxdepth(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   int              maxdepth            /**< new maxdepth of the branching rule */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetBranchruleMaxdepth", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPbranchruleSetMaxdepth(branchrule, scip->set, maxdepth);
 
    return SCIP_OKAY;
 }
@@ -3515,7 +3530,8 @@ RETCODE SCIPgetVarStrongbranch(
    VAR*             var,                /**< variable to get strong branching values for */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
-   Real*            up                  /**< stores dual bound after branching column up */
+   Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranch", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -3526,7 +3542,7 @@ RETCODE SCIPgetVarStrongbranch(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPcolGetStrongbranch(SCIPvarGetCol(var), scip->set, scip->stat, scip->lp, itlim, down, up) );
+   CHECK_OKAY( SCIPcolGetStrongbranch(SCIPvarGetCol(var), scip->set, scip->stat, scip->lp, itlim, down, up, lperror) );
 
    return SCIP_OKAY;
 }
@@ -4047,14 +4063,18 @@ RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to fix */
    Real             fixedval,           /**< value to fix variable at */
-   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    )
 {
    assert(var != NULL);
    assert(infeasible != NULL);
+   assert(fixed != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPfixVar", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-   
+
+   *fixed = FALSE;
+
    if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsIntegral(scip->set, fixedval))
       || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
       || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
@@ -4077,16 +4097,19 @@ RETCODE SCIPfixVar(
       if( SCIPsetIsGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
       {
          CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
+         *fixed = TRUE;
       }
       if( SCIPsetIsLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
          CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
+         *fixed = TRUE;
       }
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
                      scip->branchcand, scip->eventqueue, fixedval, infeasible) );
+      *fixed = TRUE;
       return SCIP_OKAY;
       
    default:
@@ -5398,7 +5421,7 @@ RETCODE SCIPcreateEmptyRow(
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPcreateEmptyRow", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
                   name, 0, NULL, NULL, lhs, rhs, local, modifiable, removeable) );

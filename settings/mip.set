@@ -290,6 +290,14 @@ constraints/logicor/maxvarusefac = 1
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: -0.2]
 constraints/logicor/minvarusefac = -0.2
 
+# frequency for separating cuts of constraint handler <or> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/or/sepafreq = 1
+
+# frequency for propagating domains of constraint handler <or> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/or/propfreq = 1
+
 # priority of conflict handler <setppc>
 # [type: int, range: [-2147483648,2147483647], default: 700000]
 conflict/setppc/priority = 700000
@@ -313,6 +321,14 @@ constraints/knapsack/sepafreq = 10
 # frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
+
+# maximal number of separation rounds per node
+# [type: int, range: [0,2147483647], default: 5]
+constraints/knapsack/maxrounds = 5
+
+# maximal number of separation rounds per node in the root node
+# [type: int, range: [0,2147483647], default: 10]
+constraints/knapsack/maxroundsroot = 10
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -382,13 +398,25 @@ nodeselection/restartdfs/selectbestfreq = 1000
 # [type: int, range: [-2147483648,2147483647], default: -100]
 branching/conffullstrong/priority = -100
 
+# maximal depth level, up to which branching rule <conffullstrong> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/conffullstrong/maxdepth = -1
+
 # priority of branching rule <fullstrong>
 # [type: int, range: [-2147483648,2147483647], default: 0]
 branching/fullstrong/priority = 0
 
+# maximal depth level, up to which branching rule <fullstrong> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/fullstrong/maxdepth = -1
+
 # priority of branching rule <history>
 # [type: int, range: [-2147483648,2147483647], default: 10000]
 branching/history/priority = 10000
+
+# maximal depth level, up to which branching rule <history> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/history/maxdepth = -1
 
 # minimal value for minimum history size to regard history value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 4]
@@ -422,9 +450,17 @@ branching/history/inititer = 0
 # [type: int, range: [-2147483648,2147483647], default: 100]
 branching/mostinf/priority = 100
 
+# maximal depth level, up to which branching rule <mostinf> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/mostinf/maxdepth = -1
+
 # priority of branching rule <leastinf>
 # [type: int, range: [-2147483648,2147483647], default: 50]
 branching/leastinf/priority = 50
+
+# maximal depth level, up to which branching rule <leastinf> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/leastinf/maxdepth = -1
 
 # priority of heuristic <coefdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1001000]

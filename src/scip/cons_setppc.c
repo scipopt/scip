@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.37 2004/03/08 18:05:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.38 2004/03/30 12:51:45 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1912,8 +1912,9 @@ DECL_CONSPRESOL(consPresolSetppc)
                if( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && !SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
                {
                   Bool infeasible;
+                  Bool fixed;
 
-                  CHECK_OKAY( SCIPfixVar(scip, var, 0.0, &infeasible) );
+                  CHECK_OKAY( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
                   if( infeasible )
                   {
                      debugMessage("setppc constraint <%s>: infeasible fixing <%s> == 0\n",
@@ -1921,6 +1922,7 @@ DECL_CONSPRESOL(consPresolSetppc)
                      *result = SCIP_CUTOFF;
                      return SCIP_OKAY;
                   }
+                  assert(fixed);
                   (*nfixedvars)++;
                   *result = SCIP_SUCCESS;
                }
@@ -1986,6 +1988,7 @@ DECL_CONSPRESOL(consPresolSetppc)
             {
                VAR* var;
                Bool infeasible;
+               Bool fixed;
                Bool found;
                int v;
                
@@ -2002,7 +2005,7 @@ DECL_CONSPRESOL(consPresolSetppc)
                }
                assert(found);
 
-               CHECK_OKAY( SCIPfixVar(scip, var, 1.0, &infeasible) );
+               CHECK_OKAY( SCIPfixVar(scip, var, 1.0, &infeasible, &fixed) );
                if( infeasible )
                {
                   debugMessage("setppc constraint <%s>: infeasible fixing <%s> == 1\n",
@@ -2010,8 +2013,10 @@ DECL_CONSPRESOL(consPresolSetppc)
                   *result = SCIP_CUTOFF;
                   return SCIP_OKAY;
                }
-               CHECK_OKAY( SCIPdelCons(scip, cons) );
+               assert(fixed);
                (*nfixedvars)++;
+
+               CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*ndelconss)++;
                *result = SCIP_SUCCESS;
                continue;

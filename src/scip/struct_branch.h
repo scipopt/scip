@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.5 2004/02/25 16:49:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.6 2004/03/30 12:51:52 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -67,6 +67,7 @@ struct Branchrule
    BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
    CLOCK*           clock;              /**< branching rule execution time */
    int              priority;           /**< priority of the branching rule */
+   int              maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    Bool             initialized;        /**< is branching rule initialized? */
 };
 

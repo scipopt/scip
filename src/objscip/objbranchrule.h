@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.6 2004/02/05 14:12:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.7 2004/03/30 12:51:49 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -51,15 +51,20 @@ public:
    /** default priority of the branching rule */
    const int scip_priority_;
 
+   /** default maximal depth for applying the branching rule */
+   const int scip_maxdepth_;
+
    /** default constructor */
    ObjBranchrule(
       const char*   name,               /**< name of branching rule */
       const char*   desc,               /**< description of branching rule */
-      int           priority            /**< priority of the branching rule */
+      int           priority,           /**< priority of the branching rule */
+      int           maxdepth            /**< maximal depth level, up to which this branching rule should be used (or -1) */
       )
       : scip_name_(name),
         scip_desc_(desc),
-        scip_priority_(priority)
+        scip_priority_(priority),
+        scip_maxdepth_(maxdepth)
    {
    }
 

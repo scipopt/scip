@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.70 2004/03/19 09:41:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.71 2004/03/30 12:51:48 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -181,7 +181,8 @@ RETCODE SCIPcolGetStrongbranch(
    LP*              lp,                 /**< current LP data */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
-   Real*            up                  /**< stores dual bound after branching column up */
+   Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
 /** gets last strong branching information available for a column variable;

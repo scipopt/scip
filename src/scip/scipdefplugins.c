@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.14 2004/03/09 18:03:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.15 2004/03/30 12:51:51 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -37,6 +37,7 @@
 #include "cons_knapsack.h"
 #include "cons_linear.h"
 #include "cons_logicor.h"
+#include "cons_or.h"
 #include "cons_setppc.h"
 #include "cons_varlb.h"
 #include "cons_varub.h"
@@ -71,6 +72,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeConshdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConshdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConshdlrLogicor(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrOr(scip) );
    CHECK_OKAY( SCIPincludeConshdlrSetppc(scip) );
    CHECK_OKAY( SCIPincludeConshdlrKnapsack(scip) );
 

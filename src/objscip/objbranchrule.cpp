@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.4 2004/02/04 17:27:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.5 2004/03/30 12:51:49 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -162,7 +162,7 @@ RETCODE SCIPincludeObjBranchrule(
 
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
-                  objbranchrule->scip_priority_,
+                  objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_,
                   branchFreeObj, branchInitObj, branchExitObj, branchExeclpObj, branchExecpsObj,
                   branchruledata) );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.57 2004/03/09 18:03:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.58 2004/03/30 12:51:48 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -400,6 +400,8 @@ RETCODE setParameterValues(const CPXPARAM* cpxparam)
    {
       if( curparam.intparval[i] != cpxparam->intparval[i] )
       {
+         debugMessage("setting CPLEX int parameter %d from %d to %d\n", 
+            intparam[i], curparam.intparval[i], cpxparam->intparval[i]);
          curparam.intparval[i] = cpxparam->intparval[i];
          CHECK_ZERO( CPXsetintparam(cpxenv, intparam[i], curparam.intparval[i]) );
       }
@@ -408,6 +410,8 @@ RETCODE setParameterValues(const CPXPARAM* cpxparam)
    {
       if( curparam.dblparval[i] != cpxparam->dblparval[i] )
       {
+         debugMessage("setting CPLEX dbl parameter %d from %g to %g\n", 
+            dblparam[i], curparam.dblparval[i], cpxparam->dblparval[i]);
          curparam.dblparval[i] = cpxparam->dblparval[i];
          CHECK_ZERO( CPXsetdblparam(cpxenv, dblparam[i], curparam.dblparval[i]) );
       }
@@ -728,7 +732,7 @@ RETCODE SCIPlpiCreate(
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
-   CHECK_ZERO(restat);
+   CHECK_ZERO( restat );
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
    numlp++;
@@ -808,6 +812,8 @@ RETCODE SCIPlpiLoadColLP(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("loading LP in column format into CPLEX: %d cols, %d rows\n", ncols, nrows);
+
    invalidateSolution(lpi);
 
    CHECK_OKAY( ensureSidechgMem(lpi, nrows) );
@@ -857,6 +863,8 @@ RETCODE SCIPlpiAddCols(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("adding %d columns with %d nonzeros to CPLEX\n", ncols, nnonz);
+
    invalidateSolution(lpi);
 
    CHECK_ZERO( CPXaddcols(cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
@@ -876,7 +884,10 @@ RETCODE SCIPlpiDelCols(
    assert(lpi->cpxlp != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(cpxenv, lpi->cpxlp));
 
+   debugMessage("deleting %d columns from CPLEX\n", lastcol - firstcol + 1);
+
    invalidateSolution(lpi);
+
    CHECK_ZERO( CPXdelcols(cpxenv, lpi->cpxlp, firstcol, lastcol) );
 
    return SCIP_OKAY;   
@@ -893,6 +904,8 @@ RETCODE SCIPlpiDelColset(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("deleting a column set from CPLEX\n");
 
    invalidateSolution(lpi);
 
@@ -919,6 +932,8 @@ RETCODE SCIPlpiAddRows(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("adding %d rows with %d nonzeros to CPLEX\n", nrows, nnonz);
 
    invalidateSolution(lpi);
 
@@ -950,7 +965,10 @@ RETCODE SCIPlpiDelRows(
    assert(lpi->cpxlp != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(cpxenv, lpi->cpxlp));
 
+   debugMessage("deleting %d rows from CPLEX\n", lastrow - firstrow + 1);
+
    invalidateSolution(lpi);
+
    CHECK_ZERO( CPXdelrows(cpxenv, lpi->cpxlp, firstrow, lastrow) );
 
    return SCIP_OKAY;   
@@ -967,6 +985,8 @@ RETCODE SCIPlpiDelRowset(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("deleting a row set from CPLEX\n");
 
    invalidateSolution(lpi);
 
@@ -986,6 +1006,8 @@ RETCODE SCIPlpiClear(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("clearing CPLEX LP\n");
 
    invalidateSolution(lpi);
 
@@ -1016,6 +1038,8 @@ RETCODE SCIPlpiChgBounds(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("changing %d bounds in CPLEX\n", ncols);
+
    invalidateSolution(lpi);
 
    CHECK_OKAY( ensureBoundchgMem(lpi, ncols) );
@@ -1041,6 +1065,8 @@ RETCODE SCIPlpiChgSides(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("changing %d sides in CPLEX\n", nrows);
 
    invalidateSolution(lpi);
 
@@ -1081,6 +1107,8 @@ RETCODE SCIPlpiChgCoef(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("changing coefficient row %d, column %d in CPLEX to %g\n", row, col, newval);
+
    invalidateSolution(lpi);
 
    CHECK_ZERO( CPXchgcoef(cpxenv, lpi->cpxlp, row, col, newval) );
@@ -1097,6 +1125,8 @@ RETCODE SCIPlpiChgObjsen(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("changing objective sense in CPLEX to %d\n", objsen);
 
    invalidateSolution(lpi);
    
@@ -1116,6 +1146,8 @@ RETCODE SCIPlpiChgObj(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("changing %d objective values in CPLEX\n", ncols);
 
    CHECK_ZERO( CPXchgobj(cpxenv, lpi->cpxlp, ncols, ind, obj) );
 
@@ -1139,6 +1171,8 @@ RETCODE SCIPlpiScaleRow(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(scaleval != 0.0);
+
+   debugMessage("scaling row %d with factor %g in CPLEX\n", row, scaleval);
 
    invalidateSolution(lpi);
 
@@ -1194,6 +1228,8 @@ RETCODE SCIPlpiScaleCol(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(scaleval != 0.0);
+
+   debugMessage("scaling column %d with factor %g in CPLEX\n", col, scaleval);
 
    invalidateSolution(lpi);
 
@@ -1684,7 +1720,9 @@ RETCODE SCIPlpiStrongbranch(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-   
+
+   debugMessage("calling CPLEX strongbranching on %d candidates (%d iterations)\n", ncand, itlim);
+
    CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, cand, ncand, down, up, itlim) );
 
    /* CPLEX is not able to return the iteration counts in strong branching */
@@ -2000,6 +2038,8 @@ RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("saving CPLEX basis into %p/%p\n", cstat, rstat);
+
    CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, cstat, rstat) );
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
@@ -2022,6 +2062,8 @@ RETCODE SCIPlpiSetBase(
    assert(lpi->cpxlp != NULL);
    assert(cstat != NULL);
    assert(rstat != NULL);
+
+   debugMessage("loading basis %p/%p into CPLEX\n", cstat, rstat);
 
    invalidateSolution(lpi);
 
@@ -2119,6 +2161,8 @@ RETCODE SCIPlpiGetState(
    /* allocate lpistate data */
    CHECK_OKAY( lpistateCreate(lpistate, memhdr, ncols, nrows) );
 
+   debugMessage("storing CPLEX LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
+
    /* allocate enough memory for storing uncompressed basis information */
    CHECK_OKAY( ensureCstatMem(lpi, ncols) );
    CHECK_OKAY( ensureRstatMem(lpi, nrows) );
@@ -2157,7 +2201,9 @@ RETCODE SCIPlpiSetState(
    assert(lpistate != NULL);
    assert(lpistate->ncols == CPXgetnumcols(cpxenv, lpi->cpxlp));
    assert(lpistate->nrows == CPXgetnumrows(cpxenv, lpi->cpxlp));
- 
+
+   debugMessage("loading LPI state %p (%d cols, %d rows) into CPLEX\n", lpistate, lpistate->ncols, lpistate->nrows);
+
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
       return SCIP_OKAY;   
 

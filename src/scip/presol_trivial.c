@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.11 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.12 2004/03/30 12:51:50 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -60,6 +60,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
    Real lb;
    Real ub;
    Bool infeasible;
+   Bool fixed;
    int nvars;
    int v;
 
@@ -105,13 +106,14 @@ DECL_PRESOLEXEC(presolExecTrivial)
          {
             debugMessage("fixing integral variable <%s>: [%g,%g] -> [%g,%g]\n",
                SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
-            CHECK_OKAY( SCIPfixVar(scip, vars[v], newlb, &infeasible) );
+            CHECK_OKAY( SCIPfixVar(scip, vars[v], newlb, &infeasible, &fixed) );
             if( infeasible )
             {
                debugMessage(" -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+            assert(fixed);
             (*nfixedvars)++;
          }
          else
@@ -149,13 +151,14 @@ DECL_PRESOLEXEC(presolExecTrivial)
          if( SCIPisFeasEQ(scip, lb, ub) )
          {
             debugMessage("fixing continuous variable <%s>: [%g,%g]\n", SCIPvarGetName(vars[v]), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, vars[v], lb, &infeasible) );
+            CHECK_OKAY( SCIPfixVar(scip, vars[v], lb, &infeasible, &fixed) );
             if( infeasible )
             {
                debugMessage(" -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+            assert(fixed);
             (*nfixedvars)++;
          }
       }

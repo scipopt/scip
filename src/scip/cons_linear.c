@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.90 2004/03/15 17:51:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.91 2004/03/30 12:51:43 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3180,6 +3180,7 @@ RETCODE convertUnaryEquality(
    Real val;
    Real fixval;
    Bool infeasible;
+   Bool fixed;
 
    assert(nfixedvars != NULL);
    assert(ndelconss != NULL);
@@ -3200,18 +3201,16 @@ RETCODE convertUnaryEquality(
    debugMessage("linear equality <%s>: fix <%s> == %g\n",
       SCIPconsGetName(cons), SCIPvarGetName(var), fixval);
    
-   /* count variable fixing, if variable is not already fixed */
-   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
-      (*nfixedvars)++;
-
    /* fix variable */
-   CHECK_OKAY( SCIPfixVar(scip, var, fixval, &infeasible) );
+   CHECK_OKAY( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
    if( infeasible )
    {
       debugMessage(" -> infeasible fixing\n");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
+   if( fixed )
+      (*nfixedvars)++;
 
    /* disable constraint */
    CHECK_OKAY( SCIPdelCons(scip, cons) );
@@ -3522,6 +3521,7 @@ RETCODE fixVariables(
    Real lb;
    Real ub;
    Bool fixed;
+   Bool fixingsfound;
    Bool infeasible;
    int v;
 
@@ -3532,7 +3532,7 @@ RETCODE fixVariables(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   fixed = FALSE;
+   fixingsfound = FALSE;
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars != NULL);
@@ -3547,21 +3547,24 @@ RETCODE fixVariables(
          {
             debugMessage("converting variable <%s> with fixed bounds [%g,%g] into fixed variable\n",
                SCIPvarGetName(var), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, var, lb, &infeasible) );
+            CHECK_OKAY( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
             if( infeasible )
             {
                debugMessage(" -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
-            (*nfixedvars)++;
-            *result = SCIP_SUCCESS;
-            fixed = TRUE;
+            if( fixed )
+            {
+               (*nfixedvars)++;
+               *result = SCIP_SUCCESS;
+               fixingsfound = TRUE;
+            }
          }
       }
    }
 
-   if( fixed )
+   if( fixingsfound )
    {
       CHECK_OKAY( applyFixings(scip, cons, conschanged) );
       assert(*conschanged);

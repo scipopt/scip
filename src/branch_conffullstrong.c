@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_conffullstrong.c,v 1.2 2004/02/04 17:27:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_conffullstrong.c,v 1.3 2004/03/30 12:51:40 bzfpfend Exp $"
 
 /**@file   branch_conffullstrong.c
  * @brief  full strong LP branching rule, that creates infeasible children to give input to conflict analysis
@@ -32,6 +32,8 @@
 #define BRANCHRULE_NAME          "conffullstrong"
 #define BRANCHRULE_DESC          "full strong branching that creates infeasible children (input for conflict analysis)"
 #define BRANCHRULE_PRIORITY      -100
+#define BRANCHRULE_MAXDEPTH      -1
+
 
 
 
@@ -88,32 +90,38 @@ DECL_BRANCHEXECLP(branchExeclpConffullstrong)
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
    assert(nlpcands > 0);
 
-   if( nlpcands == 1 )
-   {
-      /* only one candidate: nothing has to be done */
-      bestlpcand = 0;
-      bestdown = lowerbound;
-      bestup = lowerbound;
-   }
-   else
+   /* if only one candidate exists, choose this one without applying strong branching */
+   bestlpcand = 0;
+   bestdown = lowerbound;
+   bestup = lowerbound;
+   bestscore = -SCIPinfinity(scip);
+   if( nlpcands > 1 )
    {
       Real down;
       Real up;
       Real downgain;
       Real upgain;
       Real score;
+      Bool lperror;
       int c;
 
       /* search the full strong candidate */
-      bestscore = -SCIPinfinity(scip);
-      bestlpcand = -1;
-      bestdown = 0.0;
-      bestup = 0.0;
       for( c = 0; c < nlpcands; ++c )
       {
          assert(lpcands[c] != NULL);
 
-         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, &down, &up) );
+         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, &down, &up, &lperror) );
+
+         /* check for an error in strong branching */
+         if( lperror )
+         {
+            SCIPmessage(scip, SCIP_VERBLEVEL_HIGH,
+               "(node %lld) error in strong branching call for variable <%s> with solution %g\n", 
+               SCIPgetNodenum(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
+            break;
+         }
+
+         /* evaluate strong branching */
          down = MAX(down, lowerbound);
          up = MAX(up, lowerbound);
          downgain = down - lowerbound;
@@ -161,7 +169,7 @@ DECL_BRANCHEXECLP(branchExeclpConffullstrong)
    }
 
    assert(*result == SCIP_DIDNOTRUN);
-   assert(bestlpcand >= 0);
+   assert(0 <= bestlpcand && bestlpcand < nlpcands);
    
    /* perform the branching */
    debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
@@ -217,7 +225,7 @@ RETCODE SCIPincludeBranchruleConffullstrong(
    branchruledata = NULL;
 
    /* include conffullstrong branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
                   branchFreeConffullstrong, branchInitConffullstrong, branchExitConffullstrong, 
                   branchExeclpConffullstrong, branchExecpsConffullstrong,
                   branchruledata) );

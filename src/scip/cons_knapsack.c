@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.29 2004/03/22 17:46:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.30 2004/03/30 12:51:43 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -49,11 +49,26 @@
 
 #define MAX_SEPA_CAPACITY         10000 /**< maximal capacity of knapsack to apply cover separation */
 
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node */
+#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node */
+#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
+
+
 
 
 /*
  * Local methods
  */
+
+/** constraint handler data */
+struct ConshdlrData
+{
+   int              maxrounds;          /**< maximal number of separation rounds per node */
+   int              maxroundsroot;      /**< maximal number of separation rounds in the root node */
+   int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
+   int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
+};
 
 /** constraint data for knapsack constraints */
 struct ConsData
@@ -662,6 +677,8 @@ RETCODE separateCovers(
       {
          ROW* row;
          char name[MAXSTRLEN];
+         Real cutnorm;
+         Real cutfeas;
 
          /* remove unnecessary items from cover to get a minimal cover */
          coverweight = 0;
@@ -701,13 +718,18 @@ RETCODE separateCovers(
         
          /* lift variables not in cover to inequality */
          CHECK_OKAY( liftCover(scip, row, cons, covervars, noncovervars, ncovervars, nnoncovervars) ); 
-           
-         debugMessage("lifted cover cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
-         debug(SCIProwPrint(row, NULL));
-         CHECK_OKAY( SCIPaddCut(scip, row, infeasibility/(SCIProwGetNNonz(row)+1)) );
-         CHECK_OKAY( SCIPreleaseRow(scip, &row) );
 
-         *separated = TRUE;
+         /* check, if cut is violated enough */
+         cutnorm = SCIProwGetNorm(row);
+         cutfeas = SCIPgetRowLPFeasibility(scip, row);
+         if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
+         {         
+            debugMessage("lifted cover cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
+            debug(SCIProwPrint(row, NULL));
+            CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
+            *separated = TRUE;
+         }
+         CHECK_OKAY( SCIPreleaseRow(scip, &row) );
       }
 
       CHECK_OKAY( SCIPfreeBufferArray(scip, &noncovervars) );
@@ -1028,18 +1050,21 @@ void tightenWeights(
  */
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 0
 static
 DECL_CONSFREE(consFreeKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   CONSHDLRDATA* conshdlrdata;
+
+   /* free constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPfreeMemory(scip, &conshdlrdata);
+
+   SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeKnapsack NULL
-#endif
 
 
 /** initialization method of constraint handler (called when problem solving starts) */
@@ -1143,16 +1168,41 @@ DECL_CONSINITLP(consInitlpKnapsack)
 static
 DECL_CONSSEPA(consSepaKnapsack)
 {  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
    Bool separated;
+   int depth;
+   int nrounds;
+   int maxsepacuts;
+   int ncuts;
    int i;
 
+   *result = SCIP_DIDNOTRUN;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   depth = SCIPgetDepth(scip);
+   nrounds = SCIPgetNSepaRounds(scip);
+
+   /* only call the separator a given number of times at each node */
+   if( (depth == 0 && nrounds >= conshdlrdata->maxroundsroot)
+      || (depth > 0 && nrounds >= conshdlrdata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* get the maximal number of cuts allowed in a separation round */
+   maxsepacuts = depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
+
    *result = SCIP_DIDNOTFIND;
-   
-   for( i = 0; i < nusefulconss; i++ )
+
+   ncuts = 0;
+   for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
    {
       CHECK_OKAY( separateCovers(scip, conss[i], &separated) );
-      if( separated ) 
+      if( separated )
+      {
+         ncuts++;
          *result = SCIP_SEPARATED;
+      }
    }
    
    return SCIP_OKAY;
@@ -1588,7 +1638,7 @@ RETCODE SCIPincludeConshdlrKnapsack(
    EVENTHDLRDATA* eventhdlrdata;
 
    /* create knapsack constraint handler data */
-   conshdlrdata = NULL;
+   CHECK_OKAY( SCIPallocMemory(scip, &conshdlrdata) );
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -1613,6 +1663,16 @@ RETCODE SCIPincludeConshdlrKnapsack(
    /* include the linear constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY) );
 #endif
+
+   /* add knapsack constraint handler parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "constraints/knapsack/maxrounds",
+                  "maximal number of separation rounds per node",
+                  &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "constraints/knapsack/maxroundsroot",
+                  "maximal number of separation rounds per node in the root node",
+                  &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

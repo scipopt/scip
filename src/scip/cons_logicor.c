@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.33 2004/03/08 18:05:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.34 2004/03/30 12:51:44 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1735,6 +1735,7 @@ DECL_CONSPRESOL(consPresolLogicor)
    CONSDATA* consdata;
    Bool infeasible;
    Bool redundant;
+   Bool fixed;
    int c;
 
    assert(conshdlr != NULL);
@@ -1788,15 +1789,17 @@ DECL_CONSPRESOL(consPresolLogicor)
             assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             
-            CHECK_OKAY( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible) );
+            CHECK_OKAY( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
             if( infeasible )
             {
                debugMessage(" -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
-            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            assert(fixed);
             (*nfixedvars)++;
+
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
             *result = SCIP_SUCCESS;
             continue;

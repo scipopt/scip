@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.10 2004/03/19 09:41:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.11 2004/03/30 12:51:41 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -32,6 +32,7 @@
 #define BRANCHRULE_NAME          "history"
 #define BRANCHRULE_DESC          "history branching"
 #define BRANCHRULE_PRIORITY      10000
+#define BRANCHRULE_MAXDEPTH      -1
 
 #define DEFAULT_MINRELIABLE      4.0    /**< minimal value for minimum history size to regard history value as reliable */
 #define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum history size to regard history value as reliable */
@@ -296,6 +297,8 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       for( i = 0; i < ninitcands && lookahead < maxlookahead
               && SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations; ++i )
       {
+         Bool lperror;
+
          /* get candidate number to initialize */
          c = initcands[i];
          assert(!SCIPisIntegral(scip, lpcandssol[c]));
@@ -306,7 +309,18 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
             SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
          /* use strong branching on candidate */
-         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], inititer, &down, &up) );
+         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], inititer, &down, &up, &lperror) );
+
+         /* check for an error in strong branching */
+         if( lperror )
+         {
+            SCIPmessage(scip, SCIP_VERBLEVEL_HIGH,
+               "(node %lld) error in strong branching call for variable <%s> with solution %g\n", 
+               SCIPgetNodenum(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
+            break;
+         }
+
+         /* evaluate strong branching */
          down = MAX(down, lowerbound);
          up = MAX(up, lowerbound);
          downgain = down - lowerbound;
@@ -472,7 +486,7 @@ RETCODE SCIPincludeBranchruleHistory(
    CHECK_OKAY( SCIPallocMemory(scip, &branchruledata) );
    
    /* include branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
                   branchFreeHistory, branchInitHistory, branchExitHistory, branchExeclpHistory, branchExecpsHistory,
                   branchruledata) );
 

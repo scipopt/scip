@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.22 2004/02/04 17:27:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.23 2004/03/30 12:51:43 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -95,6 +95,16 @@ DECL_CONSCHECK(consCheckIntegral)
             *result = SCIP_INFEASIBLE;
       }
    }
+#ifndef NDEBUG
+   else
+   {
+      for( v = 0; v < nbin + nint; ++v )
+      {
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
+         assert(SCIPisIntegral(scip, solval));
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }

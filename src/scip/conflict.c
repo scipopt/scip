@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.32 2004/03/16 13:41:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.33 2004/03/30 12:51:42 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1277,8 +1277,8 @@ RETCODE lpconflictAnalyzeDualfarkas(
    {
       row = rows[r];
       assert(row != NULL);
-      assert(row->cols != NULL);
-      assert(row->vals != NULL);
+      assert(row->len == 0 || row->cols != NULL);
+      assert(row->len == 0 || row->vals != NULL);
       
       /* ignore local rows and rows with farkas value 0.0 */
       if( !row->local && !SCIPsetIsFeasZero(set, row->dualfarkas) )
@@ -1488,8 +1488,8 @@ RETCODE lpconflictAnalyzeDualsol(
    nrows = SCIPlpGetNRows(lp);
    cols = SCIPlpGetCols(lp);
    ncols = SCIPlpGetNCols(lp);
-   assert(rows != NULL);
-   assert(cols != NULL);
+   assert(nrows == 0 || rows != NULL);
+   assert(ncols == 0 || cols != NULL);
 
    /* make sure, the dual values are stored in the rows, and the reduced costs in the columns */
    CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, &dualfeasible) );
@@ -1523,8 +1523,8 @@ RETCODE lpconflictAnalyzeDualsol(
    {
       row = rows[r];
       assert(row != NULL);
-      assert(row->cols != NULL);
-      assert(row->vals != NULL);
+      assert(row->len == 0 || row->cols != NULL);
+      assert(row->len == 0 || row->vals != NULL);
       
       /* ignore dual solution values of 0.0 */
       if( SCIPsetIsFeasZero(set, row->dualsol) )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.c,v 1.9 2004/02/04 17:27:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.c,v 1.10 2004/03/30 12:51:41 bzfpfend Exp $"
 
 /**@file   branch_leastinf.c
  * @brief  least infeasible LP branching rule
@@ -32,6 +32,8 @@
 #define BRANCHRULE_NAME          "leastinf"
 #define BRANCHRULE_DESC          "least infeasible branching"
 #define BRANCHRULE_PRIORITY      50
+#define BRANCHRULE_MAXDEPTH      -1
+
 
 
 
@@ -112,7 +114,7 @@ RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
                   NULL, NULL, NULL, branchExeclpLeastinf, NULL,
                   NULL) );
 

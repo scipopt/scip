@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.94 2004/03/22 17:46:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.95 2004/03/30 12:51:51 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -638,21 +638,17 @@ RETCODE solveNodeLP(
                   enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
                }
             }
-            
-            /* separate LP, if no cuts have been found by the constraint handlers */
-            if( SCIPsepastoreGetNCuts(sepastore) == 0 )
-            {
-               /* sort separators by priority */
-               SCIPsetSortSepas(set);
 
-               /* call separators */
-               for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts; ++s )
-               {
-                  CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, SCIPnodeGetDepth(tree->actnode), &result) );
-                  *cutoff = *cutoff || (result == SCIP_CUTOFF);
-                  separateagain = separateagain || (result == SCIP_CONSADDED);
-                  enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
-               }
+            /* sort separators by priority */
+            SCIPsetSortSepas(set);
+
+            /* call LP separators */
+            for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts; ++s )
+            {
+               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, SCIPnodeGetDepth(tree->actnode), &result) );
+               *cutoff = *cutoff || (result == SCIP_CUTOFF);
+               separateagain = separateagain || (result == SCIP_CONSADDED);
+               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
             }
          }
 

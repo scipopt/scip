@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.10 2004/02/05 14:12:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.11 2004/03/30 12:51:49 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -45,6 +45,7 @@ DECL_PRESOLEXEC(presolExecDualfix)
    VAR** vars;
    Real bound;
    Bool infeasible;
+   Bool fixed;
    int nvars;
    int v;
 
@@ -89,13 +90,14 @@ DECL_PRESOLEXEC(presolExecDualfix)
          *result = SCIP_UNBOUNDED;
          return SCIP_OKAY;
       }
-      CHECK_OKAY( SCIPfixVar(scip, vars[v], bound, &infeasible) );
+      CHECK_OKAY( SCIPfixVar(scip, vars[v], bound, &infeasible, &fixed) );
       if( infeasible )
       {
          debugMessage(" -> infeasible fixing\n");
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
+      assert(fixed);
       (*nfixedvars)++;
       *result = SCIP_SUCCESS;
    }

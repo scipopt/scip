@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.4 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.5 2004/03/30 12:51:50 bzfpfend Exp $"
 
 /**@file   pub_branch.h
  * @brief  public methods for branching rules
@@ -64,6 +64,12 @@ const char* SCIPbranchruleGetDesc(
 /** gets priority of branching rule */
 extern
 int SCIPbranchruleGetPriority(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
+extern
+int SCIPbranchruleGetMaxdepth(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 

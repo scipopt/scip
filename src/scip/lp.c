@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.105 2004/03/19 09:41:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.106 2004/03/30 12:51:47 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1824,7 +1824,8 @@ RETCODE SCIPcolGetStrongbranch(
    LP*              lp,                 /**< current LP data */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
-   Real*            up                  /**< stores dual bound after branching column up */
+   Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    assert(col != NULL);
@@ -1845,6 +1846,9 @@ RETCODE SCIPcolGetStrongbranch(
    assert(itlim >= 1);
    assert(down != NULL);
    assert(up != NULL);
+   assert(lperror != NULL);
+
+   *lperror = FALSE;
 
    if( col->validstrongbranchlp != stat->lpcount || itlim > col->strongbranchitlim )
    {
@@ -1860,6 +1864,7 @@ RETCODE SCIPcolGetStrongbranch(
       }
       else
       {
+         RETCODE retcode;
          Real strongbranchdown;
          Real strongbranchup;
          int iter;
@@ -1873,27 +1878,42 @@ RETCODE SCIPcolGetStrongbranch(
          /* call LPI strong branching */
          stat->nstrongbranchs++;
          col->strongbranchitlim = itlim;
-         CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim,
-                        &strongbranchdown, &strongbranchup, &iter) );
-         col->strongbranchdown = MIN(strongbranchdown + lp->looseobjval, lp->cutoffbound);
-         col->strongbranchup = MIN(strongbranchup + lp->looseobjval, lp->cutoffbound);
+         retcode = SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim,
+            &strongbranchdown, &strongbranchup, &iter);
 
-         /* update strong branching statistics */
-         if( iter == -1 )
+         /* check return code for errors */
+         if( retcode == SCIP_LPERROR )
          {
-            /* calculate avergate iteration number */
-            iter = stat->nlps > 0 ? (int)(2*stat->nlpiterations / stat->nlps) : 0;
-            if( iter/2 >= itlim )
-               iter = 2*itlim;
+            *lperror = TRUE;
+            col->strongbranchdown = SCIP_INVALID;
+            col->strongbranchup = SCIP_INVALID;
+            col->validstrongbranchlp = -1;
+            col->strongbranchsolval = SCIP_INVALID;
+            col->strongbranchnode = -1;
          }
-         stat->nsblpiterations += iter;
+         else
+         {
+            CHECK_OKAY( retcode );
+            col->strongbranchdown = MIN(strongbranchdown + lp->looseobjval, lp->cutoffbound);
+            col->strongbranchup = MIN(strongbranchup + lp->looseobjval, lp->cutoffbound);
+            
+            /* update strong branching statistics */
+            if( iter == -1 )
+            {
+               /* calculate avergate iteration number */
+               iter = stat->nlps > 0 ? (int)(2*stat->nlpiterations / stat->nlps) : 0;
+               if( iter/2 >= itlim )
+                  iter = 2*itlim;
+            }
+            stat->nsblpiterations += iter;
+         }
 
          /* start timing */
          SCIPclockStop(stat->strongbranchtime, set);
       }
    }
-   assert(col->strongbranchdown < SCIP_INVALID);
-   assert(col->strongbranchup < SCIP_INVALID);
+   assert(*lperror || col->strongbranchdown < SCIP_INVALID);
+   assert(*lperror || col->strongbranchup < SCIP_INVALID);
 
    *down = col->strongbranchdown;
    *up = col->strongbranchup;

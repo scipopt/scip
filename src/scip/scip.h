@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.113 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.114 2004/03/30 12:51:51 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -810,6 +810,7 @@ RETCODE SCIPincludeBranchrule(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
+   int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -843,6 +844,14 @@ RETCODE SCIPsetBranchrulePriority(
    SCIP*            scip,               /**< SCIP data structure */
    BRANCHRULE*      branchrule,         /**< branching rule */
    int              priority            /**< new priority of the branching rule */
+   );
+
+/** sets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
+extern
+RETCODE SCIPsetBranchruleMaxdepth(
+   SCIP*            scip,               /**< SCIP data structure */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   int              maxdepth            /**< new maxdepth of the branching rule */
    );
 
 /** creates a display column and includes it in SCIP */
@@ -1448,7 +1457,8 @@ RETCODE SCIPgetVarStrongbranch(
    VAR*             var,                /**< variable to get strong branching values for */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
-   Real*            up                  /**< stores dual bound after branching column up */
+   Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
 /** gets strong branching information on COLUMN variable of the last SCIPgetVarStrongbranch() call;
@@ -1606,7 +1616,8 @@ RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to fix */
    Real             fixedval,           /**< value to fix variable at */
-   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    );
 
 /** From a given equality a*x + b*y == c, aggregates one of the variables and removes it from the set of

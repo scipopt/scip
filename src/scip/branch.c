@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.38 2004/03/19 09:41:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.39 2004/03/30 12:51:39 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -497,6 +497,7 @@ RETCODE SCIPbranchruleCreate(
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
+   int              maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -516,6 +517,7 @@ RETCODE SCIPbranchruleCreate(
    ALLOC_OKAY( duplicateMemoryArray(&(*branchrule)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray(&(*branchrule)->desc, desc, strlen(desc)+1) );
    (*branchrule)->priority = priority;
+   (*branchrule)->maxdepth = maxdepth;
    (*branchrule)->branchfree = branchfree;
    (*branchrule)->branchinit = branchinit;
    (*branchrule)->branchexit = branchexit;
@@ -537,6 +539,11 @@ RETCODE SCIPbranchruleCreate(
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
                   paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) ); /*lint !e740*/
+   sprintf(paramname, "branching/%s/maxdepth", name);
+   sprintf(paramdesc, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*branchrule)->maxdepth, maxdepth, -1, INT_MAX, 
+                  NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -639,7 +646,8 @@ RETCODE SCIPbranchruleExecLPSol(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   if( branchrule->branchexeclp != NULL )
+   if( branchrule->branchexeclp != NULL
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPnodeGetDepth(tree->actnode)) )
    {
       Longint oldndomchgs;
       int oldncutsfound;
@@ -705,7 +713,8 @@ RETCODE SCIPbranchruleExecPseudoSol(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   if( branchrule->branchexecps != NULL )
+   if( branchrule->branchexecps != NULL
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPnodeGetDepth(tree->actnode)) )
    {
       Longint oldndomchgs;
 
@@ -814,6 +823,30 @@ void SCIPbranchruleSetPriority(
    
    branchrule->priority = priority;
    set->branchrulessorted = FALSE;
+}
+
+/** gets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
+int SCIPbranchruleGetMaxdepth(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->maxdepth;
+}
+
+/** sets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
+void SCIPbranchruleSetMaxdepth(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   SET*             set,                /**< global SCIP settings */
+   int              maxdepth            /**< new maxdepth of the branching rule */
+   )
+{
+   assert(branchrule != NULL);
+   assert(set != NULL);
+   assert(maxdepth >= -1);
+
+   branchrule->maxdepth = maxdepth;
 }
 
 /** gets time in seconds used in this branching rule */
