@@ -14,16 +14,13 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.8 2004/06/03 12:46:43 bzfpfend Exp $
+# $Id: check.awk,v 1.9 2004/09/02 09:19:41 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #@author  Alexander Martin
-#
-#
-# head line
 #
 function abs(x)
 {
@@ -47,7 +44,7 @@ BEGIN {
     printf("\\begin{tabular}{l@{\\quad\\enspace}rrrrrr}\n")          >TEXFILE;
     printf("\\hline\n")                                              >TEXFILE;
     printf("\\noalign{\\smallskip}\n")                               >TEXFILE;
-    printf("Example & B \\& B & StrBr & Dual Bound & ")               >TEXFILE;
+    printf("Example & B \\& B & StrBr & Dual Bound & ")              >TEXFILE;
     printf("Primal Bound & Time & Gap \\% \\\\\n")                   >TEXFILE;
     printf("\\hline\n")                                              >TEXFILE;
     printf("\\noalign{\\smallskip}\n")                               >TEXFILE;
@@ -57,20 +54,21 @@ BEGIN {
     slp      = 0;
     ssim     = 0;
     ssblp    = 0;
-    scuts    = 0;
     stottime = 0.0;
     sgap     = 0.0;
     nodegeom = 1.0;
     timegeom = 1.0;
     sblpgeom = 1.0;
-    brrule   = "default";
+    failtime = 0.0;
+    fail     = 0;
+    pass     = 0;
+    settings = "default";
 
     printf("------------------+-------+------+-------+--------------+------+------+-------\n");
     printf("Name              | Conss | Vars | Nodes |   Upperbound |  Gap | Time |\n");
     printf("------------------+-------+------+-------+--------------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum
-# ??????????? /New variable selection:/ { brrule = $4 " " $5 " " $6; } 
 /^@01/ { 
     n  = split ($2, a, "/");
     split(a[n], b, ".");
@@ -82,7 +80,6 @@ BEGIN {
        pprob = pprob "\\_" a[i];
     vars       = 0;
     cons       = 0;
-    nzos       = 0;
     timeout    = 0;
     pb         = 0.0;
     db         = 0.0;
@@ -93,15 +90,14 @@ BEGIN {
     dualiter   = 0;
     sblps      = 0;
     sbiter     = 0;
-    cuts       = 0;
     tottime    = 0.0;
 }
+/^SCIP> loaded parameter file:/ { settings = $5; }
 #
 # problem size
 #
 /^  Variables        :/ { vars = $3; }
 /^  Constraints      :/ { cons = $3; }
-#/^  ?????????        :/ { nzos = $3; }
 #
 # solution
 #
@@ -117,10 +113,6 @@ BEGIN {
 /^  dual LP          :/ { duallps = $5; dualiter = $6; }
 /^  strong branching :/ { sblps = $5; sbiter = $6; }
 #
-# cuts
-#
-# ????????????????? /^ ... / { cuts = $?; }
-#
 # time
 #
 /^Solving Time       :/ { tottime = $4 }
@@ -135,7 +127,6 @@ BEGIN {
    slp      += lps;
    ssim     += simplex;
    ssblp    += sblps;
-   scuts    += cuts;
    nprobs++;
 
    if (pb > 1e+19  ||  pb < -1e+19) {
@@ -197,7 +188,7 @@ END {
             "Geom.\\ Mean", nodegeom, sblpgeom, timegeom)                 >TEXFILE;
     printf("\\hline\n")                                                   >TEXFILE;
     printf("\\end{tabular}\n")                                            >TEXFILE;
-    printf("\\caption{%s}\n", brrule)                                     >TEXFILE;
+    printf("\\caption{%s}\n", settings)                                   >TEXFILE;
     printf("\\end{center}\n")                                             >TEXFILE;
     printf("\\end{alex}\n")                                               >TEXFILE;
     printf("\\end{table}\n")                                              >TEXFILE;

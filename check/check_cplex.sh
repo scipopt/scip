@@ -1,4 +1,4 @@
-# $Id: check_cplex.sh,v 1.3 2003/12/23 12:13:06 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.4 2004/09/02 09:19:41 bzfpfend Exp $
 CPLEXBIN=cplex
 TSTNAME=$1
 BINNAME=$CPLEXBIN.$2
@@ -8,6 +8,7 @@ MEMLIMIT=$5
 
 OUTFILE=results/check.$TSTNAME.$BINNAME.out
 ERRFILE=results/check.$TSTNAME.$BINNAME.err
+RESFILE=results/check.$TSTNAME.$BINNAME.res
 TEXFILE=results/check.$TSTNAME.$BINNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINNAME.tmp
 
@@ -32,7 +33,13 @@ do
 	echo set mip limits treememory $MEMLIMIT >> $TMPFILE
 	echo optimize                           >> $TMPFILE
 	echo quit                               >> $TMPFILE
+	echo -----------------------------
+	date
+	echo -----------------------------
 	$CPLEXBIN < $TMPFILE 2>>$ERRFILE
+	echo -----------------------------
+	date
+	echo -----------------------------
 	echo =ready=
     else
 	echo @02 FILE NOT FOUND: $i ===========
@@ -45,4 +52,4 @@ rm $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-gawk -f check_cplex.awk $OUTFILE > $TEXFILE
+gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
