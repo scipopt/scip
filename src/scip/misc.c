@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.24 2004/06/29 17:55:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.25 2004/06/30 10:47:41 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2207,7 +2207,7 @@ RETCODE SCIPptrarraySetVal(
    assert(ptrarray != NULL);
    assert(idx >= 0);
 
-   debugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+   debugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n", 
       ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
 
    if( val != NULL )
