@@ -33,7 +33,7 @@
 
 
 
-#define SCIP_VERSION                 30 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_VERSION                 40 /**< SCIP version number (multiplied by 100 to get integer number) */
 
 
 
