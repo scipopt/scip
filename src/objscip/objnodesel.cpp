@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.4 2004/04/27 15:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.5 2004/09/23 15:46:29 bzfpfend Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -161,9 +161,9 @@ RETCODE SCIPincludeObjNodesel(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
-                  objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_, objnodesel->scip_lowestboundfirst_,
-                  nodeselFreeObj, nodeselInitObj, nodeselExitObj, nodeselSelectObj, nodeselCompObj,
-                  nodeseldata) );
+         objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_, objnodesel->scip_lowestboundfirst_,
+         nodeselFreeObj, nodeselInitObj, nodeselExitObj, nodeselSelectObj, nodeselCompObj,
+         nodeseldata) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.3 2004/02/04 17:27:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.4 2004/09/23 15:46:30 bzfpfend Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -112,8 +112,8 @@ RETCODE SCIPincludeObjReader(
 
    /* include file reader */
    CHECK_OKAY( SCIPincludeReader(scip, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,
-                  readerFreeObj, readerReadObj,
-                  readerdata) );
+         readerFreeObj, readerReadObj,
+         readerdata) );
 
    return SCIP_OKAY;
 }

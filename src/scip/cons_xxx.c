@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.22 2004/08/24 11:57:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.23 2004/09/23 15:46:28 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -407,6 +407,7 @@ DECL_CONSDISABLE(consDisableXxx)
 #else
 #define consDisableXxx NULL
 #endif
+
 
 /** constraint display method of constraint handler */
 #if 0

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.3 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.4 2004/09/23 15:46:30 bzfpfend Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -173,7 +173,7 @@ RETCODE SCIPcreateObjProb(
 
    /* create problem */
    CHECK_OKAY( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, 
-                  probInitsolObj, probExitsolObj, probdata) );
+         probInitsolObj, probExitsolObj, probdata) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.87 2004/09/13 15:11:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.88 2004/09/23 15:46:29 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -698,6 +698,13 @@ RETCODE SCIPlpFlush(
    SET*             set                 /**< global SCIP settings */
    );
 
+/** marks the LP to be flushed, even if the LP thinks it is not flushed */
+extern
+RETCODE SCIPlpMarkFlushed(
+   LP*              lp,                 /**< current LP data */
+   SET*             set                 /**< global SCIP settings */
+   );
+
 /** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */
 extern
 RETCODE SCIPlpSolve(
@@ -723,26 +730,26 @@ RETCODE SCIPlpSolveAndEval(
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
-/** gets solution status of last solve call */
+/** gets solution status of current LP */
 extern
 LPSOLSTAT SCIPlpGetSolstat(
    LP*              lp                  /**< current LP data */
    );
 
-/** gets objective value of last solution */
+/** gets objective value of current LP */
 extern
 Real SCIPlpGetObjval(
    LP*              lp,                 /**< current LP data */
    SET*             set                 /**< global SCIP settings */
    );
 
-/** gets part of objective value of last solution that results from COLUMN variables only */
+/** gets part of objective value of current LP that results from COLUMN variables only */
 extern
 Real SCIPlpGetColumnObjval(
    LP*              lp                  /**< current LP data */
    );
 
-/** gets part of objective value of last solution that results from LOOSE variables only */
+/** gets part of objective value of current LP that results from LOOSE variables only */
 extern
 Real SCIPlpGetLooseObjval(
    LP*              lp,                 /**< current LP data */

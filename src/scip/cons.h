@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.76 2004/09/21 12:07:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.77 2004/09/23 15:46:26 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -35,6 +35,8 @@
 #include "type_stat.h"
 #include "type_mem.h"
 #include "type_misc.h"
+#include "type_lp.h"
+#include "type_var.h"
 #include "type_prob.h"
 #include "type_sol.h"
 #include "type_tree.h"
@@ -492,7 +494,7 @@ RETCODE SCIPconsResetAge(
  *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
  */
 extern
-RETCODE SCIPconsResolveConflictBound(
+RETCODE SCIPconsResolvePropagation(
    CONS*            cons,               /**< constraint that deduced the assignment */
    SET*             set,                /**< global SCIP settings */
    VAR*             infervar,           /**< variable whose bound was deduced by the constraint */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.5 2004/09/21 12:08:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.6 2004/09/23 15:46:35 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -235,11 +235,13 @@ RETCODE SCIPvbcNewChild(
       return SCIP_OKAY;
 
    /* insert mapping node -> nodenum into hash map */
-   nodenum = stat->ncreatednodes;
+   nodenum = stat->ncreatednodesrun;
+   assert(nodenum > 0);
    CHECK_OKAY( SCIPhashmapInsert(vbc->nodenum, node, (void*)nodenum) );
 
    /* get nodenum of parent node from hash map */
    parentnodenum = node->parent != NULL ? (int)SCIPhashmapGetImage(vbc->nodenum, node->parent) : 0;
+   assert(node->parent == NULL || parentnodenum > 0);
 
    /* get branching variable */
    branchvar = getBranchVar(node);
@@ -264,12 +266,14 @@ void vbcSetColor(
    )
 {
    assert(vbc != NULL);
+   assert(node != NULL);
 
    if( vbc->file != NULL && color != -1 )
    {
       int nodenum;
 
       nodenum = (int)SCIPhashmapGetImage(vbc->nodenum, node);
+      assert(nodenum > 0);
       printTime(vbc, stat);
       fprintf(vbc->file, "P %d %d\n", nodenum, color);
    }
@@ -295,6 +299,7 @@ void SCIPvbcSolvedNode(
 
    /* get node num from hash map */
    nodenum = (int)SCIPhashmapGetImage(vbc->nodenum, node);
+   assert(nodenum > 0);
 
    /* get branching variable */
    branchvar = getBranchVar(node);

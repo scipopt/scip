@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.28 2004/09/21 12:08:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.29 2004/09/23 15:46:34 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -45,6 +45,7 @@
 #include "type_pricer.h"
 #include "type_reader.h"
 #include "type_sepa.h"
+#include "type_prop.h"
 
 
 /** global SCIP settings */
@@ -87,6 +88,7 @@ struct Set
    CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
    PRESOL**         presols;            /**< presolvers */
    SEPA**           sepas;              /**< separators */
+   PROP**           props;              /**< propagators */
    HEUR**           heurs;              /**< primal heuristics */
    EVENTHDLR**      eventhdlrs;         /**< event handlers */
    NODESEL**        nodesels;           /**< node selectors */
@@ -107,6 +109,8 @@ struct Set
    int              presolssize;        /**< size of presols array */
    int              nsepas;             /**< number of separators */
    int              sepassize;          /**< size of sepas array */
+   int              nprops;             /**< number of propagators */
+   int              propssize;          /**< size of props array */
    int              nheurs;             /**< number of primal heuristics */
    int              heurssize;          /**< size of heurs array */
    int              neventhdlrs;        /**< number of event handlers */
@@ -134,6 +138,8 @@ struct Set
    int              maxsepacutsroot;    /**< maximal number of separated cuts at the root node */
    int              minmaxconfvars;     /**< minimal absolute maximum of variables involved in a conflict clause */
    int              maxconflploops;     /**< maximal number of LP resolving loops during conflict analysis */
+   int              conffuiplevels;     /**< number of depth levels up to which first UIP's are used in conflict
+                                         *   analysis (-1: use All-FirstUIP rule) */
    int              colagelimit;        /**< maximum age a column can reach before it is deleted from the LP */
    int              rowagelimit;        /**< maximum age a row can reach before it is deleted from the LP */
    int              cutagelimit;        /**< maximum age a cut can reach before it is deleted from the global cut pool */
@@ -152,6 +158,7 @@ struct Set
    Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
    Bool             presolssorted;      /**< are the presolvers sorted by priority? */
    Bool             sepassorted;        /**< are the separators sorted by priority? */
+   Bool             propssorted;        /**< are the propagators sorted by priority? */
    Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    Bool             catchctrlc;         /**< should the CTRL-C interrupt be caught by SCIP? */

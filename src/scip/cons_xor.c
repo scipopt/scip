@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.8 2004/09/21 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.9 2004/09/23 15:46:28 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -761,7 +761,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: only one unfixed variable -> fix <%s> to %d\n",
          SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), odd);
-      CHECK_OKAY( SCIPinferBinvar(scip, vars[watchedvar1], odd, cons, PROPRULE_1, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], odd, cons, PROPRULE_1, &infeasible, &tightened) );
       assert(!infeasible);
       assert(tightened);
       (*nfixedvars)++;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.8 2004/08/24 11:58:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.9 2004/09/23 15:46:35 bzfpfend Exp $"
 
 /**@file   type_var.h
  * @brief  type definitions for problem variables
@@ -64,7 +64,8 @@ typedef enum DomchgType DOMCHGTYPE;
 enum BoundchgType
 {
    SCIP_BOUNDCHGTYPE_BRANCHING = 0,     /**< bound change was due to a branching decision */
-   SCIP_BOUNDCHGTYPE_INFERENCE = 1      /**< bound change was due to an inference (e.g. domain propagation) */
+   SCIP_BOUNDCHGTYPE_CONSINFER = 1,     /**< bound change was due to an inference of a constraint (domain propagation) */
+   SCIP_BOUNDCHGTYPE_PROPINFER = 2      /**< bound change was due to an inference of a domain propagator */
 };
 typedef enum BoundchgType BOUNDCHGTYPE;
 

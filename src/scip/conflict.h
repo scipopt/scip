@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.20 2004/09/21 12:07:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.21 2004/09/23 15:46:26 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -176,6 +176,11 @@ Longint SCIPconflictGetNPropConflicts(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets total number of literals in conflict clauses created in propagation conflict analysis */
+extern
+Longint SCIPconflictGetNPropConflictLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
 
 
 
@@ -217,6 +222,12 @@ Longint SCIPconflictGetNLPCalls(
 /** gets number of valid conflicts detected in infeasible LP conflict analysis */
 extern
 Longint SCIPconflictGetNLPConflicts(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets total number of literals in conflict clauses detected in infeasible LP conflict analysis */
+extern
+Longint SCIPconflictGetNLPConflictLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -265,6 +276,12 @@ Longint SCIPconflictGetNStrongbranchCalls(
 /** gets number of valid conflicts detected in infeasible strong branching conflict analysis */
 extern
 Longint SCIPconflictGetNStrongbranchConflicts(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets total number of literals in conflict clauses detected in infeasible strong branching conflict analysis */
+extern
+Longint SCIPconflictGetNStrongbranchConflictLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -317,6 +334,11 @@ Longint SCIPconflictGetNPseudoConflicts(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets total number of literals in conflict clauses detected in pseudo solution conflict analysis */
+extern
+Longint SCIPconflictGetNPseudoConflictLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.23 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.24 2004/09/23 15:46:33 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -71,6 +71,9 @@ struct Col
    Real             obj;                /**< current objective value of column in LP */
    Real             lb;                 /**< current lower bound of column in LP */
    Real             ub;                 /**< current upper bound of column in LP */
+   Real             flushedobj;         /**< objective value of column already flushed to the LP solver */
+   Real             flushedlb;          /**< lower bound of column already flushed to the LP solver */
+   Real             flushedub;          /**< upper bound of column already flushed to the LP solver */
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    Real             farkascoef;         /**< coefficient in dual farkas infeasibility proof (== dualfarkas^T A_c) */
@@ -122,6 +125,8 @@ struct Row
    Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    Real             lhs;                /**< left hand side of row */
    Real             rhs;                /**< right hand side of row */
+   Real             flushedlhs;         /**< left hand side minus constant of row already flushed to the LP solver */
+   Real             flushedrhs;         /**< right hand side minus constant of row already flushed to the LP solver */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
    Real             maxval;             /**< maximal absolute value of row vector, only valid if nummaxval > 0 */
    Real             minval;             /**< minimal absolute non-zero value of row vector, only valid if numminval > 0 */

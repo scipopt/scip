@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.46 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.47 2004/09/23 15:46:30 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -104,6 +104,7 @@ RETCODE SCIPprimalCreate(
    ALLOC_OKAY( allocMemory(primal) );
    (*primal)->sols = NULL;
    (*primal)->existingsols = NULL;
+   (*primal)->currentsol = NULL;
    (*primal)->solssize = 0;
    (*primal)->nsols = 0;
    (*primal)->existingsolssize = 0;
@@ -126,6 +127,12 @@ RETCODE SCIPprimalFree(
 
    assert(primal != NULL);
    assert(*primal != NULL);
+
+   /* free temporary solution for storing current solution */
+   if( (*primal)->currentsol != NULL )
+   {
+      CHECK_OKAY( SCIPsolFree(&(*primal)->currentsol, memhdr, *primal) );
+   }
 
    /* free feasible primal CIP solutions */
    for( s = 0; s < (*primal)->nsols; ++s )
@@ -618,6 +625,58 @@ RETCODE SCIPprimalAddSolFree(
    return SCIP_OKAY;
 }
 
+/** links temporary solution of primal data to current solution */
+static
+RETCODE primalLinkCurrentSol(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(primal != NULL);
+
+   if( primal->currentsol == NULL )
+   {
+      CHECK_OKAY( SCIPsolCreateCurrentSol(&primal->currentsol, memhdr, set, stat, primal, tree, lp, heur) );
+   }
+   else
+   {
+      CHECK_OKAY( SCIPsolLinkCurrentSol(primal->currentsol, memhdr, set, stat, tree, lp) );
+      SCIPsolSetHeur(primal->currentsol, heur);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds current LP/pseudo solution to solution storage */
+RETCODE SCIPprimalAddCurrentSol(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
+   )
+{
+   assert(primal != NULL);
+
+   /* link temporary solution to current solution */
+   CHECK_OKAY( primalLinkCurrentSol(primal, memhdr, set, stat, tree, lp, heur) );
+
+   /* add solution to solution storage */
+   CHECK_OKAY( SCIPprimalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, primal->currentsol, stored) );
+
+   return SCIP_OKAY;
+}
+
 /** checks primal solution; if feasible, adds it to storage by copying it */
 RETCODE SCIPprimalTrySol(
    PRIMAL*          primal,             /**< primal data */
@@ -702,6 +761,9 @@ RETCODE SCIPprimalTrySolFree(
 
    *stored = FALSE;
 
+   /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
+   checklprows = checklprows || set->exactsolve;
+
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(*sol));
 
@@ -729,6 +791,34 @@ RETCODE SCIPprimalTrySolFree(
       *stored = FALSE;
    }
    assert(*sol == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** checks current LP/pseudo solution; if feasible, adds it to storage */
+RETCODE SCIPprimalTryCurrentSol(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
+   )
+{
+   assert(primal != NULL);
+
+   /* link temporary solution to current solution */
+   CHECK_OKAY( primalLinkCurrentSol(primal, memhdr, set, stat, tree, lp, heur) );
+
+   /* add solution to solution storage */
+   CHECK_OKAY( SCIPprimalTrySol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, primal->currentsol,
+         checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }

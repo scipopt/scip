@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.23 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.24 2004/09/23 15:46:30 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -38,6 +38,7 @@
 #include "type_sol.h"
 #include "type_primal.h"
 #include "type_tree.h"
+#include "type_heur.h"
 
 #include "struct_primal.h"
 
@@ -119,6 +120,21 @@ RETCODE SCIPprimalAddSolFree(
    Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
+/** adds current LP/pseudo solution to solution storage */
+extern
+RETCODE SCIPprimalAddCurrentSol(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
+   );
+
 /** checks primal solution; if feasible, adds it to storage by copying it */
 extern
 RETCODE SCIPprimalTrySol(
@@ -151,6 +167,23 @@ RETCODE SCIPprimalTrySolFree(
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
+   );
+
+/** checks current LP/pseudo solution; if feasible, adds it to storage */
+extern
+RETCODE SCIPprimalTryCurrentSol(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
 /** inserts solution into the global array of all existing primal solutions */

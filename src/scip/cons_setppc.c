@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.59 2004/09/21 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.60 2004/09/23 15:46:27 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -895,7 +895,7 @@ RETCODE processFixings(
                assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
-                  CHECK_OKAY( SCIPinferBinvar(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
+                  CHECK_OKAY( SCIPinferBinvarCons(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
                   assert(!infeasible);
                   fixed = fixed || tightened;
                }
@@ -985,7 +985,7 @@ RETCODE processFixings(
             assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
-               CHECK_OKAY( SCIPinferBinvar(scip, var, TRUE, cons, 0, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferBinvarCons(scip, var, TRUE, cons, 0, &infeasible, &tightened) );
                assert(!infeasible);
                assert(tightened);
                break;

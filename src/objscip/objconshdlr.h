@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.20 2004/08/24 11:57:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.21 2004/09/23 15:46:29 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -475,9 +475,9 @@ public:
    /** propagation conflict resolving method of constraint handler
     *
     *  This method is called during conflict analysis. If the conflict handler wants to support conflict analysis,
-    *  it should call SCIPinferVarLb() or SCIPinferVarUb() in domain propagation instead of SCIPchgVarLb() or
+    *  it should call SCIPinferVarLbCons() or SCIPinferVarUbCons() in domain propagation instead of SCIPchgVarLb() or
     *  SCIPchgVarUb() in order to deduce bound changes on variables.
-    *  In the SCIPinferVarLb() and SCIPinferVarUb() calls, the handler provides the constraint, that deduced the
+    *  In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint, that deduced the
     *  variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
     *  The propagation conflict resolving method must then be implemented, to provide the "reasons" for the bound
     *  changes, i.e. the bounds of variables at the time of the propagation, that forced the constraint to set the
@@ -487,7 +487,7 @@ public:
     *
     *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE (i.e. changes the lower bound of z
     *  to 1.0), if both, x and y, are assigned to FALSE (i.e. if the upper bounds of these variables are 0.0). It uses
-    *  SCIPinferVarLb(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
+    *  SCIPinferVarLbCons(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
     *  constraint handler and is set to 0).
     *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
     *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
@@ -497,7 +497,7 @@ public:
     *  the reason for the deduction of the lower bound of z.
     *
     *  possible return values for *result:
-    *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason variables
+    *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
     *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
     */
    virtual RETCODE scip_resprop(
@@ -505,8 +505,8 @@ public:
       CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       CONS*         cons,               /**< the constraint that deduced the bound change of the conflict variable */
       VAR*          infervar,           /**< the conflict variable whose bound change has to be resolved */
-      int           inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLb()
-                                         *   or SCIPinferVarUb() call */
+      int           inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons()
+                                         *   or SCIPinferVarUbCons() call */
       BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
       BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
                                          *   change took place */

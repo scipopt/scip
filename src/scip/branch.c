@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.49 2004/09/21 12:07:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.50 2004/09/23 15:46:26 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -160,7 +160,7 @@ RETCODE branchcandCalcLPCands(
    assert(branchcand->validlpcandslp <= stat->lpcount);
    assert(lp != NULL);
    assert(lp->solved);
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDED);
+   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDED);
 
    debugMessage("calculating LP branching candidates: validlp=%d, lpcount=%d\n",
       branchcand->validlpcandslp, stat->lpcount);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.14 2004/09/21 12:08:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.15 2004/09/23 15:46:34 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -145,6 +145,7 @@ struct Tree
    int              repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
    Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
    Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
+   Bool             probinglpflushed;   /**< was the LP flushed before we entered the probing mode? */
 };
 
 

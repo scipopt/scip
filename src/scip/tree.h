@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.65 2004/09/21 12:08:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.66 2004/09/23 15:46:34 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -38,6 +38,7 @@
 #include "type_primal.h"
 #include "type_tree.h"
 #include "type_branch.h"
+#include "type_prop.h"
 #include "pub_tree.h"
 
 #ifndef NDEBUG
@@ -156,7 +157,8 @@ RETCODE SCIPnodeDisableCons(
    );
 
 /** adds bound change with inference information to focus node, child of focus node, or probing node;
- *  if possible, adjusts bound to integral value
+ *  if possible, adjusts bound to integral value;
+ *  at most one of infercons and inferprop may be non-NULL
  */
 extern
 RETCODE SCIPnodeAddBoundinfer(
@@ -172,6 +174,7 @@ RETCODE SCIPnodeAddBoundinfer(
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
@@ -300,7 +303,8 @@ extern
 RETCODE SCIPtreeStartProbing(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
    );
 
 /** switches back from probing to normal operation mode, restores bounds of all variables and restores active constraints

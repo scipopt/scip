@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.110 2004/09/21 12:08:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.111 2004/09/23 15:46:33 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -45,6 +45,7 @@
 #include "pricer.h"
 #include "reader.h"
 #include "sepa.h"
+#include "prop.h"
 
 
 
@@ -149,8 +150,11 @@
 #define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_MINMAXCONFVARS      30 /**< minimal absolute maximum of variables involved in a conflict clause */
 #define SCIP_DEFAULT_MAXCONFLPLOOPS     100 /**< maximal number of LP resolving loops during conflict analysis */
+#define SCIP_DEFAULT_CONFFUIPLEVELS       1 /**< number of depth levels up to which first UIP's are used in conflict
+                                             *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_REPROPCONFLICT    TRUE /**< should earlier nodes be repropagated in order to replace branching
                                              *   decisions by deductions */
+
 
 /* Primal Solutions */
 
@@ -284,6 +288,10 @@ RETCODE SCIPsetCreate(
    (*set)->nsepas = 0;
    (*set)->sepassize = 0;
    (*set)->sepassorted = FALSE;
+   (*set)->props = NULL;
+   (*set)->nprops = 0;
+   (*set)->propssize = 0;
+   (*set)->propssorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -546,6 +554,11 @@ RETCODE SCIPsetCreate(
          "maximal number of LP resolving loops during conflict analysis",
          &(*set)->maxconflploops, SCIP_DEFAULT_MAXCONFLPLOOPS, 1, INT_MAX,
          NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "conflict/conffuiplevels",
+         "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
+         &(*set)->conffuiplevels, SCIP_DEFAULT_CONFFUIPLEVELS, -1, INT_MAX,
+         NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
          "conflict/repropconflict",
          "should earlier nodes be repropagated in order to replace branching decisions by deductions",
@@ -733,6 +746,13 @@ RETCODE SCIPsetFree(
       CHECK_OKAY( SCIPsepaFree(&(*set)->sepas[i], (*set)->scip) );
    }
    freeMemoryArrayNull(&(*set)->sepas);
+
+   /* free propagators */
+   for( i = 0; i < (*set)->nprops; ++i )
+   {
+      CHECK_OKAY( SCIPpropFree(&(*set)->props[i], (*set)->scip) );
+   }
+   freeMemoryArrayNull(&(*set)->props);
 
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
@@ -1439,6 +1459,64 @@ void SCIPsetSortSepas(
    }
 }
 
+/** inserts propagator in propagator list */
+RETCODE SCIPsetIncludeProp(
+   SET*             set,                /**< global SCIP settings */
+   PROP*            prop                /**< propagator */
+   )
+{
+   assert(set != NULL);
+   assert(prop != NULL);
+   assert(!SCIPpropIsInitialized(prop));
+
+   if( set->nprops >= set->propssize )
+   {
+      set->propssize = SCIPsetCalcMemGrowSize(set, set->nprops+1);
+      ALLOC_OKAY( reallocMemoryArray(&set->props, set->propssize) );
+   }
+   assert(set->nprops < set->propssize);
+   
+   set->props[set->nprops] = prop;
+   set->nprops++;
+   set->propssorted = FALSE;
+
+   return SCIP_OKAY;
+}   
+
+/** returns the propagator of the given name, or NULL if not existing */
+PROP* SCIPsetFindProp(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name                /**< name of propagator */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nprops; ++i )
+   {
+      if( strcmp(SCIPpropGetName(set->props[i]), name) == 0 )
+         return set->props[i];
+   }
+
+   return NULL;
+}
+
+/** sorts propagators by priorities */
+void SCIPsetSortProps(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->propssorted )
+   {
+      SCIPbsortPtr((void**)set->props, set->nprops, SCIPpropComp);
+      set->propssorted = TRUE;
+   }
+}
+
 /** inserts primal heuristic in primal heuristic list */
 RETCODE SCIPsetIncludeHeur(
    SET*             set,                /**< global SCIP settings */
@@ -1775,6 +1853,12 @@ RETCODE SCIPsetInitCallbacks(
       CHECK_OKAY( SCIPsepaInit(set->sepas[i], set->scip) );
    }
 
+   /* propagators */
+   for( i = 0; i < set->nprops; ++i )
+   {
+      CHECK_OKAY( SCIPpropInit(set->props[i], set->scip) );
+   }
+
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
@@ -1847,6 +1931,12 @@ RETCODE SCIPsetExitCallbacks(
    for( i = 0; i < set->nsepas; ++i )
    {
       CHECK_OKAY( SCIPsepaExit(set->sepas[i], set->scip) );
+   }
+
+   /* propagators */
+   for( i = 0; i < set->nprops; ++i )
+   {
+      CHECK_OKAY( SCIPpropExit(set->props[i], set->scip) );
    }
 
    /* primal heuristics */

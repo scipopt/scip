@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.118 2004/09/21 12:07:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.119 2004/09/23 15:46:27 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2183,7 +2183,7 @@ RETCODE tightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-            CHECK_OKAY( SCIPinferVarUb(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -2212,7 +2212,7 @@ RETCODE tightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-            CHECK_OKAY( SCIPinferVarLb(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n", 
@@ -2245,7 +2245,7 @@ RETCODE tightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-            CHECK_OKAY( SCIPinferVarLb(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -2274,7 +2274,7 @@ RETCODE tightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-            CHECK_OKAY( SCIPinferVarUb(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",

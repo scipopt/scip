@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.29 2004/09/21 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.30 2004/09/23 15:46:28 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -437,6 +437,39 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayProblem)
 
    printf("\n");
    CHECK_OKAY( SCIPprintOrigProblem(scip, NULL) );
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display propagators command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
+{  /*lint --e{715}*/
+   PROP** props;
+   int nprops;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   props = SCIPgetProps(scip);
+   nprops = SCIPgetNProps(scip);
+
+   /* display list of propagators */
+   printf("\n");
+   printf(" propagator           priority freq  description\n");
+   printf(" ----------           -------- ----  -----------\n");
+   for( i = 0; i < nprops; ++i )
+   {
+      printf(" %-20s ", SCIPpropGetName(props[i]));
+      if( strlen(SCIPpropGetName(props[i])) > 20 )
+         printf("\n %20s ", "-->");
+      printf("%8d ", SCIPpropGetPriority(props[i]));
+      printf("%4d  ", SCIPpropGetFreq(props[i]));
+      printf(SCIPpropGetDesc(props[i]));
+      printf("\n");
+   }
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1195,7 +1228,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "branching") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayBranching, NULL,
-            "branching", "display branching rule priorities", FALSE, NULL) );
+            "branching", "display branching rules", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1204,7 +1237,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "conflict") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayConflict, NULL,
-            "conflict", "display conflict handler priorities", FALSE, NULL) );
+            "conflict", "display conflict handlers", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1213,7 +1246,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "conshdlrs") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayConshdlrs, NULL,
-            "conshdlrs", "display constraint handler settings", FALSE, NULL) );
+            "conshdlrs", "display constraint handlers", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1222,7 +1255,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "displaycols") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayDisplaycols, NULL,
-            "displaycols", "display display column settings", FALSE, NULL) );
+            "displaycols", "display display columns", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1231,7 +1264,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "heuristics") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayHeuristics, NULL,
-            "heuristics", "display primal heuristics settings", FALSE, NULL) );
+            "heuristics", "display primal heuristics", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1240,7 +1273,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "nodeselectors") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayNodeselectors, NULL,
-            "nodeselectors", "display node selectors settings", FALSE, NULL) );
+            "nodeselectors", "display node selectors", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1249,7 +1282,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "presolvers") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayPresolvers, NULL,
-            "presolvers", "display presolvers settings", FALSE, NULL) );
+            "presolvers", "display presolvers", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1263,11 +1296,20 @@ RETCODE SCIPincludeDialogDefault(
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* display propagators */
+   if( !SCIPdialogHasEntry(submenu, "propagators") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayPropagators, NULL,
+            "propagators", "display propagators", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* display readers */
    if( !SCIPdialogHasEntry(submenu, "readers") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayReaders, NULL,
-            "readers", "display file readers settings", FALSE, NULL) );
+            "readers", "display file readers", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1276,7 +1318,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "separators") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplaySeparators, NULL,
-            "separators", "display cut separators settings", FALSE, NULL) );
+            "separators", "display cut separators", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

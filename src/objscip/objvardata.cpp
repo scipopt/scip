@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.1 2004/05/03 13:35:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.2 2004/09/23 15:46:30 bzfpfend Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -153,7 +153,7 @@ RETCODE SCIPcreateObjVar(
 
    /* create variable */
    CHECK_OKAY( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removeable, 
-                  varDelorigObj, varTransObj, varDeltransObj, vardata) );
+         varDelorigObj, varTransObj, varDeltransObj, vardata) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.210 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.211 2004/09/23 15:46:32 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -63,6 +63,7 @@
 #include "presol.h"
 #include "pricer.h"
 #include "sepa.h"
+#include "prop.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -1312,6 +1313,82 @@ RETCODE SCIPsetSepaPriority(
    CHECK_OKAY( checkStage(scip, "SCIPsetSepaPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIPsepaSetPriority(sepa, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
+/** creates a propagator and includes it in SCIP */
+RETCODE SCIPincludeProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of propagator */
+   const char*      desc,               /**< description of propagator */
+   int              priority,           /**< priority of the propagator */
+   int              freq,               /**< frequency for calling propagator */
+   DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
+   DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
+   DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
+   DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
+   PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   PROP* prop;
+
+   CHECK_OKAY( checkStage(scip, "SCIPincludeProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPpropCreate(&prop, scip->set, scip->mem->setmem,
+         name, desc, priority, freq,
+         propfree, propinit, propexit, propexec, propresprop, propdata) );
+   CHECK_OKAY( SCIPsetIncludeProp(scip->set, prop) );
+   
+   return SCIP_OKAY;
+}
+
+/** returns the propagator of the given name, or NULL if not existing */
+PROP* SCIPfindProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of propagator */
+   )
+{
+   assert(name != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfindProp", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindProp(scip->set, name);
+}
+
+/** returns the array of currently available propagators */
+PROP** SCIPgetProps(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetProps", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSortProps(scip->set);
+
+   return scip->set->props;
+}
+
+/** returns the number of currently available propagators */
+int SCIPgetNProps(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNProps", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nprops;
+}
+
+/** sets the priority of a propagator */
+RETCODE SCIPsetPropPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROP*            prop,               /**< primal propistic */
+   int              priority            /**< new priority of the propagator */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetPropPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPpropSetPriority(prop, scip->set, priority);
 
    return SCIP_OKAY;
 }
@@ -4447,7 +4524,7 @@ RETCODE SCIPtightenVarUb(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  */
-RETCODE SCIPinferVarLb(
+RETCODE SCIPinferVarLbCons(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound,           /**< new value for bound */
@@ -4462,7 +4539,7 @@ RETCODE SCIPinferVarLb(
 
    assert(infeasible != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPinferVarLb", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPinferVarLbCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
 
@@ -4498,7 +4575,7 @@ RETCODE SCIPinferVarLb(
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
             scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, 
-            infercons, inferinfo, FALSE) );
+            infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -4517,7 +4594,7 @@ RETCODE SCIPinferVarLb(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  */
-RETCODE SCIPinferVarUb(
+RETCODE SCIPinferVarUbCons(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound,           /**< new value for bound */
@@ -4532,7 +4609,7 @@ RETCODE SCIPinferVarUb(
 
    assert(infeasible != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPinferVarUb", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPinferVarUbCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
 
@@ -4568,7 +4645,7 @@ RETCODE SCIPinferVarUb(
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
             scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, 
-            infercons, inferinfo, FALSE) );
+            infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -4586,7 +4663,7 @@ RETCODE SCIPinferVarUb(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason for the
  *  deduction of the fixing
  */
-RETCODE SCIPinferBinvar(
+RETCODE SCIPinferBinvarCons(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< binary variable to fix */
    Bool             fixedval,           /**< value to fix binary variable to */
@@ -4603,7 +4680,7 @@ RETCODE SCIPinferBinvar(
    assert(fixedval == TRUE || fixedval == FALSE);
    assert(infeasible != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPinferBinvar", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPinferBinvarCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -4650,13 +4727,242 @@ RETCODE SCIPinferBinvar(
       {
          CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
                scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, 
-               infercons, inferinfo, FALSE) );
+               infercons, NULL, inferinfo, FALSE) );
       }
       else
       {
          CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
                scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, 
-               infercons, inferinfo, FALSE) );
+               infercons, NULL, inferinfo, FALSE) );
+      }
+      break;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ */
+RETCODE SCIPinferVarLbProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   PROP*            inferprop,          /**< propagator that deduced the bound change */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   Real lb;
+   Real ub;
+
+   assert(infeasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPinferVarLbProp", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+   
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
+   {
+      if( tightened != NULL )
+         *tightened = FALSE;
+      return SCIP_OKAY;
+   }
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, 
+            NULL, inferprop, inferinfo, FALSE) );
+      break;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ */
+RETCODE SCIPinferVarUbProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   PROP*            inferprop,          /**< propagator that deduced the bound change */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   Real lb;
+   Real ub;
+
+   assert(infeasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPinferVarUbProp", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+   
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
+   {
+      if( tightened != NULL )
+         *tightened = FALSE;
+      return SCIP_OKAY;
+   }
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, 
+            NULL, inferprop, inferinfo, FALSE) );
+      break;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in current node;
+ *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason for the
+ *  deduction of the fixing
+ */
+RETCODE SCIPinferBinvarProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< binary variable to fix */
+   Bool             fixedval,           /**< value to fix binary variable to */
+   PROP*            inferprop,          /**< propagator that deduced the fixing */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   )
+{
+   Real lb;
+   Real ub;
+
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(fixedval == TRUE || fixedval == FALSE);
+   assert(infeasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPinferBinvarProp", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsEQ(scip->set, lb, 0.0) || SCIPsetIsEQ(scip->set, lb, 1.0));
+   assert(SCIPsetIsEQ(scip->set, ub, 0.0) || SCIPsetIsEQ(scip->set, ub, 1.0));
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+
+   /* check, if variable is already fixed */
+   if( (lb > 0.5) || (ub < 0.5) )
+   {
+      *infeasible = (fixedval == (lb < 0.5));
+
+      return SCIP_OKAY;
+   }
+
+   /* apply the fixing */
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      if( fixedval == TRUE )
+      {
+         CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
+      }
+      break;
+
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
+                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
+      break;
+
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      if( fixedval == TRUE )
+      {
+         CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+               scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, 
+               NULL, inferprop, inferinfo, FALSE) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+               scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, 
+               NULL, inferprop, inferinfo, FALSE) );
       }
       break;
 
@@ -4883,7 +5189,7 @@ RETCODE SCIPchgVarType(
 RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to fix */
-   Real             fixedval,           /**< value to fix variable at */
+   Real             fixedval,           /**< value to fix variable to */
    Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    )
@@ -7305,7 +7611,9 @@ Longint SCIPgetLastDivenode(
  * probing methods
  */
 
-/** initiates probing, making methods SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPpropagateProbing() available */
+/** initiates probing, making methods SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), SCIPfixVarProbing() and
+ *  SCIPpropagateProbing() available
+ */
 RETCODE SCIPstartProbing(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -7318,7 +7626,7 @@ RETCODE SCIPstartProbing(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPtreeStartProbing(scip->tree, scip->mem->solvemem, scip->set) );
+   CHECK_OKAY( SCIPtreeStartProbing(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -7389,10 +7697,48 @@ RETCODE SCIPchgVarUbProbing(
    return SCIP_OKAY;
 }
 
+/** injects a change of variable's bounds into probing node to fix the variable to the specified value; the same can also
+ *  be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated like deductions instead
+ *  of branching decisions
+ */
+extern
+RETCODE SCIPfixVarProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             fixedval            /**< value to fix variable to */
+   )
+{
+   Real lb;
+   Real ub;
+
+   CHECK_OKAY( checkStage(scip, "SCIPfixVarProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   if( SCIPsetIsGT(scip->set, fixedval, lb) )
+   {
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_LOWER, TRUE) );
+   }
+   if( SCIPsetIsLT(scip->set, fixedval, ub) )
+   {
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, fixedval, SCIP_BOUNDTYPE_UPPER, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
- *  bounds due to SCIPchgVarLbProbing() and SCIPchgVarUbProbing() are used for propagation
+ *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
  */
 RETCODE SCIPpropagateProbing(
    SCIP*            scip,               /**< SCIP data structure */
@@ -8203,6 +8549,21 @@ RETCODE SCIPaddSolFree(
    return SCIP_OKAY;
 }
 
+/** adds current LP/pseudo solution to solution storage */
+RETCODE SCIPaddCurrentSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   HEUR*            heur,               /**< heuristic that found the solution */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPprimalAddCurrentSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
+         scip->tree, scip->lp, scip->eventfilter, heur, stored) );
+
+   return SCIP_OKAY;
+}
+
 /** checks solution for feasibility; if possible, adds it to storage by copying */
 RETCODE SCIPtrySol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -8234,6 +8595,23 @@ RETCODE SCIPtrySolFree(
    CHECK_OKAY( SCIPprimalTrySolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
          scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
    
+   return SCIP_OKAY;
+}
+
+/** checks current LP/pseudo solution for feasibility; if possible, adds it to storage */
+RETCODE SCIPtryCurrentSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   HEUR*            heur,               /**< heuristic that found the solution */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPtryCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPprimalTryCurrentSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
+         scip->tree, scip->lp, scip->eventfilter, heur, checkintegrality, checklprows, stored) );
+
    return SCIP_OKAY;
 }
 
@@ -9322,16 +9700,31 @@ void printConstraintTimingStatistics(
 }
 
 static
-void printRedcostStrengtheningStatistics(
+void printPropagatorStatistics(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file */
    )
 {
-   fprintf(file, "Reduced Cost Str.  :       Time      Calls      Found\n");
-   fprintf(file, "  total            : %10.2f %10lld %10lld\n",
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(file != NULL);
+
+   fprintf(file, "Propagators        :       Time      Calls    Cutoffs    DomReds\n");
+
+   fprintf(file, "  reduced cost str.: %10.2f %10lld          - %10lld\n",
       SCIPclockGetTime(scip->stat->redcoststrtime),
       scip->stat->nredcoststrcalls,
       scip->stat->nredcoststrfound);
+
+   for( i = 0; i < scip->set->nprops; ++i )
+      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld %10lld\n",
+         SCIPpropGetName(scip->set->props[i]),
+         SCIPpropGetTime(scip->set->props[i]),
+         SCIPpropGetNCalls(scip->set->props[i]),
+         SCIPpropGetNCutoffs(scip->set->props[i]),
+         SCIPpropGetNDomredsFound(scip->set->props[i]));
 }
 
 static
@@ -9340,25 +9733,37 @@ void printConflictStatistics(
    FILE*            file                /**< output file */
    )
 {
-   fprintf(file, "Conflict Analysis  :       Time      Calls  Conflicts\n");
-   fprintf(file, "  propagation      : %10.2f %10lld %10lld\n",
+   fprintf(file, "Conflict Analysis  :       Time      Calls  Conflicts   Literals   LP Iters\n");
+   fprintf(file, "  propagation      : %10.2f %10lld %10lld %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
-      SCIPconflictGetNPropConflicts(scip->conflict));
-   fprintf(file, "  infeasible LP    : %10.2f %10lld %10lld   (%lld LP iterations)\n",
+      SCIPconflictGetNPropConflicts(scip->conflict),
+      SCIPconflictGetNPropConflicts(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNPropConflictLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNPropConflicts(scip->conflict) : 0);
+   fprintf(file, "  infeasible LP    : %10.2f %10lld %10lld %10.1f %10lld\n",
       SCIPconflictGetLPTime(scip->conflict),
       SCIPconflictGetNLPCalls(scip->conflict),
       SCIPconflictGetNLPConflicts(scip->conflict),
+      SCIPconflictGetNLPConflicts(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNLPConflictLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNLPConflicts(scip->conflict) : 0,
       SCIPconflictGetNLPIterations(scip->conflict));
-   fprintf(file, "  strong branching : %10.2f %10lld %10lld   (%lld LP iterations)\n",
+   fprintf(file, "  strong branching : %10.2f %10lld %10lld %10.1f %10lld\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
       SCIPconflictGetNStrongbranchCalls(scip->conflict),
       SCIPconflictGetNStrongbranchConflicts(scip->conflict),
+      SCIPconflictGetNStrongbranchConflicts(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNStrongbranchConflictLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNStrongbranchConflicts(scip->conflict) : 0,
       SCIPconflictGetNStrongbranchIterations(scip->conflict));
-   fprintf(file, "  pseudo solution  : %10.2f %10lld %10lld\n",
+   fprintf(file, "  pseudo solution  : %10.2f %10lld %10lld %10.1f          -\n",
       SCIPconflictGetPseudoTime(scip->conflict),
       SCIPconflictGetNPseudoCalls(scip->conflict),
-      SCIPconflictGetNPseudoConflicts(scip->conflict));
+      SCIPconflictGetNPseudoConflicts(scip->conflict),
+      SCIPconflictGetNPseudoConflicts(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNPseudoConflictLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNPseudoConflicts(scip->conflict) : 0);
 }
 
 static
@@ -9751,7 +10156,7 @@ RETCODE SCIPprintStatistics(
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
       printConstraintTimingStatistics(scip, file);
-      printRedcostStrengtheningStatistics(scip, file);
+      printPropagatorStatistics(scip, file);
       printConflictStatistics(scip, file);
       printSeparatorStatistics(scip, file);
       printPricerStatistics(scip, file);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.167 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.168 2004/09/23 15:46:32 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -55,6 +55,7 @@
 #include "type_pricer.h"
 #include "type_reader.h"
 #include "type_sepa.h"
+#include "type_prop.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
 #include "pub_branch.h"
@@ -73,6 +74,7 @@
 #include "pub_pricer.h"
 #include "pub_reader.h"
 #include "pub_sepa.h"
+#include "pub_prop.h"
 #include "pub_sol.h"
 #include "pub_tree.h"
 #include "pub_var.h"
@@ -683,6 +685,49 @@ RETCODE SCIPsetSepaPriority(
    SCIP*            scip,               /**< SCIP data structure */
    SEPA*            sepa,               /**< primal sepaistic */
    int              priority            /**< new priority of the separator */
+   );
+
+/** creates a propagator and includes it in SCIP */
+extern
+RETCODE SCIPincludeProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of propagator */
+   const char*      desc,               /**< description of propagator */
+   int              priority,           /**< priority of the propagator */
+   int              freq,               /**< frequency for calling propagator */
+   DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
+   DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
+   DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
+   DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
+   PROPDATA*        propdata            /**< propagator data */
+   );
+
+/** returns the propagator of the given name, or NULL if not existing */
+extern
+PROP* SCIPfindProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of propagator */
+   );
+
+/** returns the array of currently available propagators */
+extern
+PROP** SCIPgetProps(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available propagators */
+extern
+int SCIPgetNProps(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of a propagator */
+extern
+RETCODE SCIPsetPropPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROP*            prop,               /**< primal propistic */
+   int              priority            /**< new priority of the propagator */
    );
 
 /** creates a primal heuristic and includes it in SCIP */
@@ -1663,11 +1708,11 @@ RETCODE SCIPtightenVarUb(
  *  for the deduction of the bound change
  */
 extern
-RETCODE SCIPinferVarLb(
+RETCODE SCIPinferVarLbCons(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound,           /**< new value for bound */
-   CONS*            infercons,          /**< constraint that deduced the bound change */
+   CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
@@ -1679,7 +1724,7 @@ RETCODE SCIPinferVarLb(
  *  for the deduction of the bound change
  */
 extern
-RETCODE SCIPinferVarUb(
+RETCODE SCIPinferVarUbCons(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound,           /**< new value for bound */
@@ -1694,11 +1739,58 @@ RETCODE SCIPinferVarUb(
  *  deduction of the fixing
  */
 extern
-RETCODE SCIPinferBinvar(
+RETCODE SCIPinferBinvarCons(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< binary variable to fix */
    Bool             fixedval,           /**< value to fix binary variable to */
    CONS*            infercons,          /**< constraint that deduced the fixing */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   );
+
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ */
+extern
+RETCODE SCIPinferVarLbProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ */
+extern
+RETCODE SCIPinferVarUbProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   PROP*            inferprop,          /**< propagator that deduced the bound change */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in current node;
+ *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason for the
+ *  deduction of the fixing
+ */
+extern
+RETCODE SCIPinferBinvarProp(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< binary variable to fix */
+   Bool             fixedval,           /**< value to fix binary variable to */
+   PROP*            inferprop,          /**< propagator that deduced the fixing */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
@@ -1817,7 +1909,7 @@ extern
 RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to fix */
-   Real             fixedval,           /**< value to fix variable at */
+   Real             fixedval,           /**< value to fix variable to */
    Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    );
@@ -2903,7 +2995,9 @@ Longint SCIPgetLastDivenode(
 /**@name LP Diving Methods */
 /**@{ */
 
-/** initiates probing, making methods SCIPchgVarLbProbing(), and SCIPchgVarUbProbing() available */
+/** initiates probing, making methods SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), SCIPfixVarProbing() and
+ *  SCIPpropagateProbing() available
+ */
 extern
 RETCODE SCIPstartProbing(
    SCIP*            scip                /**< SCIP data structure */
@@ -2935,10 +3029,21 @@ RETCODE SCIPchgVarUbProbing(
    Real             newbound            /**< new value for bound */
    );
 
+/** injects a change of variable's bounds into probing node to fix the variable to the specified value; the same can also
+ *  be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated like deductions instead
+ *  of branching decisions
+ */
+extern
+RETCODE SCIPfixVarProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             fixedval            /**< value to fix variable to */
+   );
+
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
- *  bounds due to SCIPchgVarLbProbing() and SCIPchgVarUbProbing() are used for propagation
+ *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
  */
 extern
 RETCODE SCIPpropagateProbing(
@@ -3337,6 +3442,14 @@ RETCODE SCIPaddSolFree(
    Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
+/** adds current LP/pseudo solution to solution storage */
+extern
+RETCODE SCIPaddCurrentSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   HEUR*            heur,               /**< heuristic that found the solution */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
+   );
+
 /** checks solution for feasibility; if possible, adds it to storage by copying */
 extern
 RETCODE SCIPtrySol(
@@ -3355,6 +3468,16 @@ RETCODE SCIPtrySolFree(
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
+   );
+
+/** checks current LP/pseudo solution for feasibility; if possible, adds it to storage */
+extern
+RETCODE SCIPtryCurrentSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   HEUR*            heur,               /**< heuristic that found the solution */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
 /** checks solution for feasibility without adding it to the solution store */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.22 2004/09/21 12:08:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.23 2004/09/23 15:46:34 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -48,7 +48,8 @@ struct Stat
    Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
    Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
    Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
-   Longint          ncreatednodes;      /**< number of nodes created */
+   Longint          ncreatednodes;      /**< total number of nodes created */
+   Longint          ncreatednodesrun;   /**< number of nodes created in current run */
    Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    Longint          nreprops;           /**< number of times, a solved node is repropagated again */

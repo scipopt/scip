@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.111 2004/09/21 12:08:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.112 2004/09/23 15:46:35 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -267,6 +267,7 @@ RETCODE varAddLbchginfo(
    int              pos,                /**< position of the bound change in its bound change array */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
@@ -278,7 +279,9 @@ RETCODE varAddLbchginfo(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, newbound));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, oldbound, 0.0));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 1.0));
-   assert(boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE || infercons == NULL);
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
+   assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
    debugMessage("adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, oldbound, newbound);
@@ -293,8 +296,24 @@ RETCODE varAddLbchginfo(
    var->lbchginfos[var->nlbchginfos].boundtype = SCIP_BOUNDTYPE_LOWER;
    var->lbchginfos[var->nlbchginfos].inferboundtype = inferboundtype;
    var->lbchginfos[var->nlbchginfos].inferencedata.var = infervar;
-   var->lbchginfos[var->nlbchginfos].inferencedata.cons = infercons;
    var->lbchginfos[var->nlbchginfos].inferencedata.info = inferinfo;
+
+   switch( boundchgtype )
+   {
+   case SCIP_BOUNDCHGTYPE_BRANCHING:
+      break;
+   case SCIP_BOUNDCHGTYPE_CONSINFER:
+      assert(infercons != NULL);
+      var->lbchginfos[var->nlbchginfos].inferencedata.reason.cons = infercons;
+      break;
+   case SCIP_BOUNDCHGTYPE_PROPINFER:
+      var->lbchginfos[var->nlbchginfos].inferencedata.reason.prop = inferprop;
+      break;
+   default:
+      errorMessage("invalid bound change type %d\n", boundchgtype);
+      return SCIP_INVALIDDATA;
+   }
+
    var->nlbchginfos++;
 
    assert(var->nlbchginfos < 2
@@ -316,6 +335,7 @@ RETCODE varAddUbchginfo(
    int              pos,                /**< position of the bound change in its bound change array */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
@@ -327,7 +347,9 @@ RETCODE varAddUbchginfo(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, newbound));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, oldbound, 1.0));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0));
-   assert(boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE || infercons == NULL);
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
+   assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
    debugMessage("adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, oldbound, newbound);
@@ -342,8 +364,24 @@ RETCODE varAddUbchginfo(
    var->ubchginfos[var->nubchginfos].boundtype = SCIP_BOUNDTYPE_UPPER;
    var->ubchginfos[var->nubchginfos].inferboundtype = inferboundtype;
    var->ubchginfos[var->nubchginfos].inferencedata.var = infervar;
-   var->ubchginfos[var->nubchginfos].inferencedata.cons = infercons;
    var->ubchginfos[var->nubchginfos].inferencedata.info = inferinfo;
+
+   switch( boundchgtype )
+   {
+   case SCIP_BOUNDCHGTYPE_BRANCHING:
+      break;
+   case SCIP_BOUNDCHGTYPE_CONSINFER:
+      assert(infercons != NULL);
+      var->ubchginfos[var->nubchginfos].inferencedata.reason.cons = infercons;
+      break;
+   case SCIP_BOUNDCHGTYPE_PROPINFER:
+      var->ubchginfos[var->nubchginfos].inferencedata.reason.prop = inferprop;
+      break;
+   default:
+      errorMessage("invalid bound change type %d\n", boundchgtype);
+      return SCIP_INVALIDDATA;
+   }
+
    var->nubchginfos++;
 
    assert(var->nubchginfos < 2
@@ -391,24 +429,42 @@ RETCODE SCIPboundchgApply(
          if( SCIPsetIsLE(set, boundchg->newbound, var->locdom.ub) )
          {
             /* add the bound change info to the variable's bound change info array */
-            if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+            switch( boundchg->boundchgtype )
             {
+            case SCIP_BOUNDCHGTYPE_BRANCHING:
                debugMessage(" -> branching: new lower bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
                stat->lastbranchdir = SCIP_BRANCHDIR_UPWARDS;
-            }
-            else
-            {
-               assert(boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
-               debugMessage(" -> inference: new lower bound of <%s>[%g,%g]: %g\n",
+               break;
+
+            case SCIP_BOUNDCHGTYPE_CONSINFER:
+               assert(boundchg->data.inferencedata.reason.cons != NULL);
+               debugMessage(" -> constraint <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+                  SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.cons,
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
                      boundchg->data.inferencedata.info,
-                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_INFERENCE) );
+                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_CONSINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_PROPINFER:
+               debugMessage(" -> propagator <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.prop != NULL
+                  ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.info,
+                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            default:
+               errorMessage("invalid bound change type %d\n", boundchg->boundchgtype);
+               return SCIP_INVALIDDATA;
             }
             
             /* change local bound of variable */
@@ -439,23 +495,42 @@ RETCODE SCIPboundchgApply(
          if( SCIPsetIsGE(set, boundchg->newbound, var->locdom.lb) )
          {
             /* add the bound change info to the variable's bound change info array */
-            if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+            switch( boundchg->boundchgtype )
             {
+            case SCIP_BOUNDCHGTYPE_BRANCHING:
                debugMessage(" -> branching: new upper bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
-               stat->lastbranchdir = SCIP_BRANCHDIR_UPWARDS;
-            }
-            else
-            {
-               assert(boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
-               debugMessage(" -> inference: new upper bound of <%s>[%g,%g]: %g\n",
+               stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
+               break;
+
+            case SCIP_BOUNDCHGTYPE_CONSINFER:
+               assert(boundchg->data.inferencedata.reason.cons != NULL);
+               debugMessage(" -> constraint <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+                  SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.cons, boundchg->data.inferencedata.info,
-                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_INFERENCE) );
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
+                     boundchg->data.inferencedata.info,
+                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_CONSINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_PROPINFER:
+               debugMessage(" -> propagator <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.prop != NULL
+                  ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.info,
+                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            default:
+               errorMessage("invalid bound change type %d\n", boundchg->boundchgtype);
+               return SCIP_INVALIDDATA;
             }
 
             /* change local bound of variable */
@@ -569,14 +644,13 @@ RETCODE boundchgCaptureData(
    switch( boundchg->boundchgtype )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
+   case SCIP_BOUNDCHGTYPE_PROPINFER:
       break;
 
-   case SCIP_BOUNDCHGTYPE_INFERENCE:
+   case SCIP_BOUNDCHGTYPE_CONSINFER:
       assert(boundchg->data.inferencedata.var != NULL);
-      if( boundchg->data.inferencedata.cons != NULL )
-      {
-         SCIPconsCapture(boundchg->data.inferencedata.cons);
-      }
+      assert(boundchg->data.inferencedata.reason.cons != NULL);
+      SCIPconsCapture(boundchg->data.inferencedata.reason.cons);
       break;
       
    default:
@@ -600,14 +674,13 @@ RETCODE boundchgReleaseData(
    switch( boundchg->boundchgtype )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
+   case SCIP_BOUNDCHGTYPE_PROPINFER:
       break;
 
-   case SCIP_BOUNDCHGTYPE_INFERENCE:
+   case SCIP_BOUNDCHGTYPE_CONSINFER:
       assert(boundchg->data.inferencedata.var != NULL);
-      if( boundchg->data.inferencedata.cons != NULL )
-      {
-         CHECK_OKAY( SCIPconsRelease(&boundchg->data.inferencedata.cons, memhdr, set) );
-      }
+      assert(boundchg->data.inferencedata.reason.cons != NULL);
+      CHECK_OKAY( SCIPconsRelease(&boundchg->data.inferencedata.reason.cons, memhdr, set) );
       break;
       
    default:
@@ -1064,6 +1137,7 @@ RETCODE SCIPdomchgAddBoundchg(
    Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    BOUNDTYPE        inferboundtype      /**< type of bound for inference var: lower or upper bound */
    )
@@ -1077,11 +1151,9 @@ RETCODE SCIPdomchgAddBoundchg(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, newbound));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
       || SCIPsetIsEQ(set, newbound, boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : 0.0));
-   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
-   assert((int)SCIP_BOUNDTYPE_LOWER == 0 && (int)SCIP_BOUNDTYPE_UPPER == 1); /* must be one bit */
-   assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
-   assert((int)SCIP_BOUNDCHGTYPE_BRANCHING == 0 && (int)SCIP_BOUNDCHGTYPE_INFERENCE == 1); /* must be one bit */
-   assert(boundchgtype != SCIP_BOUNDCHGTYPE_INFERENCE || infervar != NULL);
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
+   assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
    debugMessage("adding %s bound change <%s: %g> of variable <%s> to domain change at %p pointing to %p\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
@@ -1112,13 +1184,19 @@ RETCODE SCIPdomchgAddBoundchg(
    case SCIP_BOUNDCHGTYPE_BRANCHING:
       boundchg->data.branchingdata.lpsolval = lpsolval;
       break;
-   case SCIP_BOUNDCHGTYPE_INFERENCE:
+   case SCIP_BOUNDCHGTYPE_CONSINFER:
+      assert(infercons != NULL);
       boundchg->data.inferencedata.var = infervar;
-      boundchg->data.inferencedata.cons = infercons;
+      boundchg->data.inferencedata.reason.cons = infercons;
+      boundchg->data.inferencedata.info = inferinfo; 
+      break;
+   case SCIP_BOUNDCHGTYPE_PROPINFER:
+      boundchg->data.inferencedata.var = infervar;
+      boundchg->data.inferencedata.reason.prop = inferprop;
       boundchg->data.inferencedata.info = inferinfo; 
       break;
    default:
-      errorMessage("invalid bound change type\n");
+      errorMessage("invalid bound change type %d\n", boundchgtype);
       return SCIP_INVALIDDATA;
    }
 
@@ -8160,7 +8238,8 @@ VAR* SCIPbdchginfoGetInferVar(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      || bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return bdchginfo->inferencedata.var;
 }
@@ -8171,9 +8250,21 @@ CONS* SCIPbdchginfoGetInferCons(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
+   assert(bdchginfo->inferencedata.reason.cons != NULL);
 
-   return bdchginfo->inferencedata.cons;
+   return bdchginfo->inferencedata.reason.cons;
+}
+
+/** returs inference propagator of given bound change information, or NULL if no propagator was responsible */
+PROP* SCIPbdchginfoGetInferProp(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   )
+{
+   assert(bdchginfo != NULL);
+   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+
+   return bdchginfo->inferencedata.reason.prop;
 }
 
 /** returs inference user information of given bound change information */
@@ -8182,7 +8273,8 @@ int SCIPbdchginfoGetInferInfo(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      || bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return bdchginfo->inferencedata.info;
 }
@@ -8193,7 +8285,8 @@ BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      || bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return (BOUNDTYPE)(bdchginfo->inferboundtype);
 }

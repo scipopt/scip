@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.53 2004/09/21 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.54 2004/09/23 15:46:27 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -802,7 +802,7 @@ RETCODE processWatchedVars(
          /* fixed remaining variable to one and disable constraint */
          debugMessage(" -> single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
             SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetDepth(scip));
-         CHECK_OKAY( SCIPinferBinvar(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
+         CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
          assert(!infeasible);
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );

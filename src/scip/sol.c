@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.42 2004/09/21 12:08:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.43 2004/09/23 15:46:33 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -359,6 +359,17 @@ RETCODE SCIPsolFree(
    freeBlockMemory(memhdr, sol);
 
    return SCIP_OKAY;
+}
+
+/** informs the solution that it now belongs to the given primal heuristic */
+void SCIPsolSetHeur(
+   SOL*             sol,                /**< primal CIP solution */
+   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+
+   sol->heur = heur;
 }
 
 /** copies current LP solution into CIP solution by linking */

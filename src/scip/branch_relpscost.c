@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.10 2004/09/21 12:07:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.11 2004/09/23 15:46:26 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -41,7 +41,7 @@
 #define DEFAULT_MAXLOOKAHEAD     4      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
-#define DEFAULT_MAXBDCHGS       -1      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
+#define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 
 
 /** branching rule data */
@@ -467,6 +467,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
              */
             if( allowaddcons && downinf == downconflict && upinf == upconflict )
             {
+               debugMessage(" -> variable <%s> is infeasible in %s: conflict constraint added\n",
+                  SCIPvarGetName(lpcands[c]), 
+                  downinf && upinf ? "both directions" : (downinf ? "downward branch" : "upwardbranch"));
                *result = SCIP_CONSADDED;
                nbdconflicts++;
                if( (downinf && upinf)
@@ -476,15 +479,16 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             else if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
-               debugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
+               debugMessage(" -> variable <%s> is infeasible in both directions (conflict: %d/%d)\n",
+                  SCIPvarGetName(lpcands[c]), downconflict, upconflict);
                *result = SCIP_CUTOFF;
                break; /* terminate initialization loop, because node is infeasible */
             }
             else
             {
                /* rounding is infeasible in one direction -> round variable in other direction */
-               debugMessage(" -> variable <%s> is infeasible in %s branch\n",
-                     SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward");
+               debugMessage(" -> variable <%s> is infeasible in %s branch (conflict: %d/%d)\n",
+                  SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward", downconflict, upconflict);
                CHECK_OKAY( addBdchg(scip, &bdchginds, &bdchgdowninfs, &nbdchgs, c, downinf) );
                if( branchruledata->maxbdchgs >= 0 && nbdchgs + nbdconflicts >= branchruledata->maxbdchgs )
                   break; /* terminate initialization loop, because enough roundings are performed */

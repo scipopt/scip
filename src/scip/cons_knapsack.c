@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.63 2004/09/21 12:07:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.64 2004/09/23 15:46:27 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -998,7 +998,7 @@ RETCODE propagateCons(
             if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
             {
                CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-               CHECK_OKAY( SCIPinferBinvar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
                assert(!infeasible);
                assert(tightened);
                (*nfixedvars)++;

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.82 2004/08/10 14:18:58 bzfpfend Exp $
+# $Id: Makefile,v 1.83 2004/09/23 15:46:25 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -193,6 +193,7 @@ SCIPLIBOBJ	=	branch.o \
 			pricer.o \
 			primal.o \
 			prob.o \
+			prop.o \
 			reader.o \
 			retcode.o \
 			scip.o \
@@ -229,6 +230,7 @@ SCIPLIBOBJ	=	branch.o \
 			disp_default.o \
 			heur_coefdiving.o \
 			heur_feaspump.o \
+			heur_fixandinfer.o \
 			heur_fracdiving.o \
 			heur_linesearchdiving.o \
 			heur_objpscostdiving.o \
@@ -241,6 +243,7 @@ SCIPLIBOBJ	=	branch.o \
 			nodesel_restartdfs.o \
 			presol_dualfix.o \
 			presol_trivial.o \
+			prop_pseudoobj.o \
 			reader_cnf.o \
 			reader_mps.o \
 			sepa_cmir.o \

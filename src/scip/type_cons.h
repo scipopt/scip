@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.16 2004/08/24 11:58:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.17 2004/09/23 15:46:34 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -394,10 +394,10 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
 
 /** propagation conflict resolving method of constraint handler
  *
- *  This method is called during conflict analysis. If the conflict handler wants to support conflict analysis,
- *  it should call SCIPinferVarLb() or SCIPinferVarUb() in domain propagation instead of SCIPchgVarLb() or
+ *  This method is called during conflict analysis. If the constraint handler wants to support conflict analysis,
+ *  it should call SCIPinferVarLbCons() or SCIPinferVarUbCons() in domain propagation instead of SCIPchgVarLb() or
  *  SCIPchgVarUb() in order to deduce bound changes on variables.
- *  In the SCIPinferVarLb() and SCIPinferVarUb() calls, the handler provides the constraint, that deduced the
+ *  In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint, that deduced the
  *  variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
  *  The propagation conflict resolving method must then be implemented, to provide the "reasons" for the bound
  *  changes, i.e. the bounds of variables at the time of the propagation, that forced the constraint to set the
@@ -407,7 +407,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *
  *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE (i.e. changes the lower bound of z
  *  to 1.0), if both, x and y, are assigned to FALSE (i.e. if the upper bounds of these variables are 0.0). It uses
- *  SCIPinferVarLb(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
+ *  SCIPinferVarLbCons(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
  *  constraint handler and is set to 0).
  *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
  *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
@@ -421,7 +421,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that deduced the bound change of the conflict variable
  *  - infervar        : the conflict variable whose bound change has to be resolved
- *  - inferinfo       : the user information passed to the corresponding SCIPinferVarLb() or SCIPinferVarUb() call
+ *  - inferinfo       : the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call
  *  - boundtype       : the type of the changed bound (lower or upper bound)
  *  - bdchgidx        : the index of the bound change, representing the point of time where the change took place
  *
@@ -429,7 +429,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - result          : pointer to store the result of the propagation conflict resolving call
  *
  *  possible return values for *result:
- *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason variables
+ *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
  *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
  */
 #define DECL_CONSRESPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar, int inferinfo, \

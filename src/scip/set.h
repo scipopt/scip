@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.67 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.68 2004/09/23 15:46:33 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -47,6 +47,7 @@
 #include "type_pricer.h"
 #include "type_reader.h"
 #include "type_sepa.h"
+#include "type_prop.h"
 
 #include "struct_set.h"
 
@@ -380,6 +381,26 @@ SEPA* SCIPsetFindSepa(
 /** sorts separators by priorities */
 extern
 void SCIPsetSortSepas(
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts propagator in propagator list */
+extern
+RETCODE SCIPsetIncludeProp(
+   SET*             set,                /**< global SCIP settings */
+   PROP*            prop                /**< propagator */
+   );
+
+/** returns the propagator of the given name, or NULL if not existing */
+extern
+PROP* SCIPsetFindProp(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name                /**< name of propagator */
+   );
+
+/** sorts propagators by priorities */
+extern
+void SCIPsetSortProps(
    SET*             set                 /**< global SCIP settings */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.36 2004/09/09 13:59:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.37 2004/09/23 15:46:32 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -108,12 +108,12 @@ RETCODE SCIPsepaCreate(
    sprintf(paramname, "separating/%s/priority", name);
    sprintf(paramdesc, "priority of separator <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*sepa)->priority, priority, INT_MIN, INT_MAX, 
-                  paramChgdSepaPriority, (PARAMDATA*)(*sepa)) ); /*lint !e740*/
+         &(*sepa)->priority, priority, INT_MIN, INT_MAX, 
+         paramChgdSepaPriority, (PARAMDATA*)(*sepa)) ); /*lint !e740*/
    sprintf(paramname, "separating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
+         &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -325,7 +325,7 @@ int SCIPsepaGetPriority(
 
 /** sets priority of separator */
 void SCIPsepaSetPriority(
-   SEPA*            sepa,               /**< primal sepaistic */
+   SEPA*            sepa,               /**< separator */
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the separator */
    )

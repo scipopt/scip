@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.18 2004/08/24 11:58:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.19 2004/09/23 15:46:34 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -66,7 +66,11 @@ struct BranchingData
 struct InferenceData
 {
    VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
-   CONS*            cons;               /**< constraint that infered this bound change, or NULL */
+   union
+   {
+      CONS*         cons;               /**< constraint that infered this bound change, or NULL */
+      PROP*         prop;               /**< propagator that infered this bound change, or NULL */
+   } reason;
    int              info;               /**< user information for inference to help resolving the conflict */
 };
 
@@ -80,7 +84,7 @@ struct BoundChg
       INFERENCEDATA inferencedata;      /**< data for infered bound changes */
    } data;
    VAR*             var;                /**< active variable to change the bounds for */
-   unsigned int     boundchgtype:1;     /**< bound change type: branching decision or infered bound change */
+   unsigned int     boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int     inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
 };
@@ -100,7 +104,7 @@ struct BdChgInfo
    VAR*             var;                /**< active variable that changed the bounds */
    INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
    BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
-   unsigned int     boundchgtype:1;     /**< bound change type: branching decision or infered bound change */
+   unsigned int     boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int     inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
 };

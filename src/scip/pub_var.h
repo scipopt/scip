@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.25 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.26 2004/09/23 15:46:31 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -876,6 +876,12 @@ CONS* SCIPbdchginfoGetInferCons(
    BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
+/** returs inference propagator of given bound change information, or NULL if no propagator was responsible */
+extern
+PROP* SCIPbdchginfoGetInferProp(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
 /** returs inference user information of given bound change information */
 extern
 int SCIPbdchginfoGetInferInfo(
@@ -907,7 +913,8 @@ BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
 #define SCIPbdchginfoGetPos(bdchginfo)            (bdchginfo)->bdchgidx.pos
 #define SCIPbdchginfoGetIdx(bdchginfo)            (&(bdchginfo)->bdchgidx)
 #define SCIPbdchginfoGetInferVar(bdchginfo)       (bdchginfo)->inferencedata.var
-#define SCIPbdchginfoGetInferCons(bdchginfo)      (bdchginfo)->inferencedata.cons
+#define SCIPbdchginfoGetInferCons(bdchginfo)      (bdchginfo)->inferencedata.reason.cons
+#define SCIPbdchginfoGetInferProp(bdchginfo)      (bdchginfo)->inferencedata.reason.prop
 #define SCIPbdchginfoGetInferInfo(bdchginfo)      (bdchginfo)->inferencedata.info
 #define SCIPbdchginfoGetInferBoundtype(bdchginfo) (BOUNDTYPE)((bdchginfo)->inferboundtype)
 

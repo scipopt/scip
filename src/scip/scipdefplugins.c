@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.26 2004/08/10 14:19:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.27 2004/09/23 15:46:32 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -46,6 +46,7 @@
 #include "disp_default.h"
 #include "heur_coefdiving.h"
 #include "heur_feaspump.h"
+#include "heur_fixandinfer.h"
 #include "heur_fracdiving.h"
 #include "heur_linesearchdiving.h"
 #include "heur_objpscostdiving.h"
@@ -58,6 +59,7 @@
 #include "nodesel_restartdfs.h"
 #include "presol_dualfix.h"
 #include "presol_trivial.h"
+#include "prop_pseudoobj.h"
 #include "reader_cnf.h"
 #include "reader_mps.h"
 #include "sepa_cmir.h"
@@ -105,6 +107,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeBranchruleRelpscost(scip) );
    CHECK_OKAY( SCIPincludeHeurCoefdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurFeaspump(scip) );
+   CHECK_OKAY( SCIPincludeHeurFixandinfer(scip) );
    CHECK_OKAY( SCIPincludeHeurFracdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurLinesearchdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurObjpscostdiving(scip) );
@@ -112,6 +115,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeHeurRootsoldiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
    CHECK_OKAY( SCIPincludeHeurSimplerounding(scip) );
+   CHECK_OKAY( SCIPincludePropPseudoobj(scip) );
    CHECK_OKAY( SCIPincludeSepaCmir(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
    CHECK_OKAY( SCIPincludeSepaIntobj(scip) );

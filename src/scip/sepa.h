@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.27 2004/09/07 18:22:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.28 2004/09/23 15:46:33 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -92,7 +92,7 @@ RETCODE SCIPsepaExec(
 /** sets priority of separator */
 extern
 void SCIPsepaSetPriority(
-   SEPA*            sepa,               /**< primal sepaistic */
+   SEPA*            sepa,               /**< separator */
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the separator */
    );
