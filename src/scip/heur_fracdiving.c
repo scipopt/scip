@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.9 2004/04/06 15:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.10 2004/04/15 10:41:22 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -35,6 +35,7 @@
 #define HEUR_PRIORITY     -1000000
 #define HEUR_FREQ         10
 #define HEUR_FREQOFS      0
+#define HEUR_MAXDEPTH     -1
 #define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -510,7 +511,7 @@ RETCODE SCIPincludeHeurFracdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_PSEUDONODES,
+                  HEUR_MAXDEPTH, HEUR_PSEUDONODES,
                   heurFreeFracdiving, heurInitFracdiving, heurExitFracdiving, heurExecFracdiving,
                   heurdata) );
 

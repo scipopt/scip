@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.18 2004/04/06 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.19 2004/04/15 10:41:24 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1317,12 +1317,11 @@ RETCODE SCIPlpiSolveBarrier(
 /** performs strong branching iterations on all candidates */
 RETCODE SCIPlpiStrongbranch(
    LPI*             lpi,                /**< LP interface structure */
-   const int*       cand,               /**< candidate list */
-   Real*            psol,               /**< array with current primal solution values of candidates */
-   int              ncand,              /**< size of candidate list */
+   int              col,                /**< column to apply strong branching on */
+   Real             psol,               /**< current primal solution value of column */
    int              itlim,              /**< iteration limit for strong branchings */
-   Real*            down,               /**< stores dual bound after branching candidate down */
-   Real*            up,                 /**< stores dual bound after branching candidate up */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up,                 /**< stores dual bound after branching column up */
    int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
@@ -1330,36 +1329,45 @@ RETCODE SCIPlpiStrongbranch(
    SPxSolver::VarStatus* rowstat;
    SPxSolver::VarStatus* colstat;
    SPxSolver::Status status;
-   Real oldBound;
+   Real oldlb;
+   Real oldub;
+   Real newlb;
+   Real newub;
    bool error;
    int oldItlim;
-   int c;
 
-   debugMessage("calling SCIPlpiStrongbranch()\n");
+   debugMessage("calling SCIPlpiStrongbranch() on variable %d (%d iterations)\n", col, itlim);
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(cand != NULL);
+   assert(down != NULL);
+   assert(up != NULL);
 
+   /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
    rowstat = new SPxSolver::VarStatus[spx->nRows()];
    colstat = new SPxSolver::VarStatus[spx->nCols()]; 
-   oldItlim = spx->terminationIter();             
    status = SPxSolver::UNKNOWN;                      
    error = false;                                 
 
+   /* get basis and current bounds of column */
    spx->getBasis(rowstat, colstat);    
-   spx->setTerminationIter(itlim);
+   oldlb = spx->lower(col);
+   oldub = spx->upper(col);
 
    if( iter != NULL )
       *iter = 0;
 
-   for( c = 0; c < ncand && !error; ++c )
+   oldItlim = spx->terminationIter();             
+   spx->setTerminationIter(itlim);
+
+   /* down branch */
+   newub = EPSCEIL(psol-1.0, 1e-06);
+   if( newub >= oldlb - 0.5 )
    {
-      /* down branch */
-      debugMessage("strong branching down on x%d (%g) with %d iterations\n", cand[c], psol[c], itlim);
-      oldBound = spx->upper(cand[c]);
-      spx->changeUpper(cand[c], floor(psol[c]));
+      debugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
+
+      spx->changeUpper(col, newub);
 
       status = spx->solve();
       switch( status )
@@ -1367,11 +1375,11 @@ RETCODE SCIPlpiStrongbranch(
       case SPxSolver::ABORT_TIME:
       case SPxSolver::ABORT_ITER:
       case SPxSolver::OPTIMAL:
-         down[c] = spx->value();
+         *down = spx->value();
          break;
       case SPxSolver::ABORT_VALUE:
       case SPxSolver::INFEASIBLE:
-         down[c] = spx->terminationValue();
+         *down = spx->terminationValue();
          break;
       default:
          error = true;
@@ -1379,16 +1387,19 @@ RETCODE SCIPlpiStrongbranch(
       }
       if( iter != NULL )
          (*iter) += spx->iterations();
-      spx->changeUpper(cand[c], oldBound);
+      spx->changeUpper(col, oldub);
       spx->setBasis(rowstat, colstat);
-
-      if( error )
-         continue;
-
-      /* up branch */
-      debugMessage("strong branching  up  on x%d (%g) with %d iterations\n", cand[c], psol[c], itlim);
-      oldBound = spx->lower(cand[c]);
-      spx->changeLower(cand[c], ceil(psol[c]));
+   }
+   else
+      *down = spx->terminationValue();
+      
+   /* up branch */
+   newlb = EPSFLOOR(psol+1.0, 1e-06);
+   if( !error && newlb <= oldub + 0.5 )
+   {
+      debugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
+      
+      spx->changeLower(col, newlb);
       
       status = spx->solve();
       switch( status )
@@ -1396,11 +1407,11 @@ RETCODE SCIPlpiStrongbranch(
       case SPxSolver::ABORT_TIME:
       case SPxSolver::ABORT_ITER:
       case SPxSolver::OPTIMAL:
-         up[c] = spx->value();
+         *up = spx->value();
          break;
       case SPxSolver::ABORT_VALUE:
       case SPxSolver::INFEASIBLE:
-         up[c] = spx->terminationValue();
+         *up = spx->terminationValue();
          break;
       case SPxSolver::UNBOUNDED:
       default:
@@ -1409,10 +1420,12 @@ RETCODE SCIPlpiStrongbranch(
       }
       if( iter != NULL )
          (*iter) += spx->iterations();
-      spx->changeLower(cand[c], oldBound);
+      spx->changeLower(col, oldlb);
       spx->setBasis(rowstat, colstat);
    }
-
+   else
+      *up = spx->terminationValue();
+   
    spx->setTerminationIter(oldItlim);
    
    delete [] rowstat;

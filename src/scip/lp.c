@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.107 2004/04/06 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.108 2004/04/15 10:41:23 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1833,13 +1833,14 @@ RETCODE SCIPcolGetStrongbranch(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(col->primsol < SCIP_INVALID);
-   assert(!SCIPsetIsIntegral(set, col->primsol));
+   /*??????????????????????assert(!SCIPsetIsIntegral(set, col->primsol));*/
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
    assert(set != NULL);
    assert(stat != NULL);
    assert(lp != NULL);
    assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
    assert(lp->validsollp == stat->lpcount);
    assert(col->lppos < lp->ncols);
    assert(lp->cols[col->lppos] == col);
@@ -1878,7 +1879,7 @@ RETCODE SCIPcolGetStrongbranch(
          /* call LPI strong branching */
          stat->nstrongbranchs++;
          col->strongbranchitlim = itlim;
-         retcode = SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim,
+         retcode = SCIPlpiStrongbranch(lp->lpi, col->lpipos, col->primsol, itlim,
             &strongbranchdown, &strongbranchup, &iter);
 
          /* check return code for errors */

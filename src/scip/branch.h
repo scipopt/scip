@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.27 2004/04/05 15:48:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.28 2004/04/15 10:41:21 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -96,6 +96,24 @@ int SCIPbranchcandGetNPseudoCands(
 /** gets number of branching candidates with maximal branch priority for pseudo solution branching */
 extern
 int SCIPbranchcandGetNPrioPseudoCands(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of binary branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPbranchcandGetNPrioPseudoBins(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of integer branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPbranchcandGetNPrioPseudoInts(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of implicit integer branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPbranchcandGetNPrioPseudoImpls(
    BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
 
@@ -196,13 +214,22 @@ void SCIPbranchruleSetMaxdepth(
  * branching methods
  */
 
-/** calculates the branching score out of the downward and upward gain prediction */
+/** calculates the branching score out of the gain predictions for a binary branching */
 extern
 Real SCIPbranchGetScore(
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
-   Real             downgain,           /**< prediction of objective gain for branching downwards */
-   Real             upgain              /**< prediction of objective gain for branching upwards */
+   Real             downgain,           /**< prediction of objective gain for rounding downwards */
+   Real             upgain              /**< prediction of objective gain for rounding upwards */
+   );
+
+/** calculates the branching score out of the gain predictions for a branching with arbitrary many children */
+extern
+Real SCIPbranchGetScoreMultiple(
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   int              nchildren,          /**< number of children that the branching will create */
+   Real*            gains               /**< prediction of objective gain for each child */
    );
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;

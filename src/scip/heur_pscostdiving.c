@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.1 2004/04/06 15:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.2 2004/04/15 10:41:23 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -35,6 +35,7 @@
 #define HEUR_PRIORITY     -1002000
 #define HEUR_FREQ         10
 #define HEUR_FREQOFS      4
+#define HEUR_MAXDEPTH     -1
 #define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -530,7 +531,7 @@ RETCODE SCIPincludeHeurPscostdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_PSEUDONODES,
+                  HEUR_MAXDEPTH, HEUR_PSEUDONODES,
                   heurFreePscostdiving, heurInitPscostdiving, heurExitPscostdiving, heurExecPscostdiving,
                   heurdata) );
 

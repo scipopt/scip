@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.4 2004/02/04 17:27:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.5 2004/04/15 10:41:25 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -68,6 +68,11 @@ public:
         scip_stdpriority_(stdpriority),
         scip_memsavepriority_(memsavepriority),
         scip_lowestboundfirst_(lowestboundfirst)
+   {
+   }
+
+   /** destructor */
+   virtual ~ObjNodesel()
    {
    }
 

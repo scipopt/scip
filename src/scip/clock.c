@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.9 2004/02/05 14:12:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.10 2004/04/15 10:41:21 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -477,4 +477,16 @@ void SCIPclockSetTime(
          abort();
       }
    }
+}
+
+/** gets current time of day in seconds (standard time zone) */
+Real SCIPclockGetTimeOfDay(
+   void
+   )
+{
+   struct timeval tp; /*lint !e86*/
+   
+   gettimeofday(&tp, NULL);
+
+   return (Real)(tp.tv_sec % (24*3600)) + (Real)tp.tv_usec / 1e+6;
 }

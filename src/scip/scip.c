@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.147 2004/04/08 13:14:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.148 2004/04/15 10:41:26 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1269,6 +1269,7 @@ RETCODE SCIPincludeHeur(
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
    int              freqofs,            /**< frequency offset for calling primal heuristic */
+   int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -1282,7 +1283,7 @@ RETCODE SCIPincludeHeur(
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
-                  name, desc, dispchar, priority, freq, freqofs, pseudonodes,
+                  name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes,
                   heurfree, heurinit, heurexit, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
@@ -4622,6 +4623,102 @@ RETCODE SCIPmultiaggregateVar(
    return SCIP_OKAY;
 }
 
+/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ */
+RETCODE SCIPupdateVarPseudocost(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPupdateVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   SCIPvarUpdatePseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight);
+
+   return SCIP_OKAY;
+}
+
+/** gets the variable's pseudo cost value for the given direction */
+Real SCIPgetVarPseudocost(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
+}
+
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
+Real SCIPgetVarPseudocostCount(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPvarGetPseudocostCount(var, dir);
+}
+
+/** gets the variable's pseudo cost score value for the given LP solution value */
+Real SCIPgetVarPseudocostScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solval              /**< variable's LP solution value */
+   )
+{
+   Real downsol;
+   Real upsol;
+   Real pscostdown;
+   Real pscostup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   downsol = SCIPsetCeil(scip->set, solval-1.0);
+   upsol = SCIPsetFloor(scip->set, solval+1.0);
+   pscostdown = SCIPvarGetPseudocost(var, scip->stat, downsol-solval);
+   pscostup = SCIPvarGetPseudocost(var, scip->stat, upsol-solval);
+
+   return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
+}
+
+/** returns the average number of inferences found after branching on the variable in given direction;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
+ *  over all variables for branching in the given direction is returned
+ */
+Real SCIPgetVarAvgInferences(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferences", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPvarGetAvgInferences(var, scip->stat, dir);
+}
+
+/** returns the variable's average inference score value */
+Real SCIPgetVarAvgInferenceScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   Real inferdown;
+   Real inferup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   
+   inferdown = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   inferup = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
+}
+
 
 
 
@@ -6005,24 +6102,65 @@ int SCIPgetNPrioPseudoBranchCands(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int npriopseudocands;
-
    CHECK_ABORT( checkStage(scip, "SCIPgetNPrioPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    return SCIPbranchcandGetNPrioPseudoCands(scip->branchcand);
 }
 
-/** calculates the branching score out of the downward and upward gain prediction */
+/** gets number of binary branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPgetNPrioPseudoBranchBins(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrioPseudoBranchBins", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioPseudoBins(scip->branchcand);
+}
+
+/** gets number of integer branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPgetNPrioPseudoBranchInts(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrioPseudoBranchInts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioPseudoInts(scip->branchcand);
+}
+
+/** gets number of implicit integer branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPgetNPrioPseudoBranchImpls(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrioPseudoBranchImpls", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioPseudoImpls(scip->branchcand);
+}
+
+/** calculates the branching score out of the gain predictions for a binary branching */
 Real SCIPgetBranchScore(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
-   Real             downgain,           /**< prediction of objective gain for branching downwards */
-   Real             upgain              /**< prediction of objective gain for branching upwards */
+   Real             downgain,           /**< prediction of objective gain for rounding downwards */
+   Real             upgain              /**< prediction of objective gain for rounding upwards */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetBranchScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    return SCIPbranchGetScore(scip->set, var, downgain, upgain);
+}
+
+/** calculates the branching score out of the gain predictions for a branching with arbitrary many children */
+Real SCIPgetBranchScoreMultiple(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   int              nchildren,          /**< number of children that the branching will create */
+   Real*            gains               /**< prediction of objective gain for each child */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetBranchScoreMultiple", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPbranchGetScoreMultiple(scip->set, var, nchildren, gains);
 }
 
 /** creates a child node of the active node */
@@ -6755,68 +6893,6 @@ RETCODE SCIPdropVarEvent(
    CHECK_OKAY( SCIPvarDropEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
    
    return SCIP_OKAY;
-}
-
-/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
- *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
- */
-RETCODE SCIPupdateVarPseudocost(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
-   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
-   Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPupdateVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-
-   SCIPvarUpdatePseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight);
-
-   return SCIP_OKAY;
-}
-
-/** gets the variable's pseudo cost value for the given direction */
-Real SCIPgetVarPseudocost(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-
-   return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
-}
-
-/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
-Real SCIPgetVarPseudocostCount(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-
-   return SCIPvarGetPseudocostCount(var, dir);
-}
-
-/** gets the variable's pseudo cost score value for the given LP solution value */
-Real SCIPgetVarPseudocostScore(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             solval              /**< variable's LP solution value */
-   )
-{
-   Real frac;
-   Real pscostdown;
-   Real pscostup;
-
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-
-   frac = solval - SCIPsetFloor(scip->set, solval);
-   pscostdown = SCIPvarGetPseudocost(var, scip->stat, -frac);
-   pscostup = SCIPvarGetPseudocost(var, scip->stat, 1.0-frac);
-
-   return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
 }
 
 
@@ -7955,25 +8031,6 @@ RETCODE SCIPprintStatistics(
       printTreeStatistics(scip, file);
       printSolutionStatistics(scip, file);
       
-#if 0
-      { /*????????????????????????????????*/
-         /**@todo remove this! */
-         int v;
-         for( v = 0; v < scip->transprob->nvars; ++v )
-         {
-            if( SCIPvarGetNBranchings(scip->transprob->vars[v]) > 0 )
-            {
-               char s[MAXSTRLEN];
-               sprintf(s, "<%s>", SCIPvarGetName(scip->transprob->vars[v]));
-               printf(" %16s: %6lld branchings, %8lld inferences  ->  %7.2f inferences/branching (avg. depth: %7.2f)\n",
-                  s, SCIPvarGetNBranchings(scip->transprob->vars[v]),
-                  SCIPvarGetNInferences(scip->transprob->vars[v]), SCIPvarGetAvgInferences(scip->transprob->vars[v]),
-                  SCIPvarGetAvgBranchdepth(scip->transprob->vars[v]));
-            }
-         }
-      }
-#endif
-
       return SCIP_OKAY;
 
    default:
@@ -7982,12 +8039,97 @@ RETCODE SCIPprintStatistics(
    }  /*lint !e788*/
 }
 
+/** outputs history statistics about branchings on variables */
+RETCODE SCIPprintBranchingStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   VAR** vars;
+   Real* depths;
+   Real depth;
+   int v;
+   int i;
+
+   CHECK_OKAY( checkStage(scip, "SCIPprintBranchingHistory", TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( file == NULL )
+      file = stdout;
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_PRESOLVED:
+      fprintf(file, "problem not yet solved. branching statistics not available.\n");
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      CHECK_OKAY( SCIPallocBufferArray(scip, &vars, scip->transprob->nvars) );
+      CHECK_OKAY( SCIPallocBufferArray(scip, &depths, scip->transprob->nvars) );
+      for( v = 0; v < scip->transprob->nvars; ++v )
+      {
+         depth = SCIPvarGetAvgBranchdepth(scip->transprob->vars[v], SCIP_BRANCHDIR_DOWNWARDS)
+            + SCIPvarGetAvgBranchdepth(scip->transprob->vars[v], SCIP_BRANCHDIR_UPWARDS);
+         for( i = v; i > 0 && depth < depths[i-1]; i-- )
+         {
+            vars[i] = vars[i-1];
+            depths[i] = depths[i-1];
+         }
+         vars[i] = scip->transprob->vars[v];
+         depths[i] = depth;
+      }
+
+      fprintf(file, "                        branchings          depth           inferences             LP gain  \n");
+      fprintf(file, " variable             down       up     down       up     down       up       down         up\n");
+
+      for( v = 0; v < scip->transprob->nvars; ++v )
+      {
+         if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
+            || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
+         {
+            fprintf(file, " %-16s %8lld %8lld %8.1f %8.1f %8.1f %8.1f %10.1f %10.1f\n",
+               SCIPvarGetName(vars[v]),
+               SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
+               SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS),
+               SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
+               SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS),
+               SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
+               SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
+               SCIPvarGetPseudocost(vars[v], scip->stat, -1.0),
+               SCIPvarGetPseudocost(vars[v], scip->stat, +1.0));
+         }
+      }
+      SCIPfreeBufferArray(scip, &depths);
+      SCIPfreeBufferArray(scip, &vars);
+
+      return SCIP_OKAY;
+      
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
 
 
 
 /*
  * timing methods
  */
+
+/** gets current time of day in seconds (standard time zone) */
+Real SCIPgetTimeOfDay(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetTimeOfDay", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPclockGetTimeOfDay();
+}
 
 /** creates a clock using the default clock type */
 RETCODE SCIPcreateClock(

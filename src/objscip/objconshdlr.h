@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.9 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.10 2004/04/15 10:41:25 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -85,6 +85,11 @@ public:
         scip_sepafreq_(sepafreq),
         scip_propfreq_(propfreq),
         scip_needscons_(needscons)
+   {
+   }
+
+   /** destructor */
+   virtual ~ObjConshdlr()
    {
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.4 2004/02/04 17:27:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.5 2004/04/15 10:41:25 bzfpfend Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -58,6 +58,11 @@ public:
       : scip_name_(name),
         scip_desc_(desc),
         scip_extension_(extension)
+   {
+   }
+
+   /** destructor */
+   virtual ~ObjReader()
    {
    }
 

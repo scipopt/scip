@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.17 2004/04/06 15:21:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.18 2004/04/15 10:41:26 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -23,8 +23,10 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "branch_allfullstrong.h"
 #include "branch_conffullstrong.h"
 #include "branch_fullstrong.h"
+#include "branch_inference.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
 #include "branch_relpscost.h"
@@ -92,8 +94,10 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselRestartdfs(scip) );
+   CHECK_OKAY( SCIPincludeBranchruleAllfullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleConffullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
+   CHECK_OKAY( SCIPincludeBranchruleInference(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleRelpscost(scip) );

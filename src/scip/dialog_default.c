@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.17 2004/03/30 12:51:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.18 2004/04/15 10:41:22 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -473,6 +473,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 
    printf("\n");
    CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display branchingstatistics command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayBranchingstatistics)
+{  /*lint --e{715}*/
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   CHECK_OKAY( SCIPprintBranchingStatistics(scip, NULL) );
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1103,6 +1117,15 @@ RETCODE SCIPincludeDialogDefault(
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayStatistics, NULL,
                      "statistics", "display problem and optimization statistics", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display branchingstatistics */
+   if( !SCIPdialogHasEntry(submenu, "branchingstatistics") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayBranchingstatistics, NULL,
+                     "branchingstatistics", "display branching statistics", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

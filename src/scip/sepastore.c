@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.15 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.16 2004/04/15 10:41:26 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -182,6 +182,8 @@ RETCODE sepastoreAddCut(
    assert(set != NULL);
    assert(cut != NULL);
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
+
+   /**@todo don't add redundant cuts to the separation store */
 
    /* get maximum of separated cuts at this node:
     *  - for root LP, use all cuts
@@ -385,7 +387,7 @@ RETCODE SCIPsepastoreApplyCuts(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
-   /**@todo avoid applying redundant cuts */
+   /**@todo avoid applying redundant cuts (see sepastoreAddCut()) */
    debugMessage("applying %d bound changes and %d cuts\n", sepastore->nbdchgs, sepastore->ncuts);
 
    /* apply cuts stored as bound changes */

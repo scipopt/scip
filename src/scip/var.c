@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.79 2004/04/07 14:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.80 2004/04/15 10:41:27 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5499,27 +5499,44 @@ Real SCIPvarGetPseudocostCount(
 void SCIPvarIncNBranchings(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   int              depth               /**< depth at which the bound change took place */
+   int              depth,              /**< depth at which the bound change took place */
+   BRANCHDIR        dir                 /**< branching direction */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
 
-   SCIPhistoryIncNBranchings(var->history, depth);
-   SCIPhistoryIncNBranchings(stat->glbhistory, depth);
+   SCIPhistoryIncNBranchings(var->history, depth, dir);
+   SCIPhistoryIncNBranchings(stat->glbhistory, depth, dir);
 }
 
 /** increases the number of inferences counter of the variable */
 void SCIPvarIncNInferences(
    VAR*             var,                /**< problem variable */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
 
-   SCIPhistoryIncNInferences(var->history);
-   SCIPhistoryIncNInferences(stat->glbhistory);
+   SCIPhistoryIncNInferences(var->history, dir);
+   SCIPhistoryIncNInferences(stat->glbhistory, dir);
+}
+
+/** returns the average number of inferences found after branching on the variable in given direction */
+Real SCIPvarGetAvgInferences(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   return SCIPhistoryGetNBranchings(var->history, dir) > 0
+      ? SCIPhistoryGetAvgInferences(var->history, dir)
+      : SCIPhistoryGetAvgInferences(stat->glbhistory, dir);
 }
 
 
@@ -5529,44 +5546,37 @@ void SCIPvarIncNInferences(
  * type validity.
  */
 
-/** returns the number of times, a bound of the variable was changed due to branching */
+/** returns the number of times, a bound of the variable was changed in given direction due to branching */
 Longint SCIPvarGetNBranchings(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
    )
 {
    assert(var != NULL);
 
-   return SCIPhistoryGetNBranchings(var->history);
+   return SCIPhistoryGetNBranchings(var->history, dir);
 }
 
-/** returns the number of inferences this variable triggered */
+/** returns the number of inferences branching on this variable in given direction triggered */
 Longint SCIPvarGetNInferences(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
    )
 {
    assert(var != NULL);
 
-   return SCIPhistoryGetNInferences(var->history);
+   return SCIPhistoryGetNInferences(var->history, dir);
 }
 
-/** returns the average number of inferences found after branching on the variable */
-Real SCIPvarGetAvgInferences(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return  SCIPhistoryGetAvgInferences(var->history);
-}
-
-/** returns the average depth of bound changes due to branching on the variable */
+/** returns the average depth of bound changes in given direction due to branching on the variable */
 Real SCIPvarGetAvgBranchdepth(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
    )
 {
    assert(var != NULL);
 
-   return  SCIPhistoryGetAvgBranchdepth(var->history);
+   return  SCIPhistoryGetAvgBranchdepth(var->history, dir);
 }
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.4 2004/02/04 17:27:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.5 2004/04/15 10:41:26 bzfpfend Exp $"
 
 /**@file   pub_heur.h
  * @brief  public methods for primal heuristics
@@ -83,6 +83,12 @@ int SCIPheurGetFreq(
 /** gets frequency offset of primal heuristic */
 extern
 int SCIPheurGetFreqofs(
+   HEUR*            heur                /**< primal heuristic */
+   );
+
+/** gets maximal depth level for calling primal heuristic (returns -1, if no depth limit exists) */
+extern
+int SCIPheurGetMaxdepth(
    HEUR*            heur                /**< primal heuristic */
    );
 

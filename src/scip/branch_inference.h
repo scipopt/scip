@@ -14,32 +14,26 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.5 2004/04/15 10:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.h,v 1.1 2004/04/15 10:41:21 bzfpfend Exp $"
 
-/**@file   struct_history.h
- * @brief  datastructures for branching and inference history
+/**@file   branch_inference.h
+ * @brief  inference history branching rule
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STRUCT_HISTORY_H__
-#define __STRUCT_HISTORY_H__
+#ifndef __BRANCH_INFERENCE_H__
+#define __BRANCH_INFERENCE_H__
 
 
-#include "def.h"
-#include "type_history.h"
+#include "scip.h"
 
 
-/** branching and inference history information for single variable */
-struct History
-{
-   Real             pscostcount[2];     /**< nr of (partial) summands in down/upwards pseudo costs (may be fractional) */
-   Real             pscostsum[2];       /**< sum of (partial) pseudo cost values for down/upwards branching */
-   Longint          nbranchings[2];     /**< nr of times, the variable changed its bounds due to branching */
-   Longint          ninferences[2];     /**< nr of times, branching on the variable lead to inference of another bound */
-   Longint          branchdepthsum[2];  /**< sum of depth levels, at which the branching bound changes took place */
-};
-
+/** creates the inference history braching rule and includes it in SCIP */
+extern
+RETCODE SCIPincludeBranchruleInference(
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_tree.h,v 1.3 2004/02/05 14:12:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_tree.h,v 1.4 2004/04/15 10:41:27 bzfpfend Exp $"
 
 /**@file   type_tree.h
  * @brief  type definitions for branch-and-bound tree
@@ -40,7 +40,6 @@ enum NodeType
 };
 typedef enum NodeType NODETYPE;         /**< type of node */
 
-typedef struct Actnode ACTNODE;         /**< data for the current node */
 typedef struct Child CHILD;             /**< data for child nodes */
 typedef struct Sibling SIBLING;         /**< data for sibling nodes */
 typedef struct Leaf LEAF;               /**< data for leaf nodes */

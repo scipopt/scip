@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.59 2004/04/07 14:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.60 2004/04/15 10:41:27 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -33,6 +33,7 @@
 #include "type_set.h"
 #include "type_stat.h"
 #include "type_misc.h"
+#include "type_history.h"
 #include "type_event.h"
 #include "type_lp.h"
 #include "type_var.h"
@@ -661,14 +662,24 @@ extern
 void SCIPvarIncNBranchings(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   int              depth               /**< depth at which the bound change took place */
+   int              depth,              /**< depth at which the bound change took place */
+   BRANCHDIR        dir                 /**< branching direction */
    );
 
 /** increases the number of inferences counter of the variable */
 extern
 void SCIPvarIncNInferences(
    VAR*             var,                /**< problem variable */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the average number of inferences found after branching on the variable in given direction */
+extern
+Real SCIPvarGetAvgInferences(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
    );
 
 

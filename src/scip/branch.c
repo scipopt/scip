@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.41 2004/04/05 15:48:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.42 2004/04/15 10:41:20 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -394,6 +394,36 @@ int SCIPbranchcandGetNPrioPseudoCands(
    assert(branchcand != NULL);
 
    return branchcand->npriopseudocands;
+}
+
+/** gets number of binary branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPbranchcandGetNPrioPseudoBins(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriopseudobins;
+}
+
+/** gets number of integer branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPbranchcandGetNPrioPseudoInts(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriopseudoints;
+}
+
+/** gets number of implicit integer branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPbranchcandGetNPrioPseudoImpls(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriopseudocands - branchcand->npriopseudobins - branchcand->npriopseudoints;
 }
 
 /** insert pseudocand at given position, or to the first positions of the maximal priority candidates, using the
@@ -1128,12 +1158,12 @@ Bool SCIPbranchruleIsInitialized(
  * branching methods
  */
 
-/** calculates the branching score out of the downward and upward gain prediction */
+/** calculates the branching score out of the gain predictions for a binary branching */
 Real SCIPbranchGetScore(
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
-   Real             downgain,           /**< prediction of objective gain for branching downwards */
-   Real             upgain              /**< prediction of objective gain for branching upwards */
+   Real             downgain,           /**< prediction of objective gain for rounding downwards */
+   Real             upgain              /**< prediction of objective gain for rounding upwards */
    )
 {
    Real score;
@@ -1144,6 +1174,7 @@ Real SCIPbranchGetScore(
    downgain += set->sumepsilon;
    upgain += set->sumepsilon;
 
+   /* weigh the two child nodes with branchscorefac and 1-branchscorefac */
    if( downgain > upgain )
       score = set->branchscorefac * downgain + (1.0-set->branchscorefac) * upgain;
    else
@@ -1153,6 +1184,35 @@ Real SCIPbranchGetScore(
       score *= SCIPvarGetBranchFactor(var);
 
    return score;
+}
+
+/** calculates the branching score out of the gain predictions for a branching with arbitrary many children */
+Real SCIPbranchGetScoreMultiple(
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   int              nchildren,          /**< number of children that the branching will create */
+   Real*            gains               /**< prediction of objective gain for each child */
+   )
+{
+   Real min1 = set->infinity;
+   Real min2 = set->infinity;
+   int c;
+
+   assert(nchildren == 0 || gains != NULL);
+
+   /* search for the two minimal gains in the child list and use these to calculate the branching score */
+   for( c = 0; c < nchildren; ++c )
+   {
+      if( gains[c] < min1 )
+      {
+         min2 = min1;
+         min1 = gains[c];
+      }
+      else if( gains[c] < min2 )
+         min2 = gains[c];
+   }
+
+   return SCIPbranchGetScore(set, var, min1, min2);
 }
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;

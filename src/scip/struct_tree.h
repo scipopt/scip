@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.7 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.8 2004/04/15 10:41:27 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch-and-bound tree
@@ -112,7 +112,7 @@ struct Tree
    NODE*            root;               /**< root node of the tree */
    NODEPQ*          leaves;             /**< leaves of the tree */
    NODE**           path;               /**< array of fork/subtree nodes storing the active path from root to leaf */
-   NODE*            actnode;            /**< active node */
+   NODE*            actnode;            /**< currently active node */
    NODE*            actlpfork;          /**< fork/subroot node defining the LP state of the active node */
    NODE*            actsubroot;         /**< root of the active subtree */
    NODE**           children;           /**< array with children of the active node */
@@ -127,7 +127,7 @@ struct Tree
    int              pathlen;            /**< length of the current path (== depth of the current node + 1) */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
-   Bool             actnodehaslp;       /**< is LP being processed in the active node? */
+   Bool             actnodehaslp;       /**< is LP being processed in the currently active node? */
    Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };
 

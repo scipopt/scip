@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.h,v 1.6 2004/02/04 17:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.h,v 1.7 2004/04/15 10:41:21 bzfpfend Exp $"
 
 /**@file   clock.h
  * @brief  internal methods for clocks and timing issues
@@ -103,6 +103,12 @@ extern
 void SCIPclockSetTime(
    CLOCK*           clock,              /**< clock timer */
    Real             sec                 /**< time in seconds to set the clock's timer to */
+   );
+
+/** gets current time of day in seconds (standard time zone) */
+extern
+Real SCIPclockGetTimeOfDay(
+   void
    );
 
 

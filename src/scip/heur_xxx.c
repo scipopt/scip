@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.4 2004/02/04 17:27:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.5 2004/04/15 10:41:23 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -28,13 +28,14 @@
 #include "heur_xxx.h"
 
 
-#define HEUR_NAME            "xxx"
-#define HEUR_DESC            "primal heuristic template"
-#define HEUR_DISPCHAR        '?'
-#define HEUR_PRIORITY        0
-#define HEUR_FREQ            1
-#define HEUR_FREQOFS         0
-#define HEUR_PSEUDONODES     TRUE       /** call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_NAME         "xxx"
+#define HEUR_DESC         "primal heuristic template"
+#define HEUR_DISPCHAR     '?'
+#define HEUR_PRIORITY     0
+#define HEUR_FREQ         1
+#define HEUR_FREQOFS      0
+#define HEUR_MAXDEPTH     -1
+#define HEUR_PSEUDONODES  TRUE          /** call heuristic at nodes where only a pseudo solution exist? */
 
 
 
@@ -144,7 +145,7 @@ RETCODE SCIPincludeHeurXxx(
 
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_PSEUDONODES,
+                  HEUR_MAXDEPTH, HEUR_PSEUDONODES,
                   heurFreeXxx, heurInitXxx, heurExitXxx, heurExecXxx,
                   heurdata) );
 

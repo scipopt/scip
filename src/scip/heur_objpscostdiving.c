@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.1 2004/04/06 15:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.2 2004/04/15 10:41:23 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -35,6 +35,7 @@
 #define HEUR_PRIORITY     -1003000
 #define HEUR_FREQ         10
 #define HEUR_FREQOFS      6
+#define HEUR_MAXDEPTH     -1
 #define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -530,7 +531,7 @@ RETCODE SCIPincludeHeurObjpscostdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_PSEUDONODES,
+                  HEUR_MAXDEPTH, HEUR_PSEUDONODES,
                   heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving, heurExecObjpscostdiving,
                   heurdata) );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.31 2004/02/05 14:12:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.32 2004/04/15 10:41:22 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -71,6 +71,7 @@ RETCODE SCIPheurCreate(
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
    int              freqofs,            /**< frequency offset for calling primal heuristic */
+   int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -96,6 +97,7 @@ RETCODE SCIPheurCreate(
    (*heur)->priority = priority;
    (*heur)->freq = freq;
    (*heur)->freqofs = freqofs;
+   (*heur)->maxdepth = maxdepth;
    (*heur)->pseudonodes = pseudonodes;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
@@ -121,6 +123,10 @@ RETCODE SCIPheurCreate(
    sprintf(paramdesc, "frequency offset for calling primal heuristic <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*heur)->freqofs, freqofs, 0, INT_MAX, NULL, NULL) );
+   sprintf(paramname, "heuristics/%s/maxdepth", name);
+   sprintf(paramdesc, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*heur)->maxdepth, maxdepth, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -220,6 +226,7 @@ RETCODE SCIPheurExec(
    assert(heur->heurexec != NULL);
    assert(heur->freq >= -1);
    assert(heur->freqofs >= 0);
+   assert(heur->maxdepth >= -1);
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(primal != NULL);
@@ -242,6 +249,9 @@ RETCODE SCIPheurExec(
                && ((depth + heur->freq - heur->freqofs) / heur->freq
                   != (lpforkdepth + heur->freq - heur->freqofs) / heur->freq)));
    }
+
+   /* compare current depth against heuristic's maximal depth level */
+   execute = execute && (heur->maxdepth == -1 || depth <= heur->maxdepth);
 
    if( execute )
    {
@@ -374,6 +384,16 @@ int SCIPheurGetFreqofs(
    assert(heur != NULL);
 
    return heur->freqofs;
+}
+
+/** gets maximal depth level for calling primal heuristic (returns -1, if no depth limit exists) */
+int SCIPheurGetMaxdepth(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->maxdepth;
 }
 
 /** gets the number of times, the heuristic was called and tried to find a solution */

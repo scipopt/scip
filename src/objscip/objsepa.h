@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.4 2004/02/04 17:27:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.5 2004/04/15 10:41:25 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -63,6 +63,11 @@ public:
         scip_desc_(desc),
         scip_priority_(priority),
         scip_freq_(freq)
+   {
+   }
+
+   /** destructor */
+   virtual ~ObjSepa()
    {
    }
 

@@ -406,6 +406,14 @@ nodeselection/restartdfs/memsavepriority = 50000
 # [type: int, range: [0,2147483647], default: 1000]
 nodeselection/restartdfs/selectbestfreq = 1000
 
+# priority of branching rule <allfullstrong>
+# [type: int, range: [-2147483648,2147483647], default: -1000]
+branching/allfullstrong/priority = -1000
+
+# maximal depth level, up to which branching rule <allfullstrong> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/allfullstrong/maxdepth = -1
+
 # priority of branching rule <conffullstrong>
 # [type: int, range: [-2147483648,2147483647], default: -100]
 branching/conffullstrong/priority = -100
@@ -421,6 +429,14 @@ branching/fullstrong/priority = 0
 # maximal depth level, up to which branching rule <fullstrong> should be used (-1 for no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 branching/fullstrong/maxdepth = -1
+
+# priority of branching rule <inference>
+# [type: int, range: [-2147483648,2147483647], default: 1000]
+branching/inference/priority = 1000
+
+# maximal depth level, up to which branching rule <inference> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/inference/maxdepth = -1
 
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]
@@ -438,13 +454,13 @@ branching/leastinf/priority = 50
 # [type: int, range: [-1,2147483647], default: -1]
 branching/leastinf/maxdepth = -1
 
-# priority of branching rule <reliability>
+# priority of branching rule <relpscost>
 # [type: int, range: [-2147483648,2147483647], default: 10000]
-branching/reliability/priority = 10000
+branching/relpscost/priority = 10000
 
-# maximal depth level, up to which branching rule <reliability> should be used (-1 for no limit)
+# maximal depth level, up to which branching rule <relpscost> should be used (-1 for no limit)
 # [type: int, range: [-1,2147483647], default: -1]
-branching/reliability/maxdepth = -1
+branching/relpscost/maxdepth = -1
 
 # minimal value for minimum pseudo cost size to regard pseudo cost value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 4]
@@ -486,6 +502,10 @@ heuristics/coefdiving/freq = 10
 # [type: int, range: [0,2147483647], default: 2]
 heuristics/coefdiving/freqofs = 2
 
+# maximal depth level to call primal heuristic <coefdiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/coefdiving/maxdepth = -1
+
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
 heuristics/coefdiving/divestartdepth = 0.5
@@ -521,6 +541,10 @@ heuristics/fracdiving/freq = 10
 # frequency offset for calling primal heuristic <fracdiving>
 # [type: int, range: [0,2147483647], default: 0]
 heuristics/fracdiving/freqofs = 0
+
+# maximal depth level to call primal heuristic <fracdiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/fracdiving/maxdepth = -1
 
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
@@ -558,6 +582,10 @@ heuristics/objpscostdiving/freq = 10
 # [type: int, range: [0,2147483647], default: 6]
 heuristics/objpscostdiving/freqofs = 6
 
+# maximal depth level to call primal heuristic <objpscostdiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/objpscostdiving/maxdepth = -1
+
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
 heuristics/objpscostdiving/divestartdepth = 0.5
@@ -585,6 +613,10 @@ heuristics/pscostdiving/freq = 10
 # frequency offset for calling primal heuristic <pscostdiving>
 # [type: int, range: [0,2147483647], default: 4]
 heuristics/pscostdiving/freqofs = 4
+
+# maximal depth level to call primal heuristic <pscostdiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/pscostdiving/maxdepth = -1
 
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
@@ -622,6 +654,10 @@ heuristics/rounding/freq = 5
 # [type: int, range: [0,2147483647], default: 0]
 heuristics/rounding/freqofs = 0
 
+# maximal depth level to call primal heuristic <rounding> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rounding/maxdepth = -1
+
 # priority of heuristic <simplerounding>
 # [type: int, range: [-2147483648,2147483647], default: 0]
 heuristics/simplerounding/priority = 0
@@ -633,6 +669,10 @@ heuristics/simplerounding/freq = 1
 # frequency offset for calling primal heuristic <simplerounding>
 # [type: int, range: [0,2147483647], default: 0]
 heuristics/simplerounding/freqofs = 0
+
+# maximal depth level to call primal heuristic <simplerounding> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/simplerounding/maxdepth = -1
 
 # priority of separator <gomory>
 # [type: int, range: [-2147483648,2147483647], default: 0]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.36 2004/02/26 13:53:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.37 2004/04/15 10:41:24 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -355,12 +355,11 @@ RETCODE SCIPlpiSolveBarrier(
 extern 
 RETCODE SCIPlpiStrongbranch(
    LPI*             lpi,                /**< LP interface structure */
-   const int*       cand,               /**< candidate list */
-   Real*            psol,               /**< array with current primal solution values of candidates */
-   int              ncand,              /**< size of candidate list */
+   int              col,                /**< column to apply strong branching on */
+   Real             psol,               /**< current primal solution value of column */
    int              itlim,              /**< iteration limit for strong branchings */
-   Real*            down,               /**< stores dual bounds after branching candidate down */
-   Real*            up,                 /**< stores dual bounds after branching candidate up */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up,                 /**< stores dual bound after branching column up */
    int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.11 2004/04/07 14:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.12 2004/04/15 10:41:26 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -29,6 +29,7 @@
 
 #include "def.h"
 #include "type_retcode.h"
+#include "type_history.h"
 #include "type_var.h"
 #include "type_cons.h"
 
@@ -443,28 +444,25 @@ int SCIPvarGetBranchPriority(
    VAR*             var                 /**< problem variable */
    );
 
-/** returns the number of times, a bound of the variable was changed due to branching */
+/** returns the number of times, a bound of the variable was changed in given direction due to branching */
 extern
 Longint SCIPvarGetNBranchings(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
    );
 
-/** returns the number of inferences this variable triggered */
+/** returns the number of inferences branching on this variable in given direction triggered */
 extern
 Longint SCIPvarGetNInferences(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
    );
 
-/** returns the average number of inferences found after branching on the variable */
-extern
-Real SCIPvarGetAvgInferences(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** returns the average depth of bound changes due to branching on the variable */
+/** returns the average depth of bound changes in given direction due to branching on the variable */
 extern
 Real SCIPvarGetAvgBranchdepth(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
    );
 
 #else
@@ -515,10 +513,9 @@ Real SCIPvarGetAvgBranchdepth(
 #define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
-#define SCIPvarGetNBranchings(var)      (SCIPhistoryGetNBranchings(var->history))
-#define SCIPvarGetNInferences(var)      (SCIPhistoryGetNInferences(var->history))
-#define SCIPvarGetAvgInferences(var)    (SCIPhistoryGetAvgInferences(var->history))
-#define SCIPvarGetAvgBranchdepth(var)   (SCIPhistoryGetAvgBranchdepth(var->history))
+#define SCIPvarGetNBranchings(var,dir)    (SCIPhistoryGetNBranchings(var->history, dir))
+#define SCIPvarGetNInferences(var,dir)    (SCIPhistoryGetNInferences(var->history, dir))
+#define SCIPvarGetAvgBranchdepth(var,dir) (SCIPhistoryGetAvgBranchdepth(var->history, dir))
 
 #endif
 

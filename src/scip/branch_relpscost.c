@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.1 2004/04/06 15:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.2 2004/04/15 10:41:21 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -29,8 +29,8 @@
 #include "branch_relpscost.h"
 
 
-#define BRANCHRULE_NAME          "reliability"
-#define BRANCHRULE_DESC          "reliability branching"
+#define BRANCHRULE_NAME          "relpscost"
+#define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
 #define BRANCHRULE_PRIORITY      10000
 #define BRANCHRULE_MAXDEPTH      -1
 
@@ -296,6 +296,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
               && SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations; ++i )
       {
          Bool lperror;
+         Bool downinf;
+         Bool upinf;
 
          /* get candidate number to initialize */
          c = initcands[i];
@@ -321,19 +323,15 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          /* evaluate strong branching */
          down = MAX(down, lowerbound);
          up = MAX(up, lowerbound);
+         downinf = SCIPisGE(scip, down, cutoffbound);
+         upinf = SCIPisGE(scip, up, cutoffbound);
          downgain = down - lowerbound;
          upgain = up - lowerbound;
 
          /* check for possible fixings */
          if( allcolsinlp && !exactsolve )
          {
-            Bool downinf;
-            Bool upinf;
-
             /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-            downinf = SCIPisGE(scip, down, cutoffbound);
-            upinf = SCIPisGE(scip, up, cutoffbound);
-
             if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
@@ -375,8 +373,14 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             lookahead++;
       
          /* update pseudo cost values */
-         CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
-         CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+         if( !downinf )
+         {
+            CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
+         }
+         if( !upinf )
+         {
+            CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+         }
       
          debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, score, 

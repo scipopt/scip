@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.59 2004/04/06 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.60 2004/04/15 10:41:24 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -248,6 +248,62 @@ RETCODE ensureRstatMem(
       lpi->rstatsize = newsize;
    }
    assert(num <= lpi->rstatsize);
+
+   return SCIP_OKAY;
+}
+
+/** stores current basis in internal arrays of LPI data structure */
+static
+RETCODE getBase(
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            dnorm               /**< array for storing dual norms, or NULL */
+   )
+{
+   int ncols;
+   int nrows;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+
+   ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
+   nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
+
+   /* allocate enough memory for storing uncompressed basis information */
+   CHECK_OKAY( ensureCstatMem(lpi, ncols) );
+   CHECK_OKAY( ensureRstatMem(lpi, nrows) );
+
+   /* get unpacked basis information from CPLEX */
+   if( dnorm != NULL )
+   {
+      CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat, dnorm) );
+   }
+   else
+   {
+      CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** loads basis stored in internal arrays of LPI data structure into CPLEX */
+static
+RETCODE setBase(
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            dnorm               /**< array of dual norms, or NULL */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+
+   /* load basis information into CPLEX */
+   if( dnorm != NULL )
+   {
+      CHECK_ZERO( CPXcopybasednorms(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat, dnorm) );
+   }
+   else
+   {
+      CHECK_ZERO( CPXcopybase(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1679,7 +1735,10 @@ RETCODE SCIPlpiSolveBarrier(
       /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
       debugMessage("CPLEX returned INForUNBD -> calling CPLEX barrier again without presolve\n");
       
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+      /* switch off preprocessing */
+      setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
+      CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
+
       retval = CPXhybbaropt(cpxenv, lpi->cpxlp, 0);
       switch( retval  )
       {
@@ -1700,7 +1759,7 @@ RETCODE SCIPlpiSolveBarrier(
          errorMessage("CPLEX barrier returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
 
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
+      setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
    }
 
    return SCIP_OKAY;
@@ -1709,12 +1768,11 @@ RETCODE SCIPlpiSolveBarrier(
 /** performs strong branching iterations on all candidates */
 RETCODE SCIPlpiStrongbranch(
    LPI*             lpi,                /**< LP interface structure */
-   const int*       cand,               /**< candidate list */
-   Real*            psol,               /**< array with current primal solution values of candidates */
-   int              ncand,              /**< size of candidate list */
+   int              col,                /**< column to apply strong branching on */
+   Real             psol,               /**< current primal solution value of column */
    int              itlim,              /**< iteration limit for strong branchings */
-   Real*            down,               /**< stores dual bound after branching candidate down */
-   Real*            up,                 /**< stores dual bound after branching candidate up */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up,                 /**< stores dual bound after branching column up */
    int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
@@ -1722,13 +1780,106 @@ RETCODE SCIPlpiStrongbranch(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   debugMessage("calling CPLEX strongbranching on %d candidates (%d iterations)\n", ncand, itlim);
+   debugMessage("calling CPLEX strongbranching on variable %d (%d iterations)\n", col, itlim);
 
-   CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, cand, ncand, down, up, itlim) );
+   /* if the solution value is integral, we have to apply strong branching manually; otherwise, the CPLEX
+    * method CPXstrongbranch() is applicable
+    */
+   if( EPSISINT(psol, 1e-06) )
+   {
+      const char lbound = 'L';
+      const char ubound = 'U';
+      Real oldlb;
+      Real oldub;
+      Real newlb;
+      Real newub;
+      int objsen;
+      int solstat;
+      int olditlim;
+      int it;
 
-   /* CPLEX is not able to return the iteration counts in strong branching */
-   if( iter != NULL )
-      *iter = -1;
+      if( iter != NULL )
+         *iter = 0;
+
+      objsen = CPXgetobjsen(cpxenv, lpi->cpxlp);
+
+      /* save current LP basis and bounds*/
+      CHECK_OKAY( getBase(lpi, NULL) );
+      CHECK_ZERO( CPXgetlb(cpxenv, lpi->cpxlp, &oldlb, col, col) );
+      CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, &oldub, col, col) );
+
+      /* save old iteration limit and set iteration limit to strong branching limit */
+      if( itlim > CPX_INT_MAX )
+         itlim = CPX_INT_MAX;
+      olditlim = getIntParam(lpi, CPX_PARAM_ITLIM);
+      setIntParam(lpi, CPX_PARAM_ITLIM, itlim);
+      
+      /* down branch */
+      newub = EPSCEIL(psol-1.0, 1e-06);
+      if( newub >= oldlb - 0.5 )
+      {
+         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &ubound, &newub) );
+         CHECK_OKAY( SCIPlpiSolveDual(lpi) );
+         if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+            *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+         else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+         {
+            CHECK_OKAY( SCIPlpiGetObjval(lpi, down) );
+         }
+         else
+            *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+         if( iter != NULL )
+         {
+            CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, &it) );
+            *iter += it;
+         }
+         debugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
+
+         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &ubound, &oldub) );
+         CHECK_OKAY( setBase(lpi, NULL) );
+      }
+      else
+         *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+
+      /* up branch */
+      newlb = EPSFLOOR(psol+1.0, 1e-06);
+      if( newlb <= oldub + 0.5 )
+      {
+         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &lbound, &newlb) );
+         CHECK_OKAY( SCIPlpiSolveDual(lpi) );
+         if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+            *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+         else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+         {
+            CHECK_OKAY( SCIPlpiGetObjval(lpi, up) );
+         }
+         else
+            *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+         if( iter != NULL )
+         {
+            CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, &it) );
+            *iter += it;
+         }
+         debugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
+
+         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &lbound, &oldlb) );
+         CHECK_OKAY( setBase(lpi, NULL) );
+      }
+      else
+         *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+
+      /* reset iteration limit */
+      setIntParam(lpi, CPX_PARAM_ITLIM, olditlim);
+   }
+   else
+   {
+      CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, &col, 1, down, up, itlim) );
+      debugMessage(" -> down: %g, up:%g\n", *down, *up);
+
+      /* CPLEX is not able to return the iteration counts in strong branching */
+      if( iter != NULL )
+         *iter = -1;
+   }
 
    return SCIP_OKAY;
 }
@@ -2166,20 +2317,16 @@ RETCODE SCIPlpiGetState(
 
    debugMessage("storing CPLEX LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
 
-   /* allocate enough memory for storing uncompressed basis information */
-   CHECK_OKAY( ensureCstatMem(lpi, ncols) );
-   CHECK_OKAY( ensureRstatMem(lpi, nrows) );
-
    /* get unpacked basis information from CPLEX */
    if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->dnorm, ncols) );
-      CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat, (*lpistate)->dnorm) );
+      CHECK_OKAY( getBase(lpi, (*lpistate)->dnorm) );
    }
    else
    {
       (*lpistate)->dnorm = NULL;
-      CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
+      CHECK_OKAY( getBase(lpi, NULL) );
    }
 
    /* pack LPi state data */
@@ -2220,11 +2367,11 @@ RETCODE SCIPlpiSetState(
    /* load basis information into CPLEX */
    if( lpistate->dnorm != NULL && getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
-      CHECK_ZERO( CPXcopybasednorms(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat, lpistate->dnorm) );
+      CHECK_OKAY( setBase(lpi, lpistate->dnorm) );
    }
    else
    {
-      CHECK_ZERO( CPXcopybase(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
+      CHECK_OKAY( setBase(lpi, NULL) );
    }
 
    return SCIP_OKAY;

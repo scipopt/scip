@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.122 2004/04/08 13:14:45 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.123 2004/04/15 10:41:26 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -677,6 +677,7 @@ RETCODE SCIPincludeHeur(
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
    int              freqofs,            /**< frequency offset for calling primal heuristic */
+   int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -1708,6 +1709,60 @@ RETCODE SCIPmultiaggregateVar(
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
+/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ */
+extern
+RETCODE SCIPupdateVarPseudocost(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
+   );
+
+/** gets the variable's pseudo cost value for the given direction */
+extern
+Real SCIPgetVarPseudocost(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
+extern
+Real SCIPgetVarPseudocostCount(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   );
+
+/** gets the variable's pseudo cost score value for the given LP solution value */
+extern
+Real SCIPgetVarPseudocostScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solval              /**< variable's LP solution value */
+   );
+
+/** returns the average number of inferences found after branching on the variable in given direction;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
+ *  over all variables for branching in the given direction is returned
+ */
+extern
+Real SCIPgetVarAvgInferences(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the variable's average inference score value */
+extern
+Real SCIPgetVarAvgInferenceScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   );
+
 /**@} */
 
 
@@ -2431,13 +2486,40 @@ int SCIPgetNPrioPseudoBranchCands(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** calculates the branching score out of the downward and upward gain prediction */
+/** gets number of binary branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPgetNPrioPseudoBranchBins(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of integer branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPgetNPrioPseudoBranchInts(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of implicit integer branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPgetNPrioPseudoBranchImpls(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** calculates the branching score out of the gain predictions for a binary branching */
 extern
 Real SCIPgetBranchScore(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
-   Real             downgain,           /**< prediction of objective gain for branching downwards */
-   Real             upgain              /**< prediction of objective gain for branching upwards */
+   Real             downgain,           /**< prediction of objective gain for rounding downwards */
+   Real             upgain              /**< prediction of objective gain for rounding upwards */
+   );
+
+/** calculates the branching score out of the gain predictions for a branching with arbitrary many children */
+extern
+Real SCIPgetBranchScoreMultiple(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   int              nchildren,          /**< number of children that the branching will create */
+   Real*            gains               /**< prediction of objective gain for each child */
    );
 
 /** creates a child node of the active node */
@@ -2778,42 +2860,6 @@ RETCODE SCIPdropVarEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    );
 
-/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
- *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
- */
-extern
-RETCODE SCIPupdateVarPseudocost(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
-   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
-   Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
-   );
-
-/** gets the variable's pseudo cost value for the given direction */
-extern
-Real SCIPgetVarPseudocost(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
-   );
-
-/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
-extern
-Real SCIPgetVarPseudocostCount(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
-   );
-
-/** gets the variable's pseudo cost score value for the given LP solution value */
-extern
-Real SCIPgetVarPseudocostScore(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             solval              /**< variable's LP solution value */
-   );
-
 /**@} */
 
 
@@ -3144,6 +3190,13 @@ RETCODE SCIPprintStatistics(
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
+/** outputs history statistics about branchings on variables */
+extern
+RETCODE SCIPprintBranchingStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
 /**@} */
 
 
@@ -3155,6 +3208,12 @@ RETCODE SCIPprintStatistics(
 
 /**@name Timing Methods */
 /**@{ */
+
+/** gets current time of day in seconds (standard time zone) */
+extern
+Real SCIPgetTimeOfDay(
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
 /** creates a clock using the default clock type */
 extern

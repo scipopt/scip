@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.34 2004/04/08 13:14:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.35 2004/04/15 10:41:21 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -598,7 +598,7 @@ RETCODE liftCover(
 
    return SCIP_OKAY;
 }
-       
+
 /** separates cover inequalities for given knapsack constraint */
 static
 RETCODE separateCovers(
@@ -774,6 +774,7 @@ RETCODE separateCovers(
    return SCIP_OKAY;
 }
 
+#if 0       
 /** separates lifted cardinality inequalities for given knapsack constraint */
 static
 RETCODE separateCardinality(
@@ -1000,7 +1001,6 @@ RETCODE separateCardinality(
    return SCIP_OKAY;
 }
 
-
 /** separates lifted cardinality inequalities for given knapsack constraint */
 static
 RETCODE separateCardinality2(
@@ -1062,19 +1062,9 @@ RETCODE separateCardinality2(
 
    for( ; i < consdata->nvars && setweight <= consdata->capacity && slack < 1.0; i++ )
    {
-      ROW* row;
-      char name[MAXSTRLEN];
-      Real cutnorm;
-      Real cutfeas;
-
       nsetvars = 0;
       nnonsetvars = 0;
 
-      /* create LP row */
-      sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-      CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)i, 
-                     SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
-           
       for( j = 0; j < consdata->nvars; j++)
       {
          if( chosen[perm[j]] )
@@ -1097,18 +1087,31 @@ RETCODE separateCardinality2(
 
       /* lift variables not in set into inequality */
       CHECK_OKAY( liftCardinality(scip, row, cons, setvars, nonsetvars, nsetvars, nnonsetvars, nsetvars) );
-      
-      /* check, if cut is violated enough */
-      cutnorm = SCIProwGetNorm(row);
-      cutfeas = SCIPgetRowLPFeasibility(scip, row);
-      if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
-      {         
-         debugMessage("lifted cardinality cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
-         debug(SCIProwPrint(row, NULL));
-         CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
-         *separated = TRUE;
+
+      if( slack < 0.0 )
+      {
+         ROW* row;
+         char name[MAXSTRLEN];
+         Real cutnorm;
+         Real cutfeas;
+         
+         /* create LP row */
+         sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+         CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)i, 
+                        SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
+           
+         /* check, if cut is violated enough */
+         cutnorm = SCIProwGetNorm(row);
+         cutfeas = SCIPgetRowLPFeasibility(scip, row);
+         if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
+         {         
+            debugMessage("lifted cardinality cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
+            debug(SCIProwPrint(row, NULL));
+            CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
+            *separated = TRUE;
+         }
+         CHECK_OKAY( SCIPreleaseRow(scip, &row) );
       }
-      CHECK_OKAY( SCIPreleaseRow(scip, &row) );
 
       /* put next item into set */
       setweight += consdata->weights[perm[i]];
@@ -1125,6 +1128,7 @@ RETCODE separateCardinality2(
   
    return SCIP_OKAY;
 }
+#endif
 
 /** propagation methode for knapsack constraint */
 static
@@ -1600,14 +1604,13 @@ DECL_CONSSEPA(consSepaKnapsack)
          ncuts++;
          *result = SCIP_SEPARATED;
       }
-#endif
-
       CHECK_OKAY( separateCardinality2(scip, conss[i], &separated) );
       if( separated )
       {
          ncuts++;
          *result = SCIP_SEPARATED;
       }
+#endif
    }
    
    return SCIP_OKAY;
