@@ -35,7 +35,7 @@
 #include "presol_dualfix.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
-#include "nodesel_plunging.h"
+#include "nodesel_restartdfs.h"
 #include "branch_fullstrong.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
@@ -73,7 +73,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludePresolDualfix(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
-   CHECK_OKAY( SCIPincludeNodeselPlunging(scip) );
+   CHECK_OKAY( SCIPincludeNodeselRestartdfs(scip) );
    CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );

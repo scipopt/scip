@@ -296,7 +296,7 @@ nodesel/bfs/maxplungequot = 1.5
 
 # frequency for selecting the best node instead of the deepest one (0: never)
 # [default: 10000]
-nodesel/plunging/selectbestfreq = 10000
+nodesel/restartdfs/selectbestfreq = 10000
 
 # priority of branching rule
 # [default: 200]
