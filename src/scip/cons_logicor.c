@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.56 2004/10/21 14:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.57 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -858,7 +858,6 @@ Bool checkCons(
    /* calculate the constraint's activity */
    sum = 0.0;
    solval = 0.0;
-   assert(SCIPfeastol(scip) < 0.1); /* to make the comparison against 1.1 working */
    for( v = 0; v < nvars && sum < 1.0; ++v )
    {
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
@@ -918,6 +917,8 @@ RETCODE addCut(
    }
    assert(consdata->row != NULL);
    assert(!SCIProwIsInLP(consdata->row));
+
+   debugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
             
    /* insert LP row as cut */
    CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
@@ -954,6 +955,8 @@ RETCODE separateCons(
    /* skip constraints already in the LP */
    if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
       return SCIP_OKAY;
+
+   debugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* update and check the watched variables */
    CHECK_OKAY( processWatchedVars(scip, cons, eventhdlr, cutoff, reduceddom, &addcut, &mustcheck) );
@@ -1162,19 +1165,38 @@ RETCODE branchLP(
       if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
       {
          NODE* node;
+         Real downprio;
 
          /* perform the binary set branching on the selected variables */
          assert(1 <= nselcands && nselcands <= nlpcands);
          
+         /* choose preferred branching direction */
+         switch( SCIPvarGetBranchDirection(branchcands[0]) )
+         {
+         case SCIP_BRANCHDIR_DOWNWARDS:
+            downprio = 1.0;
+            break;
+         case SCIP_BRANCHDIR_UPWARDS:
+            downprio = -1.0;
+            break;
+         case SCIP_BRANCHDIR_AUTO:
+            downprio = SCIPvarGetRootSol(branchcands[0]) - SCIPgetVarSol(scip, branchcands[0]);
+            break;
+         default:
+            errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+               SCIPvarGetBranchDirection(branchcands[0]), SCIPvarGetName(branchcands[0]));
+            return SCIP_INVALIDDATA;
+         }
+
          /* create left child, fix x_i = 0 for all i \in S */
-         CHECK_OKAY( SCIPcreateChild(scip, &node, -(Real)SCIPvarGetBranchDirection(branchcands[0])) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
          for( i = 0; i < nselcands; ++i )
          {
             CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
          }
 
          /* create right child: add constraint x(S) >= 1 */
-         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)SCIPvarGetBranchDirection(branchcands[0])) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
          if( nselcands == 1 )
          {
             /* only one candidate selected: fix it to 1.0 */

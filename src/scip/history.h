@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.9 2004/05/24 17:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.10 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -105,14 +105,14 @@ Real SCIPhistoryGetPseudocost(
 extern
 Real SCIPhistoryGetPseudocostCount(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns whether the pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
 extern
 Bool SCIPhistoryIsPseudocostEmpty(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** increases the number of branchings counter */
@@ -120,63 +120,63 @@ extern
 void SCIPhistoryIncNBranchings(
    HISTORY*         history,            /**< branching and inference history */
    int              depth,              /**< depth at which the bound change took place */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** increases the number of inferences counter */
 extern
 void SCIPhistoryIncNInferences(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** increases the number of cutoffs counter */
 extern
 void SCIPhistoryIncNCutoffs(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** get number of branchings counter */
 extern
 Longint SCIPhistoryGetNBranchings(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** get number of inferences counter */
 extern
 Longint SCIPhistoryGetNInferences(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of inferences per branching */
 extern
 Real SCIPhistoryGetAvgInferences(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** get number of cutoffs counter */
 extern
 Longint SCIPhistoryGetNCutoffs(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of cutoffs per branching */
 extern
 Real SCIPhistoryGetAvgCutoffs(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average depth of bound changes due to branching */
 extern
 Real SCIPhistoryGetAvgBranchdepth(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 #else
@@ -185,8 +185,9 @@ Real SCIPhistoryGetAvgBranchdepth(
  * speed up the algorithms.
  */
 
-#define SCIPbranchdirOpposite(dir)                 ((dir) == SCIP_BRANCHDIR_DOWNWARDS \
-                                                   ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS)
+#define SCIPbranchdirOpposite(dir)                              \
+   ((dir) == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS  \
+      : ((dir) == SCIP_BRANCHDIR_UPWARDS ? SCIP_BRANCHDIR_DOWNWARDS : SCIP_BRANCHDIR_AUTO))
 #define SCIPhistoryGetPseudocost(history,solvaldelta)                                       \
    ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->pscostcount[1] > 0.0                \
                             ? (history)->pscostsum[1] / (history)->pscostcount[1] : 1.0)    \

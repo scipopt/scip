@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.118 2004/10/21 09:55:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.119 2004/10/22 13:02:50 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -993,7 +993,7 @@ RETCODE nodeRepropagate(
    CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
 
    /* mark the node refocused and temporarily install it as focus node */
-   oldtype = node->nodetype;
+   oldtype = (NODETYPE)node->nodetype;
    oldfocusnode = tree->focusnode;
    oldfocuslpfork = tree->focuslpfork;
    oldfocussubroot = tree->focussubroot;
@@ -3179,9 +3179,7 @@ RETCODE SCIPtreeBranchVar(
 {
    NODE* node;
    Real solval;
-   Real rootsolval;
    Real downprio;
-   int direction;
 
    assert(tree != NULL);
    assert(set != NULL);
@@ -3206,12 +3204,26 @@ RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    solval = SCIPvarGetSol(var, tree->focusnodehaslp);
-   rootsolval = SCIPvarGetRootSol(var);
    assert(SCIPsetIsGE(set, solval, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsLE(set, solval, SCIPvarGetUbLocal(var)));
 
-   direction = SCIPvarGetBranchDirection(var);
-   downprio = (direction == 0 ? rootsolval - solval : -direction);
+   /* choose preferred branching direction */
+   switch( SCIPvarGetBranchDirection(var) )
+   {
+   case SCIP_BRANCHDIR_DOWNWARDS:
+      downprio = 1.0;
+      break;
+   case SCIP_BRANCHDIR_UPWARDS:
+      downprio = -1.0;
+      break;
+   case SCIP_BRANCHDIR_AUTO:
+      downprio = SCIPvarGetRootSol(var) - solval;
+      break;
+   default:
+      errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+         SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
 
    if( SCIPsetIsIntegral(set, solval) )
    {
@@ -3239,7 +3251,7 @@ RETCODE SCIPtreeBranchVar(
                   
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), fixval);
-      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, direction == 0 ? SCIPsetInfinity(set) : 0.0) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, SCIPsetInfinity(set)) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 

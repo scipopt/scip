@@ -142,6 +142,10 @@ lp/fastmip = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 lp/scaling = TRUE
 
+# should presolving of LP solver be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/presolving = TRUE
+
 # fraction of maximal memory usage resulting in switch to memory saving mode
 # [type: real, range: [0,1], default: 0.8]
 memory/savefac = 0.8
@@ -451,8 +455,8 @@ constraints/knapsack/maxsepacuts = 50
 constraints/knapsack/maxsepacutsroot = 200
 
 # priority of conflict handler <logicor>
-# [type: int, range: [-2147483648,2147483647], default: 800000]
-conflict/logicor/priority = 800000
+# [type: int, range: [-2147483648,2147483647], default: 700000]
+conflict/logicor/priority = 700000
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -499,8 +503,8 @@ constraints/or/eagerfreq = 100
 constraints/or/maxprerounds = -1
 
 # priority of conflict handler <setppc>
-# [type: int, range: [-2147483648,2147483647], default: 700000]
-conflict/setppc/priority = 700000
+# [type: int, range: [-2147483648,2147483647], default: 800000]
+conflict/setppc/priority = 800000
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]

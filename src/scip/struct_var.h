@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.21 2004/10/19 18:36:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.22 2004/10/22 13:02:50 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -245,7 +245,7 @@ struct Var
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
    int              branchpriority;     /**< priority of the variable for branching */
-   int              branchdirection;    /**< preferred branching direction of the variable (-1: down, 0: auto, +1: up) */
+   BRANCHDIR        branchdirection;    /**< preferred branching direction of the variable (downwards, upwards, auto) */
    int              lbchginfossize;     /**< available slots in lbchginfos array */
    int              nlbchginfos;        /**< number of lower bound changes from root node to current node */
    int              ubchginfossize;     /**< available slots in ubchginfos array */

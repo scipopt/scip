@@ -1,3 +1,4 @@
+#!/bin/sh
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -14,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.12 2004/10/12 14:06:05 bzfpfend Exp $
+# $Id: check.sh,v 1.13 2004/10/22 13:02:48 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3

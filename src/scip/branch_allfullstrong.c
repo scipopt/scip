@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.11 2004/10/19 18:36:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.12 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -290,13 +290,11 @@ RETCODE branch(
       NODE* node;
       VAR* var;
       Real solval;
-      Real rootsolval;
       Real lb;
       Real ub;
       Real newlb;
       Real newub;
       Real downprio;
-      int direction;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestpseudocand && bestpseudocand < npseudocands);
@@ -304,12 +302,27 @@ RETCODE branch(
 
       var = pseudocands[bestpseudocand];
       solval = SCIPvarGetLPSol(var);
-      rootsolval = SCIPvarGetRootSol(var);
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
-      direction = SCIPvarGetBranchDirection(var);
-      downprio = (direction == 0 ? rootsolval - solval : -direction);
-      
+
+      /* choose preferred branching direction */
+      switch( SCIPvarGetBranchDirection(var) )
+      {
+      case SCIP_BRANCHDIR_DOWNWARDS:
+         downprio = 1.0;
+         break;
+      case SCIP_BRANCHDIR_UPWARDS:
+         downprio = -1.0;
+         break;
+      case SCIP_BRANCHDIR_AUTO:
+         downprio = SCIPvarGetRootSol(var) - solval;
+         break;
+      default:
+         errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+            SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
+         return SCIP_INVALIDDATA;
+      }
+
       /* perform the branching */
       debugMessage(" -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
          npseudocands, bestpseudocand, SCIPvarGetName(var), lb, ub, solval, bestdown, bestup, bestscore);
@@ -334,7 +347,7 @@ RETCODE branch(
          assert(solval > lb + 0.5 || solval < ub - 0.5); /* otherwise, the variable is already fixed */
 
          debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), solval);
-         CHECK_OKAY( SCIPcreateChild(scip, &node, direction == 0 ? SCIPinfinity(scip) : 0.0) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, SCIPinfinity(scip)) );
          if( solval > lb + 0.5 )
          {
             CHECK_OKAY( SCIPchgVarLbNode(scip, node, var, solval) );

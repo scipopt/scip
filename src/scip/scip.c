@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.216 2004/10/19 18:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.217 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5164,7 +5164,7 @@ RETCODE SCIPaddVarBranchPriority(
 RETCODE SCIPchgVarBranchDirection(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              branchdirection     /**< preferred branch direction of the variable (-1: down, 0: auto, +1: up) */
+   BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchDirection", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -5757,7 +5757,7 @@ Real SCIPgetVarPseudocostCurrentRun(
 Real SCIPgetVarPseudocostCount(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -5771,7 +5771,7 @@ Real SCIPgetVarPseudocostCount(
 Real SCIPgetVarPseudocostCountCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -5832,7 +5832,7 @@ Real SCIPgetVarPseudocostScoreCurrentRun(
 Real SCIPgetVarAvgInferences(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferences", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -5847,7 +5847,7 @@ Real SCIPgetVarAvgInferences(
 Real SCIPgetVarAvgInferencesCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferencesCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -5896,7 +5896,7 @@ Real SCIPgetVarAvgInferenceScoreCurrentRun(
 Real SCIPgetVarAvgCutoffs(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -5911,7 +5911,7 @@ Real SCIPgetVarAvgCutoffs(
 Real SCIPgetVarAvgCutoffsCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffsCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );

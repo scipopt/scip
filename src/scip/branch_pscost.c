@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.2 2004/10/19 18:36:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.3 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -71,12 +71,9 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
    Real* lpcandsfrac;
    Real bestscore;
    Real bestrootdiff;
-   Real rootsolval;
-   Real rootdiff;
    Real downprio;
    int nlpcands;
    int bestcand;
-   int direction;
    int c;
 
    assert(branchrule != NULL);
@@ -96,6 +93,8 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
    for( c = 0; c < nlpcands; ++c )
    {
       Real score;
+      Real rootsolval;
+      Real rootdiff;
 
       score = SCIPgetVarPseudocostScore(scip, lpcands[c], lpcandssol[c]);
       rootsolval = SCIPvarGetRootSol(lpcands[c]);
@@ -111,11 +110,26 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(!SCIPisIntegral(scip, lpcandssol[bestcand]));
 
    /* perform the branching */
-   rootsolval = SCIPvarGetRootSol(lpcands[bestcand]);
-   direction = SCIPvarGetBranchDirection(lpcands[bestcand]);
-   downprio = (direction == 0 ? rootsolval - lpcandssol[bestcand] : -direction);
-   debugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, rootval=%g)\n",
-      nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], rootsolval);
+   debugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
+      nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestscore);
+
+   /* choose preferred branching direction */
+   switch( SCIPvarGetBranchDirection(lpcands[bestcand]) )
+   {
+   case SCIP_BRANCHDIR_DOWNWARDS:
+      downprio = 1.0;
+      break;
+   case SCIP_BRANCHDIR_UPWARDS:
+      downprio = -1.0;
+      break;
+   case SCIP_BRANCHDIR_AUTO:
+      downprio = SCIPvarGetRootSol(lpcands[bestcand]) - lpcandssol[bestcand];
+      break;
+   default:
+      errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+         SCIPvarGetBranchDirection(lpcands[bestcand]), SCIPvarGetName(lpcands[bestcand]));
+      return SCIP_INVALIDDATA;
+   }
 
    /* create child node with x <= floor(x') */
    debugMessage(" -> creating child: <%s> <= %g\n",

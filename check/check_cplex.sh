@@ -1,4 +1,5 @@
-# $Id: check_cplex.sh,v 1.4 2004/09/02 09:19:41 bzfpfend Exp $
+#!/bin/sh
+# $Id: check_cplex.sh,v 1.5 2004/10/22 13:02:48 bzfpfend Exp $
 CPLEXBIN=cplex
 TSTNAME=$1
 BINNAME=$CPLEXBIN.$2

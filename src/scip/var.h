@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.77 2004/10/19 18:36:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.78 2004/10/22 13:02:50 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -585,7 +585,7 @@ void SCIPvarChgBranchPriority(
 extern
 void SCIPvarChgBranchDirection(
    VAR*             var,                /**< problem variable */
-   int              branchdirection     /**< branching direction of the variable */
+   BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );
 
 /** gets objective value of variable in current LP; the value can be different from the bound stored in the variable's own
@@ -695,7 +695,7 @@ Real SCIPvarGetPseudocostCurrentRun(
 extern
 Real SCIPvarGetPseudocostCount(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
@@ -704,7 +704,7 @@ Real SCIPvarGetPseudocostCount(
 extern
 Real SCIPvarGetPseudocostCountCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** increases the number of branchings counter of the variable */
@@ -713,7 +713,7 @@ RETCODE SCIPvarIncNBranchings(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    int              depth,              /**< depth at which the bound change took place */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** increases the number of inferences counter of the variable */
@@ -721,7 +721,7 @@ extern
 RETCODE SCIPvarIncNInferences(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** increases the number of cutoffs counter of the variable */
@@ -729,7 +729,7 @@ extern
 RETCODE SCIPvarIncNCutoffs(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of inferences found after branching on the variable in given direction */
@@ -737,7 +737,7 @@ extern
 Real SCIPvarGetAvgInferences(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of inferences found after branching on the variable in given direction
@@ -747,7 +747,7 @@ extern
 Real SCIPvarGetAvgInferencesCurrentRun(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of cutoffs found after branching on the variable in given direction */
@@ -755,7 +755,7 @@ extern
 Real SCIPvarGetAvgCutoffs(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of cutoffs found after branching on the variable in given direction in the current run */
@@ -763,7 +763,7 @@ extern
 Real SCIPvarGetAvgCutoffsCurrentRun(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** outputs variable information into file stream */

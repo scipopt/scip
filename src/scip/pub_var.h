@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.28 2004/10/19 18:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.29 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -229,7 +229,7 @@ RETCODE SCIPvarGetProbvarSum(
 extern
 Longint SCIPvarGetNBranchings(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of times, a bound of the variable was changed in given direction due to branching
@@ -238,14 +238,14 @@ Longint SCIPvarGetNBranchings(
 extern
 Longint SCIPvarGetNBranchingsCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of inferences branching on this variable in given direction triggered */
 extern
 Longint SCIPvarGetNInferences(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of inferences branching on this variable in given direction triggered
@@ -254,28 +254,28 @@ Longint SCIPvarGetNInferences(
 extern
 Longint SCIPvarGetNInferencesCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of cutoffs branching on this variable in given direction produced */
 extern
 Longint SCIPvarGetNCutoffs(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of cutoffs branching on this variable in given direction produced in the current run */
 extern
 Longint SCIPvarGetNCutoffsCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average depth of bound changes in given direction due to branching on the variable */
 extern
 Real SCIPvarGetAvgBranchdepth(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average depth of bound changes in given direction due to branching on the variable
@@ -284,7 +284,7 @@ Real SCIPvarGetAvgBranchdepth(
 extern
 Real SCIPvarGetAvgBranchdepthCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 
@@ -490,9 +490,9 @@ int SCIPvarGetBranchPriority(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets the preferred branch direction of the variable (-1: downwards, 0: automatic, +1: upwards) */
+/** gets the preferred branch direction of the variable (downwards, upwards, or auto) */
 extern
-int SCIPvarGetBranchDirection(
+BRANCHDIR SCIPvarGetBranchDirection(
    VAR*             var                 /**< problem variable */
    );
 
@@ -855,7 +855,7 @@ BOUNDCHGTYPE SCIPbdchginfoGetChgtype(
 
 /** returns whether the bound change information belongs to a lower or upper bound change */
 extern
-BOUNDCHGTYPE SCIPbdchginfoGetBoundtype(
+BOUNDTYPE SCIPbdchginfoGetBoundtype(
    BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 

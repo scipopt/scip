@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.16 2004/10/20 12:46:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.17 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -612,11 +612,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
       NODE* node;
-      Real rootsolval;
       Real proveddown;
       Real provedup;
       Real downprio;
-      int direction;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nlpcands);
@@ -633,9 +631,23 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             SCIPceil(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
          SCIPgetVarPseudocostScoreCurrentRun(scip, lpcands[bestcand], lpcandssol[bestcand]));
 
-      rootsolval = SCIPvarGetRootSol(lpcands[bestcand]);
-      direction = SCIPvarGetBranchDirection(lpcands[bestcand]);
-      downprio = (direction == 0 ? rootsolval - lpcandssol[bestcand] : -direction);
+      /* choose preferred branching direction */
+      switch( SCIPvarGetBranchDirection(lpcands[bestcand]) )
+      {
+      case SCIP_BRANCHDIR_DOWNWARDS:
+         downprio = 1.0;
+         break;
+      case SCIP_BRANCHDIR_UPWARDS:
+         downprio = -1.0;
+         break;
+      case SCIP_BRANCHDIR_AUTO:
+         downprio = SCIPvarGetRootSol(lpcands[bestcand]) - lpcandssol[bestcand];
+         break;
+      default:
+         errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+            SCIPvarGetBranchDirection(lpcands[bestcand]), SCIPvarGetName(lpcands[bestcand]));
+         return SCIP_INVALIDDATA;
+      }
 
       /* calculate proved lower bounds for children */
       proveddown = (bestisstrongbranch ? MAX(provedbound, bestsbdown) : provedbound);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_history.h,v 1.4 2004/04/15 10:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_history.h,v 1.5 2004/10/22 13:02:50 bzfpfend Exp $"
 
 /**@file   type_history.h
  * @brief  type definitions for branching and inference history
@@ -31,7 +31,8 @@
 enum BranchDir
 {
    SCIP_BRANCHDIR_DOWNWARDS = 0,        /**< downwards branching: decreasing upper bound */
-   SCIP_BRANCHDIR_UPWARDS   = 1         /**< upwards branching: increasing lower bound */
+   SCIP_BRANCHDIR_UPWARDS   = 1,        /**< upwards branching: increasing lower bound */
+   SCIP_BRANCHDIR_AUTO      = 2         /**< automatic setting for choosing bound changes */
 };
 typedef enum BranchDir BRANCHDIR;       /**< branching direction for branching on variables */
 

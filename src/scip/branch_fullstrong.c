@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.30 2004/10/19 18:36:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.31 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -276,9 +276,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
       NODE* node;
-      Real rootsolval;
       Real downprio;
-      int direction;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nlpcands);
@@ -288,9 +286,23 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
          nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestdown, bestup, bestscore);
 
-      rootsolval = SCIPvarGetRootSol(lpcands[bestcand]);
-      direction = SCIPvarGetBranchDirection(lpcands[bestcand]);
-      downprio = (direction == 0 ? rootsolval - lpcandssol[bestcand] : -direction);
+      /* choose preferred branching direction */
+      switch( SCIPvarGetBranchDirection(lpcands[bestcand]) )
+      {
+      case SCIP_BRANCHDIR_DOWNWARDS:
+         downprio = 1.0;
+         break;
+      case SCIP_BRANCHDIR_UPWARDS:
+         downprio = -1.0;
+         break;
+      case SCIP_BRANCHDIR_AUTO:
+         downprio = SCIPvarGetRootSol(lpcands[bestcand]) - lpcandssol[bestcand];
+         break;
+      default:
+         errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+            SCIPvarGetBranchDirection(lpcands[bestcand]), SCIPvarGetName(lpcands[bestcand]));
+         return SCIP_INVALIDDATA;
+      }
 
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.173 2004/10/19 18:36:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.174 2004/10/22 13:02:50 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1909,7 +1909,7 @@ extern
 RETCODE SCIPchgVarBranchDirection(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              branchdirection     /**< preferred branch direction of the variable (-1: down, 0: auto, +1: up) */
+   BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );
 
 /** changes type of variable in the problem; this changes the vars array returned from
@@ -2017,7 +2017,7 @@ extern
 Real SCIPgetVarPseudocostCount(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
@@ -2027,7 +2027,7 @@ extern
 Real SCIPgetVarPseudocostCountCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** gets the variable's pseudo cost score value for the given LP solution value */
@@ -2056,7 +2056,7 @@ extern
 Real SCIPgetVarAvgInferences(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of inferences found after branching on the variable in given direction in the current run;
@@ -2067,7 +2067,7 @@ extern
 Real SCIPgetVarAvgInferencesCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the variable's average inference score value */
@@ -2092,7 +2092,7 @@ extern
 Real SCIPgetVarAvgCutoffs(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average number of cutoffs found after branching on the variable in given direction in the current run;
@@ -2103,7 +2103,7 @@ extern
 Real SCIPgetVarAvgCutoffsCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the variable's average cutoff score value */

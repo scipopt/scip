@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.62 2004/10/21 14:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.63 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -859,6 +859,9 @@ RETCODE processFixings(
    *addcut = FALSE;
    *mustcheck = FALSE;
 
+   debugMessage("processing constraint <%s> with respect to fixed variables (%d fixed to 0.0, %d fixed to 1.0)\n",
+      SCIPconsGetName(cons), consdata->nfixedzeros, consdata->nfixedones);
+
    if( consdata->nfixedones >= 2 )
    {
       /* at least two variables are fixed to 1:
@@ -867,10 +870,13 @@ RETCODE processFixings(
        */
       if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
+         debugMessage(" -> disabling set covering constraint <%s>\n", SCIPconsGetName(cons));
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       }
       else
       {
+         debugMessage(" -> conflict on set packing/partitioning constraint <%s>\n", SCIPconsGetName(cons));
+
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
 
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -887,6 +893,7 @@ RETCODE processFixings(
        */
       if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
+         debugMessage(" -> disabling set covering constraint <%s>\n", SCIPconsGetName(cons));
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       }
       else
@@ -901,6 +908,9 @@ RETCODE processFixings(
             Bool tightened;
             int nvars;
             int v;
+
+            debugMessage(" -> fixing all other variables to zero in set packing/partitioning constraint <%s>\n", 
+               SCIPconsGetName(cons));
 
             /* unfixed variables exist: fix them to zero */
             vars = consdata->vars;
@@ -917,6 +927,7 @@ RETCODE processFixings(
                   CHECK_OKAY( SCIPinferBinvarCons(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
                   assert(!infeasible);
                   fixed = fixed || tightened;
+                  debugMessage("   -> fixed <%s> to zero (tightened=%d)\n", SCIPvarGetName(var), tightened);
                }
                else
                   fixedonefound = TRUE;
@@ -933,6 +944,7 @@ RETCODE processFixings(
           */
          if( !SCIPconsIsModifiable(cons) )
          {
+            debugMessage(" -> disabling set packing/partitioning constraint <%s>\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
       }
@@ -951,11 +963,14 @@ RETCODE processFixings(
       {
          if( !SCIPconsIsModifiable(cons) )
          {
+            debugMessage(" -> disabling set packing constraint <%s>\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
       }
       else
       {
+         debugMessage(" -> set covering/partitioning constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          if( SCIPconsIsModifiable(cons) )
             *addcut = TRUE;
@@ -982,6 +997,7 @@ RETCODE processFixings(
       {
          if( !SCIPconsIsModifiable(cons) )
          {
+            debugMessage(" -> disabling set packing constraint <%s>\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
       }
@@ -1004,6 +1020,8 @@ RETCODE processFixings(
             assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
+               debugMessage(" -> fixing remaining variable <%s> to one in set covering/partitioning constraint <%s>\n", 
+                  SCIPvarGetName(var), SCIPconsGetName(cons));
                CHECK_OKAY( SCIPinferBinvarCons(scip, var, TRUE, cons, 0, &infeasible, &tightened) );
                assert(!infeasible);
                assert(tightened);
@@ -1043,6 +1061,7 @@ Bool checkCons(
    VAR** vars;
    Real solval;
    Real sum;
+   Real sumbound;
    int nvars;
    int v;
    
@@ -1050,8 +1069,8 @@ Bool checkCons(
    vars = consdata->vars;
    nvars = consdata->nvars;
    sum = 0.0;
-   assert(SCIPfeastol(scip) < 0.1); /* to make the comparison against 1.1 working */
-   for( v = 0; v < nvars && sum < 1.1; ++v )  /* if sum >= 1.1, the feasibility is clearly decided */
+   sumbound = (consdata->setppctype == SCIP_SETPPCTYPE_COVERING ? 1.0 : 1.0 + 2*SCIPfeastol(scip));
+   for( v = 0; v < nvars && sum < sumbound; ++v )  /* if sum >= sumbound, the feasibility is clearly decided */
    {
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
       solval = SCIPgetSolVal(scip, sol, vars[v]);
@@ -1134,7 +1153,9 @@ RETCODE addCut(
    }
    assert(consdata->row != NULL);
    assert(!SCIProwIsInLP(consdata->row));
-   
+
+   debugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
+
    /* insert LP row as cut */
    CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
 
@@ -1172,6 +1193,8 @@ RETCODE separateCons(
    if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
       return SCIP_OKAY;
 
+   debugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
+
    /* check constraint for violation only looking at the fixed variables, apply further fixings if possible */
    CHECK_OKAY( processFixings(scip, cons, cutoff, reduceddom, &addcut, &mustcheck) );
 
@@ -1182,8 +1205,11 @@ RETCODE separateCons(
       /* variable's fixings didn't give us any information -> we have to check the constraint */
       if( consdata->row != NULL )
       {
+         Real feasibility;
+
          assert(!SCIProwIsInLP(consdata->row));
-         addcut = !SCIPisFeasible(scip, SCIPgetRowLPFeasibility(scip, consdata->row));
+         feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+         addcut = !SCIPisFeasible(scip, feasibility);
       }
       else
          addcut = !checkCons(scip, consdata, NULL);
@@ -1602,19 +1628,38 @@ RETCODE branchLP(
       if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
       {
          NODE* node;
+         Real downprio;
 
          /* perform the binary set branching on the selected variables */
          assert(1 <= nselcands && nselcands <= nlpcands);
          
+         /* choose preferred branching direction */
+         switch( SCIPvarGetBranchDirection(branchcands[0]) )
+         {
+         case SCIP_BRANCHDIR_DOWNWARDS:
+            downprio = 1.0;
+            break;
+         case SCIP_BRANCHDIR_UPWARDS:
+            downprio = -1.0;
+            break;
+         case SCIP_BRANCHDIR_AUTO:
+            downprio = SCIPvarGetRootSol(branchcands[0]) - SCIPgetVarSol(scip, branchcands[0]);
+            break;
+         default:
+            errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+               SCIPvarGetBranchDirection(branchcands[0]), SCIPvarGetName(branchcands[0]));
+            return SCIP_INVALIDDATA;
+         }
+
          /* create left child, fix x_i = 0 for all i \in S */
-         CHECK_OKAY( SCIPcreateChild(scip, &node, -(Real)SCIPvarGetBranchDirection(branchcands[0])) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
          for( i = 0; i < nselcands; ++i )
          {
             CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
          }
 
          /* create right child: add constraint x(S) >= 1 */
-         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)SCIPvarGetBranchDirection(branchcands[0])) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
          if( nselcands == 1 )
          {
             /* only one candidate selected: fix it to 1.0 */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.11 2004/10/05 16:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.12 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -185,7 +185,8 @@ BRANCHDIR SCIPbranchdirOpposite(
    BRANCHDIR        dir                 /**< branching direction */
    )
 {
-   return (dir == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+   return (dir == SCIP_BRANCHDIR_DOWNWARDS ? SCIP_BRANCHDIR_UPWARDS
+      : (dir == SCIP_BRANCHDIR_UPWARDS ? SCIP_BRANCHDIR_DOWNWARDS : SCIP_BRANCHDIR_AUTO));
 }
 
 /** returns the expected dual gain for moving the corresponding variable by "solvaldelta" */
@@ -207,10 +208,11 @@ Real SCIPhistoryGetPseudocost(
  */
 Real SCIPhistoryGetPseudocostCount(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    return history->pscostcount[dir];
@@ -219,10 +221,11 @@ Real SCIPhistoryGetPseudocostCount(
 /** returns whether the pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
 Bool SCIPhistoryIsPseudocostEmpty(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
    
    return (history->pscostcount[dir] == 0.0);
@@ -232,11 +235,12 @@ Bool SCIPhistoryIsPseudocostEmpty(
 void SCIPhistoryIncNBranchings(
    HISTORY*         history,            /**< branching and inference history */
    int              depth,              /**< depth at which the bound change took place */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
    assert(depth >= 1);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    history->nbranchings[dir]++;
@@ -246,10 +250,11 @@ void SCIPhistoryIncNBranchings(
 /** increases the number of inferences counter */
 void SCIPhistoryIncNInferences(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    history->ninferences[dir]++;
@@ -258,10 +263,11 @@ void SCIPhistoryIncNInferences(
 /** increases the number of cutoffs counter */
 void SCIPhistoryIncNCutoffs(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    history->ncutoffs[dir]++;
@@ -270,10 +276,11 @@ void SCIPhistoryIncNCutoffs(
 /** get number of branchings counter */
 Longint SCIPhistoryGetNBranchings(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    return history->nbranchings[dir];
@@ -282,10 +289,11 @@ Longint SCIPhistoryGetNBranchings(
 /** get number of inferences counter */
 Longint SCIPhistoryGetNInferences(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    return history->ninferences[dir];
@@ -294,10 +302,11 @@ Longint SCIPhistoryGetNInferences(
 /** returns the average number of inferences per branching */
 Real SCIPhistoryGetAvgInferences(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    return history->nbranchings[dir] > 0 ? (Real)history->ninferences[dir]/(Real)history->nbranchings[dir] : 0;
@@ -306,10 +315,11 @@ Real SCIPhistoryGetAvgInferences(
 /** get number of cutoffs counter */
 Longint SCIPhistoryGetNCutoffs(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    return history->ncutoffs[dir];
@@ -318,10 +328,11 @@ Longint SCIPhistoryGetNCutoffs(
 /** returns the average number of cutoffs per branching */
 Real SCIPhistoryGetAvgCutoffs(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    return history->nbranchings[dir] > 0 ? (Real)history->ncutoffs[dir]/(Real)history->nbranchings[dir] : 0;
@@ -330,10 +341,11 @@ Real SCIPhistoryGetAvgCutoffs(
 /** returns the average depth of bound changes due to branching */
 Real SCIPhistoryGetAvgBranchdepth(
    HISTORY*         history,            /**< branching and inference history */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert(dir == 0 || dir == 1);
 
    return history->nbranchings[dir] > 0 ? (Real)history->branchdepthsum[dir]/(Real)history->nbranchings[dir] : 0;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.19 2004/03/22 16:03:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.20 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1452,7 +1452,7 @@ RETCODE SCIPparamsetGetBool(
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
@@ -1477,7 +1477,7 @@ RETCODE SCIPparamsetGetInt(
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_INT )
@@ -1502,7 +1502,7 @@ RETCODE SCIPparamsetGetLongint(
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
@@ -1527,7 +1527,7 @@ RETCODE SCIPparamsetGetReal(
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
@@ -1552,7 +1552,7 @@ RETCODE SCIPparamsetGetChar(
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
@@ -1577,7 +1577,7 @@ RETCODE SCIPparamsetGetString(
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
@@ -1602,7 +1602,7 @@ RETCODE SCIPparamsetSetBool(
    assert(paramset != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
@@ -1627,7 +1627,7 @@ RETCODE SCIPparamsetSetInt(
    assert(paramset != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_INT )
@@ -1652,7 +1652,7 @@ RETCODE SCIPparamsetSetLongint(
    assert(paramset != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
@@ -1677,7 +1677,7 @@ RETCODE SCIPparamsetSetReal(
    assert(paramset != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
@@ -1702,7 +1702,7 @@ RETCODE SCIPparamsetSetChar(
    assert(paramset != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
@@ -1727,7 +1727,7 @@ RETCODE SCIPparamsetSetString(
    assert(paramset != NULL);
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
@@ -1828,7 +1828,7 @@ RETCODE paramsetParse(
    }
 
    /* retrieve parameter from hash table */
-   param = SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param == NULL )
    {
       warningMessage("unknown parameter <%s>\n", paramname);

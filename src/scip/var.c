@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.116 2004/10/19 18:36:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.117 2004/10/22 13:02:50 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -448,7 +448,7 @@ RETCODE SCIPboundchgApply(
                CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
                      boundchg->data.inferencedata.info,
-                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_CONSINFER) );
+                     (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
                break;
 
             case SCIP_BOUNDCHGTYPE_PROPINFER:
@@ -459,7 +459,7 @@ RETCODE SCIPboundchgApply(
                CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
                      boundchg->data.inferencedata.info,
-                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
                break;
 
             default:
@@ -514,7 +514,7 @@ RETCODE SCIPboundchgApply(
                CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
                      boundchg->data.inferencedata.info,
-                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_CONSINFER) );
+                     (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
                break;
 
             case SCIP_BOUNDCHGTYPE_PROPINFER:
@@ -525,7 +525,7 @@ RETCODE SCIPboundchgApply(
                CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
                      boundchg->data.inferencedata.info,
-                     boundchg->inferboundtype, SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
                break;
 
             default:
@@ -1675,7 +1675,7 @@ RETCODE varCreate(
    (*var)->nlocksdown = 0;
    (*var)->nlocksup = 0;
    (*var)->branchpriority = 0;
-   (*var)->branchdirection = 0;
+   (*var)->branchdirection = SCIP_BRANCHDIR_AUTO;
    (*var)->lbchginfossize = 0;
    (*var)->nlbchginfos = 0;
    (*var)->ubchginfossize = 0;
@@ -2516,7 +2516,7 @@ RETCODE SCIPvarTransform(
       sprintf(name, "t_%s", origvar->name);
       CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
-            origvar->vartype, origvar->initial, origvar->removeable,
+            (VARTYPE)(origvar->vartype), origvar->initial, origvar->removeable,
             NULL, NULL, origvar->vardeltrans, origvar->vardata) );
       
       /* copy the branch factor and priority */
@@ -3191,39 +3191,21 @@ RETCODE SCIPvarAggregate(
    /* update branching direction of both variables to agree to a single direction */
    if( scalar >= 0.0 )
    {
-      if( var->branchdirection + aggvar->branchdirection > 0 )
-      {
-         SCIPvarChgBranchDirection(var, +1);
-         assert(aggvar->branchdirection == +1);
-      }
-      else if( var->branchdirection + aggvar->branchdirection < 0 )
-      {
-         SCIPvarChgBranchDirection(var, -1);
-         assert(aggvar->branchdirection == -1);
-      }
-      else
-      {
-         SCIPvarChgBranchDirection(var, 0);
-         assert(aggvar->branchdirection == 0);
-      }
+      if( var->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(var, aggvar->branchdirection);
+      else if( aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(aggvar, var->branchdirection);
+      else if( var->branchdirection != aggvar->branchdirection )
+         SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO);
    }
    else
    {
-      if( var->branchdirection - aggvar->branchdirection > 0 )
-      {
-         SCIPvarChgBranchDirection(var, +1);
-         assert(aggvar->branchdirection == -1);
-      }
-      else if( var->branchdirection - aggvar->branchdirection < 0 )
-      {
-         SCIPvarChgBranchDirection(var, -1);
-         assert(aggvar->branchdirection == +1);
-      }
-      else
-      {
-         SCIPvarChgBranchDirection(var, 0);
-         assert(aggvar->branchdirection == 0);
-      }
+      if( var->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(var, SCIPbranchdirOpposite(aggvar->branchdirection));
+      else if( aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(aggvar, SCIPbranchdirOpposite(var->branchdirection));
+      else if( var->branchdirection != aggvar->branchdirection )
+         SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO);
    }
 
    if( var->probindex != -1 )
@@ -3265,7 +3247,7 @@ RETCODE SCIPvarMultiaggregate(
    Real obj;
    Real branchfactor;
    int branchpriority;
-   int branchdirection;
+   BRANCHDIR branchdirection;
    int nlocksdown;
    int nlocksup;
    int v;
@@ -3349,12 +3331,12 @@ RETCODE SCIPvarMultiaggregate(
       {
          SCIPvarChgBranchFactor(aggvars[v], set, branchfactor);
          SCIPvarChgBranchPriority(aggvars[v], branchpriority);
-         if( aggvars[v]->branchdirection == 0 )
+         if( aggvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
             if( scalars[v] >= 0.0 )
                SCIPvarChgBranchDirection(aggvars[v], branchdirection);
             else
-               SCIPvarChgBranchDirection(aggvars[v], -branchdirection);
+               SCIPvarChgBranchDirection(aggvars[v], SCIPbranchdirOpposite(branchdirection));
          }
       }
       SCIPvarChgBranchFactor(var, set, branchfactor);
@@ -3485,7 +3467,7 @@ RETCODE SCIPvarNegate(
       /* copy the branch factor and priority, and use the negative preferred branching direction */
       (*negvar)->branchfactor = var->branchfactor;
       (*negvar)->branchpriority = var->branchpriority;
-      (*negvar)->branchdirection = -var->branchdirection;
+      (*negvar)->branchdirection = SCIPbranchdirOpposite(var->branchdirection);
 
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
       CHECK_OKAY( varAddParent(var, memhdr, set, *negvar) );
@@ -3790,7 +3772,7 @@ void SCIPvarAdjustLb(
 
    debugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
 
-   *lb = adjustedLb(set, var->vartype, *lb);
+   *lb = adjustedLb(set, (VARTYPE)(var->vartype), *lb);
 }
 
 /** adjust upper bound to integral value, if variable is integral */
@@ -3805,7 +3787,7 @@ void SCIPvarAdjustUb(
 
    debugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
 
-   *ub = adjustedUb(set, var->vartype, *ub);
+   *ub = adjustedUb(set, (VARTYPE)(var->vartype), *ub);
 }
 
 
@@ -3833,7 +3815,7 @@ RETCODE varProcessChgLbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, var->vartype, newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, (VARTYPE)(var->vartype), newbound)));
 
    debugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
@@ -3915,7 +3897,7 @@ RETCODE varProcessChgUbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, var->vartype, newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, (VARTYPE)(var->vartype), newbound)));
 
    debugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
@@ -4291,7 +4273,7 @@ RETCODE varProcessChgLbLocal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, var->vartype, newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, (VARTYPE)(var->vartype), newbound)));
 
    debugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -4386,7 +4368,7 @@ RETCODE varProcessChgUbLocal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, var->vartype, newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, (VARTYPE)(var->vartype), newbound)));
 
    debugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -5522,14 +5504,13 @@ void SCIPvarChgBranchPriority(
 static
 void varProcessChgBranchDirection(
    VAR*             var,                /**< problem variable */
-   int              branchdirection     /**< branching direction of the variable */
+   BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    )
 {
    VAR* parentvar;
    int i;
 
    assert(var != NULL);
-   assert(-1 <= branchdirection && branchdirection <= +1);
 
    debugMessage("process changing branch direction of <%s> from %d to %d\n", 
       var->name, var->branchdirection, branchdirection);
@@ -5563,11 +5544,11 @@ void varProcessChgBranchDirection(
          if( parentvar->data.aggregate.scalar > 0.0 )
             varProcessChgBranchDirection(parentvar, branchdirection);
          else
-            varProcessChgBranchDirection(parentvar, -branchdirection);
+            varProcessChgBranchDirection(parentvar, SCIPbranchdirOpposite(branchdirection));
          break;
 
       case SCIP_VARSTATUS_NEGATED:
-         varProcessChgBranchDirection(parentvar, -branchdirection);
+         varProcessChgBranchDirection(parentvar, SCIPbranchdirOpposite(branchdirection));
          break;
 
       default:
@@ -5582,13 +5563,12 @@ void varProcessChgBranchDirection(
  */
 void SCIPvarChgBranchDirection(
    VAR*             var,                /**< problem variable */
-   int              branchdirection     /**< branching direction of the variable */
+   BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    )
 {
    int v;
 
    assert(var != NULL);
-   assert(-1 <= branchdirection && branchdirection <= +1);
 
    debugMessage("changing branch direction of <%s> from %d to %d\n", var->name, var->branchdirection, branchdirection);
 
@@ -5616,7 +5596,7 @@ void SCIPvarChgBranchDirection(
       if( var->data.aggregate.scalar > 0.0 )
          SCIPvarChgBranchDirection(var->data.aggregate.var, branchdirection);
       else
-         SCIPvarChgBranchDirection(var->data.aggregate.var, -branchdirection);
+         SCIPvarChgBranchDirection(var->data.aggregate.var, SCIPbranchdirOpposite(branchdirection));
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
@@ -5624,12 +5604,12 @@ void SCIPvarChgBranchDirection(
       {
          /* only update branching direction of aggregation variables, if they don't have a preferred direction yet */
          assert(var->data.multaggr.vars[v] != NULL);
-         if( var->data.multaggr.vars[v]->branchdirection == 0 )
+         if( var->data.multaggr.vars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
             if( var->data.multaggr.scalars[v] > 0.0 )
                SCIPvarChgBranchDirection(var->data.multaggr.vars[v], branchdirection);
             else
-               SCIPvarChgBranchDirection(var->data.multaggr.vars[v], -branchdirection);
+               SCIPvarChgBranchDirection(var->data.multaggr.vars[v], SCIPbranchdirOpposite(branchdirection));
          }
       }
       break;
@@ -5638,7 +5618,7 @@ void SCIPvarChgBranchDirection(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIPvarChgBranchDirection(var->negatedvar, -branchdirection);
+      SCIPvarChgBranchDirection(var->negatedvar, SCIPbranchdirOpposite(branchdirection));
       break;
          
    default:
@@ -6262,8 +6242,8 @@ int SCIPvarGetBranchPriority(
    return var->branchpriority;
 }
 
-/** gets the preferred branch direction of the variable (-1: downwards, 0: automatic, +1: upwards) */
-int SCIPvarGetBranchDirection(
+/** gets the preferred branch direction of the variable (downwards, upwards, or auto) */
+BRANCHDIR SCIPvarGetBranchDirection(
    VAR*             var                 /**< problem variable */
    )
 {
@@ -7198,11 +7178,11 @@ Real SCIPvarGetPseudocostCurrentRun(
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
 Real SCIPvarGetPseudocostCount(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
-   assert(dir == 0 || dir == 1);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    
    switch( var->varstatus )
    {
@@ -7242,11 +7222,11 @@ Real SCIPvarGetPseudocostCount(
  */
 Real SCIPvarGetPseudocostCountCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
-   assert(dir == 0 || dir == 1);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    
    switch( var->varstatus )
    {
@@ -7286,11 +7266,12 @@ RETCODE SCIPvarIncNBranchings(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    int              depth,              /**< depth at which the bound change took place */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7345,11 +7326,12 @@ RETCODE SCIPvarIncNBranchings(
 RETCODE SCIPvarIncNInferences(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7404,11 +7386,12 @@ RETCODE SCIPvarIncNInferences(
 RETCODE SCIPvarIncNCutoffs(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7462,10 +7445,11 @@ RETCODE SCIPvarIncNCutoffs(
 /** returns the number of times, a bound of the variable was changed in given direction due to branching */
 Longint SCIPvarGetNBranchings(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7505,10 +7489,11 @@ Longint SCIPvarGetNBranchings(
  */
 Longint SCIPvarGetNBranchingsCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7546,10 +7531,11 @@ Longint SCIPvarGetNBranchingsCurrentRun(
 /** returns the average depth of bound changes in given direction due to branching on the variable */
 Real SCIPvarGetAvgBranchdepth(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7589,10 +7575,11 @@ Real SCIPvarGetAvgBranchdepth(
  */
 Real SCIPvarGetAvgBranchdepthCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7630,10 +7617,11 @@ Real SCIPvarGetAvgBranchdepthCurrentRun(
 /** returns the number of inferences branching on this variable in given direction triggered */
 Longint SCIPvarGetNInferences(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7673,10 +7661,11 @@ Longint SCIPvarGetNInferences(
  */
 Longint SCIPvarGetNInferencesCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7715,11 +7704,12 @@ Longint SCIPvarGetNInferencesCurrentRun(
 Real SCIPvarGetAvgInferences(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7762,11 +7752,12 @@ Real SCIPvarGetAvgInferences(
 Real SCIPvarGetAvgInferencesCurrentRun(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7806,10 +7797,11 @@ Real SCIPvarGetAvgInferencesCurrentRun(
 /** returns the number of cutoffs branching on this variable in given direction produced */
 Longint SCIPvarGetNCutoffs(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7847,10 +7839,11 @@ Longint SCIPvarGetNCutoffs(
 /** returns the number of cutoffs branching on this variable in given direction produced in the current run */
 Longint SCIPvarGetNCutoffsCurrentRun(
    VAR*             var,                /**< problem variable */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7889,11 +7882,12 @@ Longint SCIPvarGetNCutoffsCurrentRun(
 Real SCIPvarGetAvgCutoffs(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -7934,11 +7928,12 @@ Real SCIPvarGetAvgCutoffs(
 Real SCIPvarGetAvgCutoffsCurrentRun(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
-   BRANCHDIR        dir                 /**< branching direction */
+   BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( var->varstatus )
    {
@@ -8431,17 +8426,17 @@ BOUNDCHGTYPE SCIPbdchginfoGetChgtype(
 {
    assert(bdchginfo != NULL);
 
-   return bdchginfo->boundchgtype;
+   return (BOUNDCHGTYPE)(bdchginfo->boundchgtype);
 }
 
 /** returns whether the bound change information belongs to a lower or upper bound change */
-BOUNDCHGTYPE SCIPbdchginfoGetBoundtype(
+BOUNDTYPE SCIPbdchginfoGetBoundtype(
    BDCHGINFO*       bdchginfo           /**< bound change information */
    )
 {
    assert(bdchginfo != NULL);
 
-   return bdchginfo->boundtype;
+   return (BOUNDTYPE)(bdchginfo->boundtype);
 }
 
 /** returs depth level of given bound change information */

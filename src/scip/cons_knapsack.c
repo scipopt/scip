@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.65 2004/10/05 11:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.66 2004/10/22 13:02:49 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -379,7 +379,7 @@ RETCODE addRelaxation(
 
 /** checks knapsack constraint for feasibility of given solution: returns TRUE iff constraint is feasible */
 static
-Bool checkCons(
+RETCODE checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint to check */
    SOL*             sol,                /**< solution to check, NULL for current solution */
@@ -822,7 +822,7 @@ RETCODE SCIPseparateKnapsackCardinality(
          
          /* check, if lifting yielded a violated cut */
          assert(ncovervars >= 1);
-         if( SCIPisEfficacious(scip, (activity + liftlpval - ncovervars)/sqrt(ncovervars)) )
+         if( SCIPisEfficacious(scip, (activity + liftlpval - ncovervars)/sqrt((Real)ncovervars)) )
          {
             ROW* row;
             Real cutnorm;
