@@ -46,6 +46,7 @@ struct Nodesel
 {
    char*            name;               /**< name of node selector */
    char*            desc;               /**< description of node selector */
+   DECL_NODESELFREE((*nodeselfree));    /**< destructor of node selector */
    DECL_NODESELINIT((*nodeselinit));    /**< initialise node selector */
    DECL_NODESELEXIT((*nodeselexit));    /**< deinitialise node selector */
    DECL_NODESELSLCT((*nodeselslct));    /**< node selection method */
@@ -320,6 +321,8 @@ NODE* SCIPnodepqFirst(                  /**< returns the best node of the queue 
    if( nodepq->len == 0 )
       return NULL;
 
+   assert(nodepq->slots[0] != NULL);
+
    return nodepq->slots[0];
 }
 
@@ -446,6 +449,7 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
    NODESEL**        nodesel,            /**< pointer to store node selector */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
+   DECL_NODESELFREE((*nodeselfree)),    /**< destructor of node selector */
    DECL_NODESELINIT((*nodeselinit)),    /**< initialise node selector */
    DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
    DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
@@ -463,6 +467,7 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
    ALLOC_OKAY( allocMemory(*nodesel) );
    ALLOC_OKAY( duplicateMemoryArray((*nodesel)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray((*nodesel)->desc, desc, strlen(desc)+1) );
+   (*nodesel)->nodeselfree = nodeselfree;
    (*nodesel)->nodeselinit = nodeselinit;
    (*nodesel)->nodeselexit = nodeselexit;
    (*nodesel)->nodeselslct = nodeselslct;
@@ -475,12 +480,19 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
 }
    
 RETCODE SCIPnodeselFree(                /**< frees memory of node selector */
-   NODESEL**        nodesel             /**< pointer to node selector data structure */
+   NODESEL**        nodesel,            /**< pointer to node selector data structure */
+   SCIP*            scip                /**< SCIP data structure */   
    )
 {
    assert(nodesel != NULL);
    assert(*nodesel != NULL);
    assert(!(*nodesel)->initialized);
+
+   /* call destructor of node selector */
+   if( (*nodesel)->nodeselfree != NULL )
+   {
+      CHECK_OKAY( (*nodesel)->nodeselfree(*nodesel, scip) );
+   }
 
    freeMemoryArray((*nodesel)->name);
    freeMemoryArray((*nodesel)->desc);
@@ -578,6 +590,25 @@ const char* SCIPnodeselGetName(         /**< gets name of node selector */
    assert(nodesel != NULL);
 
    return nodesel->name;
+}
+
+NODESELDATA* SCIPnodeselGetData(        /**< gets user data of node selector */
+   NODESEL*         nodesel             /**< node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   return nodesel->nodeseldata;
+}
+
+void SCIPnodeselSetData(                /**< sets user data of node selector; user has to free old data in advance! */
+   NODESEL*         nodesel,            /**< node selector */
+   NODESELDATA*     nodeseldata         /**< new node selector user data */
+   )
+{
+   assert(nodesel != NULL);
+
+   nodesel->nodeseldata = nodeseldata;
 }
 
 Bool SCIPnodeselIsInitialized(          /**< is node selector initialized? */

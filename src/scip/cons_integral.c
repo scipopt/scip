@@ -37,19 +37,12 @@
 #define CONSHDLR_CHCKPRIORITY         0
 
 
-#if 0
-/** constraint data for integrality constraint */
-struct ConsData
-{
-   int              dummy;              /**< dummy to not have an empty struct */
-};
-#endif
-
 
 /*
  * Callback methods
  */
 
+static
 DECL_CONSENFO(SCIPconsEnfoIntegral)
 {
    VAR** vars;
@@ -96,6 +89,7 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
    return SCIP_FEASIBLE;
 }
 
+static
 DECL_CONSCHCK(SCIPconsChckIntegral)
 {
    assert(conshdlr != NULL);
@@ -121,7 +115,9 @@ RETCODE SCIPincludeConsHdlrIntegral(      /**< creates the handler for integrali
 {
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY,
-                  NULL, NULL, NULL, NULL, NULL, SCIPconsEnfoIntegral, SCIPconsChckIntegral, NULL,
+                  NULL, NULL, NULL, 
+                  NULL, NULL, 
+                  NULL, SCIPconsEnfoIntegral, SCIPconsChckIntegral, NULL,
                   NULL) );
 
    return SCIP_OKAY;

@@ -301,6 +301,7 @@ RETCODE SCIPincludeReader(              /**< creates a reader and includes it in
    const char*      name,               /**< name of reader */
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
+   DECL_READERFREE((*readerfree)),      /**< destructor of reader */
    DECL_READERINIT((*readerinit)),      /**< initialise reader */
    DECL_READEREXIT((*readerexit)),      /**< deinitialise reader */
    DECL_READERREAD((*readerread)),      /**< read method */
@@ -315,9 +316,10 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
-   DECL_CONSFREE((*consfree)),          /**< free specific constraint data */
+   DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
    DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
    DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
@@ -338,6 +340,7 @@ RETCODE SCIPincludeNodesel(             /**< creates a node selector and include
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
+   DECL_NODESELFREE((*nodeselfree)),    /**< destructor of node selector */
    DECL_NODESELINIT((*nodeselinit)),    /**< initialise node selector */
    DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
    DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
@@ -352,6 +355,7 @@ RETCODE SCIPincludeDisp(                /**< creates a display column and includ
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
+   DECL_DISPFREE((*dispfree)),          /**< destructor of display column */
    DECL_DISPINIT((*dispinit)),          /**< initialise display column */
    DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
    DECL_DISPOUTP((*dispoutp)),          /**< output method */
@@ -471,6 +475,18 @@ RETCODE SCIPgetSiblings(                /**< gets siblings of active node */
    );
 
 extern
+RETCODE SCIPgetBestChild(               /**< gets the best child of the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE**           bestchild           /**< pointer to store best child */
+   );
+
+extern
+RETCODE SCIPgetBestSibling(             /**< gets the best sibling of the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE**           bestsibling         /**< pointer to store best sibling */
+   );
+
+extern
 RETCODE SCIPgetBestLeaf(                /**< gets the best leaf from the node queue */
    SCIP*            scip,               /**< SCIP data structure */
    NODE**           bestleaf            /**< pointer to store best leaf */
@@ -510,6 +526,12 @@ extern
 RETCODE SCIPgetMaxDepth(                /**< gets maximal depth of all processed nodes */
    SCIP*            scip,               /**< SCIP data structure */
    int*             maxdepth            /**< pointer to store the depth */
+   );
+
+extern
+RETCODE SCIPgetPlungeDepth(             /**< gets actual plunging depth (succ. times, a child was selected as next node) */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             plungedepth         /**< pointer to store the depth */
    );
 
 extern

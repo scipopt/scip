@@ -351,14 +351,22 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
       /* select next node to process */
       CHECK_OKAY( SCIPnodeselSelect(set->nodesel, set->scip, &actnode) );
 
+      /* update statistics */
+      if( actnode != NULL )
+      {
+         stat->nnodes++;
+         stat->maxdepth = MAX(stat->maxdepth, actnode->depth);
+         if( actnode->nodetype == SCIP_NODETYPE_CHILD )
+            stat->plungedepth++;
+         else if( actnode->nodetype != SCIP_NODETYPE_SIBLING )
+            stat->plungedepth = 0;
+      }
+
       /* activate selected node */
       CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, lp, tree) );
 
       if( actnode != NULL )
       {
-         stat->nnodes++;
-         stat->maxdepth = MAX(stat->maxdepth, actnode->depth);
-
          debugMessage("Processing node %d in depth %d\n", stat->nnodes, SCIPnodeGetDepth(actnode));
          
          /* presolve node */

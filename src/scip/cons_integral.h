@@ -30,16 +30,6 @@
 #include "scip.h"
 
 
-DECL_CONSINIT(SCIPconsInitIntegral);
-DECL_CONSEXIT(SCIPconsExitIntegral);
-DECL_CONSFREE(SCIPconsFreeIntegral);
-DECL_CONSTRAN(SCIPconsTranIntegral);
-DECL_CONSSEPA(SCIPconsSepaIntegral);
-DECL_CONSENFO(SCIPconsEnfoIntegral);
-DECL_CONSCHCK(SCIPconsChckIntegral);
-DECL_CONSPROP(SCIPconsPropIntegral);
-
-
 extern
 RETCODE SCIPincludeConsHdlrIntegral(    /**< creates the handler for the integrality constraint and includes it in SCIP */
    SCIP*            scip                /**< SCIP data structure */

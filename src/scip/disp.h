@@ -31,14 +31,21 @@ typedef struct Disp DISP;               /**< display column data structure */
 typedef struct DispData DISPDATA;       /**< display column specific data */
 
 
-/** initialization method of display column
+/** destructor of display column to free user data (called when SCIP is exiting)
+ *  possible return values:
+ *    SCIP_OKAY       : normal termination
+ *    neg. values     : error codes
+ */
+#define DECL_DISPFREE(x) RETCODE x (DISP* disp, SCIP* scip)
+
+/** initialization method of display column (called at problem creation)
  *  possible return values:
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
  */
 #define DECL_DISPINIT(x) RETCODE x (DISP* disp, SCIP* scip)
 
-/** deinitialization method of display column
+/** deinitialization method of display column (called at problem destruction)
  *  possible return values:
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
@@ -68,6 +75,7 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
+   DECL_DISPFREE((*dispfree)),          /**< destructor of display column */
    DECL_DISPINIT((*dispinit)),          /**< initialise display column */
    DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
    DECL_DISPOUTP((*dispoutp)),          /**< output method */
@@ -80,7 +88,8 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
 
 extern
 RETCODE SCIPdispFree(                   /**< frees memory of display column */
-   DISP**           disp                /**< pointer to display column data structure */
+   DISP**           disp,               /**< pointer to display column data structure */
+   SCIP*            scip                /**< SCIP data structure */   
    );
 
 extern
@@ -104,6 +113,17 @@ RETCODE SCIPdispOutput(                 /**< output display column to screen */
 extern
 const char* SCIPdispGetName(            /**< gets name of display column */
    DISP*            disp                /**< display column */
+   );
+
+extern
+DISPDATA* SCIPdispGetData(              /**< gets user data of display column */
+   DISP*            disp                /**< display column */
+   );
+
+extern
+void SCIPdispSetData(                   /**< sets user data of display column; user has to free old data in advance! */
+   DISP*            disp,               /**< display column */
+   DISPDATA*        dispdata            /**< new display column user data */
    );
 
 extern

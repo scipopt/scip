@@ -36,6 +36,7 @@ struct Reader
    const char*      name;               /**< name of reader */
    const char*      desc;               /**< description of reader */
    const char*      extension;          /**< file extension that reader processes */
+   DECL_READERFREE((*readerfree));      /**< destructor of reader */
    DECL_READERINIT((*readerinit));      /**< initialise reader */
    DECL_READEREXIT((*readerexit));      /**< deinitialise reader */
    DECL_READERREAD((*readerread));      /**< read method */
@@ -52,6 +53,7 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
    const char*      name,               /**< name of reader */
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
+   DECL_READERFREE((*readerfree)),      /**< destructor of reader */
    DECL_READERINIT((*readerinit)),      /**< initialise reader */
    DECL_READEREXIT((*readerexit)),      /**< deinitialise reader */
    DECL_READERREAD((*readerread)),      /**< read method */
@@ -68,6 +70,7 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
    ALLOC_OKAY( duplicateMemoryArray((*reader)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray((*reader)->desc, desc, strlen(desc)+1) );
    ALLOC_OKAY( duplicateMemoryArray((*reader)->extension, extension, strlen(extension)+1) );
+   (*reader)->readerfree = readerfree;
    (*reader)->readerinit = readerinit;
    (*reader)->readerexit = readerexit;
    (*reader)->readerread = readerread;
@@ -78,12 +81,19 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
 }
 
 RETCODE SCIPreaderFree(                 /**< frees memory of reader */
-   READER**         reader              /**< pointer to reader data structure */
+   READER**         reader,             /**< pointer to reader data structure */
+   SCIP*            scip                /**< SCIP data structure */   
    )
 {
    assert(reader != NULL);
    assert(*reader != NULL);
    assert(!(*reader)->initialized);
+
+   /* call destructor of reader */
+   if( (*reader)->readerfree != NULL )
+   {
+      CHECK_OKAY( (*reader)->readerfree(*reader, scip) );
+   }
 
    freeMemoryArray((*reader)->name);
    freeMemoryArray((*reader)->desc);
@@ -240,6 +250,25 @@ const char* SCIPreaderGetName(          /**< gets name of reader */
    assert(reader != NULL);
 
    return reader->name;
+}
+
+READERDATA* SCIPreaderGetData(          /**< gets user data of reader */
+   READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   return reader->readerdata;
+}
+
+void SCIPreaderSetData(                 /**< sets user data of reader; user has to free old data in advance! */
+   READER*          reader,             /**< reader */
+   READERDATA*      readerdata          /**< new reader user data */
+   )
+{
+   assert(reader != NULL);
+
+   reader->readerdata = readerdata;
 }
 
 Bool SCIPreaderIsInitialized(           /**< is reader initialized? */

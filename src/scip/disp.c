@@ -36,6 +36,7 @@ struct Disp
    char*            name;               /**< name of display column */
    char*            desc;               /**< description of display column */
    char*            header;             /**< head line of display column */
+   DECL_DISPFREE((*dispfree));          /**< destructor of display column */
    DECL_DISPINIT((*dispinit));          /**< initialise display column */
    DECL_DISPEXIT((*dispexit));          /**< deinitialise display column */
    DECL_DISPOUTP((*dispoutp));          /**< output method */
@@ -57,6 +58,7 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
+   DECL_DISPFREE((*dispfree)),          /**< destructor of display column */
    DECL_DISPINIT((*dispinit)),          /**< initialise display column */
    DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
    DECL_DISPOUTP((*dispoutp)),          /**< output method */
@@ -78,6 +80,7 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
    ALLOC_OKAY( duplicateMemoryArray((*disp)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray((*disp)->desc, desc, strlen(desc)+1) );
    ALLOC_OKAY( duplicateMemoryArray((*disp)->header, header, strlen(header)+1) );
+   (*disp)->dispfree = dispfree;
    (*disp)->dispinit = dispinit;
    (*disp)->dispexit = dispexit;
    (*disp)->dispoutp = dispoutp;
@@ -93,12 +96,19 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
 }
    
 RETCODE SCIPdispFree(                   /**< frees memory of display column */
-   DISP**           disp                /**< pointer to display column data structure */
+   DISP**           disp,               /**< pointer to display column data structure */
+   SCIP*            scip                /**< SCIP data structure */   
    )
 {
    assert(disp != NULL);
    assert(*disp != NULL);
    assert(!(*disp)->initialized);
+
+   /* call destructor of display column */
+   if( (*disp)->dispfree != NULL )
+   {
+      CHECK_OKAY( (*disp)->dispfree(*disp, scip) );
+   }
 
    freeMemoryArray((*disp)->name);
    freeMemoryArray((*disp)->desc);
@@ -179,6 +189,25 @@ const char* SCIPdispGetName(            /**< gets name of display column */
    assert(disp != NULL);
 
    return disp->name;
+}
+
+DISPDATA* SCIPdispGetData(              /**< gets user data of display column */
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->dispdata;
+}
+
+void SCIPdispSetData(                   /**< sets user data of display column; user has to free old data in advance! */
+   DISP*            disp,               /**< display column */
+   DISPDATA*        dispdata            /**< new display column user data */
+   )
+{
+   assert(disp != NULL);
+
+   disp->dispdata = dispdata;
 }
 
 int SCIPdispGetPosition(                /**< gets position of display column */

@@ -55,7 +55,7 @@
 
 /* Pricing */
 
-#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
+#define SCIP_DEFAULT_USEPRICING      FALSE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS       32 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 1024 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 5.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -76,7 +76,7 @@
 /* Tree */
 
 /*#define SCIP_DEFAULT_NODELIMIT     INT_MAX*/ /**< maximal number of nodes to create */
-#define SCIP_DEFAULT_NODELIMIT    10000000 /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT     1000000 /**< maximal number of nodes to create */
 
 
 /* Display */
@@ -177,28 +177,28 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )
    {
-      CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i]) );
+      CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i], (*set)->scip) );
    }
    freeMemoryArray((*set)->readers);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i]) );
+      CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], (*set)->scip) );
    }
    freeMemoryArray((*set)->conshdlrs);
 
    /* free node selectors */
    for( i = 0; i < (*set)->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i]) );
+      CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i], (*set)->scip) );
    }
    freeMemoryArray((*set)->nodesels);
 
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispFree(&(*set)->disps[i]) );
+      CHECK_OKAY( SCIPdispFree(&(*set)->disps[i], (*set)->scip) );
    }
    freeMemoryArray((*set)->disps);
 

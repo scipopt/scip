@@ -52,6 +52,7 @@ struct Stat
    int              lastdispnode;       /**< last node for which an information line was displayed */
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */
+   int              plungedepth;        /**< actual plunging depth (successive times, a child was selected as next node) */
 };
 
 

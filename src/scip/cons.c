@@ -37,9 +37,10 @@ struct ConsHdlr
    int              sepapriority;       /**< priority of the constraint handler for separation */
    int              enfopriority;       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority;       /**< priority of the constraint handler for checking infeasibility */
+   DECL_CONSFREE((*consfree));          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit));          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit));          /**< deinitialise constraint handler */
-   DECL_CONSFREE((*consfree));          /**< frees specific constraint data */
+   DECL_CONSDELE((*consdele));          /**< frees specific constraint data */
    DECL_CONSTRAN((*constran));          /**< transforms constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa));          /**< separates cutting planes */
    DECL_CONSENFO((*consenfo));          /**< enforcing constraints */
@@ -214,9 +215,10 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
-   DECL_CONSFREE((*consfree)),          /**< free specific constraint data */
+   DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
    DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
    DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
@@ -231,9 +233,10 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    (*conshdlr)->sepapriority = sepapriority;
    (*conshdlr)->enfopriority = enfopriority;
    (*conshdlr)->chckpriority = chckpriority;
+   (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
    (*conshdlr)->consexit = consexit;
-   (*conshdlr)->consfree = consfree;
+   (*conshdlr)->consdele = consdele;
    (*conshdlr)->constran = constran;
    (*conshdlr)->conssepa = conssepa;
    (*conshdlr)->consenfo = consenfo;
@@ -249,13 +252,20 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrFree(               /**< frees memory of constraint handler */
-   CONSHDLR**       conshdlr            /**< pointer to constraint handler data structure */
+RETCODE SCIPconshdlrFree(               /**< calls destructor and frees memory of constraint handler */
+   CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SCIP*            scip                /**< SCIP data structure */   
    )
 {
    assert(conshdlr != NULL);
    assert(*conshdlr != NULL);
    assert(!(*conshdlr)->initialized);
+
+   /* call destructor of constraint handler */
+   if( (*conshdlr)->consfree != NULL )
+   {
+      CHECK_OKAY( (*conshdlr)->consfree(*conshdlr, scip) );
+   }
 
    freeMemoryArray((*conshdlr)->name);
    freeMemoryArray((*conshdlr)->desc);
@@ -359,6 +369,25 @@ const char* SCIPconshdlrGetName(        /**< gets name of constraint handler */
    return conshdlr->name;
 }
 
+CONSHDLRDATA* SCIPconshdlrGetData(      /**< gets user data of constraint handler */
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->conshdlrdata;
+}
+
+void SCIPconshdlrSetData(               /**< sets user data of constraint handler; user has to free old data in advance! */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->conshdlrdata = conshdlrdata;
+}
+
 CONS** SCIPconshdlrGetConss(            /**< gets constraints array of constraint handler */
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -440,9 +469,9 @@ RETCODE SCIPconsFree(                   /**< frees a constraint */
    assert(set != NULL);
 
    /* free constraint data */
-   if( (*cons)->conshdlr->consfree != NULL )
+   if( (*cons)->conshdlr->consdele != NULL )
    {
-      CHECK_OKAY( (*cons)->conshdlr->consfree((*cons)->conshdlr, set->scip, &(*cons)->consdata) );
+      CHECK_OKAY( (*cons)->conshdlr->consdele((*cons)->conshdlr, set->scip, &(*cons)->consdata) );
    }
    freeBlockMemoryArray(memhdr, (*cons)->name, strlen((*cons)->name)+1);
    freeBlockMemory(memhdr, *cons);

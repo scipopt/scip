@@ -1962,6 +1962,64 @@ int SCIPtreeGetNNodes(                  /**< gets number of nodes (children + si
    return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree) + (tree->actnode != NULL ? 1 : 0);
 }
 
+NODE* SCIPtreeGetBestChild(             /**< gets the best child of the active node */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   SCIP* scip;
+   NODESEL* nodesel;
+   NODE* bestnode;
+   int i;
+
+   assert(tree != NULL);
+
+   scip = set->scip;
+   nodesel = set->nodesel;
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+
+   bestnode = NULL;
+   for( i = 0; i < tree->nchildren; ++i )
+   {
+      if( bestnode == NULL || SCIPnodeselCompare(nodesel, scip, tree->children[i], bestnode) < 0 )
+      {
+         bestnode = tree->children[i];
+      }
+   }
+
+   return bestnode;
+}
+
+NODE* SCIPtreeGetBestSibling(           /**< gets the best sibling of the active node */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   SCIP* scip;
+   NODESEL* nodesel;
+   NODE* bestnode;
+   int i;
+
+   assert(tree != NULL);
+
+   scip = set->scip;
+   nodesel = set->nodesel;
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+
+   bestnode = NULL;
+   for( i = 0; i < tree->nsiblings; ++i )
+   {
+      if( bestnode == NULL || SCIPnodeselCompare(nodesel, scip, tree->siblings[i], bestnode) < 0 )
+      {
+         bestnode = tree->siblings[i];
+      }
+   }
+   
+   return bestnode;
+}
+
 NODE* SCIPtreeGetBestLeaf(              /**< gets the best leaf from the node queue */
    TREE*            tree                /**< branch-and-bound tree */
    )
@@ -1978,38 +2036,32 @@ NODE* SCIPtreeGetBestNode(              /**< gets the best node from the tree (c
 {
    SCIP* scip;
    NODESEL* nodesel;
+   NODE* bestchild;
+   NODE* bestsibling;
+   NODE* bestleaf;
    NODE* bestnode;
-   int i;
 
    assert(tree != NULL);
    assert(set != NULL);
 
    scip = set->scip;
    nodesel = set->nodesel;
-
    assert(scip != NULL);
    assert(nodesel != NULL);
 
-   /* get the best leaf */
-   bestnode = SCIPtreeGetBestLeaf(tree);
+   /* get the best child, sibling, and leaf */
+   bestchild = SCIPtreeGetBestChild(tree, set);
+   bestsibling = SCIPtreeGetBestSibling(tree, set);
+   bestleaf = SCIPtreeGetBestLeaf(tree);
 
-   /* check for better siblings */
-   for( i = 0; i < tree->nsiblings; ++i )
-   {
-      if( bestnode == NULL || SCIPnodeselCompare(nodesel, scip, tree->siblings[i], bestnode) <= 0 )
-      {
-         bestnode = tree->siblings[i];
-      }
-   }
+   /* return the best of the three */
+   bestnode = bestchild;
+   if( bestsibling != NULL && (bestnode == NULL || SCIPnodeselCompare(nodesel, scip, bestsibling, bestnode) < 0) )
+      bestnode = bestsibling;
+   if( bestleaf != NULL && (bestnode == NULL || SCIPnodeselCompare(nodesel, scip, bestleaf, bestnode) < 0) )
+      bestnode = bestleaf;
 
-   /* check for better children */
-   for( i = 0; i < tree->nchildren; ++i )
-   {
-      if( bestnode == NULL || SCIPnodeselCompare(nodesel, scip, tree->children[i], bestnode) <= 0 )
-      {
-         bestnode = tree->children[i];
-      }
-   }
+   assert(SCIPtreeGetNLeaves(tree) == 0 || bestnode != NULL);
 
    return bestnode;
 }

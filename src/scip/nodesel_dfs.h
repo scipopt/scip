@@ -30,12 +30,6 @@
 #include "scip.h"
 
 
-DECL_NODESELINIT(SCIPnodeselInitDfs);
-DECL_NODESELEXIT(SCIPnodeselExitDfs);
-DECL_NODESELSLCT(SCIPnodeselSlctDfs);
-DECL_NODESELCOMP(SCIPnodeselCompDfs);
-
-
 extern
 RETCODE SCIPincludeNodeselDfs(          /**< creates the node selector for depth first search and includes it in SCIP */
    SCIP*            scip                /**< SCIP data structure */

@@ -356,6 +356,19 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
  * Callback methods
  */
 
+static
+DECL_CONSINIT(SCIPconsFreeLinear)
+{
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "free linear constraint handler");
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_CONSINIT(SCIPconsInitLinear)
 {
    assert(conshdlr != NULL);
@@ -367,6 +380,7 @@ DECL_CONSINIT(SCIPconsInitLinear)
    return SCIP_OKAY;
 }
 
+static
 DECL_CONSEXIT(SCIPconsExitLinear)
 {
    assert(conshdlr != NULL);
@@ -378,7 +392,8 @@ DECL_CONSEXIT(SCIPconsExitLinear)
    return SCIP_OKAY;
 }
 
-DECL_CONSFREE(SCIPconsFreeLinear)
+static
+DECL_CONSDELE(SCIPconsDeleLinear)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -399,6 +414,7 @@ DECL_CONSFREE(SCIPconsFreeLinear)
    return SCIP_OKAY;
 }
 
+static
 DECL_CONSTRAN(SCIPconsTranLinear)
 {
    LINCONS* lincons;
@@ -425,6 +441,7 @@ DECL_CONSTRAN(SCIPconsTranLinear)
    return SCIP_OKAY;
 }
 
+static
 DECL_CONSSEPA(SCIPconsSepaLinear)
 {
    RETCODE retcode;
@@ -448,6 +465,7 @@ DECL_CONSSEPA(SCIPconsSepaLinear)
    }
 }
 
+static
 DECL_CONSENFO(SCIPconsEnfoLinear)
 {
    assert(conshdlr != NULL);
@@ -460,6 +478,7 @@ DECL_CONSENFO(SCIPconsEnfoLinear)
    return applyConstraints(conshdlr, scip, conss, nconss);
 }
 
+static
 DECL_CONSCHCK(SCIPconsChckLinear)
 {
    assert(conshdlr != NULL);
@@ -471,6 +490,7 @@ DECL_CONSCHCK(SCIPconsChckLinear)
    return SCIP_OKAY;
 }
 
+static
 DECL_CONSPROP(SCIPconsPropLinear)
 {
    assert(conshdlr != NULL);
@@ -495,8 +515,9 @@ RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear cons
 {
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY,
-                  SCIPconsInitLinear, SCIPconsExitLinear, SCIPconsFreeLinear,
-                  SCIPconsTranLinear, SCIPconsSepaLinear, SCIPconsEnfoLinear, SCIPconsChckLinear, SCIPconsPropLinear,
+                  SCIPconsFreeLinear, SCIPconsInitLinear, SCIPconsExitLinear, 
+                  SCIPconsDeleLinear, SCIPconsTranLinear, 
+                  SCIPconsSepaLinear, SCIPconsEnfoLinear, SCIPconsChckLinear, SCIPconsPropLinear,
                   NULL) );
 
    return SCIP_OKAY;

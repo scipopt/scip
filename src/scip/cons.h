@@ -30,11 +30,23 @@
 typedef struct ConsHdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct Cons CONS;               /**< constraint data structure */
 typedef struct ConsList CONSLIST;       /**< list of constraints */
-typedef void CONSHDLRDATA;              /**< constraint handler data */
+typedef struct ConsHdlrData CONSHDLRDATA;/**< constraint handler data */
 typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
 
 
-/** initialization method of constraint handler
+/** destructor of constraint handler to free user data (called when SCIP is exiting)
+ *
+ *  input:
+ *    conshdlr        : the constraint handler itself
+ *    scip            : SCIP main data structure
+ *
+ *  possible return values:
+ *    SCIP_OKAY       : normal termination
+ *    neg. values     : error codes
+ */
+#define DECL_CONSFREE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
+
+/** initialization method of constraint handler (called at problem creation)
  *
  *  input:
  *    conshdlr        : the constraint handler itself
@@ -46,7 +58,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  */
 #define DECL_CONSINIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
-/** deinitialization method of constraint handler
+/** deinitialization method of constraint handler (called at problem destruction)
  *
  *  input:
  *    conshdlr        : the constraint handler itself
@@ -69,7 +81,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    SCIP_OKAY       : normal termination
  *    neg. values     : error codes
  */
-#define DECL_CONSFREE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONSDATA** consdata)
+#define DECL_CONSDELE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONSDATA** consdata)
 
 /** transforms constraint data into data belonging to the transformed problem
  *
@@ -214,9 +226,10 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
-   DECL_CONSFREE((*consfree)),          /**< free specific constraint data */
+   DECL_CONSDELE((*consdele)),          /**< free specific constraint data */
    DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
    DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
@@ -226,8 +239,9 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    );
 
 extern
-RETCODE SCIPconshdlrFree(               /**< frees memory of constraint handler */
-   CONSHDLR**       conshdlr            /**< pointer to constraint handler data structure */
+RETCODE SCIPconshdlrFree(               /**< calls destructor and frees memory of constraint handler */
+   CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SCIP*            scip                /**< SCIP data structure */   
    );
 
 extern
@@ -257,6 +271,17 @@ RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constrain
 extern
 const char* SCIPconshdlrGetName(        /**< gets name of constraint handler */
    CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+extern
+CONSHDLRDATA* SCIPconshdlrGetData(      /**< gets user data of constraint handler */
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+extern
+void SCIPconshdlrSetData(               /**< sets user data of constraint handler; user has to free old data in advance! */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
 extern

@@ -32,6 +32,7 @@
 #include "disp_default.h"
 #include "cons_integral.h"
 #include "cons_linear.h"
+#include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
 
 
@@ -129,6 +130,7 @@ main(int argc, char **argv)
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_SCIP( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_SCIP( SCIPincludeConsHdlrLinear(scip) );
+   CHECK_SCIP( SCIPincludeNodeselBfs(scip) );
    CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
 
 

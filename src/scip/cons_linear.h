@@ -30,15 +30,6 @@
 #include "scip.h"
 
 
-DECL_CONSINIT(SCIPconsInitLinear);
-DECL_CONSEXIT(SCIPconsExitLinear);
-DECL_CONSFREE(SCIPconsFreeLinear);
-DECL_CONSTRAN(SCIPconsTranLinear);
-DECL_CONSSEPA(SCIPconsSepaLinear);
-DECL_CONSENFO(SCIPconsEnfoLinear);
-DECL_CONSCHCK(SCIPconsChckLinear);
-DECL_CONSPROP(SCIPconsPropLinear);
-
 
 extern
 RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear constraints and includes it in SCIP */

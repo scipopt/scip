@@ -16,44 +16,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   mem.c
- * @brief  block memory pools and memory buffers
+/**@file   nodesel_bfs.h
+ * @brief  node selector for best first search
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
-#include "mem.h"
-
+#ifndef __NODESEL_BFS_H__
+#define __NODESEL_BFS_H__
 
 
-RETCODE SCIPmemCreate(                  /**< creates block memory structures */
-   MEM**            mem                 /**< pointer to block memory structure */
-   )
-{
-   assert(mem != NULL);
+#include "scip.h"
 
-   ALLOC_OKAY( allocMemory(*mem) );
 
-   ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, TRUE, 10 ) );
-   ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, FALSE, 10) );
+extern
+RETCODE SCIPincludeNodeselBfs(          /**< creates the node selector for best first search and includes it in SCIP */
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPmemFree(                    /**< frees block memory structures */
-   MEM**            mem                 /**< pointer to block memory structure */
-   )
-{
-   assert(mem != NULL);
-
-   destroyBlockMemory((*mem)->probmem);
-   destroyBlockMemory((*mem)->solvemem);
-
-   freeMemory(*mem);
-
-   return SCIP_OKAY;
-}
-
+#endif

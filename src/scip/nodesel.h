@@ -32,14 +32,21 @@ typedef struct Nodesel NODESEL;         /**< node selector data structure */
 typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 
-/** initialization method of node selector
+/** destructor of node selector to free user data (called when SCIP is exiting)
+ *  possible return values:
+ *    SCIP_OKAY       : normal termination
+ *    neg. values     : error codes
+ */
+#define DECL_NODESELFREE(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
+
+/** initialization method of node selector (called at problem creation)
  *  possible return values:
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
  */
 #define DECL_NODESELINIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
-/** deinitialization method of node selector
+/** deinitialization method of node selector (called at problem destruction)
  *  possible return values:
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
@@ -142,6 +149,7 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
    NODESEL**        nodesel,            /**< pointer to store node selector */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
+   DECL_NODESELFREE((*nodeselfree)),    /**< destructor of node selector */
    DECL_NODESELINIT((*nodeselinit)),    /**< initialise node selector */
    DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
    DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
@@ -152,7 +160,8 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
 
 extern
 RETCODE SCIPnodeselFree(                /**< frees memory of node selector */
-   NODESEL**        nodesel             /**< pointer to node selector data structure */
+   NODESEL**        nodesel,            /**< pointer to node selector data structure */
+   SCIP*            scip                /**< SCIP data structure */   
    );
 
 extern
@@ -185,6 +194,17 @@ int SCIPnodeselCompare(                 /**< compares two nodes; returns -1/0/+1
 extern
 const char* SCIPnodeselGetName(         /**< gets name of node selector */
    NODESEL*         nodesel             /**< node selector */
+   );
+
+extern
+NODESELDATA* SCIPnodeselGetData(        /**< gets user data of node selector */
+   NODESEL*         nodesel             /**< node selector */
+   );
+
+extern
+void SCIPnodeselSetData(                /**< sets user data of node selector; user has to free old data in advance! */
+   NODESEL*         nodesel,            /**< node selector */
+   NODESELDATA*     nodeseldata         /**< new node selector user data */
    );
 
 extern

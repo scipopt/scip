@@ -1298,7 +1298,7 @@ RETCODE SCIPincludeReaderMPS(           /**< includes the MPS file reader in SCI
    )
 {
    CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-                  NULL, NULL, SCIPreaderReadMPS, NULL) );
+                  NULL, NULL, NULL, SCIPreaderReadMPS, NULL) );
 
    return SCIP_OKAY;
 }

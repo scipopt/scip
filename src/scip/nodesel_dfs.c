@@ -33,19 +33,25 @@
 #define NODESEL_DESC "Depth First Search"
 
 
-/** node selector data for depth first search node selection */
-struct NodeselData
-{
-   /* no data needed, but C standard forbits empty structs */
-   int              dummy;              /**< circumvent forbidden empty struct */
-};
-
 
 
 /*
  * Callback methods
  */
 
+static
+DECL_NODESELFREE(SCIPnodeselFreeDfs)
+{
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+   assert(scip != NULL);
+
+   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "destruct depth first search node selector");
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_NODESELINIT(SCIPnodeselInitDfs)
 {
    assert(nodesel != NULL);
@@ -57,6 +63,7 @@ DECL_NODESELINIT(SCIPnodeselInitDfs)
    return SCIP_OKAY;
 }
 
+static
 DECL_NODESELEXIT(SCIPnodeselExitDfs)
 {
    assert(nodesel != NULL);
@@ -68,6 +75,7 @@ DECL_NODESELEXIT(SCIPnodeselExitDfs)
    return SCIP_OKAY;
 }
 
+static
 DECL_NODESELSLCT(SCIPnodeselSlctDfs)
 {
    assert(nodesel != NULL);
@@ -75,9 +83,12 @@ DECL_NODESELSLCT(SCIPnodeselSlctDfs)
    assert(scip != NULL);
    assert(selnode != NULL);
 
-   return SCIPgetBestNode(scip, selnode);
+   CHECK_OKAY( SCIPgetBestNode(scip, selnode) );
+
+   return SCIP_OKAY;
 }
 
+static
 DECL_NODESELCOMP(SCIPnodeselCompDfs)
 {
    int depth1;
@@ -122,7 +133,7 @@ RETCODE SCIPincludeNodeselDfs(          /**< creates the node selector for depth
    )
 {
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
-                  SCIPnodeselInitDfs, SCIPnodeselExitDfs, SCIPnodeselSlctDfs, SCIPnodeselCompDfs,
+                  SCIPnodeselFreeDfs, SCIPnodeselInitDfs, SCIPnodeselExitDfs, SCIPnodeselSlctDfs, SCIPnodeselCompDfs,
                   NULL, FALSE) );
 
    return SCIP_OKAY;

@@ -314,6 +314,18 @@ int SCIPtreeGetNNodes(                  /**< gets number of nodes (children + si
    );
 
 extern
+NODE* SCIPtreeGetBestChild(             /**< gets the best child of the active node */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+NODE* SCIPtreeGetBestSibling(           /**< gets the best sibling of the active node */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
 NODE* SCIPtreeGetBestLeaf(              /**< gets the best leaf from the node queue */
    TREE*            tree                /**< branch-and-bound tree */
    );

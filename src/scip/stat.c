@@ -95,6 +95,7 @@ void SCIPstatReset(                     /**< reset statistics to the data before
    stat->lastdispnode = 0;
    stat->ndisplines = 0;
    stat->maxdepth = -1;
+   stat->plungedepth = 0;
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
