@@ -51,7 +51,7 @@ RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear const
    );
 
 extern
-RETCODE SCIPcreateConsLPRow(            /**< creates and captures a linear constraint from an LP row, captures the row */
+RETCODE SCIPcreateConsLinearLPRow(      /**< creates and captures a linear constraint from an LP row, captures the row */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    ROW*             row,                /**< LP row */
@@ -59,38 +59,38 @@ RETCODE SCIPcreateConsLPRow(            /**< creates and captures a linear const
    );
 
 extern
-RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constraint */
-   CONS*            cons,               /**< constraint data */
+RETCODE SCIPaddCoefConsLinear(          /**< adds coefficient in linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
    VAR*             var,                /**< variable of constraint entry */
    Real             val                 /**< coefficient of constraint entry */
    );
 
 extern
-RETCODE SCIPconsLinearGetLhs(           /**< gets left hand side of linear constraint */
-   CONS*            cons,               /**< constraint data */
+RETCODE SCIPgetLhsConsLinear(           /**< gets left hand side of linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
    Real*            lhs                 /**< pointer to store left hand side */
    );
 
 extern
-RETCODE SCIPconsLinearGetRhs(           /**< gets right hand side of linear constraint */
-   CONS*            cons,               /**< constraint data */
+RETCODE SCIPgetRhsConsLinear(           /**< gets right hand side of linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
    Real*            rhs                 /**< pointer to store right hand side */
    );
 
 extern
-RETCODE SCIPconsLinearChgLhs(           /**< changes left hand side of linear constraint */
-   CONS*            cons,               /**< constraint data */
+RETCODE SCIPchgLhsConsLinear(           /**< changes left hand side of linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
    Real             lhs                 /**< new left hand side */
    );
 
 extern
-RETCODE SCIPconsLinearChgRhs(           /**< changes right hand side of linear constraint */
-   CONS*            cons,               /**< constraint data */
+RETCODE SCIPchgRhsConsLinear(           /**< changes right hand side of linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
    Real             rhs                 /**< new right hand side */
    );
 

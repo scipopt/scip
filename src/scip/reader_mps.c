@@ -790,7 +790,7 @@ RETCODE readCols(
             mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else if( !SCIPisZero(scip, val) )
          {
-            CHECK_OKAY( SCIPconsLinearAddCoef(cons, scip, var, val) );
+            CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, var, val) );
          }
       }
       if (mpsinputField5(mpsi) != NULL)
@@ -810,7 +810,7 @@ RETCODE readCols(
                mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
             else if( !SCIPisZero(scip, val) )
             {
-               CHECK_OKAY( SCIPconsLinearAddCoef(cons, scip, var, val) );
+               CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, var, val) );
             }
          }
       }
@@ -870,27 +870,27 @@ RETCODE readRhs(
             val = atof(mpsinputField3(mpsi));
 
             /* find out the row sense */
-            CHECK_OKAY( SCIPconsLinearGetLhs(cons, scip, &lhs) );
-            CHECK_OKAY( SCIPconsLinearGetRhs(cons, scip, &rhs) );
+            CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
+            CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, val) );
+               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
                assert(SCIPisZero(scip, lhs));
-               CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, val) );
+               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
             }
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
                assert(SCIPisZero(scip, lhs));
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, val) );
-               CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, val) );
+               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
             }
          }
       }
@@ -904,27 +904,27 @@ RETCODE readRhs(
             val = atof(mpsinputField5(mpsi));
          
             /* find out the row sense */
-            CHECK_OKAY( SCIPconsLinearGetLhs(cons, scip, &lhs) );
-            CHECK_OKAY( SCIPconsLinearGetRhs(cons, scip, &rhs) );
+            CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
+            CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, val) );
+               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
                assert(SCIPisZero(scip, lhs));
-               CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, val) );
+               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
             }
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
                assert(SCIPisZero(scip, lhs));
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, val) );
-               CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, val) );
+               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
             }
          }
       }
@@ -991,17 +991,17 @@ RETCODE readRanges(
             val = atof(mpsinputField3(mpsi));
 
             /* find out the row sense */
-            CHECK_OKAY( SCIPconsLinearGetLhs(cons, scip, &lhs) );
-            CHECK_OKAY( SCIPconsLinearGetRhs(cons, scip, &rhs) );
+            CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
+            CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
-               CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, rhs - ABS(val)) );
+               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, rhs - ABS(val)) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
-               CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, lhs + ABS(val)) );
+               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, lhs + ABS(val)) );
             }
             else
             {
@@ -1009,11 +1009,11 @@ RETCODE readRanges(
                assert(SCIPisEQ(scip, lhs, rhs));
                if( val >= 0.0 )
                {
-                  CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, rhs + val) );
+                  CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, rhs + val) );
                }
                else
                {
-                  CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, lhs + val) );
+                  CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, lhs + val) );
                }
             }
          }
@@ -1027,17 +1027,17 @@ RETCODE readRanges(
                val = atof(mpsinputField5(mpsi));
 
                /* find out the row sense */
-               CHECK_OKAY( SCIPconsLinearGetLhs(cons, scip, &lhs) );
-               CHECK_OKAY( SCIPconsLinearGetRhs(cons, scip, &rhs) );
+               CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
+               CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
                if( SCIPisInfinity(scip, -lhs) )
                {
                   /* lhs = -infinity -> lower or equal */
-                  CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, rhs - ABS(val)) );
+                  CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, rhs - ABS(val)) );
                }
                else if( SCIPisInfinity(scip, rhs) )
                {
                   /* rhs = +infinity -> greater or equal */
-                  CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, lhs + ABS(val)) );
+                  CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, lhs + ABS(val)) );
                }
                else
                {
@@ -1045,11 +1045,11 @@ RETCODE readRanges(
                   assert(SCIPisEQ(scip, lhs, rhs));
                   if( val >= 0.0 )
                   {
-                     CHECK_OKAY( SCIPconsLinearChgRhs(cons, scip, rhs + val) );
+                     CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, rhs + val) );
                   }
                   else
                   {
-                     CHECK_OKAY( SCIPconsLinearChgLhs(cons, scip, lhs + val) );
+                     CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, lhs + val) );
                   }
                }
             }
