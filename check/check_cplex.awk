@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.5 2004/11/04 16:45:37 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.6 2005/01/17 17:17:06 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -32,17 +32,17 @@ function max(x,y)
 BEGIN {
     printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
     printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
-    printf("\\usepackage{amsmath,amsfonts,amssymb}\n")               >TEXFILE;
+    printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
     printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
     printf("\\begin{document}\n\n")                                  >TEXFILE;
     printf("\\begin{table}[p]\n")                                    >TEXFILE;
     printf("\\begin{center}\n")                                      >TEXFILE;
     printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
     printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-    printf("\\begin{tabular}{lrrrrrrrrrrrr}\n")                      >TEXFILE;
-    printf("\\hline\n")                                              >TEXFILE;
+    printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
+    printf("\\toprule\n")                                            >TEXFILE;
     printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
-    printf("\\hline\n")                                              >TEXFILE;
+    printf("\\midrule\n")                                            >TEXFILE;
 
     printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
     printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
@@ -191,14 +191,14 @@ BEGIN {
    nodegeom = nodegeom^((nprobs-1)/nprobs) * bbnodes^(1.0/nprobs);
 }
 END {   
-    printf("\\hline\n")                                                   >TEXFILE;
+    printf("\\midrule\n")                                                 >TEXFILE;
     printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
        "Total", nprobs, sbab, stottime) >TEXFILE;
     printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
        "Geom. Mean", nodegeom, timegeom) >TEXFILE;
-    printf("\\hline\n")                                                   >TEXFILE;
+    printf("\\bottomrule\n")                                              >TEXFILE;
     printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
-    printf("\\end{tabular}\n")                                            >TEXFILE;
+    printf("\\end{tabular*}\n")                                           >TEXFILE;
     printf("\\caption{CPLEX with default settings}\n")                    >TEXFILE;
     printf("\\end{center}\n")                                             >TEXFILE;
     printf("\\end{table}\n")                                              >TEXFILE;
