@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.100 2004/02/06 12:53:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.101 2004/02/25 16:49:54 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4155,6 +4155,105 @@ RETCODE lpFlush(
    return SCIP_OKAY;
 }
 
+/** sets parameter of type int in LP solver, ignoring unknown parameters */
+static
+RETCODE lpSetIntpar(
+   LP*              lp,                 /**< current LP data */
+   LPPARAM          lpparam,            /**< LP parameter */
+   int              value               /**< value to set parameter to */
+   )
+{
+   RETCODE retcode;
+
+   assert(lp != NULL);
+
+   retcode = SCIPlpiSetIntpar(lp->lpi, lpparam, value);
+
+   /* ignore unknown parameter error */
+   if( retcode == SCIP_PARAMETERUNKNOWN )
+      return SCIP_OKAY;
+
+   return retcode;
+}
+
+/** sets parameter of type Real in LP solver, ignoring unknown parameters */
+static
+RETCODE lpSetRealpar(
+   LP*              lp,                 /**< current LP data */
+   LPPARAM          lpparam,            /**< LP parameter */
+   Real             value               /**< value to set parameter to */
+   )
+{
+   RETCODE retcode;
+
+   assert(lp != NULL);
+
+   retcode = SCIPlpiSetRealpar(lp->lpi, lpparam, value);
+
+   /* ignore unknown parameter error */
+   if( retcode == SCIP_PARAMETERUNKNOWN )
+      return SCIP_OKAY;
+
+   return retcode;
+}
+
+#ifndef NDEBUG
+/** checks, that parameter of type int in LP solver has the given value, ignoring unknown parameters */
+static
+RETCODE lpCheckIntpar(
+   LP*              lp,                 /**< current LP data */
+   LPPARAM          lpparam,            /**< LP parameter */
+   int              value               /**< value parameter should have */
+   )
+{
+   RETCODE retcode;
+   int lpivalue;
+
+   assert(lp != NULL);
+
+   retcode = SCIPlpiGetIntpar(lp->lpi, lpparam, &lpivalue);
+
+   /* ignore unknown parameter error */
+   if( retcode == SCIP_PARAMETERUNKNOWN )
+      return SCIP_OKAY;
+
+   /* check value */
+   if( lpivalue != value )
+      return SCIP_LPERROR;
+
+   return retcode;
+}
+
+/** checks, that parameter of type Real in LP solver has the given value, ignoring unknown parameters */
+static
+RETCODE lpCheckRealpar(
+   LP*              lp,                 /**< current LP data */
+   LPPARAM          lpparam,            /**< LP parameter */
+   Real             value               /**< value parameter should have */
+   )
+{
+   RETCODE retcode;
+   Real lpivalue;
+
+   assert(lp != NULL);
+
+   retcode = SCIPlpiGetRealpar(lp->lpi, lpparam, &lpivalue);
+
+   /* ignore unknown parameter error */
+   if( retcode == SCIP_PARAMETERUNKNOWN )
+      return SCIP_OKAY;
+
+   /* check value */
+   if( lpivalue != value )
+      return SCIP_LPERROR;
+
+   return retcode;
+}
+#else
+#define lpCheckIntpar(lp, lpparam, value) SCIP_OKAY
+#define lpCheckRealpar(lp, lpparam, value) SCIP_OKAY
+#endif
+
 
 
 
@@ -4235,14 +4334,14 @@ RETCODE SCIPlpCreate(
    CHECK_OKAY( SCIPlpiChgObjsen((*lp)->lpi, SCIP_OBJSEN_MINIMIZE) );
 
    /* set default parameters in LP solver */
-   CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim) );
-   CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol) );
-   CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_DUALFEASTOL, (*lp)->lpidualfeastol) );
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_LPINFO, FALSE) );
+   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim) );
+   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol) );
+   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_DUALFEASTOL, (*lp)->lpidualfeastol) );
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -5100,18 +5199,11 @@ RETCODE lpSetUobjlim(
 {
    assert(lp != NULL);
    
-#ifndef NDEBUG
-   {
-      Real olduobjlim;
-      
-      CHECK_OKAY( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_UOBJLIM, &olduobjlim) );
-      assert(olduobjlim == lp->lpiuobjlim);
-   }
-#endif
+   CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
 
    if( uobjlim != lp->lpiuobjlim )
    {
-      CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_UOBJLIM, uobjlim) );
+      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_UOBJLIM, uobjlim) );
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lp->primalfeasible = FALSE;
@@ -5131,18 +5223,11 @@ RETCODE lpSetFeastol(
    assert(lp != NULL);
    assert(feastol >= 0.0);
    
-#ifndef NDEBUG
-   {
-      Real oldfeastol;
-      
-      CHECK_OKAY( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, &oldfeastol) );
-      assert(oldfeastol == lp->lpifeastol);
-   }
-#endif
+   CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_FEASTOL, lp->lpifeastol) );
 
    if( feastol != lp->lpifeastol )
    {
-      CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, feastol) );
+      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_FEASTOL, feastol) );
       if( lp->nrows > 0 && feastol < lp->lpifeastol )
       {
          lp->solved = FALSE;
@@ -5164,19 +5249,12 @@ RETCODE lpSetDualFeastol(
 {
    assert(lp != NULL);
    assert(dualfeastol >= 0.0);
-   
-#ifndef NDEBUG
-   {
-      Real olddualfeastol;
-      
-      CHECK_OKAY( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_DUALFEASTOL, &olddualfeastol) );
-      assert(olddualfeastol == lp->lpidualfeastol);
-   }
-#endif
+
+   CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_DUALFEASTOL, lp->lpidualfeastol) );
 
    if( dualfeastol != lp->lpidualfeastol )
    {
-      CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_DUALFEASTOL, dualfeastol) );
+      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, dualfeastol) );
       if( lp->nrows > 0 && dualfeastol < lp->lpidualfeastol )
       {
          lp->solved = FALSE;
@@ -5198,18 +5276,11 @@ RETCODE lpSetFromscratch(
 {
    assert(lp != NULL);
 
-#ifndef NDEBUG
-   {
-      int oldfromscratch;
-      
-      CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, &oldfromscratch) );
-      assert(oldfromscratch == (int)(lp->lpifromscratch));
-   }
-#endif
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_FROMSCRATCH, lp->lpifromscratch) );
 
    if( fromscratch != lp->lpifromscratch )
    {
-      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, fromscratch) );
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, fromscratch) );
       lp->lpifromscratch = fromscratch;
    }
    
@@ -5225,18 +5296,11 @@ RETCODE lpSetFastmip(
 {
    assert(lp != NULL);
 
-#ifndef NDEBUG
-   {
-      int oldfastmip;
-      
-      CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, &oldfastmip) );
-      assert(oldfastmip == (int)(lp->lpifastmip));
-   }
-#endif
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_FASTMIP, lp->lpifastmip) );
 
    if( fastmip != lp->lpifastmip )
    {
-      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, fastmip) );
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FASTMIP, fastmip) );
       lp->lpifastmip = fastmip;
    }
    
@@ -5252,18 +5316,11 @@ RETCODE lpSetScaling(
 {
    assert(lp != NULL);
 
-#ifndef NDEBUG
-   {
-      int oldscaling;
-      
-      CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_SCALING, &oldscaling) );
-      assert(oldscaling == (int)(lp->lpiscaling));
-   }
-#endif
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_SCALING, lp->lpiscaling) );
 
    if( scaling != lp->lpiscaling )
    {
-      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, scaling) );
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_SCALING, scaling) );
       lp->lpiscaling = scaling;
    }
    
@@ -5508,7 +5565,7 @@ RETCODE lpSolveStable(
    /* solve again, use other simplex this time */
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
-      stat->nnodes, stat->nlps, useprimal ? "dual" : "primal");
+      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
    CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */
@@ -5518,7 +5575,7 @@ RETCODE lpSolveStable(
    /* solve again with opposite scaling setting */
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
-      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", set->scaling ? "without" : "with");
+      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->scaling ? "with" : "without");
    CHECK_OKAY( lpSetScaling(lp, !set->scaling) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
    
@@ -5529,7 +5586,7 @@ RETCODE lpSolveStable(
    /* solve again with opposite scaling, use other simplex this time */
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
-      stat->nnodes, stat->nlps, useprimal ? "dual" : "primal", set->scaling ? "without" : "with");
+      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->scaling ? "with" : "without");
    CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */

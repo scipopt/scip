@@ -3,9 +3,9 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2002 Tobias Achterberg                              *
+*    Copyright (C) 2002-2004 Tobias Achterberg                              *
 *                                                                           *
-*                  2002-2002 Konrad-Zuse-Zentrum                            *
+*                  2002-2004 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the SCIP Academic Licence.        *
@@ -31,7 +31,7 @@ compilation settings:
               - "00??????????" is replaced by "pwr4"
 
 - $(COMP):   the compiler
-             "gnu", "intel", "compaq", "sun", "insure", ... (see make/ dir)
+             "gnu", "intel", "compaq", "sun", "insure", ... (see make/ directory)
 
 - $(OPT):    the optimization level of compilation
              "dbg", "opt", or "prf"
@@ -69,6 +69,14 @@ Here is what you have to do to get SCIP running:
    - "LPS=spx"  to use SOPLEX as LP solver (not yet implemented!)
    - "COMP=gnu" to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
+
+   ******************************************************************************
+   If you are compiling SCIP in optimized mode and use it as a callable library,
+   make sure that the double alignment flag of the compiler ("-malign-double" for
+   GNU C compiler) is set to equal values in both, SCIP and your code. Otherwise,
+   the size of SCIP's data structures used in your code wouldn't correspond to
+   the data structure sizes in the SCIP callable library.
+   ******************************************************************************
 
 3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
    (e.g. "bin/scip.linux.x86.gnu.dbg.cpx")

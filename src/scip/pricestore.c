@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.10 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.11 2004/02/25 16:49:55 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -274,13 +274,11 @@ RETCODE SCIPpricestoreAddBdviolvar(
     */
    if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) )
    {
-      CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 0.0,
-                     NULL, NULL, 0, 0) );
+      CHECK_OKAY( SCIPvarSetLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 0.0) );
    }
    else
    {
-      CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 0.0,
-                     NULL, NULL, 0, 0) );
+      CHECK_OKAY( SCIPvarSetUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -569,6 +567,7 @@ RETCODE SCIPpricestoreResetBounds(
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   VAR* var;
    int v;
 
    assert(pricestore != NULL);
@@ -584,13 +583,13 @@ RETCODE SCIPpricestoreResetBounds(
     */
    for( v = 0; v < pricestore->nbdviolvars; ++v )
    {
-      debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", pricestore->bdviolvars[v]->name, 
-         SCIPvarGetLbLocal(pricestore->bdviolvars[v]), SCIPvarGetUbLocal(pricestore->bdviolvars[v]),
-         pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
-      CHECK_OKAY( SCIPvarChgLbLocal(pricestore->bdviolvars[v], memhdr, set, stat, lp, branchcand, eventqueue,
-                     pricestore->bdviolvarslb[v], NULL, NULL, 0, 0) );
-      CHECK_OKAY( SCIPvarChgUbLocal(pricestore->bdviolvars[v], memhdr, set, stat, lp, branchcand, eventqueue,
-                     pricestore->bdviolvarsub[v], NULL, NULL, 0, 0) );
+      var = pricestore->bdviolvars[v];
+      assert(var != NULL);
+
+      debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", var->name, 
+         SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
+      CHECK_OKAY( SCIPvarSetLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarslb[v]) );
+      CHECK_OKAY( SCIPvarSetUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarsub[v]) );
       CHECK_OKAY( SCIPvarRelease(&pricestore->bdviolvars[v], memhdr, set, lp) );
    }
    pricestore->naddedbdviolvars = 0;

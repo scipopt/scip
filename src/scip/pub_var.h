@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.6 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.7 2004/02/25 16:49:55 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -395,15 +395,21 @@ CONS* SCIPvarGetInferCons(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets inference depth level of variable */
+/** gets inference depth level of binary variable (depth in the tree at which variable was fixed), or -1 if unfixed */
 extern
 int SCIPvarGetInferDepth(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets inference number of variable (inference index in variable's inference depth level) */
+/** gets inference number of binary variable (inference index in variable's inference depth level), or -1 if unfixed */
 extern
 int SCIPvarGetInferIndex(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets type of bound change of fixed binary variable (fixed due to branching or due to inference) */
+extern
+BOUNDCHGTYPE SCIPvarGetBoundchgType(
    VAR*             var                 /**< problem variable */
    );
 
@@ -452,9 +458,10 @@ Real SCIPvarGetBranchingPriority(
 #define SCIPvarGetUbLocal(var)          (var)->locdom.ub
 #define SCIPvarGetInferVar(var)         (var)->infervar
 #define SCIPvarGetInferCons(var)        (var)->infercons
-#define SCIPvarGetInferDepth(var)       ((int)((var)->inferdepth))
-#define SCIPvarGetInferIndex(var)       ((int)((var)->inferindex))
-#define SCIPvarGetBranchingPriority(var) ((var)->branchingpriority)
+#define SCIPvarGetInferDepth(var)       (var)->inferdepth
+#define SCIPvarGetInferIndex(var)       (var)->inferindex
+#define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
+#define SCIPvarGetBranchingPriority(var) (var)->branchingpriority
 
 #endif
 

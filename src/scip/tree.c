@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.79 2004/02/06 13:43:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.80 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -790,11 +790,6 @@ RETCODE SCIPnodeAddCons(
    assert(node != NULL);
    assert(cons != NULL);
 
-   /* add constraint addition to the node's constraint set change data */
-   CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, node, cons) );
-   assert(node->conssetchg != NULL);
-   assert(node->conssetchg->addedconss != NULL);
-
    /* if node is the root, mark constraint to be globally valid */
    if( node->depth == 0 )
    {
@@ -802,11 +797,11 @@ RETCODE SCIPnodeAddCons(
       cons->local = FALSE;
    }
 
-   /* activate constraint, if node is active */
-   if( node->active && !cons->active && !cons->updateactivate )
-   {
-      CHECK_OKAY( SCIPconsActivate(cons, set) );
-   }
+   /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
+   CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, cons, node->active) );
+   assert(node->conssetchg != NULL);
+   assert(node->conssetchg->addedconss != NULL);
+   assert(!node->active || SCIPconsIsActive(cons));
 
    return SCIP_OKAY;
 }
@@ -940,7 +935,7 @@ RETCODE SCIPnodeAddBoundchg(
 
       /* remember the bound change as branching decision (infervar/infercons are not important: use NULL) */
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
-                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, node,
+                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, 
                      lpsolval, NULL, NULL) );
       
       /* update the child's lower bound */
@@ -951,7 +946,7 @@ RETCODE SCIPnodeAddBoundchg(
    {
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
-                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, node, 
+                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, 
                      0.0, infervar, infercons) );
    }
 
@@ -967,11 +962,11 @@ RETCODE SCIPnodeAddBoundchg(
    if( node->active )
    {
       CHECK_OKAY( SCIPboundchgApply(&node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1],
-                     memhdr, set, stat, lp, branchcand, eventqueue) );
+                     memhdr, set, stat, lp, branchcand, eventqueue, node->depth, node->domchg->domchgdyn.nboundchgs-1) );
       if( node->depth == 0 )
       {
          /* changed bound in root node: update the global bound */
-         CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
+         CHECK_OKAY( SCIPvarSetBdGlobal(var, set, newbound, boundtype) );
       }
    }
 
@@ -1297,7 +1292,7 @@ RETCODE treeSwitchPath(
       debugMessage("switch path: apply constraint set changed in depth %d\n", i);
       CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set) );
       debugMessage("switch path: apply domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue) );
+      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue, i) );
    }
 
    /* if the LP fork changed, the lpcount information for the new LP fork is unknown */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.3 2004/02/04 17:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -38,17 +38,17 @@
 /** data for objective value change events */
 struct EventObjChg
 {
-   VAR*             var;                /**< variable whose objective value changed */
    Real             oldobj;             /**< old objective value before value changed */
    Real             newobj;             /**< new objective value after value changed */
+   VAR*             var;                /**< variable whose objective value changed */
 };
 
 /** data for bound change events */
 struct EventBdChg
 {
-   VAR*             var;                /**< variable whose bound changed */
    Real             oldbound;           /**< old bound before bound changed */
    Real             newbound;           /**< new bound after bound changed */
+   VAR*             var;                /**< variable whose bound changed */
 };
 
 /** event data structure */
@@ -96,7 +96,7 @@ struct EventQueue
    EVENT**          events;             /**< array with queued events */
    int              eventssize;         /**< number of available slots in events array */
    int              nevents;            /**< number of events in queue (used slots if events array) */
-   unsigned int     delayevents:1;      /**< should the events be delayed and processed later? */
+   Bool             delayevents;        /**< should the events be delayed and processed later? */
 };
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.2 2004/02/04 17:27:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.3 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -44,11 +44,11 @@
  */
 struct PQueue
 {
+   Real             sizefac;            /**< memory growing factor */
+   DECL_SORTPTRCOMP((*ptrcmp));         /**< compares two data elements */
+   void**           slots;              /**< array of element slots */
    int              len;                /**< number of used element slots */
    int              size;               /**< total number of available element slots */
-   Real             sizefac;            /**< memory growing factor */
-   void**           slots;              /**< array of element slots */
-   DECL_SORTPTRCOMP((*ptrcmp));         /**< compares two data elements */
 };
 
 /** element list to store in a hash table */
@@ -61,11 +61,11 @@ struct HashList
 /** hash table data structure */
 struct HashTable
 {
-   HASHLIST**       lists;              /**< hash lists of the hash table */
-   int              nlists;             /**< number of lists stored in the hash table */
    DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
    DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
+   HASHLIST**       lists;              /**< hash lists of the hash table */
+   int              nlists;             /**< number of lists stored in the hash table */
 };
 
 /** dynamic array for storing real values */

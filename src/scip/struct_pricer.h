@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricer.h,v 1.4 2004/02/04 17:27:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricer.h,v 1.5 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_pricer.h
  * @brief  datastructures for variable pricers
@@ -37,7 +37,6 @@ struct Pricer
 {
    char*            name;               /**< name of variable pricer */
    char*            desc;               /**< description of variable pricer */
-   int              priority;           /**< priority of the variable pricer */
    DECL_PRICERFREE  ((*pricerfree));    /**< destructor of variable pricer */
    DECL_PRICERINIT  ((*pricerinit));    /**< initialize variable pricer */
    DECL_PRICEREXIT  ((*pricerexit));    /**< deinitialize variable pricer */
@@ -45,6 +44,7 @@ struct Pricer
    DECL_PRICERFARKAS((*pricerfarkas));  /**< farkas pricing method of variable pricer for infeasible LPs */
    PRICERDATA*      pricerdata;         /**< variable pricers local data */
    CLOCK*           clock;              /**< pricer execution time */
+   int              priority;           /**< priority of the variable pricer */
    int              ncalls;             /**< number of times, this pricer was called */
    int              nvarsfound;         /**< number of variables priced in found so far by this pricer */
    Bool             active;             /**< is variable pricer in use for the current problem? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.3 2004/02/04 17:27:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.4 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   scipstruct.h
  * @brief  SCIP main data structure
@@ -49,8 +49,6 @@
 /** SCIP main data structure */
 struct Scip
 {
-   STAGE            stage;              /**< SCIP operation stage */
-
    /* INIT */
    MEM*             mem;                /**< block memory buffers */
    SET*             set;                /**< global SCIP settings */
@@ -77,6 +75,8 @@ struct Scip
    CONFLICT*        conflict;           /**< conflict analysis data for propagation conflicts */
    LPCONFLICT*      lpconflict;         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal;             /**< primal data and solution storage */
+
+   STAGE            stage;              /**< SCIP operation stage */
 };
 
 

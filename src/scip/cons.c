@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.65 2004/02/05 14:12:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.66 2004/02/25 16:49:53 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2474,17 +2474,18 @@ RETCODE conssetchgEnsureDisabledconssSize(
    return SCIP_OKAY;
 }
 
-/** adds constraint addition to constraint set changes, and captures constraint */
+/** adds constraint addition to constraint set changes, and captures constraint; activates constraint if the
+ *  constraint set change data is currently active
+ */
 RETCODE SCIPconssetchgAddAddedCons(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   NODE*            node,               /**< node that the constraint set change belongs to */
-   CONS*            cons                /**< added constraint */
+   CONS*            cons,               /**< added constraint */
+   Bool             active              /**< is the constraint set change currently active? */
    )
 {
    assert(conssetchg != NULL);
-   assert(node != NULL);
    assert(cons != NULL);
 
    /* if constraint set change doesn't exist, create it */
@@ -2503,6 +2504,17 @@ RETCODE SCIPconssetchgAddAddedCons(
 
    /* capture constraint */
    SCIPconsCapture(cons);
+
+   /* activate constraint, if node is active */
+   if( active && !SCIPconsIsActive(cons) )
+   {
+      CHECK_OKAY( SCIPconsActivate(cons, set) );
+      assert(SCIPconsIsActive(cons));
+         
+      /* remember, that this constraint set change data was resposible for the constraint's addition */
+      cons->addconssetchg = *conssetchg;
+      cons->addarraypos = (*conssetchg)->naddedconss-1;
+   }
 
    return SCIP_OKAY;
 }

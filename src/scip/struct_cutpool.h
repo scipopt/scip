@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cutpool.h,v 1.2 2004/02/04 17:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cutpool.h,v 1.3 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_cutpool.h
  * @brief  datastructures for storing cuts in a cut pool
@@ -47,6 +47,8 @@ struct Cut
 /** storage for pooled cuts */
 struct Cutpool
 {
+   Longint          ncalls;             /**< number of times, the cutpool was separated */
+   Longint          ncutsfound;         /**< total number of cuts that were separated from the pool */
    CLOCK*           clock;              /**< separation time */
    HASHTABLE*       hashtable;          /**< hash table to identify already stored cuts */
    CUT**            cuts;               /**< stored cuts of the pool */
@@ -56,8 +58,6 @@ struct Cutpool
    int              processedlp;        /**< last LP that has been processed */
    int              firstunprocessed;   /**< first cut that has not been processed in the last LP */
    int              maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
-   Longint          ncalls;             /**< number of times, the cutpool was separated */
-   Longint          ncutsfound;         /**< total number of cuts that were separated from the pool */
 };
 
 

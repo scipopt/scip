@@ -44,12 +44,12 @@ $(OBJDIR)/conflict.o: src/conflict.c src/def.h src/type_retcode.h src/message.h 
   src/type_misc.h src/pub_misc.h src/paramset.h src/pub_paramset.h \
   src/lp.h src/type_lp.h src/type_prob.h src/pub_lp.h src/struct_lp.h \
   src/var.h src/pub_var.h src/struct_var.h src/prob.h src/struct_prob.h \
-  src/scip.h src/type_dialog.h src/pub_branch.h src/pub_conflict.h \
-  src/pub_cons.h src/pub_cutpool.h src/type_cutpool.h src/pub_dialog.h \
-  src/pub_disp.h src/pub_event.h src/pub_heur.h src/pub_nodesel.h \
-  src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
-  src/pub_tree.h src/conflict.h src/cons.h src/type_sepastore.h \
-  src/struct_cons.h src/struct_conflict.h
+  src/tree.h src/pub_tree.h src/struct_tree.h src/scip.h \
+  src/type_dialog.h src/pub_branch.h src/pub_conflict.h src/pub_cons.h \
+  src/pub_cutpool.h src/type_cutpool.h src/pub_dialog.h src/pub_disp.h \
+  src/pub_event.h src/pub_heur.h src/pub_nodesel.h src/pub_presol.h \
+  src/pub_pricer.h src/pub_reader.h src/pub_sepa.h src/conflict.h \
+  src/cons.h src/type_sepastore.h src/struct_cons.h src/struct_conflict.h
 $(OBJDIR)/cons.o: src/cons.c src/def.h src/type_retcode.h src/set.h src/message.h \
   src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
   src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.12 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.13 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -50,53 +50,6 @@
 /** global SCIP settings */
 struct Set
 {
-   SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
-   PARAMSET*        paramset;           /**< set of parameters */
-   BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
-   READER**         readers;            /**< file readers */
-   int              nreaders;           /**< number of file readers */
-   int              readerssize;        /**< size of readers array */
-   PRICER**         pricers;            /**< variable pricers */
-   int              npricers;           /**< number of variable pricers */
-   int              nactivepricers;     /**< number of variable pricers used in the current problem */
-   int              pricerssize;        /**< size of pricers array */
-   Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
-   CONSHDLR**       conshdlrs;          /**< constraint handlers */
-   int              nconshdlrs;         /**< number of constraint handlers */
-   int              conshdlrssize;      /**< size of conshdlrs array */
-   CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
-   int              nconflicthdlrs;     /**< number of conflict handlers */
-   int              conflicthdlrssize;  /**< size of conflicthdlrs array */
-   Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
-   PRESOL**         presols;            /**< presolvers */
-   int              npresols;           /**< number of presolvers */
-   int              presolssize;        /**< size of presols array */
-   Bool             presolssorted;      /**< are the presolvers sorted by priority? */
-   SEPA**           sepas;              /**< separators */
-   int              nsepas;             /**< number of separators */
-   int              sepassize;          /**< size of sepas array */
-   Bool             sepassorted;        /**< are the separators sorted by priority? */
-   HEUR**           heurs;              /**< primal heuristics */
-   int              nheurs;             /**< number of primal heuristics */
-   int              heurssize;          /**< size of heurs array */
-   Bool             heurssorted;        /**< are the heuristics sorted by priority? */
-   EVENTHDLR**      eventhdlrs;         /**< event handlers */
-   int              neventhdlrs;        /**< number of event handlers */
-   int              eventhdlrssize;     /**< size of eventhdlrs array */
-   NODESEL**        nodesels;           /**< node selectors */
-   int              nnodesels;          /**< number of node selectors */
-   int              nodeselssize;       /**< size of nodesels array */
-   NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
-   BRANCHRULE**     branchrules;        /**< branching rules */
-   int              nbranchrules;       /**< number of branching rules */
-   int              branchrulessize;    /**< size of branchrules array */
-   Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
-   DISP**           disps;              /**< display columns */
-   int              ndisps;             /**< number of display columns */
-   int              dispssize;          /**< size of disps array */
-
-   VERBLEVEL        verblevel;          /**< verbosity level of output */
-   Bool             catchctrlc;         /**< should the CTRL-C interrupt be catched by SCIP? */
    Real             infinity;           /**< values larger than this are considered infinity */
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
    Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
@@ -108,25 +61,66 @@ struct Set
    Real             historyeps;         /**< minimal variable distance value to use for branching history updates */
    Real             historydelta;       /**< minimal objective distance value to use for branching history updates */
    Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
-   int              memgrowinit;        /**< initial size of dynamically allocated arrays */
    Real             treegrowfac;        /**< memory growing factor for tree array */
-   int              treegrowinit;       /**< initial size of tree array */
    Real             pathgrowfac;        /**< memory growing factor for path array */
-   int              pathgrowinit;       /**< initial size of path array */
    Real             branchscorefac;     /**< branching score factor to weigh downward and upward gain prediction */
+   Real             presolabortfac;     /**< abort presolve, if l.t. this frac of the problem was changed in last round */
+   Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+   Real             maxconfvarsfac;     /**< maximal fraction of binary variables involved in a conflict clause */
+   Real             timelimit;          /**< maximal time in seconds to run */
+   Real             memlimit;           /**< maximal memory usage in MB */
+   Real             gaplimit;           /**< solving stops, if the given gap is reached */
+   Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
+   Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
+   SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
+   PARAMSET*        paramset;           /**< set of parameters */
+   BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
+   READER**         readers;            /**< file readers */
+   PRICER**         pricers;            /**< variable pricers */
+   CONSHDLR**       conshdlrs;          /**< constraint handlers */
+   CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
+   PRESOL**         presols;            /**< presolvers */
+   SEPA**           sepas;              /**< separators */
+   HEUR**           heurs;              /**< primal heuristics */
+   EVENTHDLR**      eventhdlrs;         /**< event handlers */
+   NODESEL**        nodesels;           /**< node selectors */
+   NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
+   BRANCHRULE**     branchrules;        /**< branching rules */
+   DISP**           disps;              /**< display columns */
+   int              nreaders;           /**< number of file readers */
+   int              readerssize;        /**< size of readers array */
+   int              npricers;           /**< number of variable pricers */
+   int              nactivepricers;     /**< number of variable pricers used in the current problem */
+   int              pricerssize;        /**< size of pricers array */
+   int              nconshdlrs;         /**< number of constraint handlers */
+   int              conshdlrssize;      /**< size of conshdlrs array */
+   int              nconflicthdlrs;     /**< number of conflict handlers */
+   int              conflicthdlrssize;  /**< size of conflicthdlrs array */
+   int              npresols;           /**< number of presolvers */
+   int              presolssize;        /**< size of presols array */
+   int              nsepas;             /**< number of separators */
+   int              sepassize;          /**< size of sepas array */
+   int              nheurs;             /**< number of primal heuristics */
+   int              heurssize;          /**< size of heurs array */
+   int              neventhdlrs;        /**< number of event handlers */
+   int              eventhdlrssize;     /**< size of eventhdlrs array */
+   int              nnodesels;          /**< number of node selectors */
+   int              nodeselssize;       /**< size of nodesels array */
+   int              nbranchrules;       /**< number of branching rules */
+   int              branchrulessize;    /**< size of branchrules array */
+   int              ndisps;             /**< number of display columns */
+   int              dispssize;          /**< size of disps array */
+   int              memgrowinit;        /**< initial size of dynamically allocated arrays */
+   int              treegrowinit;       /**< initial size of tree array */
+   int              pathgrowinit;       /**< initial size of path array */
    int              dispwidth;          /**< maximal number of characters in a node information line */
    int              dispfreq;           /**< frequency for displaying node information lines */
    int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
    int              maxpresolrounds;    /**< maximal number of presolving rounds (-1: unlimited) */
-   Real             presolabortfac;     /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
    int              maxpricevarsroot;   /**< maximal number of priced variables at the root node */
-   Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of separated cuts at the root node */
-   Bool             usepropconflict;    /**< should propagation conflict analysis be used? */
-   Bool             uselpconflict;      /**< should infeasible LP conflict analysis be used? */
-   Real             maxconfvarsfac;     /**< maximal fraction of binary variables involved in a conflict clause */
    int              minmaxconfvars;     /**< minimal absolute maximum of variables involved in a conflict clause */
    int              colagelimit;        /**< maximum age a column can reach before it is deleted from the LP */
    int              rowagelimit;        /**< maximum age a row can reach before it is deleted from the LP */
@@ -134,21 +128,26 @@ struct Set
    int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted, or -1 */
    int              consobsoleteage;    /**< age of a constraint after which it is marked obsolete (not useful anymore) */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
-   Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
-   Real             timelimit;          /**< maximal time in seconds to run */
-   Real             memlimit;           /**< maximal memory usage in MB */
-   Real             gaplimit;           /**< solving stops, if the given gap is reached */
    int              sollimit;           /**< solving stops, if the given number of solutions were found (-1: no limit) */
-   Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    int              redcostfreq;        /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
+   VERBLEVEL        verblevel;          /**< verbosity level of output */
+   CLOCKTYPE        clocktype;          /**< default clock type to use */
+   Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
+   Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
+   Bool             presolssorted;      /**< are the presolvers sorted by priority? */
+   Bool             sepassorted;        /**< are the separators sorted by priority? */
+   Bool             heurssorted;        /**< are the heuristics sorted by priority? */
+   Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
+   Bool             catchctrlc;         /**< should the CTRL-C interrupt be catched by SCIP? */
+   Bool             usepropconflict;    /**< should propagation conflict analysis be used? */
+   Bool             uselpconflict;      /**< should infeasible LP conflict analysis be used? */
    Bool             checklpfeas;        /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
    Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
    Bool             scaling;            /**< should scaling of LP solver be used? */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
    Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
-   CLOCKTYPE        clocktype;          /**< default clock type to use */
    Bool             clocksenabled;      /**< is timing enabled? */
 };
 

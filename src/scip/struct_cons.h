@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.4 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.5 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -88,13 +88,16 @@ struct ConsSetChg
 /** constraint handler */
 struct Conshdlr
 {
+   Longint          nsepacalls;         /**< number of times, the separator was called */
+   Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
+   Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
+   Longint          npropcalls;         /**< number of times, the propagator was called */
+   Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
+   Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
+   Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
+   Longint          nchildren;          /**< number of children the constraint handler created during branching */
    char*            name;               /**< name of constraint handler */
    char*            desc;               /**< description of constraint handler */
-   int              sepapriority;       /**< priority of the constraint handler for separation */
-   int              enfopriority;       /**< priority of the constraint handler for constraint enforcing */
-   int              checkpriority;      /**< priority of the constraint handler for checking infeasibility */
-   int              sepafreq;           /**< frequency for separating cuts; zero means to separate only in the root node */
-   int              propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
    DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit));      /**< initialize constraint handler */
    DECL_CONSEXIT    ((*consexit));      /**< deinitialize constraint handler */
@@ -117,45 +120,42 @@ struct Conshdlr
    DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    CONS**           conss;              /**< array with all active constraints */
-   int              consssize;          /**< size of conss array */
-   int              nconss;             /**< total number of active constraints */
-   int              maxnconss;          /**< maximal number of active constraints existing at the same time */
-   int              startnconss;        /**< number of active constraints existing when problem solving started */
    CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
-   int              sepaconsssize;      /**< size of sepaconss array */
-   int              nsepaconss;         /**< number of active constraints that may be separated during LP processing */
-   int              nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */
    CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
-   int              enfoconsssize;      /**< size of enfoconss array */
-   int              nenfoconss;         /**< number of active constraints that must be enforced during node processing */
-   int              nusefulenfoconss;   /**< number of non-obsolete active constraints that must be enforced */
    CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
-   int              checkconsssize;     /**< size of checkconss array */
-   int              ncheckconss;        /**< number of active constraints that must be checked for feasibility */
-   int              nusefulcheckconss;  /**< number of non-obsolete active constraints that must be checked */
    CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
-   int              propconsssize;      /**< size of propconss array */
-   int              npropconss;         /**< number of active constraints that may be propagated during node processing */
-   int              nusefulpropconss;   /**< number of non-obsolete active constraints that should be propagated */
    CONS**           updateconss;        /**< array with constraints that changed and have to be update in the handler */
-   int              updateconsssize;    /**< size of updateconss array */
-   int              nupdateconss;       /**< number of update constraints */
-   int              nenabledconss;      /**< total number of enabled constraints of the handler */
-   int              lastnsepaconss;     /**< number of already separated constraints after last conshdlrResetSepa() call */
-   int              lastnenfoconss;     /**< number of already enforced constraints after last conshdlrResetEnfo() call */
    CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
    CLOCK*           sepatime;           /**< time used for separation of this constraint handler */
    CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
-   Longint          nsepacalls;         /**< number of times, the separator was called */
-   Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
-   Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
-   Longint          npropcalls;         /**< number of times, the propagator was called */
-   Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
-   Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
-   Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
-   Longint          nchildren;          /**< number of children the constraint handler created during branching */
+   int              sepapriority;       /**< priority of the constraint handler for separation */
+   int              enfopriority;       /**< priority of the constraint handler for constraint enforcing */
+   int              checkpriority;      /**< priority of the constraint handler for checking infeasibility */
+   int              sepafreq;           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int              propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int              consssize;          /**< size of conss array */
+   int              nconss;             /**< total number of active constraints */
+   int              maxnconss;          /**< maximal number of active constraints existing at the same time */
+   int              startnconss;        /**< number of active constraints existing when problem solving started */
+   int              sepaconsssize;      /**< size of sepaconss array */
+   int              nsepaconss;         /**< number of active constraints that may be separated during LP processing */
+   int              nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */
+   int              enfoconsssize;      /**< size of enfoconss array */
+   int              nenfoconss;         /**< number of active constraints that must be enforced during node processing */
+   int              nusefulenfoconss;   /**< number of non-obsolete active constraints that must be enforced */
+   int              checkconsssize;     /**< size of checkconss array */
+   int              ncheckconss;        /**< number of active constraints that must be checked for feasibility */
+   int              nusefulcheckconss;  /**< number of non-obsolete active constraints that must be checked */
+   int              propconsssize;      /**< size of propconss array */
+   int              npropconss;         /**< number of active constraints that may be propagated during node processing */
+   int              nusefulpropconss;   /**< number of non-obsolete active constraints that should be propagated */
+   int              updateconsssize;    /**< size of updateconss array */
+   int              nupdateconss;       /**< number of update constraints */
+   int              nenabledconss;      /**< total number of enabled constraints of the handler */
+   int              lastnsepaconss;     /**< number of already separated constraints after last conshdlrResetSepa() call */
+   int              lastnenfoconss;     /**< number of already enforced constraints after last conshdlrResetEnfo() call */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */

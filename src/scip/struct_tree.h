@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.6 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.7 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch-and-bound tree
@@ -88,6 +88,7 @@ struct Subroot
 /** node data structure */
 struct Node
 {
+   Real             lowerbound;         /**< lower (dual) LP bound of subtree */
    union
    {
       SIBLING       sibling;            /**< data for sibling nodes */
@@ -100,7 +101,6 @@ struct Node
    NODE*            parent;             /**< parent node in the tree */
    CONSSETCHG*      conssetchg;         /**< constraint set changes at this node or NULL */
    DOMCHG*          domchg;             /**< domain changes at this node or NULL */
-   Real             lowerbound;         /**< lower (dual) LP bound of subtree */
    unsigned int     depth:16;           /**< depth in the tree */
    unsigned int     nodetype:3;         /**< type of node */
    unsigned int     active:1;           /**< is node in the path to the current active node? */
@@ -114,16 +114,16 @@ struct Tree
    NODE**           path;               /**< array of fork/subtree nodes storing the active path from root to leaf */
    NODE*            actnode;            /**< active node */
    NODE*            actlpfork;          /**< fork/subroot node defining the LP state of the active node */
-   int              actlpforklpcount;   /**< LP number of last solved LP in current LP fork, or -1 if unknown */
    NODE*            actsubroot;         /**< root of the active subtree */
    NODE**           children;           /**< array with children of the active node */
-   int              childrensize;       /**< available slots in children vector */
-   int              nchildren;          /**< current number of children (number of used slots in children vector) */
    NODE**           siblings;           /**< array with siblings of the active node */
-   int              siblingssize;       /**< available slots in siblings vector */
-   int              nsiblings;          /**< current number of siblings (number of used slots in siblings vector) */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
+   int              actlpforklpcount;   /**< LP number of last solved LP in current LP fork, or -1 if unknown */
+   int              childrensize;       /**< available slots in children vector */
+   int              nchildren;          /**< current number of children (number of used slots in children vector) */
+   int              siblingssize;       /**< available slots in siblings vector */
+   int              nsiblings;          /**< current number of siblings (number of used slots in siblings vector) */
    int              pathlen;            /**< length of the current path (== depth of the current node + 1) */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */

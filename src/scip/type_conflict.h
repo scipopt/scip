@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.2 2004/02/04 17:27:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.3 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -73,6 +73,7 @@ typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure fo
  *  input:
  *  - scip            : SCIP main data structure
  *  - conflicthdlr    : the conflict handler itself
+ *  - node            : node to add resulting conflict clause to (with SCIPaddConsNode())
  *  - conflictvars    : array with binary variables in the conflict set
  *  - nconflictvars   : number of binary variables in the conflict set
  *  - resolved        : is the conflict set already used to create a constraint?
@@ -83,8 +84,8 @@ typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure fo
  *  - SCIP_DIDNOTFIND : the conflict handler could not create a constraint out of the conflict set
  *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
  */
-#define DECL_CONFLICTEXEC(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr, VAR** conflictvars, int nconflictvars, \
-                                        Bool resolved, RESULT* result)
+#define DECL_CONFLICTEXEC(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr, NODE* node, \
+                                        VAR** conflictvars, int nconflictvars, Bool resolved, RESULT* result)
 
 
 

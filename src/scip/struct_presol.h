@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_presol.h,v 1.3 2004/02/04 17:27:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_presol.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_presol.h
  * @brief  datastructures for presolvers
@@ -37,13 +37,13 @@ struct Presol
 {
    char*            name;               /**< name of presolver */
    char*            desc;               /**< description of presolver */
-   int              priority;           /**< priority of the presolver */
    DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver */
    DECL_PRESOLINIT  ((*presolinit));    /**< initialize presolver */
    DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialize presolver */
    DECL_PRESOLEXEC  ((*presolexec));    /**< presolver execution method */
    PRESOLDATA*      presoldata;         /**< presolver data */
    CLOCK*           clock;              /**< presolving time */
+   int              priority;           /**< priority of the presolver */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */

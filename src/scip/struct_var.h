@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.6 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.7 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -72,16 +72,14 @@ struct InferenceData
 /** change in one bound of a variable */
 struct BoundChg
 {
-   VAR*             var;                /**< active variable to change the bounds for */
+   Real             newbound;           /**< new value for bound */
+   Real             oldbound;           /**< old value for bound */
    union
    {
       BRANCHINGDATA branchingdata;      /**< data for branching decisions */
       INFERENCEDATA inferencedata;      /**< data for inferred bound changes */
    } data;
-   Real             newbound;           /**< new value for bound */
-   Real             oldbound;           /**< old value for bound */
-   unsigned int     depth:16;           /**< depth in the tree, where this bound change took place */
-   unsigned int     index:14;           /**< bound change index for each node representing the order of changes */
+   VAR*             var;                /**< active variable to change the bounds for */
    unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int     boundchgtype:1;     /**< bound change type: branching decision or inferred bound change */
 };
@@ -127,25 +125,25 @@ union DomChg
 /** domain of a variable */
 struct Dom
 {
-   HOLELIST*        holelist;           /**< list of holes */
    Real             lb;                 /**< lower bounds of variables */
    Real             ub;                 /**< upper bounds of variables */
+   HOLELIST*        holelist;           /**< list of holes */
 };
 
 /** aggregation information: x = a*y + c */
 struct Aggregate
 {
-   VAR*             var;                /**< variable y in aggregation */
    Real             scalar;             /**< multiplier a in aggregation */
    Real             constant;           /**< constant shift c in aggregation */
+   VAR*             var;                /**< variable y in aggregation */
 };
 
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
 struct Multaggr
 {
-   VAR**            vars;               /**< variables y in multiple aggregation */
-   Real*            scalars;            /**< multipliers a in multiple aggregation */
    Real             constant;           /**< constant shift c in multiple aggregation */
+   Real*            scalars;            /**< multipliers a in multiple aggregation */
+   VAR**            vars;               /**< variables y in multiple aggregation */
    int              nvars;              /**< number of variables in aggregation */
    int              varssize;           /**< size of vars and scalars arrays */
 };
@@ -159,6 +157,10 @@ struct Negate
 /** variable of the problem */
 struct Var
 {
+   Real             obj;                /**< objective function value of variable */
+   Real             branchingpriority;  /**< priority of the variable to choose as branching variable */
+   DOM              glbdom;             /**< domain of variable in global problem */
+   DOM              locdom;             /**< domain of variable in current subproblem */
    union
    {
       VAR*          transvar;           /**< pointer to representing transformed variable (for original variables) */
@@ -171,13 +173,9 @@ struct Var
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
    VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
-   VAR*             infervar;           /**< variable that was assigned (parent of var, or var itself) */
-   CONS*            infercons;          /**< constraint that deduced the assignment (binary variables only), or NULL */
+   VAR*             infervar;           /**< variable whose fixing was deduced (parent of var, or var itself) */
+   CONS*            infercons;          /**< constraint that deduced the fixing (binary variables only), or NULL */
    HISTORY*         lphistory;          /**< branching history information for downwards and upwards branching on LP */
-   DOM              glbdom;             /**< domain of variable in global problem */
-   DOM              locdom;             /**< domain of variable in current subproblem */
-   Real             obj;                /**< objective function value of variable */
-   Real             branchingpriority;  /**< priority of the variable to choose as branching variable */
    int              index;              /**< consecutively numbered variable identifier */
    int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
@@ -189,8 +187,10 @@ struct Var
    int              nuses;              /**< number of times, this variable is referenced */
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
-   unsigned int     inferdepth:16;      /**< depth in the tree, where the last bound change took place */
-   unsigned int     inferindex:15;      /**< bound change index for each node representing the order of changes */
+   int              inferdepth;         /**< depth in the tree, where the binary variable was fixed, or -1 */
+   int              inferindex;         /**< index of the binary variable's fixing in its depth level, or -1 */
+   int              conflictsetcount;   /**< number of last conflict set, this variable was member of */
+   BOUNDCHGTYPE     boundchgtype;       /**< bound change type (branching or inference) of binary variable's fixing */
    unsigned int     initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */

@@ -1,4 +1,20 @@
-# $Id: check.sh,v 1.6 2004/01/22 14:42:25 bzfpfend Exp $
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#*                                                                           *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2004 Tobias Achterberg                              *
+#*                                                                           *
+#*                  2002-2004 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the SCIP Academic Licence.        *
+#*                                                                           *
+#*  You should have received a copy of the SCIP Academic License             *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*                                                                           *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# $Id: check.sh,v 1.7 2004/02/25 16:49:52 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3

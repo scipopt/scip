@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.127 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.128 2004/02/25 16:49:55 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -350,19 +350,20 @@ RETCODE SCIPcreate(
    CHECK_OKAY( SCIPdialoghdlrCreate(&(*scip)->dialoghdlr) );
    CHECK_OKAY( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
-   (*scip)->origprob = NULL;
    (*scip)->stat = NULL;
-   (*scip)->transprob = NULL;
-   (*scip)->tree = NULL;
-   (*scip)->lp = NULL;
-   (*scip)->pricestore = NULL;
-   (*scip)->sepastore = NULL;
-   (*scip)->branchcand = NULL;
-   (*scip)->cutpool = NULL;
-   (*scip)->conflict = NULL;
-   (*scip)->primal = NULL;
+   (*scip)->origprob = NULL;
    (*scip)->eventfilter = NULL;
    (*scip)->eventqueue = NULL;
+   (*scip)->branchcand = NULL;
+   (*scip)->tree = NULL;
+   (*scip)->lp = NULL;
+   (*scip)->transprob = NULL;
+   (*scip)->pricestore = NULL;
+   (*scip)->sepastore = NULL;
+   (*scip)->cutpool = NULL;
+   (*scip)->conflict = NULL;
+   (*scip)->lpconflict = NULL;
+   (*scip)->primal = NULL;
 
    return SCIP_OKAY;
 }
@@ -2571,6 +2572,34 @@ CONS* SCIPfindCons(
  * local subproblem methods
  */
 
+/** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
+ *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
+ */
+RETCODE SCIPaddConsNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to add constraint to */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(cons != NULL);
+   assert(node != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( SCIPnodeGetDepth(node) == 0 )
+   {
+      assert(node == scip->tree->root);
+      cons->local = FALSE;
+      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+   }
+   else
+   {
+      CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds constraint locally to the active node (and all of its subnodes), even if it is a global constraint;
  *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
  */
@@ -2583,25 +2612,23 @@ RETCODE SCIPaddConsLocal(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddConsLocal", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeAddCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
+   CHECK_OKAY( SCIPaddConsNode(scip, scip->tree->actnode, cons) );
    
    return SCIP_OKAY;
 }
 
-/** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
- *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
- */
-RETCODE SCIPaddConsNode(
+/** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
+RETCODE SCIPdisableConsNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to add constraint to */
-   CONS*            cons                /**< constraint to add */
+   NODE*            node,               /**< node to disable constraint in */
+   CONS*            cons                /**< constraint to disable */
    )
 {
    assert(cons != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPdisableConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
+   CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
    
    return SCIP_OKAY;
 }
@@ -2641,22 +2668,6 @@ RETCODE SCIPdisableConsLocal(
       errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }  /*lint !e788*/
-}
-
-/** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
-RETCODE SCIPdisableConsNode(
-   SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to disable constraint in */
-   CONS*            cons                /**< constraint to disable */
-   )
-{
-   assert(cons != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPdisableConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
-
-   CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
-   
-   return SCIP_OKAY;
 }
 
 /** gets dual bound of active node */
@@ -3571,16 +3582,16 @@ RETCODE SCIPchgVarLb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
@@ -3610,16 +3621,16 @@ RETCODE SCIPchgVarUb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
@@ -3719,9 +3730,9 @@ RETCODE SCIPtightenVarLb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -3784,9 +3795,9 @@ RETCODE SCIPtightenVarUb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+                     scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -4445,7 +4456,7 @@ RETCODE SCIPanalyzeConflict(
 {
    CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->set, scip->transprob, success) );
+   CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->set, scip->transprob, scip->tree, success) );
    
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.107 2004/02/05 14:12:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.108 2004/02/25 16:49:56 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1205,15 +1205,6 @@ CONS* SCIPfindCons(
 /**@name Local Subproblem Methods */
 /**@{ */
 
-/** adds constraint locally to the active node (and all of its subnodes), even if it is a global constraint;
- *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
- */
-extern
-RETCODE SCIPaddConsLocal(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to add */
-   );
-
 /** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
  *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
  */
@@ -1224,13 +1215,13 @@ RETCODE SCIPaddConsNode(
    CONS*            cons                /**< constraint to add */
    );
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
- *  if the method is called during problem modification or presolving, the constraint is globally deleted from the problem
+/** adds constraint locally to the active node (and all of its subnodes), even if it is a global constraint;
+ *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
  */
 extern
-RETCODE SCIPdisableConsLocal(
+RETCODE SCIPaddConsLocal(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to disable */
+   CONS*            cons                /**< constraint to add */
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
@@ -1238,6 +1229,15 @@ extern
 RETCODE SCIPdisableConsNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to disable constraint in */
+   CONS*            cons                /**< constraint to disable */
+   );
+
+/** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
+ *  if the method is called during problem modification or presolving, the constraint is globally deleted from the problem
+ */
+extern
+RETCODE SCIPdisableConsLocal(
+   SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint to disable */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.4 2004/02/04 17:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.5 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -35,22 +35,22 @@
 /** primal heuristics data */
 struct Heur
 {
+   Longint          ncalls;             /**< number of times, this heuristic was called */
+   Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
    char*            name;               /**< name of primal heuristic */
    char*            desc;               /**< description of primal heuristic */
-   char             dispchar;           /**< display character of primal heuristic */
-   int              priority;           /**< priority of the primal heuristic */
-   int              freq;               /**< frequency for calling primal heuristic */
-   int              freqofs;            /**< frequency offset for calling primal heuristic */
    DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */
    DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    HEURDATA*        heurdata;           /**< primal heuristics local data */
    CLOCK*           clock;              /**< heuristic execution time */
-   Longint          ncalls;             /**< number of times, this heuristic was called */
-   Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
+   int              priority;           /**< priority of the primal heuristic */
+   int              freq;               /**< frequency for calling primal heuristic */
+   int              freqofs;            /**< frequency offset for calling primal heuristic */
    Bool             pseudonodes;        /**< call heuristic at nodes where only a pseudo solution exist? */
    Bool             initialized;        /**< is primal heuristic initialized? */
+   char             dispchar;           /**< display character of primal heuristic */
 };
 
 

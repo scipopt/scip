@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.3 2004/02/04 17:27:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -39,13 +39,13 @@
  */
 struct NodePQ
 {
-   NODESEL*         nodesel;            /**< node selector used for sorting the nodes in the queue */
-   NODE**           slots;              /**< array of element slots */
-   int              len;                /**< number of used element slots */
-   int              size;               /**< total number of available element slots */
-   NODE*            lowerboundnode;     /**< node with minimal lower bound, or NULL if not available */
    Real             lowerboundsum;      /**< sum of lower bounds of all nodes in the queue */
    Real             lowerbound;         /**< minimal lower bound value of all nodes in the queue */
+   NODESEL*         nodesel;            /**< node selector used for sorting the nodes in the queue */
+   NODE**           slots;              /**< array of element slots */
+   NODE*            lowerboundnode;     /**< node with minimal lower bound, or NULL if not available */
+   int              len;                /**< number of used element slots */
+   int              size;               /**< total number of available element slots */
    int              nlowerbounds;       /**< number of nodes in the queue with minimal lower bound (0 if invalid) */
    Bool             validlowerbound;    /**< is lower bound value valid? */
 };
@@ -55,14 +55,14 @@ struct Nodesel
 {
    char*            name;               /**< name of node selector */
    char*            desc;               /**< description of node selector */
-   int              stdpriority;        /**< priority of the node selector in standard mode */
-   int              memsavepriority;    /**< priority of the node selector in memory saving mode */
    DECL_NODESELFREE ((*nodeselfree));   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit));   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialize node selector */
    DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
    NODESELDATA*     nodeseldata;        /**< node selector data */
+   int              stdpriority;        /**< priority of the node selector in standard mode */
+   int              memsavepriority;    /**< priority of the node selector in memory saving mode */
    Bool             lowestboundfirst;   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    Bool             initialized;        /**< is node selector initialized? */
 };

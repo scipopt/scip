@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.6 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.7 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -36,16 +36,6 @@
 /** problem and runtime specific statistics */
 struct Stat
 {
-   CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
-   CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
-   CLOCK*           primallptime;       /**< primal LP solution time */
-   CLOCK*           duallptime;         /**< dual LP solution time */
-   CLOCK*           strongbranchtime;   /**< strong branching time */
-   CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
-   CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
-   CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
-   CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
-   HISTORY*         glblphistory;       /**< average branching history for downwards and upwards branching on LP */
    Longint          nlpiterations;      /**< number of simplex iterations (primal + dual) */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
@@ -61,6 +51,16 @@ struct Stat
    Longint          lastdivenode;       /**< last node where LP diving was applied */
    Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    Longint          nholechgs;          /**< total number of hole changes generated in the tree */
+   CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
+   CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
+   CLOCK*           primallptime;       /**< primal LP solution time */
+   CLOCK*           duallptime;         /**< dual LP solution time */
+   CLOCK*           strongbranchtime;   /**< strong branching time */
+   CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
+   CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
+   CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
+   CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
+   HISTORY*         glblphistory;       /**< average branching history for downwards and upwards branching on LP */
    int              nvaridx;            /**< number of used variable indices */
    int              ncolidx;            /**< number of used column indices */
    int              nrowidx;            /**< number of used row indices */

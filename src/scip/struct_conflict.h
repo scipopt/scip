@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.3 2004/02/04 17:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -41,35 +41,36 @@ struct Conflicthdlr
 {
    char*            name;               /**< name of conflict handler */
    char*            desc;               /**< description of conflict handler */
-   int              priority;           /**< priority of the conflict handler */
    DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
    DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
    DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */
    DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
    CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
+   int              priority;           /**< priority of the conflict handler */
    Bool             initialized;        /**< is conflict handler initialized? */
 };
 
 /** conflict analysis data structure for propagation conflicts */
 struct Conflict
 {
+   Longint          ncalls;             /**< number of calls to propagation conflict analysis */
+   Longint          nconflicts;         /**< number of valid conflicts detected in propagation conflict analysis */
    CLOCK*           analyzetime;        /**< time used for propagation conflict analysis */
    PQUEUE*          varqueue;           /**< unprocessed conflict variables */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
    int              conflictvarssize;   /**< size of conflictvars array */
    int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
-   Longint          ncalls;             /**< number of calls to propagation conflict analysis */
-   Longint          nconflicts;         /**< number of valid conflicts detected in propagation conflict analysis */
+   int              count;              /**< conflict set counter to label conflict variables with */
 };
 
 /** conflict analysis data structure for infeasible LP conflicts */
 struct LPConflict
 {
-   CLOCK*           analyzetime;        /**< time used for infeasible LP conflict analysis */
-   LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
    Longint          ncalls;             /**< number of calls to infeasible LP conflict analysis */
    Longint          nconflicts;         /**< number of valid conflicts detected in infeasible LP conflict analysis */
    Longint          nlpiterations;      /**< total number of iterations used for solving alternative LPs */
+   CLOCK*           analyzetime;        /**< time used for infeasible LP conflict analysis */
+   LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
 };
 
 

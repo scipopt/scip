@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.12 2004/02/04 17:27:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.13 2004/02/25 16:49:53 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -35,6 +35,7 @@
 #include "type_lp.h"
 #include "type_var.h"
 #include "type_prob.h"
+#include "type_tree.h"
 #include "type_conflict.h"
 #include "type_scip.h"
 #include "pub_conflict.h"
@@ -87,6 +88,7 @@ extern
 RETCODE SCIPconflicthdlrExec(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP*            scip,               /**< SCIP data structure */   
+   NODE*            node,               /**< node to add conflict constraint to */
    VAR**            conflictvars,       /**< variables of the conflict set */
    int              nconflictvars,      /**< number of variables in the conflict set */
    Bool             resolved,           /**< is the conflict set already used to create a constraint? */
@@ -146,6 +148,7 @@ RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
    SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -199,6 +202,7 @@ RETCODE SCIPlpconflictAnalyze(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    CONFLICT*        conflict,           /**< conflict analysis data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */

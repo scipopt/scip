@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.29 2004/02/05 14:12:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.30 2004/02/25 16:49:53 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -108,6 +108,7 @@
 #include "lp.h"
 #include "var.h"
 #include "prob.h"
+#include "tree.h"
 #include "scip.h"
 #include "conflict.h"
 #include "cons.h"
@@ -290,6 +291,7 @@ RETCODE SCIPconflicthdlrExit(
 RETCODE SCIPconflicthdlrExec(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP*            scip,               /**< SCIP data structure */   
+   NODE*            node,               /**< node to add conflict constraint to */
    VAR**            conflictvars,       /**< variables of the conflict set */
    int              nconflictvars,      /**< number of variables in the conflict set */
    Bool             resolved,           /**< is the conflict set already used to create a constraint? */
@@ -304,7 +306,7 @@ RETCODE SCIPconflicthdlrExec(
    *result = SCIP_DIDNOTRUN;
    if( conflicthdlr->conflictexec != NULL )
    {
-      CHECK_OKAY( conflicthdlr->conflictexec(scip, conflicthdlr, conflictvars, nconflictvars, resolved, result) );
+      CHECK_OKAY( conflicthdlr->conflictexec(scip, conflicthdlr, node, conflictvars, nconflictvars, resolved, result) );
 
       if( *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTFIND
@@ -448,6 +450,7 @@ RETCODE SCIPconflictCreate(
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvarssize = 0;
    (*conflict)->nconflictvars = 0;
+   (*conflict)->count = 0;
    (*conflict)->ncalls = 0;
    (*conflict)->nconflicts = 0;
    
@@ -533,6 +536,7 @@ static
 RETCODE conflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
    SET*             set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch and bound tree */
    int              maxsize,            /**< maximal size of conflict set */
    Bool*            success             /**< pointer to store whether the conflict set is valid */
    )
@@ -543,6 +547,7 @@ RETCODE conflictAnalyze(
    CONS* infercons;
 
    assert(conflict != NULL);
+   assert(tree != NULL);
    assert(success != NULL);
 
    debugMessage("analyzing conflict with %d conflict candidates (maxsize=%d)\n",
@@ -556,6 +561,9 @@ RETCODE conflictAnalyze(
       errorMessage("no conflict variables to analyze\n");
       return SCIP_INVALIDDATA;
    }
+
+   /* increase the conflict set counter, such that variables of new conflict set are labeled with this new counter */
+   conflict->count++;
 
    /* clear the conflict set */
    conflict->nconflictvars = 0;
@@ -620,6 +628,7 @@ RETCODE conflictAnalyze(
             CHECK_OKAY( conflictEnsureConflictvarsMem(conflict, set, conflict->nconflictvars+1) );
             conflict->conflictvars[conflict->nconflictvars] = var;
             conflict->nconflictvars++;
+            var->conflictsetcount = conflict->count;
          }
       }
 
@@ -630,7 +639,13 @@ RETCODE conflictAnalyze(
    /* if a valid conflict set was found, call the conflict handlers */
    if( var == NULL )
    {
+      NODE* node;
+      BOUNDCHG* boundchgs;
       RESULT result;
+      int nboundchgs;
+      int nbranchingvars;
+      int d;
+      int b;
       int h;
 
       assert(conflict->conflictvars != NULL);
@@ -638,13 +653,68 @@ RETCODE conflictAnalyze(
 
       debugMessage(" -> found conflict set of size %d/%d\n", conflict->nconflictvars, maxsize);
 
+      /* identify the depth, at which the conflict clause should be added:
+       * - if the branching rule operates on variables only, and if all branching variables up to a certain
+       *   depth level are member of the conflict, the conflict clause can only be violated in the subtree
+       *   of the node at that depth, because in all other nodes, at least one of these branching variables
+       *   takes a different value, such that the conflict clause is feasible
+       * - if there is at least one branching variable in a node, we assume, that this branching was performed
+       *   on variables, and that the siblings of this node are disjunct w.r.t. the branching variables' fixings
+       * - the variables in the conflict set are labeled with the current conflict set counter
+       * - there are no branching variables in the root node, so we can start with depth level 1
+       */
+      for( d = 1; d < tree->pathlen; ++d )
+      {
+         node = tree->path[d];
+         assert(node != NULL);
+
+         /* if node has no domain changes, the branching was not performed on variables */
+         if( node->domchg == NULL )
+            break;
+
+         /* scan the bound changes of the current depth level: branchings are always first entries */
+         boundchgs = node->domchg->domchgbound.boundchgs;
+         nboundchgs = node->domchg->domchgbound.nboundchgs;
+         nbranchingvars = 0;
+         for( b = 0; b < nboundchgs; ++b )
+         {
+            var = boundchgs[b].var;
+            if( SCIPvarGetBoundchgType(var) != SCIP_BOUNDCHGTYPE_BRANCHING )
+               break;
+            if( var->conflictsetcount != conflict->count )
+            {
+               /* the branching variable is not member of the conflict set: abort at this depth level */
+               nbranchingvars = 0;
+               break;
+            }
+            nbranchingvars++;
+         }
+
+         /* break, if a branching variable not in the conflict set was found, or no branching variables exist,
+          * which probably means, that this branching was not operating on variables
+          */
+         if( nbranchingvars == 0 )
+            break;
+      }
+
+      /* now, d is the depth level of the first node, that has non-variable branching or a branching variable
+       * not in the conflict set; this means, the siblings of the node may benefit from the conflict clause,
+       * and the clause should be added to the node's parent, i.e. at depth level d-1
+       */
+      assert(1 <= d && d <= tree->pathlen);
+      debugMessage(" -> conflict found at depth %d is active in depth %d\n", tree->pathlen-1, d-1);
+
+      /* if all branching variables are in the conflict set, the conflict clause is of no use */
+      if( d == tree->pathlen )
+         return SCIP_OKAY;
+
       /* sort conflict handlers by priority */
       SCIPsetSortConflicthdlrs(set);
 
       /* call conflict handlers to create a conflict constraint */
       for( h = 0; h < set->nconflicthdlrs; ++h )
       {
-         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, 
+         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d-1], 
                         conflict->conflictvars, conflict->nconflictvars, *success, &result) );
          *success = *success || (result == SCIP_CONSADDED);
       }
@@ -661,6 +731,7 @@ RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
    SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
@@ -694,7 +765,7 @@ RETCODE SCIPconflictAnalyze(
    conflict->ncalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, &valid) );
+   CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, &valid) );
 
    /* check, if a conflict constraint was created */
    if( valid )
@@ -1022,6 +1093,7 @@ RETCODE lpconflictAnalyzeAltLP(
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    CONFLICT*        conflict,           /**< conflict analysis data */
    int              maxsize,            /**< maximal size of conflict set */
@@ -1132,7 +1204,7 @@ RETCODE lpconflictAnalyzeAltLP(
          if( valid )
          {
             /* analyze the conflict set, and create a conflict constraint on success */
-            CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
+            CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, success) );
          }
       }
       
@@ -1161,6 +1233,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    CONFLICT*        conflict,           /**< conflict analysis data */
    int              maxsize,            /**< maximal size of conflict set */
@@ -1354,7 +1427,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
          debugMessage("farkas conflict analysis removed %d fixings\n", nremoved);
 
          /* analyze the conflict set, and create a conflict constraint on success */
-         CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
+         CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, success) );
       }
    }
 
@@ -1372,6 +1445,7 @@ RETCODE lpconflictAnalyzeDualsol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    CONFLICT*        conflict,           /**< conflict analysis data */
    int              maxsize,            /**< maximal size of conflict set */
@@ -1690,7 +1764,7 @@ RETCODE lpconflictAnalyzeDualsol(
          debugMessage("dual conflict analysis removed %d of %d fixings\n", nremoved, nfixings);
 
          /* analyze the conflict set, and create a conflict constraint on success */
-         CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
+         CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, success) );
 
          /* free the buffer for the sorted binary variables */
          SCIPsetFreeBufferArray(set, &binvarscores);
@@ -1715,6 +1789,7 @@ RETCODE SCIPlpconflictAnalyze(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    CONFLICT*        conflict,           /**< conflict analysis data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
@@ -1758,7 +1833,7 @@ RETCODE SCIPlpconflictAnalyze(
 
 #if 0
    /* analyze conflict with alternative polyhedron */
-   CHECK_OKAY( lpconflictAnalyzeAltLP(lpconflict, memhdr, set, stat, lp, conflict, maxsize, &valid) );
+   CHECK_OKAY( lpconflictAnalyzeAltLP(lpconflict, memhdr, set, stat, tree, lp, conflict, maxsize, &valid) );
 #else
    /* if objective limit was reachted, solve LP to the optimum to get a better dual starting bound */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
@@ -1777,11 +1852,11 @@ RETCODE SCIPlpconflictAnalyze(
    /* analyze conflict with dual farkas or dual solution */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      CHECK_OKAY( lpconflictAnalyzeDualfarkas(lpconflict, memhdr, set, stat, prob, lp, conflict, maxsize, &valid) );
+      CHECK_OKAY( lpconflictAnalyzeDualfarkas(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, maxsize, &valid) );
    }
    else
    {
-      CHECK_OKAY( lpconflictAnalyzeDualsol(lpconflict, memhdr, set, stat, prob, lp, conflict, maxsize, &valid) );
+      CHECK_OKAY( lpconflictAnalyzeDualsol(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, maxsize, &valid) );
    }
 #endif
    

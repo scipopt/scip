@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.88 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.89 2004/02/25 16:49:56 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -667,7 +667,7 @@ RETCODE solveNodeLP(
    /* analyze an infeasible LP */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
    {
-      CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, memhdr, set, stat, prob, lp, conflict, NULL) );
+      CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, NULL) );
    }
 
    return SCIP_OKAY;

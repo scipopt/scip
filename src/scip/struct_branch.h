@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.4 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.5 2004/02/25 16:49:56 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -51,9 +51,14 @@ struct BranchCand
 /** branching rule */
 struct Branchrule
 {
+   Longint          nlpcalls;           /**< number of times, this branching rule was called on an LP solution */
+   Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
+   Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */
+   Longint          ncutsfound;         /**< number of cutting planes found so far by this branching rule */
+   Longint          ndomredsfound;      /**< number of domain reductions found so far by this branching rule */
+   Longint          nchildren;          /**< number of children created so far by this branching rule */
    char*            name;               /**< name of branching rule */
    char*            desc;               /**< description of branching rule */
-   int              priority;           /**< priority of the branching rule */
    DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
    DECL_BRANCHINIT  ((*branchinit));    /**< initialize branching rule */
    DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialize branching rule */
@@ -61,12 +66,7 @@ struct Branchrule
    DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
    CLOCK*           clock;              /**< branching rule execution time */
-   Longint          nlpcalls;           /**< number of times, this branching rule was called on an LP solution */
-   Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
-   Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */
-   Longint          ncutsfound;         /**< number of cutting planes found so far by this branching rule */
-   Longint          ndomredsfound;      /**< number of domain reductions found so far by this branching rule */
-   Longint          nchildren;          /**< number of children created so far by this branching rule */
+   int              priority;           /**< priority of the branching rule */
    Bool             initialized;        /**< is branching rule initialized? */
 };
 

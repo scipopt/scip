@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_paramset.h,v 1.3 2004/02/05 14:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_paramset.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_paramset.h
  * @brief  datastructures for handling parameter settings
@@ -55,22 +55,22 @@ typedef struct IntParam INTPARAM;
 /** data for Longint parameters */
 struct LongintParam
 {
-   Longint*         valueptr;           /**< pointer to store the current parameter value, or NULL */
    Longint          curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    Longint          defaultvalue;       /**< default value of the parameter */
    Longint          minvalue;           /**< minimum value for parameter */
    Longint          maxvalue;           /**< maximum value for parameter */
+   Longint*         valueptr;           /**< pointer to store the current parameter value, or NULL */
 };
 typedef struct LongintParam LONGINTPARAM;
 
 /** data for Real parameters */
 struct RealParam
 {
-   Real*            valueptr;           /**< pointer to store the current parameter value, or NULL */
    Real             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    Real             defaultvalue;       /**< default value of the parameter */
    Real             minvalue;           /**< minimum value for parameter */
    Real             maxvalue;           /**< maximum value for parameter */
+   Real*            valueptr;           /**< pointer to store the current parameter value, or NULL */
 };
 typedef struct RealParam REALPARAM;
 
@@ -78,9 +78,9 @@ typedef struct RealParam REALPARAM;
 struct CharParam
 {
    char*            valueptr;           /**< pointer to store the current parameter value, or NULL */
+   char*            allowedvalues;      /**< array with possible parameter values, or NULL if not restricted */
    char             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    char             defaultvalue;       /**< default value of the parameter */
-   char*            allowedvalues;      /**< array with possible parameter values, or NULL if not restricted */
 };
 typedef struct CharParam CHARPARAM;
 

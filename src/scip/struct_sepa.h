@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.3 2004/02/04 17:27:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.4 2004/02/25 16:49:58 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -35,19 +35,19 @@
 /** separators data */
 struct Sepa
 {
+   Longint          lastsepanode;       /**< last node where this separator was called */
+   Longint          ncalls;             /**< number of times, this separator was called */
+   Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
    char*            name;               /**< name of separator */
    char*            desc;               /**< description of separator */
-   int              priority;           /**< priority of the separator */
-   int              freq;               /**< frequency for calling separator */
    DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */
    DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
    SEPADATA*        sepadata;           /**< separators local data */
    CLOCK*           clock;              /**< separation time */
-   Longint          lastsepanode;       /**< last node where this separator was called */
-   Longint          ncalls;             /**< number of times, this separator was called */
-   Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
+   int              priority;           /**< priority of the separator */
+   int              freq;               /**< frequency for calling separator */
    int              ncallsatnode;       /**< number of times, this separator was called at the current node */
    int              ncutsfoundatnode;   /**< number of cutting planes found at the current node */
    Bool             initialized;        /**< is separator initialized? */

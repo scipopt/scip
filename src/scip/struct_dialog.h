@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.2 2004/02/04 17:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.3 2004/02/25 16:49:57 bzfpfend Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -39,13 +39,13 @@ struct Dialog
    DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
    char*            name;               /**< name of dialog: command name appearing in parent's dialog menu */
    char*            desc;               /**< description of dialog used if description output method is NULL */
-   Bool             issubmenu;          /**< is the dialog a submenu? */
    DIALOG*          parent;             /**< parent dialog of dialog */
    DIALOG**         subdialogs;         /**< sub dialogs of dialog */
+   DIALOGDATA*      dialogdata;         /**< user defined dialog data */
    int              nsubdialogs;        /**< number of sub dialogs */
    int              subdialogssize;     /**< size of subdialogs array */
    int              nuses;              /**< number of times, the dialog is used */
-   DIALOGDATA*      dialogdata;         /**< user defined dialog data */
+   Bool             issubmenu;          /**< is the dialog a submenu? */
 };
 
 /** dialog handler */

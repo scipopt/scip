@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.54 2004/02/05 14:12:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.55 2004/02/25 16:49:55 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2272,7 +2272,7 @@ RETCODE SCIPlpiGetIntpar(
       *ival = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
       break;
    default:
-      return SCIP_LPERROR;
+      return SCIP_PARAMETERUNKNOWN;
    }
 
    return SCIP_OKAY;
@@ -2337,7 +2337,7 @@ RETCODE SCIPlpiSetIntpar(
       setIntParam(lpi, CPX_PARAM_ITLIM, ival);
       break;
    default:
-      return SCIP_LPERROR;
+      return SCIP_PARAMETERUNKNOWN;
    }
 
    return SCIP_OKAY;
@@ -2373,7 +2373,7 @@ RETCODE SCIPlpiGetRealpar(
       *dval = getDblParam(lpi, CPX_PARAM_TILIM);
       break;
    default:
-      return SCIP_LPERROR;
+      return SCIP_PARAMETERUNKNOWN;
    }
    
    return SCIP_OKAY;
@@ -2408,7 +2408,7 @@ RETCODE SCIPlpiSetRealpar(
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
    default:
-      return SCIP_LPERROR;
+      return SCIP_PARAMETERUNKNOWN;
    }
 
    return SCIP_OKAY;

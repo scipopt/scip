@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.87 2004/02/05 14:12:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.88 2004/02/25 16:49:53 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4632,7 +4632,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
    }
 
    /* add constraint to SCIP */
-   CHECK_OKAY( SCIPaddCons(scip, cons) );
+   CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
    *result = SCIP_CONSADDED;

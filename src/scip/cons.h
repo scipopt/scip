@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.57 2004/02/05 14:12:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.58 2004/02/25 16:49:53 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -242,14 +242,16 @@ RETCODE SCIPconssetchgFree(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** adds constraint addition to constraint set changes, and captures constraint */
+/** adds constraint addition to constraint set changes, and captures constraint; activates constraint if the
+ *  constraint set change data is currently active
+ */
 extern
 RETCODE SCIPconssetchgAddAddedCons(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   NODE*            node,               /**< node that the constraint set change belongs to */
-   CONS*            cons                /**< added constraint */
+   CONS*            cons,               /**< added constraint */
+   Bool             active              /**< is the constraint set change currently active? */
    );
 
 /** adds constraint disabling to constraint set changes, and captures constraint */

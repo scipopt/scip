@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.63 2004/02/06 12:53:43 bzfpfend Exp $
+# $Id: Makefile,v 1.64 2004/02/25 16:49:52 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -69,7 +69,7 @@ DOXY		=	doxygen
 FLAGS		=	-I$(SRCDIR)
 CFLAGS		=	
 CXXFLAGS	=	
-LDFLAGS		=	-lpthread -lm
+LDFLAGS		=	-lpthread -lm -lz
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -146,7 +146,15 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLIB		=	soplexdbg.$(OSTYPE).$(ARCH)
 LPILIBOBJ	=	lpi_spxdbg.o bitencode.o
-LPILIBSRC	=	lpi_spxdbg.cpp bitencode.c
+LPILIBSRC	=	src/lpi_spxdbg.cpp src/bitencode.c
+endif
+
+ifeq ($(LPS),spx121)
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/spx121inc 
+LPSLIB		=	soplex121.$(OSTYPE).$(ARCH)
+LPILIBOBJ	=	lpi_spx121.o bitencode.o
+LPILIBSRC	=	src/lpi_spx121.cpp src/bitencode.c
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
