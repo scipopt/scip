@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.108 2004/08/25 14:56:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.109 2004/08/31 16:53:54 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1787,6 +1787,7 @@ void SCIPvarPrint(
    if( file == NULL )
       file = stdout;
 
+   /* type of variable */
    switch( var->vartype )
    {
    case SCIP_VARTYPE_BINARY:
@@ -1806,8 +1807,14 @@ void SCIPvarPrint(
       abort();
    }
 
-   fprintf(file, " <%s>: ", var->name);
+   /* name */
+   fprintf(file, " <%s>:", var->name);
 
+   /* objective value */
+   fprintf(file, " obj=%g", var->obj);
+
+   /* bounds */
+   fprintf(file, ", bounds=");
    if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
       fprintf(file, " [-inf,");
    else
@@ -1816,9 +1823,11 @@ void SCIPvarPrint(
       fprintf(file, "+inf]");
    else
       fprintf(file, "%g]", var->glbdom.ub);
-   
+
+   /* holes */
    /**@todo print holes */
 
+   /* fixings and aggregations */
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1827,18 +1836,18 @@ void SCIPvarPrint(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      fprintf(file, " == %g", var->glbdom.lb);
+      fprintf(file, ", fixed: %g", var->glbdom.lb);
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      fprintf(file, " ==");
+      fprintf(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
          fprintf(file, " %g", var->data.aggregate.constant);
       fprintf(file, " %+g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      fprintf(file, " ==");
+      fprintf(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
          fprintf(file, " %g", var->data.multaggr.constant);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
@@ -1846,7 +1855,7 @@ void SCIPvarPrint(
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      fprintf(file, " == %g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
+      fprintf(file, ", negated: %g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
       break;
 
    default:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.27 2004/08/24 11:58:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.28 2004/08/31 16:53:53 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -282,8 +282,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
 #endif
 
                      /* try to scale the cut to integral values */
-                     CHECK_OKAY( SCIPmakeRowRational(scip, cut, maxdnom, maxscale, &success) );
-                     
+                     CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, maxdnom, maxscale, &success) );
+
                      /* if scaling was successful, add the cut */
                      if( success )
                      {

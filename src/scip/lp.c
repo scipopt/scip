@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.138 2004/08/25 15:40:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.139 2004/08/31 16:53:52 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3326,7 +3326,8 @@ void rowCalcNorms(
 }
 
 /** scales row with given factor, and rounds coefficients to integers if close enough;
- *  the constant is automatically moved to the sides
+ *  the constant is automatically moved to the sides;
+ *  if the row's activity is proven to be integral, the sides are automatically rounded to the next integer
  */
 static
 RETCODE rowScale(
@@ -3366,70 +3367,92 @@ RETCODE rowScale(
       roundtol = MIN(roundtol, 1e-03);
    }
 
-   /* scale the row coefficients, thereby recalculating whether the row's activity is always integral;
-    * if the row coefficients are rounded to the nearest integer value, calculate the maximal activity difference,
-    * this rounding can lead to
-    */
    mindelta = 0.0;
    maxdelta = 0.0;
-   row->integral = TRUE;
-   for( c = 0; c < row->len; ++c )
+
+   /* don't scale the row, if the scalar is 1.0 */
+   if( SCIPsetIsEQ(set, scaleval, 1.0) )
    {
-      col = row->cols[c];
-      val = row->vals[c];
-      assert(!SCIPsetIsZero(set, val));
+      scaleval = 1.0;
 
-      /* get local or global bounds for column, depending on the local or global feasibility of the row */
-      if( row->local )
+      /* only check row for integrality */
+      row->integral = TRUE;
+      for( c = 0; c < row->len; ++c )
       {
-         lb = col->lb;
-         ub = col->ub;
-      }
-      else
-      {
-         lb = SCIPvarGetLbGlobal(col->var);
-         ub = SCIPvarGetUbGlobal(col->var);
-      }
-
-      /* calculate scaled coefficient */
-      newval = val * scaleval;
-      if( EPSISINT(newval, roundtol) )
-      {
-         intval = EPSFLOOR(newval, roundtol);
-         if( intval < newval )
+         col = row->cols[c];
+         val = row->vals[c];
+         if( !SCIPcolIsIntegral(col) || !SCIPsetIsIntegral(set, val) )
          {
-            mindelta += (intval - newval)*ub;
-            maxdelta += (intval - newval)*lb;
+            row->integral = FALSE;
+            break;
+         }
+      }
+   }
+   else
+   {
+      /* scale the row coefficients, thereby recalculating whether the row's activity is always integral;
+       * if the row coefficients are rounded to the nearest integer value, calculate the maximal activity difference,
+       * this rounding can lead to
+       */
+      row->integral = TRUE;
+      for( c = 0; c < row->len; ++c )
+      {
+         col = row->cols[c];
+         val = row->vals[c];
+         assert(!SCIPsetIsZero(set, val));
+
+         /* get local or global bounds for column, depending on the local or global feasibility of the row */
+         if( row->local )
+         {
+            lb = col->lb;
+            ub = col->ub;
          }
          else
          {
-            mindelta += (intval - newval)*lb;
-            maxdelta += (intval - newval)*ub;
+            lb = SCIPvarGetLbGlobal(col->var);
+            ub = SCIPvarGetUbGlobal(col->var);
          }
-         newval = intval;
+
+         /* calculate scaled coefficient */
+         newval = val * scaleval;
+         if( EPSISINT(newval, roundtol) )
+         {
+            intval = EPSFLOOR(newval, roundtol);
+            if( intval < newval )
+            {
+               mindelta += (intval - newval)*ub;
+               maxdelta += (intval - newval)*lb;
+            }
+            else
+            {
+               mindelta += (intval - newval)*lb;
+               maxdelta += (intval - newval)*ub;
+            }
+            newval = intval;
+         }
+         assert(!SCIPsetIsZero(set, newval));
+
+         row->vals[c] = newval;
+         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, newval);
+
+         /* update the norms of the row */
+         rowDelNorms(row, set, -1, val);
+         rowAddNorms(row, set, -1, newval);
+
+         /* update the value in the corresponding column vector, if already linked */
+         pos = row->linkpos[c];
+         if( pos >= 0 )
+         {
+            assert(col->rows != NULL);
+            assert(col->vals != NULL);
+            assert(col->rows[pos] == row);
+            assert(SCIPsetIsEQ(set, col->vals[pos], val));
+            col->vals[pos] = newval;
+         }
+
+         /* mark the coefficient changed */
+         coefChanged(row, col, lp);
       }
-      assert(!SCIPsetIsZero(set, newval));
-
-      row->vals[c] = newval;
-      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, newval);
-
-      /* update the norms of the row */
-      rowDelNorms(row, set, -1, val);
-      rowAddNorms(row, set, -1, newval);
-
-      /* update the value in the corresponding column vector, if already linked */
-      pos = row->linkpos[c];
-      if( pos >= 0 )
-      {
-         assert(col->rows != NULL);
-         assert(col->vals != NULL);
-         assert(col->rows[pos] == row);
-         assert(SCIPsetIsEQ(set, col->vals[pos], val));
-         col->vals[pos] = newval;
-      }
-
-      /* mark the coefficient changed */
-      coefChanged(row, col, lp);
    }
 
    /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
@@ -3947,15 +3970,16 @@ RETCODE SCIProwChgRhs(
 #define DIVTOL      (1e+06*set->epsilon)
 #define TWOMULTTOL  (1e+03*set->epsilon)
 #define RATIONALTOL (1e+02*set->epsilon)
-/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
-RETCODE SCIProwMakeRational(
+/** tries to find a value, such that all row coefficients, if scaled with this value become integral */
+RETCODE SCIProwCalcIntegralScalar(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
-   Real             maxscale,           /**< maximal value to scale row with */
-   Bool*            success             /**< stores whether row could be made rational */
+   Real             maxscale,           /**< maximal allowed scalar */
+   Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   Bool*            success             /**< stores whether returned value is valid */
    )
 {
    COL* col;
@@ -3974,11 +3998,15 @@ RETCODE SCIProwMakeRational(
    assert(maxdnom >= 1);
    assert(success != NULL);
 
+   if( intscalar != NULL )
+      *intscalar = SCIP_INVALID;
    *success = FALSE;
 
    /* nothing to do, if row is empty */
    if( row->len == 0 )
    {
+      if( intscalar != NULL )
+         *intscalar = 1.0;
       *success = TRUE;
       return SCIP_OKAY;
    }
@@ -4043,14 +4071,16 @@ RETCODE SCIProwMakeRational(
       {
          /* make row coefficients integral by dividing them by the smallest coefficient */
          assert(scaleval <= maxscale);
-         CHECK_OKAY( rowScale(row, set, stat, lp, scaleval, DIVTOL) );
+         if( intscalar != NULL )
+            *intscalar = scaleval;
          *success = TRUE;
       }
       else if( twomult )
       {
          /* make row coefficients integral by multiplying them with a power of 2 */
          assert(twomultval <= maxscale);
-         CHECK_OKAY( rowScale(row, set, stat, lp, twomultval, TWOMULTTOL) );
+         if( intscalar != NULL )
+            *intscalar = twomultval;
          *success = TRUE;
       }
       else
@@ -4099,32 +4129,45 @@ RETCODE SCIProwMakeRational(
          {
             /* make row coefficients integral by multiplying them with the smallest common multiple of the denominators */
             assert((Real)scm/(Real)gcd <= maxscale);
-            CHECK_OKAY( rowScale(row, set, stat, lp, (Real)scm/(Real)gcd, RATIONALTOL) );
+            if( intscalar != NULL )
+               *intscalar = (Real)scm/(Real)gcd;
             *success = TRUE;
          }
       }
    }
    else
    {
-      /* all coefficients are integral: we have nothing to do except moving the constant to the sides */
-      CHECK_OKAY( SCIProwChgLhs(row, set, lp, row->lhs - row->constant) );
-      CHECK_OKAY( SCIProwChgRhs(row, set, lp, row->rhs - row->constant) );
-      CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, 0.0) );
+      /* all coefficients are already integral */
+      if( intscalar != NULL )
+         *intscalar = 1.0;
       *success = TRUE;
    }
 
-   /* clean up the row sides */
+   return SCIP_OKAY;
+}
+
+/** tries to scale row, s.t. all coefficients become integral */
+RETCODE SCIProwMakeIntegral(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal value to scale row with */
+   Bool*            success             /**< stores whether row could be made rational */
+   )
+{
+   Real intscalar;
+
+   assert(success != NULL);
+
+   /* calculate scalar to make coefficients integral */
+   CHECK_OKAY( SCIProwCalcIntegralScalar(row, set, stat, lp, maxdnom, maxscale, &intscalar, success) );
+
    if( *success )
    {
-      assert(row->constant == 0.0); /* in rowScale(), the constant should be moved to the sides */
-      if( !contvars )
-      {
-         /* no continuous variables exist in the row, all coefficients of the new row are integral -> round sides */
-         if( !SCIPsetIsInfinity(set, -row->lhs) )
-            row->lhs = SCIPsetCeil(set, row->lhs);
-         if( !SCIPsetIsInfinity(set, row->rhs) )
-            row->rhs = SCIPsetFloor(set, row->rhs);
-      }
+      /* scale the row */
+      CHECK_OKAY( rowScale(row, set, stat, lp, intscalar, DIVTOL) );
    }
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.14 2004/08/31 14:42:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.15 2004/08/31 16:53:53 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -147,7 +147,7 @@ RETCODE addCut(
       
 #if 0 /*????????????????????*/
       /* try to scale the cut to integral values */
-      CHECK_OKAY( SCIPmakeRowRational(scip, cut, 100 /*maxdnom*/, 128 /*maxscale*/, &success) );
+      CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, 100 /*maxdnom*/, 128 /*maxscale*/, &success) );
 #else
       success = TRUE;
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.84 2004/08/10 14:19:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.85 2004/08/31 16:53:53 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -382,9 +382,22 @@ RETCODE SCIProwChgRhs(
    Real             rhs                 /**< new right hand side */
    );
 
-/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
+/** tries to find a value, such that all row coefficients, if scaled with this value become integral */
 extern
-RETCODE SCIProwMakeRational(
+RETCODE SCIProwCalcIntegralScalar(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal allowed scalar */
+   Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   Bool*            success             /**< stores whether returned value is valid */
+   );
+
+/** tries to scale row, s.t. all coefficients become integral */
+extern
+RETCODE SCIProwMakeIntegral(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.159 2004/08/31 14:42:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.160 2004/08/31 16:53:53 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2638,9 +2638,20 @@ RETCODE SCIPaddVarsToRowSameCoef(
    Real             val                 /**< unique value of all coefficients */
    );
 
-/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
+/** tries to find a value, such that all row coefficients, if scaled with this value become integral */
 extern
-RETCODE SCIPmakeRowRational(
+RETCODE SCIPcalcRowIntegralScalar(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal allowed scalar */
+   Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   Bool*            success             /**< stores whether returned value is valid */
+   );
+
+/** tries to scale row, s.t. all coefficients become integral */
+extern
+RETCODE SCIPmakeRowIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */

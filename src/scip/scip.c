@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.200 2004/08/31 14:42:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.201 2004/08/31 16:53:53 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6801,8 +6801,25 @@ RETCODE SCIPaddVarsToRowSameCoef(
    return SCIP_OKAY;
 }
 
-/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
-RETCODE SCIPmakeRowRational(
+/** tries to find a value, such that all row coefficients, if scaled with this value become integral */
+RETCODE SCIPcalcRowIntegralScalar(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal allowed scalar */
+   Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   Bool*            success             /**< stores whether returned value is valid */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcalcRowIntegralScalar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwCalcIntegralScalar(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, intscalar, success) );
+
+   return SCIP_OKAY;
+}
+
+/** tries to scale row, s.t. all coefficients become integral */
+RETCODE SCIPmakeRowIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
@@ -6810,9 +6827,9 @@ RETCODE SCIPmakeRowRational(
    Bool*            success             /**< stores whether row could be made rational */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPmakeRowRational", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPmakeRowIntegral", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwMakeRational(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, success) );
+   CHECK_OKAY( SCIProwMakeIntegral(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, success) );
 
    return SCIP_OKAY;
 }
