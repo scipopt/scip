@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.75 2004/12/06 14:11:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.76 2004/12/10 13:36:26 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -1028,7 +1028,7 @@ Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsNegative(set, val)        ( EPSN(val, (set)->num_epsilon) )
 #define SCIPsetIsIntegral(set, val)        ( EPSISINT(val, (set)->num_epsilon) )
 #define SCIPsetIsScalingIntegral(set, val, scalar)                      \
-   ( EPSISINT((scalar)*(val), MIN(REALABS(scalar), 1.0)*(set)->num_epsilon) )
+   ( EPSISINT((scalar)*(val), MAX(REALABS(scalar), 1.0)*(set)->num_epsilon) )
 #define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->num_epsilon) )
 #define SCIPsetFloor(set, val)             ( EPSFLOOR(val, (set)->num_epsilon) )
 #define SCIPsetCeil(set, val)              ( EPSCEIL(val, (set)->num_epsilon) )

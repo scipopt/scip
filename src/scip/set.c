@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.126 2004/12/10 12:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.127 2004/12/10 13:36:26 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2505,7 +2505,7 @@ Bool SCIPsetIsScalingIntegral(
    assert(set != NULL);
    
    scaledeps = REALABS(scalar);
-   scaledeps = MIN(scaledeps, 1.0);
+   scaledeps = MAX(scaledeps, 1.0);
    scaledeps *= set->num_epsilon;
 
    return EPSISINT(scalar*val, scaledeps);

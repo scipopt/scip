@@ -56,6 +56,7 @@ fixed bugs:
   scaled to an integral value, that are not integral after scaling due to a large scalar that increased the integrality
   gap to a value larger than epsilon
 - fixed wrong assertion in xor constraint handler with switching both watched variables to unwatched
+- removed bug in SCIPisScalingIntegral()
 
 
 SCIP version 0.77
