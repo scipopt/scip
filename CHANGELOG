@@ -13,10 +13,17 @@ interface:
 - changed memory interface (see memory.h), MEMHDR is now called BLKMEM
 - additional parameter "aggregated" in SCIPmultiaggregateVars()
 
+plugins:
+- new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
+  old implementation is now called "objfeaspump"; parameter names have been changed accordingly
+
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
   nodes
 - new parameters heuristics/fixandinfer/proprounds and heuristics/fixandinfer/minfixings
+- default frequency offset of fracdiving heuristic changed to 3
+- default frequency offset of (new) feaspump heuristic changed to 0
+- default frequency offset of objfeaspump heuristic changed to 8
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex

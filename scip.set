@@ -807,40 +807,40 @@ heuristics/coefdiving/maxdiveubquotnosol = 0.1
 heuristics/coefdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <feaspump>
-# [type: int, range: [-2147483648,2147483647], default: -1003000]
-heuristics/feaspump/priority = -1003000
+# [type: int, range: [-2147483648,2147483647], default: -1008000]
+heuristics/feaspump/priority = -1008000
 
 # frequency for calling primal heuristic <feaspump> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/feaspump/freq = 10
 
 # frequency offset for calling primal heuristic <feaspump>
-# [type: int, range: [0,2147483647], default: 3]
-heuristics/feaspump/freqofs = 3
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/feaspump/freqofs = 0
 
 # maximal depth level to call primal heuristic <feaspump> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/feaspump/maxdepth = -1
 
-# minimal relative depth to start diving
-# [type: real, range: [0,1], default: 0]
-heuristics/feaspump/minreldepth = 0
-
-# maximal relative depth to start diving
-# [type: real, range: [0,1], default: 1]
-heuristics/feaspump/maxreldepth = 1
-
 # maximal fraction of diving LP iterations compared to total iteration number
 # [type: real, range: [0,1], default: 0.01]
 heuristics/feaspump/maxlpiterquot = 0.01
 
-# maximal diving depth: number of binary/integer variables times depthfac
-# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
-heuristics/feaspump/depthfac = 0.5
+# maximal number of pumping loops (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/feaspump/maxloops = 2147483647
 
-# maximal diving depth factor if no feasible solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 2]
-heuristics/feaspump/depthfacnosol = 2
+# minimum number of random variables to flip, if a 1-cycle is encountered
+# [type: int, range: [1,2147483647], default: 10]
+heuristics/feaspump/minflips = 10
+
+# maximum length of cycles to be checked explicitly in each round
+# [type: int, range: [1,100], default: 3]
+heuristics/feaspump/cyclelength = 3
+
+# number of iterations until a random perturbation is forced
+# [type: int, range: [1,2147483647], default: 100]
+heuristics/feaspump/perturbfreq = 100
 
 # priority of heuristic <fixandinfer>
 # [type: int, range: [-2147483648,2147483647], default: -500000]
@@ -875,8 +875,8 @@ heuristics/fracdiving/priority = -1002000
 heuristics/fracdiving/freq = 10
 
 # frequency offset for calling primal heuristic <fracdiving>
-# [type: int, range: [0,2147483647], default: 0]
-heuristics/fracdiving/freqofs = 0
+# [type: int, range: [0,2147483647], default: 3]
+heuristics/fracdiving/freqofs = 3
 
 # maximal depth level to call primal heuristic <fracdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -997,6 +997,42 @@ heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet
 # [type: real, range: [0,1.79769313486232e+308], default: 8]
 heuristics/linesearchdiving/maxdiveavgquotnosol = 8
+
+# priority of heuristic <objfeaspump>
+# [type: int, range: [-2147483648,2147483647], default: -1003000]
+heuristics/objfeaspump/priority = -1003000
+
+# frequency for calling primal heuristic <objfeaspump> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/objfeaspump/freq = 10
+
+# frequency offset for calling primal heuristic <objfeaspump>
+# [type: int, range: [0,2147483647], default: 8]
+heuristics/objfeaspump/freqofs = 8
+
+# maximal depth level to call primal heuristic <objfeaspump> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/objfeaspump/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0]
+heuristics/objfeaspump/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/objfeaspump/maxreldepth = 1
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.01]
+heuristics/objfeaspump/maxlpiterquot = 0.01
+
+# maximal diving depth: number of binary/integer variables times depthfac
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+heuristics/objfeaspump/depthfac = 0.5
+
+# maximal diving depth factor if no feasible solution was found yet
+# [type: real, range: [0,1.79769313486232e+308], default: 2]
+heuristics/objfeaspump/depthfacnosol = 2
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]

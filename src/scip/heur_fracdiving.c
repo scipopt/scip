@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.20 2005/01/21 09:16:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.21 2005/01/31 15:21:03 bzfberth Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -34,7 +34,7 @@
 #define HEUR_DISPCHAR         'f'
 #define HEUR_PRIORITY         -1002000
 #define HEUR_FREQ             10
-#define HEUR_FREQOFS          0
+#define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
