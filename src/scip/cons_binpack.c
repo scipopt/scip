@@ -105,6 +105,21 @@ DECL_CONSEXIT(consExitBinpack)
 #endif
 
 
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#if 0
+static
+DECL_CONSSOLSTART(consSolstartBinpack)
+{
+   errorMessage("method of binpack constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consSolstartBinpack NULL
+#endif
+
+
 /** frees specific constraint data */
 #if 0
 static
@@ -412,7 +427,7 @@ RETCODE SCIPincludeConsHdlrBinpack(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeBinpack, consInitBinpack, consExitBinpack,
+                  consFreeBinpack, consInitBinpack, consExitBinpack, consSolstartBinpack,
                   consDeleteBinpack, consTransBinpack, consInitlpBinpack,
                   consSepaBinpack, consEnfolpBinpack, consEnfopsBinpack, consCheckBinpack, 
                   consPropBinpack, consPresolBinpack, consRescvarBinpack,

@@ -79,6 +79,8 @@ DECL_CONSCHECK(consCheckIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
+   debugMessage("Check method of integrality constraint\n");
+
    CHECK_OKAY( SCIPgetVarsData(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
    *result = SCIP_FEASIBLE;
@@ -113,7 +115,7 @@ RETCODE SCIPincludeConsHdlrIntegral(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  NULL, NULL, NULL, 
+                  NULL, NULL, NULL, NULL,
                   NULL, NULL, 
                   NULL, NULL, consEnfolpIntegral, NULL, consCheckIntegral, NULL, NULL, NULL,
                   NULL, NULL,

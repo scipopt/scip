@@ -192,6 +192,7 @@ RETCODE SCIPheurExec(
    const SET*       set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    int              actdepth,           /**< depth of active node */
+   int              lpforkdepth,        /**< depth of the last node with solved LP */
    Bool             actnodehaslp,       /**< is LP being processed in the active node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -219,7 +220,7 @@ RETCODE SCIPheurExec(
        */
       execute = actnodehaslp;
       execute &= (actdepth == 0 && heur->freq >= 0)
-         || (heur->freq > 0 && (actdepth / heur->freq != (actdepth-set->lpsolvefreq) / heur->freq));
+         || (heur->freq > 0 && (actdepth / heur->freq != lpforkdepth / heur->freq));
    }
 
    if( execute )

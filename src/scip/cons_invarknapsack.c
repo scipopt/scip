@@ -105,6 +105,21 @@ DECL_CONSEXIT(consExitInvarknapsack)
 #endif
 
 
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#if 0
+static
+DECL_CONSSOLSTART(consSolstartInvarknapsack)
+{
+   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consSolstartInvarknapsack NULL
+#endif
+
+
 /** frees specific constraint data */
 #if 0
 static
@@ -386,7 +401,7 @@ RETCODE SCIPincludeConsHdlrInvarknapsack(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeInvarknapsack, consInitInvarknapsack, consExitInvarknapsack,
+                  consFreeInvarknapsack, consInitInvarknapsack, consExitInvarknapsack, consSolstartInvarknapsack,
                   consDeleteInvarknapsack, consTransInvarknapsack, consInitlpInvarknapsack,
                   consSepaInvarknapsack, consEnfolpInvarknapsack, consEnfopsInvarknapsack, consCheckInvarknapsack, 
                   consPropInvarknapsack, consPresolInvarknapsack, consRescvarInvarknapsack,

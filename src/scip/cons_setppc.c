@@ -184,9 +184,8 @@ RETCODE conshdlrdataDecVaruses(
 
    /* decrease varuses counter */
    CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), -1) );
-   assert(SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)) >= 0);
-
    /*debugMessage("varuses of <%s>: %d\n", SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));*/
+   assert(SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)) >= 0);
 
    return SCIP_OKAY;
 }
@@ -1168,6 +1167,10 @@ DECL_CONSFREE(consFreeSetppc)
 #define consExitSetppc NULL
 
 
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#define consSolstartSetppc NULL
+
+
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteSetppc)
@@ -1768,7 +1771,6 @@ DECL_CONSPRESOL(consPresolSetppc)
 {
    CONS* cons;
    CONSDATA* consdata;
-   Bool infeasible;
    int c;
 
    assert(conshdlr != NULL);
@@ -1840,8 +1842,16 @@ DECL_CONSPRESOL(consPresolSetppc)
                var = consdata->vars[v];
                if( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && !SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
                {
+                  Bool infeasible;
+
                   CHECK_OKAY( SCIPfixVar(scip, var, 0.0, &infeasible) );
-                  assert(!infeasible);
+                  if( infeasible )
+                  {
+                     debugMessage("setppc constraint <%s>: infeasible fixing <%s> == 0\n",
+                        SCIPconsGetName(cons), SCIPvarGetName(var));
+                     *result = SCIP_CUTOFF;
+                     return SCIP_OKAY;
+                  }
                   (*nfixedvars)++;
                   *result = SCIP_SUCCESS;
                }
@@ -1906,6 +1916,7 @@ DECL_CONSPRESOL(consPresolSetppc)
             else
             {
                VAR* var;
+               Bool infeasible;
                Bool found;
                int v;
                
@@ -1922,7 +1933,13 @@ DECL_CONSPRESOL(consPresolSetppc)
                assert(found);
 
                CHECK_OKAY( SCIPfixVar(scip, var, 1.0, &infeasible) );
-               assert(!infeasible);
+               if( infeasible )
+               {
+                  debugMessage("setppc constraint <%s>: infeasible fixing <%s> == 1\n",
+                     SCIPconsGetName(cons), SCIPvarGetName(var));
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*nfixedvars)++;
                (*ndelconss)++;
@@ -1930,12 +1947,14 @@ DECL_CONSPRESOL(consPresolSetppc)
                continue;
             }
          }
-         else if( consdata->nfixedzeros == consdata->nvars - 2
-            && consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+         else if( consdata->nfixedzeros == consdata->nvars - 2 && consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
          {
             VAR* var;
             VAR* var1;
             VAR* var2;
+            Bool infeasible;
+            Bool redundant;
+            Bool aggregated;
             int v;
 
             /* aggregate variable and delete constraint, if set partitioning constraint consists only of two
@@ -1957,42 +1976,27 @@ DECL_CONSPRESOL(consPresolSetppc)
                }
             }
             assert(var1 != NULL && var2 != NULL);
-            if( SCIPvarGetStatus(var1) != SCIP_VARSTATUS_AGGREGATED )
+
+            /* aggregate binary equality var1 + var2 == 1 */
+            debugMessage("set partitioning constraint <%s>: aggregate <%s> + <%s> == 1\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+            CHECK_OKAY( SCIPaggregateVars(scip, var1, var2, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+            if( infeasible )
             {
-               debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
+               debugMessage("set partitioning constraint <%s>: infeasible aggregation <%s> + <%s> == 1\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
-               CHECK_OKAY( SCIPaggregateVar(scip, var1, var2, -1.0, 1.0, &infeasible) );
-               if( infeasible )
-               {
-                  debugMessage("set partitioning constraint <%s>: infeasible aggregation <%s> == 1 - <%s>\n",
-                     SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
-                  *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
-               }
-               CHECK_OKAY( SCIPdelCons(scip, cons) );
-               (*naggrvars)++;
-               (*ndelconss)++;
-               *result = SCIP_SUCCESS;
-               continue;
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
             }
-            else if( SCIPvarGetStatus(var2) != SCIP_VARSTATUS_AGGREGATED )
+            if( aggregated )
+               (*naggrvars)++;
+            if( redundant )
             {
-               debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
-                  SCIPconsGetName(cons), SCIPvarGetName(var2), SCIPvarGetName(var1));
-               CHECK_OKAY( SCIPaggregateVar(scip, var2, var1, -1.0, 1.0, &infeasible) );
-               if( infeasible )
-               {
-                  debugMessage("set partitioning constraint <%s>: infeasible aggregation <%s> == 1 - <%s>\n",
-                     SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
-                  *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
-               }
                CHECK_OKAY( SCIPdelCons(scip, cons) );
-               (*naggrvars)++;
                (*ndelconss)++;
-               *result = SCIP_SUCCESS;
-               continue;
             }
+            *result = SCIP_SUCCESS;
+            continue;
          }
       }
 
@@ -2101,13 +2105,14 @@ DECL_CONSACTIVE(consActiveSetppc)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPconsIsTransformed(cons));
 
+   debugMessage("activation information for set partitioning / packing / covering constraint <%s>\n",
+      SCIPconsGetName(cons));
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   debugMessage("activation information method of set partitioning / packing / covering constraint handler\n");
 
    /* increase the number of uses for each variable in the constraint */
    for( v = 0; v < consdata->nvars; ++v )
@@ -2131,13 +2136,14 @@ DECL_CONSDEACTIVE(consDeactiveSetppc)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPconsIsTransformed(cons));
 
+   debugMessage("deactivation information for set partitioning / packing / covering constraint <%s>\n",
+      SCIPconsGetName(cons));
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   debugMessage("deactivation information method of set partitioning / packing / covering constraint handler\n");
 
    /* decrease the number of uses for each variable in the constraint */
    for( v = 0; v < consdata->nvars; ++v )
@@ -2426,7 +2432,7 @@ RETCODE SCIPincludeConsHdlrSetppc(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  consFreeSetppc, consInitSetppc, consExitSetppc,
+                  consFreeSetppc, consInitSetppc, consExitSetppc, consSolstartSetppc,
                   consDeleteSetppc, consTransSetppc, 
                   consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
                   consPropSetppc, consPresolSetppc, consRescvarSetppc,

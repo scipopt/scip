@@ -60,6 +60,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< the constraint handler should only be called, if linear constraints exist */
 
 #define TIGHTENBOUNDSFREQ             5 /**< multiplier on propagation frequency, how often the bounds are tightened */
+#define MAXAGGRNORMSCALE              4 /**< maximal allowed relative gain in maximum norm for constraint aggregation */
 
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
@@ -74,6 +75,7 @@ struct ConsData
    EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             rhs;                /**< right hand side of row */
+   Real             maxabsval;          /**< maximum absolute value of all coefficients */
    Real             pseudoactivity;     /**< pseudo activity value in actual pseudo solution */
    Real             minactivity;        /**< minimal value w.r.t. the variable's bounds for the constraint's activity,
                                          *   ignoring the coefficients contributing with infinite value */
@@ -83,9 +85,12 @@ struct ConsData
    int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
    int              varssize;           /**< size of the vars- and vals-arrays */
    int              nvars;              /**< number of nonzeros in constraint */
+   unsigned int     validmaxabsval:1;   /**< is the maximum absolute value valid? */
    unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds valid? */
    unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
-   unsigned int     redchecked:1;       /**< is constraint already checked for redundancy with other constraints? */
+   unsigned int     changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
+   unsigned int     normalized:1;       /**< is the constraint in normalized form? */
+   unsigned int     upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
    unsigned int     sorted:1;           /**< are the constraint's variables sorted? */
 };
 
@@ -101,6 +106,7 @@ struct ConsHdlrData
 {
    EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    LINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
+   Real             maxaggrnormscale;   /**< maximal allowed relative gain in maximum norm for constraint aggregation */
    int              linconsupgradessize;/**< size of linconsupgrade array */
    int              nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int              tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -572,6 +578,7 @@ RETCODE consdataCreate(
    (*consdata)->row = NULL;
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
+   (*consdata)->maxabsval = SCIP_INVALID;
    (*consdata)->pseudoactivity = SCIP_INVALID;
    (*consdata)->minactivity = SCIP_INVALID;
    (*consdata)->maxactivity = SCIP_INVALID;
@@ -579,9 +586,12 @@ RETCODE consdataCreate(
    (*consdata)->maxactivityinf = -1;
    (*consdata)->varssize = nvars;
    (*consdata)->nvars = nvars;
+   (*consdata)->validmaxabsval = FALSE;
    (*consdata)->validactivities = FALSE;
    (*consdata)->propagated = FALSE;
-   (*consdata)->redchecked = FALSE;
+   (*consdata)->changed = TRUE;
+   (*consdata)->normalized = FALSE;
+   (*consdata)->upgraded = FALSE;
    (*consdata)->sorted = (nvars <= 1);
    
    return SCIP_OKAY;
@@ -816,7 +826,7 @@ void consdataUpdateChgUb(
    }
 }
 
-/** updates minimum and maximum activity for coefficient addition */
+/** updates minimum and maximum activity and maximum absolute value for coefficient addition */
 static
 void consdataUpdateAddCoef(
    SCIP*            scip,               /**< SCIP data structure */
@@ -827,6 +837,18 @@ void consdataUpdateAddCoef(
 {
    assert(consdata != NULL);
 
+   /* update maximum absolute value */
+   if( consdata->validmaxabsval )
+   {
+      Real absval;
+
+      assert(consdata->maxabsval < SCIP_INVALID);
+
+      absval = ABS(val);
+      consdata->maxabsval = MAX(consdata->maxabsval, absval);
+   }
+
+   /* update pseudo, minimal and maximal activity */
    if( consdata->validactivities )
    {
       assert(consdata->pseudoactivity < SCIP_INVALID);
@@ -838,7 +860,7 @@ void consdataUpdateAddCoef(
    }
 }
 
-/** updates minimum and maximum activity for coefficient deletion */
+/** updates minimum and maximum activity for coefficient deletion, invalidates maximum absolute value if necessary */
 static
 void consdataUpdateDelCoef(
    SCIP*            scip,               /**< SCIP data structure */
@@ -849,6 +871,17 @@ void consdataUpdateDelCoef(
 {
    assert(consdata != NULL);
 
+   /* invalidate maximum absolute value, if this coefficient was the maximum */
+   if( consdata->validmaxabsval )
+   {
+      if( val == consdata->maxabsval )  /* check for equality without epsilon is correct here! */
+      {
+         consdata->validmaxabsval = FALSE;
+         consdata->maxabsval = SCIP_INVALID;
+      }
+   }
+
+   /* update pseudo, minimal and maximal activity */
    if( consdata->validactivities )
    {
       assert(consdata->pseudoactivity < SCIP_INVALID);
@@ -860,7 +893,48 @@ void consdataUpdateDelCoef(
    }
 }
 
-/** calculates pseudo activity, and minimum and maximum activity for constraint */
+/** calculates maximum absolute value of coefficients */
+static
+void consdataCalcMaxAbsval(
+   CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   Real absval;
+   int i;
+
+   assert(consdata != NULL);
+   assert(!consdata->validmaxabsval);
+   assert(consdata->maxabsval >= SCIP_INVALID);
+
+   consdata->validmaxabsval = TRUE;
+   consdata->maxabsval = 0.0;
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      absval = consdata->vals[i];
+      absval = ABS(absval);
+      consdata->maxabsval = MAX(consdata->maxabsval, absval);
+   }   
+}
+
+/** returns the maximum absolute value of all coefficients in the constraint */
+static
+Real consdataGetMaxAbsval(
+   CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( !consdata->validmaxabsval )
+      consdataCalcMaxAbsval(consdata);
+   assert(consdata->validmaxabsval);
+   assert(consdata->maxabsval < SCIP_INVALID);
+
+   return consdata->maxabsval;
+}
+
+/** calculates pseudo activity, and minimum and maximum activity for constraint;
+ *  additionally recalculates maximum absolute value of coefficients
+ */
 static
 void consdataCalcActivities(
    SCIP*            scip,               /**< SCIP data structure */
@@ -875,14 +949,16 @@ void consdataCalcActivities(
    assert(consdata->minactivity >= SCIP_INVALID);
    assert(consdata->maxactivity >= SCIP_INVALID);
    
+   consdata->validmaxabsval = TRUE;
    consdata->validactivities = TRUE;
+   consdata->maxabsval = 0.0;
    consdata->pseudoactivity = 0.0;
    consdata->minactivity = 0.0;
    consdata->maxactivity = 0.0;
    consdata->minactivityinf = 0;
    consdata->maxactivityinf = 0;
 
-   for( i = 0; i < consdata->nvars; ++ i )
+   for( i = 0; i < consdata->nvars; ++i )
       consdataUpdateAddCoef(scip, consdata, consdata->vars[i], consdata->vals[i]);
 }
 
@@ -1430,7 +1506,8 @@ RETCODE chgLhs(
    /* set new left hand side */
    consdata->lhs = lhs;
    consdata->propagated = FALSE;
-   consdata->redchecked = FALSE;
+   consdata->changed = TRUE;
+   consdata->normalized = FALSE;
 
    /* update the lhs of the LP row */
    if( consdata->row != NULL )
@@ -1510,7 +1587,8 @@ RETCODE chgRhs(
    /* set new right hand side */
    consdata->rhs = rhs;
    consdata->propagated = FALSE;
-   consdata->redchecked = FALSE;
+   consdata->changed = TRUE;
+   consdata->normalized = FALSE;
 
    /* update the rhs of the LP row */
    if( consdata->row != NULL )
@@ -1585,7 +1663,8 @@ RETCODE addCoef(
    }
 
    consdata->propagated = FALSE;
-   consdata->redchecked = FALSE;
+   consdata->changed = TRUE;
+   consdata->normalized = FALSE;
    if( consdata->nvars == 1 )
       consdata->sorted = TRUE;
    else
@@ -1667,7 +1746,8 @@ RETCODE delCoefPos(
    consdata->nvars--;
 
    consdata->propagated = FALSE;
-   consdata->redchecked = FALSE;
+   consdata->changed = TRUE;
+   consdata->normalized = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1716,7 +1796,8 @@ RETCODE chgCoefPos(
    consdata->vals[pos] = newval;
 
    consdata->propagated = FALSE;
-   consdata->redchecked = FALSE;
+   consdata->changed = TRUE;
+   consdata->normalized = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1778,7 +1859,7 @@ RETCODE scaleCons(
          consdata->rhs = SCIPfloor(scip, consdata->rhs);
    }
 
-   consdata->validactivities = FALSE;
+   consdataInvalidateActivities(consdata);
 
    return SCIP_OKAY;
 }
@@ -1822,9 +1903,19 @@ RETCODE normalizeCons(
    int nnegcoeffs;
    int i;
 
+   /* we must not change a modifiable constraint in any way */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   /* get constraint data */
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* check, if the constraint is already normalized */
+   if( consdata->normalized )
+      return SCIP_OKAY;
+
+   /* get coefficient arrays */
    vars = consdata->vars;
    vals = consdata->vals;
    nvars = consdata->nvars;
@@ -1951,8 +2042,11 @@ RETCODE normalizeCons(
          CHECK_OKAY( scaleCons(scip, cons, 1.0/(Real)gcd) );
       }
    }
-   
-   debugMessage("normalized constraint:\n");
+
+   /* mark constraint to be normalized */
+   consdata->normalized = TRUE;
+
+   debugMessage("normalized constraint: ");
    debug(consdataPrint(scip, consdata, NULL));
 
    return SCIP_OKAY;
@@ -2110,10 +2204,13 @@ RETCODE applyFixings(
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
     * to clean up the constraint
     */
-   CHECK_OKAY( mergeMultiples(scip, cons) );
-
-   debugMessage("after merging: ");
-   debug(consdataPrint(scip, consdata, NULL));
+   if( cleanup )
+   {
+      CHECK_OKAY( mergeMultiples(scip, cons) );
+      
+      debugMessage("after merging: ");
+      debug(consdataPrint(scip, consdata, NULL));
+   }
 
    return SCIP_OKAY;
 }
@@ -2345,6 +2442,29 @@ DECL_CONSFREE(consFreeLinear)
 #define consExitLinear NULL
 
 
+/** solving start notification method of constraint handler (called when presolving was finished) */
+static
+DECL_CONSSOLSTART(consSolstartLinear)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* delete all linear constraints that were upgraded to a more specific constraint type */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->upgraded )
+      {
+         CHECK_OKAY( SCIPdelCons(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteLinear)
@@ -2373,7 +2493,6 @@ DECL_CONSTRANS(consTransLinear)
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
-   CONS* upgdcons;
 
    /*debugMessage("Trans method of linear constraints\n");*/
 
@@ -2401,22 +2520,6 @@ DECL_CONSTRANS(consTransLinear)
                   SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
                   SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
                   SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
-
-   /* normalize constraint, if it is unmodifiable */
-   if( !SCIPconsIsModifiable(*targetcons) )
-   {
-      CHECK_OKAY( normalizeCons(scip, *targetcons) );
-   }
-
-   /* try to upgrade target linear constraint into more specific constraint */
-   CHECK_OKAY( SCIPupgradeConsLinear(scip, *targetcons, &upgdcons) );
-   
-   /* if upgrading was successful, release the old constraint and use the upgraded constraint instead */
-   if( upgdcons != NULL )
-   {
-      CHECK_OKAY( SCIPreleaseCons(scip, targetcons) );
-      *targetcons = upgdcons;
-   }
 
    return SCIP_OKAY;
 }
@@ -2631,21 +2734,6 @@ DECL_CONSPROP(consPropLinear)
          if( tightenbounds )
          {
             CHECK_OKAY( tightenBounds(scip, cons, &nchgbds, result) );
-#ifndef NDEBUG
-            {
-               Real newminactivity;
-               Real newmaxactivity;
-               Real recalcminactivity;
-               Real recalcmaxactivity;
-               
-               consdataGetActivityBounds(scip, consdata, &newminactivity, &newmaxactivity);
-               consdataInvalidateActivities(consdata);
-               consdataGetActivityBounds(scip, consdata, &recalcminactivity, &recalcmaxactivity);
-
-               assert(SCIPisSumRelEQ(scip, newminactivity, recalcminactivity));
-               assert(SCIPisSumRelEQ(scip, newmaxactivity, recalcmaxactivity));
-            }
-#endif
          }
          
          /* check constraint for infeasibility and redundancy */
@@ -2715,16 +2803,319 @@ RETCODE tightenSides(
          if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
          {
             CHECK_OKAY( chgLhs(scip, cons, SCIPceil(scip, consdata->lhs)) );
-            (*nchgsides)++;
+            if( !consdata->upgraded )
+               (*nchgsides)++;
             *conschanged = TRUE;
          }
          if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisIntegral(scip, consdata->rhs) )
          {
             CHECK_OKAY( chgRhs(scip, cons, SCIPfloor(scip, consdata->rhs)) );
-            (*nchgsides)++;
+            if( !consdata->upgraded )
+               (*nchgsides)++;
             *conschanged = TRUE;
          }
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/* processes equality with only one variable by fixing the variable and deleting the constraint */
+static
+RETCODE convertUnaryEquality(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int*             nfixedvars,         /**< pointer to count number of fixed variables */
+   int*             ndelconss,          /**< pointer to count number of deleted constraints */
+   RESULT*          result,             /**< pointer to store result for successful conversions */
+   Bool*            consdeleted         /**< pointer to store TRUE, if constraint was deleted */
+   )
+{
+   CONSDATA* consdata;
+   VAR* var;
+   Real val;
+   Real fixval;
+   Bool infeasible;
+
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
+   assert(result != NULL);
+   assert(consdeleted != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars == 1);
+   assert(SCIPisEQ(scip, consdata->lhs, consdata->rhs));
+
+   /* calculate the value to fix the variable to */
+   var = consdata->vars[0];
+   val = consdata->vals[0];
+   assert(!SCIPisZero(scip, val));
+   fixval = consdata->rhs/val;
+
+   debugMessage("linear equality <%s>: fix <%s> == %g\n",
+      SCIPconsGetName(cons), SCIPvarGetName(var), fixval);
+   
+   /* count variable fixing, if variable is not already fixed */
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+      (*nfixedvars)++;
+
+   /* fix variable */
+   CHECK_OKAY( SCIPfixVar(scip, var, fixval, &infeasible) );
+   if( infeasible )
+   {
+      debugMessage(" -> infeasible fixing\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   /* disable constraint */
+   CHECK_OKAY( SCIPdelCons(scip, cons) );
+   if( !consdata->upgraded )
+      (*ndelconss)++;
+   *result = SCIP_SUCCESS;
+   *consdeleted = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/* processes equality with exactly two variables by aggregating one of the variables and deleting the constraint */
+static
+RETCODE convertBinaryEquality(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int*             naggrvars,          /**< pointer to count number of aggregated variables */
+   int*             ndelconss,          /**< pointer to count number of deleted constraints */
+   RESULT*          result,             /**< pointer to store result for successful conversions */
+   Bool*            consdeleted         /**< pointer to store TRUE, if constraint was deleted */
+   )
+{
+   CONSDATA* consdata;
+   Bool infeasible;
+   Bool redundant;
+   Bool aggregated;
+
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+   assert(result != NULL);
+   assert(consdeleted != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars == 2);
+   assert(SCIPisEQ(scip, consdata->lhs, consdata->rhs));
+
+   debugMessage("linear constraint <%s>: aggregate %g<%s> + %g<%s> == %g\n",
+      SCIPconsGetName(cons), consdata->vals[0], SCIPvarGetName(consdata->vars[0]), 
+      consdata->vals[1], SCIPvarGetName(consdata->vars[1]), consdata->rhs);
+   
+   /* aggregate the equality */
+   CHECK_OKAY( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], consdata->vals[0], consdata->vals[1],
+                  consdata->rhs, &infeasible, &redundant, &aggregated) );
+
+   /* check for infeasibility of aggregation */
+   if( infeasible )
+   {
+      debugMessage(" -> infeasible aggregation\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+   
+   /* count the aggregation */
+   if( aggregated )
+   {
+      (*naggrvars)++;
+      *result = SCIP_SUCCESS;
+   }
+
+   /* delete the constraint, if it is redundant */
+   if( redundant )
+   {
+      CHECK_OKAY( SCIPdelCons(scip, cons) );
+      
+      if( !consdata->upgraded )
+         (*ndelconss)++;
+      *result = SCIP_SUCCESS;
+      *consdeleted = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
+ * into an inequality
+ */
+static
+RETCODE convertLongEquality(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int*             naggrvars,          /**< pointer to count number of aggregated variables */
+   RESULT*          result,             /**< pointer to store result for successful conversions */
+   Bool*            conschanged         /**< pointer to store TRUE, if changes were made to the constraint */
+   )
+{
+   CONSDATA* consdata;
+   VAR** vars;
+   Real* vals;
+   VAR* var;
+   Real val;
+   VARTYPE bestslacktype;
+   VARTYPE actslacktype;
+   Real bestslackdomrng;
+   Real actslackdomrng;
+   Bool integral;
+   int bestslackpos;
+   int v;
+
+   assert(naggrvars != NULL);
+   assert(result != NULL);
+   assert(conschanged != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars > 2);
+   assert(SCIPisEQ(scip, consdata->lhs, consdata->rhs));
+
+   /* look for a slack variable s to convert a*x + s == b into lhs <= a*x <= rhs */
+   vars = consdata->vars;
+   vals = consdata->vals;
+   bestslackpos = -1;
+   bestslacktype = SCIP_VARTYPE_BINARY;
+   bestslackdomrng = 0.0;
+   integral = TRUE;
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      assert(vars != NULL);
+      assert(vals != NULL);
+      var = vars[v];
+      val = vals[v];
+            
+      actslacktype = SCIPvarGetType(var);
+      integral &= (actslacktype != SCIP_VARTYPE_CONTINOUS);
+      integral &= SCIPisIntegral(scip, val);
+
+      assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
+      assert(SCIPvarGetNLocksUp(var) >= 1);
+      if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 )
+      {
+         /* variable is only locked in this equality: if variable is continous or if the value is 1.0,
+          * it is a candidate for being a slack variable
+          */
+         if( actslacktype == SCIP_VARTYPE_CONTINOUS
+            || actslacktype == SCIP_VARTYPE_IMPLINT
+            || (integral && SCIPisEQ(scip, ABS(val), 1.0))
+             )
+         {
+            actslackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
+            if( bestslackpos == -1
+               || actslacktype > bestslacktype
+               || (actslacktype == bestslacktype && actslackdomrng > bestslackdomrng) )
+            {
+               bestslackpos = v;
+               bestslacktype = actslacktype;
+               bestslackdomrng = actslackdomrng;
+            }
+         }
+      }
+   }
+
+   /* if all coefficients and variables are integral, the right hand side must also be integral */
+   if( integral && !SCIPisIntegral(scip, consdata->rhs) )
+   {
+      debugMessage("linear equality <%s> is integer infeasible:", SCIPconsGetName(cons));
+      debug(consdataPrint(scip, consdata, NULL));
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   /* if the slack variable is of integer type, and the constraint itself may take fractional values,
+    * we cannot aggregate the variable, because the integrality condition would get lost
+    */
+   if( bestslackpos >= 0 &&
+      (bestslacktype == SCIP_VARTYPE_CONTINOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
+   {
+      VAR* slackvar;
+      Real* scalars;
+      Real slackcoef;
+      Real slackvarlb;
+      Real slackvarub;
+      Real aggrconst;
+      Real newlhs;
+      Real newrhs;
+      Bool infeasible;
+
+      /* we found a slack variable that only occurs in this equality:
+       *   a_1*x_1 + ... + a_k*x_k + a'*s == rhs  ->  s == rhs - a_1/a'*x_1 - ... - a_k/a'*x_k
+       */
+
+      /* convert equality into inequality by deleting the slack variable:
+       *  x + a*s == b, l <= s <= u   ->  b - a*u <= x <= b - a*l
+       */
+      slackvar = vars[bestslackpos];
+      slackcoef = vals[bestslackpos];
+      assert(!SCIPisZero(scip, slackcoef));
+      aggrconst = consdata->rhs/slackcoef;
+      slackvarlb = SCIPvarGetLbGlobal(slackvar);
+      slackvarub = SCIPvarGetUbGlobal(slackvar);
+      if( slackcoef > 0.0 )
+      {
+         if( SCIPisInfinity(scip, -slackvarlb) )
+            newrhs = SCIPinfinity(scip);
+         else
+            newrhs = consdata->rhs - slackcoef * slackvarlb;
+         if( SCIPisInfinity(scip, slackvarub) )
+            newlhs = -SCIPinfinity(scip);
+         else
+            newlhs = consdata->lhs - slackcoef * slackvarub;
+      }
+      else
+      {
+         if( SCIPisInfinity(scip, -slackvarlb) )
+            newlhs = -SCIPinfinity(scip);
+         else
+            newlhs = consdata->rhs - slackcoef * slackvarlb;
+         if( SCIPisInfinity(scip, slackvarub) )
+            newrhs = SCIPinfinity(scip);
+         else
+            newrhs = consdata->lhs - slackcoef * slackvarub;
+      }
+      assert(SCIPisLE(scip, newlhs, newrhs));
+      CHECK_OKAY( chgLhs(scip, cons, newlhs) );
+      CHECK_OKAY( chgRhs(scip, cons, newrhs) );
+      CHECK_OKAY( delCoefPos(scip, cons, bestslackpos) );
+
+      /* allocate temporary memory */
+      CHECK_OKAY( SCIPcaptureBufferArray(scip, &scalars, consdata->nvars) );
+
+      /* set up the multi-aggregation */
+      debugMessage("linear constraint <%s>: multi-aggregate <%s> ==",
+         SCIPconsGetName(cons), SCIPvarGetName(slackvar));
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         scalars[v] = -consdata->vals[v]/slackcoef;
+         debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(consdata->vars[v])));
+      }
+      debug(printf(" %+g, bounds of <%s>: [%g,%g]\n", 
+               aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub));
+
+      /* perform the multi-aggregation */
+      CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, consdata->vars, scalars, aggrconst,
+                     &infeasible) );
+
+      /* free temporary memory */
+      CHECK_OKAY( SCIPreleaseBufferArray(scip, &scalars) );
+
+      /* check for infeasible aggregation */
+      if( infeasible )
+      {
+         debugMessage("linear constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(cons));
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      (*naggrvars)++;
+      *result = SCIP_SUCCESS;
+      *conschanged = TRUE;
    }
 
    return SCIP_OKAY;
@@ -2744,393 +3135,29 @@ RETCODE convertEquality(
    )
 {
    CONSDATA* consdata;
-   Bool infeasible;
-
-   assert(nfixedvars != NULL);
-   assert(naggrvars != NULL);
-   assert(result != NULL);
-   assert(conschanged != NULL);
-   assert(consdeleted != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+   /* do nothing on inequalities */
+   if( !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      return SCIP_OKAY;
+
+   /* depending on the number of variables, call a special conversion method */
+   if( consdata->nvars == 1 )
    {
-      if( consdata->nvars == 1 )
-      {
-         VAR* var;
-         Real val;
-         Real fixval;
-
-         /* only one variable: adjust bounds and delete constraint */
-         var = consdata->vars[0];
-         val = consdata->vals[0];
-         assert(!SCIPisZero(scip, val));
-         fixval = consdata->rhs/val;
-
-         /* check, if fixing would lead to an infeasibility */
-         if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPisIntegral(scip, fixval)) )
-         {
-            debugMessage("linear equality <%s> is integer infeasible: %+g<%s> == %g\n",
-               SCIPconsGetName(cons), val, SCIPvarGetName(var), consdata->rhs);
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-         if( SCIPisLT(scip, fixval, SCIPvarGetLbGlobal(var)) || SCIPisGT(scip, fixval, SCIPvarGetUbGlobal(var)) )
-         {
-            debugMessage("linear equality <%s> is bound infeasible: %+g<%s> == %g, bounds=[%g,%g]\n",
-               SCIPconsGetName(cons), val, SCIPvarGetName(var), consdata->rhs, 
-               SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-
-         /* fix variable, if not already fixed */
-         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
-         {
-            debugMessage("linear equality <%s>: fix <%s> == %g\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var), fixval);
-            CHECK_OKAY( SCIPfixVar(scip, var, fixval, &infeasible) );
-            if( infeasible )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            (*nfixedvars)++;
-         }
-
-         /* disable constraint */
-         CHECK_OKAY( SCIPdelCons(scip, cons) );
-         (*ndelconss)++;
-         *result = SCIP_SUCCESS;
-         *consdeleted = TRUE;
-         return SCIP_OKAY;
-      }
-      else if( consdata->nvars == 2 )
-      {
-         VAR** vars;
-         Real* vals;
-         Real scalar;
-         Real constant;
-         int agg;
-
-         /* two variables: aggregation may be possible */
-         agg = -1;
-         vars = consdata->vars;
-         vals = consdata->vals;
-         assert(!SCIPisZero(scip, vals[0]));
-         assert(!SCIPisZero(scip, vals[1]));
-
-         /* vals[0] * vars[0] + vals[1] * vars[1] == rhs
-          *  ->  vars[0] == -vals[1]/vals[0] * vars[1] + rhs/vals[0]  (agg=0)
-          *  ->  vars[1] == -vals[0]/vals[1] * vars[0] + rhs/vals[1]  (agg=1)
-          */
-         if( SCIPvarGetType(vars[0]) == SCIP_VARTYPE_CONTINOUS )
-            agg = 0;
-         else if( SCIPvarGetType(vars[1]) == SCIP_VARTYPE_CONTINOUS )
-            agg = 1;
-         else if( SCIPvarGetType(vars[0]) == SCIP_VARTYPE_IMPLINT )
-            agg = 0;
-         else if( SCIPvarGetType(vars[1]) == SCIP_VARTYPE_IMPLINT )
-            agg = 1;
-         else if( SCIPisIntegral(scip, vals[1]/vals[0]) )
-            agg = 0;
-         else if( SCIPisIntegral(scip, vals[0]/vals[1]) )
-            agg = 1;
-         if( agg >= 0 )
-         {
-            assert(agg == 0 || agg == 1);
-            scalar = -vals[1-agg]/vals[agg];
-            constant = consdata->rhs/vals[agg];
-            if( SCIPvarGetType(vars[0]) != SCIP_VARTYPE_CONTINOUS
-               && SCIPvarGetType(vars[1]) != SCIP_VARTYPE_CONTINOUS
-               && SCIPisIntegral(scip, scalar) && !SCIPisIntegral(scip, constant) )
-            {
-               debugMessage("linear constraint <%s>: infeasible integer aggregation <%s> == %g<%s>%+g\n",
-                  SCIPconsGetName(cons), SCIPvarGetName(vars[agg]), scalar, SCIPvarGetName(vars[1-agg]), constant);
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            else
-            {
-               debugMessage("linear constraint <%s>: aggregate <%s> == %g<%s>%+g\n",
-                  SCIPconsGetName(cons), SCIPvarGetName(vars[agg]), scalar, SCIPvarGetName(vars[1-agg]), constant);
-               CHECK_OKAY( SCIPaggregateVar(scip, vars[agg], vars[1-agg], scalar, constant, &infeasible) );
-               if( infeasible )
-               {
-                  debugMessage("linear constraint <%s>: aggregation infeasible <%s> == %g<%s>%+g\n",
-                     SCIPconsGetName(cons), SCIPvarGetName(vars[agg]), scalar, SCIPvarGetName(vars[1-agg]), constant);
-                  *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
-               }
-
-               CHECK_OKAY( SCIPdelCons(scip, cons) );
-               (*naggrvars)++;
-               (*ndelconss)++;
-               *result = SCIP_SUCCESS;
-               *consdeleted = TRUE;
-               return SCIP_OKAY;
-            }
-         }
-         else if( SCIPisIntegral(scip, vals[0]) && SCIPisIntegral(scip, vals[1]) )
-         {
-            VAR* aggvar;
-            Longint a;
-            Longint b;
-            Longint c;
-            Longint gcd;
-            Longint actclass;
-            Longint classstep;
-            Longint xsol;
-            Longint ysol;
-
-            /* Both variables are integers, and their coefficients are not multiples of each other:
-             *   a*x + b*y == c    ->   a*x == c - b*y
-             * Assume, that a and b don't have any common divisor. Let (x',y') be a solution of the equality.
-             * Then x = -b*z + x', y = a*z + y' with z integral gives all solutions to the equality.
-             */
-            a = (Longint)(SCIPfloor(scip, vals[0]));
-            b = (Longint)(SCIPfloor(scip, vals[1]));
-            c = (Longint)(SCIPfloor(scip, consdata->rhs));
-            assert(a != 0 && b != 0);
-            gcd = SCIPcalcGreComDiv(ABS(a), ABS(b));
-            a /= gcd;
-            b /= gcd;
-            c /= gcd;
-            if( !SCIPisIntegral(scip, consdata->rhs/gcd) )
-            {
-               debugMessage("linear equality <%s> is integer infeasible: %+g<%s> %+g<%s> == %g\n",
-                  SCIPconsGetName(cons), vals[0], SCIPvarGetName(vars[0]), vals[1], SCIPvarGetName(vars[1]),
-                  consdata->rhs);
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-
-            /* find initial solution (x',y'):
-             *  - find y' such that c - b*y' is a multiple of a
-             *    - start in equivalence class c%a
-             *    - step through classes, where each step increases class number by (-b)%a
-             *    - because a and b don't have a common divisor, each class is visited at most once
-             *    - if equivalence class 0 is visited, we are done: y' equals the number of steps taken
-             *  - calculate x' with x' = (c - b*y')/a (which must be integral)
-             */
-
-            /* search upwards from ysol = 0 */
-            ysol = 0;
-            actclass = c%a;
-            if( actclass < 0 )
-               actclass += a;
-            classstep = (-b)%a;
-            if( classstep < 0 )
-               classstep += a;
-            assert(0 < classstep && classstep < a);
-            while( actclass != 0 )
-            {
-               assert(0 <= actclass && actclass < a);
-               actclass += classstep;
-               if( actclass >= a )
-                  actclass -= a;
-               ysol++;
-            }
-            assert(((c - b*ysol)%a) == 0);
-            xsol = (c - b*ysol)/a;
-
-            /* feasible solutions are (x,y) = (x',y') + z*(-b,a)
-             * - create new integer variable z with infinite bounds
-             * - aggregate variable x = -b*z + x'
-             * - aggregate variable y =  a*z + y'
-             * - the bounds of z are calculated automatically during aggregation
-             */
-            CHECK_OKAY( SCIPcreateVar(scip, &aggvar, NULL, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-                           SCIP_VARTYPE_INTEGER, TRUE) );
-            CHECK_OKAY( SCIPaddVar(scip, aggvar) );
-            CHECK_OKAY( SCIPaggregateVar(scip, vars[0], aggvar, (Real)(-b), (Real)xsol, &infeasible) );
-            if( !infeasible )
-            {
-               CHECK_OKAY( SCIPaggregateVar(scip, vars[1], aggvar, (Real)a, (Real)ysol, &infeasible) );
-            }
-
-            debugMessage("linear constraint <%s>: aggregate <%s> == %g<%s>%+g, <%s> == %g<%s>%+g, <%s>: [%g,%g], obj=%g\n",
-               SCIPconsGetName(cons), SCIPvarGetName(vars[0]), (Real)(-b), SCIPvarGetName(aggvar), (Real)xsol,
-               SCIPvarGetName(vars[1]), (Real)a, SCIPvarGetName(aggvar), (Real)ysol,
-               SCIPvarGetName(aggvar), SCIPvarGetLbGlobal(aggvar), SCIPvarGetUbGlobal(aggvar), SCIPvarGetObj(aggvar));
-
-            /* release z */
-            CHECK_OKAY( SCIPreleaseVar(scip, &aggvar) );
-
-            /* check for infeasible aggregation */
-            if( infeasible )
-            {
-               debugMessage("linear constraint <%s>: aggregation infeasible\n", SCIPconsGetName(cons));
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-
-            /* disable constraint */
-            CHECK_OKAY( SCIPdelCons(scip, cons) );
-            (*naggrvars)++;  /* count the two aggregations only as one, because an additional variable was created */
-            (*ndelconss)++;
-            *result = SCIP_SUCCESS;
-            *consdeleted = TRUE;
-            return SCIP_OKAY;
-         }
-      }
-      else
-      {
-         VAR** vars;
-         Real* vals;
-         VAR* var;
-         Real val;
-         VARTYPE bestslacktype;
-         VARTYPE actslacktype;
-         Real bestslackdomrng;
-         Real actslackdomrng;
-         Bool integral;
-         int bestslackpos;
-         int v;
-
-         /* more than two variables: look for a slack variable s to convert a*x + s == b into lhs <= a*x <= rhs */
-         vars = consdata->vars;
-         vals = consdata->vals;
-         bestslackpos = -1;
-         bestslacktype = SCIP_VARTYPE_BINARY;
-         bestslackdomrng = 0.0;
-         integral = TRUE;
-         for( v = 0; v < consdata->nvars; ++v )
-         {
-            assert(vars != NULL);
-            assert(vals != NULL);
-            var = vars[v];
-            val = vals[v];
-            
-            actslacktype = SCIPvarGetType(var);
-            integral &= (actslacktype != SCIP_VARTYPE_CONTINOUS);
-            integral &= SCIPisIntegral(scip, val);
-
-            assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
-            assert(SCIPvarGetNLocksUp(var) >= 1);
-            if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 )
-            {
-               /* variable is only locked in this equality: if variable is continous or if the value is 1.0,
-                * it is a candidate for being a slack variable
-                */
-               if( actslacktype == SCIP_VARTYPE_CONTINOUS
-                  || actslacktype == SCIP_VARTYPE_IMPLINT
-                  || (integral && SCIPisEQ(scip, ABS(val), 1.0))
-                   )
-               {
-                  actslackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
-                  if( bestslackpos == -1
-                     || actslacktype > bestslacktype
-                     || (actslacktype == bestslacktype && actslackdomrng > bestslackdomrng) )
-                  {
-                     bestslackpos = v;
-                     bestslacktype = actslacktype;
-                     bestslackdomrng = actslackdomrng;
-                  }
-               }
-            }
-         }
-
-         if( integral && !SCIPisIntegral(scip, consdata->rhs) )
-         {
-            debugMessage("linear equality <%s> is integer infeasible:", SCIPconsGetName(cons));
-            debug(consdataPrint(scip, consdata, NULL));
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-
-         /* if the slack variable is of integer type, and the constraint itself may not take integral values,
-          * we cannot aggregate the variable, because the integrality condition would get lost
-          */
-         if( bestslackpos >= 0 &&
-            (bestslacktype == SCIP_VARTYPE_CONTINOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
-         {
-            VAR* slackvar;
-            Real* scalars;
-            Real slackcoef;
-            Real slackvarlb;
-            Real slackvarub;
-            Real aggrconst;
-            Real newlhs;
-            Real newrhs;
-
-            /* we found a slack variable that only occurs in this equality:
-             *   a_1*x_1 + ... + a_k*x_k + a'*s == rhs  ->  s == rhs - a_1/a'*x_1 - ... - a_k/a'*x_k
-             */
-
-            /* convert equality into inequality by deleting the slack variable:
-             *  x + a*s == b, l <= s <= u   ->  b - a*u <= x <= b - a*l
-             */
-            slackvar = vars[bestslackpos];
-            slackcoef = vals[bestslackpos];
-            assert(!SCIPisZero(scip, slackcoef));
-            aggrconst = consdata->rhs/slackcoef;
-            slackvarlb = SCIPvarGetLbGlobal(slackvar);
-            slackvarub = SCIPvarGetUbGlobal(slackvar);
-            if( slackcoef > 0.0 )
-            {
-               if( SCIPisInfinity(scip, -slackvarlb) )
-                  newrhs = SCIPinfinity(scip);
-               else
-                  newrhs = consdata->rhs - slackcoef * slackvarlb;
-               if( SCIPisInfinity(scip, slackvarub) )
-                  newlhs = -SCIPinfinity(scip);
-               else
-                  newlhs = consdata->lhs - slackcoef * slackvarub;
-            }
-            else
-            {
-               if( SCIPisInfinity(scip, -slackvarlb) )
-                  newlhs = -SCIPinfinity(scip);
-               else
-                  newlhs = consdata->rhs - slackcoef * slackvarlb;
-               if( SCIPisInfinity(scip, slackvarub) )
-                  newrhs = SCIPinfinity(scip);
-               else
-                  newrhs = consdata->lhs - slackcoef * slackvarub;
-            }
-            assert(SCIPisLE(scip, newlhs, newrhs));
-            CHECK_OKAY( chgLhs(scip, cons, newlhs) );
-            CHECK_OKAY( chgRhs(scip, cons, newrhs) );
-            CHECK_OKAY( delCoefPos(scip, cons, bestslackpos) );
-
-            /* allocate temporary memory */
-            CHECK_OKAY( SCIPcaptureBufferArray(scip, &scalars, consdata->nvars) );
-
-            /* set up the multi-aggregation */
-            debugMessage("linear constraint <%s>: multi-aggregate <%s> ==",
-               SCIPconsGetName(cons), SCIPvarGetName(slackvar));
-            for( v = 0; v < consdata->nvars; ++v )
-            {
-               scalars[v] = -consdata->vals[v]/slackcoef;
-               debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(consdata->vars[v])));
-            }
-            debug(printf(" %+g, bounds of <%s>: [%g,%g]\n", 
-                         aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub));
-
-            /* perform the multi-aggregation */
-            CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, consdata->vars, scalars, aggrconst,
-                           &infeasible) );
-
-            /* free temporary memory */
-            CHECK_OKAY( SCIPreleaseBufferArray(scip, &scalars) );
-
-            /* check for infeasible aggregation */
-            if( infeasible )
-            {
-               debugMessage("linear constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(cons));
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-
-            (*naggrvars)++;
-            *result = SCIP_SUCCESS;
-            *conschanged = TRUE;
-            return SCIP_OKAY;
-         }
-      }
+      /* fix variable */
+      CHECK_OKAY( convertUnaryEquality(scip, cons, nfixedvars, ndelconss, result, consdeleted) );
+   }
+   else if( consdata->nvars == 2 )
+   {
+      /* aggregate one of the variables */
+      CHECK_OKAY( convertBinaryEquality(scip, cons, naggrvars, ndelconss, result, consdeleted) );
+   }
+   else
+   {
+      /* try to multi-aggregate one of the variables */
+      CHECK_OKAY( convertLongEquality(scip, cons, naggrvars, result, conschanged) );
    }
 
    return SCIP_OKAY;
@@ -3180,6 +3207,7 @@ RETCODE fixVariables(
             CHECK_OKAY( SCIPfixVar(scip, var, lb, &infeasible) );
             if( infeasible )
             {
+               debugMessage(" -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
@@ -3199,22 +3227,54 @@ RETCODE fixVariables(
    return SCIP_OKAY;
 }
 
-/* tries to aggregate two equalities in order to decrease the number of variables in the first equality:
+#define BINWEIGHT  1
+#define INTWEIGHT  4
+#define CONTWEIGHT 8
+
+/** gets weight for variable in a "weighted number of variables" sum */
+static
+int getVarWeight(
+   VAR*             var                 /**< variable to get weight for */
+   )
+{
+   switch( SCIPvarGetType(var) )
+   {
+   case SCIP_VARTYPE_BINARY:
+      return BINWEIGHT;
+   case SCIP_VARTYPE_INTEGER:
+   case SCIP_VARTYPE_IMPLINT:
+      return INTWEIGHT;
+   case SCIP_VARTYPE_CONTINOUS:
+      return CONTWEIGHT;
+   default:
+      errorMessage("invalid variable type");
+      abort();
+   }
+}
+
+/* tries to aggregate an (in)equality and an equality in order to decrease the number of variables in the (in)equality:
  *   cons0 := a * cons0 + b * cons1, 
- * where a = val1[v] and b = -val0[v] for common variable v which removes most variables;
- * for numerical stability, we will only accept integral a and b
+ * where a = val1[v] and b = -val0[v] for common variable v which removes most variable weight;
+ * for numerical stability, we will only accept integral a and b;
+ * the variable weight is a weighted sum over all included variables, where each binary variable weighs BINWEIGHT, 
+ * each integer or implicit integer variable weighs INTWEIGHT and each continous variable weighs CONTWEIGHT
  */
 static 
-RETCODE aggregateEqualities(
+RETCODE aggregateConstraints(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons0,              /**< constraint to modify */
-   CONS*            cons1,              /**< constraint to use for aggregation of cons0 */
-   int              nvarscommon,        /**< number of variables, that appear in both constraints */
+   CONS*            cons0,              /**< (in)equality to modify */
+   CONS*            cons1,              /**< equality to use for aggregation of cons0 */
    int*             commonidx0,         /**< array with indices of variables in cons0, that appear also in cons1 */
    int*             commonidx1,         /**< array with indices of variables in cons1, that appear also in cons0 */
    int*             diffidx0minus1,     /**< array with indices of variables in cons0, that don't appear in cons1 */
    int*             diffidx1minus0,     /**< array with indices of variables in cons1, that don't appear in cons0 */
-   int*             nchgcoefs,          /**< pointer to count number of changed coefficients */
+   int              nvarscommon,        /**< number of variables, that appear in both constraints */
+   int              commonidxweight,    /**< variable weight sum of common variables */
+   int              diffidx0minus1weight, /**< variable weight sum of variables in cons0, that don't appear in cons1 */
+   int              diffidx1minus0weight, /**< variable weight sum of variables in cons1, that don't appear in cons0 */
+   Real             maxaggrnormscale,   /**< maximal allowed relative gain in maximum norm for constraint aggregation */
+   int*             nupgdconss,         /**< pointer to count the number of upgraded constraints */
+   int*             nchgcoefs,          /**< pointer to count the number of changed coefficients */
    RESULT*          result,             /**< pointer to store the result of the aggregation */
    Bool*            aggregated          /**< pointer to store whether an aggregation was made */
    )
@@ -3228,39 +3288,50 @@ RETCODE aggregateEqualities(
    Real actscalarsum;
    Real bestscalarsum;
    Bool betterscalarsum;
+   int actvarweight;
    int actnvars;
+   int bestvarweight;
    int bestnvars;
    int bestv;
    int v;
    int i;
 
-   assert(nvarscommon >= 1);
    assert(commonidx0 != NULL);
    assert(commonidx1 != NULL);
    assert(diffidx0minus1 != NULL);
    assert(diffidx1minus0 != NULL);
+   assert(nvarscommon >= 1);
+   assert(commonidxweight >= nvarscommon);
    assert(nchgcoefs != NULL);
    assert(result != NULL);
    assert(aggregated != NULL);
 
    assert(SCIPconsIsActive(cons0));
    assert(SCIPconsIsActive(cons1));
+   
+   debugMessage("try aggregation of <%s> and <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
 
+   /* cons0 is an (in)equality */
    consdata0 = SCIPconsGetData(cons0);
    assert(consdata0 != NULL);
    assert(consdata0->nvars >= 1);
-   assert(SCIPisEQ(scip, consdata0->lhs, consdata0->rhs));
+   assert(SCIPisLE(scip, consdata0->lhs, consdata0->rhs));
+   assert(diffidx0minus1weight >= consdata0->nvars - nvarscommon);
    
+   /* cons1 is an equality */
    consdata1 = SCIPconsGetData(cons1);
    assert(consdata1 != NULL);
    assert(consdata1->nvars >= 1);
    assert(SCIPisEQ(scip, consdata1->lhs, consdata1->rhs));
+   assert(diffidx1minus0weight >= consdata1->nvars - nvarscommon);
 
    *aggregated = FALSE;
 
    /* search for the best common variable such that
-    *  val1[var] * consdata0 - val0[var] * consdata1
-    * has least number of variables */
+    *   val1[var] * consdata0 - val0[var] * consdata1
+    * has least weighted number of variables
+    */
+   bestvarweight = commonidxweight + diffidx0minus1weight;
    bestnvars = consdata0->nvars;
    bestv = -1;
    bestscalarsum = 0.0;
@@ -3275,40 +3346,60 @@ RETCODE aggregateEqualities(
       if( SCIPisIntegral(scip, a) && SCIPisIntegral(scip, b) )
       {
          /* count the number of variables in the potential new constraint  a * consdata0 + b * consdata1 */
+         actvarweight = diffidx0minus1weight + diffidx1minus0weight;
          actnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
          actscalarsum = ABS(a) + ABS(b);
          betterscalarsum = (actscalarsum < bestscalarsum);
-         for( i = 0; i < nvarscommon && (actnvars < bestnvars || (actnvars == bestnvars && betterscalarsum)); ++i )
+         for( i = 0; i < nvarscommon
+                 && (actvarweight < bestvarweight || (actvarweight == bestvarweight && betterscalarsum)); ++i )
          {
             aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
             if( !SCIPisZero(scip, aggrcoef) )
+            {
+               actvarweight += getVarWeight(consdata0->vars[commonidx0[i]]);
                actnvars++;
+            }
          }
-         if( actnvars < bestnvars || (actnvars == bestnvars && betterscalarsum) )
+         if( actvarweight < bestvarweight || (actvarweight == bestvarweight && betterscalarsum) )
          {
             bestv = v;
+            bestvarweight = actvarweight;
             bestnvars = actnvars;
             bestscalarsum = actscalarsum;
          }
       }
    }
 
+   /* if better aggregation was found, create new constraint and delete old one */
    if( bestv != -1 )
    {
       CONS* newcons;
+      CONSDATA* newconsdata;
       VAR** newvars;
       Real* newvals;
+      Real newlhs;
       Real newrhs;
       int newnvars;
 
-      /* better aggregation was found: create new constraint and delete old one */
-      a = consdata1->vals[commonidx1[bestv]];
-      b = -consdata0->vals[commonidx0[bestv]];
-      assert(!SCIPisZero(scip, a));
+      /* choose multipliers such that the multiplier for the (in)equality cons0 is positive */
+      if( consdata1->vals[commonidx1[bestv]] > 0.0 )
+      {
+         a = consdata1->vals[commonidx1[bestv]];
+         b = -consdata0->vals[commonidx0[bestv]];
+      }
+      else
+      {
+         a = -consdata1->vals[commonidx1[bestv]];
+         b = consdata0->vals[commonidx0[bestv]];
+      }
+      assert(SCIPisIntegral(scip, a));
+      assert(SCIPisPositive(scip, a));
+      assert(SCIPisIntegral(scip, b));
       assert(!SCIPisZero(scip, b));
-      debugMessage("aggregate equalities <%s> := %g*<%s> + %g*<%s>  ->  oldnvars=%d, newnvars=%d\n",
+
+      debugMessage("aggregate linear constraints <%s> := %g*<%s> + %g*<%s>  ->  nvars: %d -> %d, weight: %d -> %d\n",
          SCIPconsGetName(cons0), a, SCIPconsGetName(cons0), b, SCIPconsGetName(cons1),
-         consdata0->nvars, bestnvars);
+         consdata0->nvars, bestnvars, commonidxweight + diffidx0minus1weight, bestvarweight);
       debugMessage("<%s>: ", SCIPconsGetName(cons0));
       debug(consdataPrint(scip, consdata0, NULL));
       debugMessage("<%s>: ", SCIPconsGetName(cons1));
@@ -3362,27 +3453,73 @@ RETCODE aggregateEqualities(
       }
       assert(newnvars == bestnvars);
 
-      todoMessage("don't aggregate equalities, if max{|coef|} is increased too much");
-
-      /* calculate the new right hand side of the equality */
-      newrhs = a * consdata0->rhs + b * consdata1->rhs;
+      /* calculate the new left and right hand side of the (in)equality */
+      assert(!SCIPisInfinity(scip, -consdata1->lhs));
+      assert(!SCIPisInfinity(scip, consdata1->rhs));
+      if( SCIPisInfinity(scip, -consdata0->lhs) )
+         newlhs = -SCIPinfinity(scip);
+      else
+         newlhs = a * consdata0->lhs + b * consdata1->lhs;
+      if( SCIPisInfinity(scip, consdata0->rhs) )
+         newrhs = SCIPinfinity(scip);
+      else
+         newrhs = a * consdata0->rhs + b * consdata1->rhs;
 
       /* create the new linear constraint */
-      CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newrhs, newrhs,
+      CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newlhs, newrhs,
                      SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
                      SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
                      SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
 
-      /* update the statistics: we changed all coefficients of the old cons0 */
-      (*nchgcoefs) += consdata0->nvars;
-      *result = SCIP_SUCCESS;
-      *aggregated = TRUE;
+      newconsdata = SCIPconsGetData(newcons);
+      assert(newconsdata != NULL);
 
-      /* delete the old constraint */
-      CHECK_OKAY( SCIPdelCons(scip, cons0) );
-      
-      /* add the new constraint */
-      CHECK_OKAY( SCIPaddCons(scip, newcons) );
+      /* copy the upgraded flag from the old cons0 to the new constraint */
+      newconsdata->upgraded = consdata0->upgraded;
+
+      /* normalize the new constraint */
+      CHECK_OKAY( normalizeCons(scip, newcons) );
+
+      debugMessage(" -> <%s>: ", SCIPconsGetName(newcons));
+      debug(consdataPrint(scip, SCIPconsGetData(newcons), NULL));
+
+      /* check, if we really want to use the new constraint instead of the old one:
+       * use the new one, if the maximum norm doesn't grow too much
+       */
+      if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
+      {
+         CONS* upgdcons;
+
+         /* update the statistics: we changed all coefficients */
+         if( !consdata0->upgraded )
+            (*nchgcoefs) += consdata0->nvars + consdata1->nvars - nvarscommon;
+         *result = SCIP_SUCCESS;
+         *aggregated = TRUE;
+         
+         /* delete the old constraint, and add the new linear constraint to the problem */
+         CHECK_OKAY( SCIPdelCons(scip, cons0) );
+         CHECK_OKAY( SCIPaddCons(scip, newcons) );
+
+         /* try to upgrade the new constraint */
+         CHECK_OKAY( SCIPupgradeConsLinear(scip, newcons, &upgdcons) );
+         if( upgdcons != NULL )
+         {
+            debugMessage("upgraded linear constraint <%s> to type <%s>:\n", 
+               SCIPconsGetName(newcons), SCIPconshdlrGetName(SCIPconsGetHdlr(upgdcons)));
+            debug(consdataPrint(scip, newconsdata, NULL));
+
+            /* add the upgraded constraint to the problem */
+            CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
+            CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
+            (*nupgdconss)++;
+            
+            /* mark the linear constraint being upgraded and to be removed after presolving;
+             * don't delete it directly, because it may help to preprocess other linear constraints
+             */
+            assert(!newconsdata->upgraded);
+            newconsdata->upgraded = TRUE;
+         }
+      }
 
       /* release the new constraint */
       CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
@@ -3395,18 +3532,20 @@ RETCODE aggregateEqualities(
    return SCIP_OKAY;
 }
 
-/** checks redundancy of constraint with given index against all prior constraints in the constraint set,
+/** compares constraint with all prior constraints for possible redundancy or aggregation,
  *  and removes or changes constraint accordingly
  */
 static
-RETCODE removeRedundancy(
+RETCODE preprocessConstraintPairs(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< constraint set */
-   int              firstredcheck,      /**< first constraint that changed since last redundancy check */
+   int              firstchange,        /**< first constraint that changed since last pair preprocessing round */
    int              chkind,             /**< index of constraint to check against all prior indices upto startind */
+   Real             maxaggrnormscale,   /**< maximal allowed relative gain in maximum norm for constraint aggregation */
    int*             nfixedvars,         /**< pointer to count number of fixed variables */
    int*             naggrvars,          /**< pointer to count number of aggregated variables */
    int*             ndelconss,          /**< pointer to count number of deleted constraints */
+   int*             nupgdconss,         /**< pointer to count the number of upgraded constraints */
    int*             nchgsides,          /**< pointer to count number of changed left/right hand sides */
    int*             nchgcoefs,          /**< pointer to count number of changed coefficients */
    RESULT*          result              /**< pointer to store result for successful conversions */
@@ -3433,20 +3572,23 @@ RETCODE removeRedundancy(
    int nvarscommon;
    int nvars0minus1;
    int nvars1minus0;
+   int commonidxweight;
+   int diffidx0minus1weight;
+   int diffidx1minus0weight;
    int varcmp;
    int c;
    int v0;
    int v1;
 
    assert(conss != NULL);
-   assert(firstredcheck <= chkind);
+   assert(firstchange <= chkind);
    assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
    assert(ndelconss != NULL);
    assert(nchgsides != NULL);
    assert(result != NULL);
 
-   /* get the constraint to be checked for redundancy */
+   /* get the constraint to be checked against all prior constraints */
    cons0 = conss[chkind];
    assert(SCIPconsIsActive(cons0));
 
@@ -3466,7 +3608,7 @@ RETCODE removeRedundancy(
    diffidx1minus0size = consdata0->nvars;
 
    /* check constraint against all prior constraints */
-   for( c = (consdata0->redchecked ? firstredcheck : 0); c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0);
+   for( c = (consdata0->changed ? 0 : firstchange); c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0);
         ++c )
    {
       cons1 = conss[c];
@@ -3479,8 +3621,8 @@ RETCODE removeRedundancy(
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
 
-      /* if both constraints didn't change since last redundancy check, we can ignore the pair */
-      if( consdata0->redchecked && consdata1->redchecked )
+      /* if both constraints didn't change since last pair processing, we can ignore the pair */
+      if( !consdata0->changed && !consdata1->changed )
          continue;
 
       assert(consdata1->nvars >= 1);
@@ -3498,8 +3640,7 @@ RETCODE removeRedundancy(
          diffidx1minus0size = consdata1->nvars;
       }
 
-      todoMessage("normalize constraints (at a different place, but it is important here)");
-      /* because both constraints are normalized, a <=-row and a >=-row cannot be redundant */
+      /* because both constraints are normalized, a "<="-row and a ">="-row cannot be redundant */
       if( SCIPisInfinity(scip, -consdata0->lhs) != SCIPisInfinity(scip, -consdata1->lhs)
          && SCIPisInfinity(scip, consdata0->rhs) != SCIPisInfinity(scip, consdata1->rhs) )
          continue;
@@ -3509,14 +3650,18 @@ RETCODE removeRedundancy(
        *   consdata0 dominates consdata1 w.r.t. left hand side
        * - if rhs0 <= rhs1 and for each variable v and each solution value x_v val0[v]*x_v >= val1[v]*x_v,
        *   consdata0 dominates consdata1 w.r.t. right hand side
-       * - if both constraints are equalities, count the number of common variables N_c and the number of variable in
-       *   the difference sets N_0 = |V_0 \ V_1|, N_1 = |V_1 \ V_0|
-       *   - if N_c > N_1, try to aggregate  consdata0 := a * consdata0 + b * consdata1  in order to decrease the number of
-       *     variables in consdata0, where a = val1[v] and b = -val0[v] for common v which removes most variables;
-       *     for numerical stability, we will only accept integral a and b
-       *   - if N_c > N_0, try to aggregate  consdata1 := a * consdata1 + b * consdata0  in order to decrease the number of
-       *     variables in consdata1, where a = val0[v] and b = -val1[v] for common v which removes most variables;
-       *     for numerical stability, we will only accept integral a and b
+       * - if both at least one constraint is an equality, count the weighted number of common variables W_c
+       *   and the weighted number of variable in the difference sets W_0 = w(V_0 \ V_1), W_1 = w(V_1 \ V_0),
+       *   where the weight of each variable depends on its type, such that aggregations in order to remove the
+       *   number of continous and integer variables are prefered:
+       *   - if W_c > W_1, try to aggregate  consdata0 := a * consdata0 + b * consdata1  in order to decrease the 
+       *     variable weight in consdata0, where a = +/- val1[v] and b = -/+ val0[v] for common v which leads to
+       *     the smallest weight; for numerical stability, we will only accept integral a and b; the sign of a has
+       *     to be positive to not switch the sense of the (in)equality cons0
+       *   - if W_c > W_0, try to aggregate  consdata1 := a * consdata1 + b * consdata0  in order to decrease the 
+       *     variable weight in consdata1, where a = +/- val0[v] and b = -/+ val1[v] for common v which leads to
+       *     the smallest weight; for numerical stability, we will only accept integral a and b; the sign of a has
+       *     to be positive to not switch the sense of the (in)equality cons1
        */
 
       /* check consdata0 against consdata1 for redundancy */
@@ -3525,13 +3670,16 @@ RETCODE removeRedundancy(
       cons0dominatesrhs = SCIPisLE(scip, consdata0->rhs, consdata1->rhs);
       cons1dominatesrhs = SCIPisLE(scip, consdata1->rhs, consdata0->rhs);
       nvarscommon = 0;
+      commonidxweight = 0;
       nvars0minus1 = 0;
+      diffidx0minus1weight = 0;
       nvars1minus0 = 0;
+      diffidx1minus0weight = 0;
       v0 = 0;
       v1 = 0;
       while( (v0 < consdata0->nvars || v1 < consdata1->nvars)
          && (cons0dominateslhs || cons1dominateslhs || cons0dominatesrhs || cons1dominatesrhs
-            || (cons0isequality && cons1isequality)) )
+            || cons0isequality || cons1isequality) )
       {
          /* test, if variable appears in only one or in both constraints */
          if( v0 < consdata0->nvars && v1 < consdata1->nvars )
@@ -3550,6 +3698,7 @@ RETCODE removeRedundancy(
             val1 = 0.0;
             diffidx0minus1[nvars0minus1] = v0;
             nvars0minus1++;
+            diffidx0minus1weight += getVarWeight(var);
             v0++;
             break;
 
@@ -3560,6 +3709,7 @@ RETCODE removeRedundancy(
             val1 = consdata1->vals[v1];
             diffidx1minus0[nvars1minus0] = v1;
             nvars1minus0++;
+            diffidx1minus0weight += getVarWeight(var);
             v1++;
             break;
 
@@ -3572,6 +3722,7 @@ RETCODE removeRedundancy(
             commonidx0[nvarscommon] = v0;
             commonidx1[nvarscommon] = v1;
             nvarscommon++;
+            commonidxweight += getVarWeight(var);
             v0++;
             v1++;
             break;
@@ -3627,7 +3778,9 @@ RETCODE removeRedundancy(
             continue;
          }
          CHECK_OKAY( chgLhs(scip, cons0, -SCIPinfinity(scip)) );
-         (*nchgsides)++;
+         cons0isequality = FALSE;
+         if( !consdata0->upgraded )
+            (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
       else if( cons0dominateslhs && !SCIPisInfinity(scip, -consdata1->lhs) )
@@ -3645,7 +3798,9 @@ RETCODE removeRedundancy(
             continue;
          }
          CHECK_OKAY( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
-         (*nchgsides)++;
+         cons1isequality = FALSE;
+         if( !consdata1->upgraded )
+            (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
       if( cons1dominatesrhs && !SCIPisInfinity(scip, consdata0->rhs) )
@@ -3663,7 +3818,9 @@ RETCODE removeRedundancy(
             continue;
          }
          CHECK_OKAY( chgRhs(scip, cons0, SCIPinfinity(scip)) );
-         (*nchgsides)++;
+         cons0isequality = FALSE;
+         if( !consdata0->upgraded )
+            (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
       else if( cons0dominatesrhs && !SCIPisInfinity(scip, consdata1->rhs) )
@@ -3681,7 +3838,9 @@ RETCODE removeRedundancy(
             continue;
          }
          CHECK_OKAY( chgRhs(scip, cons1, SCIPinfinity(scip)) );
-         (*nchgsides)++;
+         cons1isequality = FALSE;
+         if( !consdata1->upgraded )
+            (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
 
@@ -3691,7 +3850,8 @@ RETCODE removeRedundancy(
          /* consdata0 became redundant */
          debugMessage("linear constraint <%s> is redundant\n", SCIPconsGetName(cons0));
          CHECK_OKAY( SCIPdelCons(scip, cons0) );
-         (*ndelconss)++;
+         if( !consdata0->upgraded )
+            (*ndelconss)++;
          *result = SCIP_SUCCESS;
          continue;
       }
@@ -3700,15 +3860,16 @@ RETCODE removeRedundancy(
          /* consdata1 became redundant */
          debugMessage("linear constraint <%s> is redundant\n", SCIPconsGetName(cons1));
          CHECK_OKAY( SCIPdelCons(scip, cons1) );
-         (*ndelconss)++;
+         if( !consdata1->upgraded )
+            (*ndelconss)++;
          *result = SCIP_SUCCESS;
          continue;
       }
 
-      /* check, if we want to aggregate equalities:
+      /* check, if we want to aggregate an (in)equality with an equality:
        *   consdata0 := a * consdata0 + b * consdata1  or  consdata1 := a * consdata1 + b * consdata0
        */
-      if( cons0isequality && cons1isequality )
+      if( cons0isequality || cons1isequality )
       {
          Bool aggregated;
 
@@ -3716,17 +3877,19 @@ RETCODE removeRedundancy(
          assert(consdata1->nvars == nvarscommon + nvars1minus0);
 
          aggregated = FALSE;
-         if( nvarscommon > nvars1minus0 )
+         if( cons1isequality && commonidxweight > diffidx1minus0weight )
          {
-            /* N_c > N_1: try to aggregate  consdata0 := a * consdata0 + b * consdata1 */
-            CHECK_OKAY( aggregateEqualities(scip, cons0, cons1, nvarscommon, commonidx0, commonidx1,
-                           diffidx0minus1, diffidx1minus0, nchgcoefs, result, &aggregated) );
+            /* W_c > W_1: try to aggregate  consdata0 := a * consdata0 + b * consdata1 */
+            CHECK_OKAY( aggregateConstraints(scip, cons0, cons1, commonidx0, commonidx1, diffidx0minus1, diffidx1minus0, 
+                           nvarscommon, commonidxweight, diffidx0minus1weight, diffidx1minus0weight, maxaggrnormscale,
+                           nupgdconss, nchgcoefs, result, &aggregated) );
          }
-         if( !aggregated && nvarscommon > nvars0minus1 )
+         if( !aggregated && cons0isequality && commonidxweight > diffidx0minus1weight )
          {
-            /* N_c > N_0: try to aggregate  consdata1 := a * consdata1 + b * consdata0 */
-            CHECK_OKAY( aggregateEqualities(scip, cons1, cons0, nvarscommon, commonidx1, commonidx0,
-                           diffidx1minus0, diffidx0minus1, nchgcoefs, result, &aggregated) );
+            /* W_c > W_0: try to aggregate  consdata1 := a * consdata1 + b * consdata0 */
+            CHECK_OKAY( aggregateConstraints(scip, cons1, cons0, commonidx1, commonidx0, diffidx1minus0, diffidx0minus1,
+                           nvarscommon, commonidxweight, diffidx1minus0weight, diffidx0minus1weight, maxaggrnormscale,
+                           nupgdconss, nchgcoefs, result, &aggregated) );
          }
       }
    }
@@ -3744,6 +3907,7 @@ RETCODE removeRedundancy(
 static
 DECL_CONSPRESOL(consPresolLinear)
 {
+   CONSHDLRDATA* conshdlrdata;
    CONS* cons;
    CONS* upgdcons;
    CONSDATA* consdata;
@@ -3754,7 +3918,7 @@ DECL_CONSPRESOL(consPresolLinear)
    Bool conschanged;
    int oldnfixedvars;
    int oldnaggrvars;
-   int firstredcheck;
+   int firstchange;
    int c;
 
    assert(conshdlr != NULL);
@@ -3765,28 +3929,53 @@ DECL_CONSPRESOL(consPresolLinear)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* process constraints */
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   /* process single constraints */
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
-   firstredcheck = -1;
+   firstchange = -1;
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
+      assert(SCIPconsIsActive(cons));
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      /* remember the first constraint that must be checked for redundancy */
-      if( firstredcheck == -1 && !consdata->redchecked )
-         firstredcheck = c;
-
+      /* check, if constraint is already propagated/preprocessed */
       if( consdata->propagated )
          continue;
+
+      /* remember the first changed constraint to begin the next aggregation round with */
+      if( firstchange == -1 && consdata->changed )
+         firstchange = c;
 
       debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
       debug(consdataPrint(scip, consdata, NULL));
 
       consdeleted = FALSE;
       conschanged = FALSE;
+
+      /* try to upgrade the constraint into a more specific constraint type */
+      CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
+      if( upgdcons != NULL )
+      {
+         debugMessage("upgraded linear constraint <%s> to type <%s>:\n", 
+               SCIPconsGetName(cons), SCIPconshdlrGetName(SCIPconsGetHdlr(upgdcons)));
+         debug(consdataPrint(scip, consdata, NULL));
+
+         /* add the upgraded constraint to the problem */
+         CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
+         CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
+         (*nupgdconss)++;
+
+         /* mark the linear constraint being upgraded and to be removed after presolving;
+          * don't delete it directly, because it may help to preprocess other linear constraints
+          */
+         assert(!consdata->upgraded);
+         consdata->upgraded = TRUE;
+      }
 
       /* incorporate fixings and aggregations in constraint */
       if( nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
@@ -3795,129 +3984,143 @@ DECL_CONSPRESOL(consPresolLinear)
       }
 
       /* we can only presolve linear constraints, that are not modifiable */
-      if( !SCIPconsIsModifiable(cons) )
+      if( SCIPconsIsModifiable(cons) )
+         continue;
+
+      /* check, if constraint is empty */
+      if( consdata->nvars == 0 )
       {
-         /* check, if constraint is empty */
-         if( consdata->nvars == 0 )
+         if( SCIPisPositive(scip, consdata->lhs) || SCIPisNegative(scip, consdata->rhs) )
          {
-            if( SCIPisPositive(scip, consdata->lhs) || SCIPisNegative(scip, consdata->rhs) )
-            {
-               debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
-                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-               *result = SCIP_CUTOFF;
-               continue;
-            }
-            else
-            {
-               debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
-                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-               CHECK_OKAY( SCIPdelCons(scip, cons) );
-               (*ndelconss)++;
-               *result = SCIP_SUCCESS;
-               continue;
-            }
-         }
-
-         /* tighten left and right hand side due to integrality */
-         CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
-
-         /* check bounds */
-         if( SCIPisGT(scip, consdata->lhs, consdata->rhs) )
-         {
-            debugMessage("linear constraint <%s> is infeasible: sides=[%g,%g]\n",
+            debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
                SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
             *result = SCIP_CUTOFF;
             continue;
          }
-
-         /* convert special equalities */
-         CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
-                        &conschanged, &consdeleted) );
-         if( *result == SCIP_CUTOFF || consdeleted )
-            continue;
-
-         /* tighten variable's bounds */
-         CHECK_OKAY( tightenBounds(scip, cons, nchgbds, result) );
-         if( *result == SCIP_CUTOFF )
-            continue;
-
-         /* check for fixed variables */
-         CHECK_OKAY( fixVariables(scip, cons, nfixedvars, result, &conschanged) );
-         if( *result == SCIP_CUTOFF )
-            continue;
-
-         /* check constraint for infeasibility and redundancy */
-         consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-         if( SCIPisGT(scip, minactivity, consdata->rhs) || SCIPisLT(scip, maxactivity, consdata->lhs) )
+         else
          {
-            debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            *result = SCIP_CUTOFF;
-            continue;
-         }
-         else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
-         {
-            debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
+               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
             CHECK_OKAY( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
+            if( !consdata->upgraded )
+               (*ndelconss)++;
             *result = SCIP_SUCCESS;
             continue;
-         }
-         else if( SCIPisGE(scip, minactivity, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) )
-         {
-            debugMessage("linear constraint <%s> left hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            CHECK_OKAY( chgLhs(scip, cons, -SCIPinfinity(scip)) );
-            (*nchgsides)++;
-            *result = SCIP_SUCCESS;
-            conschanged = TRUE;
-         }
-         else if( SCIPisLE(scip, maxactivity, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) )
-         {
-            debugMessage("linear constraint <%s> right hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            CHECK_OKAY( chgRhs(scip, cons, SCIPinfinity(scip)) );
-            (*nchgsides)++;
-            *result = SCIP_SUCCESS;
-            conschanged = TRUE;
-         }
-
-         /* if constraint was changed, try to upgrade linear constraint into more specific constraint */
-         if( conschanged )
-         {
-            CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
-            if( upgdcons != NULL )
-            {
-               /* remove the old constraint from the problem, and add the upgraded one */
-               CHECK_OKAY( SCIPdelCons(scip, cons) );
-               CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
-               CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
-               (*nupgdconss)++;
-               continue;
-            }
          }
       }
 
+      /* tighten left and right hand side due to integrality */
+      CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
+
+      /* check bounds */
+      if( SCIPisGT(scip, consdata->lhs, consdata->rhs) )
+      {
+         debugMessage("linear constraint <%s> is infeasible: sides=[%g,%g]\n",
+            SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+         *result = SCIP_CUTOFF;
+         continue;
+      }
+
+      /* convert special equalities */
+      CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
+                     &conschanged, &consdeleted) );
+      if( *result == SCIP_CUTOFF || consdeleted )
+         continue;
+
+      /* tighten variable's bounds */
+      CHECK_OKAY( tightenBounds(scip, cons, nchgbds, result) );
+      if( *result == SCIP_CUTOFF )
+         continue;
+
+      /* check for fixed variables */
+      CHECK_OKAY( fixVariables(scip, cons, nfixedvars, result, &conschanged) );
+      if( *result == SCIP_CUTOFF )
+         continue;
+
+      /* check constraint for infeasibility and redundancy */
+      consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
+      if( SCIPisGT(scip, minactivity, consdata->rhs) || SCIPisLT(scip, maxactivity, consdata->lhs) )
+      {
+         debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         *result = SCIP_CUTOFF;
+         continue;
+      }
+      else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
+      {
+         debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         CHECK_OKAY( SCIPdelCons(scip, cons) );
+         if( !consdata->upgraded )
+            (*ndelconss)++;
+         *result = SCIP_SUCCESS;
+         continue;
+      }
+      else if( SCIPisGE(scip, minactivity, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         debugMessage("linear constraint <%s> left hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         CHECK_OKAY( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+         if( !consdata->upgraded )
+            (*nchgsides)++;
+         *result = SCIP_SUCCESS;
+         conschanged = TRUE;
+      }
+      else if( SCIPisLE(scip, maxactivity, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         debugMessage("linear constraint <%s> right hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         CHECK_OKAY( chgRhs(scip, cons, SCIPinfinity(scip)) );
+         if( !consdata->upgraded )
+            (*nchgsides)++;
+         *result = SCIP_SUCCESS;
+         conschanged = TRUE;
+      }
+
+      /* if constraint was changed, try again to upgrade linear constraint into more specific constraint */
+      if( conschanged )
+      {
+         CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
+         if( upgdcons != NULL )
+         {
+            debugMessage("upgraded linear constraint <%s> to type <%s>:\n", 
+               SCIPconsGetName(cons), SCIPconshdlrGetName(SCIPconsGetHdlr(upgdcons)));
+            debug(consdataPrint(scip, consdata, NULL));
+
+            /* add the upgraded constraint to the problem */
+            CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
+            CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
+            (*nupgdconss)++;
+            
+            /* mark the linear constraint being upgraded and to be removed after presolving;
+             * don't delete it directly, because it may help to preprocess other linear constraints
+             */
+            assert(!consdata->upgraded);
+            consdata->upgraded = TRUE;
+         }
+      }
+
+      /* mark constraint being propagated/preprocessed */
+      assert(SCIPconsIsActive(cons));
       consdata->propagated = TRUE;
    }
 
-   /* redundancy checking */
-   if( *result != SCIP_CUTOFF && firstredcheck != -1 )
+   /* process pairs of constraints: check them for redundancy and try to aggregate them */
+   if( *result != SCIP_CUTOFF && firstchange != -1 )
    {
-      for( c = firstredcheck; c < nconss; ++c )
+      for( c = firstchange; c < nconss; ++c )
       {
          if( SCIPconsIsActive(conss[c]) )
          {
-            CHECK_OKAY( removeRedundancy(scip, conss, firstredcheck, c,
-                           nfixedvars, naggrvars, ndelconss, nchgsides, nchgcoefs, result) );
+            CHECK_OKAY( preprocessConstraintPairs(scip, conss, firstchange, c, conshdlrdata->maxaggrnormscale,
+                           nfixedvars, naggrvars, ndelconss, nupgdconss, nchgsides, nchgcoefs, result) );
          }
       }
-      for( c = firstredcheck; c < nconss; ++c )
+      for( c = firstchange; c < nconss; ++c )
       {
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
-         consdata->redchecked = TRUE;
+         consdata->changed = FALSE;
       }
    }
 
@@ -4049,7 +4252,7 @@ RETCODE SCIPincludeConsHdlrLinear(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_SEPAFREQ,
                   CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeLinear, consInitLinear, consExitLinear,
+                  consFreeLinear, consInitLinear, consExitLinear, consSolstartLinear,
                   consDeleteLinear, consTransLinear, 
                   consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
                   consPropLinear, consPresolLinear, consRescvarLinear,
@@ -4063,6 +4266,10 @@ RETCODE SCIPincludeConsHdlrLinear(
                   "conshdlr/linear/tightenboundsfreq",
                   "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
                   &conshdlrdata->tightenboundsfreq, TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "conshdlr/linear/maxaggrnormscale",
+                  "maximal allowed relative gain in maximum norm for constraint aggregation",
+                  &conshdlrdata->maxaggrnormscale, MAXAGGRNORMSCALE, 0.0, REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -4309,6 +4516,7 @@ RETCODE SCIPupgradeConsLinear(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
+   /* get the constraint handler and check, if it's really a linear constraint */
    conshdlr = SCIPconsGetHdlr(cons);
    if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
@@ -4316,17 +4524,26 @@ RETCODE SCIPupgradeConsLinear(
       return SCIP_INVALIDDATA;
    }
 
+   /* get constraint handler data and constraint data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* check, if the constraint was already upgraded and will be deleted anyway after preprocessing */
+   if( consdata->upgraded )
+      return SCIP_OKAY;
+
+   /* check, if the constraint is already stored as LP row */
    if( consdata->row != NULL )
    {
       errorMessage("cannot upgrade linear constraint that is already stored as LP row");
       return SCIP_INVALIDDATA;
    }
+
+
+   /* normalize constraint */
+   CHECK_OKAY( normalizeCons(scip, cons) );
 
 
    /* 

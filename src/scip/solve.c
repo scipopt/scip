@@ -72,6 +72,42 @@ void SCIPsolvePrintStopReason(
       fprintf(file, "solution limit reached");
 }
 
+/** domain propagation */
+static
+RETCODE propagateDomains(
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   RESULT result;
+   Bool propagain;
+   int h;
+
+   assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+   assert(cutoff != NULL);
+
+   debugMessage("domain propagation\n");
+   *cutoff = FALSE;
+   do
+   {
+      propagain = FALSE;
+      for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
+      {
+         CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[h], memhdr, set, prob, tree->actnode->depth, &result) );
+         propagain |= (result == SCIP_REDUCEDDOM);
+         (*cutoff) |= (result == SCIP_CUTOFF);
+      }
+   }
+   while( propagain && !(*cutoff) );
+
+   return SCIP_OKAY;
+}
+
 /** constructs the LP of the root node */
 static
 RETCODE initRootLP(
@@ -81,7 +117,9 @@ RETCODE initRootLP(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< LP data */
-   SEPASTORE*       sepastore           /**< separation storage */
+   SEPASTORE*       sepastore,          /**< separation storage */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    VAR* var;
@@ -131,7 +169,7 @@ RETCODE initRootLP(
    }
 
    /* apply found cuts */
-   CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, tree, lp) );
+   CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -146,7 +184,9 @@ RETCODE solveNodeInitialLP(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    SEPASTORE*       sepastore,          /**< separation storage */
-   EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    EVENT event;
@@ -164,7 +204,7 @@ RETCODE solveNodeInitialLP(
    if( tree->actnode->depth == 0 )
    {
       assert(stat->lpcount == 0);
-      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, sepastore) );
+      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, sepastore, branchcand, eventqueue) );
    }
 
    /* only the bounds and the constraint list may have been changed since the LP state node
@@ -349,15 +389,28 @@ RETCODE solveNodeLP(
          }
          else
          {
+            Longint oldnboundchanges;
+
+            oldnboundchanges = stat->nboundchanges;
+
             /* apply found cuts */
-            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, tree, lp) );
+            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+
+            /* if at least one of the cut was a bound change, propagate domains again */
+            if( stat->nboundchanges != oldnboundchanges )
+            {
+               CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, &cutoff) );
+            }
 
             mustprice |= !lp->solved;
             mustsepar = !lp->solved;
 
-            /* solve LP (with dual simplex) */
-            debugMessage("separation: solve LP\n");
-            CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+            if( !cutoff )
+            {
+               /* solve LP (with dual simplex) */
+               debugMessage("separation: solve LP\n");
+               CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+            }
          }
          assert(cutoff || lp->solved); /* after cutoff, the LP may be unsolved due to bound changes */
 
@@ -519,7 +572,7 @@ RETCODE enforceConstraints(
             assert(SCIPsepastoreGetNCuts(sepastore) > 0);
 
             /* apply found cuts */
-            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, tree, lp) );
+            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
 
             *infeasible = TRUE;
             *solveagain = TRUE;
@@ -647,6 +700,41 @@ RETCODE enforceConstraints(
    return SCIP_OKAY;
 }
 
+/** calls primal heuristics */
+static
+RETCODE primalHeuristics(
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch and bound tree */
+   PRIMAL*          primal,             /**< primal data */
+   Bool*            foundsol            /**< pointer to store whether a solution has been found */
+   )
+{
+   RESULT result;
+   int actdepth;
+   int lpforkdepth;
+   int h;
+
+   assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+   assert(foundsol != NULL);
+
+   *foundsol = FALSE;
+
+   if( SCIPtreeGetNNodes(tree) > 0 )
+   {
+      actdepth = tree->actnode->depth;
+      lpforkdepth = tree->actlpfork != NULL ? tree->actlpfork->depth : -1;
+      for( h = 0; h < set->nheurs; ++h )
+      {
+         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actdepth, lpforkdepth, tree->actnodehaslp, &result) );
+         (*foundsol) |= (result == SCIP_FOUNDSOL);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** main solving loop */
 RETCODE SCIPsolveCIP(
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -669,14 +757,11 @@ RETCODE SCIPsolveCIP(
    NODESEL* nodesel;
    NODE* actnode;
    EVENT event;
-   RESULT result;
    Bool cutoff;
    Bool infeasible;
    Bool solveagain;
-   Bool propagain;
    Bool initiallpsolved;
-   Bool forceprintline;
-   int h;
+   Bool foundsol;
 
    assert(set != NULL);
    assert(memhdr != NULL);
@@ -781,29 +866,12 @@ RETCODE SCIPsolveCIP(
 
       debugMessage("Processing node %lld in depth %d, %d siblings\n", stat->nnodes, actnode->depth, tree->nsiblings);
       
-      /* presolve node */
-      todoMessage("node presolving");
-
       /* domain propagation */
-      todoMessage("move domain propagation into an own method; limit number of loops");
-      cutoff = FALSE;
-      do
-      {
-         propagain = FALSE;
-         for( h = 0; h < set->nconshdlrs && !cutoff; ++h )
-         {
-            CHECK_OKAY( SCIPconshdlrPropagate(conshdlrs_enfo[h], memhdr, set, prob, actnode->depth, &result) );
-            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-            assert(set->buffer->firstfree == 0);
-            propagain |= (result == SCIP_REDUCEDDOM);
-            cutoff |= (result == SCIP_CUTOFF);
-         }
-      }
-      while( propagain && !cutoff );
+      CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, &cutoff) );
 
       if( cutoff )
       {
-         debugMessage("node preprocessing determined that node is infeasible\n");
+         debugMessage("domain propagation determined that node is infeasible\n");
          tree->actnode->lowerbound = primal->upperbound;
       }
       else
@@ -836,7 +904,8 @@ RETCODE SCIPsolveCIP(
                if( !initiallpsolved )
                {
                   /* load and solve the initial LP of the node */
-                  CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, sepastore, eventfilter) );
+                  CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, sepastore, 
+                                 branchcand, eventfilter, eventqueue) );
                   assert(lp->solved);
                   initiallpsolved = TRUE;
                }
@@ -863,11 +932,21 @@ RETCODE SCIPsolveCIP(
             }
             else
             {
+               Longint oldnboundchanges;
+
                assert(!tree->actnodehaslp || lp->solved);
+
+               oldnboundchanges = stat->nboundchanges;
 
                /* enforce constraints */
                CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, sepastore, branchcand, primal, eventqueue,
                               conshdlrs_enfo, &infeasible, &solveagain) );
+
+               /* apply further domain propagation, if addional bounds have been changed */
+               if( stat->nboundchanges != oldnboundchanges )
+               {
+                  CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, &cutoff) );
+               }
             }
          }
          while( solveagain );
@@ -936,19 +1015,11 @@ RETCODE SCIPsolveCIP(
       }
 
       /* call primal heuristics */
-      forceprintline = (actnode->depth == 0) && infeasible;
-      if( SCIPtreeGetNNodes(tree) > 0 )
-      {
-         for( h = 0; h < set->nheurs; ++h )
-         {
-            CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actnode->depth, tree->actnodehaslp, &result) );
-            assert(set->buffer->firstfree == 0);
-            forceprintline &= !(result == SCIP_FOUNDSOL);
-         }
-      }
+      CHECK_OKAY( primalHeuristics(set, tree, primal, &foundsol) );
+      assert(set->buffer->firstfree == 0);
       
       /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, forceprintline) );
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, (actnode->depth == 0) && infeasible && !foundsol) );
       assert(set->buffer->firstfree == 0);
       
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 

@@ -58,6 +58,22 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  */
 #define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
+/** solving start notification method of constraint handler (called when presolving was finished)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  It is called even when presolving is turned off.
+ *  The constraint handler may use this call e.g. to clean up its presolving data, or to finally modify its constraints
+ *  before the branch and bound process begins.
+ *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : final array of constraints in transformed problem
+ *  - nconss          : final number of constraints in transformed problem
+ */
+#define DECL_CONSSOLSTART(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+
 /** frees specific constraint data
  *
  *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
@@ -312,7 +328,6 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
    int nnewdelconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides,                 \
    int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
    int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, RESULT* result)
-
 
 /** conflict variable resolving method of constraint handler
  *
@@ -589,6 +604,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
@@ -626,6 +642,13 @@ RETCODE SCIPconshdlrInit(
 extern
 RETCODE SCIPconshdlrExit(
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
+   SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** informs constraint handler that the presolving was finished and the branch and bound process is being started */
+extern
+RETCODE SCIPconshdlrSolstart(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
@@ -836,9 +859,9 @@ int SCIPconshdlrGetMaxNConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** resets maximum number of active constraints to current number of active constraints */
+/** gets initial number of active constraints of constraint handler */
 extern
-void SCIPconshdlrResetNMaxNConss(
+int SCIPconshdlrGetStartNConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

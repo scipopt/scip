@@ -260,6 +260,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                         {
                            debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, viol=%f\n",
                               cutname, cutact, cutrhs, cutnorm, (cutact-cutrhs)/cutnorm);
+                           debug(SCIPprintRow(scip, cut, NULL));
                            CHECK_OKAY( SCIPaddCut(scip, cut, (cutact-cutrhs)/cutnorm/(cutlen+1)) );
                            *result = SCIP_SEPARATED;
                            ncuts++;

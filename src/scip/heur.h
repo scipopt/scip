@@ -128,6 +128,7 @@ RETCODE SCIPheurExec(
    const SET*       set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    int              actdepth,           /**< depth of active node */
+   int              lpforkdepth,        /**< depth of the last node with solved LP */
    Bool             actnodehaslp,       /**< is LP being processed in the active node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );

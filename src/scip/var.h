@@ -1,3 +1,4 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
@@ -573,10 +574,10 @@ RETCODE SCIPvarFix(
    Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    );
 
-/** converts variable into aggregated variable */
+/** converts loose variable into aggregated variable */
 extern
 RETCODE SCIPvarAggregate(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< loose problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -585,7 +586,7 @@ RETCODE SCIPvarAggregate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
+   VAR*             aggvar,             /**< loose variable $y$ in aggregation $x = a*y + c$ */
    Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
    Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
@@ -825,6 +826,17 @@ RETCODE SCIPvarGetProbvarBound(
    BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
    );
 
+/** transforms given variable, scalar and constant to the corresponding active variable, scalar and constant;
+ *  if the variable resolves to a fixed variable, the returned variable will be NULL, "scalar" will be 0.0 and
+ *  the value of the sum will be stored in "constant"
+ */
+extern
+RETCODE SCIPvarGetProbvarSum(
+   VAR**            var,                /**< pointer to problem variable $x$ in sum $a*x + c$ */
+   Real*            scalar,             /**< pointer to scalar $a$ in sum $a*x + c$ */
+   Real*            constant            /**< pointer to constant $c$ in sum $a*x + c$ */
+   );
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -864,6 +876,12 @@ Bool SCIPvarIsNegated(
 /** gets type of variable */
 extern
 VARTYPE SCIPvarGetType(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
+extern
+Bool SCIPvarIsRemoveable(
    VAR*             var                 /**< problem variable */
    );
 
@@ -971,6 +989,7 @@ int SCIPvarGetInferNum(
       && ((var)->varstatus != SCIP_VARSTATUS_NEGATED || (var)->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL))
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
 #define SCIPvarGetType(var)             ((VARTYPE)((var)->vartype))
+#define SCIPvarIsRemoveable(var)        (var)->removeable
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbIndex(var)        (var)->probindex
 #define SCIPvarGetCol(var)              (var)->data.col

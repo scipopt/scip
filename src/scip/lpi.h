@@ -42,24 +42,24 @@ enum LPParam
 {
    SCIP_LPPAR_FROMSCRATCH =  0,         /**< solver should start from scratch at next call */
    SCIP_LPPAR_FASTMIP     =  1,         /**< fast mip setting of LP solver */
-   SCIP_LPPAR_LPIT1       =  2,         /**< number of simplex iterations in phase 1 */
-   SCIP_LPPAR_LPIT2       =  3,         /**< number of simplex iterations in phase 2 */
+   SCIP_LPPAR_PRICING     =  2,         /**< pricing strategy */
+   SCIP_LPPAR_LPINFO      =  3,         /**< should LP solver output information to the screen? */
    SCIP_LPPAR_FEASTOL     =  4,         /**< feasibility tolerance */
    SCIP_LPPAR_LOBJLIM     =  5,         /**< lower objective limit */
    SCIP_LPPAR_UOBJLIM     =  6,         /**< upper objective limit */
    SCIP_LPPAR_LPITLIM     =  7,         /**< LP iteration limit */
    SCIP_LPPAR_LPTILIM     =  8,         /**< LP time limit */
-   SCIP_LPPAR_PRICING     =  9,         /**< pricing strategy */
-   SCIP_LPPAR_LPINFO      = 10          /**< should LP solver output information to the screen? */
+   SCIP_LPPAR_LPITER      =  9          /**< number of simplex iterations for last LP solve */
 };
 typedef enum LPParam LPPARAM;
 
 /** LP pricing strategy */
 enum Pricing
 {
-   SCIP_PRICING_FULL        = 0,        /**< full pricing */
-   SCIP_PRICING_STEEP       = 1,        /**< steepest edge pricing */
-   SCIP_PRICING_STEEPQSTART = 2         /**< steepest edge pricing without initial dual norms */
+   SCIP_PRICING_AUTO        = 0,        /**< the LP solver should use its prefered strategy */
+   SCIP_PRICING_FULL        = 1,        /**< full pricing */
+   SCIP_PRICING_STEEP       = 2,        /**< steepest edge pricing */
+   SCIP_PRICING_STEEPQSTART = 3         /**< steepest edge pricing without initial dual norms */
 };
 typedef enum Pricing PRICING;
 

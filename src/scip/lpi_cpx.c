@@ -42,11 +42,13 @@ typedef DUALPACKET ROWPACKET;           /* each row needs two bit of information
 #define ROWS_PER_PACKET DUALPACKETSIZE
 
 /* CPLEX parameter lists which can be changed */
-#define NUMINTPARAM  6
+#define NUMINTPARAM  8
 static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
    CPX_PARAM_FASTMIP,
+   CPX_PARAM_PREIND,
+   CPX_PARAM_PPRIIND,
    CPX_PARAM_DPRIIND,
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND
@@ -1427,7 +1429,7 @@ RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
-   setParameterValues(&(lpi->cpxparam));
+   CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
 
    retval = CPXprimopt(cpxenv, lpi->cpxlp);
    switch( retval  )
@@ -1448,7 +1450,10 @@ RETCODE SCIPlpiSolvePrimal(
       /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
       debugMessage("CPLEX returned INForUNBD -> calling CPLEX primal simplex again without presolve\n");
       
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+      /* switch off preprocessing */
+      setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
+      CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
+
       retval = CPXprimopt(cpxenv, lpi->cpxlp);
       switch( retval  )
       {
@@ -1469,7 +1474,8 @@ RETCODE SCIPlpiSolvePrimal(
          errorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off");
       }
 
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
+      /* switch on preprocessing again */
+      setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
    }
 
    return SCIP_OKAY;
@@ -1491,7 +1497,7 @@ RETCODE SCIPlpiSolveDual(
 
    invalidateSolution(lpi);
 
-   setParameterValues(&(lpi->cpxparam));
+   CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
 
    retval = CPXdualopt(cpxenv, lpi->cpxlp);
    switch( retval  )
@@ -1506,13 +1512,16 @@ RETCODE SCIPlpiSolveDual(
 
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
-   
+
    if( lpi->solstat == CPX_STAT_INForUNBD )
    {
       /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
       debugMessage("CPLEX returned INForUNBD -> calling CPLEX dual simplex again without presolve\n");
       
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+      /* switch off preprocessing */
+      setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
+      CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
+
       retval = CPXdualopt(cpxenv, lpi->cpxlp);
       switch( retval  )
       {
@@ -1533,7 +1542,8 @@ RETCODE SCIPlpiSolveDual(
          errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off");
       }
 
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
+      /* switch on preprocessing again */
+      setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
    }
 
    return SCIP_OKAY;
@@ -2137,16 +2147,36 @@ RETCODE SCIPlpiGetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      if( getIntParam(lpi, CPX_PARAM_ADVIND) == CPX_ON )
-	 *ival = FALSE;
-      else
-	 *ival = TRUE;
+      *ival = (getIntParam(lpi, CPX_PARAM_ADVIND) == CPX_OFF);
       break;
-   case SCIP_LPPAR_LPIT1:
-      *ival = CPXgetphase1cnt(cpxenv, lpi->cpxlp);
+   case SCIP_LPPAR_FASTMIP:
+      *ival = (getIntParam(lpi, CPX_PARAM_FASTMIP) == CPX_ON);
       break;
-   case SCIP_LPPAR_LPIT2:
-      *ival = CPXgetitcnt(cpxenv, lpi->cpxlp);
+   case SCIP_LPPAR_PRICING:
+      switch( getIntParam(lpi, CPX_PARAM_DPRIIND) )
+      {
+      case CPX_DPRIIND_FULL:
+         *ival = SCIP_PRICING_FULL;
+         break;
+      case CPX_DPRIIND_STEEP:
+         *ival = SCIP_PRICING_STEEP;
+         break;
+      case CPX_DPRIIND_STEEPQSTART:
+         *ival = SCIP_PRICING_STEEPQSTART;
+         break;
+      default:
+         *ival = SCIP_PRICING_AUTO;
+         break;
+      }
+      break;
+   case SCIP_LPPAR_LPINFO:
+      *ival = (getIntParam(lpi, CPX_PARAM_SCRIND) == CPX_ON);
+      break;
+   case SCIP_LPPAR_LPITLIM:
+      *ival = getIntParam(lpi, CPX_PARAM_ITLIM);
+      break;
+   case SCIP_LPPAR_LPITER:
+      *ival = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
       break;
    default:
       return SCIP_LPERROR;
@@ -2172,9 +2202,6 @@ RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       setIntParam(lpi, CPX_PARAM_ADVIND, (ival == FALSE) ? CPX_ON : CPX_OFF);
       break;
-   case SCIP_LPPAR_LPITLIM:
-      setIntParam(lpi, CPX_PARAM_ITLIM, ival);
-      break;
    case SCIP_LPPAR_FASTMIP:
       assert(ival == TRUE || ival == FALSE);
       setIntParam(lpi, CPX_PARAM_FASTMIP, (ival == TRUE) ? CPX_ON : CPX_OFF);
@@ -2182,13 +2209,20 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_PRICING:
       switch( (PRICING)ival )
       {
+      case SCIP_PRICING_AUTO:
+	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_AUTO);
+	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_AUTO);
+         break;
       case SCIP_PRICING_FULL:
+	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_FULL);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_FULL);
          break;
       case SCIP_PRICING_STEEP:
+	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_STEEP);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEP);
 	 break;
       case SCIP_PRICING_STEEPQSTART:
+	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_STEEPQSTART);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEPQSTART);
 	 break;
       default:
@@ -2197,16 +2231,13 @@ RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
-      if( ival == TRUE )
-      {
-	 setIntParam(lpi, CPX_PARAM_SIMDISPLAY, CPX_ON);
+      if( ival )
 	 setIntParam(lpi, CPX_PARAM_SCRIND, CPX_ON);
-      }
       else 
-      {
-	 setIntParam(lpi, CPX_PARAM_SIMDISPLAY, CPX_OFF);
 	 setIntParam(lpi, CPX_PARAM_SCRIND, CPX_OFF);
-      }
+      break;
+   case SCIP_LPPAR_LPITLIM:
+      setIntParam(lpi, CPX_PARAM_ITLIM, ival);
       break;
    default:
       return SCIP_LPERROR;

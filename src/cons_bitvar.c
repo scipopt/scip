@@ -698,6 +698,8 @@ RETCODE propagateWord(
          debugMessage("bitvar <%s> word %d: fixing word <%s> to %d\n",
             SCIPconsGetName(cons), word, SCIPvarGetName(wordvar), wordlb);
          CHECK_OKAY( SCIPfixVar(scip, wordvar, (Real)wordlb, infeasible) );
+         if( *infeasible )
+            return SCIP_OKAY;
          if( nfixedvars != NULL )
             (*nfixedvars)++;
       }
@@ -741,7 +743,8 @@ RETCODE propagateWord(
                SCIPconsGetName(cons), word, b, SCIPvarGetName(consdata->bits[b]),
                SCIPvarGetName(wordvar), wordlb, wordub);
             CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 0.0, infeasible) );
-            assert(!(*infeasible));
+            if( *infeasible )
+               return SCIP_OKAY;
             if( nfixedvars != NULL )
                (*nfixedvars)++;
          }
@@ -756,7 +759,8 @@ RETCODE propagateWord(
                SCIPconsGetName(cons), word, b, SCIPvarGetName(consdata->bits[b]),
                SCIPvarGetName(wordvar), wordlb, wordub);
             CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 1.0, infeasible) );
-            assert(!(*infeasible));
+            if( *infeasible )
+               return SCIP_OKAY;
             if( nfixedvars != NULL )
                (*nfixedvars)++;
          }
@@ -904,6 +908,10 @@ DECL_CONSFREE(consFreeBitvar)
 
 /** deinitialization method of constraint handler (called when problem solving exits) */
 #define consExitBitvar NULL
+
+
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#define consSolstartBitvar NULL
 
 
 /** frees specific constraint data */
@@ -1321,7 +1329,7 @@ RETCODE SCIPincludeConsHdlrBitvar(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeBitvar, consInitBitvar, consExitBitvar,
+                  consFreeBitvar, consInitBitvar, consExitBitvar, consSolstartBitvar,
                   consDeleteBitvar, consTransBitvar, consInitlpBitvar,
                   consSepaBitvar, consEnfolpBitvar, consEnfopsBitvar, consCheckBitvar, 
                   consPropBitvar, consPresolBitvar, consRescvarBitvar,

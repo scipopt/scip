@@ -161,15 +161,15 @@ RETCODE runSCIP(
 
       CHECK_OKAY( SCIPcreateProb(scip, "testprob", NULL, NULL, NULL) );
       
-      CHECK_OKAY( SCIPcreateConsBitconstString(scip, &bitvar1, "bitvar1", 5, 0.0, "b0000000000000000010000") );
+      CHECK_OKAY( SCIPcreateConsBitconstString(scip, &bitvar1, "bitvar1", 1, 0.0, "b1") );
 
-      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar2, "bitvar2", 80, +1.0e-05, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar2, "bitvar2", 1024, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, bitvar2) );
-      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar3, "bitvar3", 80, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar3, "bitvar3", 1024, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, bitvar3) );
 
       CHECK_OKAY( SCIPcreateConsBitarith(scip, &cons, "bitarith", SCIP_BITARITHTYPE_ADD, bitvar1, bitvar2, bitvar3,
-                     TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+                     TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 

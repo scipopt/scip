@@ -1832,9 +1832,9 @@ RETCODE varUpdateAggregationBounds(
    return SCIP_OKAY;
 }
 
-/** converts variable into aggregated variable */
+/** converts loose variable into aggregated variable */
 RETCODE SCIPvarAggregate(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< loose problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -1843,7 +1843,7 @@ RETCODE SCIPvarAggregate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
+   VAR*             aggvar,             /**< loose variable $y$ in aggregation $x = a*y + c$ */
    Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
    Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
@@ -1856,103 +1856,63 @@ RETCODE SCIPvarAggregate(
    assert(var != NULL);
    assert(var->glbdom.lb == var->actdom.lb);
    assert(var->glbdom.ub == var->actdom.ub);
+   assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
+   assert(infeasible != NULL);
+
+   /* aggregation is a fixing, if the scalar is zero */
+   if( SCIPsetIsZero(set, scalar) )
+      return SCIPvarFix(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, constant, infeasible);
+
+   assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->actdom.lb);
    assert(aggvar->glbdom.ub == aggvar->actdom.ub);
-   assert(!SCIPsetIsZero(set, scalar));
-   assert(infeasible != NULL);
 
    debugMessage("aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
       scalar, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub, constant);
 
+   assert(var->varstatus == SCIP_VARSTATUS_LOOSE);
+   assert(aggvar->varstatus == SCIP_VARSTATUS_LOOSE);
+
    *infeasible = FALSE;
 
-   switch( var->varstatus )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.transvar == NULL )
-      {
-         errorMessage("Cannot aggregate an untransformed original variable");
-         return SCIP_INVALIDDATA;
-      }
-      CHECK_OKAY( SCIPvarAggregate(var->data.transvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
-                     aggvar, scalar, constant, infeasible) );
-      break;
+   /* tighten the bounds of aggregated and aggregation variable */
+   CHECK_OKAY( varUpdateAggregationBounds(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
+                  aggvar, scalar, constant, infeasible) );
+   if( *infeasible )
+      return SCIP_OKAY;
 
-   case SCIP_VARSTATUS_LOOSE:
-      assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
+   /* set the aggregated variable's objective value to 0.0 */
+   obj = var->obj;
+   CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, tree, lp, branchcand, eventqueue, 0.0) );
 
-      /* tighten the bounds of aggregated and aggregation variable */
-      CHECK_OKAY( varUpdateAggregationBounds(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
-                     aggvar, scalar, constant, infeasible) );
-      if( *infeasible )
-         return SCIP_OKAY;
+   /* unlock all rounding locks */
+   nlocksdown = var->nlocksdown;
+   nlocksup = var->nlocksup;
+   var->nlocksdown = 0;
+   var->nlocksup = 0;
 
-      /* set the aggregated variable's objective value to 0.0 */
-      obj = var->obj;
-      CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, tree, lp, branchcand, eventqueue, 0.0) );
+   /* convert variable into aggregated variable */
+   var->varstatus = SCIP_VARSTATUS_AGGREGATED;
+   var->data.aggregate.var = aggvar;
+   var->data.aggregate.scalar = scalar;
+   var->data.aggregate.constant = constant;
 
-      /* unlock all rounding locks */
-      nlocksdown = var->nlocksdown;
-      nlocksup = var->nlocksup;
-      var->nlocksdown = 0;
-      var->nlocksup = 0;
+   /* make aggregated variable a parent of the aggregation variable */
+   CHECK_OKAY( varAddParent(aggvar, memhdr, set, var) );
 
-      /* convert variable into aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_AGGREGATED;
-      var->data.aggregate.var = aggvar;
-      var->data.aggregate.scalar = scalar;
-      var->data.aggregate.constant = constant;
+   /* update the problem's vars array */
+   CHECK_OKAY( SCIPprobVarFixed(prob, set, branchcand, var) );
 
-      /* make aggregated variable a parent of the aggregation variable */
-      CHECK_OKAY( varAddParent(aggvar, memhdr, set, var) );
+   /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
+    * variable and the problem's objective offset
+    */
+   CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, prob, tree, lp, branchcand, eventqueue, obj) );
 
-      /* update the problem's vars array */
-      CHECK_OKAY( SCIPprobVarFixed(prob, set, branchcand, var) );
+   /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
+   varAddRoundLocks(var, nlocksdown, nlocksup);
 
-      /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
-       * variable and the problem's objective offset
-       */
-      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, prob, tree, lp, branchcand, eventqueue, obj) );
-
-      /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
-      varAddRoundLocks(var, nlocksdown, nlocksup);
-
-      /* update flags of aggregation variable */
-      aggvar->removeable &= var->removeable;
-      break;
-
-   case SCIP_VARSTATUS_COLUMN:
-      errorMessage("Cannot aggregate a column variable");
-      return SCIP_INVALIDDATA;
-
-   case SCIP_VARSTATUS_FIXED:
-      errorMessage("Cannot aggregate a fixed variable");
-      return SCIP_INVALIDDATA;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      errorMessage("Cannot aggregate an aggregated variable again");
-      return SCIP_INVALIDDATA;
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot aggregate a multiple aggregated variable");
-      return SCIP_INVALIDDATA;
-
-   case SCIP_VARSTATUS_NEGATED:
-      /* aggregate negation variable x in x' = offset - x, instead of aggregating x' directly:
-       *   x' = a*y + c  ->  x = offset - x' = offset - a*y - c
-       */
-      assert(SCIPsetIsZero(set, var->obj));
-      assert(var->negatedvar != NULL);
-      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
-      assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarAggregate(var->negatedvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
-                     aggvar, -scalar, var->data.negate.constant - constant, infeasible) );
-      break;
-
-   default:
-      errorMessage("Unknown variable status");
-      abort();
-   }
+   /* update flags of aggregation variable */
+   aggvar->removeable &= var->removeable;
 
    return SCIP_OKAY;
 }
@@ -2094,8 +2054,8 @@ RETCODE SCIPvarMultiaggregate(
    return SCIP_OKAY;
 }
 
-/** gets negated variable x' = offset - x of problem variable x, where offset is fixed to lb + ub when the negated
- *  variable is created
+/** gets negated variable x' = offset - x of problem variable x, where offset is fixed to 1.0 for binary variables,
+ *  and to lb + ub when the negated variable is created
  */
 RETCODE SCIPvarGetNegated(
    VAR*             var,                /**< problem variable to negate */
@@ -2130,9 +2090,14 @@ RETCODE SCIPvarGetNegated(
       CHECK_OKAY( varCreate(negvar, memhdr, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
                      var->vartype, var->removeable) );
       (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED;
-      (*negvar)->data.negate.constant = var->glbdom.lb + var->glbdom.ub;
+      if( var->vartype == SCIP_VARTYPE_BINARY )
+         (*negvar)->data.negate.constant = 1.0;
+      else
+         (*negvar)->data.negate.constant = var->glbdom.lb + var->glbdom.ub;
 
-      /* set the local bounds corresponding to the negation variable */
+      /* set the bounds corresponding to the negation variable */
+      (*negvar)->glbdom.lb = (*negvar)->data.negate.constant - var->glbdom.ub;
+      (*negvar)->glbdom.ub = (*negvar)->data.negate.constant - var->glbdom.lb;
       (*negvar)->actdom.lb = (*negvar)->data.negate.constant - var->actdom.ub;
       (*negvar)->actdom.ub = (*negvar)->data.negate.constant - var->actdom.lb;
       todoMessage("create holes in the negated variable corresponding to the holes of the negation variable");
@@ -2312,15 +2277,15 @@ RETCODE SCIPvarAddObj(
    Real             addobj              /**< additional objective value for variable */
    )
 {
-   Real oldobj;
-   int i;
-
    assert(var != NULL);
 
    debugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
 
    if( !SCIPsetIsZero(set, addobj) )
    {
+      Real oldobj;
+      int i;
+
       switch( var->varstatus )
       {
       case SCIP_VARSTATUS_ORIGINAL:
@@ -3686,6 +3651,72 @@ RETCODE SCIPvarGetProbvarBound(
    return SCIP_OKAY;
 }
 
+/** transforms given variable, scalar and constant to the corresponding active variable, scalar and constant;
+ *  if the variable resolves to a fixed variable, the returned variable will be NULL, "scalar" will be 0.0 and
+ *  the value of the sum will be stored in "constant"
+ */
+RETCODE SCIPvarGetProbvarSum(
+   VAR**            var,                /**< pointer to problem variable $x$ in sum $a*x + c$ */
+   Real*            scalar,             /**< pointer to scalar $a$ in sum $a*x + c$ */
+   Real*            constant            /**< pointer to constant $c$ in sum $a*x + c$ */
+   )
+{
+   assert(var != NULL);
+   assert(scalar != NULL);
+   assert(constant != NULL);
+
+   while( *var != NULL )
+   {
+      switch( (*var)->varstatus )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( (*var)->data.transvar == NULL )
+         {
+            errorMessage("original variable has no transformed variable attached");
+            return SCIP_INVALIDDATA;
+         }
+         *var = (*var)->data.transvar;
+         break;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:       /* x = c'          =>  a*x + c ==             (a*c' + c) */
+         (*constant) += *scalar * (*var)->glbdom.lb;
+         *scalar = 0.0;
+         *var = NULL;
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
+         assert((*var)->data.aggregate.var != NULL);
+         (*constant) += *scalar * (*var)->data.aggregate.constant;
+         (*scalar) *= (*var)->data.aggregate.scalar;
+         *var = (*var)->data.aggregate.var;
+         break;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("multiple aggregated variable has no single corresponding active problem variable");
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
+         assert((*var)->negatedvar != NULL);
+         assert((*var)->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+         assert((*var)->negatedvar->negatedvar == *var);
+         (*constant) += *scalar * (*var)->data.negate.constant;
+         (*scalar) *= -1.0;
+         *var = (*var)->negatedvar;
+         break;
+
+      default:
+         errorMessage("unknown variable status");
+         abort();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -3754,6 +3785,16 @@ VARTYPE SCIPvarGetType(
    assert(var != NULL);
 
    return (VARTYPE)(var->vartype);
+}
+
+/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
+Bool SCIPvarIsRemoveable(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->removeable;
 }
 
 /** gets unique index of variable */

@@ -105,6 +105,21 @@ DECL_CONSEXIT(consExitEqknapsack)
 #endif
 
 
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#if 0
+static
+DECL_CONSSOLSTART(consSolstartEqknapsack)
+{
+   errorMessage("method of eqknapsack constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consSolstartEqknapsack NULL
+#endif
+
+
 /** frees specific constraint data */
 #if 0
 static
@@ -386,7 +401,7 @@ RETCODE SCIPincludeConsHdlrEqknapsack(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack,
+                  consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, consSolstartEqknapsack,
                   consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,
                   consSepaEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
                   consPropEqknapsack, consPresolEqknapsack, consRescvarEqknapsack,

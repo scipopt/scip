@@ -350,6 +350,16 @@ STAGE SCIPstage(
    return scip->stage;
 }
 
+/** returns whether the current stage belongs to the transformed problem space */
+Bool SCIPisTransformed(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return (scip->stage != SCIP_STAGE_PROBLEM);
+}
+
 
 
 
@@ -728,6 +738,7 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
@@ -753,7 +764,7 @@ RETCODE SCIPincludeConsHdlr(
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
                   name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
-                  consfree, consinit, consexit, consdelete, constrans, consinitlp,
+                  consfree, consinit, consexit, conssolstart, consdelete, constrans, consinitlp,
                   conssepa, consenfolp, consenfops, conscheck, consprop, conspresol, consrescvar,
                   conslock, consunlock, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
@@ -1956,7 +1967,7 @@ RETCODE presolve(
    aborted = SCIPsolveIsStopped(scip->set, scip->stat);
    *result = SCIP_DIDNOTRUN;
 
-   while( nrounds < maxnrounds && !aborted && *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED )
+   while( nrounds < maxnrounds && !aborted )
    {
       lastnfixedvars = nfixedvars;
       lastnaggrvars = naggrvars;
@@ -1997,16 +2008,22 @@ RETCODE presolve(
          || (Real)(nchgcoefs - lastnchgcoefs)/(Real)(scip->transprob->nvars * scip->transprob->nconss) < 0.2*abortfac);
       /* abort if time limit reached or user interrupted */
       aborted |= SCIPsolveIsStopped(scip->set, scip->stat);
+      /* abort if problem is infeasible or unbounded */
+      aborted |= (*result == SCIP_CUTOFF);
+      aborted |= (*result == SCIP_UNBOUNDED);
 
       /* increase round number */
       nrounds++;
 
-      /* print presolving statistics */
-      sprintf(s, "presolving after %d rounds:", nrounds);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-      sprintf(s, " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients",
-         nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+      if( !aborted )
+      {
+         /* print presolving statistics */
+         sprintf(s, "presolving after %d rounds:", nrounds);
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+         sprintf(s, " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients",
+            nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+      }
    }
    
    /* print presolving statistics */
@@ -2026,9 +2043,12 @@ RETCODE SCIPpresolve(
 {
    RESULT result;
    char s[MAXSTRLEN];
-   int i;
+   int h;
 
    CHECK_OKAY( checkStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* inform original problem, that solving starts now */
+   SCIPprobSolvingStarts(scip->origprob);
 
    /* switch stage to INITSOLVE */
    scip->stage = SCIP_STAGE_INITSOLVE;
@@ -2063,6 +2083,15 @@ RETCODE SCIPpresolve(
    /* presolve problem */
    CHECK_OKAY( presolve(scip, &result) );
 
+   /* inform constraint handlers that presolving is finished and the branch and bound process starts now */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      CHECK_OKAY( SCIPconshdlrSolstart(scip->set->conshdlrs[h], scip) );
+   }
+   
+   /* inform problem, that presolving is finished and the branch and bound process starts now */
+   SCIPprobSolvingStarts(scip->transprob);
+
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
 
@@ -2077,18 +2106,16 @@ RETCODE SCIPpresolve(
          scip->transprob->ncont, scip->transprob->nconss);
       infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
 
-      SCIPprobResetMaxNConss(scip->transprob);
-      for( i = 0; i < scip->set->nconshdlrs; ++i )
+      for( h = 0; h < scip->set->nconshdlrs; ++h )
       {
          int nconss;
 
-         nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[i]);
+         nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
          if( nconss > 0 )
          {
-            sprintf(s, " %5d constraints of type <%s>", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+            sprintf(s, " %5d constraints of type <%s>", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
             infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          }
-         SCIPconshdlrResetNMaxNConss(scip->set->conshdlrs[i]);
       }
 
       /* switch stage to SOLVING */
@@ -2122,9 +2149,6 @@ RETCODE SCIPsolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   char s[MAXSTRLEN];
-   int i;
-
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    /* check, if a node selector exists */
@@ -2837,34 +2861,35 @@ RETCODE SCIPfixVar(
    )
 {
    assert(var != NULL);
+   assert(infeasible != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPfixVar", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   
+   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval))
+      || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
+      || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+   {
+      *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
+      return SCIP_OKAY;
+   }
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_SOLVING:
-      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval))
-         || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
-         || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+      *infeasible = FALSE;
+      if( SCIPsetIsGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
       {
-         *infeasible = TRUE;
+         CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
       }
-      else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      if( SCIPsetIsLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
-         *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
-      }
-      else
-      {
-         *infeasible = FALSE;
-         if( SCIPsetIsGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
-         {
-            CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
-         }
-         if( SCIPsetIsLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
-         {
-            CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
-         }
+         CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
       }
       return SCIP_OKAY;
 
@@ -2879,22 +2904,387 @@ RETCODE SCIPfixVar(
    }
 }
 
-/** converts variable into aggregated variable; this changes the vars array returned from
- *  SCIPgetVars() and SCIPgetVarsData()
+/** Tries to aggregate an equality $a*x + b*y == c$ consisting of two integral active problem variables $x$ and $y$.
+ *  An integer aggregation (i.e. integral coefficients $a'$ and $b'$, such that $a'*x + b'*y == c'$) is searched.
+ *  This can lead to the detection of infeasibility (e.g. if $c'$ is fractional), or to a rejection of the
+ *  aggregation (denoted by aggregated == FALSE), if the resulting integer coefficients are too large and thus
+ *  numerically instable.
  */
-RETCODE SCIPaggregateVar(
+static
+RETCODE aggregateActiveIntVars(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable $x$ to aggregate */
-   VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
-   Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
-   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   VAR*             varx,               /**< integral variable $x$ in equality $a*x + b*y == c$ */
+   VAR*             vary,               /**< integral variable $y$ in equality $a*x + b*y == c$ */
+   Real             scalarx,            /**< multiplier $a$ in equality $a*x + b*y == c$ */
+   Real             scalary,            /**< multiplier $b$ in equality $a*x + b*y == c$ */
+   Real             rhs,                /**< right hand side $c$ in equality $a*x + b*y == c$ */
+   Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaggregateVar", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   VAR* aggvar;
+   char aggvarname[MAXSTRLEN];
+   Longint scalarxn;
+   Longint scalarxd;
+   Longint scalaryn;
+   Longint scalaryd;
+   Longint a;
+   Longint b;
+   Longint c;
+   Longint scm;
+   Longint gcd;
+   Longint actclass;
+   Longint classstep;
+   Longint xsol;
+   Longint ysol;
+   Bool success;
 
-   CHECK_OKAY( SCIPvarAggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-                  scip->branchcand, scip->eventqueue, aggvar, scalar, constant, infeasible) );
+#define MAXDNOM 1000000
+
+   assert(scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(varx != NULL);
+   assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINOUS);
+   assert(vary != NULL);
+   assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINOUS);
+   assert(!SCIPsetIsZero(scip->set, scalarx));
+   assert(!SCIPsetIsZero(scip->set, scalary));
+   assert(infeasible != NULL);
+   assert(aggregated != NULL);
+
+   *infeasible = FALSE;
+   *aggregated = FALSE;
+
+   /* get rational representation of coefficients */
+   success = SCIPrealToRational(scalarx, scip->set->feastol, MAXDNOM, &scalarxn, &scalarxd);
+   if( success )
+      success = SCIPrealToRational(scalary, scip->set->feastol, MAXDNOM, &scalaryn, &scalaryd);
+   if( !success )
+      return SCIP_OKAY;
+   assert(scalarxd >= 1);
+   assert(scalaryd >= 1);
+
+   /* multiply equality with smallest common denominator */
+   scm = SCIPcalcSmaComMul(scalarxd, scalaryd);
+   a = (scm/scalarxd)*scalarxn;
+   b = (scm/scalaryd)*scalaryn;
+   rhs *= scm;
+   
+   /* divide equality by the greatest common divisor of a and b */
+   gcd = SCIPcalcGreComDiv(ABS(a), ABS(b));
+   a /= gcd;
+   b /= gcd;
+   rhs /= gcd;
+   assert(a != 0);
+   assert(b != 0);
+
+   /* check, if right hand side is integral */
+   if( !SCIPsetIsIntegral(scip->set, rhs) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   c = (Longint)(SCIPfloor(scip, rhs));
+
+   /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
+   if( a == 1 || a == -1 )
+   {
+      /* aggregate x = - b/a*y + c/a */
+      CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                        scip->lp, scip->branchcand, scip->eventqueue, vary, (Real)(-b/a), (Real)(c/a), infeasible) );
+      *aggregated = TRUE;
+      return SCIP_OKAY;
+   }
+   if( b == 1 || b == -1 )
+   {
+      /* aggregate y = - a/b*x + c/b */
+      CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                        scip->lp, scip->branchcand, scip->eventqueue, varx, (Real)(-a/b), (Real)(c/b), infeasible) );
+      *aggregated = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* Both variables are integers, their coefficients are not multiples of each other, and they don't have any
+    * common divisor. Let (x',y') be a solution of the equality
+    *   a*x + b*y == c    ->   a*x == c - b*y
+    * Then x = -b*z + x', y = a*z + y' with z integral gives all solutions to the equality.
+    */
+
+   /* find initial solution (x',y'):
+    *  - find y' such that c - b*y' is a multiple of a
+    *    - start in equivalence class c%a
+    *    - step through classes, where each step increases class number by (-b)%a, until class 0 is visited
+    *    - if equivalence class 0 is visited, we are done: y' equals the number of steps taken
+    *    - because a and b don't have a common divisor, each class is visited at most once, and at most a-1 steps are needed
+    *  - calculate x' with x' = (c - b*y')/a (which must be integral)
+    */
+
+   /* search upwards from ysol = 0 */
+   ysol = 0;
+   actclass = c%a;
+   if( actclass < 0 )
+      actclass += a;
+   assert(0 <= actclass && actclass < a);
+   classstep = (-b)%a;
+   if( classstep < 0 )
+      classstep += a;
+   assert(0 < classstep && classstep < a);
+   while( actclass != 0 )
+   {
+      assert(0 <= actclass && actclass < a);
+      actclass += classstep;
+      if( actclass >= a )
+         actclass -= a;
+      ysol++;
+   }
+   assert(ysol < a);
+   assert(((c - b*ysol)%a) == 0);
+   xsol = (c - b*ysol)/a;
+
+   /* feasible solutions are (x,y) = (x',y') + z*(-b,a)
+    * - create new integer variable z with infinite bounds
+    * - aggregate variable x = -b*z + x'
+    * - aggregate variable y =  a*z + y'
+    * - the bounds of z are calculated automatically during aggregation
+    */
+   sprintf(aggvarname, "agg%d", scip->stat->nvaridx);
+   CHECK_OKAY( SCIPvarCreateTransformed(&aggvar, scip->mem->solvemem, scip->set, scip->stat,
+                  aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
+                  SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary) ) );
+   CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->tree, scip->branchcand, aggvar) );
+   CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                  scip->lp, scip->branchcand, scip->eventqueue, aggvar, (Real)(-b), (Real)xsol, infeasible) );
+   if( !(*infeasible) )
+   {
+      CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                     scip->lp, scip->branchcand, scip->eventqueue, aggvar, (Real)a, (Real)ysol, infeasible) );
+   }
+   *aggregated = TRUE;
+
+   /* release z */
+   CHECK_OKAY( SCIPvarRelease(&aggvar, scip->mem->solvemem, scip->set, scip->lp) );
+
+   return SCIP_OKAY;
+}
+
+/** performs second step of SCIPaggregateVars(): 
+ *  the variable to be aggregated is chosen among active problem variables $x'$ and $y'$, prefering a less strict variable
+ *  type as aggregation variable (i.e. continous variables are prefered over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
+ *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ */
+static
+RETCODE aggregateActiveVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             varx,               /**< variable $x$ in equality $a*x + b*y == c$ */
+   VAR*             vary,               /**< variable $y$ in equality $a*x + b*y == c$ */
+   Real             scalarx,            /**< multiplier $a$ in equality $a*x + b*y == c$ */
+   Real             scalary,            /**< multiplier $b$ in equality $a*x + b*y == c$ */
+   Real             rhs,                /**< right hand side $c$ in equality $a*x + b*y == c$ */
+   Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   )
+{
+   int agg;
+
+   assert(scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(varx != NULL);
+   assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
+   assert(vary != NULL);
+   assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
+   assert(!SCIPsetIsZero(scip->set, scalarx));
+   assert(!SCIPsetIsZero(scip->set, scalary));
+   assert(infeasible != NULL);
+   assert(aggregated != NULL);
+
+   *infeasible = FALSE;
+   *aggregated = FALSE;
+
+   /* figure out, which variable should be aggregated */
+   agg = -1;
+   
+   /* a*x + b*y == c
+    *  ->  x == -b/a * y + c/a  (agg=0)
+    *  ->  y == -a/b * x + c/b  (agg=1)
+    */
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINOUS )
+      agg = 0;
+   else if( SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINOUS )
+      agg = 1;
+   else if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT )
+      agg = 0;
+   else if( SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT )
+      agg = 1;
+   else if( SCIPisIntegral(scip, scalary/scalarx) )
+      agg = 0;
+   else if( SCIPisIntegral(scip, scalarx/scalary) )
+      agg = 1;
+   if( agg == 1 )
+   {
+      VAR* var;
+      Real scalar;
+
+      /* switch the variables, such that varx is the aggregated variable */
+      var = vary;
+      vary = varx;
+      varx = var;
+      scalar = scalary;
+      scalary = scalarx;
+      scalarx = scalar;
+      agg = 0;
+   }
+   assert(agg == 0 || agg == -1);
+
+   /* did we find an "easy" aggregation? */
+   if( agg == 0 )
+   {
+      Real scalar;
+      Real constant;
+
+      /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
+      scalar = -scalary/scalarx;
+      constant = rhs/scalarx;
+
+      /* check aggregation for integer feasibility */
+      if( SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINOUS
+         && SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINOUS
+         && SCIPisIntegral(scip, scalar) && !SCIPisIntegral(scip, constant) )
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* aggregate the variable */
+      CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                        scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant, infeasible) );
+      *aggregated = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* the variables are both integral: we have to try to find an integer aggregation */
+   CHECK_OKAY( aggregateActiveIntVars(scip, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+
+   return SCIP_OKAY;
+}
+
+/** From a given equality $a*x + b*y == c$, aggregates one of the variables and removes it from the set of
+ *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData().
+ *  In the first step, the equality is transformed into an equality with active problem variables
+ *  $a'*x' + b'*y' == c'$. If $x' == y'$, this leads to the detection of redundancy if $a' == -b'$ and $c' == 0$,
+ *  of infeasibility, if $a' == -b'$ and $c' != 0$, or to a variable fixing $x' == c'/(a'+b')$ (and possible
+ *  infeasibility) otherwise.
+ *  In the second step, the variable to be aggregated is chosen among $x'$ and $y'$, prefering a less strict variable
+ *  type as aggregation variable (i.e. continous variables are prefered over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
+ *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ *
+ *  The output flags have the following meaning:
+ *  - infeasible: the problem is infeasible
+ *  - redundant:  the equality can be deleted from the constraint set
+ *  - aggregated: the aggregation was successfully performed (aggregated implies redundant)
+ */
+RETCODE SCIPaggregateVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             varx,               /**< variable $x$ in equality $a*x + b*y == c$ */
+   VAR*             vary,               /**< variable $y$ in equality $a*x + b*y == c$ */
+   Real             scalarx,            /**< multiplier $a$ in equality $a*x + b*y == c$ */
+   Real             scalary,            /**< multiplier $b$ in equality $a*x + b*y == c$ */
+   Real             rhs,                /**< right hand side $c$ in equality $a*x + b*y == c$ */
+   Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   Bool*            redundant,          /**< pointer to store whether the equality is (now) redundant */
+   Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   )
+{
+   Real constantx;
+   Real constanty;
+
+   assert(infeasible != NULL);
+   assert(redundant != NULL);
+   assert(aggregated != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPaggregateVars", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   *redundant = FALSE;
+   *aggregated = FALSE;
+
+   /* get the corresponding equality in active problem variable space:
+    * transform both expressions "a*x + 0" and "b*y + 0" into problem variable space
+    */
+   constantx = 0.0;
+   constanty = 0.0;
+   CHECK_OKAY( SCIPvarGetProbvarSum(&varx, &scalarx, &constantx) );
+   CHECK_OKAY( SCIPvarGetProbvarSum(&vary, &scalary, &constanty) );
+   
+   /* move the constant to the right hand side to acquire the form "a'*x' + b'*y' == c'" */
+   rhs -= (constantx + constanty);
+
+   /* if a scalar is zero, treat the variable as fixed-to-zero variable */
+   if( SCIPsetIsZero(scip->set, scalarx) )
+      varx = NULL;
+   if( SCIPsetIsZero(scip->set, scalary) )
+      vary = NULL;
+
+   /* capture the special cases that less than two variables are left, due to resolutions to a fixed variable or
+    * to the same active variable
+    */
+   if( varx == NULL && vary == NULL )
+   {
+      /* both variables were resolved to fixed variables */
+      *infeasible = !SCIPsetIsZero(scip->set, rhs);
+      *redundant = TRUE;
+      return SCIP_OKAY;
+   }
+   if( varx == NULL )
+   {
+      assert(SCIPsetIsZero(scip->set, scalarx));
+      assert(!SCIPsetIsZero(scip->set, scalary));
+      
+      /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
+      CHECK_OKAY( SCIPvarFix(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+                     scip->branchcand, scip->eventqueue, rhs/scalary, infeasible) );
+      *aggregated = TRUE;
+      return SCIP_OKAY;
+   }
+   if( vary == NULL )
+   {
+      assert(SCIPsetIsZero(scip->set, scalary));
+      assert(!SCIPsetIsZero(scip->set, scalarx));
+      
+      /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
+      CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+                     scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+      *aggregated = TRUE;
+      return SCIP_OKAY;
+   }
+   if( varx == vary )
+   {
+      /* both variables were resolved to the same active problem variable: this variable can be fixed */
+      scalarx += scalary;
+      if( SCIPsetIsZero(scip->set, scalarx) )
+      {
+         /* left hand side of equality is zero: equality is redundant and potentially infeasible */
+         *infeasible = !SCIPsetIsZero(scip->set, rhs);
+         *redundant = TRUE;
+      }
+      else
+      {
+         /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
+         CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+                        scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+         *aggregated = TRUE;
+      }
+      return SCIP_OKAY;
+   }
+
+   /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
+   CHECK_OKAY( aggregateActiveVars(scip, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+   *redundant = *aggregated;
 
    return SCIP_OKAY;
 }
@@ -5509,15 +5899,18 @@ void printConstraintStatistics(
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CONSHDLR* conshdlr;
+      int startnconss;
       int maxnconss;
-      
+
       conshdlr = scip->set->conshdlrs[i];
+      startnconss = SCIPconshdlrGetStartNConss(conshdlr);
       maxnconss = SCIPconshdlrGetMaxNConss(conshdlr);
       if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12d %12lld %12lld %12lld %12lld %12lld %12lld\n",
-            maxnconss,
+         fprintf(file, " %12d%c%12lld %12lld %12lld %12lld %12lld %12lld\n",
+            startnconss,
+            maxnconss > startnconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr), 
             SCIPconshdlrGetNPropCalls(conshdlr), 
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),

@@ -128,6 +128,21 @@ DECL_CONSEXIT(consExitXxx)
 #endif
 
 
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#if 0
+static
+DECL_CONSSOLSTART(consSolstartXxx)
+{
+   errorMessage("method of xxx constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consSolstartXxx NULL
+#endif
+
+
 /** frees specific constraint data */
 #if 0
 static
@@ -404,7 +419,7 @@ RETCODE SCIPincludeConsHdlrXxx(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeXxx, consInitXxx, consExitXxx,
+                  consFreeXxx, consInitXxx, consExitXxx, consSolstartXxx,
                   consDeleteXxx, consTransXxx, consInitlpXxx,
                   consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
                   consPropXxx, consPresolXxx, consRescvarXxx,

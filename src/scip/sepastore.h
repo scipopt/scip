@@ -67,8 +67,11 @@ RETCODE SCIPsepastoreApplyCuts(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< LP data */
+   LP*              lp,                 /**< LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** clears the separation storage without adding the cuts to the LP */

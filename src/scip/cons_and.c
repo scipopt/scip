@@ -261,6 +261,10 @@ RETCODE checkAllConss(
 #define consExitAnd NULL
 
 
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#define consSolstartAnd NULL
+
+
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteAnd)
@@ -496,7 +500,7 @@ RETCODE SCIPincludeConsHdlrAnd(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeAnd, consInitAnd, consExitAnd,
+                  consFreeAnd, consInitAnd, consExitAnd, consSolstartAnd,
                   consDeleteAnd, consTransAnd, consInitlpAnd,
                   consSepaAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd, 
                   consPropAnd, consPresolAnd, consRescvarAnd,

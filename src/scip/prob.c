@@ -151,6 +151,7 @@ RETCODE SCIPprobCreate(
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
    (*prob)->maxnconss = 0;
+   (*prob)->startnconss = 0;
    (*prob)->transformed = transformed;
 
    return SCIP_OKAY;
@@ -550,7 +551,8 @@ RETCODE SCIPprobVarFixed(
    assert(var != NULL);
    assert(var->varstatus == SCIP_VARSTATUS_FIXED
       || var->varstatus == SCIP_VARSTATUS_AGGREGATED
-      || var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+      || var->varstatus == SCIP_VARSTATUS_MULTAGGR
+      || var->varstatus == SCIP_VARSTATUS_NEGATED);
 
    if( var->probindex == -1 )
       return SCIP_OKAY;
@@ -679,14 +681,17 @@ RETCODE SCIPprobDelCons(
    return SCIP_OKAY;
 }
 
-/** resets maximum number of constraints to current number of constraints */
-void SCIPprobResetMaxNConss(
+/** resets maximum number of constraints to current number of constraints, remembers actual number of constraints
+ *  as starting number of constraints
+ */
+void SCIPprobSolvingStarts(
    PROB*            prob                /**< problem data */
    )
 {
    assert(prob != NULL);
 
    prob->maxnconss = prob->nconss;
+   prob->startnconss = prob->nconss;
 }
 
 /** sets objective sense: minimization or maximization */
@@ -877,6 +882,6 @@ void SCIPprobPrintStatistics(
    fprintf(file, "  Problem name     : %s\n", prob->name);
    fprintf(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continous)\n",
       prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
-   fprintf(file, "  Constraints      : %d actual, %d maximal\n", prob->nconss, prob->maxnconss);
+   fprintf(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
 }
 

@@ -143,6 +143,12 @@ STAGE SCIPstage(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** returns whether the current stage belongs to the transformed problem space */
+extern
+Bool SCIPisTransformed(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
@@ -391,6 +397,7 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
@@ -1099,17 +1106,35 @@ RETCODE SCIPfixVar(
    Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    );
 
-/** converts variable into aggregated variable; this changes the vars array returned from
- *  SCIPgetVars() and SCIPgetVarsData()
+/** From a given equality $a*x + b*y == c$, aggregates one of the variables and removes it from the set of
+ *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData().
+ *  In the first step, the equality is transformed into an equality with active problem variables
+ *  $a'*x' + b'*y' == c'$. If $x' == y'$, this leads to the detection of redundancy if $a' == -b'$ and $c' == 0$,
+ *  of infeasibility, if $a' == -b'$ and $c' != 0$, or to a variable fixing $x' == c'/(a'+b')$ (and possible
+ *  infeasibility) otherwise.
+ *  In the second step, the variable to be aggregated is chosen among $x'$ and $y'$, prefering a less strict variable
+ *  type as aggregation variable (i.e. continous variables are prefered over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
+ *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ *
+ *  The output flags have the following meaning:
+ *  - infeasible: the problem is infeasible
+ *  - redundant:  the equality can be deleted from the constraint set
+ *  - aggregated: the aggregation was successfully performed (aggregated implies redundant)
  */
 extern
-RETCODE SCIPaggregateVar(
+RETCODE SCIPaggregateVars(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable $x$ to aggregate */
-   VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
-   Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
-   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   VAR*             varx,               /**< variable $x$ in equality $a*x + b*y == c$ */
+   VAR*             vary,               /**< variable $y$ in equality $a*x + b*y == c$ */
+   Real             scalarx,            /**< multiplier $a$ in equality $a*x + b*y == c$ */
+   Real             scalary,            /**< multiplier $b$ in equality $a*x + b*y == c$ */
+   Real             rhs,                /**< right hand side $c$ in equality $a*x + b*y == c$ */
+   Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   Bool*            redundant,          /**< pointer to store whether the equality is (now) redundant */
+   Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
 /** converts variable into multi-aggregated variable; this changes the vars array returned from

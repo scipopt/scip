@@ -1133,32 +1133,25 @@ RETCODE readBounds(
             /* if a bound of a binary variable is given, the variable is converted into an integer variable
              * with default bounds 0 <= x <= infinity
              */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
-               && !(*mpsinputField1(mpsi) == 'L' && SCIPisEQ(scip, val, 0.0))
-               && !(*mpsinputField1(mpsi) == 'U' && SCIPisEQ(scip, val, 1.0)) )
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
-               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-               CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
-               CHECK_OKAY( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
+               if( (mpsinputField1(mpsi)[1] == 'I') /* ILOG extension (Integer Bound) */
+                  || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisEQ(scip, val, 0.0))
+                     && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisEQ(scip, val, 1.0))) )
+               {
+                  assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+                  assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  CHECK_OKAY( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
+               }
             }
 
-            switch(*mpsinputField1(mpsi))
+            switch(mpsinputField1(mpsi)[0])
             {
             case 'L':
-               if (mpsinputField1(mpsi)[1] == 'I') /* ILOG extension (Integer Lower Bound) */
-               {
-                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
-               }
-
                CHECK_OKAY( SCIPchgVarLb(scip, var, val) );
                break;
             case 'U':
-               if (mpsinputField1(mpsi)[1] == 'I') /* ILOG extension (Integer Upper Bound) */
-               {
-                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
-               }
-
                CHECK_OKAY( SCIPchgVarUb(scip, var, val) );
                break;
             case 'F':

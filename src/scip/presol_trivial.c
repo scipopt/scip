@@ -107,7 +107,12 @@ DECL_PRESOLEXEC(presolExecTrivial)
             debugMessage("fixing integral variable <%s>: [%g,%g] -> [%g,%g]\n",
                SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
             CHECK_OKAY( SCIPfixVar(scip, vars[v], newlb, &infeasible) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               debugMessage(" -> infeasible fixing\n");
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
             (*nfixedvars)++;
          }
          else
@@ -148,7 +153,12 @@ DECL_PRESOLEXEC(presolExecTrivial)
          {
             debugMessage("fixing continous variable <%s>: [%g,%g]\n", SCIPvarGetName(vars[v]), lb, ub);
             CHECK_OKAY( SCIPfixVar(scip, vars[v], lb, &infeasible) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               debugMessage(" -> infeasible fixing\n");
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
             (*nfixedvars)++;
          }
       }

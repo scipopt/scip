@@ -93,6 +93,7 @@ struct Prob
    int              consssize;          /**< available slots in conss array */
    int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int              maxnconss;          /**< maximum number of constraints existing at the same time */
+   int              startnconss;        /**< number of constraints existing when problem solving started */
    unsigned int     transformed:1;      /**< TRUE iff problem is the transformed problem */
 };
 
@@ -197,9 +198,11 @@ RETCODE SCIPprobDelCons(
    CONS*            cons                /**< constraint to remove */
    );
 
-/** resets maximum number of constraints to current number of constraints */
+/** resets maximum number of constraints to current number of constraints, remembers actual number of constraints
+ *  as starting number of constraints
+ */
 extern
-void SCIPprobResetMaxNConss(
+void SCIPprobSolvingStarts(
    PROB*            prob                /**< problem data */
    );
 

@@ -3342,7 +3342,7 @@ void SCIProwPrint(
       file = stdout;
 
    /* print left hand side */
-   fprintf(file, "%+g <= ", row->lhs);
+   fprintf(file, "%g <= ", row->lhs);
 
    /* print coefficients */
    if( row->len == 0 )
@@ -3361,7 +3361,7 @@ void SCIProwPrint(
       fprintf(file, "%+g ", row->constant);
 
    /* print right hand side */
-   fprintf(file, "<= %+g\n", row->rhs);
+   fprintf(file, "<= %g\n", row->rhs);
 }
 
 
@@ -3716,10 +3716,10 @@ RETCODE lpFlushAddRows(
       for( i = 0; i < row->len; ++i )
       {
          lpipos = row->cols[i]->lpipos;
-         debug( printf(" %+gx%d(<%s>)", row->vals[i], lpipos+1, row->cols[i]->var->name) );
          if( lpipos >= 0 )
          {
             assert(lpipos < lp->ncols);
+            debug( printf(" %+gx%d(<%s>)", row->vals[i], lpipos+1, row->cols[i]->var->name) );
             ind[nnonz] = lpipos;
             val[nnonz] = row->vals[i];
             nnonz++;
@@ -4022,6 +4022,10 @@ RETCODE SCIPlpCreate(
    (*lp)->diving = FALSE;
 
    /* set default parameters in LP solver */
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, FALSE) );  /* FASTMIP gives numerical problems! */
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_LPINFO, FALSE) );
    CHECK_OKAY( SCIPlpSetFeastol(*lp, set->feastol) );
 
    return SCIP_OKAY;
@@ -4929,6 +4933,13 @@ RETCODE SCIPlpSolvePrimal(
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
+#if 0
+   { /*????????????????????*/
+      char fname[MAXSTRLEN];
+      sprintf(fname, "primlp%d.lp", stat->nlps);
+      CHECK_OKAY( SCIPlpWrite(lp, fname) );
+   }
+#endif
 
    /* start timing */
    SCIPclockStart(stat->primallptime, set);
@@ -5068,6 +5079,13 @@ RETCODE SCIPlpSolveDual(
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
+#if 0
+   { /*????????????????????*/
+      char fname[MAXSTRLEN];
+      sprintf(fname, "duallp%d.lp", stat->nlps);
+      CHECK_OKAY( SCIPlpWrite(lp, fname) );
+   }
+#endif
 
    /* start timing */
    SCIPclockStart(stat->duallptime, set);
@@ -5501,16 +5519,10 @@ RETCODE SCIPlpGetIterations(
    int*             iterations          /**< pointer to store the iteration count */
    )
 {
-   int iter1;
-   int iter2;
-
    assert(lp != NULL);
    assert(iterations != NULL);
 
-   CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPIT1, &iter1) );
-   CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPIT2, &iter2) );
-   
-   *iterations = iter1 + iter2;
+   CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITER, iterations) );
 
    return SCIP_OKAY;
 }
@@ -6095,9 +6107,9 @@ RETCODE SCIPlpStartDive(
          assert(lp->cols[c]->var != NULL);
          assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
          assert(lp->cols[c]->var->data.col == lp->cols[c]);
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.lb, lp->cols[c]->lb));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.ub, lp->cols[c]->ub));
+         assert(SCIPsetIsFeasEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
+         assert(SCIPsetIsFeasEQ(set, lp->cols[c]->var->actdom.lb, lp->cols[c]->lb));
+         assert(SCIPsetIsFeasEQ(set, lp->cols[c]->var->actdom.ub, lp->cols[c]->ub));
       }
    }
 #endif

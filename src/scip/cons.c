@@ -42,6 +42,7 @@ struct ConsHdlr
    DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit));      /**< initialise constraint handler */
    DECL_CONSEXIT    ((*consexit));      /**< deinitialise constraint handler */
+   DECL_CONSSOLSTART((*conssolstart));  /**< solving start notification method of constraint handler */
    DECL_CONSDELETE  ((*consdelete));    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans));     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp));    /**< initialize LP with relaxations of "initial" constraints */
@@ -63,6 +64,7 @@ struct ConsHdlr
    int              consssize;          /**< size of conss array */
    int              nconss;             /**< total number of active constraints */
    int              maxnconss;          /**< maximal number of active constraints existing at the same time */
+   int              startnconss;        /**< number of active constraints existing when problem solving started */
    CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
    int              sepaconsssize;      /**< size of sepaconss array */
    int              nsepaconss;         /**< number of active constraints that may be separated during LP processing */
@@ -1060,6 +1062,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
@@ -1085,8 +1088,8 @@ RETCODE SCIPconshdlrCreate(
    assert(conshdlr != NULL);
    assert(name != NULL);
    assert(desc != NULL);
-   assert((sepafreq >= 0) ^ (conssepa == NULL));
-   assert((propfreq >= 0) ^ (consprop == NULL));
+   assert((conssepa != NULL) || (sepafreq == -1));
+   assert((consprop != NULL) || (propfreq == -1));
 
    ALLOC_OKAY( allocMemory(conshdlr) );
    ALLOC_OKAY( duplicateMemoryArray(&(*conshdlr)->name, name, strlen(name)+1) );
@@ -1099,6 +1102,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
    (*conshdlr)->consexit = consexit;
+   (*conshdlr)->conssolstart = conssolstart;
    (*conshdlr)->consdelete = consdelete;
    (*conshdlr)->constrans = constrans;
    (*conshdlr)->consinitlp = consinitlp;
@@ -1120,6 +1124,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consssize = 0;
    (*conshdlr)->nconss = 0;
    (*conshdlr)->maxnconss = 0;
+   (*conshdlr)->startnconss = 0;
    (*conshdlr)->sepaconss = NULL;
    (*conshdlr)->sepaconsssize = 0;
    (*conshdlr)->nsepaconss = 0;
@@ -1258,6 +1263,7 @@ RETCODE SCIPconshdlrInit(
    conshdlr->npropcalls = 0;
    conshdlr->ncutsfound = 0;
    conshdlr->maxnconss = conshdlr->nconss;
+   conshdlr->startnconss = 0;
    conshdlr->lastnfixedvars = 0;
    conshdlr->lastnaggrvars = 0;
    conshdlr->lastnchgvartypes = 0;
@@ -1308,6 +1314,25 @@ RETCODE SCIPconshdlrExit(
       CHECK_OKAY( conshdlr->consexit(scip, conshdlr) );
    }
    conshdlr->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs constraint handler that the presolving was finished and the branch and bound process is being started */
+RETCODE SCIPconshdlrSolstart(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(conshdlr != NULL);
+   assert(scip != NULL);
+
+   if( conshdlr->conssolstart != NULL )
+   {
+      CHECK_OKAY( conshdlr->conssolstart(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+   }
+   conshdlr->maxnconss = conshdlr->nconss;
+   conshdlr->startnconss = conshdlr->nconss;
 
    return SCIP_OKAY;
 }
@@ -2130,14 +2155,14 @@ int SCIPconshdlrGetMaxNConss(
    return conshdlr->maxnconss;
 }
 
-/** resets maximum number of active constraints to current number of active constraints */
-void SCIPconshdlrResetNMaxNConss(
+/** gets initial number of active constraints of constraint handler */
+int SCIPconshdlrGetStartNConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
    assert(conshdlr != NULL);
 
-   conshdlr->maxnconss = conshdlr->nconss;
+   return conshdlr->startnconss;
 }
 
 /** gets number of variables fixed in presolving method of constraint handler */

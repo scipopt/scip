@@ -513,6 +513,9 @@ RETCODE applyFixings(
          ++v;
    }
 
+   debugMessage("after fixings: ");
+   debug(consdataPrint(scip, consdata, NULL));
+
    return SCIP_OKAY;
 }
 
@@ -1079,6 +1082,10 @@ DECL_CONSFREE(consFreeLogicor)
 
 /** deinitialization method of constraint handler (called when problem solving exits) */
 #define consExitLogicor NULL
+
+
+/** solving start notification method of constraint handler (called when presolving was finished) */
+#define consSolstartLogicor NULL
 
 
 /** frees specific constraint data */
@@ -1794,7 +1801,12 @@ DECL_CONSPRESOL(consPresolLogicor)
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             
             CHECK_OKAY( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               debugMessage(" -> infeasible fixing\n");
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
             CHECK_OKAY( SCIPdelCons(scip, cons) );
             (*nfixedvars)++;
             (*ndelconss)++;
@@ -2091,7 +2103,7 @@ RETCODE SCIPincludeConsHdlrLogicor(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  consFreeLogicor, consInitLogicor, consExitLogicor,
+                  consFreeLogicor, consInitLogicor, consExitLogicor, consSolstartLogicor,
                   consDeleteLogicor, consTransLogicor, 
                   consInitlpLogicor, consSepaLogicor, 
                   consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
