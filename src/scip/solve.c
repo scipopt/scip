@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.112 2004/06/01 16:40:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.113 2004/06/01 18:04:42 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1608,6 +1608,7 @@ RETCODE SCIPsolveCIP(
          if( SCIPnodeGetType(actnode) == SCIP_NODETYPE_LEAF )
          {
             stat->plungedepth = 0;
+            stat->nbacktracks++;
             debugMessage("selected leaf node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
          }
          else if( SCIPnodeGetType(actnode) == SCIP_NODETYPE_CHILD )

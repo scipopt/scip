@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.43 2004/06/01 16:40:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.44 2004/06/01 18:04:40 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -54,7 +54,7 @@
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
 #endif
-#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
+#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching (0: disable branching) */
 #define DEFAULT_MAXVARUSEFAC        1.0  /**< branching factor to weigh maximum of positive and negative variable uses */
 #define DEFAULT_MINVARUSEFAC       -0.2  /**< branching factor to weigh minimum of positive and negative variable uses */
 
@@ -1425,17 +1425,17 @@ RETCODE branchPseudo(
    assert(conshdlr != NULL);
    assert(result != NULL);
 
-   /* get fractional variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
-   if( npseudocands == 0 )
-      return SCIP_OKAY;
-
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    /* check, if pseudo branching is disabled */
-   if( conshdlrdata->npseudobranches == 0 )
+   if( conshdlrdata->npseudobranches <= 1 )
+      return SCIP_OKAY;
+
+   /* get fractional variables */
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
+   if( npseudocands == 0 )
       return SCIP_OKAY;
 
    posvaruses = conshdlrdata->posvaruses;

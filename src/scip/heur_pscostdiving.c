@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.4 2004/05/03 11:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.5 2004/06/01 18:04:41 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -81,6 +81,7 @@ static
 void calcPscostQuot(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
+   Real             primsol,            /**< primal solution of variable */
    Real             frac,               /**< fractionality of variable */
    int              rounddir,           /**< -1: round down, +1: round up, 0: select due to pseudo cost values */
    Real*            pscostquot,         /**< pointer to store pseudo cost quotient */
@@ -92,6 +93,7 @@ void calcPscostQuot(
 
    assert(pscostquot != NULL);
    assert(roundup != NULL);
+   assert(SCIPisEQ(scip, frac, primsol - SCIPfloor(scip, primsol)));
 
    /* bound fractions to not prefer variables that are nearly integral */
    frac = MAX(frac, 0.1);
@@ -106,6 +108,10 @@ void calcPscostQuot(
    if( rounddir == -1 )
       *roundup = FALSE;
    else if( rounddir == +1 )
+      *roundup = TRUE;
+   else if( primsol < SCIPvarGetRootSol(var) - 0.4 )
+      *roundup = FALSE;
+   else if( primsol > SCIPvarGetRootSol(var) + 0.4 )
       *roundup = TRUE;
    else if( frac < 0.3 )
       *roundup = FALSE;
@@ -212,6 +218,7 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    Real searchbound;
    Real objval;
    Real oldobjval;
+   Real primsol;
    Real frac;
    Real pscostquot;
    Real bestpscostquot;
@@ -340,6 +347,7 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
          var = lpcands[c];
          mayrounddown = SCIPvarMayRoundDown(var);
          mayroundup = SCIPvarMayRoundUp(var);
+         primsol = lpcandssol[c];
          frac = lpcandsfrac[c];
          if( mayrounddown || mayroundup )
          {
@@ -353,11 +361,11 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
                 */
                roundup = FALSE;
                if( mayrounddown && mayroundup )
-                  calcPscostQuot(scip, var, frac, 0, &pscostquot, &roundup);
+                  calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
                else if( mayrounddown )
-                  calcPscostQuot(scip, var, frac, +1, &pscostquot, &roundup);
+                  calcPscostQuot(scip, var, primsol, frac, +1, &pscostquot, &roundup);
                else
-                  calcPscostQuot(scip, var, frac, -1, &pscostquot, &roundup);
+                  calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup);
 
                /* check, if candidate is new best candidate */
                if( pscostquot > bestpscostquot )
@@ -373,7 +381,7 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
          else
          {
             /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
-            calcPscostQuot(scip, var, frac, 0, &pscostquot, &roundup);
+            calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
 
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
             if( bestcandmayrounddown || bestcandmayroundup || pscostquot > bestpscostquot )

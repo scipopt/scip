@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.135 2004/06/01 16:40:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.136 2004/06/01 18:04:42 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3248,6 +3248,12 @@ int SCIPgetMaxDepth(
 /** gets maximal depth of all processed nodes over all branch and bound runs */
 extern
 int SCIPgetMaxTotalDepth(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of backtracks, i.e. number of times, the new node was selected from the leaves queue */
+extern
+Longint SCIPgetNBacktracks(
    SCIP*            scip                /**< SCIP data structure */
    );
 

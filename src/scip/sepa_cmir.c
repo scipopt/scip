@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.4 2004/06/01 16:53:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.5 2004/06/01 18:04:42 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -35,11 +35,11 @@
 #define SEPA_FREQ                    25
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of cmir separation rounds per node */
-#define DEFAULT_MAXROUNDSROOT         9 /**< maximal number of cmir separation rounds in the root node */
+#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of cmir separation rounds in the root node */
 #define DEFAULT_MAXSEPACUTS          25 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT      75 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXAGGRS              5 /**< maximal number of aggregations for each row per separation round */
-#define DEFAULT_MAXAGGRSROOT          8 /**< maximal number of aggreagtions for each row per separation r. in the root node */
+#define DEFAULT_MAXAGGRSROOT          8 /**< maximal number of aggreagtions for each row per round in the root node */
 #define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXSLACK            0.1 /**< max. slack of rows to be used */
 #define DEFAULT_MAXROWFAC          1e+4 /**< max. row aggregation factor */

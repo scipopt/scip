@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.44 2004/06/01 16:40:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.45 2004/06/01 18:04:41 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -54,7 +54,7 @@
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
 #endif
-#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
+#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching (0: disable branching) */
 
 
 /** type of setppc constraint: set partitioning, set packing, or set covering */
@@ -71,7 +71,7 @@ struct ConshdlrData
 {
    EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    INTARRAY*        varuses;            /**< number of times a var is used in the active set ppc constraints */
-   int              npseudobranches;    /**< number of children created in pseudo branching */
+   int              npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
 };
 
 /** constraint data for set partitioning / packing / covering constraints */
@@ -1568,13 +1568,17 @@ RETCODE branchPseudo(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   varuses = conshdlrdata->varuses;
-   assert(varuses != NULL);
+   /* check, if pseudo branching is disabled */
+   if( conshdlrdata->npseudobranches <= 1 )
+      return SCIP_OKAY;
 
    /* get fractional variables */
    CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
    if( npseudocands == 0 )
       return SCIP_OKAY;
+
+   varuses = conshdlrdata->varuses;
+   assert(varuses != NULL);
 
    /* choose the maximal number of branching variables */
    maxnbranchcands = conshdlrdata->npseudobranches-1;
@@ -2587,8 +2591,8 @@ RETCODE SCIPincludeConshdlrSetppc(
    /* set partitioning constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "constraints/setppc/npseudobranches", 
-                  "number of children created in pseudo branching",
-                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
+                  "number of children created in pseudo branching (0: disable pseudo branching)",
+                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

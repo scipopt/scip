@@ -438,9 +438,9 @@ nodeselection/bfs/minplungedepth = 5
 # [type: int, range: [0,2147483647], default: 25]
 nodeselection/bfs/maxplungedepth = 25
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 1.5]
-nodeselection/bfs/maxplungequot = 1.5
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where plunging is performed
+# [type: real, range: [0,1.79769313486232e+308], default: 0.25]
+nodeselection/bfs/maxplungequot = 0.25
 
 # priority of branching rule <dfs> in standard mode
 # [type: int, range: [-2147483648,2147483647], default: 0]

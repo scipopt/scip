@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.170 2004/06/01 16:40:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.171 2004/06/01 18:04:41 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7775,6 +7775,16 @@ int SCIPgetMaxTotalDepth(
    CHECK_ABORT( checkStage(scip, "SCIPgetMaxTotalDepth", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->stat->maxtotaldepth;
+}
+
+/** gets total number of backtracks, i.e. number of times, the new node was selected from the leaves queue */
+Longint SCIPgetNBacktracks(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNBacktracks", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->stat->nbacktracks;
 }
 
 /** gets current plunging depth (succ. times, a child was selected as next node) */
