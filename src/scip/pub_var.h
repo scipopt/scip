@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.38 2005/02/04 12:51:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.39 2005/02/09 16:14:01 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -84,7 +84,7 @@ VAR* SCIPvarGetProbvar(
    );
 
 /** gets corresponding active problem variable of a binary variable and updates the given negation status;
- *  for fixed variables, NULL is returned, and the negation status is switched iff the variable is fixed to one
+ *  for fixed variables, NULL is returned, and the negation status is switched iff the variable is fixed to FALSE
  */
 extern
 RETCODE SCIPvarGetProbvarBinary(

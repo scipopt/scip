@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.209 2005/02/08 15:47:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.210 2005/02/09 16:14:01 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1661,7 +1661,7 @@ RETCODE SCIPgetNegatedVar(
 
 /** gets a binary variable that is equal to the given binary variable, and that is either active or the negated
  *  variable of an active binary variable; if the given variable is fixed, NULL is returned as representative,
- *  and *negated is TRUE iff the variable is fixed to TRUE
+ *  and *negated is TRUE iff the variable is fixed to FALSE
  */
 extern
 RETCODE SCIPgetBinvarRepresentative(
