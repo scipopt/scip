@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.86 2005/03/01 17:21:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.87 2005/03/02 12:39:32 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2941,6 +2941,9 @@ RETCODE SCIPlpiGetIntpar(
       case CPX_DPRIIND_STEEPQSTART:
          *ival = SCIP_PRICING_STEEPQSTART;
          break;
+      case CPX_DPRIIND_DEVEX:
+         *ival = SCIP_PRICING_DEVEX;
+         break;
       default:
          *ival = SCIP_PRICING_AUTO;
          break;
@@ -3010,6 +3013,10 @@ RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_STEEPQSTART:
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_STEEPQSTART);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEPQSTART);
+	 break;
+      case SCIP_PRICING_DEVEX:
+	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_DEVEX);
+	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_DEVEX);
 	 break;
       default:
          return SCIP_LPERROR;

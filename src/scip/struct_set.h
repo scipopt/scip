@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.46 2005/02/24 11:02:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.47 2005/03/02 12:39:32 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -154,6 +154,8 @@ struct Set
                                          *   barrier with 'c'rossover) */
    char             lp_resolvealgorithm;/**< LP algorithm for resolving LP relaxations if a starting basis exists
                                          *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
+   char             lp_pricing;         /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
+                                         *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
    int              lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the LP
                                          *   (-1: don't delete columns due to aging) */
    int              lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.183 2005/02/25 11:09:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.184 2005/03/02 12:39:32 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2240,6 +2240,65 @@ RETCODE lpSetIterationLimit(
          lp->lpiitlim = itlim;
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** sets the pricing strategy of the LP solver */
+static
+RETCODE lpSetPricing(
+   LP*              lp,                 /**< current LP data */
+   PRICING          pricing             /**< pricing strategy */
+   )
+{
+   Bool success;
+
+   assert(lp != NULL);
+
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_PRICING, lp->lpipricing) );
+
+   if( pricing != lp->lpipricing )
+   {
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_PRICING, pricing, &success) );
+      if( success )
+         lp->lpipricing = pricing;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the pricing strategy of the LP solver (given the character representation of the strategy) */
+static
+RETCODE lpSetPricingChar(
+   LP*              lp,                 /**< current LP data */
+   char             pricingchar         /**< character representing the pricing strategy */
+   )
+{
+   PRICING pricing;
+
+   switch( pricingchar )
+   {
+   case 'a':
+      pricing = SCIP_PRICING_AUTO;
+      break;
+   case 'f':
+      pricing = SCIP_PRICING_FULL;
+      break;
+   case 's':
+      pricing = SCIP_PRICING_STEEP;
+      break;
+   case 'q':
+      pricing = SCIP_PRICING_STEEPQSTART;
+      break;
+   case 'd':
+      pricing = SCIP_PRICING_DEVEX;
+      break;
+   default:
+      errorMessage("invalid LP pricing parameter <%c>\n", pricingchar);
+      return SCIP_INVALIDDATA;
+   }
+
+   CHECK_OKAY( lpSetPricing(lp, pricing) );
 
    return SCIP_OKAY;
 }
@@ -5955,6 +6014,7 @@ RETCODE SCIPlpCreate(
    (*lp)->lpipresolving = TRUE;
    (*lp)->lpilpinfo = FALSE;
    (*lp)->lpiitlim = INT_MAX;
+   (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
    /* set default parameters in LP solver */
@@ -6021,6 +6081,13 @@ RETCODE SCIPlpCreate(
          "LP Solver <%s>: iteration limit cannot be set -- can lead to unnecessary simplex iterations\n",
          SCIPlpiGetSolverName());
    }
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, (int)(*lp)->lpipricing, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: pricing strategy cannot be set -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
+   }
    CHECK_OKAY( lpSetBoolpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo, &success) );
    if( !success )
    {
@@ -6028,7 +6095,6 @@ RETCODE SCIPlpCreate(
          "LP Solver <%s>: lpinfo setting not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO, &success) ); /*lint !e641*/
 
    return SCIP_OKAY;
 }
@@ -8791,6 +8857,7 @@ RETCODE lpSolveStable(
    CHECK_OKAY( lpSetFastmip(lp, fastmip, &success) );
    CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
    CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
+   CHECK_OKAY( lpSetPricingChar(lp, set->lp_pricing) );
    CHECK_OKAY( lpSetLPInfo(lp, set->disp_lpinfo) );
    CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
 

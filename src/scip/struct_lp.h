@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.34 2005/02/24 11:02:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.35 2005/03/02 12:39:32 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -228,6 +228,7 @@ struct Lp
    int              validsollp;         /**< LP number for which the currently stored solution values are valid */
    int              validfarkaslp;      /**< LP number for which the currently stored farkas row multipliers are valid */
    int              lpiitlim;           /**< current iteration limit setting in LPI */
+   PRICING          lpipricing;         /**< current pricing setting in LPI */
    LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
    Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */

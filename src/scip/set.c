@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.144 2005/02/28 13:26:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.145 2005/03/02 12:39:32 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -116,6 +116,8 @@
                                                  *   barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
                                                  *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
+#define SCIP_DEFAULT_LP_PRICING             'a' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
+                                                 *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from LP
                                                  *   (-1: don't delete columns due to aging) */
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from LP
@@ -528,6 +530,11 @@ RETCODE SCIPsetCreate(
          "lp/resolvealgorithm",
          "LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)",
          &(*set)->lp_resolvealgorithm, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "sbc",
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+         "lp/pricing",
+         "LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
+         &(*set)->lp_pricing, SCIP_DEFAULT_LP_PRICING, "afsqd",
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",

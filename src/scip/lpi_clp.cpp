@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.16 2005/02/24 11:02:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.17 2005/03/02 12:39:32 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -2369,7 +2369,7 @@ RETCODE SCIPlpiSetIntpar(
    assert(lpi->clp != 0);
 
    // Handle pricing separately ...
-   if ( type == SCIP_LPPAR_PRICING )
+   if( type == SCIP_LPPAR_PRICING )
    {
       // primal pricing:
       // 0 is exact devex, 
@@ -2390,6 +2390,7 @@ RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_FULL: primalmode = 0; dualmode = 1; break;
       case SCIP_PRICING_STEEP: primalmode = 1; dualmode = 0; break;
       case SCIP_PRICING_STEEPQSTART: primalmode = 1; dualmode = 2; break;
+      case SCIP_PRICING_DEVEX: primalmode = 2; dualmode = 3; break;
       default: errorMessage("unkown pricing parameter %d!\n", ival); abort();
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
