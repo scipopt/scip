@@ -68,6 +68,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "sepastore.h"
 #include "cutpool.h"
 #include "primal.h"
+#include "paramset.h"
 
 
 
@@ -152,7 +153,9 @@ RETCODE SCIPaddBoolParam(
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue        /**< default value of the parameter */
+   Bool             defaultvalue,       /**< default value of the parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a int parameter, sets it to its default value, and adds it to the parameter set */
@@ -164,7 +167,9 @@ RETCODE SCIPaddIntParam(
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
    int              defaultvalue,       /**< default value of the parameter */
    int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue            /**< maximum value for parameter */
+   int              maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
@@ -176,7 +181,9 @@ RETCODE SCIPaddLongintParam(
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
    Longint          defaultvalue,       /**< default value of the parameter */
    Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue            /**< maximum value for parameter */
+   Longint          maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
@@ -188,7 +195,9 @@ RETCODE SCIPaddRealParam(
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    Real             defaultvalue,       /**< default value of the parameter */
    Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue            /**< maximum value for parameter */
+   Real             maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
@@ -199,7 +208,9 @@ RETCODE SCIPaddCharParam(
    const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues       /**< array with possible parameter values, or NULL if not restricted */
+   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
@@ -209,7 +220,9 @@ RETCODE SCIPaddStringParam(
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue        /**< default value of the parameter */
+   const char*      defaultvalue,       /**< default value of the parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** gets the value of an existing Bool parameter */
@@ -721,7 +734,13 @@ RETCODE SCIPdisableConsNode(
 /**@name Solve Methods */
 /**@{ */
 
-/** solves problem */
+/** presolves problem */
+extern
+RETCODE SCIPpresolve(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** presolves and solves problem */
 extern
 RETCODE SCIPsolve(
    SCIP*            scip                /**< SCIP data structure */
@@ -1908,6 +1927,13 @@ Real SCIPsumepsilon(
 extern
 Real SCIPfeastol(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** sets the feasibility tolerance */
+extern
+RETCODE SCIPsetFeastol(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             feastol             /**< new feasibility tolerance */
    );
 
 /** checks, if values are in range of epsilon */

@@ -38,8 +38,6 @@ typedef enum Setting SETTING;
 
 typedef struct Set SET;                 /**< global SCIP settings */
 
-typedef struct Pricer PRICER;           /**< ?????????????? dummy structure for future implementation of pricers */
-
 
 
 #include <math.h>
@@ -48,17 +46,19 @@ typedef struct Pricer PRICER;           /**< ?????????????? dummy structure for 
 #include "misc.h"
 #include "scip.h"
 #include "paramset.h"
-#include "reader.h"
-#include "cons.h"
-#include "event.h"
-#include "nodesel.h"
-#include "disp.h"
-#include "branch.h"
-#include "lp.h"
-#include "message.h"
 #include "buffer.h"
+#include "reader.h"
+#include "pricer.h"
+#include "cons.h"
+#include "presol.h"
 #include "sepa.h"
 #include "heur.h"
+#include "event.h"
+#include "nodesel.h"
+#include "branch.h"
+#include "disp.h"
+#include "lp.h"
+#include "message.h"
 
 
 /** global SCIP settings */
@@ -76,6 +76,9 @@ struct Set
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
+   PRESOL**         presols;            /**< presolvers */
+   int              npresols;           /**< number of presolvers */
+   int              presolssize;        /**< size of presols array */
    SEPA**           sepas;              /**< separators */
    int              nsepas;             /**< number of separators */
    int              sepassize;          /**< size of sepas array */
@@ -112,6 +115,8 @@ struct Set
    int              dispwidth;          /**< maximal number of characters in a node information line */
    int              dispfreq;           /**< frequency for displaying node information lines */
    int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
+   int              maxpresolrounds;    /**< maximal number of presolving rounds (-1: unlimited) */
+   Real             presolabortfac;     /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
    int              maxpricevarsroot;   /**< maximal number of priced variables at the root node */
    Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -153,7 +158,9 @@ RETCODE SCIPsetAddBoolParam(
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue        /**< default value of the parameter */
+   Bool             defaultvalue,       /**< default value of the parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a int parameter, sets it to its default value, and adds it to the parameter set */
@@ -166,7 +173,9 @@ RETCODE SCIPsetAddIntParam(
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
    int              defaultvalue,       /**< default value of the parameter */
    int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue            /**< maximum value for parameter */
+   int              maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
@@ -179,7 +188,9 @@ RETCODE SCIPsetAddLongintParam(
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
    Longint          defaultvalue,       /**< default value of the parameter */
    Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue            /**< maximum value for parameter */
+   Longint          maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
@@ -192,7 +203,9 @@ RETCODE SCIPsetAddRealParam(
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    Real             defaultvalue,       /**< default value of the parameter */
    Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue            /**< maximum value for parameter */
+   Real             maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
@@ -204,7 +217,9 @@ RETCODE SCIPsetAddCharParam(
    const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues       /**< array with possible parameter values, or NULL if not restricted */
+   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
@@ -215,7 +230,9 @@ RETCODE SCIPsetAddStringParam(
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue        /**< default value of the parameter */
+   const char*      defaultvalue,       /**< default value of the parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** gets the value of an existing Bool parameter */
@@ -370,6 +387,21 @@ extern
 CONSHDLR* SCIPsetFindConsHdlr(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of constraint handler */
+   );
+
+/** inserts presolver in presolver list */
+extern
+RETCODE SCIPsetIncludePresol(
+   SET*             set,                /**< global SCIP settings */
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** finds the presolver of the given name */
+extern
+RETCODE SCIPsetFindPresol(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of presolver */
+   PRESOL**         presol              /**< pointer for storing the presolver (returns NULL, if not found) */
    );
 
 /** inserts separator in separator list */

@@ -1,0 +1,323 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
+/*                            Thorsten Koch                                  */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*                                                                           */
+/*  You should have received a copy of the SCIP Academic License             */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   presol.c
+ * @brief  datastructures and methods for presolvers
+ * @author Tobias Achterberg
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#include <assert.h>
+#include <string.h>
+
+#include "presol.h"
+
+
+/** presolver */
+struct Presol
+{
+   char*            name;               /**< name of presolver */
+   char*            desc;               /**< description of presolver */
+   int              priority;           /**< priority of the presolver */
+   DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver */
+   DECL_PRESOLINIT  ((*presolinit));    /**< initialise presolver */
+   DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialise presolver */
+   DECL_PRESOLEXEC  ((*presolexec));    /**< presolving execution method */
+   PRESOLDATA*      presoldata;         /**< presolver data */
+   unsigned int     initialized:1;      /**< is presolver initialized? */
+   int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
+   int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
+   int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
+   int              lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
+   int              lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
+   int              lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
+   int              lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
+   int              lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
+   int              lastnchgsides;      /**< number of changed left or right hand sides before the last call */
+   int              nfixedvars;         /**< total number of variables fixed by this presolver */
+   int              naggrvars;          /**< total number of variables aggregated by this presolver */
+   int              nchgvartypes;       /**< total number of variable type changes by this presolver */
+   int              nchgbds;            /**< total number of variable bounds tightend by this presolver */
+   int              naddholes;          /**< total number of domain holes added by this presolver */
+   int              ndelconss;          /**< total number of deleted constraints by this presolver */
+   int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
+   int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
+   int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
+};
+
+
+
+
+/*
+ * presolver methods
+ */
+
+/** creates a presolver */
+RETCODE SCIPpresolCreate(
+   PRESOL**         presol,             /**< pointer to store presolver */
+   const char*      name,               /**< name of presolver */
+   const char*      desc,               /**< description of presolver */
+   int              priority,           /**< priority of the presolver */
+   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialise presolver */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialise presolver */
+   DECL_PRESOLEXEC  ((*presolexec)),    /**< presolving execution method */
+   PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   assert(presol != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   ALLOC_OKAY( allocMemory(presol) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*presol)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*presol)->desc, desc, strlen(desc)+1) );
+   (*presol)->priority = priority;
+   (*presol)->presolfree = presolfree;
+   (*presol)->presolinit = presolinit;
+   (*presol)->presolexit = presolexit;
+   (*presol)->presolexec = presolexec;
+   (*presol)->presoldata = presoldata;
+   (*presol)->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** frees memory of presolver */   
+RETCODE SCIPpresolFree(
+   PRESOL**         presol,             /**< pointer to presolver data structure */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(presol != NULL);
+   assert(*presol != NULL);
+   assert(!(*presol)->initialized);
+
+   /* call destructor of presolver */
+   if( (*presol)->presolfree != NULL )
+   {
+      CHECK_OKAY( (*presol)->presolfree(scip, *presol) );
+   }
+
+   freeMemoryArray(&(*presol)->name);
+   freeMemoryArray(&(*presol)->desc);
+   freeMemory(presol);
+
+   return SCIP_OKAY;
+}
+
+/** initializes presolver */
+RETCODE SCIPpresolInit(
+   PRESOL*          presol,             /**< presolver */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(presol != NULL);
+   assert(scip != NULL);
+
+   if( presol->initialized )
+   {
+      char s[MAXSTRLEN];
+      sprintf(s, "presolver <%s> already initialized", presol->name);
+      errorMessage(s);
+      return SCIP_INVALIDCALL;
+   }
+
+   presol->lastnfixedvars = 0;
+   presol->lastnaggrvars = 0;
+   presol->lastnchgvartypes = 0;
+   presol->lastnchgbds = 0;
+   presol->lastnaddholes = 0;
+   presol->lastndelconss = 0;
+   presol->lastnupgdconss = 0;
+   presol->lastnchgcoefs = 0;
+   presol->lastnchgsides = 0;
+   presol->nfixedvars = 0;
+   presol->naggrvars = 0;
+   presol->nchgvartypes = 0;
+   presol->nchgbds = 0;
+   presol->naddholes = 0;
+   presol->ndelconss = 0;
+   presol->nupgdconss = 0;
+   presol->nchgcoefs = 0;
+   presol->nchgsides = 0;
+
+   if( presol->presolinit != NULL )
+   {
+      CHECK_OKAY( presol->presolinit(scip, presol) );
+   }
+   presol->initialized = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** deinitializes presolver */
+RETCODE SCIPpresolExit(
+   PRESOL*          presol,             /**< presolver */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(presol != NULL);
+   assert(scip != NULL);
+
+   if( !presol->initialized )
+   {
+      char s[MAXSTRLEN];
+      sprintf(s, "presolver <%s> not initialized", presol->name);
+      errorMessage(s);
+      return SCIP_INVALIDCALL;
+   }
+
+   if( presol->presolexit != NULL )
+   {
+      CHECK_OKAY( presol->presolexit(scip, presol) );
+   }
+   presol->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** executes presolver */
+RETCODE SCIPpresolExec(
+   PRESOL*          presol,             /**< presolver */
+   SCIP*            scip,               /**< SCIP data structure */   
+   int              nrounds,            /**< number of presolving rounds already done */
+   int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*             nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*             nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*             naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*             ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*             nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*             nchgsides           /**< pointer to total number of changed left/right hand sides of all presolvers */
+   )
+{
+   int nnewfixedvars;
+   int nnewaggrvars;
+   int nnewchgvartypes;
+   int nnewchgbds;
+   int nnewholes;
+   int nnewdelconss;
+   int nnewupgdconss;
+   int nnewchgcoefs;
+   int nnewchgsides;
+
+   assert(presol != NULL);
+   assert(presol->presolexec != NULL);
+   assert(scip != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(nchgvartypes != NULL);
+   assert(nchgbds != NULL);
+   assert(naddholes != NULL);
+   assert(ndelconss != NULL);
+   assert(nupgdconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+
+   nnewfixedvars = *nfixedvars - presol->lastnfixedvars;
+   nnewaggrvars = *naggrvars - presol->lastnaggrvars;
+   nnewchgvartypes = *nchgvartypes - presol->lastnchgvartypes;
+   nnewchgbds = *nchgbds - presol->lastnchgbds;
+   nnewholes = *naddholes - presol->lastnaddholes;
+   nnewdelconss = *ndelconss - presol->lastndelconss;
+   nnewupgdconss = *nupgdconss - presol->lastnupgdconss;
+   nnewchgcoefs = *nchgcoefs - presol->lastnchgcoefs;
+   nnewchgsides = *nchgsides - presol->lastnchgsides;
+
+   presol->lastnfixedvars = *nfixedvars;
+   presol->lastnaggrvars = *naggrvars;
+   presol->lastnchgvartypes = *nchgvartypes;
+   presol->lastnchgbds = *nchgbds;
+   presol->lastnaddholes = *naddholes;
+   presol->lastndelconss = *ndelconss;
+   presol->lastnupgdconss = *nupgdconss;
+   presol->lastnchgcoefs = *nchgcoefs;
+   presol->lastnchgsides = *nchgsides;
+
+   CHECK_OKAY( presol->presolexec(scip, presol, nrounds,
+                  nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+                  nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+                  nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+                  ndelconss, nupgdconss, nchgcoefs, nchgsides) );
+
+   presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
+   presol->naggrvars += *naggrvars - presol->lastnaggrvars;
+   presol->nchgvartypes += *nchgvartypes - presol->lastnchgvartypes;
+   presol->nchgbds += *nchgbds - presol->lastnchgbds;
+   presol->naddholes += *naddholes - presol->lastnaddholes;
+   presol->ndelconss += *ndelconss - presol->lastndelconss;
+   presol->nupgdconss += *nupgdconss - presol->lastnupgdconss;
+   presol->nchgcoefs += *nchgcoefs - presol->lastnchgcoefs;
+   presol->nchgsides += *nchgsides - presol->lastnchgsides;
+
+   return SCIP_OKAY;
+}
+
+/** gets name of presolver */
+const char* SCIPpresolGetName(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->name;
+}
+
+/** gets priority of presolver */
+int SCIPpresolGetPriority(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->priority;
+}
+
+/** gets user data of presolver */
+PRESOLDATA* SCIPpresolGetData(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->presoldata;
+}
+
+/** sets user data of presolver; user has to free old data in advance! */
+void SCIPpresolSetData(
+   PRESOL*          presol,             /**< presolver */
+   PRESOLDATA*      presoldata          /**< new presolver user data */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presoldata = presoldata;
+}
+
+/** is presolver initialized? */
+Bool SCIPpresolIsInitialized(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->initialized;
+}
+

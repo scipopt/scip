@@ -360,12 +360,15 @@ RETCODE SCIPaddBoolParam(
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue        /**< default value of the parameter */
+   Bool             defaultvalue,       /**< default value of the parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddBoolParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddBoolParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue,
+                  paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -378,12 +381,15 @@ RETCODE SCIPaddIntParam(
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
    int              defaultvalue,       /**< default value of the parameter */
    int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue            /**< maximum value for parameter */
+   int              maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue) );
+   CHECK_OKAY( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
+                  paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -396,13 +402,15 @@ RETCODE SCIPaddLongintParam(
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
    Longint          defaultvalue,       /**< default value of the parameter */
    Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue            /**< maximum value for parameter */
+   Longint          maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddLongintParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAddLongintParam(scip->set, scip->mem->setmem, name, desc,
-                  valueptr, defaultvalue, minvalue, maxvalue) );
+                  valueptr, defaultvalue, minvalue, maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -415,12 +423,15 @@ RETCODE SCIPaddRealParam(
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    Real             defaultvalue,       /**< default value of the parameter */
    Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue            /**< maximum value for parameter */
+   Real             maxvalue,           /**< maximum value for parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue) );
+   CHECK_OKAY( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
+                  paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -432,12 +443,15 @@ RETCODE SCIPaddCharParam(
    const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues       /**< array with possible parameter values, or NULL if not restricted */
+   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, allowedvalues) );
+   CHECK_OKAY( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, allowedvalues,
+                  paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -448,12 +462,15 @@ RETCODE SCIPaddStringParam(
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue        /**< default value of the parameter */
+   const char*      defaultvalue,       /**< default value of the parameter */
+   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddStringParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddStringParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue,
+                  paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -1622,7 +1639,170 @@ RETCODE SCIPdisableConsNode(
  * solve methods
  */
 
-/** solves problem */
+/** loops through the included presolvers and constraint's presolve methods, until changes are too few */
+static
+RETCODE presolve(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   Bool aborted;
+   Real abortfac;
+   int maxnrounds;
+   int nrounds;
+   int nfixedvars;
+   int naggrvars;
+   int nchgvartypes;
+   int nchgbds;
+   int naddholes;
+   int ndelconss;
+   int nupgdconss;
+   int nchgcoefs;
+   int nchgsides;
+   int lastnfixedvars;
+   int lastnaggrvars;
+   int lastnchgvartypes;
+   int lastnchgbds;
+   int lastnaddholes;
+   int lastndelconss;
+   int lastnupgdconss;
+   int lastnchgcoefs;
+   int lastnchgsides;
+   int i;
+
+   nrounds = 0;
+   nfixedvars = 0;
+   naggrvars = 0;
+   nchgvartypes = 0;
+   nchgbds = 0;
+   naddholes = 0;
+   ndelconss = 0;
+   nupgdconss = 0;
+   nchgcoefs = 0;
+   nchgsides = 0;
+
+   maxnrounds = scip->set->maxpresolrounds;
+   if( maxnrounds == -1 )
+      maxnrounds = INT_MAX;
+
+   abortfac = scip->set->presolabortfac;
+
+   aborted = FALSE;
+
+   while( nrounds < maxnrounds && !aborted )
+   {
+      lastnfixedvars = nfixedvars;
+      lastnaggrvars = naggrvars;
+      lastnchgvartypes = nchgvartypes;
+      lastnchgbds = nchgbds;
+      lastnaddholes = naddholes;
+      lastndelconss = ndelconss;
+      lastnupgdconss = nupgdconss;
+      lastnchgcoefs = nchgcoefs;
+      lastnchgsides = nchgsides;
+
+      /* call included presolvers */
+      for( i = 0; i < scip->set->npresols; ++i )
+      {
+         CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip, nrounds, 
+                        &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
+                        &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides) );
+      }
+
+      /* call presolve methods of constraint handlers */
+      todoMessage("constraint handler presolving");
+
+      /* check, if we should abort presolving due to not enough changes in the last round */
+      aborted = TRUE;
+      aborted &= (scip->transprob->nvars == 0
+         || (Real)(nfixedvars - lastnfixedvars + naggrvars - lastnaggrvars + nchgvartypes - lastnchgvartypes
+            + nchgbds - lastnchgbds + naddholes - lastnaddholes)/(Real)(scip->transprob->nvars) < abortfac);
+      aborted &= (scip->transprob->nconss == 0
+         || (Real)(ndelconss - lastndelconss + nupgdconss - lastnupgdconss
+            + nchgsides - lastnchgsides)/(Real)(scip->transprob->nconss) < abortfac);
+      /* assume a 20% density of non-zero elements */
+      aborted &= (scip->transprob->nvars * scip->transprob->nconss == 0
+         || (Real)(nchgcoefs - lastnchgcoefs)/(Real)(scip->transprob->nvars * scip->transprob->nconss) < 0.2*abortfac);
+
+      /* increase round number */
+      nrounds++;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** presolves problem */
+RETCODE SCIPpresolve(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   char s[MAXSTRLEN];
+   int i;
+
+   CHECK_OKAY( checkStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* switch stage to INITSOLVE */
+   scip->stage = SCIP_STAGE_INITSOLVE;
+
+   /* mark statistics before solving */
+   SCIPstatMark(scip->stat);
+
+   /* init solve data structures */
+   CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
+   CHECK_OKAY( SCIPpriceCreate(&scip->price) );
+   CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
+   CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
+   CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
+   CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
+
+   /* init callback methods */
+   CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
+
+   /* copy problem in solve memory */
+   CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, &scip->transprob) );
+
+   /* activate constraints in the problem */
+   CHECK_OKAY( SCIPprobActivate(scip->transprob, scip->mem->solvemem, scip->set) );
+
+   /* create primal solution storage */
+   CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->lp) );
+
+   /* create branching candidate storage */
+   CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand, scip->set, scip->transprob) );
+
+   /* switch stage to PRESOLVING */
+   scip->stage = SCIP_STAGE_PRESOLVING;
+
+   /* presolve problem */
+   presolve(scip);
+
+   /* print presolved problem statistics */
+   sprintf(s, "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
+      scip->transprob->nvars, scip->transprob->nbin, scip->transprob->nint, scip->transprob->nimpl,
+      scip->transprob->ncont, scip->transprob->nconss);
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   {
+      int nactiveconss;
+
+      nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[i]);
+      if( nactiveconss > 0 )
+      {
+         sprintf(s, " %5d constraints of type <%s>", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+      }
+   }
+
+   /* create branch-and-bound tree */
+   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->transprob) );
+      
+   /* switch stage to SOLVING */
+   scip->stage = SCIP_STAGE_SOLVING;
+
+   return SCIP_OKAY;
+}
+
+/** presolves and solves problem */
 RETCODE SCIPsolve(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -1635,64 +1815,8 @@ RETCODE SCIPsolve(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      /* switch stage to INITSOLVE */
-      scip->stage = SCIP_STAGE_INITSOLVE;
-
-      /* mark statistics before solving */
-      SCIPstatMark(scip->stat);
-
-      /* init solve data structures */
-      CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
-      CHECK_OKAY( SCIPpriceCreate(&scip->price) );
-      CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
-      CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
-      CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
-      CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
-
-      /* init callback methods */
-      CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
-
-      /* copy problem in solve memory */
-      CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, &scip->transprob) );
-
-      /* activate constraints in the problem */
-      CHECK_OKAY( SCIPprobActivate(scip->transprob, scip->mem->solvemem, scip->set) );
-
-      /* create primal solution storage */
-      CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->lp) );
-
-      /* create branching candidate storage */
-      CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand, scip->set, scip->transprob) );
-
-      /* switch stage to PRESOLVING */
-      scip->stage = SCIP_STAGE_PRESOLVING;
-
-      /* presolve problem */
-      todoMessage("problem presolving");
-
-      /* print presolved problem statistics */
-      sprintf(s, "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
-         scip->transprob->nvars, scip->transprob->nbin, scip->transprob->nint, scip->transprob->nimpl,
-         scip->transprob->ncont, scip->transprob->nconss);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-
-      for( i = 0; i < scip->set->nconshdlrs; ++i )
-      {
-         int nactiveconss;
-
-         nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[i]);
-         if( nactiveconss > 0 )
-         {
-            sprintf(s, " %5d constraints of type <%s>", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-         }
-      }
-
-      /* create branch-and-bound tree */
-      CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->transprob) );
-      
-      /* switch stage to SOLVING */
-      scip->stage = SCIP_STAGE_SOLVING;
+      /* presolve problem and set up data structures */
+      CHECK_OKAY( SCIPpresolve(scip) );
 
       /* fallthrough */
 
@@ -4399,8 +4523,21 @@ Real SCIPfeastol(
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
-
+ 
    return scip->set->feastol;
+}
+
+/** sets the feasibility tolerance */
+RETCODE SCIPsetFeastol(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             feastol             /**< new feasibility tolerance */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetFeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetSetFeastol(scip->set, scip->lp, feastol) );
+
+   return SCIP_OKAY;
 }
 
 /** checks, if values are in range of epsilon */

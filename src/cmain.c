@@ -499,6 +499,7 @@ main(
    todoMessage("implement reduced cost fixing");
    todoMessage("statistics: count domain reductions and constraint additions of constraint handlers");
    todoMessage("it's a bit ugly, that user call backs may be called before the nodequeue was processed");
+   todoMessage("information method if parameter changed");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
