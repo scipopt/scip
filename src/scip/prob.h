@@ -144,7 +144,9 @@ RETCODE SCIPprobAddCons(
    CONS*            cons                /**< constraint to add */
    );
 
-/** removes constraint from the problem and releases it */
+/** releases and removes constraint from the problem; if the user has not captured the constraint for his own use, the
+ *  constraint may be invalid after the call
+ */
 extern
 RETCODE SCIPprobDelCons(
    PROB*            prob,               /**< problem data */

@@ -947,6 +947,28 @@ RETCODE SCIPconsCreate(
    return SCIP_OKAY;
 }
 
+/** frees constraint data of a constraint, leaving the constraint itself as a zombie constraint */
+RETCODE SCIPconsFreeData(
+   CONS*            cons,               /**< constraint to free */
+   MEMHDR*          memhdr,             /**< block memory buffer */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+   assert(memhdr != NULL);
+   assert(set != NULL);
+
+   /* free constraint data */
+   if( cons->conshdlr->consdele != NULL && cons->consdata != NULL )
+   {
+      CHECK_OKAY( cons->conshdlr->consdele(set->scip, cons->conshdlr, &cons->consdata) );
+   }
+   assert(cons->consdata == NULL);
+
+   return SCIP_OKAY;
+}
+
 /** frees a constraint */
 RETCODE SCIPconsFree(
    CONS**           cons,               /**< constraint to free */
@@ -962,10 +984,9 @@ RETCODE SCIPconsFree(
    assert(set != NULL);
 
    /* free constraint data */
-   if( (*cons)->conshdlr->consdele != NULL )
-   {
-      CHECK_OKAY( (*cons)->conshdlr->consdele(set->scip, (*cons)->conshdlr, &(*cons)->consdata) );
-   }
+   CHECK_OKAY( SCIPconsFreeData(*cons, memhdr, set) );
+
+   /* free constraint */
    freeBlockMemoryArray(memhdr, &(*cons)->name, strlen((*cons)->name)+1);
    freeBlockMemory(memhdr, cons);
 
@@ -1003,6 +1024,37 @@ RETCODE SCIPconsRelease(
       CHECK_OKAY( SCIPconsFree(cons, memhdr, set) );
    }
    *cons  = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** globally removes constraint from all subproblems; removes constraint from the addedconss array of the node, where it
+ *  was created, or from the problem, if it was a problem constraint;
+ *  the method must not be called for local check-constraint (i.e. constraints, that locally ensure feasibility);
+ *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
+ */
+RETCODE SCIPconsDelete(
+   CONS**           cons,               /**< pointer to constraint to delete */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob                /**< problem data */
+   )
+{
+   assert(cons != NULL);
+   assert(*cons != NULL);
+   assert(!(*cons)->check);
+
+   if( (*cons)->node == NULL )
+   {
+      /* deactivate and remove problem constraint from the problem */
+      CHECK_OKAY( SCIPprobDelCons(prob, memhdr, set, *cons) );
+   }
+   else
+   {
+      /* deactivate and remove constraint from the node's addedconss array */
+      CHECK_OKAY( SCIPconssetchgDelAddedCons((*cons)->node->conssetchg, memhdr, set, *cons) );
+   }
+   *cons = NULL;
 
    return SCIP_OKAY;
 }
@@ -1239,7 +1291,7 @@ RETCODE SCIPconssetchgFree(
    return SCIP_OKAY;
 }
 
-/** deletes and releases deactivated constraint from the addedconss array of the constraint set change data */
+/** deactivates, deletes, and releases constraint from the addedconss array of the constraint set change data */
 RETCODE SCIPconssetchgDelAddedCons(
    CONSSETCHG*      conssetchg,         /**< constraint set change to delete constraint from */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1251,18 +1303,35 @@ RETCODE SCIPconssetchgDelAddedCons(
 
    assert(conssetchg != NULL);
    assert(cons != NULL);
+
+   /* deactivate constraint, if it is currently active */
+   if( cons->active )
+   {
+      CHECK_OKAY( SCIPconsDeactivate(cons) );
+   }
    assert(!cons->active);
    assert(!cons->enabled);
+   assert(cons->sepaconsspos == -1);
+   assert(cons->enfoconsspos == -1);
+   assert(cons->chckconsspos == -1);
+   assert(cons->propconsspos == -1);
 
+   /* release and remove constraint from the addedconss array */
    arraypos = cons->arraypos;
    assert(0 <= arraypos && arraypos < conssetchg->naddedconss);
    assert(conssetchg->addedconss[arraypos] == cons);
 
+   /* mark the constraint to be no longer in the problem */
    cons->node = NULL;
    cons->arraypos = -1;
-   CHECK_OKAY( SCIPconsRelease(&conssetchg->addedconss[arraypos], memhdr, set) );
 
-   assert(conssetchg->addedconss[arraypos] == NULL);
+   /* free constraint data, such that constraint exists only as a zombie constraint from now on */
+   CHECK_OKAY( SCIPconsFreeData(cons, memhdr, set) );
+
+   /* release constraint */
+   CHECK_OKAY( SCIPconsRelease(&cons, memhdr, set) );
+
+   conssetchg->addedconss[arraypos] = NULL;
 
    return SCIP_OKAY;
 }
@@ -1339,17 +1408,14 @@ RETCODE SCIPconssetchgApply(
                cons->name, cons->conshdlr->name);
             
             /* release and remove constraint from the disabledconss array */
-            CHECK_OKAY( SCIPconsRelease(&conssetchg->disabledconss[i], memhdr, set) );
+            CHECK_OKAY( conssetchgDelDisabledCons(conssetchg, memhdr, set, i) );
          }
          else if( !cons->check && arraypos < conssetchg->naddedconss && cons == conssetchg->addedconss[arraypos] )
          {
             debugMessage("constraint <%s> of handler <%s> was deactivated at same node -> remove it from both arrays\n",
                cons->name, cons->conshdlr->name);
             
-            /* deactivate constraint */
-            CHECK_OKAY( SCIPconsDeactivate(conssetchg->addedconss[i]) );
-
-            /* release and remove constraint from the addedconss array */
+            /* deactivate, release, and remove constraint from the addedconss array */
             CHECK_OKAY( SCIPconssetchgDelAddedCons(conssetchg, memhdr, set, cons) );
 
             /* release and remove constraint from the disabledconss array */

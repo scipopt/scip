@@ -501,7 +501,9 @@ RETCODE SCIPprobAddCons(
    return SCIP_OKAY;
 }
 
-/** removes constraint from the problem and releases it */
+/** releases and removes constraint from the problem; if the user has not captured the constraint for his own use, the
+ *  constraint may be invalid after the call
+ */
 RETCODE SCIPprobDelCons(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
@@ -544,6 +546,9 @@ RETCODE SCIPprobDelCons(
 
    /* mark the constraint to be no longer in the problem */
    cons->arraypos = -1;
+
+   /* free constraint data, such that constraint exists only as a zombie constraint from now on */
+   CHECK_OKAY( SCIPconsFreeData(cons, memhdr, set) );
 
    /* release constraint */
    CHECK_OKAY( SCIPconsRelease(&cons, memhdr, set) );

@@ -234,7 +234,7 @@ struct Cons
    char*            name;               /**< name of the constraint */
    CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
    CONSDATA*        consdata;           /**< data for this specific constraint */
-   NODE*            node;               /**< node this constraint was created, or NULL if it's a global constraint */
+   NODE*            node;               /**< node where this constraint was created, or NULL if it's a global constraint */
    int              nuses;              /**< number of times, this constraint is referenced */
    int              sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
    int              enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
@@ -458,6 +458,14 @@ RETCODE SCIPconsCreate(
    Bool             original            /**< is constraint belonging to the original problem? */
    );
 
+/** frees constraint data of a constraint, leaving the constraint itself as a zombie constraint */
+extern
+RETCODE SCIPconsFreeData(
+   CONS*            cons,               /**< constraint to free */
+   MEMHDR*          memhdr,             /**< block memory buffer */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
 /** frees a constraint */
 extern
 RETCODE SCIPconsFree(
@@ -478,6 +486,19 @@ RETCODE SCIPconsRelease(
    CONS**           cons,               /**< pointer to constraint */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** globally removes constraint from all subproblems; removes constraint from the addedconss array of the node, where it
+ *  was created, or from the problem, if it was a problem constraint;
+ *  the method must not be called for local check-constraint (i.e. constraints, that locally ensure feasibility);
+ *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
+ */
+extern
+RETCODE SCIPconsDelete(
+   CONS**           cons,               /**< pointer to constraint to delete */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob                /**< problem data */
    );
 
 /** activates constraint */
@@ -565,7 +586,7 @@ RETCODE SCIPconssetchgFree(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** deletes and releases deactivated constraint from the addedconss array of the constraint set change data */
+/** deactivates, deletes, and releases constraint from the addedconss array of the constraint set change data */
 extern
 RETCODE SCIPconssetchgDelAddedCons(
    CONSSETCHG*      conssetchg,         /**< constraint set change to delete constraint from */

@@ -876,26 +876,32 @@ RETCODE SCIPaddCons(
    }
 }
 
-/** deletes global constraint from the problem; this method is equivalent to SCIPdisableConsLocal(), besides it can
- *  only be called during problem modification and presolving stage
+/** globally removes constraint from all subproblems; removes constraint from the subproblem of the node, where it
+ *  was created, or from the global problem, if it was a globally valid problem constraint;
+ *  the method must not be called for local check-constraint (i.e. constraints, that locally ensure feasibility);
+ *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
  */
 RETCODE SCIPdelCons(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to delete */
+   CONS**           cons                /**< pointer to constraint to delete */
    )
 {
    assert(cons != NULL);
+   assert(*cons != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPprobDelCons(scip->origprob, scip->mem->probmem, scip->set, cons) );
+      assert((*cons)->node == NULL);
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPprobDelCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+   case SCIP_STAGE_SOLVING:
+      assert(scip->stage == SCIP_STAGE_SOLVING || (*cons)->node == NULL);
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
       return SCIP_OKAY;
 
    default:
@@ -978,7 +984,7 @@ RETCODE SCIPaddConsNode(
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
  *  if the current node is the root node, or if the method is called during problem modification or presolving,
- *  the constraint is deleted from the problem
+ *  the constraint is globally deleted from the problem
  */
 RETCODE SCIPdisableConsLocal(
    SCIP*            scip,               /**< SCIP data structure */

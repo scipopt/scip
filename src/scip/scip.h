@@ -379,13 +379,15 @@ RETCODE SCIPaddCons(
    CONS*            cons                /**< constraint to add */
    );
 
-/** deletes global constraint from the problem; this method is equivalent to SCIPdisableConsLocal(), besides it can
- *  only be called during problem modification and presolving stage
+/** globally removes constraint from all subproblems; removes constraint from the subproblem of the node, where it
+ *  was created, or from the global problem, if it was a globally valid problem constraint;
+ *  the method must not be called for local check-constraint (i.e. constraints, that locally ensure feasibility);
+ *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
  */
 extern
 RETCODE SCIPdelCons(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to delete */
+   CONS**           cons                /**< pointer to constraint to delete */
    );
 
 /** finds constraint of given name in the problem */
@@ -425,7 +427,7 @@ RETCODE SCIPaddConsNode(
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
  *  if the current node is the root node, or if the method is called during problem modification or presolving,
- *  the constraint is deleted from the problem
+ *  the constraint is globally deleted from the problem
  */
 extern
 RETCODE SCIPdisableConsLocal(
