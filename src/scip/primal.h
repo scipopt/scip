@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.14 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.15 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -82,7 +82,8 @@ RETCODE SCIPprimalAddSol(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL*             sol                 /**< primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
 /** adds primal solution to solution storage, frees the solution afterwards */
@@ -96,7 +97,8 @@ RETCODE SCIPprimalAddSolFree(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
 /** checks primal solution; if feasible, adds it to storage by copying it */

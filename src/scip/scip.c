@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.114 2003/12/19 13:35:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.115 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3346,10 +3346,7 @@ Real SCIPgetVarSol(
 
    CHECK_ABORT( checkStage(scip, "SCIPgetVarSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( scip->tree->actnodehaslp )
-      return SCIPvarGetLPSol(var);
-   else
-      return SCIPvarGetPseudoSol(var);
+   return SCIPvarGetSol(var, scip->tree->actnodehaslp);
 }
 
 /** gets strong branching information on COLUMN variable */
@@ -3436,7 +3433,7 @@ RETCODE SCIPaddVarObj(
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
- *  that this change is treated like a branching decision
+ *  that in conflict analysis, this change is treated like a branching decision
  */
 RETCODE SCIPchgVarLb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3463,7 +3460,7 @@ RETCODE SCIPchgVarLb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, 
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                      scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
       return SCIP_OKAY;
 
@@ -3475,7 +3472,7 @@ RETCODE SCIPchgVarLb(
 
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
- *  that this change is treated like a branching decision
+ *  that in conflict analysis, this change is treated like a branching decision
  */
 RETCODE SCIPchgVarUb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3502,7 +3499,7 @@ RETCODE SCIPchgVarUb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, 
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                      scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL) );
       return SCIP_OKAY;
 
@@ -3512,8 +3509,9 @@ RETCODE SCIPchgVarUb(
    }  /*lint !e788*/
 }
 
-/** changes lower bound of variable in the given node; if possible, adjust bound to integral value; the bound change
- *  is treated like a branching decision, and no inference information is stored
+/** changes lower bound of variable in the given node; if possible, adjust bound to integral value; doesn't store any
+ *  inference information in the bound change, such that in conflict analysis, this change is treated like a branching
+ *  decision
  */
 RETCODE SCIPchgVarLbNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3526,14 +3524,15 @@ RETCODE SCIPchgVarLbNode(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
-   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
+   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
                   scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
    
    return SCIP_OKAY;
 }
 
-/** changes upper bound of variable in the given node; if possible, adjust bound to integral value; the bound change
- *  is treated like a branching decision, and no inference information is stored
+/** changes upper bound of variable in the given node; if possible, adjust bound to integral value; doesn't store any
+ *  inference information in the bound change, such that in conflict analysis, this change is treated like a branching
+ *  decision
  */
 RETCODE SCIPchgVarUbNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3546,7 +3545,7 @@ RETCODE SCIPchgVarUbNode(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
-   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
+   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
                   scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL ) );
    
    return SCIP_OKAY;
@@ -3554,7 +3553,7 @@ RETCODE SCIPchgVarUbNode(
 
 /** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter than the
  *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
- *  bound change, such that this change is treated like a branching decision
+ *  bound change, such that in conflict analysis, this change is treated like a branching decision
  */
 RETCODE SCIPtightenVarLb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3602,7 +3601,7 @@ RETCODE SCIPtightenVarLb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat,
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                      scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
       break;
 
@@ -3619,7 +3618,7 @@ RETCODE SCIPtightenVarLb(
 
 /** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter than the
  *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
- *  bound change, such that this change is treated like a branching decision
+ *  bound change, such that in conflict analysis, this change is treated like a branching decision
  */
 RETCODE SCIPtightenVarUb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3667,7 +3666,7 @@ RETCODE SCIPtightenVarUb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat,
+      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                      scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL) );
       break;
 
@@ -3724,12 +3723,12 @@ RETCODE SCIPinferBinVar(
    case SCIP_STAGE_SOLVING:
       if( fixedval == TRUE )
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat,
+         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                         scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, infercons) );
       }
       else
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat,
+         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                         scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, infercons) );
       }
       return SCIP_OKAY;
@@ -6237,13 +6236,14 @@ RETCODE SCIPprintBestTransSol(
 /** adds feasible primal solution to solution storage by copying it */
 RETCODE SCIPaddSol(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol                 /**< primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalAddSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol) );
+                  scip->lp, scip->eventfilter, sol, stored) );
 
    return SCIP_OKAY;
 }
@@ -6251,13 +6251,14 @@ RETCODE SCIPaddSol(
 /** adds primal solution to solution storage, frees the solution afterwards */
 RETCODE SCIPaddSolFree(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalAddSolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol) );
+                  scip->lp, scip->eventfilter, sol, stored) );
 
    return SCIP_OKAY;
 }

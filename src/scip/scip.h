@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.95 2003/12/18 15:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.96 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1414,7 +1414,7 @@ RETCODE SCIPaddVarObj(
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
- *  that this change is treated like a branching decision
+ *  that in conflict analysis, this change is treated like a branching decision
  */
 extern
 RETCODE SCIPchgVarLb(
@@ -1425,7 +1425,7 @@ RETCODE SCIPchgVarLb(
 
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
- *  that this change is treated like a branching decision
+ *  that in conflict analysis, this change is treated like a branching decision
  */
 extern
 RETCODE SCIPchgVarUb(
@@ -1434,8 +1434,9 @@ RETCODE SCIPchgVarUb(
    Real             newbound            /**< new value for bound */
    );
 
-/** changes lower bound of variable in the given node; if possible, adjust bound to integral value; the bound change
- *  is treated like a branching decision, and no inference information is stored
+/** changes lower bound of variable in the given node; if possible, adjust bound to integral value; doesn't store any
+ *  inference information in the bound change, such that in conflict analysis, this change is treated like a branching
+ *  decision
  */
 extern
 RETCODE SCIPchgVarLbNode(
@@ -1445,8 +1446,9 @@ RETCODE SCIPchgVarLbNode(
    Real             newbound            /**< new value for bound */
    );
 
-/** changes upper bound of variable in the given node; if possible, adjust bound to integral value; the bound change
- *  is treated like a branching decision, and no inference information is stored
+/** changes upper bound of variable in the given node; if possible, adjust bound to integral value; doesn't store any
+ *  inference information in the bound change, such that in conflict analysis, this change is treated like a branching
+ *  decision
  */
 extern
 RETCODE SCIPchgVarUbNode(
@@ -1458,7 +1460,7 @@ RETCODE SCIPchgVarUbNode(
 
 /** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter than the
  *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
- *  bound change, such that this change is treated like a branching decision
+ *  bound change, such that in conflict analysis, this change is treated like a branching decision
  */
 extern
 RETCODE SCIPtightenVarLb(
@@ -1471,7 +1473,7 @@ RETCODE SCIPtightenVarLb(
 
 /** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter than the
  *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
- *  bound change, such that this change is treated like a branching decision
+ *  bound change, such that in conflict analysis, this change is treated like a branching decision
  */
 extern
 RETCODE SCIPtightenVarUb(
@@ -2497,14 +2499,16 @@ RETCODE SCIPprintBestTransSol(
 extern
 RETCODE SCIPaddSol(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol                 /**< primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
 /** adds primal solution to solution storage, frees the solution afterwards */
 extern
 RETCODE SCIPaddSolFree(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
 /** checks solution for feasibility; if possible, adds it to storage by copying */

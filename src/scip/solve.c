@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.77 2003/12/18 13:44:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.78 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -598,7 +598,7 @@ RETCODE redcostStrengthening(
                   /* strengthen upper bound */
                   debugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, oldlb, newbd, primal->upperbound, lpobjval, redcost);
-                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, lp, branchcand, eventqueue,
+                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
                                  var, newbd, SCIP_BOUNDTYPE_UPPER, NULL) );
                   stat->nredcoststrfound++;
                }
@@ -632,7 +632,7 @@ RETCODE redcostStrengthening(
                   /* strengthen lower bound */
                   debugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, newbd, oldub, primal->upperbound, lpobjval, redcost);
-                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, lp, branchcand, eventqueue,
+                  CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
                                  var, newbd, SCIP_BOUNDTYPE_LOWER, NULL) );
                   stat->nredcoststrfound++;
                }
@@ -984,8 +984,6 @@ RETCODE SCIPsolveCIP(
    assert(eventfilter != NULL);
    assert(eventqueue != NULL);
 
-   /**@todo every variable, where zero is not the best bound (w.r.t. objective function) has to be in the problem */
-
    /* sort constraint handlers by priorities */
    ALLOC_OKAY( duplicateMemoryArray(&conshdlrs_sepa, set->conshdlrs, set->nconshdlrs) );
    ALLOC_OKAY( duplicateMemoryArray(&conshdlrs_enfo, set->conshdlrs, set->nconshdlrs) );
@@ -1211,7 +1209,6 @@ RETCODE SCIPsolveCIP(
       else
       {
          SOL* sol;
-         Longint oldnsolsfound;
 
          assert(!tree->actnodehaslp || lp->solved);
          assert(!cutoff);
@@ -1222,7 +1219,6 @@ RETCODE SCIPsolveCIP(
          CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
                
          /* found a feasible solution */
-         oldnsolsfound = primal->nsolsfound;
          if( tree->actnodehaslp )
          {
             /* start clock for LP solutions */
@@ -1230,8 +1226,9 @@ RETCODE SCIPsolveCIP(
 
             /* add solution to storage */
             CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, set, stat, tree, lp, NULL) );
-            CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
-            stat->nlpsolsfound += primal->nsolsfound - oldnsolsfound;
+            CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol, &foundsol) );
+            if( foundsol )
+               stat->nlpsolsfound++;
 
             /* stop clock for LP solutions */
             SCIPclockStop(stat->lpsoltime, set);
@@ -1243,8 +1240,9 @@ RETCODE SCIPsolveCIP(
 
             /* add solution to storage */
             CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, set, stat, tree, lp, NULL) );
-            CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
-            stat->npssolsfound += primal->nsolsfound - oldnsolsfound;
+            CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol, &foundsol) );
+            if( foundsol )
+               stat->npssolsfound++;
 
             /* stop clock for pseudo solutions */
             SCIPclockStop(stat->pseudosoltime, set);

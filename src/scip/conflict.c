@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.17 2003/12/01 16:14:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.18 2003/12/23 12:13:06 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -432,9 +432,9 @@ DECL_SORTPTRCOMP(conflictVarCmp)
       return -1;
    else if( SCIPvarGetInferDepth(var1) < SCIPvarGetInferDepth(var2) )
       return +1;
-   else if( SCIPvarGetInferNum(var1) > SCIPvarGetInferNum(var2) )
+   else if( SCIPvarGetInferIndex(var1) > SCIPvarGetInferIndex(var2) )
       return -1;
-   else if( SCIPvarGetInferNum(var1) < SCIPvarGetInferNum(var2) )
+   else if( SCIPvarGetInferIndex(var1) < SCIPvarGetInferIndex(var2) )
       return +1;
    else if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
       return +1;
@@ -510,7 +510,7 @@ RETCODE SCIPconflictAddVar(
 
    debugMessage("adding variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:%p] to conflict candidates\n",
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var),
-      SCIPvarGetInferDepth(var), SCIPvarGetInferNum(var), SCIPvarGetInferCons(var));
+      SCIPvarGetInferDepth(var), SCIPvarGetInferIndex(var), SCIPvarGetInferCons(var));
 
    /* get active problem variable */
    var = SCIPvarGetProbvar(var);
@@ -614,7 +614,7 @@ RETCODE conflictAnalyze(
             assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(infervar), SCIPvarGetUbLocal(infervar)));
             debugMessage("resolving conflict var <%s>: constraint <%s> infered <%s> == %g at depth %d, num %d\n",
                SCIPvarGetName(var), SCIPconsGetName(infercons), SCIPvarGetName(infervar), SCIPvarGetLbLocal(infervar),
-               SCIPvarGetInferDepth(var), SCIPvarGetInferNum(var));
+               SCIPvarGetInferDepth(var), SCIPvarGetInferIndex(var));
             CHECK_OKAY( SCIPconsResolveConflictVar(infercons, set, SCIPvarGetInferVar(var)) );
          }
          else

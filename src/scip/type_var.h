@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.1 2003/12/01 14:41:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.2 2003/12/23 12:13:08 bzfpfend Exp $"
 
 /**@file   type_ar.h
  * @brief  type definitions for problem variables
@@ -60,11 +60,21 @@ enum DomchgType
 };
 typedef enum DomchgType DOMCHGTYPE;
 
+/** bound change type */
+enum BoundchgType
+{
+   SCIP_BOUNDCHGTYPE_BRANCHING = 0,     /**< bound change was due to a branching decision */
+   SCIP_BOUNDCHGTYPE_INFERENCE = 1      /**< bound change was due to an inference (e.g. domain propagation) */
+};
+typedef enum BoundchgType BOUNDCHGTYPE;
+
 typedef struct DomChgBound DOMCHGBOUND; /**< static domain change for bound changes */
 typedef struct DomChgBoth DOMCHGBOTH;   /**< static domain change for bound and hole changes */
 typedef struct DomChgDyn DOMCHGDYN;     /**< dynamic domain change for bound and hole changes */
 typedef union DomChg DOMCHG;            /**< changes in domains of variables */
 typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
+typedef struct BranchingData BRANCHINGDATA; /**< data for branching decision bound changes */
+typedef struct InferenceData INFERENCEDATA; /**< data for inferred bound changes */
 typedef struct HoleChg HOLECHG;         /**< changes in holelist of variables */
 typedef struct Hole HOLE;               /**< hole in a domain of an integer variable */
 typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an integer variable */

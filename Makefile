@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.58 2003/12/19 13:35:18 bzfpfend Exp $
+# $Id: Makefile,v 1.59 2003/12/23 12:13:06 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -50,6 +50,8 @@ OPT		=	dbg
 LPS		=	cpx
 COMP		=	gnu
 TIME     	=  	3600
+NODES           =       2100000000
+MEM		=	1024
 TEST		=	miplib
 SETTINGS        =       default
 
@@ -211,6 +213,7 @@ SCIPLIBOBJ	=	branch.o \
 			disp_default.o \
 			heur_diving.o \
 			heur_rounding.o \
+			heur_simplerounding.o \
 			nodesel_bfs.o \
 			nodesel_dfs.o \
 			nodesel_restartdfs.o \
@@ -264,11 +267,11 @@ doc:
 
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME) $(NODES) $(MEM);
 
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME);
+		/bin/sh ./check_cplex.sh $(TEST) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM);
 
 $(OBJDIR):	
 		-mkdir -p $(OBJDIR)

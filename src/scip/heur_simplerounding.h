@@ -14,25 +14,25 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.h,v 1.4 2003/12/23 12:13:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.h,v 1.1 2003/12/23 12:13:06 bzfpfend Exp $"
 
-/**@file   heur_rounding.h
- * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
+/**@file   heur_simplerounding.h
+ * @brief  simple and fast LP rounding heuristic
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __HEUR_ROUNDING_H__
-#define __HEUR_ROUNDING_H__
+#ifndef __HEUR_SIMPLEROUNDING_H__
+#define __HEUR_SIMPLEROUNDING_H__
 
 
 #include "scip.h"
 
 
-/** creates the rounding heuristic with infeasibility recovering and includes it in SCIP */
+/** creates the simple rounding heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurRounding(
+RETCODE SCIPincludeHeurSimplerounding(
    SCIP*            scip                /**< SCIP data structure */
    );
 

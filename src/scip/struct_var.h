@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.2 2003/12/15 17:45:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.3 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -55,17 +55,34 @@ struct HoleChg
    HOLELIST*        oldlist;            /**< old value of list pointer */
 };
 
+/** data for branching decision bound changes */
+struct BranchingData
+{
+   Real             solval;             /**< solution value of variable prior to changing the bound */
+};
+
+/** data for inferred bound changes */
+struct InferenceData
+{
+   VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
+   CONS*            cons;               /**< constraint that inferred this bound change, or NULL */
+};
+
 /** change in one bound of a variable */
 struct BoundChg
 {
    VAR*             var;                /**< active variable to change the bounds for */
-   CONS*            infercons;          /**< constraint that infered this bound change, or NULL */
-   VAR*             infervar;           /**< variable that was changed (parent of var, or var itself) */
+   union
+   {
+      BRANCHINGDATA branchingdata;      /**< data for branching decisions */
+      INFERENCEDATA inferencedata;      /**< data for inferred bound changes */
+   } data;
    Real             newbound;           /**< new value for bound */
    Real             oldbound;           /**< old value for bound */
-   unsigned int     inferdepth:16;      /**< depth in the tree, where this bound change took place */
-   unsigned int     infernum:15;        /**< bound change index for each node representing the order of changes */
+   unsigned int     depth:16;           /**< depth in the tree, where this bound change took place */
+   unsigned int     index:14;           /**< bound change index for each node representing the order of changes */
    unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
+   unsigned int     boundchgtype:1;     /**< bound change type: branching decision or inferred bound change */
 };
 
 /** tracks changes of the variable's domains (static arrays, bound changes only) */
@@ -153,8 +170,8 @@ struct Var
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
    VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
-   CONS*            infercons;          /**< constraint that deduced the assignment (binary variables only), or NULL */
    VAR*             infervar;           /**< variable that was assigned (parent of var, or var itself) */
+   CONS*            infercons;          /**< constraint that deduced the assignment (binary variables only), or NULL */
    DOM              glbdom;             /**< domain of variable in global problem */
    DOM              actdom;             /**< domain of variable in actual subproblem */
    Real             obj;                /**< objective function value of variable */
@@ -170,8 +187,8 @@ struct Var
    int              nuses;              /**< number of times, this variable is referenced */
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
-   unsigned int     inferdepth:16;      /**< depth in the tree, where this bound change took place */
-   unsigned int     infernum:15;        /**< bound change index for each node representing the order of changes */
+   unsigned int     inferdepth:16;      /**< depth in the tree, where the last bound change took place */
+   unsigned int     inferindex:15;      /**< bound change index for each node representing the order of changes */
    unsigned int     initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */

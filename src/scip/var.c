@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.62 2003/12/18 15:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.63 2003/12/23 12:13:08 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -223,12 +223,32 @@ RETCODE SCIPboundchgApply(
    switch( boundchg->boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
-      CHECK_OKAY( SCIPvarChgLbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound,
-                     boundchg->infercons, boundchg->infervar, boundchg->inferdepth, boundchg->infernum) );
+      if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+      {
+         CHECK_OKAY( SCIPvarChgLbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound,
+                        NULL, NULL, boundchg->depth, boundchg->index) );
+      }
+      else
+      {
+         assert(boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+         CHECK_OKAY( SCIPvarChgLbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound,
+                        boundchg->data.inferencedata.var, boundchg->data.inferencedata.cons,
+                        boundchg->depth, boundchg->index) );
+      }
       break;
    case SCIP_BOUNDTYPE_UPPER:
-      CHECK_OKAY( SCIPvarChgUbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound, 
-                     boundchg->infercons, boundchg->infervar, boundchg->inferdepth, boundchg->infernum) );
+      if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+      {
+         CHECK_OKAY( SCIPvarChgUbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound, 
+                        NULL, NULL, boundchg->depth, boundchg->index) );
+      }
+      else
+      {
+         assert(boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+         CHECK_OKAY( SCIPvarChgUbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound, 
+                        boundchg->data.inferencedata.var, boundchg->data.inferencedata.cons,
+                        boundchg->depth, boundchg->index) );
+      }
       break;
    default:
       errorMessage("Unknown bound type\n");
@@ -273,9 +293,38 @@ RETCODE SCIPboundchgUndo(
    return SCIP_OKAY;
 }
 
-/** releases inference constraints of bound changes */
+/** captures branching and inference data of bound change */
 static
-RETCODE boundchgReleaseInfercons(
+RETCODE boundchgCaptureData(
+   BOUNDCHG*        boundchg            /**< bound change to remove */
+   )
+{
+   assert(boundchg != NULL);
+
+   switch( boundchg->boundchgtype )
+   {
+   case SCIP_BOUNDCHGTYPE_BRANCHING:
+      break;
+
+   case SCIP_BOUNDCHGTYPE_INFERENCE:
+      assert(boundchg->data.inferencedata.var != NULL);
+      if( boundchg->data.inferencedata.cons != NULL )
+      {
+         SCIPconsCapture(boundchg->data.inferencedata.cons);
+      }
+      break;
+      
+   default:
+      errorMessage("invalid bound change type\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** releases branching and inference data of bound change */
+static
+RETCODE boundchgReleaseData(
    BOUNDCHG*        boundchg,           /**< bound change to remove */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
@@ -283,11 +332,22 @@ RETCODE boundchgReleaseInfercons(
 {
    assert(boundchg != NULL);
 
-   if( boundchg->infercons != NULL )
+   switch( boundchg->boundchgtype )
    {
-      assert(boundchg->infervar != NULL);
-      CHECK_OKAY( SCIPconsRelease(&boundchg->infercons, memhdr, set) );
-      boundchg->infervar = NULL;
+   case SCIP_BOUNDCHGTYPE_BRANCHING:
+      break;
+
+   case SCIP_BOUNDCHGTYPE_INFERENCE:
+      assert(boundchg->data.inferencedata.var != NULL);
+      if( boundchg->data.inferencedata.cons != NULL )
+      {
+         CHECK_OKAY( SCIPconsRelease(&boundchg->data.inferencedata.cons, memhdr, set) );
+      }
+      break;
+      
+   default:
+      errorMessage("invalid bound change type\n");
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -329,10 +389,10 @@ RETCODE SCIPdomchgFree(
    {
       int i;
 
-      /* release inference constraints associated with the bound changes */
+      /* release branching and inference data associated with the bound changes */
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
       {
-         CHECK_OKAY( boundchgReleaseInfercons(&(*domchg)->domchgbound.boundchgs[i], memhdr, set) );
+         CHECK_OKAY( boundchgReleaseData(&(*domchg)->domchgbound.boundchgs[i], memhdr, set) );
       }
 
       /* free memory for bound and hole changes */
@@ -618,9 +678,11 @@ RETCODE SCIPdomchgAddBoundchg(
    Real             newbound,           /**< new value for bound */
    Real             oldbound,           /**< old value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
+   BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    NODE*            node,               /**< node where this bound change appears */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar            /**< variable that was changed (parent of var, or var itself) */
+   Real             solval,             /**< current solution value of variable (for branching decisions) */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
+   CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
    )
 {
    BOUNDCHG* boundchg;
@@ -630,10 +692,14 @@ RETCODE SCIPdomchgAddBoundchg(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
    assert((int)SCIP_BOUNDTYPE_LOWER == 0 && (int)SCIP_BOUNDTYPE_UPPER == 1); /* must be one bit */
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+   assert((int)SCIP_BOUNDCHGTYPE_BRANCHING == 0 && (int)SCIP_BOUNDCHGTYPE_INFERENCE == 1); /* must be one bit */
    assert(node != NULL);
+   assert(boundchgtype != SCIP_BOUNDCHGTYPE_INFERENCE || infervar != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || infercons == NULL);
 
-   debugMessage("adding bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
+   debugMessage("adding %s bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
+      boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference", 
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", oldbound, newbound, var->name, domchg, *domchg);
 
    /* if domain change data doesn't exist, create it;
@@ -655,18 +721,30 @@ RETCODE SCIPdomchgAddBoundchg(
    /* fill in the bound change data */
    boundchg = &(*domchg)->domchgdyn.boundchgs[(*domchg)->domchgdyn.nboundchgs];
    boundchg->var = var;
-   boundchg->infercons = infercons;
-   boundchg->infervar = infervar;
+   switch( boundchgtype )
+   {
+   case SCIP_BOUNDCHGTYPE_BRANCHING:
+      boundchg->data.branchingdata.solval = solval;
+      break;
+   case SCIP_BOUNDCHGTYPE_INFERENCE:
+      boundchg->data.inferencedata.var = infervar;
+      boundchg->data.inferencedata.cons = infercons;
+      break;
+   default:
+      errorMessage("invalid bound change type\n");
+      return SCIP_INVALIDDATA;
+   }
+
    boundchg->newbound = newbound;
    boundchg->oldbound = oldbound;
-   boundchg->inferdepth = SCIPnodeGetDepth(node); /*lint !e732*/
-   boundchg->infernum = (*domchg)->domchgdyn.nboundchgs;
+   boundchg->depth = SCIPnodeGetDepth(node); /*lint !e732*/
+   boundchg->index = (*domchg)->domchgdyn.nboundchgs;
    boundchg->boundtype = boundtype; /*lint !e641*/
+   boundchg->boundchgtype = boundchgtype; /*lint !e641*/
    (*domchg)->domchgdyn.nboundchgs++;
 
-   /* capture inference constraint */
-   if( infercons != NULL )
-      SCIPconsCapture(infercons);
+   /* capture branching and inference data associated with the bound changes */
+   CHECK_OKAY( boundchgCaptureData(boundchg) );
 
    return SCIP_OKAY;
 }
@@ -790,8 +868,8 @@ RETCODE varCreate(
    (*var)->parentvars = NULL;
    (*var)->negatedvar = NULL;
    (*var)->eventfilter = NULL;
-   (*var)->infercons = NULL;
    (*var)->infervar = NULL;
+   (*var)->infercons = NULL;
    (*var)->glbdom.holelist = NULL;
    (*var)->glbdom.lb = lb;
    (*var)->glbdom.ub = ub;
@@ -812,7 +890,7 @@ RETCODE varCreate(
    (*var)->nlocksdown = 0;
    (*var)->nlocksup = 0;
    (*var)->inferdepth = 0;
-   (*var)->infernum = 0;
+   (*var)->inferindex = 0;
    (*var)->initial = initial;
    (*var)->removeable = removeable;
    (*var)->vartype = vartype; /*lint !e641*/
@@ -2896,10 +2974,10 @@ RETCODE varProcessChgUbLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    );
 
 /** performs the actual change in lower bound, changes all parents accordingly */
@@ -2913,10 +2991,10 @@ RETCODE varProcessChgLbLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    )
 {
    VAR* parentvar;
@@ -2934,10 +3012,10 @@ RETCODE varProcessChgLbLocal(
    /* change the bound */
    oldbound = var->actdom.lb;
    var->actdom.lb = newbound;
-   var->infercons = infercons;
    var->infervar = infervar;
+   var->infercons = infercons;
    var->inferdepth = inferdepth; /*lint !e732*/
-   var->infernum = infernum; /*lint !e732*/
+   var->inferindex = inferindex; /*lint !e732*/
 
    /* issue bound change event */
    if( var->eventfilter != NULL )
@@ -2975,7 +3053,7 @@ RETCODE varProcessChgLbLocal(
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant, 
-                           infercons, infervar, inferdepth, infernum) );
+                           infervar, infercons, inferdepth, inferindex) );
          }
          else 
          {
@@ -2986,7 +3064,7 @@ RETCODE varProcessChgLbLocal(
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant, 
-                           infercons, infervar, inferdepth, infernum) );
+                           infervar, infercons, inferdepth, inferindex) );
          }
          break;
 
@@ -2996,7 +3074,7 @@ RETCODE varProcessChgLbLocal(
          assert(parentvar->negatedvar->negatedvar == parentvar);
          CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue,
                         parentvar->data.negate.constant - newbound, 
-                        infercons, infervar, inferdepth, infernum) );
+                        infervar, infercons, inferdepth, inferindex) );
          break;
 
       default:
@@ -3019,10 +3097,10 @@ RETCODE varProcessChgUbLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    )
 {
    VAR* parentvar;
@@ -3040,10 +3118,10 @@ RETCODE varProcessChgUbLocal(
    /* change the bound */
    oldbound = var->actdom.ub;
    var->actdom.ub = newbound;
-   var->infercons = infercons;
    var->infervar = infervar;
+   var->infercons = infercons;
    var->inferdepth = inferdepth; /*lint !e732*/
-   var->infernum = infernum; /*lint !e732*/
+   var->inferindex = inferindex; /*lint !e732*/
 
    /* issue bound change event */
    if( var->eventfilter != NULL )
@@ -3070,7 +3148,7 @@ RETCODE varProcessChgUbLocal(
          errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          abort();
       
-      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c */
+      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
@@ -3080,7 +3158,7 @@ RETCODE varProcessChgUbLocal(
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant, 
-                           infercons, infervar, inferdepth, infernum) );
+                           infervar, infercons, inferdepth, inferindex) );
          }
          else
          {
@@ -3091,7 +3169,7 @@ RETCODE varProcessChgUbLocal(
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant, 
-                           infercons, infervar, inferdepth, infernum) );
+                           infervar, infercons, inferdepth, inferindex) );
          }
          break;
 
@@ -3101,7 +3179,7 @@ RETCODE varProcessChgUbLocal(
          assert(parentvar->negatedvar->negatedvar == parentvar);
          CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue,
                         parentvar->data.negate.constant - newbound, 
-                        infercons, infervar, inferdepth, infernum) );
+                        infervar, infercons, inferdepth, inferindex) );
          break;
 
       default:
@@ -3123,10 +3201,10 @@ RETCODE SCIPvarChgLbLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    )
 {
    assert(var != NULL);
@@ -3149,17 +3227,17 @@ RETCODE SCIPvarChgLbLocal(
       if( var->data.transvar != NULL )
       {
          CHECK_OKAY( SCIPvarChgLbLocal(var->data.transvar, memhdr, set, stat, lp, branchcand, eventqueue, 
-                        newbound, infercons, infervar, inferdepth, infernum) );
+                        newbound, infervar, infercons, inferdepth, inferindex) );
       }
       else
       {
          assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->nboundchanges++;
          var->actdom.lb = newbound;
-         var->infercons = infercons;
          var->infervar = infervar;
+         var->infercons = infercons;
          var->inferdepth = inferdepth; /*lint !e732*/
-         var->infernum = infernum; /*lint !e732*/
+         var->inferindex = inferindex; /*lint !e732*/
       }
       break;
          
@@ -3167,7 +3245,7 @@ RETCODE SCIPvarChgLbLocal(
    case SCIP_VARSTATUS_LOOSE:
       stat->nboundchanges++;
       CHECK_OKAY( varProcessChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 
-                     newbound, infercons, infervar, inferdepth, infernum) );
+                     newbound, infervar, infercons, inferdepth, inferindex) );
       break;
 
    case SCIP_VARSTATUS_FIXED:
@@ -3184,7 +3262,7 @@ RETCODE SCIPvarChgLbLocal(
                var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar, 
-                        infercons, infervar, inferdepth, infernum) );
+                        infervar, infercons, inferdepth, inferindex) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
@@ -3194,7 +3272,7 @@ RETCODE SCIPvarChgLbLocal(
                var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar, 
-                        infercons, infervar, inferdepth, infernum) );
+                        infervar, infercons, inferdepth, inferindex) );
       }
       else
       {
@@ -3214,7 +3292,7 @@ RETCODE SCIPvarChgLbLocal(
       assert(var->negatedvar->negatedvar == var);
       CHECK_OKAY( SCIPvarChgUbLocal(var->negatedvar, memhdr, set, stat, lp, branchcand, eventqueue, 
                      var->data.negate.constant - newbound, 
-                     infercons, infervar, inferdepth, infernum) );
+                     infervar, infercons, inferdepth, inferindex) );
       break;
          
    default:
@@ -3235,10 +3313,10 @@ RETCODE SCIPvarChgUbLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    )
 {
    assert(var != NULL);
@@ -3261,17 +3339,17 @@ RETCODE SCIPvarChgUbLocal(
       if( var->data.transvar != NULL )
       {
          CHECK_OKAY( SCIPvarChgUbLocal(var->data.transvar, memhdr, set, stat, lp, branchcand, eventqueue, 
-                        newbound, infercons, infervar, inferdepth, infernum) );
+                        newbound, infervar, infercons, inferdepth, inferindex) );
       }
       else
       {
          assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->nboundchanges++;
          var->actdom.ub = newbound;
-         var->infercons = infercons;
          var->infervar = infervar;
+         var->infercons = infercons;
          var->inferdepth = inferdepth; /*lint !e732*/
-         var->infernum = infernum; /*lint !e732*/
+         var->inferindex = inferindex; /*lint !e732*/
       }
       break;
          
@@ -3279,7 +3357,7 @@ RETCODE SCIPvarChgUbLocal(
    case SCIP_VARSTATUS_LOOSE:
       stat->nboundchanges++;
       CHECK_OKAY( varProcessChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 
-                     newbound, infercons, infervar, inferdepth, infernum) );
+                     newbound, infervar, infercons, inferdepth, inferindex) );
       break;
 
    case SCIP_VARSTATUS_FIXED:
@@ -3296,7 +3374,7 @@ RETCODE SCIPvarChgUbLocal(
                var->data.aggregate.var->actdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar,
-                        infercons, infervar, inferdepth, infernum) );
+                        infervar, infercons, inferdepth, inferindex) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
@@ -3306,7 +3384,7 @@ RETCODE SCIPvarChgUbLocal(
                var->data.aggregate.var->actdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
                         (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar, 
-                        infercons, infervar, inferdepth, infernum) );
+                        infervar, infercons, inferdepth, inferindex) );
       }
       else
       {
@@ -3326,7 +3404,7 @@ RETCODE SCIPvarChgUbLocal(
       assert(var->negatedvar->negatedvar == var);
       CHECK_OKAY( SCIPvarChgLbLocal(var->negatedvar, memhdr, set, stat, lp, branchcand, eventqueue, 
                      var->data.negate.constant - newbound, 
-                     infercons, infervar, inferdepth, infernum) );
+                     infervar, infercons, inferdepth, inferindex) );
       break;
          
    default:
@@ -3348,10 +3426,10 @@ RETCODE SCIPvarChgBdLocal(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    )
 {
    /* apply bound change to the LP data */
@@ -3359,10 +3437,10 @@ RETCODE SCIPvarChgBdLocal(
    {
    case SCIP_BOUNDTYPE_LOWER:
       return SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound, 
-         infercons, infervar, inferdepth, infernum);
+         infervar, infercons, inferdepth, inferindex);
    case SCIP_BOUNDTYPE_UPPER:
       return SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound, 
-         infercons, infervar, inferdepth, infernum);
+         infervar, infercons, inferdepth, inferindex);
    default:
       errorMessage("Unknown bound type\n");
       return SCIP_INVALIDDATA;
@@ -4182,16 +4260,6 @@ Real SCIPvarGetUbLocal(
    return var->actdom.ub;
 }
 
-/** gets inference constraint of variable (constraint that deduced the current assignment), or NULL */
-CONS* SCIPvarGetInferCons(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->infercons;
-}
-
 /** gets inference variable of variable (variable that was assigned: parent of var, or var itself), or NULL */
 VAR* SCIPvarGetInferVar(
    VAR*             var                 /**< problem variable */
@@ -4200,6 +4268,16 @@ VAR* SCIPvarGetInferVar(
    assert(var != NULL);
 
    return var->infervar;
+}
+
+/** gets inference constraint of variable (constraint that deduced the current assignment), or NULL */
+CONS* SCIPvarGetInferCons(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->infercons;
 }
 
 /** gets inference depth level of variable */
@@ -4213,13 +4291,13 @@ int SCIPvarGetInferDepth(
 }
 
 /** gets inference number of variable (inference index in variable's inference depth level) */
-int SCIPvarGetInferNum(
+int SCIPvarGetInferIndex(
    VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
 
-   return var->infernum;
+   return var->inferindex;
 }
 
 /** gets the branching priority of the variable; this value can be used in the branching methods to scale the score
@@ -4505,6 +4583,18 @@ Real SCIPvarGetPseudoSol(
       errorMessage("Unknown variable status\n");
       abort();
    }
+}
+
+/** gets current LP or pseudo solution value of variable */
+Real SCIPvarGetSol(
+   VAR*             var,                /**< problem variable */
+   Bool             getlpval            /**< should the LP solution value be returned? */
+   )
+{
+   if( getlpval )
+      return SCIPvarGetLPSol(var);
+   else
+      return SCIPvarGetPseudoSol(var);
 }
 
 /** resolves variable to columns and adds them with the coefficient to the row */

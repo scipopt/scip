@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.10 2003/12/15 17:45:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.11 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -387,7 +387,7 @@ RETCODE SCIPsepastoreApplyCuts(
             debugMessage("apply bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val, SCIPvarGetUbLocal(var));
 
-            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, lp, branchcand, eventqueue,
+            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
                            var, val, SCIP_BOUNDTYPE_LOWER, NULL) );
 
             if( !sepastore->initiallp )
@@ -401,7 +401,7 @@ RETCODE SCIPsepastoreApplyCuts(
             debugMessage("apply bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), val);
 
-            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, lp, branchcand, eventqueue,
+            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
                            var, val, SCIP_BOUNDTYPE_UPPER, NULL) );
 
             if( !sepastore->initiallp )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.25 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.26 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -279,13 +279,15 @@ RETCODE SCIPprimalAddSol(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL*             sol                 /**< primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
    int insertpos;
 
    assert(primal != NULL);
    assert(sol != NULL);
+   assert(stored != NULL);
 
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
@@ -299,7 +301,11 @@ RETCODE SCIPprimalAddSol(
       
       /* insert copied solution into solution storage */
       CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
+
+      *stored = TRUE;
    }
+   else
+      *stored = FALSE;
 
    return SCIP_OKAY;
 }
@@ -314,7 +320,8 @@ RETCODE SCIPprimalAddSolFree(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
    int insertpos;
@@ -322,6 +329,7 @@ RETCODE SCIPprimalAddSolFree(
    assert(primal != NULL);
    assert(sol != NULL);
    assert(*sol != NULL);
+   assert(stored != NULL);
 
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(*sol));
@@ -333,11 +341,15 @@ RETCODE SCIPprimalAddSolFree(
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
+
+      *stored = TRUE;
    }
    else
    {
       /* the solution is too bad -> free it immediately */
       CHECK_OKAY( SCIPsolFree(sol, memhdr) );
+
+      *stored = FALSE;
    }
    assert(*sol == NULL);
 
@@ -381,13 +393,13 @@ RETCODE SCIPprimalTrySol(
    if( feasible )
    {
       SOL* solcopy;
-
+      
       /* create a copy of the solution */
       CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
       
       /* insert copied solution into solution storage */
       CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
-
+      
       *stored = TRUE;
    }
    else
@@ -419,6 +431,8 @@ RETCODE SCIPprimalTrySolFree(
    assert(sol != NULL);
    assert(*sol != NULL);
    assert(stored != NULL);
+
+   *stored = FALSE;
 
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(*sol));

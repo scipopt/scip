@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.70 2003/12/18 15:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.71 2003/12/23 12:13:08 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -845,6 +845,7 @@ RETCODE SCIPnodeAddBoundchg(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -858,6 +859,7 @@ RETCODE SCIPnodeAddBoundchg(
    Real oldbound;
 
    assert(node != NULL);
+   assert(tree != NULL);
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || infercons == NULL);
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_ACTNODE || infercons == NULL);
@@ -907,9 +909,37 @@ RETCODE SCIPnodeAddBoundchg(
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, SCIPvarGetObj(var));
 
-   /* remember the bound change */
-   CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
-                  var, newbound, oldbound, boundtype, node, infercons, infervar) );
+   /* if the node is a child:
+    *  - the bound change is a branching decision
+    *  - the child's lower bound can be updated due to the changed pseudo solution
+    * otherwise:
+    *  - the bound change is an inference
+    */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
+   {
+      Real newpseudoobjval;
+      Real solval;
+
+      assert(!node->active);
+      
+      /* get the variable's current solution value */
+      solval = SCIPvarGetSol(var, tree->actnodehaslp);
+
+      /* remember the bound change as branching decision */
+      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
+                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, node, solval, NULL, NULL) );
+      
+      /* update the child's lower bound */
+      newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+      node->lowerbound = MAX(node->lowerbound, newpseudoobjval);
+   }
+   else
+   {
+      /* remember the bound change as inference (solval is not important: use 0.0) */
+      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
+                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, node, 0.0, infervar, infercons) );
+   }
+
    assert(node->domchg != NULL);
    assert(node->domchg->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
    assert(node->domchg->domchgdyn.boundchgs != NULL);
@@ -928,16 +958,6 @@ RETCODE SCIPnodeAddBoundchg(
          /* changed bound in root node: update the global bound */
          CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
       }
-   }
-
-   /* if the node is a child, update its lower bound from changed pseudo solution */
-   if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
-   {
-      Real newpseudoobjval;
-      
-      assert(!node->active);
-      newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
-      node->lowerbound = MAX(node->lowerbound, newpseudoobjval);
    }
 
    return SCIP_OKAY;
@@ -2248,12 +2268,12 @@ RETCODE SCIPtreeBranchVar(
       CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         var, fixval, SCIP_BOUNDTYPE_LOWER, NULL) );
       }
       if( !SCIPsetIsEQ(set, SCIPvarGetUbLocal(var), fixval) )
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         var, fixval, SCIP_BOUNDTYPE_UPPER, NULL) );
       }
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -2263,7 +2283,7 @@ RETCODE SCIPtreeBranchVar(
       {
          debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), fixval-1);
          CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         var, fixval-1, SCIP_BOUNDTYPE_UPPER, NULL) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       }
@@ -2273,7 +2293,7 @@ RETCODE SCIPtreeBranchVar(
       {
          debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), fixval+1);
          CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         var, fixval+1, SCIP_BOUNDTYPE_LOWER, NULL) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       }
@@ -2285,14 +2305,14 @@ RETCODE SCIPtreeBranchVar(
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFloor(set, solval));
       CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, branchcand, eventqueue, 
+      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                      var, SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER, NULL) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), SCIPsetCeil(set, solval));
       CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, branchcand, eventqueue, 
+      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                      var, SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER, NULL) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
    }

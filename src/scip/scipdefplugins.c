@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.6 2003/11/27 17:48:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.7 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -46,6 +46,7 @@
 #include "branch_leastinf.h"
 #include "heur_diving.h"
 #include "heur_rounding.h"
+#include "heur_simplerounding.h"
 #include "sepa_gomory.h"
 #include "disp_default.h"
 #include "dialog_default.h"
@@ -86,6 +87,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurDiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
+   CHECK_OKAY( SCIPincludeHeurSimplerounding(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeDialogDefault(scip) );

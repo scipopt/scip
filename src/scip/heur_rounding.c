@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.15 2003/12/01 16:14:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.16 2003/12/23 12:13:06 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
- * @brief  simple LP rounding heuristic
+ * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
  * @author Tobias Achterberg
  */
 
@@ -30,10 +30,10 @@
 
 
 #define HEUR_NAME         "rounding"
-#define HEUR_DESC         "simple LP rounding heuristic"
-#define HEUR_DISPCHAR     'r'
-#define HEUR_PRIORITY     0
-#define HEUR_FREQ         1
+#define HEUR_DESC         "LP rounding heuristic with infeasibility recovering"
+#define HEUR_DISPCHAR     'R'
+#define HEUR_PRIORITY     -1000
+#define HEUR_FREQ         5
 #define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -577,7 +577,7 @@ DECL_HEUREXEC(SCIPheurExecRounding) /*lint --e{715}*/
  * heuristic specific interface methods
  */
 
-/** creates the simple rounding heuristic and includes it in SCIP */
+/** creates the rounding heuristic with infeasibility recovering and includes it in SCIP */
 RETCODE SCIPincludeHeurRounding(
    SCIP*            scip                /**< SCIP data structure */
    )

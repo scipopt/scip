@@ -1,9 +1,11 @@
-# $Id: check.sh,v 1.4 2003/12/02 11:50:38 bzfpfend Exp $
+# $Id: check.sh,v 1.5 2003/12/23 12:13:06 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
 BINID=$4
 TIMELIMIT=$5
+NODELIMIT=$6
+MEMLIMIT=$7
 
 OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
@@ -24,8 +26,9 @@ do
         echo @01 $i ===========
 	echo @01 $i ===========                >> $ERRFILE
 	echo set load $SETFILE                 >  $TMPFILE
-	echo set limits nodelimit 10000000     >> $TMPFILE
 	echo set limits timelimit $TIMELIMIT   >> $TMPFILE
+	echo set limits nodelimit $NODELIMIT   >> $TMPFILE
+	echo set limits memlimit $MEMLIMIT     >> $TMPFILE
 	echo set timing clocktype 1            >> $TMPFILE
 	echo set display verblevel 4           >> $TMPFILE
 	echo set display dispfreq 10000        >> $TMPFILE

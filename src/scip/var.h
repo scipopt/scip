@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.47 2003/12/18 15:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.48 2003/12/23 12:13:08 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -126,9 +126,11 @@ RETCODE SCIPdomchgAddBoundchg(
    Real             newbound,           /**< new value for bound */
    Real             oldbound,           /**< old value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
+   BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    NODE*            node,               /**< node where this bound change appears */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar            /**< variable that was changed (parent of var, or var itself) */
+   Real             solval,             /**< current solution value of variable */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
+   CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
    );
 
 /** adds hole change to domain changes */
@@ -377,10 +379,10 @@ RETCODE SCIPvarChgLbLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    );
 
 /** changes current local upper bound of variable; if possible, adjusts bound to integral value */
@@ -394,10 +396,10 @@ RETCODE SCIPvarChgUbLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    );
 
 /** changes current local bound of variable; if possible, adjusts bound to integral value */
@@ -412,10 +414,10 @@ RETCODE SCIPvarChgBdLocal(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
-   int              infernum            /**< bound change index for each node representing the order of changes */
+   int              inferindex          /**< bound change index for each node representing the order of changes */
    );
 
 /** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */

@@ -1,8 +1,10 @@
-# $Id: check_cplex.sh,v 1.2 2003/11/21 09:18:58 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.3 2003/12/23 12:13:06 bzfpfend Exp $
 CPLEXBIN=cplex
 TSTNAME=$1
 BINNAME=$CPLEXBIN.$2
 TIMELIMIT=$3
+NODELIMIT=$4
+MEMLIMIT=$5
 
 OUTFILE=results/check.$TSTNAME.$BINNAME.out
 ERRFILE=results/check.$TSTNAME.$BINNAME.err
@@ -26,7 +28,8 @@ do
 	echo set mip interval 10000             >> $TMPFILE
 	echo set mip tolerances absmipgap 1e-10 >> $TMPFILE
 	echo set mip tolerances mipgap 0.0      >> $TMPFILE
-	echo set mip limit treememory 2000      >> $TMPFILE
+	echo set mip limits nodes $NODELIMIT    >> $TMPFILE
+	echo set mip limits treememory $MEMLIMIT >> $TMPFILE
 	echo optimize                           >> $TMPFILE
 	echo quit                               >> $TMPFILE
 	$CPLEXBIN < $TMPFILE 2>>$ERRFILE

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.2 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.3 2003/12/23 12:13:07 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -383,15 +383,15 @@ Real SCIPvarGetUbLocal(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets inference constraint of variable (constraint that deduced the current assignment), or NULL */
-extern
-CONS* SCIPvarGetInferCons(
-   VAR*             var                 /**< problem variable */
-   );
-
 /** gets inference variable of variable (variable that was assigned: parent of var, or var itself), or NULL */
 extern
 VAR* SCIPvarGetInferVar(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets inference constraint of variable (constraint that deduced the current assignment), or NULL */
+extern
+CONS* SCIPvarGetInferCons(
    VAR*             var                 /**< problem variable */
    );
 
@@ -403,7 +403,7 @@ int SCIPvarGetInferDepth(
 
 /** gets inference number of variable (inference index in variable's inference depth level) */
 extern
-int SCIPvarGetInferNum(
+int SCIPvarGetInferIndex(
    VAR*             var                 /**< problem variable */
    );
 
@@ -450,10 +450,10 @@ Real SCIPvarGetBranchingPriority(
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
 #define SCIPvarGetLbLocal(var)          (var)->actdom.lb
 #define SCIPvarGetUbLocal(var)          (var)->actdom.ub
-#define SCIPvarGetInferCons(var)        (var)->infercons
 #define SCIPvarGetInferVar(var)         (var)->infervar
+#define SCIPvarGetInferCons(var)        (var)->infercons
 #define SCIPvarGetInferDepth(var)       ((int)((var)->inferdepth))
-#define SCIPvarGetInferNum(var)         ((int)((var)->infernum))
+#define SCIPvarGetInferIndex(var)       ((int)((var)->inferindex))
 #define SCIPvarGetBranchingPriority(var) ((var)->branchingpriority)
 
 #endif
@@ -492,6 +492,13 @@ Real SCIPvarGetLPSol(
 extern
 Real SCIPvarGetPseudoSol(
    VAR*             var                 /**< problem variable */
+   );
+
+/** gets current LP or pseudo solution value of variable */
+extern
+Real SCIPvarGetSol(
+   VAR*             var,                /**< problem variable */
+   Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
 
