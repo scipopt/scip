@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.6 2005/02/07 18:12:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.7 2005/02/08 17:23:07 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -42,6 +42,7 @@
  */
 
 #define DEFAULT_PROPROUNDS          -1  /**< maximal number of propagation rounds in probing subproblems */
+#define DEFAULT_MAXFIXINGS          10  /**< maximal number of fixings found, until probing is aborted (0: don't abort) */
 
 
 
@@ -54,6 +55,7 @@
 struct PresolData
 {
    int              proprounds;         /**< maximal number of propagation rounds in probing subproblems */
+   int              maxfixings;         /**< maximal number of fixings found, until probing is aborted (0: don't abort) */
    Bool             called;             /**< was probing applied at least once? */
 };
 
@@ -199,6 +201,7 @@ DECL_PRESOLEXEC(presolExecProbing)
    Real* oneubs;
    int nvars;
    int nbinvars;
+   int maxfixings;
    int oldnfixedvars;
    int oldnaggrvars;
    int i;
@@ -224,6 +227,7 @@ DECL_PRESOLEXEC(presolExecProbing)
 
    *result = SCIP_DIDNOTFIND;
 
+   maxfixings = (presoldata->maxfixings > 0 ? presoldata->maxfixings : INT_MAX);
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
 
@@ -238,7 +242,8 @@ DECL_PRESOLEXEC(presolExecProbing)
 
    /* for each binary variable, probe fixing the variable to zero and one */
    cutoff = FALSE;
-   for( i = 0; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip); ++i )
+   for( i = 0; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip)
+           && *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars < maxfixings; ++i )
    {
       Bool localcutoff;
       int j;
@@ -405,6 +410,10 @@ RETCODE SCIPincludePresolProbing(
          "presolving/probing/proprounds", 
          "maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)",
          &presoldata->proprounds, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "presolving/probing/maxfixings",
+         "maximal number of fixings found, until probing is aborted (0: don't abort)",
+         &presoldata->maxfixings, DEFAULT_MAXFIXINGS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
