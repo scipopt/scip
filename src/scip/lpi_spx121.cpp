@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.10 2004/09/29 19:08:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.11 2004/09/29 19:17:34 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -477,7 +477,8 @@ const char* SCIPlpiGetSolverName(
 /** creates an LP problem object */
 RETCODE SCIPlpiCreate(
    LPI**            lpi,                /**< pointer to an LP interface structure */
-   const char*      name                /**< problem name */
+   const char*      name,               /**< problem name */
+   OBJSEN           objsen              /**< objective sense */
    )
 {
    assert(lpi != NULL);
@@ -489,6 +490,9 @@ RETCODE SCIPlpiCreate(
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
+
+   /* set objective sense */
+   CHECK_OKAY( SCIPlpiChgObjsen(*lpi, objsen) );
 
    return SCIP_OKAY;
 }

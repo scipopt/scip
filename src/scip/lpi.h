@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.40 2004/09/28 11:09:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.41 2004/09/29 19:17:34 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -63,7 +63,8 @@ const char* SCIPlpiGetSolverName(
 extern 
 RETCODE SCIPlpiCreate(
    LPI**            lpi,                /**< pointer to an LP interface structure */
-   const char*      name                /**< problem name */
+   const char*      name,               /**< problem name */
+   OBJSEN           objsen              /**< objective sense */
    );
 
 /** deletes an LP problem object */

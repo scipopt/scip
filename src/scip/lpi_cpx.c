@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.70 2004/09/28 11:09:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.71 2004/09/29 19:17:34 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -866,7 +866,8 @@ const char* SCIPlpiGetSolverName(
 /** creates an LP problem object */
 RETCODE SCIPlpiCreate(
    LPI**            lpi,                /**< pointer to an LP interface structure */
-   const char*      name                /**< problem name */
+   const char*      name,               /**< problem name */
+   OBJSEN           objsen              /**< objective sense */
    )
 {
    int     restat;
@@ -918,6 +919,9 @@ RETCODE SCIPlpiCreate(
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
    numlp++;
+
+   /* set objective sense */
+   CHECK_OKAY( SCIPlpiChgObjsen(*lpi, objsen) );
 
    return SCIP_OKAY;
 }
