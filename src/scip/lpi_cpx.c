@@ -767,8 +767,12 @@ RETCODE SCIPlpiLoadColLP(
    /* calculate column lengths */
    ALLOC_OKAY( allocMemoryArray(&cnt, ncols) );
    for( c = 0; c < ncols-1; ++c )
+   {
       cnt[c] = beg[c+1] - beg[c];
+      assert(cnt[c] >= 0);
+   }
    cnt[ncols-1] = nnonz - beg[ncols-1];
+   assert(cnt[ncols-1] >= 0);
 
    /* copy data into CPLEX */
    CHECK_ZERO( CPXcopylpwnames(cpxenv, lpi->cpxlp, ncols, nrows, cpxObjsen(objsen), obj, 
@@ -776,6 +780,10 @@ RETCODE SCIPlpiLoadColLP(
 
    /* free temporary memory */
    freeMemoryArray(&cnt);
+
+   assert(CPXgetnumcols(cpxenv, lpi->cpxlp) == ncols);
+   assert(CPXgetnumrows(cpxenv, lpi->cpxlp) == nrows);
+   assert(CPXgetnumnz(cpxenv, lpi->cpxlp) == nnonz);
 
    return SCIP_OKAY;
 }
