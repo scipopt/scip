@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.69 2004/06/24 15:34:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.70 2004/07/07 09:52:44 bzfwolte Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -583,6 +583,34 @@ RETCODE SCIPvarAddVub(
 /** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
 extern
 RETCODE SCIPvarUseActiveVbds(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** informs variable x about a globally valid implication:  x >= b   =>   z <= c  or  z >= c */
+RETCODE SCIPvarAddLbimplic(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Real             bound,              /**< bound b       in bounding information x >= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   );
+
+/** informs variable x about a globally valid implication:  x <= b   =>   z <= c  or  z >= c */
+RETCODE SCIPvarAddUbimplic(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Real             bound,              /**< bound b       in bounding information x <= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   );
+
+/** replaces variables in implications of variable by their active problem variable counterparts */
+extern
+RETCODE SCIPvarUseActiveImplics(
    VAR*             var                 /**< problem variable */
    );
 

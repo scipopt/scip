@@ -274,6 +274,22 @@ constraints/linear/tightenboundsfreq = 1
 # [type: real, range: [0,1.79769313486232e+308], default: 5]
 constraints/linear/maxaggrnormscale = 5
 
+# maximal number of separation rounds per node
+# [type: int, range: [0,2147483647], default: 5]
+constraints/linear/maxrounds = 5
+
+# maximal number of separation rounds per node in the root node
+# [type: int, range: [0,2147483647], default: 10]
+constraints/linear/maxroundsroot = 10
+
+# maximal number of cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 50]
+constraints/linear/maxsepacuts = 50
+
+# maximal number of cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 200]
+constraints/linear/maxsepacutsroot = 200
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/sepafreq = 1
@@ -603,7 +619,7 @@ heuristics/coefdiving/priority = -1001000
 heuristics/coefdiving/freq = 10
 
 # frequency offset for calling primal heuristic <coefdiving>
-# [type: int, range: [0,2147483647], default: 2]
+# [type: int, range: [0,2147483647], default: 1]
 heuristics/coefdiving/freqofs = 2
 
 # maximal depth level to call primal heuristic <coefdiving> (-1: no limit)
@@ -637,6 +653,54 @@ heuristics/coefdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet
 # [type: real, range: [0,1e+99], default: 8]
 heuristics/coefdiving/maxdiveavgquotnosol = 8
+
+# priority of heuristic <feaspump>
+# [type: int, range: [-2147483648,2147483647], default: -1003000]
+heuristics/feaspump/priority = -1003000
+
+# frequency for calling primal heuristic <feaspump> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/feaspump/freq = 10
+
+# frequency offset for calling primal heuristic <feaspump>
+# [type: int, range: [0,2147483647], default: 3]
+heuristics/feaspump/freqofs = 3
+
+# maximal depth level to call primal heuristic <feaspump> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/feaspump/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristics/feaspump/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.1]
+heuristics/feaspump/maxlpiterquot = 0.1
+
+# maximal diving depth: number of binary/integer variables times depthfac
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+heuristics/feaspump/depthfac = 0.5
+
+# maximal diving depth factor if no feasible solution was found yet
+# [type: real, range: [0,1.79769313486232e+308], default: 2]
+heuristics/feaspump/depthfacnosol = 2
+
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristics/feaspump/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1e+99], default: 4]
+heuristics/feaspump/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristics/feaspump/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1e+99], default: 8]
+heuristics/feaspump/maxdiveavgquotnosol = 8
 
 # priority of heuristic <fracdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
@@ -683,7 +747,7 @@ heuristics/fracdiving/maxdiveubquotnosol = 0.1
 heuristics/fracdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <objpscostdiving>
-# [type: int, range: [-2147483648,2147483647], default: -1003000]
+# [type: int, range: [-2147483648,2147483647], default: -1004000]
 heuristics/objpscostdiving/priority = -1003000
 
 # frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only in root node)
@@ -691,7 +755,7 @@ heuristics/objpscostdiving/priority = -1003000
 heuristics/objpscostdiving/freq = 10
 
 # frequency offset for calling primal heuristic <objpscostdiving>
-# [type: int, range: [0,2147483647], default: 6]
+# [type: int, range: [0,2147483647], default: 4]
 heuristics/objpscostdiving/freqofs = 6
 
 # maximal depth level to call primal heuristic <objpscostdiving> (-1: no limit)
@@ -727,7 +791,7 @@ heuristics/pscostdiving/priority = -1002000
 heuristics/pscostdiving/freq = 10
 
 # frequency offset for calling primal heuristic <pscostdiving>
-# [type: int, range: [0,2147483647], default: 4]
+# [type: int, range: [0,2147483647], default: 2]
 heuristics/pscostdiving/freqofs = 4
 
 # maximal depth level to call primal heuristic <pscostdiving> (-1: no limit)
@@ -761,6 +825,54 @@ heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet
 # [type: real, range: [0,1e+99], default: 8]
 heuristics/pscostdiving/maxdiveavgquotnosol = 8
+
+# priority of heuristic <rootsoldiving>
+# [type: int, range: [-2147483648,2147483647], default: -1005000]
+heuristics/rootsoldiving/priority = -1005000
+
+# frequency for calling primal heuristic <rootsoldiving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/rootsoldiving/freq = 10
+
+# frequency offset for calling primal heuristic <rootsoldiving>
+# [type: int, range: [0,2147483647], default: 5]
+heuristics/rootsoldiving/freqofs = 5
+
+# maximal depth level to call primal heuristic <rootsoldiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rootsoldiving/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristics/rootsoldiving/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.1]
+heuristics/rootsoldiving/maxlpiterquot = 0.1
+
+# maximal diving depth: number of binary/integer variables times depthfac
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+heuristics/rootsoldiving/depthfac = 0.5
+
+# maximal diving depth factor if no feasible solution was found yet
+# [type: real, range: [0,1.79769313486232e+308], default: 2]
+heuristics/rootsoldiving/depthfacnosol = 2
+
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristics/rootsoldiving/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1e+99], default: 4]
+heuristics/rootsoldiving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristics/rootsoldiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1e+99], default: 8]
+heuristics/rootsoldiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <rounding>
 # [type: int, range: [-2147483648,2147483647], default: -1000]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.147 2004/07/07 09:03:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.148 2004/07/07 09:52:43 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1675,6 +1675,7 @@ RETCODE SCIPaddVarVlb(
    Real             vlbconstant         /**< constant d    in x >= b*z + d */
    );
 
+
 /** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z */
 extern
 RETCODE SCIPaddVarVub(
@@ -1683,6 +1684,28 @@ RETCODE SCIPaddVarVub(
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
    Real             vubconstant         /**< constant d    in x <= b*z + d */
+   );
+
+/** informs variable x about a globally valid implication:  x >= b   =>   z <= c  or  z >= c */
+extern
+RETCODE SCIPaddVarLbimpl(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             bound,              /**< bound b       bounding information    x >= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   );
+
+/** informs variable x about a globally valid implication:  x <= b   =>   z <= c  or  z >= c */
+extern
+RETCODE SCIPaddVarUbimpl(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             bound,              /**< bound b       bounding information    x <= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

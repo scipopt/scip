@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.184 2004/07/07 09:03:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.185 2004/07/07 09:52:43 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4494,6 +4494,40 @@ RETCODE SCIPaddVarVub(
    CHECK_OKAY( checkStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPvarAddVub(var, scip->mem->solvemem, scip->set, vubvar, vubcoef, vubconstant) );
+
+   return SCIP_OKAY;
+}
+
+/** informs variable x about a globally valid implication:  x >= b   =>   z <= c  or  z >= c */
+RETCODE SCIPaddVarLbimpl(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             bound,              /**< bound b       bounding information    x >= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarLbimplic", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPvarAddLbimplic(var, scip->mem->solvemem, scip->set, bound, infervar, infertype, inferbound) );
+   
+   return SCIP_OKAY;
+}
+
+/** informs variable x about a globally valid implication:  x <= b   =>   z <= c  or  z >= c */
+RETCODE SCIPaddVarUbimpl(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             bound,              /**< bound b       bounding information    x <= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarUbimplic", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPvarAddUbimplic(var, scip->mem->solvemem, scip->set, bound, infervar, infertype, inferbound) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.124 2004/07/06 11:55:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.125 2004/07/07 09:52:42 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5866,7 +5866,7 @@ void sumMIRRow(
    }
 }
 
-#define BOUNDSWITCH 0.5 /* 0.9999 */
+#define BOUNDSWITCH 0.5
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
  *    a'*x' == b, 0 <= x' <= ub'.
  *  
@@ -6012,11 +6012,11 @@ void transformMIRRow(
          }
       }
 
-      /* check, if variable is free (has no finite bound) */
+      /* check, if variable is free variable */
       if( SCIPsetIsInfinity(set, -bestlbsol) && SCIPsetIsInfinity(set, bestubsol) )
       {
          /* we found a free variable in the row with non-zero coefficient
-          *  -> the MIR row cannot be transformed in standard form
+          *  -> MIR row can't be transformed in standard form
           */
          *freevariable = TRUE;
          return;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.50 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.51 2004/07/07 09:52:41 bzfwolte Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1243,10 +1243,66 @@ DECL_CONSFREE(consFreeSetppc)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #define consInitpreSetppc NULL
 
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #define consExitpreSetppc NULL
+/**@TODO enable implication detection */
+#if 0
+static
+DECL_CONSEXITPRE(consExitpreSetppc)
+{
+   CONSDATA* consdata;
+   int c;
+   int i;
+   int j;
 
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      
+#ifdef DEBUG
+      debugMessage("\n setppc constraint <%s>:\n", SCIPconsGetName(conss[c]));
+      for( i = 0; i < consdata->nvars; i++ )
+         debugMessage("1<%s> + ", SCIPvarGetName(consdata->vars[i]));
+      if( consdata->setppctype == 0 ) 
+         debugMessage(" == 1\n");
+      else if( consdata->setppctype == 1 )
+         debugMessage(" <= 1\n");
+      else
+         debugMessage(" >= 1\n");
+#endif 
+
+      /* constraint is a set partitioning constraint: sum(x) == 1 or
+       * constraint is a set packing constraint:      sum(x) <= 1 */
+      if( consdata->setppctype == 0 || consdata->setppctype == 1 )
+      {
+         for( i = 0; i < consdata->nvars - 1; i++ )
+         {
+            for( j = i+1; j < consdata->nvars; j++ )
+            {
+               /* add lower bound implication (x_i >= 1  ==> x_j <= 0) to x_i */
+               CHECK_OKAY( SCIPaddVarLbimpl(scip, consdata->vars[i], 1, consdata->vars[j], TRUE, 0) );
+               
+               /* add lower bound implication (x_j >= 1  ==> x_i <= 0) to x_j */
+               CHECK_OKAY( SCIPaddVarLbimpl(scip, consdata->vars[j], 1, consdata->vars[i], TRUE, 0) );
+            }
+         }
+      }
+      /* constraint is a set covering constraint:     sum(x) >= 1 and has 2 variables x_j */
+      else if( consdata->nvars == 2 )
+      {
+         assert(consdata->setppctype == 2);
+         /* add upper bound implication (x_0 <= 0  ==> x_1 >= 1) to x_0 */
+         CHECK_OKAY( SCIPaddVarUbimpl(scip, consdata->vars[0], 0, consdata->vars[1], FALSE, 1) );
+         
+         /* add upper bound implication (x_1 <= 0  ==> x_0 >= 1) to x_1 */
+         CHECK_OKAY( SCIPaddVarUbimpl(scip, consdata->vars[1], 0, consdata->vars[0], FALSE, 1) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolSetppc NULL

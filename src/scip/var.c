@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.102 2004/07/01 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.103 2004/07/07 09:52:44 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -902,6 +902,7 @@ RETCODE vboundsAdd(
    Real             constant            /**< constant d    in x <= b*z + d  or  x >= b*z + d */
    )
 {
+   /**@todo don't add redundant variable bounds */
    assert(vbounds != NULL);
    assert(var != NULL);
    assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
@@ -942,6 +943,154 @@ RETCODE vboundsUseActiveVars(
          vbounds->constants[i] = vbounds->constants[vbounds->len-1];
          vbounds->len--;
          i--;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * methods for implications
+ */
+
+/** creates a implications data structure */
+static
+RETCODE implicsCreate(
+   IMPLICS**        implics,            /**< pointer to store implications data structure */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(implics != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, implics) );
+   (*implics)->bounds = NULL;
+   (*implics)->infervars = NULL;
+   (*implics)->infertypes = NULL;
+   (*implics)->inferbounds = NULL;
+   (*implics)->len = 0;
+   (*implics)->size = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees a implications data structure */
+static
+void implicsFree(
+   IMPLICS**        implics,            /**< pointer of implications data structure to free */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(implics != NULL);
+
+   if( *implics != NULL )
+   {
+      freeBlockMemoryArrayNull(memhdr, &(*implics)->bounds, (*implics)->size);
+      freeBlockMemoryArrayNull(memhdr, &(*implics)->infervars, (*implics)->size);
+      freeBlockMemoryArrayNull(memhdr, &(*implics)->infertypes, (*implics)->size);
+      freeBlockMemoryArrayNull(memhdr, &(*implics)->inferbounds, (*implics)->size);
+      freeBlockMemory(memhdr, implics);
+   }
+}
+
+/** ensures, that implications arrays can store at least num entries */
+static
+RETCODE implicsEnsureSize(
+   IMPLICS**        implics,            /**< pointer to implications data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(implics != NULL);
+   
+   /* create variable bounds data structure, if not yet existing */
+   if( *implics == NULL )
+   {
+      CHECK_OKAY( implicsCreate(implics, memhdr) );
+   }
+   assert(*implics != NULL);
+   assert((*implics)->len <= (*implics)->size);
+
+   if( num > (*implics)->size )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*implics)->bounds, (*implics)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*implics)->infervars, (*implics)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*implics)->infertypes, (*implics)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*implics)->inferbounds, (*implics)->size, newsize) );
+      (*implics)->size = newsize;
+   }
+   assert(num <= (*implics)->size);
+
+   return SCIP_OKAY;
+}
+
+/** adds an implication to the implications data structure */
+static
+RETCODE implicsAdd(
+   IMPLICS**        implics,            /**< pointer to implications data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Real             bound,              /**< bound b       in bounding information x <= b  or  x >= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   )
+{
+   assert(implics != NULL);
+   assert(infervar != NULL);
+   assert(infervar->varstatus == SCIP_VARSTATUS_COLUMN || infervar->varstatus == SCIP_VARSTATUS_LOOSE);
+
+   CHECK_OKAY( implicsEnsureSize(implics, memhdr, set, *implics != NULL ? (*implics)->len+1 : 1) );
+   assert(*implics != NULL);
+
+   (*implics)->bounds[(*implics)->len] = bound;
+   (*implics)->infervars[(*implics)->len] = infervar;
+   (*implics)->infertypes[(*implics)->len] = infertype;
+   (*implics)->inferbounds[(*implics)->len] = inferbound;
+   (*implics)->len++;
+
+   return SCIP_OKAY;
+}
+
+/** replaces variables in implications by their active problem variable counterparts */
+static
+RETCODE implicsUseActiveVars(
+   IMPLICS*         implics             /**< pointer to implications data structure */
+   )
+{
+   int i;
+   Real b;
+   Real d;
+
+   if( implics == NULL )
+      return SCIP_OKAY;
+
+   for( i = 0; i < implics->len; ++i )
+   {
+      /* transform linear sum  1*z + 0  into  b'*z' + d'  with active problem variable z' */
+      b = 1;
+      d = 0;
+      CHECK_OKAY( SCIPvarGetProbvarSum(&implics->infervars[i], &b, &d) );
+      
+      /* if the inference variable z was reduced to a constant, remove the entry from the implications array */
+      if( implics->infervars[i] == NULL )
+      {
+         implics->bounds[i] = implics->bounds[implics->len-1];
+         implics->infervars[i] = implics->infervars[implics->len-1];
+         implics->infertypes[i] = implics->infertypes[implics->len-1];
+         implics->inferbounds[i] = implics->inferbounds[implics->len-1];
+         implics->len--;
+         i--;
+      }
+      else
+      {
+         implics->inferbounds[i] = (implics->inferbounds[i] - d) / b ;
+         if( b < 0 )
+            implics->infertypes[i] = !implics->infertypes[i];   
       }
    }
 
@@ -1053,6 +1202,8 @@ RETCODE varCreate(
    (*var)->locdom.ub = ub;
    (*var)->vlbs = NULL;
    (*var)->vubs = NULL;
+   (*var)->lbimplics = NULL;
+   (*var)->ubimplics = NULL;
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->branchpriority = 0;
@@ -1362,6 +1513,10 @@ RETCODE varFree(
    /* free variable bounds data structures */
    vboundsFree(&(*var)->vlbs, memhdr);
    vboundsFree(&(*var)->vubs, memhdr);
+
+   /* free impications data structures */
+   implicsFree(&(*var)->lbimplics, memhdr);
+   implicsFree(&(*var)->ubimplics, memhdr);
 
    /* free branching and inference history entries */
    SCIPhistoryFree(&(*var)->history, memhdr);
@@ -2398,12 +2553,17 @@ RETCODE SCIPvarAggregate(
    VAR** vars;
    Real* coefs;
    Real* constants;
+   Real* bounds;
+   VAR** infervars;
+   Bool* infertypes;
+   Real* inferbounds;
    Real obj;
    Real branchfactor;
    int branchpriority;
    int nlocksdown;
    int nlocksup;
    int nvbds;
+   int nimplics;
    int i;
 
    assert(var != NULL);
@@ -2484,6 +2644,38 @@ RETCODE SCIPvarAggregate(
    }
    vboundsFree(&var->vlbs, memhdr);
    vboundsFree(&var->vubs, memhdr);
+
+
+   /* move the implications to the aggregation variable:
+    *  - add all implications again to the variable, thus adding it to the aggregated variable
+    *  - free the implications data structures
+    */
+   if( var->lbimplics != NULL )
+   {
+      nimplics = var->lbimplics->len;
+      bounds = var->lbimplics->bounds;
+      infervars = var->lbimplics->infervars;
+      infertypes = var->lbimplics->infertypes;
+      inferbounds = var->lbimplics->inferbounds;
+      for( i = 0; i < nimplics; ++i )
+      {
+         CHECK_OKAY( SCIPvarAddLbimplic(var, memhdr, set, bounds[i], infervars[i], infertypes[i], inferbounds[i]) );
+      }
+   }
+   if( var->ubimplics != NULL )
+   {
+      nimplics = var->ubimplics->len;
+      bounds = var->ubimplics->bounds;
+      infervars = var->ubimplics->infervars;
+      infertypes = var->ubimplics->infertypes;
+      inferbounds = var->ubimplics->inferbounds;
+      for( i = 0; i < nimplics; ++i )
+      {
+         CHECK_OKAY( SCIPvarAddUbimplic(var, memhdr, set, bounds[i], infervars[i], infertypes[i], inferbounds[i]) );
+      }
+   }
+   implicsFree(&var->lbimplics, memhdr);
+   implicsFree(&var->ubimplics, memhdr);
 
    /* add the history entries to the aggregation variable and clear the history of the aggregated variable */
    SCIPhistoryUnite(aggvar->history, var->history, scalar < 0.0);
@@ -2600,6 +2792,10 @@ RETCODE SCIPvarMultiaggregate(
       /* free the variable bounds data structures */
       vboundsFree(&var->vlbs, memhdr);
       vboundsFree(&var->vubs, memhdr);
+
+      /* free the implications data structures */
+      implicsFree(&var->lbimplics, memhdr);
+      implicsFree(&var->ubimplics, memhdr);
 
       /* update flags and branching factors and priorities of aggregation variables */
       branchfactor = var->branchfactor;
@@ -4476,6 +4672,197 @@ RETCODE SCIPvarAddVub(
    return SCIP_OKAY;
 }
 
+/** informs variable x about a globally valid implication:  x >= b   =>   z <= c  or  z >= c */
+RETCODE SCIPvarAddLbimplic(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Real             bound,              /**< bound b       in bounding information x >= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   )
+{
+   Real b;
+   Real d;
+   assert(var != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      CHECK_OKAY( SCIPvarAddLbimplic(var->data.transvar, memhdr, set, bound, infervar, infertype, inferbound) );
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      /* transform 1*z + 0 into the corresponding sum after transforming z to an active problem variable */
+      b = 1;
+      d = 0;
+      CHECK_OKAY( SCIPvarGetProbvarSum(&infervar, &b, &d) );
+      if( infervar != NULL )
+      {
+         assert( !SCIPsetIsZero(set, b) );
+         inferbound = (inferbound - d) / b;
+         if( b < 0 )
+         infertype = !infertype;
+         
+         /* add implication to the implications list */
+         CHECK_OKAY( implicsAdd(&var->lbimplics, memhdr, set, bound, infervar, infertype, inferbound) );
+         debugMessage("implication added: "); 
+         debugMessage("<%s> >= %g  =>  <%s> %s %g\n", SCIPvarGetName(var), bound, SCIPvarGetName(infervar), 
+            infertype == TRUE ? "<=" : ">=", inferbound);
+      }
+      break;
+      
+   case SCIP_VARSTATUS_FIXED:
+      /* nothing to do here */
+      break;
+      
+   case SCIP_VARSTATUS_AGGREGATED:
+      /*                          x >= b && x = a*y + c~  ==>  z <=/>= c   <=>  
+       *                                   a*y + c~ >= b  ==>  z <=/>= c   <=>
+       * (y >= (b-c~)/a, if a>0 or y <= (b-c~)/a, if a<0) ==>  z <=/>= c
+       */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> add implication z >=/<= c from lower bound information y >= (b-c~)/a */
+         CHECK_OKAY( SCIPvarAddLbimplic(var->data.aggregate.var, memhdr, set, 
+               (bound - var->data.aggregate.constant)/var->data.aggregate.scalar, infervar, infertype, inferbound) );
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> add implication z >=/<= c from upper bound information y <= (b-c~)/a */
+         CHECK_OKAY( SCIPvarAddUbimplic(var->data.aggregate.var, memhdr, set, 
+               (bound - var->data.aggregate.constant)/var->data.aggregate.scalar, infervar, infertype, inferbound) );
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* nothing to do here */
+      break;
+      
+   case SCIP_VARSTATUS_NEGATED:
+       /* x >= b && x = offset - x'  ==>  z <=/>= c   <=>  
+        *          offset - x' >= b  ==>  z <=/>= c   <=>
+        *          x' <= offset - b  ==>  z <=/>= c
+        */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarAddUbimplic(var->negatedvar, memhdr, set, var->data.negate.constant - bound, infervar,
+            infertype, inferbound) );
+      break;
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs variable x about a globally valid implication:  x <= b   =>   z <= c  or  z >= c */
+RETCODE SCIPvarAddUbimplic(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Real             bound,              /**< bound b       in bounding information x <= b */
+   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
+   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   )
+{
+   Real b;
+   Real d;
+   assert(var != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      CHECK_OKAY( SCIPvarAddUbimplic(var->data.transvar, memhdr, set, bound, infervar, infertype, inferbound) );
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE: 
+      /* transform 1*z + 0 into the corresponding sum after transforming z to an active problem variable */
+      b = 1;
+      d = 0;
+      CHECK_OKAY( SCIPvarGetProbvarSum(&infervar, &b, &d) );
+      inferbound = (inferbound - d) / b;
+      if( b < 0 )
+         infertype = !infertype;
+         
+      if( infervar != NULL )
+      {
+         /* add implication to the implications list */
+         CHECK_OKAY( implicsAdd(&var->ubimplics, memhdr, set, bound, infervar, infertype, inferbound) );
+         debugMessage("implication added: "); 
+         debugMessage("<%s> <= %g  =>  <%s> %s %g\n", SCIPvarGetName(var), bound, SCIPvarGetName(infervar), 
+            infertype == TRUE ? "<=" : ">=", inferbound);
+      }
+      break;
+      
+   case SCIP_VARSTATUS_FIXED:
+      /* nothing to do here */
+      break;
+      
+   case SCIP_VARSTATUS_AGGREGATED:
+      /*                              x <= b && x = a*y + c~  ==>  z <=/>= c   <=>  
+       *                                       a*y + c~ <= b  ==>  z <=/>= c   <=>
+       * (y <= (b-c~)/a, if a > 0 or y >= (b-c~)/a, if a < 0) ==>  z <=/>= c
+       */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> add implication z >=/<= c from upper bound information y <= (b-c~)/a */
+         CHECK_OKAY( SCIPvarAddUbimplic(var->data.aggregate.var, memhdr, set, 
+               (bound - var->data.aggregate.constant)/var->data.aggregate.scalar, infervar, infertype, inferbound) );
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> add implication z >=/<= c from lower bound information y >= (b-c~)/a */
+         CHECK_OKAY( SCIPvarAddLbimplic(var->data.aggregate.var, memhdr, set, 
+               (bound - var->data.aggregate.constant)/var->data.aggregate.scalar, infervar, infertype, inferbound) );
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* nothing to do here */
+      break;
+      
+   case SCIP_VARSTATUS_NEGATED:
+      /* x <= b && x = offset - x'  ==>  z <=/>= c   <=>  
+       *          offset - x' <= b  ==>  z <=/>= c   <=>
+       *          x' >= offset - b  ==>  z <=/>= c
+       */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarAddLbimplic(var->negatedvar, memhdr, set, var->data.negate.constant - bound, infervar,
+            infertype, inferbound) );
+      break;
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+
+   return SCIP_OKAY;
+}
+
 /** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
 RETCODE SCIPvarUseActiveVbds(
    VAR*             var                 /**< problem variable */
@@ -4485,6 +4872,19 @@ RETCODE SCIPvarUseActiveVbds(
 
    CHECK_OKAY( vboundsUseActiveVars(var->vlbs) );
    CHECK_OKAY( vboundsUseActiveVars(var->vubs) );
+
+   return SCIP_OKAY;
+}
+
+/** replaces variables in implications of variable by their active problem variable counterparts */
+RETCODE SCIPvarUseActiveImplics(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   CHECK_OKAY( implicsUseActiveVars(var->lbimplics) );
+   CHECK_OKAY( implicsUseActiveVars(var->ubimplics) );
 
    return SCIP_OKAY;
 }
@@ -5492,6 +5892,110 @@ Real* SCIPvarGetVubConstants(
    assert(var != NULL);
 
    return var->vubs != NULL ? var->vubs->constants : NULL;
+}
+
+/** gets number of lower bound implications  x => b  =>  z <= c or z >= c of given variable x */
+int SCIPvarGetNLbimpl(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lbimplics != NULL ? var->lbimplics->len : 0;
+}
+
+/** gets array with bounds b in lower bound implications  x => b  =>  z <= c or z >= c of given variable x */
+Real* SCIPvarGetLbimplBounds(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lbimplics != NULL ? var->lbimplics->bounds : NULL;
+}
+
+/** gets array with inference variables z in lower bound implications  x => b  =>  z <= c or z >= c of given variable x */
+VAR** SCIPvarGetLbimplInfervars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lbimplics != NULL ? var->lbimplics->infervars : NULL;
+}
+
+/** gets array with inference types (TRUE if z <= c, FALSE if z >= c) of lower bound implications  
+ *  x => b  =>  z <= c or z >= c of given variable x 
+ */
+Bool* SCIPvarGetLbimplInfertypes(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lbimplics != NULL ? var->lbimplics->infertypes : NULL;
+}
+
+/** gets array with inference bound c of lower bound implications x => b  =>  z <= c or z >= c of given variable x */
+Real* SCIPvarGetLbimplInferbounds(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lbimplics != NULL ? var->lbimplics->inferbounds : NULL;
+}
+
+/** gets number of upper bound implications  x <= b  =>  z <= c or z >= c of given variable x */
+int SCIPvarGetNUbimpl(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->ubimplics != NULL ? var->ubimplics->len : 0;
+}
+
+/** gets array with bounds b in upper bound implications  x <= b  =>  z <= c or z >= c of given variable x */
+Real* SCIPvarGetUbimplBounds(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->ubimplics != NULL ? var->ubimplics->bounds : NULL;
+}
+
+/** gets array with inference variables z in upper bound implications  x <= b  =>  z <= c or z >= c of given variable x */
+VAR** SCIPvarGetUbimplInfervars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->ubimplics != NULL ? var->ubimplics->infervars : NULL;
+}
+
+/** gets array with inference types (TRUE if z <= c, FALSE if z >= c) of upper bound implications  
+ *  x <= b  =>  z <= c or z >= c of given variable x 
+ */
+Bool* SCIPvarGetUbimplInfertypes(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->ubimplics != NULL ? var->ubimplics->infertypes : NULL;
+}
+
+/** gets array with inference bound c of upper bound implications x <= b  =>  z <= c or z >= c of given variable x  */
+Real* SCIPvarGetUbimplInferbounds(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->ubimplics != NULL ? var->ubimplics->inferbounds : NULL;
 }
 
 #endif

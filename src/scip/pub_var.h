@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.20 2004/06/30 14:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.21 2004/07/07 09:52:42 bzfwolte Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -549,6 +549,60 @@ Real* SCIPvarGetVubConstants(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets number of lower bound implications  x => b  =>  z <= c or z >= c of given variable x */
+int SCIPvarGetNLbimpl(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounds b in lower bound implications  x => b  =>  z <= c or z >= c of given variable x */
+Real* SCIPvarGetLbimplBounds(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with inference variables z in lower bound implications  x => b  =>  z <= c or z >= c of given variable x */
+VAR** SCIPvarGetLbimplInfervars(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with inference types (TRUE if z <= c, FALSE if z >= c) of lower bound implications  
+ *  x => b  =>  z <= c or z >= c of given variable x 
+ */
+Bool* SCIPvarGetLbimplInfertypes(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with inference bound c of lower bound implications x => b  =>  z <= c or z >= c of given variable x */
+Real* SCIPvarGetLbimplInferbounds(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets number of upper bound implications  x <= b  =>  z <= c or z >= c of given variable x */
+int SCIPvarGetNUbimpl(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounds b in upper bound implications  x <= b  =>  z <= c or z >= c of given variable x */
+Real* SCIPvarGetUbimplBounds(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with inference variables z in upper bound implications  x <= b  =>  z <= c or z >= c of given variable x */
+VAR** SCIPvarGetUbimplInfervars(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with inference types (TRUE if z <= c, FALSE if z >= c) of upper bound implications  
+ *  x <= b  =>  z <= c or z >= c of given variable x 
+ */
+Bool* SCIPvarGetUbimplInfertypes(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with inference bound c of upper bound implications x <= b  =>  z <= c or z >= c of given variable x */
+Real* SCIPvarGetUbimplInferbounds(
+   VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -608,7 +662,16 @@ Real* SCIPvarGetVubConstants(
 #define SCIPvarGetVubVars(var)          ((var)->vubs != NULL ? (var)->vubs->vars : NULL)
 #define SCIPvarGetVubCoefs(var)         ((var)->vubs != NULL ? (var)->vubs->coefs : NULL)
 #define SCIPvarGetVubConstants(var)     ((var)->vubs != NULL ? (var)->vubs->constants : NULL)
-
+#define SCIPvarGetNLbimpl(var)          ((var)->lbimplics != NULL ? (var)->lbimplics->len : 0)
+#define SCIPvarGetLbimplBounds(var)     ((var)->lbimplics != NULL ? (var)->lbimplics->bounds : NULL)
+#define SCIPvarGetLbimplInfervars(var)  ((var)->lbimplics != NULL ? (var)->lbimplics->infervars : NULL)
+#define SCIPvarGetLbimplInfertypes(var) ((var)->lbimplics != NULL ? (var)->lbimplics->infertypes : NULL)
+#define SCIPvarGetLbimplInferbounds(var)((var)->lbimplics != NULL ? (var)->lbimplics->inferbounds : NULL)
+#define SCIPvarGetNUbimpl(var)          ((var)->ubimplics != NULL ? (var)->ubimplics->len : 0)
+#define SCIPvarGetUbimplBounds(var)     ((var)->ubimplics != NULL ? (var)->ubimplics->bounds : NULL)
+#define SCIPvarGetUbimplInfervars(var)  ((var)->ubimplics != NULL ? (var)->ubimplics->infervars : NULL)
+#define SCIPvarGetUbimplInfertypes(var) ((var)->ubimplics != NULL ? (var)->ubimplics->infertypes : NULL)
+#define SCIPvarGetUbimplInferbounds(var)((var)->ubimplics != NULL ? (var)->ubimplics->inferbounds : NULL)
 #endif
 
 /** gets best local bound of variable with respect to the objective function */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.15 2004/06/01 16:40:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.16 2004/07/07 09:52:44 bzfwolte Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -141,6 +141,17 @@ struct VBounds
    int              size;               /**< size of vars, coefs, and constants arrays */
 };
 
+/** implications in the form z <= c or z >= c from bounding information of a variable in the form x <= b or x >= b */
+struct Implics
+{
+   Real*            bounds;             /**< bounds b       in bounding information x <= b  or  x >= b */
+   VAR**            infervars;          /**< variables z    in inference            z <= c  or  z >= c */
+   Bool*            infertypes;         /**< types          of inference    TRUE if z <= c, FALSE if z >= c */
+   Real*            inferbounds;        /**< bounds c       in inference            z <= c  or  z >= c */
+   int              len;                /**< number of existing implications (used slots in arrays) */
+   int              size;               /**< size of bounds, infervars, infertypes and inferbounds arrays */
+};
+
 /** aggregation information: x = a*y + c */
 struct Aggregate
 {
@@ -190,6 +201,8 @@ struct Var
    VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
    VBOUNDS*         vlbs;               /**< variable lower bounds x >= b*y + d */
    VBOUNDS*         vubs;               /**< variable upper bounds x <= b*y + d */
+   IMPLICS*         lbimplics;          /**< implications z >=/<= c from lower bound information x >= b */
+   IMPLICS*         ubimplics;          /**< implications z >=/<= c from upper bound information x <= b */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    VAR*             infervar;           /**< variable whose fixing was deduced (parent of var, or var itself) */
    CONS*            infercons;          /**< constraint that deduced the fixing (binary variables only), or NULL */

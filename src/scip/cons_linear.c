@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.107 2004/07/07 08:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.108 2004/07/07 09:52:41 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -42,13 +42,12 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
 
 #include "cons_linear.h"
-
+#include "cons_knapsack.h"
 
 
 #define CONSHDLR_NAME          "linear"
@@ -71,6 +70,11 @@
 #define CONFLICTHDLR_NAME      "linear"
 #define CONFLICTHDLR_DESC      "conflict handler creating linear constraints"
 #define CONFLICTHDLR_PRIORITY  -1000000
+
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node */
+#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node */
+#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
 
 
 /** constraint data for linear constraints */
@@ -117,6 +121,10 @@ struct ConshdlrData
    int              linconsupgradessize;/**< size of linconsupgrade array */
    int              nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int              tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
+   int              maxrounds;          /**< maximal number of separation rounds per node */
+   int              maxroundsroot;      /**< maximal number of separation rounds in the root node */
+   int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
+   int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
 };
 
 /** linear constraint update method */
@@ -2369,7 +2377,7 @@ RETCODE createRow(
 
 /** adds linear constraint as cut to the LP */
 static
-RETCODE addCut(
+RETCODE addRelaxation(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
    Real             violation           /**< absolute violation of the constraint */
@@ -2395,31 +2403,277 @@ RETCODE addCut(
    return SCIP_OKAY;
 }
 
+/* separates relaxed knapsack constraint */
+static
+RETCODE separateRelaxedKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int              nknapvars,          /**< number of variables in the continuous knapsack constraint */
+   VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
+   Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
+   Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
+   Real             rhs,                /**< right hand side of the continuous knapsack constraint */ 
+   int*             ncuts               /**< pointer to add up the number of found cuts */
+) 
+{
+   int nvars;
+   VAR** binvars;
+   int nbinvars;
+   Real* binvals;
+   VAR** consvars;
+   Longint* consvals;
+   int nconsvars;
+   int i;
+      
+   assert(nknapvars > 0);
+   assert(knapvars != NULL);
+
+   CHECK_OKAY( SCIPgetVarsData(scip, &binvars, &nvars, &nbinvars, NULL, NULL, NULL) );
+   /* set data structures */
+   CHECK_OKAY( SCIPallocBufferArray(scip, &consvars, nbinvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &consvals, nbinvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &binvals, nbinvars) );
+   clearMemoryArray(binvals, nvars);
+
+   /* relaxe continuous knapsack constraint:
+    * 1. make all variables binary: 
+    *    if x_j is continuous or integer variable substitute: 
+    *       x_j = lb  or  x_j = vlb with binary variable     if a_j < 0 
+    *       x_j = ub  or  x_j = vub with binary variable     if a_j > 0
+    * 2. make coefficients of all variables to positive integers:
+    *       x~_j = 1 - x_j        if a_j < 0
+    *       round down a_j 
+    */ 
+   for( i = 0; i < nknapvars; i++ )
+   {
+      VAR* var;
+      var = knapvars[i];
+
+      /* binary variable */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+          binvals[SCIPvarGetProbindex(var)] += knapvals[i] * valscale;
+      /* continuous or integer variable */
+      else
+      {
+         /* a_j > 0: substitution with lb or vlb */
+         if( valscale * knapvals[i] > 0 )
+         {
+            int nvlb;
+            Real* bvlb;
+            VAR** zvlb;
+            Real* dvlb;
+            Real bestlbsol;
+            int bestlbtype;
+            int j;
+
+            nvlb = SCIPvarGetNVlbs(var);
+            zvlb = SCIPvarGetVlbVars(var);
+            bvlb = SCIPvarGetVlbCoefs(var);
+            dvlb = SCIPvarGetVlbConstants(var);
+   
+            /* search for lb or vlb with maximal bound value */ 
+            bestlbsol = SCIPvarGetLbLocal(var);
+            bestlbtype = -1;
+            for( j = 0; j < nvlb; j++ )
+            {
+               /* use only vlb with binary variable z */
+               if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY )
+               {
+                  assert(SCIPvarGetProbindex(zvlb[j]) >= 0);
+                  Real vlbsol;
+                  vlbsol = bvlb[j] * SCIPvarGetLPSol(zvlb[j]) + dvlb[j];
+                  if( SCIPisGE(scip, vlbsol, bestlbsol) )
+                  {
+                     bestlbsol = vlbsol;
+                     bestlbtype = j;
+                  }
+               }
+            }
+            /* no lb or vlb with binary variable found */
+            if( SCIPisInfinity(scip, -bestlbsol) ) 
+               goto TERMINATE;
+            else
+            {
+               if( bestlbtype == -1 )
+                  rhs -= valscale * knapvals[i] * bestlbsol;
+               else
+               {
+                  rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
+                  binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
+               }
+            }
+         }
+         /* a_j < 0: substitution with ub or vub */
+         else
+         {
+            int nvub;
+            Real* bvub;
+            VAR** zvub;
+            Real* dvub;
+            Real bestubsol;
+            int bestubtype;
+            int j;
+
+            nvub = SCIPvarGetNVubs(var);
+            zvub = SCIPvarGetVubVars(var);
+            bvub = SCIPvarGetVubCoefs(var);
+            dvub = SCIPvarGetVubConstants(var);
+                     
+            /* search for ub or vub with minimal bound value */   
+            bestubsol = SCIPvarGetUbLocal(var);
+            bestubtype = -1;
+            for( j = 0; j < nvub; j++ )
+            {
+               /* use only vub with active binary variable z */
+               if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY )
+               {
+                  assert(SCIPvarGetProbindex(zvub[j]) >= 0);
+                  Real vubsol;
+                  vubsol = bvub[j] * SCIPvarGetLPSol(zvub[j]) + dvub[j];
+                  if( SCIPisLE(scip, vubsol, bestubsol) )
+                  {
+                     bestubsol = vubsol;
+                     bestubtype = j;
+                  }
+               }
+            }
+            /* no ub or vub with binary variable found */
+            if( SCIPisInfinity(scip, bestubsol) ) 
+               goto TERMINATE;
+            else
+            {
+               if( bestubtype == -1 )
+                  rhs -= valscale * knapvals[i] * bestubsol;
+               else
+               {
+                  rhs -= valscale * knapvals[i] * dvub[bestubtype];
+                  binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
+               }
+            }
+         }
+      }
+   }
+
+   /* make coefficents of all (now binary) variables to positive integers: 
+    * substitute x~_j = 1- x_j if a_j < 0 and round down positive coefficients */ 
+   nconsvars = 0;
+   for( i = 0; i < nvars; i++ )
+   {
+      VAR* var;
+      Longint valdownpositive;
+
+      /* a_j > 0 (only rounding) */
+      if( binvals[i] > 0 )
+      {
+         valdownpositive = (Longint)SCIPfloor(scip, binvals[i]);
+         if( valdownpositive > 0 )
+         {
+            var = binvars[i];
+            consvals[nconsvars] = valdownpositive;
+            consvars[nconsvars] = var;
+            nconsvars++;
+         }
+      }
+      /* a_j < 0 */
+      else if( binvals[i] < 0 )
+      {
+         Real fracsum;
+         fracsum = SCIPfrac(scip, binvals[i]) + SCIPfrac(scip, rhs);
+     
+         /* round first */
+         if( fracsum >= 1 )
+         {
+            valdownpositive = -(Longint)SCIPfloor(scip, binvals[i]);
+            rhs += valdownpositive;
+         }
+         /* substitute first */        
+         else
+         {
+            valdownpositive = (Longint)SCIPfloor(scip, -binvals[i]);
+            rhs -= binvals[i];
+         }
+
+         if( valdownpositive > 0 )
+         {
+            CHECK_OKAY( SCIPgetNegatedVar(scip, binvars[i], &var) );
+            consvals[nconsvars] = valdownpositive;
+            consvars[nconsvars] = var;
+            nconsvars++;
+         }
+      }
+    }
+
+   /* separate lifted cut from relaxed knapsack constraint */
+   if( nconsvars == 0 )
+      goto TERMINATE;
+   else
+   {
+      assert(consvars != NULL);
+      assert(consvals != NULL);
+ 
+      CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, 
+            (Longint)SCIPfloor(scip, rhs), ncuts) );
+   }
+
+ TERMINATE:
+   /* free data structures */
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &binvals) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &consvals) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &consvars) );
+
+   return SCIP_OKAY;
+}
+
 /** separates linear constraint: adds linear constraint as cut, if violated by current LP solution */
 static
 RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
-   RESULT*          result              /**< pointer to store result of separation */
+   int*             ncuts               /**< pointer to add up the number of found cuts */
    )
 {
+   CONSDATA* consdata;
    Real violation;
    Bool violated;
+   int oldncuts;
 
+   consdata = SCIPconsGetData(cons);
+   assert(ncuts != NULL);
+   assert(consdata != NULL);
    assert(cons != NULL);
-   assert(result != NULL);
+
+   oldncuts = *ncuts;
 
    CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violation, &violated) );
 
    if( violated )
    {
       /* insert LP row as cut */
-      CHECK_OKAY( addCut(scip, cons, violation) );
-      *result = SCIP_SEPARATED;
+      CHECK_OKAY( addRelaxation(scip, cons, violation) );
+      (*ncuts)++;
    }
    else if( !SCIPconsIsModifiable(cons) )
    {
-      /**@todo relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
+      /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
+      if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
+      {
+         Real dualsol = SCIProwGetDualsol(consdata->row);
+         if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasNegative(scip, dualsol) )
+         { 
+            CHECK_OKAY( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
+                  consdata->vals, +1.0, consdata->rhs, ncuts) ); 
+         }
+         else if( !SCIPisInfinity(scip, consdata->lhs) && SCIPisFeasPositive(scip, dualsol) )
+         { 
+            CHECK_OKAY( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
+                  consdata->vals, -1.0, -consdata->lhs, ncuts) ); 
+         }  
+      }
+   }
+
+   if( *ncuts > oldncuts )
+   {
+      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
    }
 
    return SCIP_OKAY;
@@ -2658,7 +2912,7 @@ DECL_CONSINITLP(consInitlpLinear)
    {
       if( SCIPconsIsInitial(conss[c]) )
       {
-         CHECK_OKAY( addCut(scip, conss[c], 0.0) );
+         CHECK_OKAY( addRelaxation(scip, conss[c], 0.0) );
       }
    }
 
@@ -2670,23 +2924,48 @@ DECL_CONSINITLP(consInitlpLinear)
 static
 DECL_CONSSEPA(consSepaLinear)
 {  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
    int c;
+   int depth;
+   int nrounds;
+   int maxsepacuts;
+   int ncuts;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   depth = SCIPgetDepth(scip);
+   nrounds = SCIPgetNSepaRounds(scip);
+
    /*debugMessage("Sepa method of linear constraints\n");*/
 
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call the separator a given number of times at each node */
+   if( (depth == 0 && nrounds >= conshdlrdata->maxroundsroot)
+      || (depth > 0 && nrounds >= conshdlrdata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* get the maximal number of cuts allowed in a separation round */
+   maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
+
    *result = SCIP_DIDNOTFIND;
+   ncuts = 0;
 
    /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss; ++c )
+   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      CHECK_OKAY( separateCons(scip, conss[c], result) );
+      CHECK_OKAY( separateCons(scip, conss[c], &ncuts) );
    }
 
+   /* adjust return value */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+ 
    /* combine linear constraints to get more cuts */
    /**@todo further cuts of linear constraints */
 
@@ -2698,30 +2977,49 @@ DECL_CONSSEPA(consSepaLinear)
 static
 DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+   Real violation;
+   Bool violated;
    int c;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /*debugMessage("Enfolp method of linear constraints\n");*/
 
    /* check for violated constraints
     * LP is processed at current node -> we can add violated linear constraints to the LP
     */
-
    *result = SCIP_FEASIBLE;
 
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      CHECK_OKAY( separateCons(scip, conss[c], result) );
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violation, &violated) );
+      
+      if( violated )
+      {
+         /* insert LP row as cut */
+         CHECK_OKAY( addRelaxation(scip, conss[c], violation) );
+         *result = SCIP_SEPARATED;
+      }
    }
 
    /* check all obsolete linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      CHECK_OKAY( separateCons(scip, conss[c], result) );
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violation, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         CHECK_OKAY( addRelaxation(scip, conss[c], violation) );
+         *result = SCIP_SEPARATED;
+      }
    }
 
    return SCIP_OKAY;
@@ -4603,6 +4901,22 @@ RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation",
          &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "constraints/linear/maxrounds",
+         "maximal number of separation rounds per node",
+         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "constraints/linear/maxroundsroot",
+         "maximal number of separation rounds per node in the root node",
+         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "constraints/linear/maxsepacuts",
+         "maximal number of cuts separated per separation round",
+         &conshdlrdata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "constraints/linear/maxsepacutsroot",
+         "maximal number of cuts separated per separation round in the root node",
+         &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

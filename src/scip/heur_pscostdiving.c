@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.7 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.8 2004/07/07 09:52:42 bzfwolte Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -34,7 +34,7 @@
 #define HEUR_DISPCHAR         'p'
 #define HEUR_PRIORITY         -1002000
 #define HEUR_FREQ             10
-#define HEUR_FREQOFS          4
+#define HEUR_FREQOFS          2
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.53 2004/07/07 08:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.54 2004/07/07 09:52:40 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -54,7 +54,7 @@
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node */
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in the root node */
 
 
 
@@ -69,7 +69,7 @@ struct ConshdlrData
    int              maxrounds;          /**< maximal number of separation rounds per node */
    int              maxroundsroot;      /**< maximal number of separation rounds in the root node */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
-   int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
+   int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
 };
 
 /** constraint data for knapsack constraints */
@@ -668,7 +668,7 @@ RETCODE SCIPseparateKnapsackCardinality(
    nitems = 0;
    nfixedones = 0;
    nfixedzeros = 0;
-   dpcapacity = -(int)(capacity+0.5) - 1;
+   dpcapacity = -capacity - 1;
    for( i = 0; i < nvars; i++ )
    {
       assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
@@ -780,7 +780,7 @@ RETCODE SCIPseparateKnapsackCardinality(
       /* generate lifted cardinality inequalities from cover, consecutively removing variables from the
        * cardinality inequality, starting with the full cover
        */
-      for( i = ncovervars - 1; i >= 0; i-- )
+      for( i = ncovervars - 1; i > 0; i-- )
       {
          int n;
 
@@ -1277,7 +1277,47 @@ DECL_CONSFREE(consFreeKnapsack)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #define consExitpreKnapsack NULL
+#if 0
+/**@TODO enable implication detection */
+static
+DECL_CONSEXITPRE(consExitpreKnapsack)
+{
+   CONSDATA* consdata;
+   int c;
+   int i;
+   int j;
+   int f;
 
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      sortItems(consdata);
+
+
+#ifdef DEBUG
+      debugMessage("\n knapsack constraint <%s>:\n", SCIPconsGetName(conss[c]));
+      for( i = 0; i < consdata->nvars; i++ )
+         debugMessage("%lld<%s> + ", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
+      debugMessage(" <= %lld\n", consdata->capacity);
+#endif
+
+      for( i = consdata->nvars - 1; i >= 1 && consdata->weights[i] + consdata->weights[i-1] > consdata->capacity; i--)
+      {
+         for( j = i-1; j >= 0 && consdata->weights[i] + consdata->weights[j] > consdata->capacity; j-- )
+         {
+            /* add lower bound implication (x_i >= 1  ==> x_j <= 0) to x_i */
+            CHECK_OKAY( SCIPaddVarLbimpl(scip, consdata->vars[i], 1, consdata->vars[j], TRUE, 0) );
+
+            /* add lower bound implication (x_j >= 1  ==> x_i <= 0) to x_j */
+            CHECK_OKAY( SCIPaddVarLbimpl(scip, consdata->vars[j], 1, consdata->vars[i], TRUE, 0) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolKnapsack NULL
@@ -1305,7 +1345,6 @@ DECL_CONSEXITSOL(consExitsolKnapsack)
    return SCIP_OKAY;
 }
 
-
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteKnapsack)
@@ -1314,7 +1353,6 @@ DECL_CONSDELETE(consDeleteKnapsack)
    
    return SCIP_OKAY;
 }
-
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
@@ -1339,7 +1377,6 @@ DECL_CONSTRANS(consTransKnapsack)
    return SCIP_OKAY;
 }
 
-
 /** LP initialization method of constraint handler */
 static
 DECL_CONSINITLP(consInitlpKnapsack)
@@ -1356,7 +1393,6 @@ DECL_CONSINITLP(consInitlpKnapsack)
 
    return SCIP_OKAY;
 }
-
 
 /** separation method of constraint handler */
 static
@@ -1404,7 +1440,6 @@ DECL_CONSSEPA(consSepaKnapsack)
    
    return SCIP_OKAY;
 }
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -1456,7 +1491,6 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
    return SCIP_OKAY;
 }
 
-
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsKnapsack)
@@ -1478,7 +1512,6 @@ DECL_CONSENFOPS(consEnfopsKnapsack)
    return SCIP_OKAY;  
 }
 
-
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckKnapsack)
@@ -1499,7 +1532,6 @@ DECL_CONSCHECK(consCheckKnapsack)
 
    return SCIP_OKAY;
 }
-
 
 /** domain propagation method of constraint handler */
 static
@@ -1598,7 +1630,6 @@ DECL_CONSPRESOL(consPresolKnapsack)
    return SCIP_OKAY;
 }
 
-
 /** conflict variable resolving method of constraint handler */
 static
 DECL_CONSRESCVAR(consRescvarKnapsack)
@@ -1625,7 +1656,6 @@ DECL_CONSRESCVAR(consRescvarKnapsack)
    return SCIP_OKAY;
 }
 
-
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockKnapsack)
@@ -1643,7 +1673,6 @@ DECL_CONSLOCK(consLockKnapsack)
 
    return SCIP_OKAY;
 }
-
 
 /** variable rounding unlock method of constraint handler */
 static
@@ -1706,7 +1735,6 @@ DECL_CONSPRINT(consPrintKnapsack)
 /*
  * Linear constraint upgrading
  */
-
 
 /** creates and captures a knapsack constraint out of a linear inequality */
 static

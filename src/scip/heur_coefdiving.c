@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.13 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.14 2004/07/07 09:52:41 bzfwolte Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -34,7 +34,7 @@
 #define HEUR_DISPCHAR         'c'
 #define HEUR_PRIORITY         -1001000
 #define HEUR_FREQ             10
-#define HEUR_FREQOFS          2
+#define HEUR_FREQOFS          1
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
