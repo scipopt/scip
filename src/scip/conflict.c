@@ -79,7 +79,7 @@
  *    assignment to SCIP.
  *  - If an (with the current assignment) infeasible constraint is detected,
  *    the constraint handler should
- *     1. call SCIPinitConflictAnalysis() to initialise the conflict queue,
+ *     1. call SCIPinitConflictAnalysis() to initialize the conflict queue,
  *     2. call SCIPaddConflictVar() for each variable in the infeasible
  *        constraint,
  *     3. call SCIPanalyseConflict() to analyse the conflict and add an

@@ -1001,7 +1001,7 @@ RETCODE SCIPsolveCIP(
       /* stop node activation timer */
       SCIPclockStop(stat->nodeactivationtime, set);
 
-      /* if no more node was selected, we finished optimisation */
+      /* if no more node was selected, we finished optimization */
       if( actnode == NULL )
          break;
 
