@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.73 2004/03/08 18:05:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.74 2004/03/15 14:54:14 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1634,6 +1634,8 @@ RETCODE SCIPvarTransform(
       /* copy rounding locks */
       (*transvar)->nlocksdown = origvar->nlocksdown;
       (*transvar)->nlocksup = origvar->nlocksup;
+      assert((*transvar)->nlocksdown >= 0);
+      assert((*transvar)->nlocksup >= 0);
    }
 
    debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);

@@ -304,11 +304,11 @@ constraints/setppc/npseudobranches = 2
 
 # frequency for separating cuts of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
-constraints/knapsack/sepafreq = 20
+constraints/knapsack/sepafreq = 5
 
 # frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
-constraints/knapsack/propfreq = -1
+constraints/knapsack/propfreq = 1
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

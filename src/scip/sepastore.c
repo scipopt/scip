@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.13 2004/03/08 18:05:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.14 2004/03/15 14:54:14 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -179,6 +179,7 @@ RETCODE sepastoreAddCut(
    assert(sepastore != NULL);
    assert(set != NULL);
    assert(cut != NULL);
+   assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* get maximum of separated cuts at this node */
    if( sepastore->initiallp )
@@ -197,6 +198,7 @@ RETCODE sepastoreAddCut(
    if( sepastore->ncuts < maxsepacuts || score > sepastore->score[maxsepacuts-1] )
    {
       debugMessage("adding cut to separation storage of size %d/%d\n", sepastore->ncuts, maxsepacuts);
+      debug(SCIProwPrint(cut, NULL));
 
       /* capture the cut */
       SCIProwCapture(cut);
@@ -269,6 +271,7 @@ RETCODE SCIPsepastoreAddCut(
 {
    assert(sepastore != NULL);
    assert(cut != NULL);
+   assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* update statistics of total number of found cuts */
    if( !sepastore->initiallp )
