@@ -48,26 +48,43 @@ using the gnu compiler in debug mode, you would have the following names:
 Here is what you have to do to get SCIP running:
 
 1. Create necessary softlinks in lib/ directory:
-   (a) to use CPLEX
+   (a) to use CPLEX (Version >= 8.0)
        - ln -s <path to directory of cplex.h> lib/cpxinc
+         (e.g. "ln -s /cplex90/include/ilcplex lib/cpxinc")
        - ln -s <file libcplex.a> lib/libcplex.$(OSTYPE).$(ARCH).a
          for each operation system and architecture to use
-         (e.g. "ln -s /cplex/libcplex.a lib/libcplex.linux.x86.a")
-   (b) to use SOPLEX
+         (e.g. "ln -s /cplex90/lib/i86_linux2_glibc2.3_gcc3.2/static_pic/libcplex.a lib/libcplex.linux.x86.a")
+   (b) to use SOPLEX (Version >= 1.2.2)
        - ln -s <path to SOPLEX' *.h files> lib/spxinc
        - ln -s <file libsoplex.[...].a> lib/libsoplex.$(OSTYPE).$(ARCH).a
          for each operating system and architecture to use
-         (e.g. "ln -s /soplex/libsoplex.linux.x86.gnu.dbg.a lib/libsoplex.linux.x86.a")
+         (e.g. "ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.a")
+   (c) to use SOPLEX (Version <= 1.2.1)
+       - ln -s <path to SOPLEX' *.h files> lib/spx121inc
+       - ln -s <file libsoplex.[...].a> lib/libsoplex121.$(OSTYPE).$(ARCH).a
+         for each operating system and architecture to use
+         (e.g. "ln -s /soplex121/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex121.linux.x86.a")
+   (d) to use CLP
+       - ln -s <path to CLP's and COIN's *.h files> lib/clpinc
+         (e.g. "ln -s /COIN/include lib/clpinc")
+       - ln -s <file libClp.a> lib/libclp.$(OSTYPE).$(ARCH).a
+         for each operating system and architecture to use
+         (e.g. "ln -s /COIN/lib/libClp.a lib/libclp.linux.x86.a")
+       - ln -s <file libCoin.a> lib/libcoin.$(OSTYPE).$(ARCH).a
+         for each operating system and architecture to use
+         (e.g. "ln -s /COIN/lib/libCoin.a lib/libcoin.linux.x86.a")
 
 2. Compile the library and the solver program:
    In your SCIP main directory, enter "make OPT=<...> LPS=<...> COMP=<...>" with
    the following options:
-   - "OPT=dbg"  to use debug compilation mode (default)
-   - "OPT=opt"  to use optimized compilation mode
-   - "OPT=prf"  to use performance analysis compilation mode
-   - "LPS=cpx"  to use CPLEX as LP solver (default)
-   - "LPS=spx"  to use SOPLEX as LP solver
-   - "COMP=gnu" to use GNU c/c++ compiler (default)
+   - "OPT=dbg"     to use debug compilation mode (default)
+   - "OPT=opt"     to use optimized compilation mode
+   - "OPT=prf"     to use performance analysis compilation mode
+   - "LPS=cpx"     to use CPLEX as LP solver (default)
+   - "LPS=spx"     to use SOPLEX Version >= 1.2.2 as LP solver
+   - "LPS=spx121"  to use SOPLEX Version <= 1.2.1 as LP solver
+   - "LPS=clp"     to use CLP as LP solver
+   - "COMP=gnu"    to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
 3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"

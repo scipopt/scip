@@ -52,18 +52,21 @@ running:
    directory, and make sure to create the necessary softlinks in SCIP's lib 
    directory
 
-2. Create necessary softlink to SCIP in lib/ directory:
+2. Create necessary softlink to SCIP's main directory in lib/ directory:
    - ln -s <path to SCIP> lib/scip
+     (e.g. "ln -s /scip lib/scip")
 
 3. Compile the example project:
-   In the example main directory, enter "make OPT=<...> LPS=<...> COMP=<...>" with
+   In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...>" with
    the following options:
-   - "OPT=dbg"  to use debug compilation mode (default)
-   - "OPT=opt"  to use optimized compilation mode
-   - "OPT=prf"  to use performance analysis compilation mode
-   - "LPS=cpx"  to use CPLEX as LP solver (default)
-   - "LPS=spx"  to use SOPLEX as LP solver
-   - "COMP=gnu" to use GNU c/c++ compiler (default)
+   - "OPT=dbg"     to use debug compilation mode (default)
+   - "OPT=opt"     to use optimized compilation mode
+   - "OPT=prf"     to use performance analysis compilation mode
+   - "LPS=cpx"     to use CPLEX as LP solver (default)
+   - "LPS=spx"     to use SOPLEX Version >= 1.2.2 as LP solver
+   - "LPS=spx121"  to use SOPLEX Version <= 1.2.1 as LP solver
+   - "LPS=clp"     to use CLP as LP solver
+   - "COMP=gnu"    to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
 3. To run the program enter "bin/example.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
