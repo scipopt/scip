@@ -354,6 +354,10 @@ constraints/linear/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/linear/maxprerounds = -1
 
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/linear/delaypresol = FALSE
+
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/linear/tightenboundsfreq = 1
@@ -398,6 +402,10 @@ constraints/and/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/and/maxprerounds = -1
 
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/and/delaypresol = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = -1
@@ -413,6 +421,10 @@ constraints/conjunction/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/maxprerounds = -1
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/conjunction/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -430,6 +442,10 @@ constraints/integral/eagerfreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/maxprerounds = -1
 
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/integral/delaypresol = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/sepafreq = 1
@@ -445,6 +461,10 @@ constraints/knapsack/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/knapsack/maxprerounds = -1
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/knapsack/delaypresol = FALSE
 
 # multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 10]
@@ -486,6 +506,10 @@ constraints/logicor/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/logicor/maxprerounds = -1
 
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/logicor/delaypresol = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/sepafreq = 1
@@ -501,6 +525,10 @@ constraints/or/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/or/maxprerounds = -1
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/or/delaypresol = FALSE
 
 # priority of conflict handler <setppc>
 # [type: int, range: [-2147483648,2147483647], default: 700000]
@@ -522,6 +550,10 @@ constraints/setppc/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/setppc/maxprerounds = -1
 
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/setppc/delaypresol = FALSE
+
 # number of children created in pseudo branching (0: disable pseudo branching)
 # [type: int, range: [0,2147483647], default: 2]
 constraints/setppc/npseudobranches = 2
@@ -542,6 +574,10 @@ constraints/varbound/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/varbound/maxprerounds = -1
 
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/varbound/delaypresol = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/xor/sepafreq = 5
@@ -557,6 +593,10 @@ constraints/xor/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/xor/maxprerounds = -1
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/xor/delaypresol = FALSE
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -582,6 +622,10 @@ presolving/dualfix/priority = 100000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/dualfix/maxrounds = -1
 
+# should presolver be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/dualfix/delay = FALSE
+
 # priority of presolver <probing>
 # [type: int, range: [-2147483648,2147483647], default: -100000]
 presolving/probing/priority = -100000
@@ -589,6 +633,10 @@ presolving/probing/priority = -100000
 # maximal number of presolving rounds the presolver participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/probing/maxrounds = -1
+
+# should presolver be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+presolving/probing/delay = TRUE
 
 # maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -601,6 +649,10 @@ presolving/trivial/priority = 9000000
 # maximal number of presolving rounds the presolver participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/trivial/maxrounds = -1
+
+# should presolver be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/trivial/delay = FALSE
 
 # priority of branching rule <bfs> in standard mode
 # [type: int, range: [-2147483648,2147483647], default: 100000]
@@ -826,9 +878,13 @@ heuristics/feaspump/maxdepth = -1
 # [type: real, range: [0,1], default: 0.01]
 heuristics/feaspump/maxlpiterquot = 0.01
 
+# factor by which the regard of the objective is decreased in each round, 1.0 for dynamic
+# [type: real, range: [0,1], default: 1]
+heuristics/feaspump/objfactor = 1
+
 # maximal number of pumping loops (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-heuristics/feaspump/maxloops = -1
+# [type: int, range: [-1,2147483647], default: 10000]
+heuristics/feaspump/maxloops = 10000
 
 # minimum number of random variables to flip, if a 1-cycle is encountered
 # [type: int, range: [1,2147483647], default: 10]
