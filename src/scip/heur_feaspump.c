@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.12 2005/01/31 15:21:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.13 2005/01/31 15:28:11 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -183,10 +183,11 @@ RETCODE handleCycle(
             newobjcoeff = -1.0;
             solval = SCIPfeasCeil(scip, solval);
          } 
+         CHECK_OKAY( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
+         CHECK_OKAY( SCIPchgVarObjDive(scip, var, newobjcoeff) );
       }
-      CHECK_OKAY( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
-      CHECK_OKAY( SCIPchgVarObjDive(scip, var, newobjcoeff) );
    }
+
    return SCIP_OKAY;
 }
 
