@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.9 2004/09/02 09:19:41 bzfpfend Exp $
+# $Id: check.awk,v 1.10 2004/09/09 09:39:34 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -64,9 +64,9 @@ BEGIN {
     pass     = 0;
     settings = "default";
 
-    printf("------------------+-------+------+-------+--------------+------+------+-------\n");
-    printf("Name              | Conss | Vars | Nodes |   Upperbound |  Gap | Time |\n");
-    printf("------------------+-------+------+-------+--------------+------+------+-------\n");
+    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
+    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound |  Gap | Time |\n");
+    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum
 /^@01/ { 
@@ -147,10 +147,10 @@ BEGIN {
       sgap += gap;
       
       printf ("%-19s & %7d & %5d & %14.9g & %14.9g & %6.1f & %7.3f \\\\\n",
-	      pprob, bbnodes, sblps, db, pb, tottime, gap)           >TEXFILE;
+         pprob, bbnodes, sblps, db, pb, tottime, gap)           >TEXFILE;
    }
-   printf("%-19s %6d %6d %7d %14.9g %6.1f %6.1f ",
-	  prob, cons, vars, bbnodes, pb, gap, tottime);
+   printf("%-19s %6d %6d %7d %14.9g %14.9g %6.1f %6.1f ",
+      prob, cons, vars, bbnodes, db, pb, gap, tottime);
    
    if (sol[prob] == "")
       printf("unknown\n");
@@ -194,7 +194,7 @@ END {
     printf("\\end{table}\n")                                              >TEXFILE;
     printf("\\end{document}")                                             >TEXFILE;
     
-    printf("------------------+-------+------+-------+--------------+------+------+-------\n");
+    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
     
     printf("\n----------------------------------------------------------------\n");
     printf("  Cnt  Pass  Fail  kNodes FailTime  TotTime  NodeGeom  TimeGeom\n");
