@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.26 2005/02/22 19:13:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.27 2005/02/24 10:38:02 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -372,7 +372,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             size = MIN(downsize, upsize);
 
             /* use strong branching on variables with unreliable pseudo cost scores */
-            usesb = (size < reliable);
+            usesb = (size < reliable && maxninitcands > 0);
 
             /* count the number of variables that are completely uninitialized */
             if( size == 0 )

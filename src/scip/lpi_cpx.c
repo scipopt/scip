@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.83 2005/02/22 19:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.84 2005/02/24 10:38:02 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2201,7 +2201,7 @@ Bool SCIPlpiExistsPrimalRay(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_UNBOUNDED);
+   return (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
@@ -2346,7 +2346,9 @@ Bool SCIPlpiIsDualInfeasible(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
 
-   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
+   return (lpi->solstat == CPX_STAT_UNBOUNDED
+      || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED
+      || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
 }
 
 /** returns TRUE iff LP is proven to be dual feasible */
@@ -2420,7 +2422,9 @@ Bool SCIPlpiIsObjlimExc(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_ABORT_OBJ_LIM);
+   return (lpi->solstat == CPX_STAT_ABORT_OBJ_LIM
+      || lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM
+      || lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM);
 }
 
 /** returns TRUE iff the iteration limit was reached */

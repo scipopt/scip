@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.180 2005/02/22 19:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.181 2005/02/24 10:38:02 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8571,8 +8571,8 @@ RETCODE lpBarrier(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   debugMessage("solving barrier LP %d (LP %d, %d cols, %d rows)\n", 
-      stat->nbarrierlps+1, stat->nlps+1, lp->ncols, lp->nrows);
+   debugMessage("solving barrier%s LP %d (LP %d, %d cols, %d rows)\n", 
+      crossover ? "/crossover" : "", stat->nbarrierlps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
 
@@ -9067,7 +9067,7 @@ RETCODE lpFlushAndSolve(
    fastmip = fastmip && !lp->flushaddedcols && !lp->flushdeletedcols; /* turn off FASTMIP if columns were changed */
    
    /* select LP algorithm to apply */
-   algo = lp->solisbasic ? set->lp_resolvealgorithm : set->lp_initalgorithm;
+   algo = (lp->solisbasic && (lp->dualfeasible || lp->primalfeasible)) ? set->lp_resolvealgorithm : set->lp_initalgorithm;
    switch( algo )
    {
    case 's':

@@ -114,6 +114,14 @@ lp/solvefreq = 1
 # [type: int, range: [-1,2147483647], default: -1]
 lp/solvedepth = -1
 
+# LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)
+# [type: char, range: {sbc}, default: s]
+lp/initalgorithm = s
+
+# LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)
+# [type: char, range: {sbc}, default: s]
+lp/resolvealgorithm = s
+
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
 # [type: int, range: [-1,2147483647], default: 10]
 lp/colagelimit = 10
