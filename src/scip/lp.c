@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.176 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.177 2005/02/16 14:51:22 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8879,6 +8879,7 @@ RETCODE SCIPlpSolveAndEval(
             else
             {
                warningMessage("(node %lld) unresolved numerical troubles in LP %d\n", stat->nnodes, stat->nlps);
+               *lperror = TRUE;
             }
          }
          debugMessage(" -> LP objective value: %g + %g = %g (solstat=%d, cutoff=%g)\n",

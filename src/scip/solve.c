@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.169 2005/02/14 13:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.170 2005/02/16 14:51:22 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -925,7 +925,7 @@ RETCODE priceAndCutLoop(
    debugMessage("node: solve LP with price and cut\n");
    CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
    assert(lp->flushed);
-   assert(lp->solved);
+   assert(lp->solved || *lperror);
 
    /* price-and-cut loop */
    npricedcolvars = prob->ncolvars;
@@ -1171,11 +1171,14 @@ RETCODE priceAndCutLoop(
                   assert(lp->flushed);
                   assert(lp->solved || lperror);
 
-                  lpobjval = SCIPlpGetObjval(lp, set);
-                  if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval) )
-                     nsepastallrounds = 0;
-                  else
-                     nsepastallrounds++;
+                  if( !(*lperror) )
+                  {
+                     lpobjval = SCIPlpGetObjval(lp, set);
+                     if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval) )
+                        nsepastallrounds = 0;
+                     else
+                        nsepastallrounds++;
+                  }
                }
             }
          }
@@ -1253,8 +1256,6 @@ RETCODE solveNodeLP(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(SCIPtreeHasFocusNodeLP(tree));
-   assert(cutoff != NULL);
-   assert(lperror != NULL);
    assert(cutoff != NULL);
    assert(unbounded != NULL);
    assert(lperror != NULL);
@@ -1806,7 +1807,7 @@ RETCODE solveNode(
             /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
              * we have to forget about the LP and use the pseudo solution instead
              */
-            if( !(*cutoff) && set->misc_exactsolve && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+            if( !(*cutoff) && !lperror && set->misc_exactsolve && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
                && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
             {
                if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && prob->ncontvars > 0 )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.86 2005/02/14 13:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.87 2005/02/16 14:51:22 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -985,7 +985,7 @@ RETCODE conflictAddClause(
          boundchgtype = (BOUNDCHGTYPE)boundchgs[b].boundchgtype;
 
          debugMessage(" -> depth %d, bound change %d: <%s> %s %g (branching: %d, conflict set: %d)\n", 
-            d, b, SCIPvarGetName(var), boundchgs[b].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            d, b, SCIPvarGetName(var), (BOUNDTYPE)boundchgs[b].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             boundchgs[b].newbound, (boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING),
             (var->conflictsetcount == conflict->count));
 
@@ -1234,7 +1234,12 @@ RETCODE conflictResolveBound(
          *resolved = (result == SCIP_SUCCESS);
          
          if( *resolved && SCIPconsIsLocal(infercons) )
-            *validdepth = MAX(*validdepth, SCIPconsGetActiveDepth(infercons));
+         {
+            int actdepth;
+            
+            actdepth = SCIPconsGetActiveDepth(infercons);
+            *validdepth = MAX(*validdepth, actdepth);
+         }
       }
       break;
 
@@ -1540,12 +1545,12 @@ RETCODE conflictAnalyze(
       assert(bdchgdepth < tree->pathlen);
       assert(tree->path[bdchgdepth] != NULL);
       assert(tree->path[bdchgdepth]->domchg != NULL);
-      assert(SCIPbdchginfoGetPos(bdchginfo) < tree->path[bdchgdepth]->domchg->domchgbound.nboundchgs);
+      assert(SCIPbdchginfoGetPos(bdchginfo) < (int)tree->path[bdchgdepth]->domchg->domchgbound.nboundchgs);
       assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].var
          == SCIPbdchginfoGetVar(bdchginfo));
       assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].newbound
-         == SCIPbdchginfoGetNewbound(bdchginfo));
-      assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].boundtype
+         == SCIPbdchginfoGetNewbound(bdchginfo)); /*lint --e{777}*/
+      assert((BOUNDTYPE)tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].boundtype
          == SCIPbdchginfoGetBoundtype(bdchginfo));
 
       /* create intermediate conflict clause */
@@ -2584,11 +2589,14 @@ RETCODE addCand(
       score = SCIPsetInfinity(set);
    else
    {
+      Real maxscore;
+
       /* calculate score for undoing the bound change */
       score = 1.0 - proofactdelta/(prooflhs - proofact);
       score = MAX(score, 0.0) + 1e-6;
       score *= depth;
-      score = MIN(score, SCIPsetInfinity(set)/2);
+      maxscore = SCIPsetInfinity(set)/2;
+      score = MIN(score, maxscore);
    }
    
    /* get enough memory to store new candidate */
@@ -3804,7 +3812,7 @@ RETCODE conflictAnalyzeLP(
          assert(!resolve || valid);
          assert(!resolve || nbdchgs > lastnbdchgs);
          debugMessage(" -> finished infeasible LP conflict analysis loop %d (iter: %d, nbdchgs: %d)\n",
-            nloops, iter, nbdchgs - lastnbdchgs);
+            nloops, allcolsinlp ? iter : 0, nbdchgs - lastnbdchgs);
       }
       while( resolve && nloops < set->conf_maxlploops && allcolsinlp );
       debugMessage("finished undoing bound changes after %d loops (valid=%d, nbdchgs: %d)\n",

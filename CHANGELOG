@@ -104,6 +104,7 @@ fixed bugs:
   array
 - fixed bug with primal bound becoming wrong, if in a prior run the optimal solution was found and the cutoff bound was
   thereby reduced due to further domain propagation w.r.t. the objective function
+- fixed bug with unresolved numerical troubles in LP that don't render the LP useless at the current node
 
 
 SCIP version 0.78
