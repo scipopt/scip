@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.4 2004/10/21 09:55:59 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.5 2004/11/04 16:45:37 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -30,21 +30,24 @@ function max(x,y)
     return (x) > (y) ? (x) : (y);
 }
 BEGIN {
-    printf("\\documentclass[leqno]{article}\n") >TEXFILE;
-    printf("\\usepackage{a4wide}\n") >TEXFILE;
-    printf("\\usepackage{amsmath,amsfonts,amssymb}\n") >TEXFILE;
-    printf("\\font\\alex=cmr10 at 9truept\n") >TEXFILE;
-    printf("\\begin{document}\n\n") >TEXFILE;
-    printf("\\begin{table}[p]\n") >TEXFILE;
-    printf("\\renewcommand{\\arraystretch}{0.818}\n") >TEXFILE;
-    printf("\\begin{alex}\n") >TEXFILE;
-    printf("\\begin{center}\n") >TEXFILE;
-    printf("\\begin{tabular}{l@{\\quad\\enspace}rrrrrr}\n") >TEXFILE;
-    printf("\\hline\n") >TEXFILE;
-    printf("\\noalign{\\smallskip}\n") >TEXFILE;
-    printf("Example & B \\& B & Cuts & Dual Bound & Primal Bound & Time & Gap \\% \\\\\n") >TEXFILE;
-    printf("\\hline\n") >TEXFILE;
-    printf("\\noalign{\\smallskip}\n") >TEXFILE;
+    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
+    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
+    printf("\\usepackage{amsmath,amsfonts,amssymb}\n")               >TEXFILE;
+    printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
+    printf("\\begin{document}\n\n")                                  >TEXFILE;
+    printf("\\begin{table}[p]\n")                                    >TEXFILE;
+    printf("\\begin{center}\n")                                      >TEXFILE;
+    printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
+    printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
+    printf("\\begin{tabular}{lrrrrrrrrrrrr}\n")                      >TEXFILE;
+    printf("\\hline\n")                                              >TEXFILE;
+    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
+    printf("\\hline\n")                                              >TEXFILE;
+
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+
     nprobs   = 0;
     sbab     = 0;
     scut     = 0;
@@ -55,10 +58,6 @@ BEGIN {
     failtime = 0.0;
     fail     = 0;
     pass     = 0;
-
-    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
-    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound | Gap% | Time |\n");
-    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum
 #
@@ -135,42 +134,38 @@ BEGIN {
 	absgap = 0.0;
 }
 /^Solution/ {
-    tottime   = $4;
-    bbnodes   = $11;
-    sbab     += bbnodes;
-    scut     += cuts;
-    stottime += tottime;
-    nprobs++;
+   tottime   = $4;
+   bbnodes   = $11;
+   sbab     += bbnodes;
+   scut     += cuts;
+   stottime += tottime;
+   nprobs++;
     
-    if (pb > 1e+70  ||  pb < -1e+70) {
-	printf ("%-12s & %7d & %5d & %14.10g & %14s & %6.1f & %7s \\\\\n", pprob, bbnodes, cuts, db, "       -      ", tottime, "   -   ") >TEXFILE;
-    }
-    else {
-	if (absgap < 0.0000001 && absgap > -0.0000001) 
-	    gap = 0.0;
-	else if ( pb > db ) {
-	    if  (db >  0.001)  
-		gap = 100.0 * (pb - db) / (1.0 * db);
-	    else if (db < -0.001)  
-		gap = 100.0 * (pb - db) / (-1.0 * db);
-	    else
-		gap = 0.0;
-	}
-	else {
-	    if (db >  0.001)  
-		gap = 100.0 * (db - pb) / (1.0 * db);
-	    else if (db < -0.001)  
-		gap = 100.0 * (db - pb) / (-1.0 * db);
-	    else
-		gap = 0.0;
-	}
-        sgap     += gap;
+   optimal = 0;
+   markersym = "\\g";
+   if( abs(pb - db) < 1e-06 )
+   {
+      gap = 0.0;
+      optimal = 1;
+      markersym = "  ";
+   }
+   else if( abs(db) < 1e-06 )
+      gap = -1.0;
+   else if( pb*db < 0.0 )
+      gap = -1.0;
+   else
+      gap = 100.0*abs((pb-db)/db);
+   if( gap >= 0.0 )
+      gapstr = sprintf("%6.1f", gap);
+   else
+      gapstr = "  --  ";
 
-	printf ("%-12s & %7d & %5d & %14.10g & %14.10g & %6.1f & %7.3f \\\\\n", pprob, bbnodes, cuts, db, pb, tottime, gap) >TEXFILE;
-    }
-    printf("%-19s %6d %6d %7d %14.9g %14.9g %6.1f %6.1f ",
-       prob, cons, vars, bbnodes, db, pb, gap, tottime);
-
+   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+      pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+   
+   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
+      prob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+   
    if (sol[prob] == "")
       printf("unknown\n");
    else {
@@ -187,7 +182,7 @@ BEGIN {
 	 pass++;
       }
    }
-
+   
    if( tottime < 1.0 )
       tottime = 1.0;
    timegeom = timegeom^((nprobs-1)/nprobs) * tottime^(1.0/nprobs);
@@ -196,23 +191,26 @@ BEGIN {
    nodegeom = nodegeom^((nprobs-1)/nprobs) * bbnodes^(1.0/nprobs);
 }
 END {   
-    printf("\\hline\n") >TEXFILE;
-    printf("\\noalign{\\vspace{1.5pt}}\n") >TEXFILE;
-    printf ("%-12s (%d) & %8d & %5d & & & %8.1f & %7.3f \\\\\n", "Total", nprobs, sbab, scut, stottime, sgap) >TEXFILE;
-    printf("\\hline\n") >TEXFILE;
-    printf("\\end{tabular}\n") >TEXFILE;
-    printf("\\caption{{\\tt CPLEX} with default parameter settings}\n") >TEXFILE;
-    printf("\\end{center}\n") >TEXFILE;
-    printf("\\end{alex}\n") >TEXFILE;
-    printf("\\end{table}\n") >TEXFILE;
-    printf("\\end{document}") >TEXFILE;
-
-    printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
+    printf("\\hline\n")                                                   >TEXFILE;
+    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
+       "Total", nprobs, sbab, stottime) >TEXFILE;
+    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
+       "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+    printf("\\hline\n")                                                   >TEXFILE;
+    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
+    printf("\\end{tabular}\n")                                            >TEXFILE;
+    printf("\\caption{CPLEX with default settings}\n")                    >TEXFILE;
+    printf("\\end{center}\n")                                             >TEXFILE;
+    printf("\\end{table}\n")                                              >TEXFILE;
+    printf("\\end{document}\n")                                           >TEXFILE;
     
-    printf("\n----------------------------------------------------------------\n");
-    printf("  Cnt  Pass  Fail  kNodes FailTime  TotTime  NodeGeom  TimeGeom\n");
-    printf("----------------------------------------------------------------\n");
-    printf("%5d %5d %5d %7d %8.0f %8.0f %9.1f %9.1f\n",
-	   nprobs, pass, fail, sbab / 1000, failtime, stottime, nodegeom, timegeom);
-    printf("----------------------------------------------------------------\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    
+    printf("\n");
+    printf("------------------------[Nodes]---------------[Time]------\n");
+    printf("  Cnt  Pass  Fail  total(k)     geom.     total     geom. \n");
+    printf("----------------------------------------------------------\n");
+    printf("%5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
+       nprobs, pass, fail, sbab / 1000, nodegeom, stottime, timegeom);
+    printf("----------------------------------------------------------\n");
 }

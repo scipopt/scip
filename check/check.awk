@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.13 2004/11/04 13:51:38 bzfpfend Exp $
+# $Id: check.awk,v 1.14 2004/11/04 16:45:37 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -45,6 +45,10 @@ BEGIN {
     printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &    Confs &    Lits &     Nodes &     Time &   BTime &   OTime &   CTime \\\\\n") > TEXFILE;
     printf("\\hline\n")                                              >TEXFILE;
 
+    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+
     nprobs = 0;
     sbab = 0;
     slp = 0;
@@ -63,10 +67,6 @@ BEGIN {
     overheadtottime = 0.0;
     overheadtimegeom = 1.0;
     basictimegeom = 1.0;
-
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |\n");
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum
 /^@01/ { 
