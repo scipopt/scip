@@ -32,11 +32,13 @@
 enum Nodetype
 {
    SCIP_NODETYPE_LEAF    = 0,           /**< unsolved leaf of the tree */
-   SCIP_NODETYPE_FORK    = 1,           /**< solved fork, where rows were only added to the father */
-   SCIP_NODETYPE_SUBROOT = 2            /**< solved fork, where rows were added, deleted, or rearranged */
+   SCIP_NODETYPE_ACTNODE = 1,           /**< the active node, whose data is stored in the dynamic data object */
+   SCIP_NODETYPE_FORK    = 2,           /**< solved fork, where rows were only added to the father */
+   SCIP_NODETYPE_SUBROOT = 3            /**< solved fork, where rows were added, deleted, or rearranged */
 };
 
 typedef enum Nodetype NODETYPE;         /**< type of node */
+typedef struct Actnode ACTNODE;         /**< data for the actual node */
 typedef struct Leaf LEAF;               /**< data for leaf nodes */
 typedef struct Fork FORK;               /**< data for fork nodes */
 typedef struct Subroot SUBROOT;         /**< data for subroot nodes */
@@ -44,9 +46,18 @@ typedef struct Node NODE;               /**< node data structure */
 typedef struct Tree TREE;               /**< branch and bound tree */
 
 
+
+/*
+ * Node methods
+ */
+
+extern
+DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound);/**< node comparator for best lower bound */
+
 extern
 NODE* SCIPnodeCreate(                   /**< creates a leaf node */
    MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    NODE*            parent,             /**< parent node in the tree */
    LPSTATE*         lpstate             /**< pointer to LP state information */
    );
@@ -54,21 +65,55 @@ NODE* SCIPnodeCreate(                   /**< creates a leaf node */
 extern
 void SCIPnodeFree(                      /**< frees node */
    NODE**           node,               /**< node data */
-   MEM*             mem                 /**< block memory buffers */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 extern
-RETCODE SCIPleafToFork(                 /**< converts a leaf node into a fork node */
-   NODE*            node,               /**< node to convert */
-   MEM*             mem                 /**< block memory buffers */
+RETCODE SCIPnodeActivate(               /**< activates a leaf node */
+   NODE*            node,               /**< leaf node to activate */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern
-RETCODE SCIPforkToSubroot(              /**< converts a fork node into a subroot node */
+RETCODE SCIPactnodeToFork(              /**< converts the active node into a fork node */
    NODE*            node,               /**< node to convert */
    MEM*             mem,                /**< block memory buffers */
    LP*              lp                  /**< actual LP data */
    );
 
+extern
+RETCODE SCIPactnodeToSubroot(           /**< converts the active node into a subroot node */
+   NODE*            node,               /**< node to convert */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+
+/*
+ * Tree methods
+ */
+
+extern
+TREE* SCIPtreeCreate(                   /**< creates an initialized tree data structure */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+RETCODE SCIPtreeExtendPath(             /**< appends node to the path of active nodes and marks node active */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEM*             mem,                /**< block memory buffers */
+   NODE*            node                /**< node to append */
+   );
+
+extern
+void SCIPtreeShrinkPath(                /**< cuts off path of active nodes after given node and marks them inactive */
+   TREE*            tree,               /**< branch-and-bound tree */
+   NODE*            node                /**< last node in the path */
+   );
 
 #endif

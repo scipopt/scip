@@ -29,18 +29,31 @@
 #define SCIP_VERSION_MAJOR  0           /**< major part of SCIP version */
 #define SCIP_VERSION_MINOR  1           /**< minor part of SCIP version */
 
+/*
+ * Boolean values
+ */
+
 typedef int Bool;                       /**< type used for boolean values */
-
-#ifndef NULL
-#define NULL 0                          /**< zero pointer */
-#endif
-
 #ifndef TRUE
 #define TRUE (0==0)                     /**< boolean value TRUE */
 #define FALSE (0==1)                    /**< boolean value FALSE */
 #endif
 
-#define SCIP_INFINITY    1.0E+20        /**< value considered to be infinity */
+/*
+ * Floating point values
+ */
+typedef double Real;                    /**< type used for floating point values */
+#define SCIP_DEFAULT_EPSZERO     1e-09  /**< default upper bound for floating points to be considered zero */
+#define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
+
+/*
+ * Pointers
+ */
+
+#ifndef NULL
+#define NULL 0                          /**< zero pointer */
+#endif
+
 
 #define SCIP_MAXNCOL       0x0000fffff  /**< maximal number of columns; 20 bits available */
 #define SCIP_MAXNROW       0x0000fffff  /**< maximal number of rows; 20 bits available */
@@ -60,6 +73,7 @@ typedef enum Setting SETTING;
 
 
 #define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) < SCIP_OKAY ) return _restat_; }
+#define CHECK_NULL(x) { if( (x) < SCIP_OKAY ) return NULL; }
 #define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
 #define ALLOC_NULL(x) { if( NULL == (x) ) return NULL; }
 

@@ -48,7 +48,7 @@ struct PQueue
 {
    int              len;                /**< number of used element slots */
    int              size;               /**< total number of available element slots */
-   double           sizefac;            /**< memory growing factor */
+   Real             sizefac;            /**< memory growing factor */
    void**           slots;              /**< array of element slots */
    DECL_SORTPTRCOMP((*ptrcmp));         /**< compares two data elements */
 };
@@ -74,7 +74,7 @@ RETCODE pqueueResize(                   /**< resizes element memory to hold at l
 RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
-   double           sizefac,            /**< memory growing factor applied, if more element slots are needed */
+   Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    )
 {
@@ -171,4 +171,76 @@ void* SCIPpqueueFirst(                  /**< returns the best element of the que
       return NULL;
 
    return pqueue->slots[0];
+}
+
+void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of pointers/Reals, sorted by first array */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int actpos;
+   int sortpos;
+   void* tmpptr;
+   Real tmpdbl;
+
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      actpos = firstpos;
+      sortpos = firstpos;
+      while( actpos < lastpos )
+      {
+         while( actpos < lastpos && (*ptrcmp)(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
+            actpos++;
+         if( actpos >= lastpos )
+            break;
+         assert( (*ptrcmp)(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
+         tmpptr = ptrarray[actpos];
+         tmpdbl = dblarray[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos+1];
+            dblarray[actpos] = dblarray[actpos+1];
+            actpos++;
+         }
+         while( actpos < lastpos && (*ptrcmp)(tmpptr, ptrarray[actpos+1]) > 0 );
+         ptrarray[actpos] = tmpptr;
+         dblarray[actpos] = tmpdbl;
+         sortpos = actpos;
+         actpos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      actpos = lastpos;
+      sortpos = lastpos;
+      while( actpos > firstpos )
+      {
+         while( actpos > firstpos && (*ptrcmp)(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
+            actpos--;
+         if( actpos <= firstpos )
+            break;
+         assert( (*ptrcmp)(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
+         tmpptr = ptrarray[actpos];
+         tmpdbl = dblarray[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos-1];
+            dblarray[actpos] = dblarray[actpos-1];
+            actpos--;
+         }
+         while( actpos > firstpos && (*ptrcmp)(ptrarray[actpos-1], tmpptr) > 0 );
+         ptrarray[actpos] = tmpptr;
+         dblarray[actpos] = tmpdbl;
+         sortpos = actpos;
+         actpos--;
+      }
+      firstpos = sortpos+1;
+   }
 }

@@ -28,10 +28,11 @@
 
 #include "scip.h"
 #include "retcode.h"
+#include "mem.h"
 #include "lp.h"
 
 typedef struct ConsHdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
-typedef struct Constraint CONSTRAINT;   /**< constraint data structure */
+typedef struct Cons CONS;               /**< constraint data structure */
 typedef struct ConsList CONSLIST;       /**< list of constraints */
 typedef void CONSDATA;                  /**< constraint type specific data; default is void */
 
@@ -40,14 +41,21 @@ typedef void CONSDATA;                  /**< constraint type specific data; defa
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
  */
-#define DECL_CONSINIT(x) RETCODE x (SCIP* scip, CONSHDLR* self)
+#define DECL_CONSINIT(x) RETCODE x (CONSHDLR* self, SCIP* scip, MEMHDR* memhdr)
 
 /** deinitialization method of constraint handler
  *  possible return values:
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
  */
-#define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* self)
+#define DECL_CONSEXIT(x) RETCODE x (CONSHDLR* self, SCIP* scip, MEMHDR* memhdr)
+
+/** frees specific constraint data
+ *  possible return values:
+ *    SCIP_OKAY   : normal termination
+ *    neg. values : error codes
+ */
+#define DECL_CONSFREE(x) RETCODE x (CONSHDLR* self, MEMHDR* memhdr, CONSDATA* consdata)
 
 /** feasibility check method of constraint handler
  *  possible return values:
@@ -55,7 +63,7 @@ typedef void CONSDATA;                  /**< constraint type specific data; defa
  *    SCIP_FAILURE: constraint is infeasible
  *    neg. values : error codes
  */
-#define DECL_CONSCHCK(x) RETCODE x (SCIP* scip, CONSHDLR* self, CONSTRAINT* constraint, double* psol)
+#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* self, SCIP* scip, MEMHDR* memhdr, CONS* cons, Real* psol)
 
 /** domain propagation method of constraint handler
  *  possible return values:
@@ -64,8 +72,42 @@ typedef void CONSDATA;                  /**< constraint type specific data; defa
  *    SCIP_OKAY   : propagator was skipped
  *    neg. values : error codes
  */
-#define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* self, CONSTRAINT* constraint, VARDOM* vardom)
+#define DECL_CONSPROP(x) RETCODE x (CONSHDLR* self, SCIP* scip, MEMHDR* memhdr, CONS* cons, DOM* dom)
 
 
+
+extern
+CONS* SCIPconsCreate(                   /**< creates a constraint */
+   MEM*             mem,                /**< block memory buffers */
+   Bool             model,              /**< is constraint necessary for feasibility? */
+   CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
+   CONSDATA*        consdata            /**< data for this specific constraint */
+   );
+
+extern
+void SCIPconsFree(                      /**< frees a constraint */
+   CONS**           cons,               /**< constraint to free */
+   MEM*             mem                 /**< block memory buffers */
+   );
+
+extern
+RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constraints */
+   CONSLIST**       conslist,           /**< constraint list to extend */
+   MEM*             mem,                /**< block memory buffers */
+   CONS*            cons                /**< constraint to add */
+   );
+
+extern
+void SCIPconslistFreePart(              /**< partially unlinks and deletes the constraints in the list */
+   CONSLIST**       conslist,           /**< constraint list to delete from */
+   MEM*             mem,                /**< block memory buffers */
+   CONSLIST*        firstkeep           /**< first constraint list entry to keep */
+      );
+
+extern
+void SCIPconslistFree(                  /**< unlinks and deletes all the constraints in the list */
+   CONSLIST**       conslist,           /**< constraint list to delete from */
+   MEM*             mem                 /**< block memory buffers */
+   );
 
 #endif

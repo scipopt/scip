@@ -1,3 +1,10 @@
+zu beachten:
+- Unterscheide VAR und COL: VAR sind alle Variablen und gehoert zu PROB, COL sind die Spalten im LP und gehoert zu LP
+  Domains gehoeren zu VAR, genauso wie DOMCHG, HOLE, HOLECHG, ...
+- wenn man eine Row loescht (bei Subroot oder von den neuen Rows im active node), dann muss diese als Linear Constraint
+  in die Constraintliste eingetragen werden, falls es sich um eine model-row handelt
+
+
 kurzfristig:
 
 mittelfristig:

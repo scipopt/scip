@@ -46,7 +46,6 @@ errorMessage_call(const char *msg, const char *filename, int line)
    printf("[%s:%d] %s\n", filename, line, msg);
 }
 
-
 /******************************
  * Standard Memory Management *
  ******************************/
@@ -306,6 +305,29 @@ struct memory_header
    int     garbageFactor;
    BLKHDR *blockhash[BLOCKHASH_SIZE];
 };
+
+static void
+alignSize(size_t* size)
+{
+   if( *size < ALIGNMENT )
+      *size = ALIGNMENT;
+   else
+      *size = ((*size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+}
+
+void
+alignMemsize(size_t* size)
+{
+   assert(ALIGNMENT == sizeof(void*));
+   alignSize(size);
+}
+
+int
+isAligned(size_t size)
+{
+   assert(ALIGNMENT == sizeof(void*));
+   return( size >= ALIGNMENT && size % ALIGNMENT == 0 );
+}
 
 /* checks, if ptr belongs to chunk 'chk' */
 static int
@@ -1046,15 +1068,6 @@ destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
       errorMessage_call("Error! Try to destroy null block.", filename, line);
 }
 
-static void
-alignSize(size_t * size)
-{
-   if( *size < ALIGNMENT )
-      *size = ALIGNMENT;
-   else
-      *size = ((*size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
-}
-
 /*-----------------------------------------------------------------------------
  *--- Name: Get a new block of memory.                                      ---
  *-----------------------------------------------------------------------------
@@ -1112,6 +1125,12 @@ void *
 reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line)
 {
    void* newptr;
+
+   if( ptr == NULL )
+   {
+      assert(oldsize == 0);
+      return allocBlockMemory_call(mem, newsize, filename, line);
+   }
 
    assert(ptr != NULL);
 

@@ -26,14 +26,28 @@
 #ifndef __SET_H__
 #define __SET_H__
 
-struct Set
+
+typedef struct Set SET;                 /**< global SCIP settings */
+
+
+#include "def.h"
+#include "sort.h"
+
+
+struct Set                              /**< global SCIP settings */
 {
-   double           epsZero;            /**< absolute values smaller than this are considered zero */
-   double           memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
-   int              memGrowAdd;         /**< memory growing constant for dynamically allocated arrays */
+   Real             epsZero;            /**< absolute values smaller than this are considered zero */
+   Real             infinity;           /**< values larger than this are considered infinity */
+   Real             memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
    int              memGrowInit;        /**< initial size of dynamically allocated arrays */
+   Real             bufGrowFac;         /**< memory growing factor for buffer arrays */
+   int              bufGrowInit;        /**< initial size of buffer arrays */
+   Real             treeGrowFac;        /**< memory growing factor for tree array */
+   int              treeGrowInit;       /**< initial size of tree array */
+   Real             pathGrowFac;        /**< memory growing factor for path array */
+   int              pathGrowInit;       /**< initial size of path array */
+   DECL_SORTPTRCOMP((*nodecmp));        /**< compares two nodes regarding the order in the leaf list */
 };
-typedef struct Set SET;
 
 
 extern
@@ -45,6 +59,82 @@ extern
 int SCIPcalcMemGrowSize(                /**< calculate memory size for dynamically allocated arrays */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
+   );
+
+extern
+int SCIPcalcBufGrowSize(                /**< calculate memory size for buffer arrays */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
+
+extern
+int SCIPcalcPathGrowSize(               /**< calculate memory size for path array */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
+
+extern
+Bool SCIPisEQ(                          /**< checks, if values are in range of epsZero */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisL(                           /**< checks, if val1 is (more than epsZero) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisLE(                          /**< checks, if val1 is not (more than epsZero) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisG(                           /**< checks, if val1 is (more than epsZero) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisGE(                          /**< checks, if val1 is not (more than epsZero) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisZero(                        /**< checks, if value is in range epsZero of 0.0 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Real SCIPinfinity(                      /**< returns infinity value */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+Bool SCIPisInfinity(                    /**< checks, if value is infinite */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against infinity */
+   );
+
+extern
+Bool SCIPisPos(                         /**< checks, if value is greater than epsZero */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisNeg(                         /**< checks, if value is lower than -epsZero */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
    );
 
 #endif

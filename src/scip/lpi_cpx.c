@@ -422,6 +422,7 @@ RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
 {
    int     restat;
 
+   assert(sizeof(Real) == sizeof(double));   /* CPLEX only works with doubles as floating points */
    assert(lpi != NULL);
    assert(numlp >= 0);
 
@@ -476,15 +477,15 @@ RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object 
    int              ncol,               /**< number of columns */
    int              nrow,               /**< number of rows */
    OBJSEN           objsen,             /**< objective sense */
-   const double*    obj,                /**< objective function vector */
-   const double*    rhs,                /**< right hand side vector */
+   const Real*      obj,                /**< objective function vector */
+   const Real*      rhs,                /**< right hand side vector */
    const char*      sen,                /**< row sense vector */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       cnt,                /**< number of nonzeros for each column */
    const int*       ind,                /**< row indices of constraint matrix entries */
-   const double*    val,                /**< values of constraint matrix entries */
-   const double*    lb,                 /**< lower bound vector */
-   const double*    ub,                 /**< upper bound vector */
+   const Real*      val,                /**< values of constraint matrix entries */
+   const Real*      lb,                 /**< lower bound vector */
+   const Real*      ub,                 /**< upper bound vector */
    const char**     cname,              /**< column names */
    const char**     rname               /**< row names */
    )
@@ -498,21 +499,87 @@ RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object 
    invalidateSolution(lpi);
 
    CHECK_ZERO( CPXcopylpwnames(cpxenv, lpi->cpxlp, ncol, nrow, cpxObjsen(objsen), 
-                  (double*)obj, (double*)rhs, (char*)sen, (int*)beg, (int*)cnt, (int*)ind, (double*)val,
-                  (double*)lb, (double*)ub, NULL, (char**)cname, (char**)rname) );
+                  (Real*)obj, (Real*)rhs, (char*)sen, (int*)beg, (int*)cnt, (int*)ind, (Real*)val,
+                  (Real*)lb, (Real*)ub, NULL, (char**)cname, (char**)rname) );
 
    return SCIP_OKAY;
+}
+
+RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncol,               /**< number of columns to be added */
+   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   const Real*      obj,                /**< objective function vector of new columns */
+   const Real*      lb,                 /**< lower bound vector of new columns */
+   const Real*      ub,                 /**< upper bound vector of new columns */
+   const int*       beg,                /**< start index of each column in ind- and val-array */
+   const int*       ind,                /**< row indices of constraint matrix entries */
+   const Real*      val,                /**< values of constraint matrix entries */
+   const char**     name                /**< column names */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXaddcols(cpxenv, lpi->cpxlp, ncol, nnonz, (Real*)obj,
+                  (int*)beg, (int*)ind, (Real*)val, (Real*)lb, (Real*)ub, (char**)name) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpiDelCols(                 /**< deletes columns from LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of columns
+                                         *   input:  1 if column should be deleted, 0 if not
+                                         *   output: new position of column, -1 if column was deleted */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXdelsetcols(cpxenv, lpi->cpxlp, dstat) );
+
+   return SCIP_OKAY;   
+}
+
+RETCODE SCIPlpiShrinkCols(              /**< deletes all columns after lastcol from LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int              lastcol             /**< last remaining column */
+   )
+{
+   int ncols;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
+   assert(-1 <= lastcol && lastcol <= ncols);
+
+   if( lastcol < ncols )
+   {
+      invalidateSolution(lpi);
+      CHECK_ZERO( CPXdelcols(cpxenv, lpi->cpxlp, lastcol+1, ncols) );
+   }
+
+   return SCIP_OKAY;   
 }
 
 RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const double*    rhs,                /**< right hand side vector of new rows */
+   const Real*      rhs,                /**< right hand side vector of new rows */
    const char*      sen,                /**< row senses */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
-   const double*    val,                /**< values of constraint matrix entries */
+   const Real*      val,                /**< values of constraint matrix entries */
    const char**     name                /**< row names */
    )
 {
@@ -522,8 +589,8 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, (double*)rhs, (char*)sen,
-                  (int*)beg, (int*)ind, (double*)val, NULL, (char**)name) );
+   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, (Real*)rhs, (char*)sen,
+                  (int*)beg, (int*)ind, (Real*)val, NULL, (char**)name) );
 
    return SCIP_OKAY;
 }
@@ -531,7 +598,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
 RETCODE SCIPlpiDelRows(                 /**< deletes rows from LP */
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of rows
-                                         *   input:  neg. value if row should be deleted, non-neg. value if not
+                                         *   input:  1 if row should be deleted, 0 if not
                                          *   output: new position of row, -1 if row was deleted */
    )
 {
@@ -546,10 +613,33 @@ RETCODE SCIPlpiDelRows(                 /**< deletes rows from LP */
    return SCIP_OKAY;   
 }
 
+RETCODE SCIPlpiShrinkRows(              /**< deletes all rows after lastrow from LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int              lastrow             /**< last remaining row */
+   )
+{
+   int nrows;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
+   assert(-1 <= lastrow && lastrow <= nrows);
+
+   if( lastrow < nrows )
+   {
+      invalidateSolution(lpi);
+      CHECK_ZERO( CPXdelrows(cpxenv, lpi->cpxlp, lastrow+1, nrows) );
+   }
+
+   return SCIP_OKAY;   
+}
+
 RETCODE SCIPlpiGetBinvRow(              /**< get dense row of inverse basis matrix (A_B)^-1 */
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
-   double*          val                 /**< vector to return coefficients */
+   Real*            val                 /**< vector to return coefficients */
    )
 {
    assert(cpxenv != NULL);
@@ -564,8 +654,8 @@ RETCODE SCIPlpiGetBinvRow(              /**< get dense row of inverse basis matr
 RETCODE SCIPlpiGetBinvARow(             /**< get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
-   const double*    binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
-   double*          val                 /**< vector to return coefficients */
+   const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
+   Real*            val                 /**< vector to return coefficients */
    )
 {
    assert(cpxenv != NULL);
@@ -581,7 +671,7 @@ RETCODE SCIPlpiGetLb(                   /**< gets lower bounds of variables */
    LPI*             lpi,                /**< LP interface structure */
    int              beg,                /**< first variable to get bound for */
    int              end,                /**< last variable to get bound for */
-   double*          lb                  /**< vector to store the bounds */
+   Real*            lb                  /**< vector to store the bounds */
    )
 {
    assert(cpxenv != NULL);
@@ -597,7 +687,7 @@ RETCODE SCIPlpiGetUb(                   /**< gets upper bounds of variables */
    LPI*             lpi,                /**< LP interface structure */
    int              beg,                /**< first variable to get bound for */
    int              end,                /**< last variable to get bound for */
-   double*          ub                  /**< vector to store the bounds */
+   Real*            ub                  /**< vector to store the bounds */
    )
 {
    assert(cpxenv != NULL);
@@ -614,7 +704,7 @@ RETCODE SCIPlpiChgBd(                   /**< changes bounds of the variables in 
    int              n,                  /**< number of bounds to be changed */
    const int*       ind,                /**< column indices */
    const char*      lu,                 /**< specifies, if 'L'ower or 'U'pper bound should be changed */
-   const double*    bd                  /**< values for the new bounds */
+   const Real*      bd                  /**< values for the new bounds */
    )
 {
    assert(cpxenv != NULL);
@@ -623,7 +713,7 @@ RETCODE SCIPlpiChgBd(                   /**< changes bounds of the variables in 
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, (int*)ind, (char*)lu, (double*)bd) );
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, (int*)ind, (char*)lu, (Real*)bd) );
 
    return SCIP_OKAY;
 }
@@ -632,7 +722,7 @@ RETCODE SCIPlpiChgRhs(                  /**< changes right hand sides of rows in
    LPI*             lpi,                /**< LP interface structure */
    int              n,                  /**< number of rows to change */
    const int*       ind,                /**< row indices */
-   const double*    rhs                 /**< new values for right hand sides */
+   const Real*      rhs                 /**< new values for right hand sides */
    )
 {
    assert(cpxenv != NULL);
@@ -641,7 +731,7 @@ RETCODE SCIPlpiChgRhs(                  /**< changes right hand sides of rows in
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, (int*)ind, (double*)rhs) );
+   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, (int*)ind, (Real*)rhs) );
 
    return SCIP_OKAY;
 }
@@ -769,10 +859,10 @@ RETCODE SCIPlpiSetIntpar(               /**< sets integer parameter of LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetDblpar(               /**< gets double parameter of LP */
+RETCODE SCIPlpiGetRealpar(              /**< gets floating point parameter of LP */
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
-   double*          dval                /**< buffer to store the parameter value */
+   Real*            dval                /**< buffer to store the parameter value */
    )
 {
    assert(cpxenv != NULL);
@@ -793,10 +883,10 @@ RETCODE SCIPlpiGetDblpar(               /**< gets double parameter of LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiSetDblpar(               /**< sets double parameter of LP */
+RETCODE SCIPlpiSetRealpar(              /**< sets floating point parameter of LP */
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
-   double           dval                /**< parameter value */
+   Real             dval                /**< parameter value */
    )
 {
    assert(cpxenv != NULL);
@@ -826,11 +916,11 @@ RETCODE SCIPlpiSetDblpar(               /**< sets double parameter of LP */
 
 RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
    LPI*             lpi,                /**< LP interface structure */
-   double*          objval,             /**< stores the objective value */
-   double*          psol,               /**< primal solution vector */
-   double*          pi,                 /**< dual solution vector */
-   double*          slck,               /**< slack vector */
-   double*          redcost             /**< reduced cost vector */
+   Real*            objval,             /**< stores the objective value */
+   Real*            psol,               /**< primal solution vector */
+   Real*            pi,                 /**< dual solution vector */
+   Real*            slck,               /**< slack vector */
+   Real*            redcost             /**< reduced cost vector */
    )
 {
    int dummy;
@@ -847,12 +937,12 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
 
 RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iterations on all candidates */
    LPI*             lpi,                /**< LP interface structure */
-   const double*    psol,               /**< primal LP solution vector */
+   const Real*      psol,               /**< primal LP solution vector */
    int              ncand,              /**< size of candidate list */
    const int*       cand,               /**< candidate list */
    int              itlim,              /**< iteration limit for strong branchings */
-   double*          down,               /**< stores dual bound after branching candidate down */
-   double*          up                  /**< stores dual bound after branching candidate up */
+   Real*            down,               /**< stores dual bound after branching candidate down */
+   Real*            up                  /**< stores dual bound after branching candidate up */
    )
 {
    assert(cpxenv != NULL);

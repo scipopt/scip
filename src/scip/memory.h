@@ -62,9 +62,13 @@ typedef struct memory_header MEMHDR;
 
 #define allocBlockMemory(mem,ptr)          ((ptr) = allocBlockMemory_call((mem),sizeof(*(ptr)),__FILE__,__LINE__))
 #define allocBlockMemoryArray(mem,ptr,num) ((ptr) = allocBlockMemory_call((mem),(num)*sizeof(*(ptr)),__FILE__,__LINE__))
+#define allocBlockMemorySize(mem,ptr,size) ((ptr) = allocBlockMemory_call((mem),(size_t)(size),__FILE__,__LINE__))
 #define reallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
                                            ((ptr) = reallocBlockMemory_call((mem),(ptr),(oldnum)*sizeof(*(ptr)), \
                                            (newnum)*sizeof(*(ptr)),__FILE__,__LINE__))
+#define reallocBlockMemorySize(mem,ptr,oldsize,newsize) \
+                                           ((ptr) = reallocBlockMemory_call((mem),(ptr),(size_t)(oldsize), \
+                                           (size_t)(newsize),__FILE__,__LINE__))
 #define duplicateBlockMemory(mem, ptr, source) \
                                            ((ptr) = duplicateBlockMemory_call((mem), (const void*)source, \
                                            sizeof(*(ptr)), __FILE__, __LINE__ ))
@@ -77,22 +81,28 @@ typedef struct memory_header MEMHDR;
 #define freeBlockMemoryArray(mem,ptr,num)  freeBlockMemory_call( (mem), (void**)(&(ptr)), (num)*sizeof(*(ptr)), \
                                            __FILE__, __LINE__ )
 #define freeBlockMemoryArrayNull(mem,ptr,num)  if( (ptr) != NULL ) freeBlockMemoryArray( (mem), (ptr), (num) )
+#define freeBlockMemorySize(mem,ptr,size)  freeBlockMemory_call( (mem), (void**)(&(ptr)), (size_t)(size), \
+                                           __FILE__, __LINE__ )
+#define freeBlockMemorySizeNull(mem,ptr,size)  if( (ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) )
 
 
 #ifndef NDEBUG
-void   memoryDiagnostic( void );
-void   memoryCheckEmpty( void );
-size_t memorySize( void *ptr );
-size_t blockMemorySize( MEMHDR *mem, void *ptr );
-void   blockMemoryDiagnostic( MEMHDR *mem );
+void   memoryDiagnostic(void);
+void   memoryCheckEmpty(void);
+size_t memorySize(void *ptr);
+size_t blockMemorySize(MEMHDR *mem, void *ptr);
+void   blockMemoryDiagnostic(MEMHDR *mem);
 #endif
 
-void   errorMessage_call( const char *msg, const char *filename, int line );
-void*  allocMemory_call( size_t size, const char *filename, int line );
-void*  reallocMemory_call( void* ptr, size_t size, const char *filename, int line );
+void   errorMessage_call(const char *msg, const char *filename, int line);
+void   alignMemsize(size_t* size);
+int    isAligned(size_t size);
+
+void*  allocMemory_call(size_t size, const char *filename, int line);
+void*  reallocMemory_call(void* ptr, size_t size, const char *filename, int line);
 void   copyMemory_call(void* ptr, const void* source, size_t size);
 void*  duplicateMemory_call(const void* source, size_t size, const char *filename, int line);
-void   freeMemory_call( void** ptr, const char *filename, int line );
+void   freeMemory_call(void** ptr, const char *filename, int line);
 
 /* Create a block memory allocation structure.
  * Parameters:
@@ -104,23 +114,20 @@ void   freeMemory_call( void** ptr, const char *filename, int line );
  * Returns   :
  *    Pointer to memory header structure.
  */
-MEMHDR* createBlockMemory_call( int initChunkSize, int clearUnusedBlocks,
-				int garbageFactor,
-				const char *filename, int line );
+MEMHDR* createBlockMemory_call(int initChunkSize, int clearUnusedBlocks, int garbageFactor,
+   const char *filename, int line);
 
 /* Free all chunks in the memory allocation structure.
  * Parameters:
  *    mem : Pointer to memory header to clear.
  */
-void clearBlockMemory_call( MEMHDR* mem, 
-			    const char *filename, int line );
+void clearBlockMemory_call(MEMHDR* mem, const char *filename, int line);
 
 /* Delete a block allocation.
  * Parameters:
  *    mem : Pointer to memory header to destroy.
  */
-void destroyBlockMemory_call( MEMHDR** mem,
-			      const char *filename, int line );
+void destroyBlockMemory_call(MEMHDR** mem, const char *filename, int line);
 
 /* Get a new block of memory.
  * Parameters:
@@ -129,8 +136,7 @@ void destroyBlockMemory_call( MEMHDR** mem,
  * Returns:
  *    Pointer to a new block of memory of size "size".
  */
-void* allocBlockMemory_call( MEMHDR* mem, size_t size,
-			     const char *filename, int line );
+void* allocBlockMemory_call(MEMHDR* mem, size_t size, const char *filename, int line);
 
 void * reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line);
 
@@ -142,8 +148,7 @@ void * duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, c
  *    ptr  : Pointer to memory to free.
  *    size : size of memory block.
  */
-void freeBlockMemory_call( MEMHDR* mem, void** ptr, size_t size,
-			   const char *filename, int line );
+void freeBlockMemory_call(MEMHDR* mem, void** ptr, size_t size, const char *filename, int line);
 
 
 

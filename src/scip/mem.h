@@ -17,7 +17,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   mem.h
- * @brief  block memory pools
+ * @brief  block memory pools and memory buffers
  * @author Tobias Achterberg
  */
 
@@ -26,17 +26,63 @@
 #ifndef __MEM_H__
 #define __MEM_H__
 
+
+typedef struct Mem MEM;
+
+
+#include "def.h"
 #include "memory.h"
+#include "retcode.h"
+#include "set.h"
+
 
 struct Mem                              /**< various block memory buffers */
 {
    MEMHDR*          treemem;            /**< ptr to memory blocks for the tree */
    MEMHDR*          statemem;           /**< ptr to memory blocks for LP states */
    MEMHDR*          lpmem;              /**< ptr to memory blocks for LP data */
+   MEMHDR*          dommem;             /**< ptr to memory blocks for domains of variables */
+   MEMHDR*          consmem;            /**< ptr to memory blocks for constraint data */
    MEMHDR*          primalmem;          /**< ptr to memory blocks for primal solutions */
    MEMHDR*          tempmem;            /**< ptr to memory blocks for short living objects */
+   void**           ptrbuf;             /**< buffer for storing temporary pointer arrays */
+   char*            charbuf;            /**< buffer for storing temporary char arrays */
+   int*             intbuf;             /**< buffer for storing temporary int arrays */
+   Real*            realbuf;            /**< buffer for storing temporary real arrays */
+   int              ptrbufsize;         /**< size of pointer array buffer */
+   int              charbufsize;        /**< size of char array buffer */
+   int              intbufsize;         /**< size of int array buffer */
+   int              realbufsize;        /**< size of real array buffer */
 };
-typedef struct Mem MEM;
 
+
+
+extern
+void** SCIPmemGetPtrbuf(                /**< returns buffer for storing pointer array */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              size                /**< minimal size of pointer buffer */
+   );
+
+extern
+char* SCIPmemGetCharbuf(                /**< returns buffer for storing char array */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              size                /**< minimal size of char buffer */
+   );
+
+extern
+int* SCIPmemGetIntbuf(                  /**< returns buffer for storing int array */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              size                /**< minimal size of int buffer */
+   );
+
+extern
+Real* SCIPmemGetRealbuf(                /**< returns buffer for storing Real array */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              size                /**< minimal size of real buffer */
+   );
 
 #endif

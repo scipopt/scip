@@ -21,7 +21,7 @@
  * @author Thorsten Koch
  */
 
-/* $Id: xternal.c,v 1.3 2002/10/25 13:54:39 bzfpfend Exp $
+/* $Id: xternal.c,v 1.4 2002/11/11 16:33:28 bzfpfend Exp $
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
@@ -47,15 +47,15 @@
  * - Braces are on a new line and not indented.
  * - Spaces around all operators.
  * - Use assert() to show preconditions for the parameters, invariants and postconditions.
- * - All global functions start with "SCIP". In the usual naming scheme this is followed by a verb and a nown, like in
- *   SCIPaddSepar(). Functions return TRUE or FALSE should be named like SCIPisSeparEnabled().
+ * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
+ *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPlpiIsOptimal().
  * - Make all functions that are not used outside the module 'static'. Naming should start with a lower case letter.
  * - Variable names should start with a lower case letter.
  * - For each structure there is a typedef with the name in all upper case.
  * - Defines should be named all upper case.
  * - Document functions, parameters and variables doxygen conform.
  *
- * As an example have a look at separate.c .
+ * As an example have a look at tree.c .
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

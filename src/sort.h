@@ -26,7 +26,15 @@
 #ifndef __SORT_H__
 #define __SORT_H__
 
+
 typedef struct PQueue PQUEUE;           /**< priority queue */
+
+
+
+#include "def.h"
+#include "retcode.h"
+
+
 
 /** compares two data element pointers
  *  result:
@@ -41,7 +49,7 @@ extern
 RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
-   double           sizefac,            /**< memory growing factor applied, if more element slots are needed */
+   Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
@@ -59,6 +67,14 @@ void* SCIPpqueueRemove(                 /**< removes and returns best element fr
 extern
 void* SCIPpqueueFirst(                  /**< returns the best element of the queue without removing it */
    const PQUEUE*    pqueue              /**< pointer to a priority queue */
+   );
+
+extern
+void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of pointers/Reals, sorted by first array */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
 

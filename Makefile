@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 2002/11/01 10:25:03 bzfpfend Exp $
+# $Id: Makefile,v 1.7 2002/11/11 16:33:28 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -87,9 +87,11 @@ NAME		=	scip
 
 #-----------------------------------------------------------------------------
 
-LIBOBJ		=	bitencode.o \
+LIBOBJ		=	bab.o \
+			bitencode.o \
 			constraint.o \
 			lp.o \
+			mem.o \
 			memory.o \
 			scip.o \
 			set.o \
