@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.4 2005/02/07 14:08:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.5 2005/02/08 09:17:04 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -150,7 +150,6 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
 
    Longint nsolsfound;
    Longint ncalls;
-   Longint iter;
    Longint nlpiterations; 
    Longint maxnlpiterations;
    int depth;       
@@ -186,7 +185,7 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* calculate the maximal number of LP iterations until heuristic is aborted */
-   nlpiterations = SCIPgetNLPIterations(scip);
+   nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
    maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
@@ -318,17 +317,16 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
       }
 
       /* resolve the diving LP */
+      nlpiterations = SCIPgetNLPIterations(scip);
       CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations, &lperror) );
       if( lperror )
          break;
 
       /* update iteration count */
-      iter = SCIPgetNLPIterations(scip);
-      heurdata->nlpiterations += iter - nlpiterations;
-      nlpiterations = SCIPgetNLPIterations(scip);
+      heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
 
       /* if we stayed at the same LP solution, rapidly decrease alpha */
-      if( iter == nlpiterations )
+      if( SCIPgetNLPIterations(scip) == nlpiterations )
       {
          /* if alpha == 0.0 was tried, abort */
          if( alpha == 0.0 )

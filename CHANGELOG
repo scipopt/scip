@@ -29,6 +29,8 @@ interface:
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
   old implementation is now called "objfeaspump"; parameter names have been changed accordingly
+- diving heuristics now compare their number of LP iterations with the number of node LP iterations instead of the
+  total number (including their own) LP iterations
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other

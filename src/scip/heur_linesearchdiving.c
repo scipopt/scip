@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.10 2005/02/07 14:08:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.11 2005/02/08 09:17:04 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @brief  linesearchdiving primal heuristic
@@ -228,7 +228,7 @@ DECL_HEUREXEC(heurExecLinesearchdiving)
       return SCIP_OKAY;
 
    /* calculate the maximal number of LP iterations until heuristic is aborted */
-   nlpiterations = SCIPgetNLPIterations(scip);
+   nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
    maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
@@ -387,13 +387,13 @@ DECL_HEUREXEC(heurExecLinesearchdiving)
       }
 
       /* resolve the diving LP */
+      nlpiterations = SCIPgetNLPIterations(scip);
       CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations, &lperror) );
       if( lperror )
          break;
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-      nlpiterations = SCIPgetNLPIterations(scip);
 
       /* get LP solution status, objective value, and fractional variables, that should be integral */
       lpsolstat = SCIPgetLPSolstat(scip);

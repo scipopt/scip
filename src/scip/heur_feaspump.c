@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.17 2005/02/07 14:54:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.18 2005/02/08 09:17:04 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -293,7 +293,7 @@ DECL_HEUREXEC(heurExecFeaspump)
    Real oldsolval;       /* one value of the last solution */ 
    Real solval;          /* one value of the actual solution */ 
    Real frac;            /* the fractional part of the value above */  
-   Real objfactor;       /* factor by which the regard of the objective is decreased in each round, in [0;0.99] */
+   Real objfactor;       /* factor by which the regard of the objective is decreased in each round, in [0,0.99] */
    Real alpha;           /* factor how the original objective is regarded, used for convex combination of two functions */
    Real objnorm;         /* Euclidean norm of the objective function, used for scaling */
 
@@ -312,7 +312,6 @@ DECL_HEUREXEC(heurExecFeaspump)
 
    Longint nlpiterations;   /* number of LP iterations done during one pumping round */
    Longint maxnlpiterations; /* maximum number of LP iterations fpr this heuristic */
-   Longint iter;         /* just used for updating */   
    Longint nsolsfound;   /* number of solutions found by this heuristic */
    Longint ncalls;       /* number of calls of this heuristic */  
 
@@ -320,7 +319,6 @@ DECL_HEUREXEC(heurExecFeaspump)
    Bool lperror; 
    Bool* cycles;           /* are there short cycles */
    
-   /*checking simple preconditions */
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -343,10 +341,10 @@ DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
    
    /* calculate the maximal number of LP iterations until heuristic is aborted */
-   nlpiterations = SCIPgetNLPIterations(scip);
+   nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 20000);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
   
    /* initialize some heuristic data */
    maxflips = 3*heurdata->minflips;
@@ -359,13 +357,13 @@ DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
    
    /* allow at least a certain number of LP iterations in this dive */
-   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 20000);
+   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
    
-   debugMessage("executing feasibility pump heuristic, maxnlpit:%lld, maxflips:%d \n",maxnlpiterations,maxflips);
+   debugMessage("executing feasibility pump heuristic, maxnlpit:%lld, maxflips:%d \n", maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
 
-   /* memory allociation */
+   /* memory allocation */
    CHECK_OKAY( SCIPallocBufferArray(scip, &mostfracvars, maxflips) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &mostfracvals, maxflips) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &lastroundedsols, heurdata->cyclelength) );
@@ -383,17 +381,17 @@ DECL_HEUREXEC(heurExecFeaspump)
    lperror = FALSE;
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
 
+   /* pumping rounds */
    objnorm = SCIPgetObjNorm(scip);
    objnorm = MAX(objnorm, 1.0);
    nsolsfound = SCIPgetNSolsFound(scip);
    if( heurdata->objfactor == 1.0 )
-      objfactor = MIN( 1 - 0.5 / (1 + nsolsfound) , 0.99 );
+      objfactor = MIN(1.0 - 0.5 / (Real)(1 + nsolsfound), 0.99);
    else  
       objfactor = heurdata->objfactor;
    alpha = 1.0;
    nstartfracs = nfracs;
    nloops = 0;
-   /* pumping rounds */
    while( nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations && nloops < maxloops )
    {
       nloops++;
@@ -423,32 +421,33 @@ DECL_HEUREXEC(heurExecFeaspump)
       for( j = 0; j <  heurdata->cyclelength; j++ )
          cycles[j] = (nloops > j+1);
          
-      /* change objective function to Manhattan-distance of the integer variables to the LP and get the rounded solution*/
+      /* change objective function to Manhattan-distance of the integer variables to the LP and get the rounded solution */
       for( i = 0; i < nvars; i++ )
       {
          var = vars[i];
          solval = SCIPvarGetLPSol(var);
          orgobjcoeff = SCIPvarGetObj(var) * SQRT(nbinvars + nintvars) / objnorm;
+
          /* handle all integer variables*/
          if( i < nbinvars + nintvars )
          {  
             frac = SCIPfeasFrac(scip, solval);
-            /* variables which are already integral, are treated seperately */
+            /* variables which are already integral, are treated separately */
             if( SCIPisFeasZero(scip,frac) )
             {
-               /* variables at their bounds should be hold there */
+               /* variables at their bounds should be kept there */
                if( SCIPisFeasEQ(scip, solval, SCIPvarGetLbLocal(var)) )
                   newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
                else if( SCIPisFeasEQ(scip, solval, SCIPvarGetUbLocal(var)) )
                   newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
-               else  
-                  newobjcoeff =  alpha * orgobjcoeff;
+               else
+                  newobjcoeff = alpha * orgobjcoeff;
             }
             else 
             {
                /* check whether the variable is one of the most fractionals and label if so */
                if( cycles[0] )
-                  insertFlipCand(mostfracvars,mostfracvals,&nflipcands,maxnflipcands, var,frac);
+                  insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
                if( frac > 0.5 )
                {
                   newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
@@ -459,6 +458,7 @@ DECL_HEUREXEC(heurExecFeaspump)
                   newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
                   solval = SCIPfeasFloor(scip, solval);
                }
+
                /* update the rounded solution */
                CHECK_OKAY( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
             }
@@ -470,13 +470,13 @@ DECL_HEUREXEC(heurExecFeaspump)
          CHECK_OKAY( SCIPchgVarObjDive(scip, var, newobjcoeff) );
          
          /* check, whether there is still the possibility of j-cycles */
-         for( j =0; j < MIN(heurdata->cyclelength, nloops-1); j++ ) 
+         for( j = 0; j < MIN(heurdata->cyclelength, nloops-1); j++ ) 
          {
             /* cycles exist, iff all solution values are equal */
             if( cycles[j] )
             {
                oldsolval = SCIPgetSolVal(scip, lastroundedsols[j], var);
-               cycles[j] = SCIPisFeasEQ(scip,solval,oldsolval);
+               cycles[j] = SCIPisFeasEQ(scip, solval, oldsolval);
             }
          }
       }
@@ -490,9 +490,9 @@ DECL_HEUREXEC(heurExecFeaspump)
       }
       else 
       {
-         for( j = 0; j < MIN(heurdata->cyclelength,nloops-1); j++ ) 
+         for( j = 0; j < MIN(heurdata->cyclelength, nloops-1); j++ ) 
          {
-            /* if we got the same rounded solution as in some the step before, we have to flip some variables */
+            /* if we got the same rounded solution as in some step before, we have to flip some variables */
             if( cycles[j] )
             {
                /* 1-cycles have a special flipping rule (flip most fractional variables) */
@@ -512,6 +512,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       }
       
       /* the LP with the new (distance) objective is solved */
+      nlpiterations = SCIPgetNLPIterations(scip);
       CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations , &lperror) );
       lpsolstat = SCIPgetLPSolstat(scip);
 
@@ -520,11 +521,9 @@ DECL_HEUREXEC(heurExecFeaspump)
          break; 
       
       /* update iteration count */
-      iter = SCIPgetNLPIterations(scip);
-      heurdata->nlpiterations += iter - nlpiterations;
-      nlpiterations = SCIPgetNLPIterations(scip);
+      heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
       nfracs = SCIPgetNLPBranchCands(scip);
-      debugMessage(" -> number of iterations: %lld/%lld\n",heurdata->nlpiterations,maxnlpiterations);
+      debugMessage(" -> number of iterations: %lld/%lld\n", heurdata->nlpiterations, maxnlpiterations);
 
       /* swap the last solutions */
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
@@ -534,7 +533,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       heurdata->roundedsol = tmpsol;
    }
 
-   /* try to round once more */
+   /* try final solution, if no more fractional variables are left */
    if( nfracs == 0 && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->sol) );

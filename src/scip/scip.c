@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.259 2005/02/07 18:12:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.260 2005/02/08 09:17:05 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3749,9 +3749,6 @@ RETCODE presolve(
       lastnchgcoefs = scip->stat->npresolchgcoefs;
       lastnchgsides = scip->stat->npresolchgsides;
 
-      /* increase round number */
-      scip->stat->npresolrounds++;
-
       /* sort presolvers by priority */
       SCIPsetSortPresols(scip->set);
 
@@ -3774,6 +3771,9 @@ RETCODE presolve(
             lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
             *unbounded, *infeasible);
       }
+
+      /* increase round number */
+      scip->stat->npresolrounds++;
 
       if( !finished )
       {
