@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.28 2005/03/10 17:38:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.29 2005/03/10 17:47:37 bzfpfend Exp $"
 
 /**@file   lpi_spx121.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -1384,6 +1384,10 @@ RETCODE SCIPlpiStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
    int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
@@ -1404,6 +1408,8 @@ RETCODE SCIPlpiStrongbranch(
    assert(lpi->spx != NULL);
    assert(down != NULL);
    assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
 
    /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
@@ -1417,6 +1423,8 @@ RETCODE SCIPlpiStrongbranch(
    oldlb = spx->lower(col);
    oldub = spx->upper(col);
 
+   *downvalid = FALSE;
+   *upvalid = FALSE;
    if( iter != NULL )
       *iter = 0;
 
@@ -1434,14 +1442,18 @@ RETCODE SCIPlpiStrongbranch(
       status = spx->solve();
       switch( status )
       {
+      case SoPlex::OPTIMAL:
+         *down = spx->value();
+         *downvalid = TRUE;
+         break;
       case SoPlex::ABORT_TIME:
       case SoPlex::ABORT_ITER:
-      case SoPlex::OPTIMAL:
          *down = spx->value();
          break;
       case SoPlex::ABORT_VALUE:
       case SoPlex::INFEASIBLE:
          *down = spx->terminationValue();
+         *downvalid = TRUE;
          break;
       default:
          error = true;
@@ -1453,8 +1465,11 @@ RETCODE SCIPlpiStrongbranch(
       spx->setBasis(rowstat, colstat);
    }
    else
+   {
       *down = spx->terminationValue();
-      
+      *downvalid = TRUE;
+   }
+  
    /* up branch */
    newlb = EPSFLOOR(psol+1.0, 1e-06);
    if( !error && newlb <= oldub + 0.5 )
@@ -1466,14 +1481,18 @@ RETCODE SCIPlpiStrongbranch(
       status = spx->solve();
       switch( status )
       {
+      case SoPlex::OPTIMAL:
+         *up = spx->value();
+         *upvalid = TRUE;
+         break;
       case SoPlex::ABORT_TIME:
       case SoPlex::ABORT_ITER:
-      case SoPlex::OPTIMAL:
          *up = spx->value();
          break;
       case SoPlex::ABORT_VALUE:
       case SoPlex::INFEASIBLE:
          *up = spx->terminationValue();
+         *upvalid = TRUE;
          break;
       case SoPlex::UNBOUNDED:
       default:
@@ -1486,7 +1505,10 @@ RETCODE SCIPlpiStrongbranch(
       spx->setBasis(rowstat, colstat);
    }
    else
+   {
       *up = spx->terminationValue();
+      *upvalid = TRUE;
+   }
    
    spx->setTerminationIter(oldItlim);
    
@@ -1501,121 +1523,6 @@ RETCODE SCIPlpiStrongbranch(
 
    return SCIP_OKAY;
 }
-
-#if 0
-/** performs strong branching iterations on all candidates */
-RETCODE SCIPlpiStrongbranch(
-   LPI*             lpi,                /**< LP interface structure */
-   const int*       cand,               /**< candidate list */
-   Real*            psol,               /**< array with current primal solution values of candidates */
-   int              ncand,              /**< size of candidate list */
-   int              itlim,              /**< iteration limit for strong branchings */
-   Real*            down,               /**< stores dual bound after branching candidate down */
-   Real*            up,                 /**< stores dual bound after branching candidate up */
-   int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
-   )
-{
-   SPxSCIP* spx;
-   SoPlex::VarStatus* rowstat;
-   SoPlex::VarStatus* colstat;
-   SoPlex::Status status;
-   Real oldBound;
-   bool error;
-   int oldItlim;
-   int c;
-
-   debugMessage("calling SCIPlpiStrongbranch()\n");
-
-   assert(lpi != NULL);
-   assert(lpi->spx != NULL);
-   assert(cand != NULL);
-
-   spx = lpi->spx;
-   rowstat = new SoPlex::VarStatus[spx->nRows()];
-   colstat = new SoPlex::VarStatus[spx->nCols()]; 
-   oldItlim = spx->terminationIter();             
-   status = SoPlex::UNKNOWN;                      
-   error = false;                                 
-
-   spx->getBasis(rowstat, colstat);    
-   spx->setTerminationIter(itlim);
-
-   if( iter != NULL )
-      *iter = 0;
-
-   for( c = 0; c < ncand && !error; ++c )
-   {
-      /* down branch */
-      debugMessage("strong branching down on x%d (%g) with %d iterations\n", cand[c], psol[c], itlim);
-      oldBound = spx->upper(cand[c]);
-      spx->changeUpper(cand[c], ceil(psol[c]-1.0));
-
-      status = spx->solve();
-      switch( status )
-      {
-      case SoPlex::ABORT_TIME:
-      case SoPlex::ABORT_ITER:
-      case SoPlex::OPTIMAL:
-         down[c] = spx->value();
-         break;
-      case SoPlex::ABORT_VALUE:
-      case SoPlex::INFEASIBLE:
-         down[c] = spx->terminationValue();
-         break;
-      default:
-         error = true;
-         break;
-      }
-      if( iter != NULL )
-         (*iter) += spx->iterations();
-      spx->changeUpper(cand[c], oldBound);
-      spx->setBasis(rowstat, colstat);
-
-      if( error )
-         continue;
-
-      /* up branch */
-      debugMessage("strong branching  up  on x%d (%g) with %d iterations\n", cand[c], psol[c], itlim);
-      oldBound = spx->lower(cand[c]);
-      spx->changeLower(cand[c], floor(psol[c]+1.0));
-      
-      status = spx->solve();
-      switch( status )
-      {
-      case SoPlex::ABORT_TIME:
-      case SoPlex::ABORT_ITER:
-      case SoPlex::OPTIMAL:
-         up[c] = spx->value();
-         break;
-      case SoPlex::ABORT_VALUE:
-      case SoPlex::INFEASIBLE:
-         up[c] = spx->terminationValue();
-         break;
-      case SoPlex::UNBOUNDED:
-      default:
-         error = true;
-         break;
-      }
-      if( iter != NULL )
-         (*iter) += spx->iterations();
-      spx->changeLower(cand[c], oldBound);
-      spx->setBasis(rowstat, colstat);
-   }
-
-   spx->setTerminationIter(oldItlim);
-   
-   delete [] rowstat;
-   delete [] colstat;
-
-   if( error )
-   {
-      errorMessage("SOPLEX status %d returned SCIPlpiStrongbranch()\n", int(status));
-      return SCIP_LPERROR;
-   }
-
-   return SCIP_OKAY;
-}
-#endif
 
 /**@} */
 
