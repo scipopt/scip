@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.1 2004/10/06 10:47:24 bzfpfend Exp $
+# $Id: Makefile,v 1.2 2004/11/15 10:55:43 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
@@ -119,12 +119,12 @@ MAINDEP		=	src/depend.main
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
-LPSLIB		=	cplex.$(OSTYPE).$(ARCH)
+LPSLIB		=	cplex.$(OSTYPE).$(ARCH).$(COMP)
 endif
 
 ifeq ($(LPS),spx)
 LINKER		=	CPP
-LPSLIB		=	soplex.$(OSTYPE).$(ARCH)
+LPSLIB		=	soplex.$(OSTYPE).$(ARCH).$(COMP)
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
