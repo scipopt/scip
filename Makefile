@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.45 2003/10/15 12:30:09 bzfpfend Exp $
+# $Id: Makefile,v 1.46 2003/10/15 13:09:25 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -23,10 +23,10 @@
 
 # Several symlinks are nesseccary:
 #
-# lib/cpxinc                         -> directory with cplex.h
-# lib/spxinc                         -> directory with SoPlex's *.h
-# lib/libcplex.$(OSTYPE).$(ARCH).a   -> libcplex.a
-# lib/libsoplex.$(BASE).a            -> libsoplex.a
+# lib/cpxinc                                        -> directory with cplex.h
+# lib/spxinc                                        -> directory with SoPlex's *.h
+# lib/libcplex.$(OSTYPE).$(ARCH).a                  -> libcplex.a
+# lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT).a  -> libsoplex.a
 #
 #
 .PHONY:		depend clean lint doc test testcplex

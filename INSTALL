@@ -79,9 +79,9 @@ Here is what you have to do to get SCIP running:
 3. To run the program enter "bin/scip.$(PAR).$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
    (e.g. "bin/scip.seq.linux.x86.gnu.dbg.cpx")
 
-3. To generate the documentation, you need to have doxygen installed, and
+4. To generate the documentation, you need to have doxygen installed, and
    enter "gmake doc"
 
-4. To check the code with lint, you need to have flexelint installed, and
+5. To check the code with lint, you need to have flexelint installed, and
    enter "gmake lint"
 
