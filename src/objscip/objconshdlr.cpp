@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.1 2003/11/27 17:48:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.2 2003/11/28 10:05:46 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -37,7 +37,7 @@
 /** constraint handler data */
 struct ConshdlrData
 {
-   scip::ObjConshdlr* objconshdlr;          /**< constraint handler object */
+   scip::ObjConshdlr* objconshdlr;      /**< constraint handler object */
 };
 
 

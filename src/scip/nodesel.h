@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.23 2003/11/26 16:09:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.24 2003/11/28 10:05:46 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  methods and datastructures for node selectors
@@ -74,6 +74,8 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  input:
  *  - scip            : SCIP main data structure
  *  - nodesel         : the node selector itself
+ *  - node1           : first node to compare
+ *  - node2           : second node to compare
  *
  *  possible return values:
  *  - value < 0: node1 comes before (is better than) node2

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.1 2003/11/27 17:48:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.2 2003/11/28 10:05:46 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -149,7 +149,7 @@ RETCODE SCIPincludeObjBranchrule(
 {
    BRANCHRULEDATA* branchruledata;
 
-   /* create xxx branching rule data */
+   /* create branching rule data */
    branchruledata = new BRANCHRULEDATA;
    branchruledata->objbranchrule = objbranchrule;
 

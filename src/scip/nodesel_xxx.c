@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.2 2003/11/27 17:48:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.3 2003/11/28 10:05:46 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.c
  * @brief  xxx node selector
@@ -127,6 +127,8 @@ DECL_NODESELCOMP(nodeselCompXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
    abort(); /*lint --e{527}*/
+
+   return 0;
 }
 
 

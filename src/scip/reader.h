@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.12 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.13 2003/11/28 10:05:48 bzfpfend Exp $"
 
 /**@file   reader.h
  * @brief  interface for input file readers
@@ -48,7 +48,7 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
  *  - scip            : SCIP main data structure
  *  - reader          : the reader itself
  *  - filename        : full path and name of file to read, or NULL if stdin should be used
- *  - result          : pointer to store the result of the propagation call
+ *  - result          : pointer to store the result of the file reading call
  *
  *  possible return values for *result:
  *  - SCIP_SUCCESS    : the reader read the file correctly

@@ -1,0 +1,162 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
+/*                                                                           */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*                                                                           */
+/*  You should have received a copy of the SCIP Academic License             */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.1 2003/11/28 10:05:47 bzfpfend Exp $"
+
+/**@file   objnodesel.cpp
+ * @brief  C++ wrapper for node selectors
+ * @author Tobias Achterberg
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#include <cassert>
+
+#include "objnodesel.h"
+
+
+
+
+/*
+ * Data structures
+ */
+
+/** node selector data */
+struct NodeselData
+{
+   scip::ObjNodesel* objnodesel;        /**< node selector object */
+};
+
+
+
+
+/*
+ * Callback methods of node selector
+ */
+
+/** destructor of node selector to free user data (called when SCIP is exiting) */
+static
+DECL_NODESELFREE(nodeselFreeObj)
+{  /*lint --e{715}*/
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   /* call virtual method of nodesel object */
+   CHECK_OKAY( nodeseldata->objnodesel->scip_free(scip, nodesel) );
+
+   /* free nodesel data */
+   delete nodeseldata;
+   SCIPnodeselSetData(nodesel, NULL);
+   
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of node selector (called when problem solving starts) */
+static
+DECL_NODESELINIT(nodeselInitObj)
+{  /*lint --e{715}*/
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   /* call virtual method of nodesel object */
+   CHECK_OKAY( nodeseldata->objnodesel->scip_init(scip, nodesel) );
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of node selector (called when problem solving exits) */
+static
+DECL_NODESELEXIT(nodeselExitObj)
+{  /*lint --e{715}*/
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   /* call virtual method of nodesel object */
+   CHECK_OKAY( nodeseldata->objnodesel->scip_exit(scip, nodesel) );
+
+   return SCIP_OKAY;
+}
+
+
+/** node selection method of node selector */
+static
+DECL_NODESELSELECT(nodeselSelectObj)
+{  /*lint --e{715}*/
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   /* call virtual method of nodesel object */
+   CHECK_OKAY( nodeseldata->objnodesel->scip_select(scip, nodesel, selnode) );
+
+   return SCIP_OKAY;
+}
+
+
+/** node comparison method of node selector */
+static
+DECL_NODESELCOMP(nodeselCompObj)
+{  /*lint --e{715}*/
+   NODESELDATA* nodeseldata;
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   /* call virtual method of nodesel object */
+   return nodeseldata->objnodesel->scip_comp(scip, nodesel, node1, node2);
+}
+
+
+
+
+/*
+ * node selector specific interface methods
+ */
+
+/** creates the node selector for the given node selector object and includes it in SCIP */
+RETCODE SCIPincludeObjNodesel(
+   SCIP*            scip,               /**< SCIP data structure */
+   scip::ObjNodesel* objnodesel         /**< node selector object */
+   )
+{
+   NODESELDATA* nodeseldata;
+
+   /* create node selector data */
+   nodeseldata = new NODESELDATA;
+   nodeseldata->objnodesel = objnodesel;
+
+   /* include node selector */
+   CHECK_OKAY( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
+                  objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_, objnodesel->scip_lowestboundfirst_,
+                  nodeselFreeObj, nodeselInitObj, nodeselExitObj, nodeselSelectObj, nodeselCompObj,
+                  nodeseldata) );
+
+   return SCIP_OKAY;
+}

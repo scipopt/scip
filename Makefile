@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.54 2003/11/27 17:48:36 bzfpfend Exp $
+# $Id: Makefile,v 1.55 2003/11/28 10:05:45 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -234,7 +234,12 @@ SCIPLIBDEP	=	src/depend.sciplib
 OBJSCIPLIBNAME	=	objscip
 OBJSCIPLIBOBJ	=	objbranchrule.o \
 			objconshdlr.o \
-			objpricer.o
+			objheur.o \
+			objnodesel.o \
+			objpresol.o \
+			objpricer.o \
+			objreader.o \
+			objsepa.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).a

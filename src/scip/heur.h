@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.19 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.20 2003/11/28 10:05:46 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  methods and datastructures for primal heuristics
@@ -63,7 +63,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  input:
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
- *  - result          : pointer to store the result of the separation call
+ *  - result          : pointer to store the result of the heuristic call
  *
  *  possible return values for *result:
  *  - SCIP_FOUNDSOL   : at least one feasible primal solution was found

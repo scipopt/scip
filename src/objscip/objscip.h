@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objscip.h,v 1.1 2003/11/27 17:48:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objscip.h,v 1.2 2003/11/28 10:05:48 bzfpfend Exp $"
 
 /**@file   objscip.h
  * @brief  C++ wrapper classes for SCIP
@@ -29,7 +29,12 @@
 
 #include "objbranchrule.h"
 #include "objconshdlr.h"
+#include "objheur.h"
+#include "objnodesel.h"
+#include "objpresol.h"
 #include "objpricer.h"
+#include "objreader.h"
+#include "objsepa.h"
 
 
 #endif
