@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.36 2004/02/05 14:12:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.37 2004/03/01 09:54:43 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -339,18 +339,6 @@ DECL_DISPOUTPUT(SCIPdispOutputVars)
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputCurconss)
-{  /*lint --e{715}*/
-   assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCONSS) == 0);
-   assert(scip != NULL);
-
-   SCIPdispDecimal(file, (Longint)SCIPgetNEnabledConss(scip), DISP_WIDT_CURCONSS);
-
-   return SCIP_OKAY;
-}
-
-static
 DECL_DISPOUTPUT(SCIPdispOutputConss)
 {  /*lint --e{715}*/
    assert(disp != NULL);
@@ -358,6 +346,18 @@ DECL_DISPOUTPUT(SCIPdispOutputConss)
    assert(scip != NULL);
 
    SCIPdispDecimal(file, (Longint)SCIPgetNGlobalConss(scip), DISP_WIDT_CONSS);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_DISPOUTPUT(SCIPdispOutputCurconss)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCONSS) == 0);
+   assert(scip != NULL);
+
+   SCIPdispDecimal(file, (Longint)SCIPgetNEnabledConss(scip), DISP_WIDT_CURCONSS);
 
    return SCIP_OKAY;
 }

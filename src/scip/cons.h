@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.58 2004/02/25 16:49:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.59 2004/03/01 09:54:43 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -398,9 +398,28 @@ RETCODE SCIPconsDisable(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
- *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
- *  deduced;
+/** adds given value to age of constraint, but age can never become negative;
+ *  should be called
+ *   - in constraint separation, if no cut was found for this constraint,
+ *   - in constraint enforcing, if constraint was feasible, and
+ *   - in constraint propagation, if no domain reduction was deduced;
+ *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
+ *  in next update,
+ */
+extern
+RETCODE SCIPconsAddAge(
+   CONS*            cons,               /**< constraint */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   Real             deltaage            /**< value to add to the constraint's age */
+   );
+
+/** increases age of constraint by 1.0;
+ *  should be called
+ *   - in constraint separation, if no cut was found for this constraint,
+ *   - in constraint enforcing, if constraint was feasible, and
+ *   - in constraint propagation, if no domain reduction was deduced;
  *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
  *  in next update,
  */
@@ -412,9 +431,11 @@ RETCODE SCIPconsIncAge(
    PROB*            prob                /**< problem data */
    );
 
-/** resets age of constraint to zero; should be called in constraint separation, if a cut was found for this constraint,
- *  in constraint enforcing, if the constraint was violated, and in constraint propagation, if a domain reduction was
- *  deduced;
+/** resets age of constraint to zero;
+ *  should be called
+ *   - in constraint separation, if a cut was found for this constraint,
+ *   - in constraint enforcing, if the constraint was violated, and
+ *   - in constraint propagation, if a domain reduction was deduced;
  *  if it was obsolete, makes constraint useful again or marks constraint to be made useful again in next update
  */
 extern

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.5 2004/02/25 16:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.6 2004/03/01 09:54:44 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -36,6 +36,7 @@
 /** constraint data structure */
 struct Cons
 {
+   Real             age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    char*            name;               /**< name of the constraint */
    CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
    CONSDATA*        consdata;           /**< data for this specific constraint */
@@ -49,7 +50,6 @@ struct Cons
    int              checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int              propconsspos;       /**< position of constraint in the handler's propconss array */
    int              nuses;              /**< number of times, this constraint is referenced */
-   int              age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    int              nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int              nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */

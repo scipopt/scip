@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.108 2004/02/25 16:49:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.109 2004/03/01 09:54:44 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1758,9 +1758,24 @@ RETCODE SCIPgetTransformedConss(
    CONS**           transconss          /**< array to store the transformed constraints */
    );
 
-/** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
- *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
- *  deduced.
+/** adds given value to age of constraint, but age can never become negative;
+ *  should be called
+ *   - in constraint separation, if no cut was found for this constraint,
+ *   - in constraint enforcing, if constraint was feasible, and
+ *   - in constraint propagation, if no domain reduction was deduced;
+ */
+extern
+RETCODE SCIPaddConsAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint */
+   Real             deltaage            /**< value to add to the constraint's age */
+   );
+
+/** increases age of constraint by 1.0;
+ *  should be called
+ *   - in constraint separation, if no cut was found for this constraint,
+ *   - in constraint enforcing, if constraint was feasible, and
+ *   - in constraint propagation, if no domain reduction was deduced;
  */
 extern
 RETCODE SCIPincConsAge(
@@ -1768,9 +1783,11 @@ RETCODE SCIPincConsAge(
    CONS*            cons                /**< constraint */
    );
 
-/** resets age of constraint to zero; should be called in constraint separation, if a cut was found for this constraint,
- *  in constraint enforcing, if the constraint was violated, and in constraint propagation, if a domain reduction was
- *  deduced.
+/** resets age of constraint to zero;
+ *  should be called
+ *   - in constraint separation, if a cut was found for this constraint,
+ *   - in constraint enforcing, if the constraint was violated, and
+ *   - in constraint propagation, if a domain reduction was deduced;
  */
 extern
 RETCODE SCIPresetConsAge(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.66 2004/02/25 16:49:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.67 2004/03/01 09:54:42 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -961,7 +961,7 @@ RETCODE conshdlrAddUpdateCons(
 
    if( !cons->update )
    {
-      debugMessage("constraint <%s> of age %d has to be updated in constraint handler <%s> (consdata=%p)\n",
+      debugMessage("constraint <%s> of age %g has to be updated in constraint handler <%s> (consdata=%p)\n",
          cons->name, cons->age, conshdlr->name, cons->consdata);
       
       /* add constraint to the updateconss array */
@@ -2840,7 +2840,7 @@ RETCODE SCIPconsCreate(
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
    (*cons)->nuses = 0;
-   (*cons)->age = 0;
+   (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
    (*cons)->initial = initial;
@@ -3181,17 +3181,20 @@ RETCODE SCIPconsDisable(
    return SCIP_OKAY;
 }
 
-/** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
- *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
- *  deduced;
+/** adds given value to age of constraint, but age can never become negative;
+ *  should be called
+ *   - in constraint separation, if no cut was found for this constraint,
+ *   - in constraint enforcing, if constraint was feasible, and
+ *   - in constraint propagation, if no domain reduction was deduced;
  *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
  *  in next update,
  */
-RETCODE SCIPconsIncAge(
+RETCODE SCIPconsAddAge(
    CONS*            cons,               /**< constraint */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   Real             deltaage            /**< value to add to the constraint's age */
    )
 {
    assert(cons != NULL);
@@ -3199,11 +3202,12 @@ RETCODE SCIPconsIncAge(
    assert(!cons->updateactivate);
    assert(set != NULL);
 
-   debugMessage("increasing age (%d) of constraint <%s> of handler <%s>\n",
-      cons->age, cons->name, cons->conshdlr->name);
+   debugMessage("adding %g to age (%g) of constraint <%s> of handler <%s>\n",
+      deltaage, cons->age, cons->name, cons->conshdlr->name);
 
-   cons->age++;
-   
+   cons->age += deltaage;
+   cons->age = MAX(cons->age, 0.0);
+
    if( !cons->check && consExceedsAgelimit(cons, set) )
    {
       if( cons->conshdlr->delayupdates )
@@ -3235,9 +3239,31 @@ RETCODE SCIPconsIncAge(
    return SCIP_OKAY;
 }
 
-/** resets age of constraint to zero; should be called in constraint separation, if a cut was found for this constraint,
- *  in constraint enforcing, if the constraint was violated, and in constraint propagation, if a domain reduction was
- *  deduced;
+/** increases age of constraint by 1.0;
+ *  should be called
+ *   - in constraint separation, if no cut was found for this constraint,
+ *   - in constraint enforcing, if constraint was feasible, and
+ *   - in constraint propagation, if no domain reduction was deduced;
+ *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
+ *  in next update,
+ */
+RETCODE SCIPconsIncAge(
+   CONS*            cons,               /**< constraint */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob                /**< problem data */
+   )
+{
+   CHECK_OKAY( SCIPconsAddAge(cons, memhdr, set, prob, 1.0) );
+
+   return SCIP_OKAY;
+}
+
+/** resets age of constraint to zero;
+ *  should be called
+ *   - in constraint separation, if a cut was found for this constraint,
+ *   - in constraint enforcing, if the constraint was violated, and
+ *   - in constraint propagation, if a domain reduction was deduced;
  *  if it was obsolete, makes constraint useful again or marks constraint to be made useful again in next update
  */
 RETCODE SCIPconsResetAge(
@@ -3249,10 +3275,10 @@ RETCODE SCIPconsResetAge(
    assert(cons->conshdlr != NULL);
    assert(!cons->updateactivate);
 
-   debugMessage("resetting age (%d) of constraint <%s> of handler <%s>\n",
+   debugMessage("resetting age (%g) of constraint <%s> of handler <%s>\n",
       cons->age, cons->name, cons->conshdlr->name);
 
-   cons->age = 0;
+   cons->age = 0.0;
 
    if( cons->obsolete )
    {
@@ -3497,6 +3523,16 @@ Bool SCIPconsIsEnabled(
    return cons->updateenable || (cons->enabled && !cons->updatedisable);
 }
 
+/** returns TRUE iff constraint is marked to be deleted */
+Bool SCIPconsIsDeleted(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updatedelete;
+}
+
 /** returns TRUE iff constraint is marked obsolete */
 Bool SCIPconsIsObsolete(
    CONS*            cons                /**< constraint */
@@ -3508,7 +3544,7 @@ Bool SCIPconsIsObsolete(
 }
 
 /** gets age of constraint */
-int SCIPconsGetAge(
+Real SCIPconsGetAge(
    CONS*            cons                /**< constraint */
    )
 {

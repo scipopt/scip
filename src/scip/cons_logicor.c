@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.31 2004/02/25 16:49:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.32 2004/03/01 09:54:43 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -57,6 +57,9 @@
 #define DEFAULT_MAXVARUSEFAC        1.0  /**< branching factor to weigh maximum of positive and negative variable uses */
 #define DEFAULT_MINVARUSEFAC       -0.2  /**< branching factor to weigh minimum of positive and negative variable uses */
 
+
+/**@todo make this a parameter setting */
+#define AGEFACTOR 0.2 /*?????????????????????*/
 
 /** constraint handler data */
 struct ConshdlrData
@@ -805,7 +808,7 @@ RETCODE processWatchedVars(
       consdata->watchedvar2 = watchedvar2;
       consdata->propagated = TRUE;
 
-      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * nvars) );
    }
 
    return SCIP_OKAY;
@@ -972,7 +975,7 @@ RETCODE separateCons(
    else
    {
       /* constraint was feasible -> increase age */
-      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
    }
 
    return SCIP_OKAY;
@@ -990,6 +993,7 @@ RETCODE enforcePseudo(
    Bool*            solvelp             /**< pointer to store TRUE, if the LP has to be solved */
    )
 {
+   CONSDATA* consdata;
    Bool addcut;
    Bool mustcheck;
 
@@ -1002,22 +1006,21 @@ RETCODE enforcePseudo(
    assert(reduceddom != NULL);
    assert(solvelp != NULL);
 
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
    /* update and check the watched variables */
    CHECK_OKAY( processWatchedVars(scip, cons, eventhdlr, cutoff, reduceddom, &addcut, &mustcheck) );
 
    if( mustcheck )
    {
-      CONSDATA* consdata;
-
       assert(!addcut);
-
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
 
       if( checkCons(scip, consdata, NULL) )
       {
          /* constraint was feasible -> increase age */
-         CHECK_OKAY( SCIPincConsAge(scip, cons) );
+         CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
       }
       else
       {
@@ -1035,8 +1038,9 @@ RETCODE enforcePseudo(
    else
    {
       /* constraint was feasible -> increase age */
-      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
    }
+
    return SCIP_OKAY;
 }
 
@@ -1663,7 +1667,7 @@ DECL_CONSCHECK(consCheckLogicor)
          if( checkCons(scip, consdata, sol) )
          {
             /* constraint was feasible -> increase age */
-            CHECK_OKAY( SCIPincConsAge(scip, cons) );
+            CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
          }
          else
          {
@@ -1850,6 +1854,9 @@ DECL_CONSRESCVAR(consRescvarLogicor)
       }
    }
    assert(infervarfound);
+
+   /* reduce the age of the constraint, because it was responsible for the conflict */
+   CHECK_OKAY( SCIPaddConsAge(scip, cons, -1.0) );
 
    return SCIP_OKAY;
 }
