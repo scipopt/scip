@@ -1,6 +1,6 @@
 #!/usr/bin/tcsh -f
 
-zip scip075 COPYING INSTALL Makefile doc/* lib lint/* lint/cpp/* lint/posix/* lint/posix/sys/* make/* scip.set src/* -x ".*" -x "*~" -x "*/CVS/*"
+zip scip075 COPYING INSTALL CHANGELOG Makefile doc/* lib lint/* lint/cpp/* lint/posix/* lint/posix/sys/* make/* scip.set src/* -x ".*" -x "*~" -x "*/CVS/*"
 echo "check version numbers in src/def.h, doc/xternal.c and zippack.sh:"
 grep "SCIP_VERSION" src/def.h
 grep "@version" doc/xternal.c

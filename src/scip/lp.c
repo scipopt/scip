@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.151 2004/10/13 17:41:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.152 2004/10/14 17:05:10 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4014,12 +4014,6 @@ RETCODE SCIProwChgRhs(
 /** additional scalars that are tried in integrality scaling */
 static const Real scalars[] = {3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0};
 static const int nscalars = 9;
-
-#if 0 /*????????????????????*/
-#define DIVTOL      (1e+06*SCIPsetEpsilon(set))
-#define TWOMULTTOL  (1e+03*SCIPsetEpsilon(set))
-#define RATIONALTOL (1e+02*SCIPsetEpsilon(set))
-#endif
 
 /** tries to find a value, such that all row coefficients, if scaled with this value become integral */
 RETCODE SCIProwCalcIntegralScalar(

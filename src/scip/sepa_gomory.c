@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.34 2004/10/13 14:36:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.35 2004/10/14 17:05:10 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -155,15 +155,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    maxdepth = SCIPgetMaxDepth(scip);
    if( depth == 0 )
    {
-#if 0 /*??????????????????????*/
-      maxdnom = 1000000;
-      maxscale = 10000000.0;
-#else
-      maxdnom = 100;
+      maxdnom = 1000;
       maxscale = 1000.0;
-      maxdnom = 1000; /*????????????????*/
-      maxscale = 1000.0; /*???????????????*/
-#endif
    }
    else if( depth <= maxdepth/4 )
    {

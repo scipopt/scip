@@ -1,0 +1,8 @@
+SCIP version 0.75
+=================
+- started change log
+
+
+current SCIP version
+====================
+- removed bugs in CLP Solver interface
