@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.53 2004/03/22 16:03:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.54 2004/04/16 10:48:02 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -64,7 +64,7 @@
                        }
 #define ALLOC_OKAY(x)  { if( NULL == (x) )                                                                   \
                          {                                                                                   \
-                           printf("[%s:%d] No memory in function call\n", __FILE__, __LINE__);               \
+                           printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__);               \
                            fflush(stdout);                                                                   \
                            return SCIP_NOMEMORY;                                                             \
                          }                                                                                   \

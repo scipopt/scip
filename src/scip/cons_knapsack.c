@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.36 2004/04/16 10:43:33 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.37 2004/04/16 10:48:02 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -793,9 +793,6 @@ RETCODE separateCardinality(
    int* items;
    Longint* weights;
    Real* profits;
-   Longint capacity;
-   int i;
-   int nitems;
    int* fixedones;
    int nfixedones;
    int* fixedzeros;
@@ -810,6 +807,9 @@ RETCODE separateCardinality(
    Real transsol;
    Longint coverweight;
    Longint maxweight;
+   Longint capacity;
+   int nitems;
+   int i;
 
    assert(separated != NULL);
 
@@ -865,18 +865,14 @@ RETCODE separateCardinality(
 
    if( capacity >= 0 && capacity <= MAX_SEPA_CAPACITY )
    {
-      //ROW* row;
-      //char name[MAXSTRLEN];
-      //Real cutnorm;
-      //Real cutfeas;
       Real* solvals;
-      int j; 
-      int idx;
       int* covervars;
-      int ncovervars;
+      int* liftcoefs;
       Real slack;
       Real liftlpval;
-      int* liftcoefs;
+      int ncovervars;
+      int j; 
+      int idx;
 
       /* solve separation knapsack with dynamic programming */
       CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, consdata->nvars) );
@@ -965,11 +961,11 @@ RETCODE separateCardinality(
          /* create LP row */
          if( SCIPisFeasNegative(scip, (slack - liftlpval)/sqrt(ncovervars + 1)) )
          {
-            int v;
             ROW* row;
-            char name[MAXSTRLEN];
             Real cutnorm;
             Real cutfeas;
+            char name[MAXSTRLEN];
+            int v;
             
             sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
             CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)ncovervars, 
@@ -1004,32 +1000,6 @@ RETCODE separateCardinality(
          }
          else
             break;
-         
-#if 0
-         /* ALT: */
-         sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)ncovervars, 
-                        SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
-         for( i = 0; i < ncovervars; i++ )
-         {
-            CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[covervars[i]], 1.0) );
-         }
-            
-         /* lift variables not in set into cardinality inequality */
-         CHECK_OKAY( liftCardinality(scip, row, cons, covervars, noncovervars, ncovervars, nnoncovervars, ncovervars) ); 
-
-         /* check, if cut is violated enough */
-         cutnorm = SCIProwGetNorm(row);
-         cutfeas = SCIPgetRowLPFeasibility(scip, row);
-         if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
-         {         
-            debugMessage("lifted cardinality cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
-            debug(SCIProwPrint(row, NULL));
-            CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
-            *separated = TRUE;
-         }
-         CHECK_OKAY( SCIPreleaseRow(scip, &row) );
-#endif
       }
       CHECK_OKAY( SCIPfreeBufferArray(scip, &liftcoefs) );
       CHECK_OKAY( SCIPfreeBufferArray(scip, &solvals) );
@@ -1531,48 +1501,15 @@ DECL_CONSFREE(consFreeKnapsack)
 
 
 /** initialization method of constraint handler (called when problem solving starts) */
-#if 0
-static
-DECL_CONSINIT(consInitKnapsack)
-{  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consInitKnapsack NULL
-#endif
 
 
 /** deinitialization method of constraint handler (called when problem solving exits) */
-#if 0
-static
-DECL_CONSEXIT(consExitKnapsack)
-{  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consExitKnapsack NULL
-#endif
 
 
 /** solving start notification method of constraint handler (called when presolving was finished) */
-#if 0
-static
-DECL_CONSSOLSTART(consSolstartKnapsack)
-{  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consSolstartKnapsack NULL
-#endif
 
 
 /** frees specific constraint data */
@@ -1911,63 +1848,19 @@ DECL_CONSUNLOCK(consUnlockKnapsack)
 
 
 /** constraint activation notification method of constraint handler */
-#if 0
-static
-DECL_CONSACTIVE(consActiveKnapsack)
-{  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consActiveKnapsack NULL
-#endif
 
 
 /** constraint deactivation notification method of constraint handler */
-#if 0
-static
-DECL_CONSDEACTIVE(consDeactiveKnapsack)
-{  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consDeactiveKnapsack NULL
-#endif
 
 
 /** constraint enabling notification method of constraint handler */
-#if 0
-static
-DECL_CONSENABLE(consEnableKnapsack)
-{  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consEnableKnapsack NULL
-#endif
 
 
 /** constraint disabling notification method of constraint handler */
-#if 0
-static
-DECL_CONSDISABLE(consDisableKnapsack)
-{  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define consDisableKnapsack NULL
-#endif
 
 
 
@@ -2056,7 +1949,7 @@ RETCODE createNormalizedKnapsack(
    return SCIP_OKAY;
 }
 
-#ifdef LINCONSUPGD_PRIORITY
+/** tries to upgrade a linear constraint into a knapsack constraint */
 static
 DECL_LINCONSUPGD(linconsUpgdKnapsack)
 {  /*lint --e{715}*/
@@ -2087,7 +1980,13 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
 
    return SCIP_OKAY;
 }
-#endif
+
+
+
+
+/*
+ * Event handler
+ */
 
 /** execution methode of bound change event handler */
 static
@@ -2112,6 +2011,9 @@ DECL_EVENTEXEC(eventExecKnapsack)
 
    return SCIP_OKAY;
 }
+
+
+
 
 /*
  * constraint specific interface methods
@@ -2147,10 +2049,8 @@ RETCODE SCIPincludeConshdlrKnapsack(
                   NULL, NULL, NULL, NULL, eventExecKnapsack,
                   eventhdlrdata) );
 
-#ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY) );
-#endif
 
    /* add knapsack constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,

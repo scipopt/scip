@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.80 2004/04/15 10:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.81 2004/04/16 10:48:03 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4010,7 +4010,7 @@ RETCODE SCIPvarAddHoleLocal(
    return SCIP_OKAY;
 }
 
-/** informs variable x about a globally valid variable lower bound x >= b*z with integer variable z */
+/** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
 RETCODE SCIPvarAddVlb(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
@@ -4087,7 +4087,7 @@ RETCODE SCIPvarAddVlb(
    return SCIP_OKAY;
 }
 
-/** informs variable x about a globally valid variable upper bound x <= b*z with integer variable z */
+/** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z */
 RETCODE SCIPvarAddVub(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */

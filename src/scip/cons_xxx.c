@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.13 2004/03/08 18:05:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.14 2004/04/16 10:48:02 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -369,6 +369,7 @@ DECL_CONSDISABLE(consDisableXxx)
  */
 
 #ifdef LINCONSUPGD_PRIORITY
+/** tries to upgrade a linear constraint into a xxx constraint */
 static
 DECL_LINCONSUPGD(linconsUpgdXxx)
 {  /*lint --e{715}*/

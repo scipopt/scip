@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.149 2004/04/15 11:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.150 2004/04/16 10:48:02 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4021,6 +4021,38 @@ RETCODE SCIPinferBinVar(
 
    if( tightened != NULL )
       *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
+RETCODE SCIPaddVarVlb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
+   Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
+   Real             vlbconstant         /**< constant d    in x >= b*z + d */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarVlb", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPvarAddVlb(var, scip->mem->solvemem, scip->set, vlbvar, vlbcoef, vlbconstant) );
+
+   return SCIP_OKAY;
+}
+
+/** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z */
+RETCODE SCIPaddVarVub(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   VAR*             vubvar,             /**< variable z    in x <= b*z + d */
+   Real             vubcoef,            /**< coefficient b in x <= b*z + d */
+   Real             vubconstant         /**< constant d    in x <= b*z + d */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPvarAddVub(var, scip->mem->solvemem, scip->set, vubvar, vubcoef, vubconstant) );
 
    return SCIP_OKAY;
 }

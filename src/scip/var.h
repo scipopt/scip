@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.60 2004/04/15 10:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.61 2004/04/16 10:48:03 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -531,7 +531,7 @@ RETCODE SCIPvarAddHoleLocal(
    Real             right               /**< right bound of open interval in new hole */
    );
 
-/** informs variable x about a globally valid variable lower bound x >= b*z with integer variable z */
+/** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
 extern
 RETCODE SCIPvarAddVlb(
    VAR*             var,                /**< problem variable */
@@ -542,7 +542,7 @@ RETCODE SCIPvarAddVlb(
    Real             vlbconstant         /**< constant d    in x >= b*z + d */
    );
 
-/** informs variable x about a globally valid variable upper bound x <= b*z with integer variable z */
+/** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z */
 extern
 RETCODE SCIPvarAddVub(
    VAR*             var,                /**< problem variable */

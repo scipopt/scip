@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.36 2004/04/05 15:48:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.37 2004/04/16 10:48:02 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -64,11 +64,11 @@
 /** constraint handler data */
 struct ConshdlrData
 {
+   Real             maxvarusefac;       /**< branching factor to weigh maximum of positive and negative variable uses */
+   Real             minvarusefac;       /**< branching factor to weigh minimum of positive and negative variable uses */
    INTARRAY*        posvaruses;         /**< number of positive literal of a variable in the active logic or constraints */
    INTARRAY*        negvaruses;         /**< number of negative literal of a variable in the active logic or constraints */
    EVENTHDLR*       eventhdlr;          /**< event handler for bound tighten events on watched variables */
-   Real             maxvarusefac;       /**< branching factor to weigh maximum of positive and negative variable uses */
-   Real             minvarusefac;       /**< branching factor to weigh minimum of positive and negative variable uses */
    int              npseudobranches;    /**< number of children created in pseudo branching */
 };
 
@@ -393,13 +393,12 @@ RETCODE consdataCreate(
 static
 RETCODE consdataFree(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to store the logic or constraint */
+   CONSDATA**       consdata,           /**< pointer to the logic or constraint */
    EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    assert(consdata != NULL);
    assert(*consdata != NULL);
-   assert(eventhdlr != NULL);
 
    /* drop bound tighten events for watched variables */
    CHECK_OKAY( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
