@@ -54,7 +54,8 @@ plugins:
   old implementation is now called "objfeaspump"; parameter names have been changed accordingly
 - diving heuristics now compare their number of LP iterations with the number of node LP iterations instead of the
   total number (including their own) LP iterations
-- included clique separator for clique cuts with at least 3 elements
+- new plugin: probing presolver
+- new plugin: clique separator for clique cuts with at least 3 elements
 - changed implementation of reliability value calculation in reliability branching; slightly modified influence
   of maximal total number of strong branching LP iterations in reliability branching
 
@@ -83,21 +84,26 @@ parameters:
 - changed default of parameter lp/pricing to 's'teepest edge pricing
 - new parameter lp/checkstability to disable stability check of LP solver's result code
 - default parameter branching/relpscost/minreliable changed to 1.0
-- default parameter branching/relpscost/maxreliable changed to 16.0
+- default parameter branching/relpscost/maxreliable changed to 32.0
 - default parameter branching/relpscost/sbiterofs changed to 20000
+- default parameter heuristics/coefdiving/maxlpiterquot changed to 0.05
+- default parameter heuristics/fracdiving/maxlpiterquot changed to 0.05
+- default parameter heuristics/guideddiving/maxlpiterquot changed to 0.05
+- default parameter heuristics/linesearchdiving/maxlpiterquot changed to 0.05
+- default parameter heuristics/pscostdiving/maxlpiterquot changed to 0.05
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
   iterations
 - calling SCIPaddCut() with forcecut=TRUE will add the cut to the LP even if it is redundant
 - command line history in interactive shell now only stores "useful" commands
-- new plugin: Probing Presolver
 - probing is now also possible in presolving stage
 - it is now possible to create subnodes in probing and use backtracking to undo probing changes
 - it is now possible to interrupt and continue presolving
 - bounds of variables are included in the feasibility checks for solutions
 - support for barrier algorithm
 - added TSP example in examples/TSP
+- SCIPaddVarImplication() now also adds variable lower and upper bounds, if the implied variable is non-binary
 
 fixed bugs:
 - fixed bug in MPS file reader

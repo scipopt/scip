@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.278 2005/03/02 19:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.279 2005/03/15 13:43:35 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5854,14 +5854,16 @@ RETCODE SCIPaddVarVub(
 }
 
 /** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
- *  if y is binary variable the corresponding valid implication for y is allso added
+ *  if y is binary, the corresponding valid implication for y is also added;
+ *  if y is non-binary, the corresponding variable lower or upper bound for y is also added
  */
 RETCODE SCIPaddVarImplication(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
-   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER)
+                                         *                          or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
    Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    )
@@ -5885,14 +5887,15 @@ RETCODE SCIPaddVarImplication(
       return SCIP_OKAY;
    }
 
-   /* if y is binary variable the corresponding valid implication for y is allso added: 
-    *  "x <= 0  ==>  y <= 0": add "y >= 1  ==>  x >= 1"
-    *  "x <= 0  ==>  y >= 1": add "y <= 0  ==>  x >= 1"
-    *  "x >= 1  ==>  y <= 0": add "y >= 1  ==>  x <= 0"
-    *  "x >= 1  ==>  y >= 1": add "y <= 0  ==>  x <= 0"
-    */    
+   /* check, whether y is binary */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
+      /* add the corresponding valid implication for y: 
+       *  "x == 0  ==>  y <= 0": add "y == 1  ==>  x >= 1"
+       *  "x == 0  ==>  y >= 1": add "y == 0  ==>  x >= 1"
+       *  "x == 1  ==>  y <= 0": add "y == 1  ==>  x <= 0"
+       *  "x == 1  ==>  y >= 1": add "y == 0  ==>  x <= 0"
+       */
       CHECK_OKAY( SCIPvarAddImplic(implvar, scip->mem->solvemem, scip->set,
             impltype == SCIP_BOUNDTYPE_UPPER, var, varfixing == TRUE ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
             varfixing == TRUE ? 0.0 : 1.0, &conflict) );
@@ -5902,7 +5905,43 @@ RETCODE SCIPaddVarImplication(
          return SCIP_OKAY;
       }
    }
-   
+   else
+   {
+      /* add the corresponding variable lower or upper bound for y */
+      if( impltype == SCIP_BOUNDTYPE_UPPER )
+      {
+         Real oldub;
+
+         oldub = SCIPvarGetUbGlobal(implvar);
+         if( varfixing == FALSE )
+         {
+            /* "x == 0  ==>  y <= newub": add VUB "y <= newub + (oldub-newub) * x" */
+            CHECK_OKAY( SCIPvarAddVub(implvar, scip->mem->solvemem, scip->set, var, oldub - implbound, implbound) );
+         }
+         else
+         {
+            /* "x == 1  ==>  y <= newub": add VUB "y <= oldub + (newub-oldub) * x" */
+            CHECK_OKAY( SCIPvarAddVub(implvar, scip->mem->solvemem, scip->set, var, implbound - oldub, oldub) );
+         }
+      }
+      else
+      {
+         Real oldlb;
+
+         oldlb = SCIPvarGetLbGlobal(implvar);
+         if( varfixing == FALSE )
+         {
+            /* "x == 0  ==>  y >= newlb": add VLB "y >= newlb + (oldlb-newlb) * x" */
+            CHECK_OKAY( SCIPvarAddVlb(implvar, scip->mem->solvemem, scip->set, var, oldlb - implbound, implbound) );
+         }
+         else
+         {
+            /* "x == 1  ==>  y >= newlb": add VLB "y >= oldlb + (newlb-oldlb) * x" */
+            CHECK_OKAY( SCIPvarAddVlb(implvar, scip->mem->solvemem, scip->set, var, implbound - oldlb, oldlb) );
+         }
+      }
+   }
+
    return SCIP_OKAY;
 }
 

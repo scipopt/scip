@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.8 2005/01/21 09:16:45 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.9 2005/03/15 13:43:34 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -136,6 +136,8 @@ BEGIN {
 /^Solution/ {
    tottime   = $4;
    bbnodes   = $11;
+}
+/^=ready=/ {
    sbab     += bbnodes;
    scut     += cuts;
    stottime += tottime;

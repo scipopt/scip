@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.28 2005/03/14 16:10:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.29 2005/03/15 13:43:34 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -36,7 +36,7 @@
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
 #define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MAXRELIABLE     32.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
 #define DEFAULT_SBITEROFS    20000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     4      /**< maximal number of further variables evaluated without better score */
@@ -270,6 +270,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       Real bestsbfracscore;
       Real bestsbdomainscore;
       Real prio;
+      Real reliable;
       Real maxlookahead;
       Real lookahead;
       Longint nodenum;
@@ -278,7 +279,6 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       int maxdepth;
       int maxbdchgs;
       int nintvars;
-      int reliable;
       int bestpscand;
       int bestsbcand;
       int inititer;

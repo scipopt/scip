@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.152 2005/02/16 17:46:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.153 2005/03/15 13:43:35 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1335,59 +1335,123 @@ RETCODE vboundsEnsureSize(
    return SCIP_OKAY;
 }
 
+/** binary searches the insertion position of the given variable in the vbounds data structure */
+static
+RETCODE vboundsSearchPos(
+   VBOUNDS*         vbounds,            /**< variable bounds data structure, or NULL */
+   VAR*             var,                /**< variable to search in vbounds data structure */
+   int*             insertpos,          /**< pointer to store position where to insert new entry */
+   Bool*            found               /**< pointer to store whether the same variable was found at the returned pos */
+   )
+{
+   int left;
+   int right;
+   int middle;
+
+   assert(insertpos != NULL);
+   assert(found != NULL);
+
+   /* check for empty vbounds data */
+   if( vbounds == NULL )
+   {
+      *insertpos = 0;
+      *found = FALSE;
+      return SCIP_OKAY;
+   }
+   assert(vbounds->len >= 1);
+
+   /* binary search for the given variable */
+   left = -1;
+   right = vbounds->len;
+   while( left < right-1 )
+   {
+      middle = (left+right)/2;
+      assert(0 <= middle && middle < vbounds->len);
+      if( var < vbounds->vars[middle] )
+         right = middle;
+      else if( var > vbounds->vars[middle] )
+         left = middle;
+      else
+      {
+         *insertpos = middle;
+         *found = TRUE;
+         return SCIP_OKAY;
+      }
+   }
+
+   *insertpos = right;
+   *found = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** adds a variable bound to the variable bounds data structure */
 static
 RETCODE vboundsAdd(
    VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   BOUNDTYPE        vboundtype,         /**< type of variable bound (LOWER or UPPER) */
    VAR*             var,                /**< variable z    in x <= b*z + d  or  x >= b*z + d */
    Real             coef,               /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
    Real             constant            /**< constant d    in x <= b*z + d  or  x >= b*z + d */
    )
 {
-   /**@todo don't add redundant variable bounds */
+   int insertpos;
+   Bool found;
+
    assert(vbounds != NULL);
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
-   CHECK_OKAY( vboundsEnsureSize(vbounds, blkmem, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
-   assert(*vbounds != NULL);
-
-   (*vbounds)->vars[(*vbounds)->len] = var;
-   (*vbounds)->coefs[(*vbounds)->len] = coef;
-   (*vbounds)->constants[(*vbounds)->len] = constant;
-   (*vbounds)->len++;
-
-   return SCIP_OKAY;
-}
-
-/** replaces bounding variables in variable bounds by their active problem variable counterparts */
-static
-RETCODE vboundsUseActiveVars(
-   VBOUNDS*         vbounds             /**< variable bounds data structure */
-   )
-{
-   int i;
-
-   if( vbounds == NULL )
-      return SCIP_OKAY;
-
-   for( i = 0; i < vbounds->len; ++i )
+   /* identify insertion position of variable */
+   CHECK_OKAY( vboundsSearchPos(*vbounds, var, &insertpos, &found) );
+   if( found )
    {
-      /* transform linear sum  b*z + d  into  b'*z' + d'  with active problem variable z' */
-      CHECK_OKAY( SCIPvarGetProbvarSum(&vbounds->vars[i], &vbounds->coefs[i], &vbounds->constants[i]) );
-      
-      /* if the bounding variable was reduced to a constant, remove the entry from the vbounds */
-      if( vbounds->vars[i] == NULL )
+      /* the same variable already exists in the vbounds data structure: use the better vbound */
+      assert(*vbounds != NULL);
+      assert(0 <= insertpos && insertpos < (*vbounds)->len);
+      assert((*vbounds)->vars[insertpos] == var);
+
+      if( vboundtype == SCIP_BOUNDTYPE_UPPER )
       {
-         vbounds->vars[i] = vbounds->vars[vbounds->len-1];
-         vbounds->coefs[i] = vbounds->coefs[vbounds->len-1];
-         vbounds->constants[i] = vbounds->constants[vbounds->len-1];
-         vbounds->len--;
-         i--;
+         if( constant + MIN(coef, 0.0) < (*vbounds)->constants[insertpos] + MIN((*vbounds)->coefs[insertpos], 0.0) )
+         {
+            (*vbounds)->coefs[insertpos] = coef;
+            (*vbounds)->constants[insertpos] = constant;
+         }
       }
+      else
+      {
+         if( constant + MAX(coef, 0.0) > (*vbounds)->constants[insertpos] + MAX((*vbounds)->coefs[insertpos], 0.0) )
+         {
+            (*vbounds)->coefs[insertpos] = coef;
+            (*vbounds)->constants[insertpos] = constant;
+         }
+      }
+   }
+   else
+   {
+      int i;
+
+      /* the given variable does not yet exist in the vbounds */
+      CHECK_OKAY( vboundsEnsureSize(vbounds, blkmem, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
+      assert(*vbounds != NULL);
+      assert(0 <= insertpos && insertpos <= (*vbounds)->len);
+      assert(0 <= insertpos && insertpos < (*vbounds)->size);
+
+      /* insert variable at the correct position */
+      for( i = (*vbounds)->len; i > insertpos; --i )
+      {
+         (*vbounds)->vars[i] = (*vbounds)->vars[i-1];
+         (*vbounds)->coefs[i] = (*vbounds)->coefs[i-1];
+         (*vbounds)->constants[i] = (*vbounds)->constants[i-1];
+      }
+      (*vbounds)->vars[insertpos] = var;
+      (*vbounds)->coefs[insertpos] = coef;
+      (*vbounds)->constants[insertpos] = constant;
+      (*vbounds)->len++;
    }
 
    return SCIP_OKAY;
@@ -1487,7 +1551,7 @@ RETCODE implicsEnsureSize(
    return SCIP_OKAY;
 }
 
-/** searches if variable y is allready contained in implications for x <= 0 or x >= 1
+/** searches if variable y is already contained in implications for x <= 0 or x >= 1
  *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper) 
  */
 static
@@ -1524,7 +1588,6 @@ RETCODE implicsSearchVar(
       left = 0;
       right = (*implics)->nbinimpls[varfixing] - 1;
       assert(left <= right);
-
    }
    else
    {
@@ -1543,7 +1606,7 @@ RETCODE implicsSearchVar(
 
    /* searches for y */
    middle = (left + right) / 2;
-   while( left <= right && (*implics)->implvars[varfixing][middle] != implvar)
+   while( left <= right && (*implics)->implvars[varfixing][middle] != implvar )
    {
       if( implvar < (*implics)->implvars[varfixing][middle] ) 
          right = middle - 1;
@@ -1641,12 +1704,12 @@ RETCODE implicsAdd(
    /* don't add redundant implications with respect to global bounds:
     *    y >= b     if b <= lb (global lower bound of y) and
     *    y <= b     if b >= ub (global upper bound of y) */
-   if( ( impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLE(set, implbound, SCIPvarGetLbGlobal(implvar)) ) 
-      || ( impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGE(set, implbound, SCIPvarGetUbGlobal(implvar)) ) )
+   if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLE(set, implbound, SCIPvarGetLbGlobal(implvar)) ) 
+      || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasGE(set, implbound, SCIPvarGetUbGlobal(implvar)) ) )
    {
       return SCIP_OKAY;
    }
-   /* searches if variable is allready contained in implications data structure */
+   /* searches if variable is already contained in implications data structure */
    if( *implics != NULL )
    {
       CHECK_OKAY( implicsSearchVar(implics, implvar, impltype, varfixing, &poslower, &posupper, &posadd) );
@@ -1665,13 +1728,13 @@ RETCODE implicsAdd(
    {
       /* add y >= b if not redundant and if it does not cause a conflict in x */
 
-      if( poslower < INT_MAX && SCIPsetIsLE(set, implbound, (*implics)->implbounds[varfixing][poslower]) )
+      if( poslower < INT_MAX && SCIPsetIsFeasLE(set, implbound, (*implics)->implbounds[varfixing][poslower]) )
       {
          /* y >= b is redundant */
          return SCIP_OKAY;
       }      
 
-      if( posupper < INT_MAX && SCIPsetIsGT(set, implbound, (*implics)->implbounds[varfixing][posupper]) )
+      if( posupper < INT_MAX && SCIPsetIsFeasGT(set, implbound, (*implics)->implbounds[varfixing][posupper]) )
       {      
          /* y >= b causes conflict for x (i.e. y <= a (with a < b) is also valid) */
          *conflict = TRUE;
@@ -1681,7 +1744,7 @@ RETCODE implicsAdd(
       if( posadd == poslower )
       {
          /* add y >= b by changing old entry on poslower */
-         assert(SCIPsetIsGT(set, implbound, (*implics)->implbounds[varfixing][poslower]));
+         assert(SCIPsetIsFeasGT(set, implbound, (*implics)->implbounds[varfixing][poslower]));
          (*implics)->implbounds[varfixing][poslower] = implbound;
 
          return SCIP_OKAY;
@@ -1713,13 +1776,13 @@ RETCODE implicsAdd(
    {
       /* add y <= b if not redundant and if it does not cause a conflict in x */
 
-      if( posupper < INT_MAX && SCIPsetIsGE(set, implbound, (*implics)->implbounds[varfixing][posupper]) )
+      if( posupper < INT_MAX && SCIPsetIsFeasGE(set, implbound, (*implics)->implbounds[varfixing][posupper]) )
       {
          /* y <= b is redundant */
          return SCIP_OKAY;
       }      
 
-      if( poslower < INT_MAX && SCIPsetIsLT(set, implbound, (*implics)->implbounds[varfixing][poslower]) )
+      if( poslower < INT_MAX && SCIPsetIsFeasLT(set, implbound, (*implics)->implbounds[varfixing][poslower]) )
       {      
          /* y <= b causes conflict for x (i.e. y >= a (with a > b) is also valid) */
          *conflict = TRUE;
@@ -1729,7 +1792,7 @@ RETCODE implicsAdd(
       if( posadd == posupper )
       {
          /* add y <= b by changing old entry on posupper */
-         assert(SCIPsetIsLT(set, implbound,(*implics)->implbounds[varfixing][posupper]));
+         assert(SCIPsetIsFeasLT(set, implbound,(*implics)->implbounds[varfixing][posupper]));
          (*implics)->implbounds[varfixing][posupper] = implbound;
 
          return SCIP_OKAY;
@@ -1760,6 +1823,7 @@ RETCODE implicsAdd(
     
    return SCIP_OKAY;
 }
+
 
 
 
@@ -5217,7 +5281,7 @@ RETCODE SCIPvarAddVlb(
       if( vlbvar != NULL )
       {
          /* add variable bound to the variable bounds list */
-         CHECK_OKAY( vboundsAdd(&var->vlbs, blkmem, set, vlbvar, vlbcoef, vlbconstant) );
+         CHECK_OKAY( vboundsAdd(&var->vlbs, blkmem, set, SCIP_BOUNDTYPE_LOWER, vlbvar, vlbcoef, vlbconstant) );
       }
       break;
       
@@ -5234,15 +5298,15 @@ RETCODE SCIPvarAddVlb(
       {
          /* a > 0 -> add variable lower bound */
          CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, vlbvar,
-                        vlbcoef/var->data.aggregate.scalar,
-                        (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               vlbcoef/var->data.aggregate.scalar,
+               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable upper bound */
          CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, vlbvar,
-                        vlbcoef/var->data.aggregate.scalar,
-                        (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               vlbcoef/var->data.aggregate.scalar,
+               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else
       {
@@ -5261,7 +5325,7 @@ RETCODE SCIPvarAddVlb(
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       CHECK_OKAY( SCIPvarAddVub(var->negatedvar, blkmem, set, vlbvar,
-                     -vlbcoef, var->data.negate.constant - vlbconstant) );
+            -vlbcoef, var->data.negate.constant - vlbconstant) );
       break;
       
    default:
@@ -5305,7 +5369,7 @@ RETCODE SCIPvarAddVub(
       if( vubvar != NULL )
       {
          /* add variable bound to the variable bounds list */
-         CHECK_OKAY( vboundsAdd(&var->vubs, blkmem, set, vubvar, vubcoef, vubconstant) );
+         CHECK_OKAY( vboundsAdd(&var->vubs, blkmem, set, SCIP_BOUNDTYPE_UPPER, vubvar, vubcoef, vubconstant) );
       }
       break;
       
@@ -5322,15 +5386,15 @@ RETCODE SCIPvarAddVub(
       {
          /* a > 0 -> add variable upper bound */
          CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, vubvar,
-                        vubcoef/var->data.aggregate.scalar,
-                        (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               vubcoef/var->data.aggregate.scalar,
+               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable lower bound */
          CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, vubvar,
-                        vubcoef/var->data.aggregate.scalar,
-                        (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               vubcoef/var->data.aggregate.scalar,
+               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else
       {
@@ -5349,13 +5413,55 @@ RETCODE SCIPvarAddVub(
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       CHECK_OKAY( SCIPvarAddVlb(var->negatedvar, blkmem, set, vubvar,
-                     -vubcoef, var->data.negate.constant - vubconstant) );
+            -vubcoef, var->data.negate.constant - vubconstant) );
       break;
       
    default:
       errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
+
+   return SCIP_OKAY;
+}
+
+/** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
+RETCODE SCIPvarUseActiveVbds(
+   VAR*             var,                /**< problem variable */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   VBOUNDS* oldvlbs;
+   VBOUNDS* oldvubs;
+   int i;
+
+   assert(var != NULL);
+
+   /* remember variable bounds data, and remove them from the variable */
+   oldvlbs = var->vlbs;
+   oldvubs = var->vubs;
+   var->vlbs = NULL;
+   var->vubs = NULL;
+
+   /* reinsert all variable bounds */
+   if( oldvlbs != NULL )
+   {
+      for( i = 0; i < oldvlbs->len; ++i )
+      {
+         CHECK_OKAY( SCIPvarAddVlb(var, blkmem, set, oldvlbs->vars[i], oldvlbs->coefs[i], oldvlbs->constants[i]) );
+      }
+   }
+   if( oldvubs != NULL )
+   {
+      for( i = 0; i < oldvubs->len; ++i )
+      {
+         CHECK_OKAY( SCIPvarAddVub(var, blkmem, set, oldvubs->vars[i], oldvubs->coefs[i], oldvubs->constants[i]) );
+      }
+   }
+
+   /* free the old variable bound data structures */
+   vboundsFree(&oldvlbs, blkmem);
+   vboundsFree(&oldvubs, blkmem);
 
    return SCIP_OKAY;
 }
@@ -5472,19 +5578,6 @@ RETCODE SCIPvarAddImplic(
       errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-
-   return SCIP_OKAY;
-}
-
-/** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
-RETCODE SCIPvarUseActiveVbds(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   CHECK_OKAY( vboundsUseActiveVars(var->vlbs) );
-   CHECK_OKAY( vboundsUseActiveVars(var->vubs) );
 
    return SCIP_OKAY;
 }

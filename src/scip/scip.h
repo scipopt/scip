@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.217 2005/03/02 19:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.218 2005/03/15 13:43:35 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2005,14 +2005,16 @@ RETCODE SCIPaddVarVub(
    );
 
 /** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
- *  if y is binary variable the corresponding valid implication for y is allso added
+ *  if y is binary, the corresponding valid implication for y is also added;
+ *  if y is non-binary, the corresponding variable lower or upper bound for y is also added
  */
 RETCODE SCIPaddVarImplication(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
-   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER)
+                                         *                          or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
    Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    );

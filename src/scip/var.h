@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.89 2005/02/14 13:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.90 2005/03/15 13:43:36 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -588,7 +588,9 @@ RETCODE SCIPvarAddVub(
 /** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
 extern
 RETCODE SCIPvarUseActiveVbds(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b */

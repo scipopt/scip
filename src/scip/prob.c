@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.70 2005/02/28 13:26:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.71 2005/03/15 13:43:35 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -959,16 +959,16 @@ RETCODE SCIPprobExitPresolve(
    /* check, wheter objective value is always integral */
    SCIPprobCheckObjIntegral(prob, set);
 
-   /* replace variables in variable bounds with active problem variables */
-   for( v = 0; v < prob->nvars; ++v )
-   {
-      CHECK_OKAY( SCIPvarUseActiveVbds(prob->vars[v]) );
-   }
-
    /* use active variables in implication graph */
    for( v = 0; v < prob->nbinvars; v++ )
    {
       CHECK_OKAY( SCIPvarUseActiveImplics(prob->vars[v], blkmem, set, stat, lp, branchcand, eventqueue, infeasible) );
+   }
+
+   /* replace variables in variable bounds with active problem variables */
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      CHECK_OKAY( SCIPvarUseActiveVbds(prob->vars[v], blkmem, set) );
    }
 
    return SCIP_OKAY;

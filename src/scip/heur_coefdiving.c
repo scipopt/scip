@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.29 2005/03/02 19:04:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.30 2005/03/15 13:43:34 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -48,7 +48,7 @@
 
 #define DEFAULT_MINRELDEPTH         0.0  /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0  /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT       0.02 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT       0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8  /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                           *   where diving is performed */
 #define DEFAULT_MAXDIVEAVGQUOT      4.0  /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)

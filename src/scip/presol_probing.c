@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.11 2005/02/14 13:35:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.12 2005/03/15 13:43:35 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -69,6 +69,7 @@ struct PresolData
    int              nfixings;           /**< total number of fixings found in probing */
    int              naggregations;      /**< total number of aggregations found in probing */
    int              nimplications;      /**< total number of implications found in probing */
+   int              nbdchgs;            /**< total number of bound changes found in probing */
    Bool             called;             /**< was probing applied at least once? */
 };
 
@@ -177,6 +178,7 @@ DECL_PRESOLINIT(presolInitProbing)
    presoldata->nfixings = 0;
    presoldata->naggregations = 0;
    presoldata->nimplications = 0;
+   presoldata->nbdchgs = 0;
 
    return SCIP_OKAY;
 }
@@ -354,9 +356,9 @@ DECL_PRESOLEXEC(presolExecProbing)
       /* display probing status */
       if( (i+1) % 1000 == 0 )
       {
-         SCIPmessage(scip, SCIP_VERBLEVEL_FULL, "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications\n", 
+         SCIPmessage(scip, SCIP_VERBLEVEL_FULL, "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n", 
             SCIPgetSolvingTime(scip), i+1, nbinvars, 100.0*(Real)(i+1)/(Real)nbinvars,
-            presoldata->nfixings, presoldata->naggregations, presoldata->nimplications);
+            presoldata->nfixings, presoldata->naggregations, presoldata->nimplications, presoldata->nbdchgs);
       }
 
       /* ignore variables, that were fixed or aggregated in prior probings */
@@ -404,102 +406,186 @@ DECL_PRESOLEXEC(presolExecProbing)
       }
 
       /* analyze probing deductions */
-      for( j = 0; j < nbinvars && !cutoff; ++j )
+      for( j = 0; j < nvars && !cutoff; ++j )
       {
+         Real newlb;
+         Real newub;
          Bool fixed;
-         Bool redundant;
-         Bool aggregated;
 
          if( j == i )
             continue;
 
-         if( zeroubs[j] < 0.5 && oneubs[j] < 0.5 )
+         /* new bounds of the variable is the union of the propagated bounds of the zero and one case */
+         newlb = MIN(zerolbs[j], onelbs[j]);
+         newub = MAX(zeroubs[j], oneubs[j]);
+
+         /* check for fixed variables */
+         if( SCIPisFeasEQ(scip, newlb, newub) )
          {
             /* in both probings, variable j is deduced to 0: fix variable to 0 */
-            debugMessage("fixing variable <%s> to 0 due to probing on <%s> with nlocks=(%d/%d)\n",
-               SCIPvarGetName(vars[j]), SCIPvarGetName(vars[i]),
-               SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-            CHECK_OKAY( SCIPfixVar(scip, vars[j], 0.0, &cutoff, &fixed) );
+            debugMessage("fixing variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+               SCIPvarGetName(vars[j]), (newlb+newub)/2.0,
+               SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+            CHECK_OKAY( SCIPfixVar(scip, vars[j], (newlb+newub)/2.0, &cutoff, &fixed) );
             if( fixed )
             {
                (*nfixedvars)++;
                presoldata->nfixings++;
                nuseless = 0;
             }
+            continue;
          }
-         else if( zerolbs[j] > 0.5 && onelbs[j] > 0.5 )
+
+         if( j < nbinvars )
          {
-            /* in both probings, variable j is deduced to 1: fix variable to 1 */
-            debugMessage("fixing variable <%s> to 1 due to probing on <%s> with nlocks=(%d/%d)\n",
-               SCIPvarGetName(vars[j]), SCIPvarGetName(vars[i]),
-               SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-            CHECK_OKAY( SCIPfixVar(scip, vars[j], 1.0, &cutoff, &fixed) );
-            if( fixed )
+            Bool redundant;
+            Bool aggregated;
+
+            assert(SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY);
+
+            /* check for aggregations and implications on binary variables */
+            if( zeroubs[j] < 0.5 && onelbs[j] > 0.5 )
             {
-               (*nfixedvars)++;
-               presoldata->nfixings++;
-               nuseless = 0;
+               /* variable j is always deduced to the same value as probing variable i:
+                * both variables can be aggregated with x_i - x_j == 0
+                */
+               debugMessage("aggregating variables <%s> == <%s>, nlocks=(%d/%d)\n",
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), 
+                  SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+               CHECK_OKAY( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, -1.0, 0.0, &cutoff, &redundant, &aggregated) );
+               if( aggregated )
+               {
+                  (*naggrvars)++;
+                  presoldata->naggregations++;
+                  nuseless = 0;
+               }
+            }
+            else if( zerolbs[j] > 0.5 && oneubs[j] < 0.5 )
+            {
+               /* variable j is always deduced to the opposite value of probing variable i:
+                * both variables can be aggregated with x_i + x_j == 1
+                */
+               debugMessage("aggregating variables <%s> == 1 - <%s>, nlocks=(%d/%d)\n",
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]),
+                  SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+               CHECK_OKAY( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, 1.0, 1.0, &cutoff, &redundant, &aggregated) );
+               if( aggregated )
+               {
+                  (*naggrvars)++;
+                  presoldata->naggregations++;
+                  nuseless = 0;
+               }
+            }
+            else if( zeroubs[j] < 0.5 )
+            {
+               /* insert implication: x_i == 0  =>  x_j == 0 */
+               debugMessage("found implication <%s> == 0  =>  <%s> == 0\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0, &cutoff) );
+               presoldata->nimplications++;
+            }
+            else if( zerolbs[j] > 0.5 )
+            {
+               /* insert implication: x_i == 0  =>  x_j == 1 */
+               debugMessage("found implication <%s> == 0  =>  <%s> == 1\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff) );
+               presoldata->nimplications++;
+            }
+            else if( oneubs[j] < 0.5 )
+            {
+               /* insert implication: x_i == 1  =>  x_j == 0 */
+               debugMessage("found implication <%s> == 1  =>  <%s> == 0\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0, &cutoff) );
+               presoldata->nimplications++;
+            }
+            else if( onelbs[j] > 0.5 )
+            {
+               /* insert implication: x_i == 1  =>  x_j == 1 */
+               debugMessage("found implication <%s> == 1  =>  <%s> == 1\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff) );
+               presoldata->nimplications++;
             }
          }
-         else if( zeroubs[j] < 0.5 && onelbs[j] > 0.5 )
+         else
          {
-            /* variable j is always deduced to the same value as probing variable i:
-             * both variables can be aggregated with x_i - x_j == 0
-             */
-            debugMessage("aggregating variables <%s> == <%s>, nlocks=(%d/%d)\n",
-               SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), 
-               SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-            CHECK_OKAY( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, -1.0, 0.0, &cutoff, &redundant, &aggregated) );
-            if( aggregated )
+            Real oldlb;
+            Real oldub;
+            Bool tightened;
+
+            assert(SCIPvarGetType(vars[j]) != SCIP_VARTYPE_BINARY);
+
+            /* check for bound tightenings */
+            oldlb = SCIPvarGetLbGlobal(vars[j]);
+            oldub = SCIPvarGetUbGlobal(vars[j]);
+            if( SCIPisLbBetter(scip, newlb, oldlb) )
             {
-               (*naggrvars)++;
-               presoldata->naggregations++;
-               nuseless = 0;
+               /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
+               debugMessage("tighten lower bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+                  SCIPvarGetName(vars[j]), oldlb, oldub, newlb,
+                  SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+               CHECK_OKAY( SCIPtightenVarLb(scip, vars[j], newlb, &cutoff, &tightened) );
+               if( tightened )
+               {
+                  (*nchgbds)++;
+                  presoldata->nbdchgs++;
+                  nuseless = 0;
+               }
             }
-         }
-         else if( zerolbs[j] > 0.5 && oneubs[j] < 0.5 )
-         {
-            /* variable j is always deduced to the opposite value of probing variable i:
-             * both variables can be aggregated with x_i + x_j == 1
-             */
-            debugMessage("aggregating variables <%s> == 1 - <%s>, nlocks=(%d/%d)\n",
-               SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]),
-               SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-            CHECK_OKAY( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, 1.0, 1.0, &cutoff, &redundant, &aggregated) );
-            if( aggregated )
+            if( SCIPisUbBetter(scip, newub, oldub) )
             {
-               (*naggrvars)++;
-               presoldata->naggregations++;
-               nuseless = 0;
+               /* in both probings, variable j is deduced to be at most newub: tighten upper bound */
+               debugMessage("tighten upper bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+                  SCIPvarGetName(vars[j]), oldlb, oldub, newub,
+                  SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+               CHECK_OKAY( SCIPtightenVarUb(scip, vars[j], newub, &cutoff, &tightened) );
+               if( tightened )
+               {
+                  (*nchgbds)++;
+                  presoldata->nbdchgs++;
+                  nuseless = 0;
+               }
             }
-         }
-         else if( zeroubs[j] < 0.5 )
-         {
-            /* insert implication: x_i == 0  =>  x_j == 0 */
-            debugMessage("found implication <%s> == 0  =>  <%s> == 0\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0, &cutoff) );
-            presoldata->nimplications++;
-         }
-         else if( zerolbs[j] > 0.5 )
-         {
-            /* insert implication: x_i == 0  =>  x_j == 1 */
-            debugMessage("found implication <%s> == 0  =>  <%s> == 1\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff) );
-            presoldata->nimplications++;
-         }
-         else if( oneubs[j] < 0.5 )
-         {
-            /* insert implication: x_i == 1  =>  x_j == 0 */
-            debugMessage("found implication <%s> == 1  =>  <%s> == 0\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0, &cutoff) );
-            presoldata->nimplications++;
-         }
-         else if( onelbs[j] > 0.5 )
-         {
-            /* insert implication: x_i == 1  =>  x_j == 1 */
-            debugMessage("found implication <%s> == 1  =>  <%s> == 1\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff) );
-            presoldata->nimplications++;
+
+            /* check for implications (only store implications with bounds tightened at least by 0.5) */
+            if( zeroubs[j] < newub - 0.5 )
+            {
+               /* insert implication: x_i == 0  =>  x_j <= zeroubs[j] */
+               debugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] <= %g\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroubs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, zeroubs[j],
+                     &cutoff) );
+               presoldata->nimplications++;
+            }
+            if( zerolbs[j] > newlb + 0.5 )
+            {
+               /* insert implication: x_i == 0  =>  x_j >= zerolbs[j] */
+               debugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zerolbs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, zerolbs[j],
+                     &cutoff) );
+               presoldata->nimplications++;
+            }
+            if( oneubs[j] < newub - 0.5 )
+            {
+               /* insert implication: x_i == 1  =>  x_j <= oneubs[j] */
+               debugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneubs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, oneubs[j],
+                     &cutoff) );
+               presoldata->nimplications++;
+            }
+            if( onelbs[j] > newlb + 0.5 )
+            {
+               /* insert implication: x_i == 1  =>  x_j >= onelbs[j] */
+               debugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onelbs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, onelbs[j],
+                     &cutoff) );
+               presoldata->nimplications++;
+            }
          }
       }
    }

@@ -895,20 +895,20 @@ branching/relpscost/maxdepth = -1
 branching/relpscost/maxbounddist = 1
 
 # minimal value for minimum pseudo cost size to regard pseudo cost value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-branching/relpscost/minreliable = 8
+# [type: real, range: [0,1.79769313486232e+308], default: 1]
+branching/relpscost/minreliable = 1
 
 # maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-branching/relpscost/maxreliable = 8
+# [type: real, range: [0,1.79769313486232e+308], default: 32]
+branching/relpscost/maxreliable = 32
 
 # maximal fraction of strong branching LP iterations compared to node relaxation LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
 branching/relpscost/sbiterquot = 0.5
 
 # additional number of allowed strong branching LP iterations
-# [type: int, range: [0,2147483647], default: 100000]
-branching/relpscost/sbiterofs = 100000
+# [type: int, range: [0,2147483647], default: 20000]
+branching/relpscost/sbiterofs = 20000
 
 # maximal number of further variables evaluated without better score
 # [type: int, range: [1,2147483647], default: 4]
@@ -951,8 +951,8 @@ heuristics/coefdiving/minreldepth = 0
 heuristics/coefdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
-heuristics/coefdiving/maxlpiterquot = 0.02
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/coefdiving/maxlpiterquot = 0.05
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1059,8 +1059,8 @@ heuristics/fracdiving/minreldepth = 0
 heuristics/fracdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
-heuristics/fracdiving/maxlpiterquot = 0.02
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/fracdiving/maxlpiterquot = 0.05
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1103,8 +1103,8 @@ heuristics/guideddiving/minreldepth = 0
 heuristics/guideddiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
-heuristics/guideddiving/maxlpiterquot = 0.02
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/guideddiving/maxlpiterquot = 0.05
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1147,8 +1147,8 @@ heuristics/linesearchdiving/minreldepth = 0
 heuristics/linesearchdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
-heuristics/linesearchdiving/maxlpiterquot = 0.02
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/linesearchdiving/maxlpiterquot = 0.05
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1263,8 +1263,8 @@ heuristics/pscostdiving/minreldepth = 0
 heuristics/pscostdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
-heuristics/pscostdiving/maxlpiterquot = 0.02
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/pscostdiving/maxlpiterquot = 0.05
 
 # maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -1589,6 +1589,10 @@ display/maxdepth/active = 1
 # display activation status of display column <plungedepth> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
 display/plungedepth/active = 1
+
+# display activation status of display column <nfrac> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nfrac/active = 1
 
 # display activation status of display column <vars> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
