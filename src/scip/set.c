@@ -16,27 +16,52 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   domain.h
- * @brief  datastructures and methods for managing domains of variables
+/**@file   set.c
+ * @brief  global SCIP settings
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __DOMAIN_H__
-#define __DOMAIN_H__
+#include <assert.h>
 
-enum BoundType
+#include "memory.h"
+#include "set.h"
+
+#define DEFAULT_EPSZERO       1e-09
+#define DEFAULT_MEMGROWFAC    1.2
+#define DEFAULT_MEMGROWADD    4
+#define DEFAULT_MEMGROWINIT   4
+
+SET* SCIPcreateSet(                     /**< creates global SCIP settings */
+   void
+   )
 {
-   SCIP_BOUNDTYPE_LOWER = 0,            /**< lower bound */
-   SCIP_BOUNDTYPE_UPPER = 1             /**< upper bound */
-};
-typedef enum BoundType BOUNDTYPE;
+   SET* set;
+   
+   ALLOC_NULL( allocMemory(set) );
+   set->epsZero = DEFAULT_EPSZERO;
+   set->memGrowFac = DEFAULT_MEMGROWFAC;
+   set->memGrowAdd = DEFAULT_MEMGROWADD;
+   set->memGrowInit = DEFAULT_MEMGROWINIT;
 
-typedef struct Domain DOMAIN;           /**< datastructures for storing domains of variables */
-typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an integer variable */
-typedef struct DomainChg DOMAINCHG;     /**< changes in domains of variables */
-typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
-typedef struct HoldChg HOLECHG;         /**< changes in holelist of variables */
+   return set;
+}
 
-#endif
+int SCIPcalcMemGrowSize(                /**< calculate memory size for dynamically allocated arrays */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   int size;
+
+   assert(set->memGrowAdd >= 1);
+   assert(set->memGrowInit >= 0);
+
+   /* calculate the size with this loop, such that the resulting numbers are allways the same (-> block memory) */
+   size = set->memGrowInit;
+   while( size < num )
+      size = set->memGrowFac * size + set->memGrowAdd;
+
+   return size;
+}

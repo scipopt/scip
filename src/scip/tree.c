@@ -61,8 +61,8 @@ struct Node                             /**< node data structure */
       SUBROOT*      subroot;            /**< data for subroot nodes */
    } data;
    NODE*            parent;             /**< parent node in the tree */
-   CONSLIST*        conslist;           /**< active constraints */
-   DOMAINCHG*       domainChg;          /**< list of domain changes */
+   CONSLIST*        conslist;           /**< full list of active constraints */
+   VARDOMCHG*       vardomChg;          /**< list of domain changes at this node */
    double           lowerbound;         /**< lower (dual) LP bound of subtree */
    unsigned int     depth:16;           /**< depth in the tree */
    unsigned int     nodetype:2;         /**< type of node */
@@ -317,7 +317,7 @@ NODE* SCIPcreateLeaf(                   /**< creates a leaf node */
    ALLOC_NULL( node->data.leaf = createLeafData(mem) );
    node->parent = NULL;
    node->conslist = NULL;
-   node->domainChg = NULL;
+   node->vardomChg = NULL;
 
    if( parent == NULL )
    {
@@ -368,7 +368,7 @@ void SCIPfreeNode(                      /**< frees node */
    /* free common data */
    dismissParent(mem, *node);
    SCIPfreeConslist(mem, &((*node)->conslist));
-   SCIPfreeDomainChg(mem, &((*node)->domainChg));
+   SCIPfreeVardomChg(mem, &((*node)->vardomChg));
 
    freeBlockMemory(mem->treemem, *node);
 }

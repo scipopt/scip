@@ -1,12 +1,15 @@
 $(OBJDIR)/bitencode.o: src/bitencode.c src/def.h src/bitencode.h
-$(OBJDIR)/constraint.o: src/constraint.c src/constraint.h src/scip.h \
- src/retcode.h src/domain.h
-$(OBJDIR)/domain.o: src/domain.c src/domain.h
-$(OBJDIR)/lp.o: src/lp.c src/lp.h src/memory.h src/def.h src/lpi.h src/retcode.h \
- src/bitencode.h
+$(OBJDIR)/constraint.o: src/constraint.c src/constraint.h src/scip.h src/retcode.h \
+  src/lp.h src/def.h src/mem.h src/memory.h src/set.h src/stat.h \
+  src/lpi.h
+$(OBJDIR)/lp.o: src/lp.c src/stat.h src/lp.h src/def.h src/mem.h src/memory.h \
+  src/set.h src/lpi.h src/retcode.h
 $(OBJDIR)/memory.o: src/memory.c src/memory.h src/def.h
-$(OBJDIR)/scip.o: src/scip.c src/tree.h src/scip.h
+$(OBJDIR)/scip.o: src/scip.c src/tree.h src/lp.h src/def.h src/mem.h src/memory.h \
+  src/set.h src/stat.h src/lpi.h src/retcode.h src/scip.h
+$(OBJDIR)/set.o: src/set.c src/memory.h src/def.h src/set.h
 $(OBJDIR)/sort.o: src/sort.c src/memory.h src/def.h src/retcode.h src/sort.h
-$(OBJDIR)/tree.o: src/tree.c src/def.h src/lp.h src/memory.h src/lpi.h \
- src/retcode.h src/constraint.h src/scip.h src/domain.h src/sort.h \
- src/tree.h
+$(OBJDIR)/stat.o: src/stat.c src/memory.h src/def.h src/stat.h
+$(OBJDIR)/tree.o: src/tree.c src/def.h src/constraint.h src/scip.h src/retcode.h \
+  src/lp.h src/mem.h src/memory.h src/set.h src/stat.h src/lpi.h \
+  src/sort.h src/tree.h

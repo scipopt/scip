@@ -16,31 +16,26 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip.h
- * @brief  SCIP callable library
+/**@file   stat.c
+ * @brief  problem statistics
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_H__
-#define __SCIP_H__
-
-#include "retcode.h"
+#include "memory.h"
+#include "stat.h"
 
 
-typedef struct Scip SCIP;
+STAT* SCIPcreateStat(                   /**< creates problem statistics data */
+   void
+   )
+{
+   STAT* stat;
+   
+   ALLOC_NULL( allocMemory(stat) );
+   stat->numcolidx = 0;
+   stat->numrowidx = 0;
 
-
-extern
-RETCODE SCIPaddRow(void);
-
-extern
-RETCODE SCIPaddCol(void);
-
-extern
-RETCODE SCIPaddConstraint(void);
-
-
-
-#endif
+   return stat;
+}

@@ -16,46 +16,27 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   domain.c
- * @brief  datastructures and methods for managing domains of variables
+/**@file   stat.h
+ * @brief  problem statistics
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "domain.h"
+#ifndef __STAT_H__
+#define __STAT_H__
 
-struct Domain
+struct Stat
 {
-   double*          lb;                 /**< lower bounds of variables */
-   double*          ub;                 /**< upper bounds of variables */
-   HOLELIST*        holelist;           /**< list of holes for each integer variable */
+   int              numcolidx;          /**< number of used column indices */
+   int              numrowidx;          /**< number of used row indices */
 };
+typedef struct Stat STAT;
 
-struct Holelist
-{
-   int              first;              /**< first value of hole */
-   int              last;               /**< last value of hole */
-   HOLELIST*        next;               /**< next hole in list */
-};
 
-struct DomainChg
-{
-   BOUNDCHG*        boundchg;           /**< changes in bounds of variables */
-   HOLECHG*         holechg;            /**< changes in hole lists */
-};
+extern
+STAT* SCIPcreateStat(                   /**< creates problem statistics data */
+   void
+   );
 
-struct BoundChg
-{
-   unsigned int     boundtype:1;        /**< type of bound: lower or upper bound */
-   unsigned int     col:31;             /**< column number */
-   double           newbound;           /**< new value for bound */
-   double           oldbound;           /**< old value for bound */
-};
-
-struct HoleChg
-{
-   HOLELIST**       ptr;                /**< changed list pointer */
-   HOLELIST*        newlist;            /**< new value of list pointer */
-   HOLELIST*        oldlist;            /**< old value of list pointer */
-};
+#endif

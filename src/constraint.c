@@ -47,3 +47,6 @@ struct ConsList
    CONSTRAINT*      constraint;         /**< pointer to constraint data structure */
    CONSLIST*        next;               /**< next list entry */
 };
+
+
+

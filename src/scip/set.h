@@ -16,31 +16,35 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip.h
- * @brief  SCIP callable library
+/**@file   set.h
+ * @brief  global SCIP settings
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_H__
-#define __SCIP_H__
+#ifndef __SET_H__
+#define __SET_H__
 
-#include "retcode.h"
-
-
-typedef struct Scip SCIP;
+struct Set
+{
+   double           epsZero;            /**< absolute values smaller than this are considered zero */
+   double           memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
+   int              memGrowAdd;         /**< memory growing constant for dynamically allocated arrays */
+   int              memGrowInit;        /**< initial size of dynamically allocated arrays */
+};
+typedef struct Set SET;
 
 
 extern
-RETCODE SCIPaddRow(void);
+SET* SCIPcreateSet(                     /**< creates global SCIP settings */
+   void
+   );
 
 extern
-RETCODE SCIPaddCol(void);
-
-extern
-RETCODE SCIPaddConstraint(void);
-
-
+int SCIPcalcMemGrowSize(                /**< calculate memory size for dynamically allocated arrays */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
 
 #endif

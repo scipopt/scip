@@ -37,8 +37,8 @@ typedef struct memory_header MEMHDR;
 #define allocMemorySize(ptr,size)          ((ptr) = allocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
 #define allocMemoryCPP(size)               allocMemory_call( (size_t)(size), __FILE__, __LINE__ )
 #define allocMemoryArrayCPP(num,size)      allocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
-#define reallocMemoryArray(ptr,num)        reallocMemory_call( (ptr), (num)*sizeof(*(ptr)), __FILE__, __LINE__ )
-#define reallocMemorySize(ptr,size)        reallocMemory_call( (ptr), (size_t)(size), __FILE__, __LINE__ )
+#define reallocMemoryArray(ptr,num)        ((ptr) = reallocMemory_call( (ptr), (num)*sizeof(*(ptr)), __FILE__, __LINE__ ))
+#define reallocMemorySize(ptr,size)        ((ptr) = reallocMemory_call( (ptr), (size_t)(size), __FILE__, __LINE__ ))
 #define copyMemory(ptr, source)            copyMemory_call( (void*)(ptr), (const void*)source, sizeof(*(ptr)) )
 #define copyMemoryArray(ptr, source, num)  copyMemory_call( (void*)(ptr), (const void*)source, (num)*sizeof(*(ptr)) )
 #define copyMemorySize(ptr, source, size)  copyMemory_call( (void*)(ptr), (const void*)source, (size_t)(size) )
@@ -62,6 +62,9 @@ typedef struct memory_header MEMHDR;
 
 #define allocBlockMemory(mem,ptr)          ((ptr) = allocBlockMemory_call((mem),sizeof(*(ptr)),__FILE__,__LINE__))
 #define allocBlockMemoryArray(mem,ptr,num) ((ptr) = allocBlockMemory_call((mem),(num)*sizeof(*(ptr)),__FILE__,__LINE__))
+#define reallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
+                                           ((ptr) = reallocBlockMemory_call((mem),(ptr),(oldnum)*sizeof(*(ptr)), \
+                                           (newnum)*sizeof(*(ptr)),__FILE__,__LINE__))
 #define duplicateBlockMemory(mem, ptr, source) \
                                            ((ptr) = duplicateBlockMemory_call((mem), (const void*)source, \
                                            sizeof(*(ptr)), __FILE__, __LINE__ ))
@@ -128,6 +131,8 @@ void destroyBlockMemory_call( MEMHDR** mem,
  */
 void* allocBlockMemory_call( MEMHDR* mem, size_t size,
 			     const char *filename, int line );
+
+void * reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line);
 
 void * duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const char *filename, int line);
 

@@ -1109,6 +1109,26 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
 }
 
 void *
+reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line)
+{
+   void* newptr;
+
+   assert(ptr != NULL);
+
+   alignSize(&oldsize);
+   alignSize(&newsize);
+   if( oldsize == newsize )
+      return ptr;
+
+   newptr = allocBlockMemory_call(mem, newsize, filename, line);
+   if( newptr != NULL )
+      copyMemory_call(newptr, ptr, MIN(oldsize, newsize));
+   freeBlockMemory_call(mem, &ptr, oldsize, filename, line);
+   
+   return newptr;
+}
+
+void *
 duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const char *filename, int line)
 {
    void   *ptr = NULL;
@@ -1117,6 +1137,7 @@ duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const ch
    ptr = allocBlockMemory_call(mem, size, filename, line);
    if( ptr != NULL )
       copyMemory_call(ptr, source, size);
+
    return ptr;
 }
 

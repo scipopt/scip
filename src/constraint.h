@@ -28,7 +28,7 @@
 
 #include "scip.h"
 #include "retcode.h"
-#include "domain.h"
+#include "lp.h"
 
 typedef struct ConsHdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct Constraint CONSTRAINT;   /**< constraint data structure */
@@ -64,7 +64,7 @@ typedef void CONSDATA;                  /**< constraint type specific data; defa
  *    SCIP_OKAY   : propagator was skipped
  *    neg. values : error codes
  */
-#define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* self, CONSTRAINT* constraint, DOMAIN* domain)
+#define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* self, CONSTRAINT* constraint, VARDOM* vardom)
 
 
 
