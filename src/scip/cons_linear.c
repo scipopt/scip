@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.153 2005/03/09 14:10:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.154 2005/03/09 14:10:46 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2312,9 +2312,7 @@ RETCODE tightenVarBounds(
          Real newub;
 
          newub = (rhs - minresactivity)/val;
-         printf("A rhs: %.9f, minresact: %.9f, val: %.9f -> newub: %.9f\n", rhs, minresactivity, val, newub); /*????????????????*/
          newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
-         printf("B rhs: %.9f, minresact: %.9f, val: %.9f -> newub: %.9f\n", rhs, minresactivity, val, newub); /*????????????????*/
          if( SCIPisUbBetter(scip, newub, ub) )
          {
             /* tighten upper bound */
