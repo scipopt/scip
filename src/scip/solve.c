@@ -1043,7 +1043,7 @@ RETCODE SCIPsolveCIP(
                   assert(cutoff || lp->solved);
                   
                   /* reduced cost bound strengthening */
-                  if( !cutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+                  if( FALSE && /*????????????????*/!cutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
                      && !SCIPsetIsInfinity(set, primal->upperbound)
                      && SCIPsetIsLT(set, SCIPlpGetObjval(lp), primal->upperbound) )
                   {
