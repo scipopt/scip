@@ -85,6 +85,7 @@ parameters:
 - new parameter lp/checkstability to disable stability check of LP solver's result code
 - default parameter branching/relpscost/minreliable changed to 1.0
 - default parameter branching/relpscost/maxreliable changed to 32.0
+- default parameter branching/relpscost/maxlookahead changed to 8
 - default parameter branching/relpscost/sbiterofs changed to 20000
 - default parameter heuristics/coefdiving/maxlpiterquot changed to 0.05
 - default parameter heuristics/fracdiving/maxlpiterquot changed to 0.05

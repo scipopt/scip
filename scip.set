@@ -911,8 +911,8 @@ branching/relpscost/sbiterquot = 0.5
 branching/relpscost/sbiterofs = 20000
 
 # maximal number of further variables evaluated without better score
-# [type: int, range: [1,2147483647], default: 4]
-branching/relpscost/maxlookahead = 4
+# [type: int, range: [1,2147483647], default: 8]
+branching/relpscost/maxlookahead = 8
 
 # maximal number of candidates initialized with strong branching per node
 # [type: int, range: [0,2147483647], default: 100]

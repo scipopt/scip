@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.29 2005/03/15 13:43:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.30 2005/03/17 08:44:53 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -39,7 +39,7 @@
 #define DEFAULT_MAXRELIABLE     32.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
 #define DEFAULT_SBITEROFS    20000      /**< additional number of allowed strong branching LP iterations */
-#define DEFAULT_MAXLOOKAHEAD     4      /**< maximal number of further variables evaluated without better score */
+#define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
 #define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
