@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.37 2005/02/04 10:24:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.38 2005/02/04 12:51:35 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -451,7 +451,16 @@ Real* SCIPvarGetVubConstants(
 /** gets number of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x, 
  *  there are no implications for nonbinary variable x
  */
-int SCIPvarGetNimpl(
+int SCIPvarGetNImpls(
+   VAR*             var,                /**< problem variable */
+   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   );
+
+/** gets number of implications  y <= 0 or y >= 1 for x <= 0 or x >= 1 of given variable x with binary y, 
+ *  there are no implications for nonbinary variable x
+ */
+extern
+int SCIPvarGetNBinImpls(
    VAR*             var,                /**< problem variable */
    Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
@@ -459,7 +468,7 @@ int SCIPvarGetNimpl(
 /** gets array with implication variables y of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
  *  there are no implications for nonbinary variable x
  */
-VAR** SCIPvarGetImplvars(
+VAR** SCIPvarGetImplVars(
    VAR*             var,                /**< problem variable */
    Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
@@ -468,7 +477,7 @@ VAR** SCIPvarGetImplvars(
  *  (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
  *  there are no implications for nonbinary variable x
  */
-BOUNDTYPE* SCIPvarGetImpltypes(
+BOUNDTYPE* SCIPvarGetImplTypes(
    VAR*             var,                /**< problem variable */
    Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
@@ -476,7 +485,7 @@ BOUNDTYPE* SCIPvarGetImpltypes(
 /** gets array with implication bounds b of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
  *  there are no implications for nonbinary variable x
  */
-Real* SCIPvarGetImplbounds(
+Real* SCIPvarGetImplBounds(
    VAR*             var,                /**< problem variable */
    Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
@@ -537,10 +546,11 @@ Real* SCIPvarGetImplbounds(
 #define SCIPvarGetVubVars(var)          ((var)->vubs != NULL ? (var)->vubs->vars : NULL)
 #define SCIPvarGetVubCoefs(var)         ((var)->vubs != NULL ? (var)->vubs->coefs : NULL)
 #define SCIPvarGetVubConstants(var)     ((var)->vubs != NULL ? (var)->vubs->constants : NULL)
-#define SCIPvarGetNimpl(var, fix)       ((var)->implics != NULL ? (var)->implics->nimpls[fix] : 0)
-#define SCIPvarGetImplvars(var, fix)    ((var)->implics != NULL ? (var)->implics->implvars[fix] : NULL)
-#define SCIPvarGetImpltypes(var, fix)   ((var)->implics != NULL ? (var)->implics->impltypes[fix] : NULL)
-#define SCIPvarGetImplbounds(var, fix)  ((var)->implics != NULL ? (var)->implics->implbounds[fix] : NULL)
+#define SCIPvarGetNImpls(var, fix)      ((var)->implics != NULL ? (var)->implics->nimpls[fix] : 0)
+#define SCIPvarGetNBinImpls(var, fix)   ((var)->implics != NULL ? (var)->implics->nbinimpls[fix] : 0)
+#define SCIPvarGetImplVars(var, fix)    ((var)->implics != NULL ? (var)->implics->implvars[fix] : NULL)
+#define SCIPvarGetImplTypes(var, fix)   ((var)->implics != NULL ? (var)->implics->impltypes[fix] : NULL)
+#define SCIPvarGetImplBounds(var, fix)  ((var)->implics != NULL ? (var)->implics->implbounds[fix] : NULL)
 #endif
 
 /** gets best local bound of variable with respect to the objective function */

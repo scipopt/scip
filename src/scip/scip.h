@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.203 2005/02/04 10:24:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.204 2005/02/04 12:51:35 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1968,7 +1968,7 @@ RETCODE SCIPaddVarVub(
 /** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
  *  if y is binary variable the corresponding valid implication for y is allso added
  */
-RETCODE SCIPaddVarImplic(
+RETCODE SCIPaddVarImplication(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
@@ -4303,6 +4303,13 @@ RETCODE SCIPprintDisplayLine(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file,               /**< output file (or NULL for standard output) */
    VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
+   );
+
+/** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool */
+extern
+RETCODE SCIPwriteImplicationConflictGraph(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename            /**< file name, or NULL for stdout */
    );
 
 /**@} */

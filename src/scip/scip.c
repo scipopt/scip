@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.255 2005/02/04 10:44:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.256 2005/02/04 12:51:35 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5798,7 +5798,7 @@ RETCODE SCIPaddVarVub(
 /** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
  *  if y is binary variable the corresponding valid implication for y is allso added
  */
-RETCODE SCIPaddVarImplic(
+RETCODE SCIPaddVarImplication(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
@@ -5811,7 +5811,7 @@ RETCODE SCIPaddVarImplic(
    Bool conflict;
    Bool fixed;
 
-   CHECK_OKAY( checkStage(scip, "SCIPaddVarImplic", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    *infeasible = FALSE;
     
    if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
@@ -11533,6 +11533,86 @@ RETCODE SCIPprintDisplayLine(
    {
       CHECK_OKAY( SCIPdispPrintLine(scip->set, scip->stat, file, TRUE) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool */
+RETCODE SCIPwriteImplicationConflictGraph(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename            /**< file name, or NULL for stdout */
+   )
+{
+   FILE* file;
+   VAR** vars;
+   int nvars;
+   int v;
+
+   CHECK_OKAY( checkStage(scip, "SCIPwriteImplicationConflictGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   /* open file */
+   if( filename == NULL )
+      file = stdout;
+   else
+   {
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         errorMessage("cannot create file <%s>\n", filename);
+         return SCIP_FILECREATEERROR;
+      }
+   }
+
+   vars = scip->transprob->vars;
+   nvars = scip->transprob->nbinvars;
+
+   /* write header */
+   fprintf(file, "digraph implconfgraph {\n");
+
+   /* store nodes */
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarGetNImpls(vars[v], TRUE) > 0 )
+         fprintf(file, "pos%d [label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
+      if( SCIPvarGetNImpls(vars[v], FALSE) > 0 )
+         fprintf(file, "neg%d [style=filled,fillcolor=red,label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
+      if( SCIPvarGetNImpls(vars[v], TRUE) > 0 && SCIPvarGetNImpls(vars[v], FALSE) > 0 )
+         fprintf(file, "pos%d -> neg%d [dir=both];\n", v, v);
+   }
+   
+   /* store edges */
+   for( v = 0; v < nvars; ++v )
+   {
+      int fix;
+
+      for( fix = 0; fix <= 1; ++fix )
+      {
+         VAR** implvars;
+         BOUNDTYPE* impltypes;
+         int nimpls;
+         int i;
+
+         nimpls = SCIPvarGetNBinImpls(vars[v], fix);
+         implvars = SCIPvarGetImplVars(vars[v], fix);
+         impltypes = SCIPvarGetImplTypes(vars[v], fix);
+         for( i = 0; i < nimpls; ++i )
+         {
+            int implidx;
+            
+            implidx = SCIPvarGetProbindex(implvars[i]);
+            if( implidx > v )
+               fprintf(file, "%s%d -> %s%d [dir=none];\n", fix == TRUE ? "pos" : "neg", v, 
+                  impltypes[i] == SCIP_BOUNDTYPE_UPPER ? "pos" : "neg", implidx);
+         }
+      }
+   }
+
+   /* write footer */
+   fprintf(file, "}\n");
+
+   /* close file */
+   if( filename != NULL )
+      fclose(file);
 
    return SCIP_OKAY;
 }

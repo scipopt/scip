@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.22 2005/01/21 09:16:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.23 2005/02/04 12:51:34 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -42,6 +42,10 @@ DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
 /** dialog execution method for the checksol command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecChecksol);
+
+/** dialog execution method for the conflictgraph command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecConflictgraph);
 
 /** dialog execution method for the display branching command */
 extern

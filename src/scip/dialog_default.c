@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.43 2005/02/02 19:34:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.44 2005/02/04 12:51:34 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -151,6 +151,40 @@ DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    printf("\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the conflictgraph command */
+DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
+{  /*lint --e{715}*/
+   RETCODE retcode;
+   const char* filename;
+
+   if( !SCIPisTransformed(scip) )
+   {
+      printf("cannot call method before problem was transformed\n");
+      SCIPdialoghdlrClearBuffer(dialoghdlr);
+   }
+   else
+   {
+      filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+
+      if( filename[0] != '\0' )
+      {
+         CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
+         retcode = SCIPwriteImplicationConflictGraph(scip, filename);
+         if( retcode == SCIP_FILECREATEERROR )
+            printf("error writing file <%s>\n", filename);
+         else
+         {
+            CHECK_OKAY( retcode );
+         }
+      }
+   }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
 }
@@ -1352,6 +1386,16 @@ RETCODE SCIPincludeDialogDefault(
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecChecksol, NULL,
             "checksol", "double checks best solution w.r.t. original problem", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* conflictgraph */
+   if( !SCIPdialogHasEntry(root, "conflictgraph") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecConflictgraph, NULL,
+            "conflictgraph", "writes binary variable implications of transformed problem as conflict graph to file",
+            FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

@@ -19,6 +19,7 @@ interface:
 - removed method SCIPsolGetObj() - use SCIPgetSolOrigObj() or SCIPgetSolTransObj() instead
 - additional parameter "checkbounds" for SCIPtrySol(), SCIPtrySolFree(), SCIPcheckSol()
 - new method SCIPcreateOrigSol()
+- new method SCIPwriteImplicationConflictGraph()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
