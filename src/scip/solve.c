@@ -80,12 +80,14 @@ RETCODE initRootLP(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< LP data */
+   LP*              lp,                 /**< LP data */
+   SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    VAR* var;
    COL* col;
    int v;
+   int h;
 
    assert(lp != NULL);
    assert(lp->ncols == 0);
@@ -120,6 +122,17 @@ RETCODE initRootLP(
    }
    assert(lp->nremoveablecols == 0);
 
+   debugMessage("adding initial rows\n");
+
+   /* add LP relaxations of all initial constraints to LP */
+   for( h = 0; h < set->nconshdlrs; ++h )
+   {
+      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], memhdr, set, prob, sepastore) );
+   }
+
+   /* apply found cuts */
+   CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, tree, lp) );
+
    return SCIP_OKAY;
 }
 
@@ -132,6 +145,7 @@ RETCODE solveNodeInitialLP(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
+   SEPASTORE*       sepastore,          /**< separation storage */
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    )
 {
@@ -150,7 +164,7 @@ RETCODE solveNodeInitialLP(
    if( tree->actnode->depth == 0 )
    {
       assert(stat->lpcount == 0);
-      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp) );
+      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, sepastore) );
    }
 
    /* only the bounds and the constraint list may have been changed since the LP state node
@@ -821,7 +835,7 @@ RETCODE SCIPsolveCIP(
                if( !initiallpsolved )
                {
                   /* load and solve the initial LP of the node */
-                  CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, eventfilter) );
+                  CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, sepastore, eventfilter) );
                   assert(lp->solved);
                   initiallpsolved = TRUE;
                }

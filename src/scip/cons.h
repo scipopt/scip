@@ -81,6 +81,20 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  */ 
 #define DECL_CONSTRANS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* sourcecons, CONS** targetcons)
 
+/** LP initialization method of constraint handler
+ *
+ *  Puts the LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
+ *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
+ *  of all initial constraints to the LP with calls to SCIPaddCut().
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ */
+#define DECL_CONSINITLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+
 /** separation method of constraint handler
  *
  *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
@@ -412,10 +426,14 @@ struct Cons
    int              checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int              propconsspos;       /**< position of constraint in the handler's propconss array */
    int              arraypos;           /**< position of constraint in the node's/problem's addedconss/conss array */
+   unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
    unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
    unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
+   unsigned int     local:1;            /**< TRUE iff constraint is only valid locally */
+   unsigned int     modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
+   unsigned int     removeable:1;       /**< TRUE iff constraint should be removed from the LP due to aging or cleanup */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
    unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
@@ -475,6 +493,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
    DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
    DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
@@ -508,6 +527,16 @@ extern
 RETCODE SCIPconshdlrExit(
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** calls LP initialization method of constraint handler to separate all initial constraints */
+extern
+RETCODE SCIPconshdlrInitLP(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** calls separator method of constraint handler to separate all constraints added after last conshdlrReset() call */
@@ -922,10 +951,14 @@ RETCODE SCIPconsCreate(
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
    );
 
@@ -1079,6 +1112,12 @@ Bool SCIPconsIsEnabled(
    CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
+extern
+Bool SCIPconsIsInitial(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint should be separated during LP processing */
 extern
 Bool SCIPconsIsSeparated(
@@ -1103,6 +1142,24 @@ Bool SCIPconsIsPropagated(
    CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint is only locally valid */
+extern
+Bool SCIPconsIsLocal(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint is modifiable (subject to column generation) */
+extern
+Bool SCIPconsIsModifiable(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint should be removed from the LP due to aging or cleanup */
+extern
+Bool SCIPconsIsRemoveable(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is belonging to original problem */
 extern
 Bool SCIPconsIsOriginal(
@@ -1120,10 +1177,14 @@ Bool SCIPconsIsOriginal(
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
+#define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
+#define SCIPconsIsLocal(cons)           (cons)->local
+#define SCIPconsIsModifiable(cons)      (cons)->modifiable
+#define SCIPconsIsRemoveable(cons)      (cons)->removeable
 #define SCIPconsIsOriginal(cons)        (cons)->original
 
 #endif

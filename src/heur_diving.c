@@ -41,18 +41,22 @@
  * Default parameter settings
  */
 
-#define SCIP_DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound)
-                                              *   where diving is performed */
-#define SCIP_DEFAULT_MAXDIVEAVGQUOT      4.0 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                              *   where diving is performed */
-#define SCIP_DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet */
-#define SCIP_DEFAULT_MAXDIVEAVGQUOTNOSOL 8.0 /**< maximal AVGQUOT when no solution was found yet */
+#define DEFAULT_DIVESTARTDEPTH      0.5 /**< minimal relative depth to start diving */
+#define DEFAULT_MAXLPITERQUOT       0.2 /**< maximal fraction of diving LP iterations compared to total iteration number */
+#define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound)
+                                         *   where diving is performed */
+#define DEFAULT_MAXDIVEAVGQUOT      4.0 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                         *   where diving is performed */
+#define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet */
+#define DEFAULT_MAXDIVEAVGQUOTNOSOL 8.0 /**< maximal AVGQUOT when no solution was found yet */
 
 
 
 /* locally defined heuristic data */
 struct HeurData
 {
+   Real             divestartdepth;     /**< minimal relative depth to start diving */
+   Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
    Real             maxdiveubquot;      /**< maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound)
                                          *   where diving is performed */
    Real             maxdiveavgquot;     /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
@@ -115,7 +119,11 @@ DECL_HEUREXEC(SCIPheurExecDiving)
    Bool mayrounddown;
    Bool mayroundup;
    Bool roundup;
+   Longint nlpiterations;
+   Longint ndivinglpiterations;
+   int nsolsfound;
    int nlpcands;
+   int startnlpcands;
    int actdepth;
    int maxdepth;
    int maxdivedepth;
@@ -135,20 +143,27 @@ DECL_HEUREXEC(SCIPheurExecDiving)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* only try to dive, if we are in the lower 20% of the tree */
-   actdepth = SCIPgetActDepth(scip);
-   maxdepth = SCIPgetMaxDepth(scip);
-   if( actdepth < 0.8*maxdepth )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* don't try to dive, if we are in the higher fraction of the tree, given by divestartdepth */
+   actdepth = SCIPgetActDepth(scip);
+   maxdepth = SCIPgetMaxDepth(scip);
+   if( actdepth < heurdata->divestartdepth*maxdepth )
+      return SCIP_OKAY;
+
+   /* don't try to dive, if we took too many LP iterations during diving */
+   nlpiterations = SCIPgetNLPIterations(scip);
+   ndivinglpiterations = SCIPgetNDivingLPIterations(scip);
+   if( ndivinglpiterations > heurdata->maxlpiterquot*nlpiterations )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
    /* calculate the objective search bound */
-   if( SCIPgetNSolsFound(scip) == 0 )
+   nsolsfound = SCIPgetNSolsFound(scip);
+   if( nsolsfound == 0 )
    {
       searchubbound = SCIPgetTransLowerbound(scip)
          + heurdata->maxdiveubquotnosol * (SCIPgetTransUpperbound(scip) - SCIPgetTransLowerbound(scip));
@@ -182,12 +197,18 @@ DECL_HEUREXEC(SCIPheurExecDiving)
 
    /* dive as long we are in the given objective limits and fractional variables exist
     * if the last rounding was in a direction, that never destroys feasibility, we continue in any case
+    * if possible, we dive at least with the depth 10
+    * if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
    divedepth = 0;
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
+   startnlpcands = nlpcands;
    while( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
-      && (bestcandmayrounddown || bestcandmayroundup || (divedepth < maxdivedepth && objval < searchbound)) )
+      && (bestcandmayrounddown || bestcandmayroundup
+         || divedepth < 10
+         || nlpcands <= startnlpcands - divedepth/2
+         || (divedepth < maxdivedepth && objval < searchbound)) )
    {
       divedepth++;
 
@@ -202,7 +223,7 @@ DECL_HEUREXEC(SCIPheurExecDiving)
       bestcand = -1;
       bestcandmayrounddown = TRUE;
       bestcandmayroundup = TRUE;
-      bestfrac = 1.0;
+      bestfrac = 100.0;
       for( c = 0; c < nlpcands; ++c )
       {
          var = lpcands[c];
@@ -210,12 +231,16 @@ DECL_HEUREXEC(SCIPheurExecDiving)
          mayroundup = SCIPvarMayRoundUp(var);
          if( mayrounddown || mayroundup )
          {
-            /* the candidate may be rounded */
+            /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
             if( bestcandmayrounddown || bestcandmayroundup )
             {
+               /* choose rounding direction: if variable may be rounded in both directions, round to the nearest integer;
+                * if we found already a feasible solution, round to the nearest integer for the first 10 roundings;
+                * otherwise, round in the direction, that does not destroy feasibility
+                */
                frac = lpcandsfrac[c];
                roundup = FALSE;
-               if( (mayrounddown && mayroundup) || divedepth < 10 )
+               if( (mayrounddown && mayroundup) || (nsolsfound > 0 && divedepth <= 10) )
                {
                   if( frac > 0.5 )
                   {
@@ -228,6 +253,8 @@ DECL_HEUREXEC(SCIPheurExecDiving)
                   frac = 1.0 - frac;
                   roundup = TRUE;
                }
+
+               /* check, if candidate is new best candidate */
                if( frac < bestfrac )
                {
                   bestcand = c;
@@ -248,6 +275,14 @@ DECL_HEUREXEC(SCIPheurExecDiving)
                frac = 1.0-frac;
                roundup = TRUE;
             }
+
+            /* penalize too small fractions */
+            if( frac < 0.01 )
+               frac += 10.0;
+            else if( frac < 0.1 )
+               frac += 1.0;
+            
+            /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
             if( bestcandmayrounddown || bestcandmayroundup || frac < bestfrac )
             {
                bestcand = c;
@@ -267,6 +302,10 @@ DECL_HEUREXEC(SCIPheurExecDiving)
          /* the variable is already fixed -> numerical troubles -> abort diving */
          break;
       }
+
+      /* every 10th diving depth, round in opposite direction */
+      if( !bestcandmayrounddown && !bestcandmayroundup && divedepth % 10 == 0 )
+         bestcandroundup = !bestcandroundup;
 
       /* apply rounding of best candidate */
       if( bestcandroundup )
@@ -346,18 +385,40 @@ RETCODE SCIPincludeHeurDiving(
 {
    HEURDATA* heurdata;
 
-   /* allocate and initialise heuristic data; this has to be freed in the destructor */
+   /* allocate heuristic data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
-   heurdata->maxdiveubquot = SCIP_DEFAULT_MAXDIVEUBQUOT;
-   heurdata->maxdiveavgquot = SCIP_DEFAULT_MAXDIVEAVGQUOT;
-   heurdata->maxdiveubquotnosol = SCIP_DEFAULT_MAXDIVEUBQUOTNOSOL;
-   heurdata->maxdiveavgquotnosol = SCIP_DEFAULT_MAXDIVEAVGQUOTNOSOL;
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_PSEUDONODES,
                   SCIPheurFreeDiving, NULL, NULL, SCIPheurExecDiving,
                   heurdata) );
 
+   /* diving heuristic parameters */
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristic/diving/divestartdepth", 
+                  "minimal relative depth to start diving",
+                  &heurdata->divestartdepth, DEFAULT_DIVESTARTDEPTH, 0.0, 1.0, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristic/diving/maxlpiterquot", 
+                  "maximal fraction of diving LP iterations compared to total iteration number",
+                  &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristic/diving/maxdiveubquot",
+                  "maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
+                  &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristic/diving/maxdiveavgquot", 
+                  "maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
+                  &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_INVALID, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristic/diving/maxdiveubquotnosol", 
+                  "maximal UBQUOT when no solution was found yet",
+                  &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "heuristic/diving/maxdiveavgquotnosol", 
+                  "maximal AVGQUOT when no solution was found yet",
+                  &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_INVALID, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 

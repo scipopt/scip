@@ -322,6 +322,11 @@ RETCODE SCIPsetCreate(
                   "epsilon for deciding if a cut is violated",
                   &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_INVALID/10.0,
                   NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/numerics/cutviolepsroot",
+                  "epsilon for deciding if a cut is violated in the root node",
+                  &(*set)->cutviolepsroot, 0.05*SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_INVALID/10.0,
+                  NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
                   "global/memory/memsavefac",
                   "fraction of maximal memory usage resulting in switch to memory saving mode",
@@ -1938,13 +1943,17 @@ Bool SCIPsetIsFeasNegative(
  */
 Bool SCIPsetIsCutViolated(
    const SET*       set,                /**< global SCIP settings */
+   Bool             root,               /**< should the root's cutvioleps be used? */
    Real             cutactivity,        /**< activity of the cut */
    Real             cutrhs              /**< right hand side value of the cut */
    )
 {
    assert(set != NULL);
 
-   return EPSGT(cutactivity, cutrhs, set->cutvioleps);
+   if( root )
+      return EPSGT(cutactivity, cutrhs, set->cutviolepsroot);
+   else
+      return EPSGT(cutactivity, cutrhs, set->cutvioleps);
 }
 
 /** checks, if relative difference of values is in range of epsilon */

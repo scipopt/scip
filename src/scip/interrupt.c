@@ -51,9 +51,12 @@ void interruptHandler(
 {
    ninterrupts++;
    if( ninterrupts >= 5 )
-      abort();
+   {
+      printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
+      exit(1);
+   }
    else
-      printf("pressed CTRL-C %d times (5 times for forcing abort)\n", ninterrupts);
+      printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
 }
 
 /** creates a CTRL-C interrupt data */

@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_varub.c
- * @brief  constraint handler for variable upper bound constraints
+ * @brief  constraint handler for varub constraints
  * @author Tobias Achterberg
  */
 
@@ -30,16 +30,17 @@
 #include "cons_linear.h"
 
 
+/* constraint handler properties */
 #define CONSHDLR_NAME          "varub"
-#define CONSHDLR_DESC          "variable upper bound constraints"
-#define CONSHDLR_SEPAPRIORITY   +600000
-#define CONSHDLR_ENFOPRIORITY   +600000
-#define CONSHDLR_CHECKPRIORITY  -600000
+#define CONSHDLR_DESC          "variable upper bounds of the form  y <= a*x, x binary"
+#define CONSHDLR_SEPAPRIORITY   +000000
+#define CONSHDLR_ENFOPRIORITY   +000000
+#define CONSHDLR_CHECKPRIORITY  +000000
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define LINCONSUPGD_PRIORITY    +600000
+#define LINCONSUPGD_PRIORITY    +000000
 
 
 
@@ -48,6 +49,8 @@
  * Local methods
  */
 
+/* put your local methods here, and declare them static */
+
 
 
 
@@ -55,12 +58,249 @@
  * Callback methods of constraint handler
  */
 
+/* TODO: Implement all necessary constraint handler methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+#if 0
+static
+DECL_CONSFREE(consFreeVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consFreeVarub NULL
+#endif
 
 
+/** initialization method of constraint handler (called when problem solving starts) */
+#if 0
+static
+DECL_CONSINIT(consInitVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
 
-/*
- * Presolving
- */
+   return SCIP_OKAY;
+}
+#else
+#define consInitVarub NULL
+#endif
+
+
+/** deinitialization method of constraint handler (called when problem solving exits) */
+#if 0
+static
+DECL_CONSEXIT(consExitVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consExitVarub NULL
+#endif
+
+
+/** frees specific constraint data */
+#if 0
+static
+DECL_CONSDELETE(consDeleteVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consDeleteVarub NULL
+#endif
+
+
+/** transforms constraint data into data belonging to the transformed problem */ 
+#if 0
+static
+DECL_CONSTRANS(consTransVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consTransVarub NULL
+#endif
+
+
+/** LP initialization method of constraint handler */
+#if 0
+static
+DECL_CONSINITLP(consInitlpVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consInitlpVarub NULL
+#endif
+
+
+/** separation method of constraint handler */
+#if 0
+static
+DECL_CONSSEPA(consSepaVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consSepaVarub NULL
+#endif
+
+
+/** constraint enforcing method of constraint handler for LP solutions */
+static
+DECL_CONSENFOLP(consEnfolpVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+static
+DECL_CONSENFOPS(consEnfopsVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
+/** feasibility check method of constraint handler for integral solutions */
+static
+DECL_CONSCHECK(consCheckVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
+/** domain propagation method of constraint handler */
+#if 0
+static
+DECL_CONSPROP(consPropVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consPropVarub NULL
+#endif
+
+
+/** presolving method of constraint handler */
+#if 0
+static
+DECL_CONSPRESOL(consPresolVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consPresolVarub NULL
+#endif
+
+
+/** conflict variable resolving method of constraint handler */
+#if 0
+static
+DECL_CONSRESCVAR(consRescvarVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consRescvarVarub NULL
+#endif
+
+
+/** constraint activation notification method of constraint handler */
+#if 0
+static
+DECL_CONSACTIVE(consActiveVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consActiveVarub NULL
+#endif
+
+
+/** constraint deactivation notification method of constraint handler */
+#if 0
+static
+DECL_CONSDEACTIVE(consDeactiveVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consDeactiveVarub NULL
+#endif
+
+
+/** constraint enabling notification method of constraint handler */
+#if 0
+static
+DECL_CONSENABLE(consEnableVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consEnableVarub NULL
+#endif
+
+
+/** constraint disabling notification method of constraint handler */
+#if 0
+static
+DECL_CONSDISABLE(consDisableVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+#else
+#define consDisableVarub NULL
+#endif
 
 
 
@@ -69,9 +309,12 @@
  * Linear constraint upgrading
  */
 
+#ifdef LINCONSUPGD_PRIORITY
 static
 DECL_LINCONSUPGD(linconsUpgdVarub)
 {
+   Bool upgrade;
+
    assert(upgdcons != NULL);
    
    /* check, if linear constraint can be upgraded to a variable upper bound constraint
@@ -79,22 +322,44 @@ DECL_LINCONSUPGD(linconsUpgdVarub)
     * - if the non-binary variable coefficient is positive, the right hand side is zero and the left hand side is infinite,
     *   if the non-binary variable coefficient is negative, the left hand side is zero and the right hand side is infinite
     */
-   if( nvars == 2
-      && nposbin + nnegbin == 1 && nposint + nnegint + nposimpl + nnegimpl + nposcont + nnegcont == 1
-      && ((nposint + nposimpl + nposcont == 1 && SCIPisZero(scip, rhs) && SCIPisInfinity(scip, -lhs))
-         || (nnegint + nnegimpl + nnegcont == 1 && SCIPisZero(scip, lhs) && SCIPisInfinity(scip, rhs))) )
+   upgrade = (nvars == 2);
+   upgrade &= (nposbin + nnegbin == 1 && nposint + nnegint + nposimpl + nnegimpl + nposcont + nnegcont == 1);
+   upgrade &= ((nposint + nposimpl + nposcont == 1 && SCIPisZero(scip, rhs) && SCIPisInfinity(scip, -lhs))
+      || (nnegint + nnegimpl + nnegcont == 1 && SCIPisZero(scip, lhs) && SCIPisInfinity(scip, rhs)));
+
+   if( upgrade )
    {
-      debugMessage("upgrading constraint <%s> to variable upper bound constraint\n", SCIPconsGetName(cons));
-      
-      /* create the variable upper bound constraint (an automatically upgraded constraint is always unmodifiable) */
-      CHECK_OKAY( SCIPcreateConsVarub(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, rhs,
-                     SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                     local, FALSE, removeable) );
+      VAR* var;
+      VAR* switchvar;
+      Real val;
+
+      debugMessage("upgrading constraint <%s> to varub constraint\n", SCIPconsGetName(cons));
+
+      /* find out the variable with variable bound, and the bound switching variable */
+      if( SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY )
+      {
+         switchvar = vars[0];
+         var = vars[1];
+         val = -vals[0]/vals[1];
+      }
+      else
+      {
+         switchvar = vars[1];
+         var = vars[0];
+         val = -vals[1]/vals[0];
+      }
+
+      /* create the bin Varub constraint (an automatically upgraded constraint is always unmodifiable) */
+      assert(!SCIPconsIsModifiable(cons));
+      CHECK_OKAY( SCIPcreateConsVarub(scip, upgdcons, SCIPconsGetName(cons), nvars, var, switchvar, val,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                     SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
 }
+#endif
 
 
 
@@ -103,65 +368,80 @@ DECL_LINCONSUPGD(linconsUpgdVarub)
  * constraint specific interface methods
  */
 
-/** creates the handler for variable upper bound constraints and includes it in SCIP */
+/** creates the handler for varub constraints and includes it in SCIP */
 RETCODE SCIPincludeConsHdlrVarub(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   CONSHDLRDATA* conshdlrdata;
+
+   /* create varub constraint handler data */
+   conshdlrdata = NULL;
+   /* TODO: (optional) create constraint handler specific data here */
+
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
-                  CONSHDLR_NEEDSCONS,
-                  NULL, NULL, NULL,
-                  NULL, NULL, 
-                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL, NULL, NULL,
-                  NULL) );
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
+                  consFreeVarub, consInitVarub, consExitVarub,
+                  consDeleteVarub, consTransVarub, consInitlpVarub,
+                  consSepaVarub, consEnfolpVarub, consEnfopsVarub, consCheckVarub, 
+                  consPropVarub, consPresolVarub, consRescvarVarub,
+                  consActiveVarub, consDeactiveVarub, 
+                  consEnableVarub, consDisableVarub,
+                  conshdlrdata) );
 
+#ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdVarub, LINCONSUPGD_PRIORITY) );
+#endif
+
+   /* add varub constraint handler parameters */
+   /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
 }
 
-/** creates and captures a variable upper bound constraint */
+/** creates and captures a varub constraint */
 RETCODE SCIPcreateConsVarub(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
    int              len,                /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             rhs,                /**< right hand side of row */
+   VAR*             var,                /**< variable that has variable bound */
+   VAR*             switchvar,          /**< binary variable to activate bound */
+   Real             val,                /**< bound value */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
 
-   errorMessage("variable upper bound constraint handler not implemented yet");
+   errorMessage("method of varub constraint handler not implemented yet");
    abort();
 
    /* find the linear constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("variable upper bound constraint handler not found");
+      errorMessage("varub constraint handler not found");
       return SCIP_PLUGINNOTFOUND;
    }
 
    /* create constraint data */
    consdata = NULL;
+   /* TODO: create and store constraint specific data here */
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, propagate) );
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

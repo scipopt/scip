@@ -177,6 +177,7 @@ struct Row
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
    Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
+   unsigned int     delaysort:1;        /**< should the row sorting be delayed and done in a lazy fashion? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
    unsigned int     lhschanged:1;       /**< was left hand side or constant changed, and has LP solver to be updated? */
    unsigned int     rhschanged:1;       /**< was right hand side or constant changed, and has LP solver to be updated? */
@@ -463,6 +464,15 @@ RETCODE SCIProwFree(
    LP*              lp                  /**< actual LP data */
    );
 
+/** ensures, that column array of row can store at least num entries */
+extern
+RETCODE SCIProwEnsureSize(
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   );
+
 /** increases usage counter of LP row */
 extern
 void SCIProwCapture(
@@ -494,6 +504,19 @@ RETCODE SCIProwUnlock(
 extern
 void SCIProwSort(
    ROW*             row                 /**< row to be sorted */
+   );
+
+/** enables delaying of row sorting */
+extern
+void SCIProwDelaySort(
+   ROW*             row                 /**< LP row */
+   );
+
+/** disables delaying of row sorting, sorts row and merges coefficients with equal columns */
+extern
+void SCIProwForceSort(
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** forbids roundings of variables in row that may violate row */

@@ -196,13 +196,14 @@ RETCODE ensureRowsSize(
 
 /** ensures, that row array of column can store at least num entries */
 static
-RETCODE ensureColSize(
+RETCODE colEnsureSize(
+   COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   COL*             col,                /**< LP column */
    int              num                 /**< minimum number of entries to store */
    )
 {
+   assert(col != NULL);
    assert(col->len <= col->size);
    
    if( num > col->size )
@@ -221,14 +222,14 @@ RETCODE ensureColSize(
 }
 
 /** ensures, that column array of row can store at least num entries */
-static
-RETCODE ensureRowSize(
+RETCODE SCIProwEnsureSize(
+   ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   ROW*             row,                /**< LP row */
    int              num                 /**< minimum number of entries to store */
    )
 {
+   assert(row != NULL);
    assert(row->len <= row->size);
    
    if( num > row->size )
@@ -263,6 +264,203 @@ DECL_SORTPTRCOMP(cmpCol)
 {
    return ((COL*)elem1)->index - ((COL*)elem2)->index;
 }
+
+
+
+
+/*
+ * Sorting of rows and columns
+ */
+
+/** bubble sort columns in a row */
+static
+void rowBSort(
+   ROW*             row                 /**< LP row */
+   )
+{
+   COL** cols;
+   Real* vals;
+   int* probindex;
+   int* linkpos;
+   COL* tmpcol;
+   Real tmpval;
+   int tmpprobindex;
+   int tmplinkpos;
+   int tmpindex;
+   int firstpos;
+   int lastpos;
+   int actpos;
+   int sortpos;
+
+   assert(row != NULL);
+
+   cols = row->cols;
+   vals = row->vals;
+   probindex = row->cols_probindex;
+   linkpos = row->linkpos;
+
+   firstpos = 0;
+   lastpos = row->len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      actpos = firstpos;
+      sortpos = firstpos;
+      while( actpos < lastpos )
+      {
+         while( actpos < lastpos && cols[actpos]->index <= cols[actpos+1]->index )
+            actpos++;
+         if( actpos >= lastpos )
+            break;
+         assert(cols[actpos]->index > cols[actpos+1]->index);
+         tmpcol = cols[actpos];
+         tmpprobindex = probindex[actpos];
+         tmpval = vals[actpos];
+         tmplinkpos = linkpos[actpos];
+         tmpindex = tmpcol->index;
+         do
+         {
+            cols[actpos] = cols[actpos+1];
+            probindex[actpos] = probindex[actpos+1];
+            vals[actpos] = vals[actpos+1];
+            linkpos[actpos] = linkpos[actpos+1];
+            actpos++;
+         }
+         while( actpos < lastpos && cols[actpos+1]->index < tmpindex );
+         cols[actpos] = tmpcol;
+         probindex[actpos] = tmpprobindex;
+         vals[actpos] = tmpval;
+         linkpos[actpos] = tmplinkpos;
+         sortpos = actpos;
+         actpos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      actpos = lastpos;
+      sortpos = lastpos;
+      while( actpos > firstpos )
+      {
+         while( actpos > firstpos && cols[actpos-1]->index <= cols[actpos]->index )
+            actpos--;
+         if( actpos <= firstpos )
+            break;
+         assert(cols[actpos-1]->index > cols[actpos]->index);
+         tmpcol = cols[actpos];
+         tmpprobindex = probindex[actpos];
+         tmpval = vals[actpos];
+         tmplinkpos = linkpos[actpos];
+         tmpindex = tmpcol->index;
+         do
+         {
+            cols[actpos] = cols[actpos-1];
+            probindex[actpos] = probindex[actpos-1];
+            vals[actpos] = vals[actpos-1];
+            linkpos[actpos] = linkpos[actpos-1];
+            actpos--;
+         }
+         while( actpos > firstpos && cols[actpos-1]->index > tmpindex );
+         cols[actpos] = tmpcol;
+         probindex[actpos] = tmpprobindex;
+         vals[actpos] = tmpval;
+         linkpos[actpos] = tmplinkpos;
+         sortpos = actpos;
+         actpos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
+/** bubble sort columns in a row */
+static
+void colBSort(
+   COL*             col                 /**< LP column */
+   )
+{
+   ROW** rows;
+   Real* vals;
+   int* linkpos;
+   ROW* tmprow;
+   Real tmpval;
+   int tmplinkpos;
+   int tmpindex;
+   int firstpos;
+   int lastpos;
+   int actpos;
+   int sortpos;
+
+   assert(col != NULL);
+
+   rows = col->rows;
+   vals = col->vals;
+   linkpos = col->linkpos;
+
+   firstpos = 0;
+   lastpos = col->len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      actpos = firstpos;
+      sortpos = firstpos;
+      while( actpos < lastpos )
+      {
+         while( actpos < lastpos && rows[actpos]->index <= rows[actpos+1]->index )
+            actpos++;
+         if( actpos >= lastpos )
+            break;
+         assert(rows[actpos]->index > rows[actpos+1]->index);
+         tmprow = rows[actpos];
+         tmpval = vals[actpos];
+         tmplinkpos = linkpos[actpos];
+         tmpindex = tmprow->index;
+         do
+         {
+            rows[actpos] = rows[actpos+1];
+            vals[actpos] = vals[actpos+1];
+            linkpos[actpos] = linkpos[actpos+1];
+            actpos++;
+         }
+         while( actpos < lastpos && rows[actpos+1]->index < tmpindex );
+         rows[actpos] = tmprow;
+         vals[actpos] = tmpval;
+         linkpos[actpos] = tmplinkpos;
+         sortpos = actpos;
+         actpos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      actpos = lastpos;
+      sortpos = lastpos;
+      while( actpos > firstpos )
+      {
+         while( actpos > firstpos && rows[actpos-1]->index <= rows[actpos]->index )
+            actpos--;
+         if( actpos <= firstpos )
+            break;
+         assert(rows[actpos-1]->index > rows[actpos]->index);
+         tmprow = rows[actpos];
+         tmpval = vals[actpos];
+         tmplinkpos = linkpos[actpos];
+         tmpindex = tmprow->index;
+         do
+         {
+            rows[actpos] = rows[actpos-1];
+            vals[actpos] = vals[actpos-1];
+            linkpos[actpos] = linkpos[actpos-1];
+            actpos--;
+         }
+         while( actpos > firstpos && rows[actpos-1]->index > tmpindex );
+         rows[actpos] = tmprow;
+         vals[actpos] = tmpval;
+         linkpos[actpos] = tmplinkpos;
+         sortpos = actpos;
+         actpos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
 
 
 
@@ -442,7 +640,7 @@ RETCODE colAddCoeff(
    if( col->len > 0 )
       col->sorted &= (col->rows[col->len-1]->index < row->index);
 
-   CHECK_OKAY( ensureColSize(memhdr, set, col, col->len+1) );
+   CHECK_OKAY( colEnsureSize(col, memhdr, set, col->len+1) );
    assert(col->rows != NULL);
    assert(col->vals != NULL);
    assert(col->linkpos != NULL);
@@ -551,7 +749,9 @@ RETCODE colChgCoeffPos(
  * local row changing methods
  */
 
-/** searches coefficient in row, returns position in row vector or -1 */
+/** searches coefficient in row, returns position in row vector or -1 if not found;
+ *  if the row is unsorted, and the sorting of the row is delayed, returns -1
+ */
 static
 int rowSearchCoeff(
    ROW*             row,                /**< row to be searched in */
@@ -570,23 +770,26 @@ int rowSearchCoeff(
    /* row has to be sorted, such that binary search works */
    if( !row->sorted )
       SCIProwSort(row);
-   assert(row->sorted);
+   assert(row->sorted || row->delaysort);
 
-   /* binary search */
-   searchidx = col->index;
-   minpos = 0;
-   maxpos = row->len-1;
-   while(minpos <= maxpos)
+   if( row->sorted )
    {
-      actpos = (minpos + maxpos)/2;
-      assert(0 <= actpos && actpos < row->len);
-      actidx = row->cols[actpos]->index;
-      if( searchidx == actidx )
-         return actpos;
-      else if( searchidx < actidx )
-         maxpos = actpos-1;
-      else
-         minpos = actpos+1;
+      /* binary search */
+      searchidx = col->index;
+      minpos = 0;
+      maxpos = row->len-1;
+      while(minpos <= maxpos)
+      {
+         actpos = (minpos + maxpos)/2;
+         assert(0 <= actpos && actpos < row->len);
+         actidx = row->cols[actpos]->index;
+         if( searchidx == actidx )
+            return actpos;
+         else if( searchidx < actidx )
+            maxpos = actpos-1;
+         else
+            minpos = actpos+1;
+      }
    }
 
    return -1;
@@ -723,7 +926,7 @@ RETCODE rowAddCoeff(
    if( row->len > 0 )
       row->sorted &= (row->cols[row->len-1]->index < col->index);
 
-   CHECK_OKAY( ensureRowSize(memhdr, set, row, row->len+1) );
+   CHECK_OKAY( SCIProwEnsureSize(row, memhdr, set, row->len+1) );
    assert(row->cols != NULL);
    assert(row->vals != NULL);
 
@@ -1172,7 +1375,10 @@ void SCIPcolSort(
       int i;
 
       /* sort coefficients */
+#if 0
       SCIPbsortPtrDblInt((void**)(col->rows), col->vals, col->linkpos, col->len, &cmpRow);
+#endif
+      colBSort(col);
 
       /* update links */
       for( i = 0; i < col->len; ++i )
@@ -1973,6 +2179,7 @@ RETCODE SCIProwCreate(
    (*row)->age = 0;
    (*row)->obsoletenode = -1;
    (*row)->sorted = FALSE;
+   (*row)->delaysort = FALSE;
    (*row)->validminmaxidx = FALSE;
    (*row)->lhschanged = FALSE;
    (*row)->rhschanged = FALSE;
@@ -2231,6 +2438,7 @@ RETCODE SCIProwDelCoeff(
    int pos;
 
    assert(row != NULL);
+   assert(!row->delaysort);
    assert(lp != NULL);
    assert(!lp->diving);
    assert(col != NULL);
@@ -2278,6 +2486,7 @@ RETCODE SCIProwChgCoeff(
    int pos;
 
    assert(row != NULL);
+   assert(!row->delaysort);
    assert(lp != NULL);
    assert(!lp->diving);
    assert(col != NULL);
@@ -2341,7 +2550,7 @@ RETCODE SCIProwIncCoeff(
    /* check, if column already exists in the row's col vector */
    if( pos == -1 )
    {
-      /* add previously not existing coefficient */
+      /* coefficient doesn't exist, or sorting is delayed: add coefficient to the end of the row's arrays */
       CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, incval, -1, NULL) );
    }
    else
@@ -2673,12 +2882,17 @@ void SCIProwSort(
    ROW*             row                 /**< row to be sorted */
    )
 {
-   if( !row->sorted )
+   assert(row != NULL);
+
+   if( !row->sorted && !row->delaysort )
    {
       int i;
 
       /* sort coefficients */
+#if 0
       SCIPbsortPtrDblIntInt((void**)(row->cols), row->vals, row->cols_probindex, row->linkpos, row->len, &cmpCol);
+#endif
+      rowBSort(row);
 
       /* update links */
       for( i = 0; i < row->len; ++i )
@@ -2693,6 +2907,96 @@ void SCIProwSort(
 
       row->sorted = TRUE;
    }
+}
+
+/** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry;
+ *  removes zero entries from row
+ *  the row must not be linked to the columns; otherwise, we would need to update the columns as well, which
+ *  is too expensive
+ */
+static
+void rowMerge(
+   ROW*             row,                /**< row to be sorted */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+   assert(!row->delaysort);
+   assert(row->nunlinked == row->len);
+   
+   /* do nothing on empty rows; if row is sorted, nothing has to be done */
+   if( row->len > 0 && !row->sorted )
+   {
+      COL** cols;
+      int* cols_probindex;
+      Real* vals;
+      int s;
+      int t;
+      
+      /* make sure, the row is sorted */
+      SCIProwSort(row);
+      assert(row->sorted);
+      
+      /* merge equal columns */
+      cols = row->cols;
+      cols_probindex = row->cols_probindex;
+      vals = row->vals;
+      assert(cols != NULL);
+      assert(cols_probindex != NULL);
+      assert(vals != NULL);
+      
+      t = 0;
+      assert(!SCIPsetIsZero(set, vals[0]));
+      for( s = 1; s < row->len; ++s )
+      {
+         assert(!SCIPsetIsZero(set, vals[s]));
+         assert(row->linkpos[s] == -1);
+         assert(cols[s]->index >= cols[t]->index);
+         assert(cols[s] == cols[t] || cols[s]->index > cols[t]->index);
+         if( cols[s] == cols[t] )
+         {
+            /* merge entries with equal column */
+            vals[t] += vals[s];
+         }
+         else
+         {
+            /* go to the next entry, overwriting actual entry if coefficient is zero */
+            if( !SCIPsetIsZero(set, vals[t]) )
+               t++;
+            cols[t] = cols[s];
+            cols_probindex[t] = cols_probindex[s];
+            vals[t] = vals[s];
+         }
+      }
+      if( !SCIPsetIsZero(set, vals[t]) )
+         t++;
+      assert(t <= row->len);
+      row->len = t;
+   }
+}
+
+/** enables delaying of row sorting */
+void SCIProwDelaySort(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert(!row->delaysort);
+
+   row->delaysort = TRUE;
+}
+
+/** disables delaying of row sorting, sorts row and merges coefficients with equal columns */
+void SCIProwForceSort(
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+   assert(row->delaysort);
+
+   row->delaysort = FALSE;
+   rowMerge(row, set);
 }
 
 /** recalculates the actual activity of a row */
@@ -4817,6 +5121,8 @@ RETCODE SCIPlpSolvePrimal(
       stat->nprimallps++;
       stat->nlpiterations += iterations;
       stat->nprimallpiterations += iterations;
+      if( lp->diving )
+         stat->ndivinglpiterations += iterations;
    }
 
    debugMessage("solving primal LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);
@@ -4953,6 +5259,8 @@ RETCODE SCIPlpSolveDual(
       stat->nduallps++;
       stat->nlpiterations += iterations;
       stat->nduallpiterations += iterations;
+      if( lp->diving )
+         stat->ndivinglpiterations += iterations;
    }
 
    debugMessage("solving dual LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);

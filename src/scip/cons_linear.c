@@ -1834,6 +1834,34 @@ RETCODE check(
    return SCIP_OKAY;
 }
 
+/** adds linear constraint as cut to the LP */
+static
+RETCODE addCut(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   Real             violation           /**< absolute violation of the constraint */
+   )
+{
+   CONSDATA* consdata;
+   ROW* row;
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   if( consdata->row == NULL )
+   {
+      /* convert lincons object into LP row */
+      CHECK_OKAY( linconsToRow(scip, consdata->lincons, SCIPconsGetName(cons), &consdata->row) );
+   }
+   row = consdata->row;
+   assert(row != NULL);
+   
+   /* insert LP row as cut */
+   CHECK_OKAY( SCIPaddCut(scip, row, violation/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
+
+   return SCIP_OKAY;
+}
+
 /** separates linear constraint: adds linear constraint as cut, if violated by current LP solution */
 static
 RETCODE separate(
@@ -1852,22 +1880,8 @@ RETCODE separate(
 
    if( violated )
    {
-      CONSDATA* consdata;
-      ROW* row;
-
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-
-      if( consdata->row == NULL )
-      {
-         /* convert lincons object into LP row */
-         CHECK_OKAY( linconsToRow(scip, consdata->lincons, SCIPconsGetName(cons), &consdata->row) );
-      }
-      row = consdata->row;
-      assert(row != NULL);
-
       /* insert LP row as cut */
-      CHECK_OKAY( SCIPaddCut(scip, row, violation/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
+      CHECK_OKAY( addCut(scip, cons, violation) );
       *result = SCIP_SEPARATED;
    }
 
@@ -2189,6 +2203,9 @@ DECL_CONSTRANS(consTransLinear)
 
    /* create linear constraint object */
    lincons = sourcedata->lincons;
+   assert(SCIPconsIsLocal(sourcecons) == lincons->local);
+   assert(SCIPconsIsModifiable(sourcecons) == lincons->modifiable);
+   assert(SCIPconsIsRemoveable(sourcecons) == lincons->removeable);
    CHECK_OKAY( linconsCreateTransformed(scip, &targetdata->lincons,
                   lincons->nvars, lincons->vars, lincons->vals, lincons->lhs, lincons->rhs,
                   lincons->local, lincons->modifiable, lincons->removeable) );
@@ -2198,8 +2215,9 @@ DECL_CONSTRANS(consTransLinear)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
-                  SCIPconsIsPropagated(sourcecons)) );
+                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    /* try to upgrade target linear constraint into more specific constraint */
    CHECK_OKAY( SCIPupgradeConsLinear(scip, *targetcons, &upgdcons) );
@@ -2209,6 +2227,22 @@ DECL_CONSTRANS(consTransLinear)
    {
       CHECK_OKAY( SCIPreleaseCons(scip, targetcons) );
       *targetcons = upgdcons;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_CONSINITLP(consInitlpLinear)
+{
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsInitial(conss[c]) )
+      {
+         CHECK_OKAY( addCut(scip, conss[c], 0.0) );
+      }
    }
 
    return SCIP_OKAY;
@@ -3268,9 +3302,9 @@ RETCODE linconsAggregateEqualities(
 
       /* create the new linear constraint */
       CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newrhs, newrhs,
-                     SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
+                     SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
                      SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
-                     lincons0->local, lincons0->modifiable, lincons0->removeable) );
+                     SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
 
       /* update the statistics: we changed all coefficients of the old cons0 */
       (*nchgcoefs) += lincons0->nvars;
@@ -3906,8 +3940,8 @@ RETCODE SCIPincludeConsHdlrLinear(
                   CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeLinear, NULL, NULL,
                   consDeleteLinear, consTransLinear, 
-                  consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, consPropLinear, consPresolLinear,
-                  NULL,
+                  consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
+                  consPropLinear, consPresolLinear, NULL,
                   NULL, NULL, NULL, NULL,
                   conshdlrdata) );
 
@@ -3963,6 +3997,7 @@ RETCODE SCIPcreateConsLinear(
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
@@ -4008,7 +4043,8 @@ RETCODE SCIPcreateConsLinear(
    consdata->row = NULL;
    
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, propagate) );
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -4225,6 +4261,9 @@ RETCODE SCIPupgradeConsLinear(
 
    lincons = consdata->lincons;
    assert(lincons != NULL);
+   assert(lincons->local == SCIPconsIsLocal(cons));
+   assert(lincons->modifiable == SCIPconsIsModifiable(cons));
+   assert(lincons->removeable == SCIPconsIsRemoveable(cons));
 
    /* we cannot upgrade a modifiable linear constraint, since we don't know what additional coefficients to expect */
    if( lincons->modifiable )
@@ -4339,7 +4378,6 @@ RETCODE SCIPupgradeConsLinear(
    {
       CHECK_OKAY( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, cons, lincons->nvars, 
                      lincons->vars, lincons->vals, lincons->lhs, lincons->rhs, 
-                     lincons->local, lincons->removeable,
                      nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
                      ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
                      poscoeffsum, negcoeffsum, integral,

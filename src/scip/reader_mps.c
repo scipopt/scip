@@ -697,16 +697,16 @@ RETCODE readRows(
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
-            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
+                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
             break;
          case 'E' :
-            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0, 
+                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
             break;
          case 'L' :
-            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL,
-                           -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
+                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
@@ -1133,7 +1133,9 @@ RETCODE readBounds(
             /* if a bound of a binary variable is given, the variable is converted into an integer variable
              * with default bounds 0 <= x <= infinity
              */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
+               && !(*mpsinputField1(mpsi) == 'L' && SCIPisEQ(scip, val, 0.0))
+               && !(*mpsinputField1(mpsi) == 'U' && SCIPisEQ(scip, val, 1.0)) )
             {
                assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
                assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
@@ -1330,7 +1332,7 @@ RETCODE SCIPincludeReaderMPS(
                   NULL, FALSE, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
                   "reader/mps/dynamicrows", "should rows be added and removed dynamically to the LP?",
-                  NULL, TRUE, NULL, NULL) );
+                  NULL, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

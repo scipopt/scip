@@ -50,6 +50,7 @@ struct Stat
    Longint          nlpiterations;      /**< number of simplex iterations (primal + dual) */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
+   Longint          ndivinglpiterations;/**< number of iterations in diving */
    Longint          nlppricings;        /**< number of times, the problem variables were priced */
    Longint          nlppricingvars;     /**< number of times, a problem variable was priced into the LP */
    Longint          nnodes;             /**< number of nodes processed (including active node) */

@@ -44,6 +44,7 @@ struct ConsHdlr
    DECL_CONSEXIT    ((*consexit));      /**< deinitialise constraint handler */
    DECL_CONSDELETE  ((*consdelete));    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans));     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSINITLP  ((*consinitlp));    /**< initialize LP with relaxations of "initial" constraints */
    DECL_CONSSEPA    ((*conssepa));      /**< separate cutting planes */
    DECL_CONSENFOLP  ((*consenfolp));    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops));    /**< enforcing constraints for pseudo solutions */
@@ -1045,6 +1046,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
    DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
    DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
@@ -1081,6 +1083,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consexit = consexit;
    (*conshdlr)->consdelete = consdelete;
    (*conshdlr)->constrans = constrans;
+   (*conshdlr)->consinitlp = consinitlp;
    (*conshdlr)->conssepa = conssepa;
    (*conshdlr)->consenfolp = consenfolp;
    (*conshdlr)->consenfops = consenfops;
@@ -1285,6 +1288,46 @@ RETCODE SCIPconshdlrExit(
       CHECK_OKAY( conshdlr->consexit(scip, conshdlr) );
    }
    conshdlr->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** calls LP initialization method of constraint handler to separate all initial constraints */
+RETCODE SCIPconshdlrInitLP(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   SEPASTORE*       sepastore           /**< separation storage */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set->scip != NULL);
+
+   if( conshdlr->consinitlp != NULL )
+   {
+      int oldncutsfound;
+      
+      debugMessage("initializing LP with %d constraints of handler <%s>\n", conshdlr->nconss, conshdlr->name);
+         
+      /* remember the current total number of found cuts */
+      oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+
+      /* because the during constraint processing, constraints of this handler may be activated, deactivated,
+       * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+       * external method; to avoid this, these changes will be buffered and processed after the method call
+       */
+      conshdlrDelayUpdates(conshdlr);
+      
+      /* call external method */
+      CHECK_OKAY( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* perform the cached constraint updates */
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+      
+      /* update the number of found cuts */
+      conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+   }
 
    return SCIP_OKAY;
 }
@@ -2873,16 +2916,21 @@ RETCODE SCIPconsCreate(
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
    )
 {
    assert(cons != NULL);
    assert(memhdr != NULL);
    assert(conshdlr != NULL);
+   assert(!original || !local);
 
    /* create constraint data */
    ALLOC_OKAY( allocBlockMemory(memhdr, cons) );
@@ -2898,10 +2946,14 @@ RETCODE SCIPconsCreate(
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
    (*cons)->arraypos = -1;
+   (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
    (*cons)->check = check;
    (*cons)->propagate = propagate;
+   (*cons)->local = local;
+   (*cons)->modifiable = modifiable;
+   (*cons)->removeable = removeable;
    (*cons)->original = original;
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
@@ -3057,6 +3109,7 @@ RETCODE SCIPconsTransform(
    assert(memhdr != NULL);
    assert(origcons != NULL);
    assert(origcons->conshdlr != NULL);
+   assert(!origcons->local);
 
    if( origcons->conshdlr->constrans != NULL )
    {
@@ -3066,8 +3119,9 @@ RETCODE SCIPconsTransform(
    else
    {
       /* create new constraint with empty constraint data */
-      CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL,
-                     origcons->separate, origcons->enforce, origcons->check, origcons->propagate, FALSE) );
+      CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL, origcons->initial,
+                     origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
+                     origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
    }
    assert(*transcons != NULL);
 
@@ -3349,6 +3403,16 @@ Bool SCIPconsIsEnabled(
    return cons->updateenable || (cons->enabled && !cons->updatedisable);
 }
 
+/** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
+Bool SCIPconsIsInitial(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->initial;
+}
+
 /** returns TRUE iff constraint should be separated during LP processing */
 Bool SCIPconsIsSeparated(
    CONS*            cons                /**< constraint */
@@ -3387,6 +3451,36 @@ Bool SCIPconsIsPropagated(
    assert(cons != NULL);
 
    return cons->propagate;
+}
+
+/** returns TRUE iff constraint is only locally valid */
+Bool SCIPconsIsLocal(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->local;
+}
+
+/** returns TRUE iff constraint is modifiable (subject to column generation) */
+Bool SCIPconsIsModifiable(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->modifiable;
+}
+
+/** returns TRUE iff constraint should be removed from the LP due to aging or cleanup */
+Bool SCIPconsIsRemoveable(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->removeable;
 }
 
 /** returns TRUE iff constraint is belonging to original problem */

@@ -595,7 +595,7 @@ RETCODE analyzeConflict(
    {
       sprintf(consname, "cf%d", SCIPgetNConss(scip));
       CHECK_OKAY( SCIPcreateConsLogicOr(scip, &cons, consname, nconflictvars, conflictvars, 
-                     TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
    }
@@ -912,6 +912,34 @@ Bool check(
    return SCIPisFeasGE(scip, sum, 1.0);
 }
 
+/** adds logic or constraint as cut to the LP */
+static
+RETCODE addCut(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< logic or constraint */
+   Real             violation           /**< absolute violation of the constraint */
+   )
+{
+   CONSDATA* consdata;
+   ROW* row;
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   if( consdata->row == NULL )
+   {
+      /* convert logic or constraint data into LP row */
+      CHECK_OKAY( logicorconsToRow(scip, consdata->logicorcons, SCIPconsGetName(cons), &consdata->row) );
+   }
+   assert(consdata->row != NULL);
+   assert(!SCIProwIsInLP(consdata->row));
+            
+   /* insert LP row as cut */
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, violation/(SCIProwGetNNonz(consdata->row)+1)) );
+
+   return SCIP_OKAY;
+}
+
 /** checks constraint for violation, and adds it as a cut if possible */
 static
 RETCODE separate(
@@ -973,16 +1001,8 @@ RETCODE separate(
 
    if( addcut )
    {
-      if( consdata->row == NULL )
-      {
-         /* convert set partitioning constraint data into LP row */
-         CHECK_OKAY( logicorconsToRow(scip, logicorcons, SCIPconsGetName(cons), &consdata->row) );
-      }
-      assert(consdata->row != NULL);
-      assert(!SCIProwIsInLP(consdata->row));
-            
       /* insert LP row as cut */
-      CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(logicorcons->nvars+1)) );
+      CHECK_OKAY( addCut(scip, cons, 1.0) );
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -1129,6 +1149,9 @@ DECL_CONSTRANS(consTransLogicOr)
    CHECK_OKAY( SCIPallocBlockMemory(scip, &targetdata) );
 
    logicorcons = sourcedata->logicorcons;
+   assert(SCIPconsIsLocal(sourcecons) == logicorcons->local);
+   assert(SCIPconsIsModifiable(sourcecons) == logicorcons->modifiable);
+   assert(SCIPconsIsRemoveable(sourcecons) == logicorcons->removeable);
 
    CHECK_OKAY( logicorconsCreateTransformed(scip, &targetdata->logicorcons, logicorcons->nvars, logicorcons->vars,
                   logicorcons->local, logicorcons->modifiable, logicorcons->removeable) );
@@ -1136,8 +1159,25 @@ DECL_CONSTRANS(consTransLogicOr)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
-                  SCIPconsIsPropagated(sourcecons)) );
+                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_CONSINITLP(consInitlpLogicOr)
+{
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsInitial(conss[c]) )
+      {
+         CHECK_OKAY( addCut(scip, conss[c], 0.0) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1335,7 +1375,7 @@ RETCODE branchLP(
             sprintf(name, "LOB%lld", SCIPgetNodenum(scip));
 
             CHECK_OKAY( SCIPcreateConsLogicOr(scip, &newcons, name, nselcands, branchcands,
-                           TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
+                           FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
             CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
          }
@@ -1851,7 +1891,7 @@ DECL_CONSRESCVAR(consRescvarLogicOr)
 {
    CONSDATA* consdata;
    LOGICORCONS* logicorcons;
-   Bool confvarfound;
+   Bool infervarfound;
    int v;
 
    assert(conshdlr != NULL);
@@ -1869,9 +1909,9 @@ DECL_CONSRESCVAR(consRescvarLogicOr)
    /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
     * are assigned to zero
     */
-   assert(SCIPvarGetLbLocal(logicorcons->vars[v]) > 0.5); /* the inference variable must be assigned to zero */
+   assert(SCIPvarGetLbLocal(infervar) > 0.5); /* the inference variable must be assigned to one */
 
-   confvarfound = FALSE;
+   infervarfound = FALSE;
    for( v = 0; v < logicorcons->nvars; ++v )
    {
       if( logicorcons->vars[v] != infervar )
@@ -1881,11 +1921,11 @@ DECL_CONSRESCVAR(consRescvarLogicOr)
       }
       else
       {
-         assert(!confvarfound);
-         confvarfound = TRUE;
+         assert(!infervarfound);
+         infervarfound = TRUE;
       }
    }
-   assert(confvarfound);
+   assert(infervarfound);
 
    return SCIP_OKAY;
 }
@@ -1932,7 +1972,6 @@ static
 DECL_CONSDISABLE(consDeactiveLogicOr)
 {
    CONSHDLRDATA* conshdlrdata;
-   INTARRAY* varuses;
    CONSDATA* consdata;
    LOGICORCONS* logicorcons;
    int v;
@@ -1977,6 +2016,7 @@ RETCODE createNormalizedLogicOr(
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
    int              mult,               /**< multiplier on the coefficients(+1 or -1) */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
@@ -2010,7 +2050,7 @@ RETCODE createNormalizedLogicOr(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsLogicOr(scip, cons, name, nvars, transvars,
-      separate, enforce, check, propagate, local, modifiable, removeable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* release temporary memory */
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &transvars) );
@@ -2046,10 +2086,11 @@ DECL_LINCONSUPGD(linconsUpgdLogicOr)
       mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
       
       /* create the logic or constraint (an automatically upgraded constraint is always unmodifiable) */
+      assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( createNormalizedLogicOr(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-                     SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                     local, FALSE, removeable) );
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -2112,7 +2153,7 @@ RETCODE SCIPincludeConsHdlrLogicOr(
                   CONSHDLR_NEEDSCONS,
                   consFreeLogicOr, NULL, NULL,
                   consDeleteLogicOr, consTransLogicOr, 
-                  consSepaLogicOr, consEnfolpLogicOr, consEnfopsLogicOr, consCheckLogicOr, 
+                  consInitlpLogicOr, consSepaLogicOr, consEnfolpLogicOr, consEnfopsLogicOr, consCheckLogicOr, 
                   consPropLogicOr, consPresolLogicOr, consRescvarLogicOr,
                   consActiveLogicOr, consDeactiveLogicOr, NULL, NULL,
                   conshdlrdata) );
@@ -2120,7 +2161,7 @@ RETCODE SCIPincludeConsHdlrLogicOr(
    /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicOr, LINCONSUPGD_PRIORITY) );
 
-   /* set partitioning constraint handler parameters */
+   /* logic or constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "conshdlr/logicor/npseudobranches", 
                   "number of children created in pseudo branching",
@@ -2145,6 +2186,7 @@ RETCODE SCIPcreateConsLogicOr(
    const char*      name,               /**< name of constraint */
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
@@ -2189,7 +2231,8 @@ RETCODE SCIPcreateConsLogicOr(
    consdata->row = NULL;
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, propagate) );
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

@@ -238,7 +238,7 @@ RETCODE readCNF(
                clausenum++;
                sprintf(s, "c%d", clausenum);
                CHECK_OKAY( SCIPcreateConsLogicOr(scip, &cons, s, clauselen, clausevars, 
-                              TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+                              !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
                CHECK_OKAY( SCIPaddCons(scip, cons) );
                CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
                clauselen = 0;
@@ -380,7 +380,7 @@ RETCODE SCIPincludeReaderCNF(
                   NULL, FALSE, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
                   "reader/cnf/dynamicrows", "should rows be added and removed dynamically to the LP?",
-                  NULL, TRUE, NULL, NULL) );
+                  NULL, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

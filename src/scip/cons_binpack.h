@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_binpack.h
- * @brief  constraint handler for bin packing constraints
+ * @brief  constraint handler for binpack constraints
  * @author Tobias Achterberg
  */
 
@@ -29,13 +29,13 @@
 #include "scip.h"
 
 
-/** creates the handler for bin packing constraints and includes it in SCIP */
+/** creates the handler for binpack constraints and includes it in SCIP */
 extern
 RETCODE SCIPincludeConsHdlrBinpack(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a bin packing constraint */
+/** creates and captures a binpack constraint */
 extern
 RETCODE SCIPcreateConsBinpack(
    SCIP*            scip,               /**< SCIP data structure */
@@ -45,12 +45,13 @@ RETCODE SCIPcreateConsBinpack(
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             rhs,                /**< right hand side of constraint */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 

@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_varub.h
- * @brief  constraint handler for variable upper bound constaints
+ * @brief  constraint handler for varub constraints
  * @author Tobias Achterberg
  */
 
@@ -29,28 +29,29 @@
 #include "scip.h"
 
 
-/** creates the handler for variable upper bound constaints and includes it in SCIP */
+/** creates the handler for varub constraints and includes it in SCIP */
 extern
 RETCODE SCIPincludeConsHdlrVarub(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a variable upper bound constaint */
+/** creates and captures a varub constraint */
 extern
 RETCODE SCIPcreateConsVarub(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
    int              len,                /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             rhs,                /**< right hand side of constraint */
+   VAR*             var,                /**< variable that has variable bound */
+   VAR*             switchvar,          /**< binary variable to activate bound */
+   Real             val,                /**< bound value */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 

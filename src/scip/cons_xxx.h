@@ -15,34 +15,35 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_invarknapsack.h
- * @brief  constraint handler for invarknapsack constraints
+/**@file   cons_xxx.h
+ * @brief  constraint handler for xxx constraints
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_INVARKNAPSACK_H__
-#define __CONS_INVARKNAPSACK_H__
+#ifndef __CONS_XXX_H__
+#define __CONS_XXX_H__
 
 
 #include "scip.h"
 
 
-/** creates the handler for invarknapsack constraints and includes it in SCIP */
+/** creates the handler for xxx constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrInvarknapsack(
+RETCODE SCIPincludeConsHdlrXxx(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a invarknapsack constraint */
+/** creates and captures a xxx constraint */
 extern
-RETCODE SCIPcreateConsInvarknapsack(
+RETCODE SCIPcreateConsXxx(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
    int              len,                /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
+   Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */

@@ -730,6 +730,7 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
    DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
    DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
@@ -750,8 +751,9 @@ RETCODE SCIPincludeConsHdlr(
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
                   name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
-                  consfree, consinit, consexit, consdelete, constrans, conssepa, consenfolp, consenfops, conscheck,
-                  consprop, conspresol, consrescvar, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
+                  consfree, consinit, consexit, consdelete, constrans, consinitlp,
+                  conssepa, consenfolp, consenfops, conscheck, consprop, conspresol, consrescvar,
+                  consactive, consdeactive, consenable, consdisable, conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
    
    return SCIP_OKAY;
@@ -2876,10 +2878,14 @@ RETCODE SCIPcreateCons(
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate           /**< should the constraint be propagated during node processing? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
    assert(cons != NULL);
@@ -2891,15 +2897,15 @@ RETCODE SCIPcreateCons(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, separate, enforce, check, propagate,
-                     TRUE) );
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, 
+                     initial, separate, enforce, check, propagate, local, modifiable, removeable, TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata, separate, enforce, check, propagate,
-                     FALSE) );
+      CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata,
+                     initial, separate, enforce, check, propagate, local, modifiable, removeable, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -3541,8 +3547,77 @@ RETCODE SCIPaddVarToRow(
    return SCIP_OKAY;
 }
 
-/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
+/** resolves variables to columns and adds them with the coefficients to the row;
+ *  if you want to add more than one variable to a row, for performance reasons this method is highly
+ *  preferable to many single calls to SCIPaddVarToRow()
+ */
+RETCODE SCIPaddVarsToRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   int              nvars,              /**< number of variables to add to the row */
+   VAR**            vars,               /**< problem variables to add */
+   Real*            vals                /**< values of coefficients */
+   )
+{
+   int v;
 
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   /* delay the row sorting */
+   SCIProwDelaySort(row);
+
+   /* add the variables to the row */
+   for( v = 0; v < nvars; ++v )
+   {
+      CHECK_OKAY( SCIPvarAddToRow(vars[v], scip->mem->solvemem, scip->set, scip->stat, scip->lp, row, vals[v]) );
+   }
+
+   /* force the row sorting */
+   SCIProwForceSort(row, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** resolves variables to columns and adds them with the same single coefficient to the row;
+ *  if you want to add more than one variable to a row, for performance reasons this method is highly
+ *  preferable to many single calls to SCIPaddVarToRow()
+ */
+RETCODE SCIPaddVarsToRowSameCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   int              nvars,              /**< number of variables to add to the row */
+   VAR**            vars,               /**< problem variables to add */
+   Real             val                 /**< unique value of all coefficients */
+   )
+{
+   int v;
+
+   assert(vars != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
+   CHECK_OKAY( SCIProwEnsureSize(row, scip->mem->solvemem, scip->set, nvars) );
+
+   /* delay the row sorting */
+   SCIProwDelaySort(row);
+
+   /* add the variables to the row */
+   for( v = 0; v < nvars; ++v )
+   {
+      CHECK_OKAY( SCIPvarAddToRow(vars[v], scip->mem->solvemem, scip->set, scip->stat, scip->lp, row, val) );
+   }
+
+   /* force the row sorting */
+   SCIProwForceSort(row, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
 RETCODE SCIPmakeRowRational(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
@@ -4759,6 +4834,16 @@ Longint SCIPgetNLPIterations(
    return scip->stat->nlpiterations;
 }
 
+/** gets total number of simplex iterations used so far during diving */
+Longint SCIPgetNDivingLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNDivingLPIterations", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->ndivinglpiterations;
+}
+
 /** gets number of separation rounds performed so far at the current node */
 int SCIPgetNSepaRounds(
    SCIP*            scip                /**< SCIP data structure */
@@ -5104,6 +5189,7 @@ void printPresolverStatistics(
       }
    }
 
+#if 0
    /* print total */
    fprintf(file, "  total            :");
    fprintf(file, " %12.2f %12d %12d %12d %12d %12d %12d %12d\n",
@@ -5115,6 +5201,7 @@ void printPresolverStatistics(
       ndelconss,
       nchgsides,
       nchgcoefs);
+#endif
 }
 
 static
@@ -5181,7 +5268,7 @@ void printConflictStatistics(
    FILE*            file                /**< output file */
    )
 {
-   fprintf(file, "Conflict analysis  :         Time        Calls    Conflicts\n");
+   fprintf(file, "Conflict Analysis  :         Time        Calls    Conflicts\n");
    fprintf(file, "  total            : %12.2f %12lld %12lld\n",
       SCIPconflictGetTime(scip->conflict),
       SCIPconflictGetNCalls(scip->conflict),
@@ -5295,6 +5382,7 @@ void printLPStatistics(
       fprintf(file, " %12.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
       fprintf(file, "            -\n");
+#if 0
    fprintf(file, "  total            : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->primallptime) + SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nlps,
@@ -5305,6 +5393,7 @@ void printLPStatistics(
          (SCIPclockGetTime(scip->stat->primallptime) + SCIPclockGetTime(scip->stat->duallptime)));
    else
       fprintf(file, "            -\n");
+#endif
    fprintf(file, "  strong branching : %12.2f %12d            -            -            -\n",
       SCIPclockGetTime(scip->stat->strongbranchtime),
       scip->stat->nstrongbranch);
@@ -6033,8 +6122,10 @@ Bool SCIPisCutViolated(
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
+   assert(scip->tree != NULL);
+   assert(scip->tree->actnode != NULL);
 
-   return SCIPsetIsCutViolated(scip->set, cutactivity, cutrhs);
+   return SCIPsetIsCutViolated(scip->set, (scip->tree->actnode->depth == 0), cutactivity, cutrhs);
 }
 
 /** checks, if relative difference of values is in range of epsilon */

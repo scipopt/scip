@@ -393,6 +393,7 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
    DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
    DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
@@ -1154,10 +1155,14 @@ RETCODE SCIPcreateCons(
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
+   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate           /**< should the constraint be propagated during node processing? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
 /** increases usage counter of constraint */
@@ -1475,6 +1480,32 @@ RETCODE SCIPaddVarToRow(
    ROW*             row,                /**< LP row */
    VAR*             var,                /**< problem variable */
    Real             val                 /**< value of coefficient */
+   );
+
+/** resolves variables to columns and adds them with the coefficients to the row;
+ *  if you want to add more than one variable to a row, for performance reasons this method is highly
+ *  preferable to many single calls to SCIPaddVarToRow()
+ */
+extern
+RETCODE SCIPaddVarsToRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   int              nvars,              /**< number of variables to add to the row */
+   VAR**            vars,               /**< problem variables to add */
+   Real*            vals                /**< values of coefficients */
+   );
+
+/** resolves variables to columns and adds them with the same single coefficient to the row;
+ *  if you want to add more than one variable to a row, for performance reasons this method is highly
+ *  preferable to many single calls to SCIPaddVarToRow()
+ */
+extern
+RETCODE SCIPaddVarsToRowSameCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   int              nvars,              /**< number of variables to add to the row */
+   VAR**            vars,               /**< problem variables to add */
+   Real             val                 /**< unique value of all coefficients */
    );
 
 /** tries to find a rational representation of the row and multiplies coefficients with common denominator */
@@ -2086,6 +2117,12 @@ int SCIPgetNLPs(
 /** gets total number of simplex iterations used so far */
 extern
 Longint SCIPgetNLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far during diving */
+extern
+Longint SCIPgetNDivingLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2721,7 +2758,7 @@ Real SCIPfrac(
 #define SCIPisFeasPositive(scip, val)    SCIPsetIsFeasPositive((scip)->set, val)    
 #define SCIPisFeasNegative(scip, val)    SCIPsetIsFeasNegative((scip)->set, val)    
                                                                            
-#define SCIPisCutViolated(scip, act,rhs) SCIPsetIsCutViolated((scip)->set, act,rhs) 
+#define SCIPisCutViolated(scip, act,rhs) SCIPsetIsCutViolated((scip)->set, ((scip)->tree->actnode->depth == 0),act,rhs) 
                                                                            
 #define SCIPisRelEQ(scip, val1, val2)    SCIPsetIsRelEQ((scip)->set, val1, val2)    
 #define SCIPisRelLT(scip, val1, val2)    SCIPsetIsRelLT((scip)->set, val1, val2)    

@@ -130,6 +130,7 @@ void SCIPstatReset(
    stat->nlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
+   stat->ndivinglpiterations = 0;
    stat->nstrongbranch = 0;
    stat->nseparounds = 0;
    stat->nlppricings = 0;

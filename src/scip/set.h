@@ -109,6 +109,7 @@ struct Set
    Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
    Real             feastol;            /**< LP feasibility tolerance */
    Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
+   Real             cutviolepsroot;     /**< epsilon for deciding if a cut is violated in the root node */
    Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
    int              memgrowinit;        /**< initial size of dynamically allocated arrays */
    Real             treegrowfac;        /**< memory growing factor for tree array */
@@ -762,6 +763,7 @@ Bool SCIPsetIsFeasNegative(
 extern
 Bool SCIPsetIsCutViolated(
    const SET*       set,                /**< global SCIP settings */
+   Bool             root,               /**< should the root's cutvioleps be used? */
    Real             cutactivity,        /**< activity of the cut */
    Real             cutrhs              /**< right hand side value of the cut */
    );
@@ -928,7 +930,8 @@ Real SCIPsetFrac(
 #define SCIPsetIsFeasPositive(set, val)    ( EPSP(val, (set)->feastol) )
 #define SCIPsetIsFeasNegative(set, val)    ( EPSN(val, (set)->feastol) )
 
-#define SCIPsetIsCutViolated(set, act,rhs) ( EPSGT(act, rhs, (set)->cutvioleps) )
+#define SCIPsetIsCutViolated(set, root, act,rhs) ( root ? EPSGT(act, rhs, (set)->cutviolepsroot) \
+                                                        : EPSGT(act, rhs, (set)->cutvioleps) )
 
 #define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
 #define SCIPsetIsRelLT(set, val1, val2)    ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )

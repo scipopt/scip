@@ -31,8 +31,12 @@ global/numerics/sumepsilon = 1e-06
 global/numerics/feastol = 1e-06
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.01]
-global/numerics/cutvioleps = 0.01
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.1]
+global/numerics/cutvioleps = 0.1
+
+# epsilon for deciding if a cut is violated in the root node
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.005]
+global/numerics/cutviolepsroot = 0.005
 
 # fraction of maximal memory usage resulting in switch to memory saving mode
 # [type: real, range: [0,1], default: 0.8]
@@ -175,16 +179,16 @@ global/catchctrlc = TRUE
 reader/cnf/dynamiccols = FALSE
 
 # should rows be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-reader/cnf/dynamicrows = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/cnf/dynamicrows = FALSE
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 reader/mps/dynamiccols = FALSE
 
 # should rows be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-reader/mps/dynamicrows = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/mps/dynamicrows = FALSE
 
 # display activation status of display column <solfound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
@@ -349,6 +353,30 @@ branchrule/leastinf/priority = 50
 # frequency for calling primal heuristic <diving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristic/diving/freq = 10
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristic/diving/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.2]
+heuristic/diving/maxlpiterquot = 0.2
+
+# maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristic/diving/maxdiveubquot = 0.8
+
+# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1e+99], default: 4]
+heuristic/diving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristic/diving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1e+99], default: 8]
+heuristic/diving/maxdiveavgquotnosol = 8
 
 # frequency for calling primal heuristic <rounding> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
