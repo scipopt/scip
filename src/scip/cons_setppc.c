@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.52 2004/07/13 15:03:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.53 2004/08/02 09:40:19 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -541,10 +541,10 @@ void consdataPrint(
       fprintf(file, "== 1\n");
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      fprintf(file, ">= 1\n");
+      fprintf(file, "<= 1\n");
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      fprintf(file, "<= 1\n");
+      fprintf(file, ">= 1\n");
       break;
    default:
       errorMessage("unknown setppc type\n");

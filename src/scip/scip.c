@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.188 2004/07/20 09:39:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.189 2004/08/02 09:40:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6344,8 +6344,8 @@ RETCODE SCIPaddVarsToRow(
 {
    int v;
 
-   assert(vars != NULL);
-   assert(vals != NULL);
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -6378,7 +6378,7 @@ RETCODE SCIPaddVarsToRowSameCoef(
 {
    int v;
 
-   assert(vars != NULL);
+   assert(nvars == 0 || vars != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
