@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.160 2004/11/03 13:14:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.161 2004/11/03 13:26:41 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8162,7 +8162,7 @@ void roundStrongCGRow(
       else
       {
          pj = SCIPsetCeil(set, k * (fj - f0) * onedivoneminusf0);
-         assert(pj >= 1);
+         assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */ 
          assert(pj <= k);
          cutaj = varsign[v] * (downaj + pj / (k + 1)); /* a°_j */
       }
@@ -8306,7 +8306,7 @@ void substituteStrongCGRow(
          else
          {
             pr = SCIPsetCeil(set, k * (fr - f0) * onedivoneminusf0);
-            assert(pr >= 1);
+            assert(pr >= 0); /* should be >= 1, but due to rounding bias can be 0 if fr almost equal to f0 */ 
             assert(pr <= k);
             cutar = downar + pr / (k + 1);
          }
