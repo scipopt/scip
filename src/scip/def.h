@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.56 2004/07/09 08:13:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.57 2004/07/20 14:34:40 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -40,35 +40,46 @@
 
 
 
-#define CHECK_ABORT_QUIET(x) { if( (x) != SCIP_OKAY ) abort(); }
-#define CHECK_OKAY_QUIET(x)  { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
-#define ALLOC_OKAY_QUIET(x)  { if( NULL == (x) ) return SCIP_NOMEMORY; }
+#define CHECK_ABORT_QUIET(x) do { if( (x) != SCIP_OKAY ) abort(); } while( FALSE )
+#define CHECK_OKAY_QUIET(x)  do { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
+#define ALLOC_OKAY_QUIET(x)  do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
 
-#define CHECK_ABORT(x) { RETCODE _restat_;                                                                   \
-                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
-                         {                                                                                   \
-                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
-                           fflush(stdout);                                                                   \
-                           abort();                                                                          \
-                         }                                                                                   \
-                       }
+#define CHECK_ABORT(x) do                                                                                     \
+                       {                                                                                      \
+                          RETCODE _restat_;                                                                   \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);   \
+                             fflush(stdout);                                                                  \
+                             abort();                                                                         \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
 
 #ifndef NDEBUG
-#define CHECK_OKAY(x)  { RETCODE _restat_;                                                                   \
-                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
-                         {                                                                                   \
-                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
-                           fflush(stdout);                                                                   \
-                           return _restat_;                                                                  \
-                         }                                                                                   \
-                       }
-#define ALLOC_OKAY(x)  { if( NULL == (x) )                                                                   \
-                         {                                                                                   \
-                           printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__);               \
-                           fflush(stdout);                                                                   \
-                           return SCIP_NOMEMORY;                                                             \
-                         }                                                                                   \
-                       }
+#define CHECK_OKAY(x)  do                                                                                     \
+                       {                                                                                      \
+                          RETCODE _restat_;                                                                   \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);   \
+                             fflush(stdout);                                                                  \
+                             return _restat_;                                                                 \
+                           }                                                                                  \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define ALLOC_OKAY(x)  do                                                                                     \
+                       {                                                                                      \
+                          if( NULL == (x) )                                                                   \
+                          {                                                                                   \
+                             printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__);       \
+                             fflush(stdout);                                                                  \
+                             return SCIP_NOMEMORY;                                                            \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
 #else
 #define CHECK_OKAY(x)  CHECK_OKAY_QUIET(x)
 #define ALLOC_OKAY(x)  ALLOC_OKAY_QUIET(x)

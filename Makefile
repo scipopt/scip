@@ -3,9 +3,9 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2002 Tobias Achterberg                              *
+#*    Copyright (C) 2002-2004 Tobias Achterberg                              *
 #*                                                                           *
-#*                  2002-2002 Konrad-Zuse-Zentrum                            *
+#*                  2002-2004 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the SCIP Academic Licence.        *
@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.80 2004/07/14 14:05:07 bzfpfend Exp $
+# $Id: Makefile,v 1.81 2004/07/20 14:34:40 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.h,v 1.15 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.h,v 1.16 2004/07/20 14:34:41 bzfpfend Exp $"
 
 /**@file   message.h
  * @brief  message output methods
@@ -61,7 +61,7 @@ typedef enum VerbLevel VERBLEVEL;
 #define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
 #else
 #define debug(x)                        /**/
-#define debugMessage                    if( FALSE ) printf
+#define debugMessage                    while( FALSE ) printf
 #endif
 
 
