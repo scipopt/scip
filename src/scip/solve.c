@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.150 2004/11/22 16:09:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.151 2004/11/23 17:53:23 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -730,12 +730,6 @@ RETCODE priceAndCutLoop(
    assert(lp->flushed);
    assert(lp->solved);
 
-   /* display node information line for root node */
-   if( root && (VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
-   {
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
-   }
-
    /* price-and-cut loop */
    ncolvars = prob->ncolvars;
    mustprice = TRUE;
@@ -844,6 +838,12 @@ RETCODE priceAndCutLoop(
       else
       {
          debugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(focusnode));
+      }
+
+      /* display node information line for root node */
+      if( root && (VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
+      {
+         CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
       }
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
@@ -999,12 +999,6 @@ RETCODE priceAndCutLoop(
 
          /* increase separation round counter */
          stat->nseparounds++;
-
-         /* display node information line for root node */
-         if( root && mustsepar )
-         {
-            CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
-         }
       }
    }
 
