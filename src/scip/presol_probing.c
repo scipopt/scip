@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.2 2005/02/03 12:59:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.3 2005/02/03 17:50:44 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -220,10 +220,18 @@ DECL_PRESOLEXEC(presolExecProbing)
 
    /* for each binary variable, probe fixing the variable to zero and one */
    cutoff = FALSE;
-   for( i = 0; i < nbinvars && !cutoff; ++i )
+   for( i = 0; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip); ++i )
    {
       Bool localcutoff;
       int j;
+
+#if 0
+      if( (i+1) % 1000 == 0 )
+      {
+         SCIPmessage(scip, SCIP_VERBLEVEL_FULL, "probing: %d/%d (%.1f%%)\n", 
+            i+1, nbinvars, 100.0*(Real)(i+1)/(Real)nbinvars);
+      }
+#endif
 
       /* ignore variables, that were fixed or aggregated in prior probings */
       if( !SCIPvarIsActive(vars[i]) )

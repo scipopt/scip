@@ -96,7 +96,7 @@ limits/gap = 0
 
 # solving stops, if the given number of solutions were found (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
-limits/sol = -1
+limits/solutions = -1
 
 # solving stops, if the given number of solution improvements were found (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -618,7 +618,7 @@ nodeselection/bfs/minplungedepth = -1
 # [type: int, range: [-1,2147483647], default: -1]
 nodeselection/bfs/maxplungedepth = -1
 
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where plunging is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where plunging is performed
 # [type: real, range: [0,1.79769313486232e+308], default: 0.25]
 nodeselection/bfs/maxplungequot = 0.25
 
@@ -790,7 +790,7 @@ heuristics/coefdiving/maxreldepth = 1
 # [type: real, range: [0,1], default: 0.02]
 heuristics/coefdiving/maxlpiterquot = 0.02
 
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/coefdiving/maxdiveubquot = 0.8
 
@@ -894,7 +894,7 @@ heuristics/fracdiving/maxreldepth = 1
 # [type: real, range: [0,1], default: 0.02]
 heuristics/fracdiving/maxlpiterquot = 0.02
 
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/fracdiving/maxdiveubquot = 0.8
 
@@ -938,7 +938,7 @@ heuristics/guideddiving/maxreldepth = 1
 # [type: real, range: [0,1], default: 0.02]
 heuristics/guideddiving/maxlpiterquot = 0.02
 
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/guideddiving/maxdiveubquot = 0.8
 
@@ -982,7 +982,7 @@ heuristics/linesearchdiving/maxreldepth = 1
 # [type: real, range: [0,1], default: 0.02]
 heuristics/linesearchdiving/maxlpiterquot = 0.02
 
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/linesearchdiving/maxdiveubquot = 0.8
 
@@ -1098,7 +1098,7 @@ heuristics/pscostdiving/maxreldepth = 1
 # [type: real, range: [0,1], default: 0.02]
 heuristics/pscostdiving/maxlpiterquot = 0.02
 
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/pscostdiving/maxdiveubquot = 0.8
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.146 2005/02/02 20:06:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.147 2005/02/03 17:50:44 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4817,7 +4817,7 @@ DECL_CONSPRESOL(consPresolLinear)
    /* process single constraints */
    firstchange = INT_MAX;
    firstupgradetry = INT_MAX;
-   for( c = 0; c < nconss && !cutoff; ++c )
+   for( c = 0; c < nconss && !cutoff && !SCIPpressedCtrlC(scip); ++c )
    {
       cons = conss[c];
       assert(SCIPconsIsActive(cons));
@@ -4975,7 +4975,7 @@ DECL_CONSPRESOL(consPresolLinear)
    {
       if( conshdlrdata->maxpresolaggrrounds == -1 || nrounds < conshdlrdata->maxpresolaggrrounds )
       {
-         for( c = firstchange; c < nconss && !cutoff; ++c )
+         for( c = firstchange; c < nconss && !cutoff && !SCIPpressedCtrlC(scip); ++c )
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {

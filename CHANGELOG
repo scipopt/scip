@@ -32,6 +32,7 @@ parameters:
 - default frequency offset of (new) feaspump heuristic changed to 0
 - default frequency offset of objfeaspump heuristic changed to 8
 - changed default priority of primal heuristics
+- renamed parameter limits/sol to limits/solutions
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex

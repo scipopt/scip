@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.164 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.165 2005/02/03 17:50:45 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -78,8 +78,8 @@ Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( SCIPgetStage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
       stat->status = SCIP_STATUS_GAPLIMIT;
-   else if( set->limit_sol >= 0 && SCIPgetStage(set->scip) >= SCIP_STAGE_PRESOLVED
-      && SCIPgetNSolsFound(set->scip) >= set->limit_sol )
+   else if( set->limit_solutions >= 0 && SCIPgetStage(set->scip) >= SCIP_STAGE_PRESOLVED
+      && SCIPgetNSolsFound(set->scip) >= set->limit_solutions )
       stat->status = SCIP_STATUS_SOLLIMIT;
    else if( set->limit_bestsol >= 0 && SCIPgetStage(set->scip) >= SCIP_STAGE_PRESOLVED
       && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )

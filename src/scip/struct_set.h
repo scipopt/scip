@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.41 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.42 2005/02/03 17:50:45 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -141,7 +141,7 @@ struct Set
    Real             limit_memory;       /**< maximal memory usage in MB */
    Real             limit_gap;          /**< solving stops, if the given gap is reached */
    Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
-   int              limit_sol;          /**< solving stops, if the given number of solutions were found (-1: no limit) */
+   int              limit_solutions;    /**< solving stops, if the given number of solutions were found (-1: no limit) */
    int              limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
                                          *   (-1: no limit) */
    int              limit_maxsol;       /**< maximal number of solutions to store in the solution storage */

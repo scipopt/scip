@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.133 2005/01/31 12:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.134 2005/02/03 17:50:44 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -102,7 +102,7 @@
 #define SCIP_DEFAULT_LIMIT_MEMORY         1e+20 /**< maximal memory usage in MB */
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
-#define SCIP_DEFAULT_LIMIT_SOL               -1 /**< solving stops, if given number of sols were found (-1: no limit) */
+#define SCIP_DEFAULT_LIMIT_SOLUTIONS         -1 /**< solving stops, if given number of sols were found (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
@@ -464,9 +464,9 @@ RETCODE SCIPsetCreate(
          &(*set)->limit_gap, SCIP_DEFAULT_LIMIT_GAP, 0.0, REAL_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
-         "limits/sol",
+         "limits/solutions",
          "solving stops, if the given number of solutions were found (-1: no limit)",
-         &(*set)->limit_sol, SCIP_DEFAULT_LIMIT_SOL, -1, INT_MAX,
+         &(*set)->limit_solutions, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "limits/bestsol",
