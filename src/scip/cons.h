@@ -38,24 +38,24 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
  */
 #define DECL_CONSFREE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
 /** initialization method of constraint handler (called when problem solving starts)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
  */
 #define DECL_CONSINIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
 /** deinitialization method of constraint handler (called when problem solving exits)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
  */
 #define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
 
@@ -74,11 +74,11 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 /** transforms constraint data into data belonging to the transformed problem
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    sourcecons      : source constraint to transform
- *    targetcons      : pointer to store created target constraint
- */
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - sourcecons      : source constraint to transform
+ *  - targetcons      : pointer to store created target constraint
+ */ 
 #define DECL_CONSTRANS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* sourcecons, CONS** targetcons)
 
 /** separation method of constraint handler
@@ -91,20 +91,20 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  nconss - nusefulconss constraints.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    conss           : array of constraints to process
- *    nconss          : number of constraints to process
- *    nusefulconss    : number of useful (non-obsolete) constraints to process
- *    result          : pointer to store the result of the separation call
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
- *    SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
- *    SCIP_SEPARATED  : at least one cutting plane was generated
- *    SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
- *    SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
- *    SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane
- *    SCIP_DIDNOTRUN  : the separator was skipped
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
+ *  - SCIP_SEPARATED  : at least one cutting plane was generated
+ *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
+ *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane
+ *  - SCIP_DIDNOTRUN  : the separator was skipped
  */
 #define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
                                     RESULT* result)
@@ -134,21 +134,21 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  nconss - nusefulconss constraints must be enforced.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    conss           : array of constraints to process
- *    nconss          : number of constraints to process
- *    nusefulconss    : number of useful (non-obsolete) constraints to process
- *    result          : pointer to store the result of the enforcing call
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
- *    SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
- *    SCIP_SEPARATED  : a cutting plane was generated to resolve an infeasibility
- *    SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced to resolve an infeasibility
- *    SCIP_CONSADDED  : no cutting plane or domain reductions, but a constraint was generated to resolve an infeasibility
- *    SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
- *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
- *    SCIP_FEASIBLE   : all constraints of the handler are feasible
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
+ *  - SCIP_SEPARATED  : a cutting plane was generated to resolve an infeasibility
+ *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced to resolve an infeasibility
+ *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but a constraint was generated to resolve an infeasibility
+ *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
+ *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
+ *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define DECL_CONSENFOLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
                                       RESULT* result)
@@ -169,25 +169,31 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  method should process the useful constraints first, and only if no violation was found, the remaining
  *  nconss - nusefulconss constraints must be enforced.
  *
+ *  If the pseudo solution's objective value is lower than the lower bound of the node, it cannot be feasible
+ *  and the enforcing method may skip it's check and set *result to SCIP_DIDNOTRUN. However, it can also process
+ *  it's constraints and return any other possible result code.
+ *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    conss           : array of constraints to process
- *    nconss          : number of constraints to process
- *    nusefulconss    : number of useful (non-obsolete) constraints to process
- *    result          : pointer to store the result of the enforcing call
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - objinfeasible   : is the solution infeasible anyway due to violating lower objective bound?
+ *  - result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
- *    SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
- *    SCIP_REDUCEDDOM : at least one domain was reduced to resolve an infeasibility
- *    SCIP_CONSADDED  : no domain reductions, but a constraint was generated to resolve an infeasibility
- *    SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
- *    SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
- *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
- *    SCIP_FEASIBLE   : all constraints of the handler are feasible
- */
+ *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
+ *  - SCIP_REDUCEDDOM : at least one domain was reduced to resolve an infeasibility
+ *  - SCIP_CONSADDED  : no domain reductions, but a constraint was generated to resolve an infeasibility
+ *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
+ *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
+ *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
+ *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
+ */ 
 #define DECL_CONSENFOPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-                                      RESULT* result)
+                                      Bool objinfeasible, RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
@@ -207,18 +213,18 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  'checklprows' is FALSE.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    conss           : array of constraints to process
- *    nconss          : number of constraints to process
- *    sol             : the solution to check feasibility for
- *    checkintegrality: has integrality to be checked?
- *    checklprows     : have current LP rows to be checked?
- *    result          : pointer to store the result of the feasibility checking call
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - sol             : the solution to check feasibility for
+ *  - checkintegrality: has integrality to be checked?
+ *  - checklprows     : have current LP rows to be checked?
+ *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
- *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
- *    SCIP_FEASIBLE   : all constraints of the handler are feasible
+ *  - SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
+ *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define DECL_CONSCHECK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, SOL* sol, \
                                      Bool checkintegrality, Bool checklprows, RESULT* result)
@@ -230,18 +236,18 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  nconss - nusefulconss constraints.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    conss           : array of constraints to process
- *    nconss          : number of constraints to process
- *    nusefulconss    : number of useful (non-obsolete) constraints to process
- *    result          : pointer to store the result of the propagation call
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
- *    SCIP_CUTOFF     : at least one constraint is infeasible for the actual domains -> node is infeasible
- *    SCIP_REDUCEDDOM : at least one domain reduction was found
- *    SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
- *    SCIP_DIDNOTRUN  : the propagator was skipped
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible for the actual domains -> node is infeasible
+ *  - SCIP_REDUCEDDOM : at least one domain reduction was found
+ *  - SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
+ *  - SCIP_DIDNOTRUN  : the propagator was skipped
  */
 #define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
                                     RESULT* result)
@@ -249,44 +255,44 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 /** presolving method of constraint handler
  *
  *  The presolver should go through the variables and constraints and tighten the domains or
- *  constraints. Each tightening should increase the given total numbers of changes.
+ *  constraints. Each tightening should increase the given total number of changes.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    conss           : array of constraints to process
- *    nconss          : number of constraints to process
- *    nrounds         : number of presolving rounds already done
- *    nnewfixedvars   : number of variables fixed since the last call to the presolving method
- *    nnewaggrvars    : number of variables aggregated since the last call to the presolving method
- *    nnewchgvartypes : number of variable type changes since the last call to the presolving method
- *    nnewchgbds      : number of variable bounds tightend since the last call to the presolving method
- *    nnewholes       : number of domain holes added since the last call to the presolving method
- *    nnewdelconss    : number of deleted constraints since the last call to the presolving method
- *    nnewupgdconss   : number of upgraded constraints since the last call to the presolving method
- *    nnewchgcoefs    : number of changed coefficients since the last call to the presolving method
- *    nnewchgsides    : number of changed left or right hand sides since the last call to the presolving method
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nrounds         : number of presolving rounds already done
+ *  - nnewfixedvars   : number of variables fixed since the last call to the presolving method
+ *  - nnewaggrvars    : number of variables aggregated since the last call to the presolving method
+ *  - nnewchgvartypes : number of variable type changes since the last call to the presolving method
+ *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolving method
+ *  - nnewholes       : number of domain holes added since the last call to the presolving method
+ *  - nnewdelconss    : number of deleted constraints since the last call to the presolving method
+ *  - nnewupgdconss   : number of upgraded constraints since the last call to the presolving method
+ *  - nnewchgcoefs    : number of changed coefficients since the last call to the presolving method
+ *  - nnewchgsides    : number of changed left or right hand sides since the last call to the presolving method
  *
  *  input/output:
- *    nfixedvars      : pointer to total number of variables fixed of all presolvers
- *    naggrvars       : pointer to total number of variables aggregated of all presolvers
- *    nchgvartypes    : pointer to total number of variable type changes of all presolvers
- *    nchgbds         : pointer to total number of variable bounds tightend of all presolvers
- *    naddholes       : pointer to total number of domain holes added of all presolvers
- *    ndelconss       : pointer to total number of deleted constraints of all presolvers
- *    nupgdconss      : pointer to total number of upgraded constraints of all presolvers
- *    nchgcoefs       : pointer to total number of changed coefficients of all presolvers
- *    nchgsides       : pointer to total number of changed left/right hand sides of all presolvers
+ *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
+ *  - naggrvars       : pointer to total number of variables aggregated of all presolvers
+ *  - nchgvartypes    : pointer to total number of variable type changes of all presolvers
+ *  - nchgbds         : pointer to total number of variable bounds tightend of all presolvers
+ *  - naddholes       : pointer to total number of domain holes added of all presolvers
+ *  - ndelconss       : pointer to total number of deleted constraints of all presolvers
+ *  - nupgdconss      : pointer to total number of upgraded constraints of all presolvers
+ *  - nchgcoefs       : pointer to total number of changed coefficients of all presolvers
+ *  - nchgsides       : pointer to total number of changed left/right hand sides of all presolvers
  *
  *  output:
- *    result          : pointer to store the result of the presolving call
+ *  - result          : pointer to store the result of the presolving call
  *
  *  possible return values for *result:
- *    SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
- *    SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *    SCIP_SUCCESS    : the presolver found a reduction
- *    SCIP_DIDNOTFIND : the presolver searched, but didn't found a presolving change
- *    SCIP_DIDNOTRUN  : the presolver was skipped
+ *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+ *  - SCIP_SUCCESS    : the presolver found a reduction
+ *  - SCIP_DIDNOTFIND : the presolver searched, but didn't found a presolving change
+ *  - SCIP_DIDNOTRUN  : the presolver was skipped
  */
 #define DECL_CONSPRESOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nrounds, \
    int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
@@ -304,9 +310,9 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  handler may use this call to update his own (statistical) data.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    cons            : the constraint that has been activated
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that has been activated
  */
 #define DECL_CONSENABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
 
@@ -319,9 +325,9 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  handler may use this call to update his own (statistical) data.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    cons            : the constraint that will be deactivated
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that will be deactivated
  */
 #define DECL_CONSDISABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
 
@@ -482,6 +488,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

@@ -165,6 +165,7 @@ RETCODE primalAddSol(
    debugMessage("insert primal solution at position %d:", insertpos);
    debug( SCIPsolPrint(sol, set, stat, prob, NULL) );
 
+#if 0 /* this may fail, because in the LP solver, the feasibility tolerance is a relative measure against the row's norm */
 #ifndef NDEBUG
    /* check solution again completely */
    {
@@ -172,6 +173,7 @@ RETCODE primalAddSol(
       CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, TRUE, TRUE, &feasible) );
       assert(feasible);
    }
+#endif
 #endif
 
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */

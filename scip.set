@@ -300,7 +300,7 @@ nodesel/restartdfs/selectbestfreq = 10000
 
 # priority of branching rule
 # [default: 200]
-branchrule/fullstrong/priority = 0
+branchrule/fullstrong/priority = 0 # ??? 200
 
 # priority of branching rule
 # [default: 100]
@@ -321,4 +321,12 @@ heuristic/rounding/freq = 1
 # frequency for calling separator (-1: never, 0: only in root node)
 # [default: 8]
 separator/gomory/freq = 8
+
+# maximal number of gomory separation rounds per node
+# [default: 3]
+separator/gomory/maxrounds = 3
+
+# maximal number of gomory separation rounds in the root node
+# [default: 3]
+separator/gomory/maxroundsroot = 3
 

@@ -2063,6 +2063,13 @@ DECL_CONSENFOPS(consEnfopsLinear)
 
    /*debugMessage("Enfops method of linear constraints\n");*/
 
+   /* if the solution is infeasible anyway due to objective value, skip the enforcement */
+   if( objinfeasible )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    /* check all linear constraints for feasibility */
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
@@ -2133,8 +2140,9 @@ DECL_CONSPROP(consPropLinear)
    assert(conshdlrdata != NULL);
    propfreq = SCIPconshdlrGetPropFreq(conshdlr);
    actdepth = SCIPgetActDepth(scip);
-   tightenbounds = conshdlrdata->tightenboundsfreq == 0 && actdepth == 0;
-   tightenbounds |= conshdlrdata->tightenboundsfreq >= 1 && (actdepth % (propfreq * conshdlrdata->tightenboundsfreq) == 0);
+   tightenbounds = (conshdlrdata->tightenboundsfreq == 0 && actdepth == 0);
+   tightenbounds |= (conshdlrdata->tightenboundsfreq >= 1
+      && (actdepth % (propfreq * conshdlrdata->tightenboundsfreq) == 0));
    nchgbds = 0;
 
    /* process useful constraints */

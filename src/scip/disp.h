@@ -41,33 +41,33 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
 /** destructor of display column to free user data (called when SCIP is exiting)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    disp            : the display column itself
+ *  - scip            : SCIP main data structure
+ *  - disp            : the display column itself
  */
 #define DECL_DISPFREE(x) RETCODE x (SCIP* scip, DISP* disp)
 
 /** initialization method of display column (called when problem solving starts)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    disp            : the display column itself
+ *  - scip            : SCIP main data structure
+ *  - disp            : the display column itself
  */
 #define DECL_DISPINIT(x) RETCODE x (SCIP* scip, DISP* disp)
 
 /** deinitialization method of display column (called when problem solving exits)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    disp            : the display column itself
+ *  - scip            : SCIP main data structure
+ *  - disp            : the display column itself
  */
 #define DECL_DISPEXIT(x) RETCODE x (SCIP* scip, DISP* disp)
 
 /** output method of display column to output file stream 'file'
  *
  *  input:
- *    scip            : SCIP main data structure
- *    disp            : the display column itself
- *    file            : file stream for output
+ *  - scip            : SCIP main data structure
+ *  - disp            : the display column itself
+ *  - file            : file stream for output
  */
 #define DECL_DISPOUTPUT(x) RETCODE x (SCIP* scip, DISP* disp, FILE* file)
 

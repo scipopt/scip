@@ -387,8 +387,10 @@ RETCODE enforceConstraints(
    )
 {
    RESULT result;
+   Real actpseudoobjval;
    Bool resolved;
    Bool enforceagain;
+   Bool objinfeasible;
    int h;
 
    assert(set != NULL);
@@ -415,6 +417,15 @@ RETCODE enforceConstraints(
    for( h = 0; h < set->nconshdlrs; ++h )
       SCIPconshdlrResetEnfo(set->conshdlrs[h]);
 
+   /* check, if the solution is infeasible anyway due to it's objective value */
+   if( tree->actnodehaslp )
+      objinfeasible = FALSE;
+   else
+   {
+      actpseudoobjval = SCIPtreeGetActPseudoobjval(tree, set);
+      objinfeasible = SCIPsetIsLT(set, actpseudoobjval, tree->actnode->lowerbound);
+   }
+
    /* enforce constraints until a handler resolved an infeasibility with cutting off the node, branching, 
     * reducing a domain, or separating a cut
     * if a constraint handler introduced new constraints to enforce his constraints, the newly added constraints
@@ -434,7 +445,7 @@ RETCODE enforceConstraints(
          }
          else
          {
-            CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, prob, &result) );
+            CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, prob, objinfeasible, &result) );
             if( SCIPsepastoreGetNCuts(sepastore) != 0 )
             {
                char s[MAXSTRLEN];
@@ -449,6 +460,13 @@ RETCODE enforceConstraints(
 
          switch( result )
          {
+         case SCIP_DIDNOTRUN:
+            assert(tree->nchildren == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+            assert(objinfeasible);
+            *infeasible = TRUE;
+            break;
+
          case SCIP_FEASIBLE:
             assert(tree->nchildren == 0);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -528,6 +546,7 @@ RETCODE enforceConstraints(
          }
          assert(!(*solveagain) || (resolved && *infeasible));
       }
+      assert(!objinfeasible || *infeasible);
       debugMessage(" -> enforcing result: infeasible=%d, solveagain=%d, resolved=%d, enforceagain=%d\n",
          *infeasible, *solveagain, resolved, enforceagain);
    }

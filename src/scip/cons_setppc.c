@@ -1482,6 +1482,14 @@ DECL_CONSENFOPS(consEnfopsSetppc)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
+   /* if the solution is infeasible anyway due to objective value, skip the constraint processing and branch directly */
+   if( objinfeasible )
+   {
+      *result = SCIP_DIDNOTRUN;
+      CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
+      return SCIP_OKAY;
+   }
+
    debugMessage("pseudo enforcing %d set partitioning / packing / covering constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;

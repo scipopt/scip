@@ -34,55 +34,55 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
 /** destructor of branching method to free user data (called when SCIP is exiting)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    branchrule      : the branching rule itself
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
  */
 #define DECL_BRANCHFREE(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
 /** initialization method of branching rule (called when problem solving starts)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    branchrule      : the branching rule itself
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
  */
 #define DECL_BRANCHINIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
 /** deinitialization method of branching rule (called when problem solving exits)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    branchrule      : the branching rule itself
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
  */
 #define DECL_BRANCHEXIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
 
 /** branching execution method for fractional LP solutions
  *
  *  input:
- *    scip            : SCIP main data structure
- *    branchrule      : the branching rule itself
- *    result          : pointer to store the result of the branching call
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
+ *  - result          : pointer to store the result of the branching call
  *
  *  possible return values for *result:
- *    SCIP_CUTOFF     : the current node was detected to be infeasible
- *    SCIP_BRANCHED   : branching was applied
- *    SCIP_REDUCEDDOM : a domain was reduced that rendered the actual LP solution infeasible
- *    SCIP_SEPARATED  : a cutting plane was generated
- *    SCIP_DIDNOTRUN  : the branching rule was skipped
+ *  - SCIP_CUTOFF     : the current node was detected to be infeasible
+ *  - SCIP_BRANCHED   : branching was applied
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual LP solution infeasible
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
 
 /** branching execution method for not completely fixed pseudo solutions
  *
  *  input:
- *    scip            : SCIP main data structure
- *    branchrule      : the branching rule itself
- *    result          : pointer to store the result of the branching call
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
+ *  - result          : pointer to store the result of the branching call
  *
  *  possible return values for *result:
- *    SCIP_CUTOFF     : the current node was detected to be infeasible
- *    SCIP_BRANCHED   : branching was applied
- *    SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
- *    SCIP_DIDNOTRUN  : the branching rule was skipped
+ *  - SCIP_CUTOFF     : the current node was detected to be infeasible
+ *  - SCIP_BRANCHED   : branching was applied
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
+ *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
 

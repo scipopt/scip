@@ -29,7 +29,10 @@
 
 
 
-/** node priority queue data structure */
+/** node priority queue data structure;
+ *  the fields lowerboundnode, lowerbound, nlowerbounds and validlowerbound are only used for node selection rules,
+ *  that don't store the lowest bound node in the first slot of the queue
+ */
 struct NodePQ
 {
    int              len;                /**< number of used element slots */
@@ -87,7 +90,9 @@ RETCODE nodepqResize(
    return SCIP_OKAY;
 }
 
-/** updates the cached minimal lower bound of all nodes in the queue */
+/** updates the cached minimal lower bound of all nodes in the queue (used for node selection rules, that don't store
+ *  the lowest bound node in the first slot of the queue)
+ */
 static
 void nodepqUpdateLowerbound(
    NODEPQ*          nodepq,             /**< node priority queue */
@@ -96,29 +101,42 @@ void nodepqUpdateLowerbound(
    )
 {
    assert(nodepq != NULL);
+   assert(set != NULL);
+   assert(set->nodesel != NULL);
+   assert(!set->nodesel->lowestboundfirst);
    assert(node != NULL);
 
-   debugMessage("update queue's lower bound: nodebound=%g, queuebound=%g, nlowerbounds=%d\n",
-      node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds);
+   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
+   debugMessage("update queue's lower bound after adding node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
+      node, node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds,
+      nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? nodepq->lowerboundnode->lowerbound : 0.0);
    if( nodepq->validlowerbound )
    {
       assert(nodepq->lowerbound < SCIP_INVALID);
       if( SCIPsetIsLE(set, node->lowerbound, nodepq->lowerbound) )
       {
-         nodepq->lowerboundnode = node;
          if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
+         {
+            assert(nodepq->nlowerbounds >= 1);
             nodepq->nlowerbounds++;
+         }
          else
          {
+            nodepq->lowerboundnode = node;
             nodepq->lowerbound = node->lowerbound;
             nodepq->nlowerbounds = 1;
          }
       }
    }
-   debugMessage(" -> new queuebound=%g, nlowerbounds=%d\n", nodepq->lowerbound, nodepq->nlowerbounds);
+   debugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
+      nodepq->lowerbound, nodepq->nlowerbounds, nodepq->lowerboundnode);
+
+   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
 }
 
-/** calculates the minimal lower bound of all nodes in the queue */
+/** calculates the minimal lower bound of all nodes in the queue (used for node selection rules, that don't store
+ *  the lowest bound node in the first slot of the queue)
+ */
 static
 void nodepqCalcLowerbound(
    NODEPQ*          nodepq,             /**< node priority queue */
@@ -131,29 +149,15 @@ void nodepqCalcLowerbound(
    assert(nodepq != NULL);
    assert(set != NULL);
    assert(set->nodesel != NULL);
+   assert(!set->nodesel->lowestboundfirst);
 
    nodepq->validlowerbound = TRUE;
    nodepq->lowerboundnode = NULL;
    nodepq->lowerbound = set->infinity;
    nodepq->nlowerbounds = 0;
 
-   if( set->nodesel->lowestboundfirst )
-   {
-      /* the node selector's compare method sorts the minimal lower bound to the front */
-      if( nodepq->len > 0 )
-      {
-         assert(nodepq->slots[0] != NULL);
-         nodepq->lowerboundnode = nodepq->slots[0];
-         nodepq->lowerbound = nodepq->slots[0]->lowerbound;
-         nodepq->nlowerbounds = 1;
-      }
-   }
-   else
-   {
-      /* if we don't know the minimal lower bound, compare all nodes */
-      for( i = 0; i < nodepq->len; ++i )
-         nodepqUpdateLowerbound(nodepq, set, nodepq->slots[i]);
-   }
+   for( i = 0; i < nodepq->len; ++i )
+      nodepqUpdateLowerbound(nodepq, set, nodepq->slots[i]);
 }
 
 /** creates node priority queue */
@@ -251,8 +255,11 @@ RETCODE SCIPnodepqInsert(
    }
    nodepq->slots[pos] = node;
 
-   /* update the minimal lower bound */
-   nodepqUpdateLowerbound(nodepq, set, node);
+   if( !nodesel->lowestboundfirst )
+   {
+      /* update the minimal lower bound */
+      nodepqUpdateLowerbound(nodepq, set, node);
+   }
 
    return SCIP_OKAY;
 }
@@ -278,7 +285,6 @@ Bool nodepqDelPos(
 
    assert(nodepq != NULL);
    assert(nodepq->len > 0);
-   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
    assert(set != NULL);
    assert(0 <= rempos && rempos < nodepq->len);
 
@@ -287,30 +293,37 @@ Bool nodepqDelPos(
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
 
-   /* update the minimal lower bound */
-   if( nodepq->nlowerbounds > 0 )
+   if( !nodesel->lowestboundfirst )
    {
-      NODE* node;
+      assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
 
-      node = nodepq->slots[rempos];
-      assert(SCIPsetIsGE(set, node->lowerbound, nodepq->lowerbound));
-
-      debugMessage("update queue's lower bound after removal: nodebound=%g, queuebound=%g, nlowerbounds=%d\n",
-         node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds);
-      if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
+      /* update the minimal lower bound */
+      if( nodepq->nlowerbounds > 0 )
       {
-         nodepq->nlowerbounds--;
-         if( nodepq->nlowerbounds == 0 )
+         NODE* node;
+         
+         node = nodepq->slots[rempos];
+         assert(SCIPsetIsGE(set, node->lowerbound, nodepq->lowerbound));
+         
+         debugMessage("update queue's lower bound after removal of node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
+            node, node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds, 
+            nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? nodepq->lowerboundnode->lowerbound : 0.0);
+         if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
          {
-            nodepq->validlowerbound = FALSE;
-            nodepq->lowerbound = SCIP_INVALID;
+            nodepq->nlowerbounds--;
+            if( nodepq->nlowerbounds == 0 )
+            {
+               nodepq->validlowerbound = FALSE;
+               nodepq->lowerbound = SCIP_INVALID;
+            }
          }
+         if( node == nodepq->lowerboundnode )
+            nodepq->lowerboundnode = NULL;
+         debugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
+            nodepq->lowerbound, nodepq->nlowerbounds, nodepq->lowerboundnode);
       }
-      if( node == nodepq->lowerboundnode )
-         nodepq->lowerboundnode = NULL;
-      debugMessage(" -> new queuebound=%g, nlowerbounds=%d\n", nodepq->lowerbound, nodepq->nlowerbounds);
+      assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
    }
-   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
 
    /* remove node of the tree and get a free slot,
     * if the removed node was the last node of the queue
@@ -459,14 +472,30 @@ Real SCIPnodepqGetLowerbound(
    assert(set != NULL);
    assert(set->nodesel != NULL);
 
-   /* if the cached lower bound is invalid, calculate it */
-   if( !nodepq->validlowerbound )
-      nodepqCalcLowerbound(nodepq, set);
+   if( set->nodesel->lowestboundfirst )
+   {
+      /* the node selector's compare method sorts the minimal lower bound to the front */
+      if( nodepq->len > 0 )
+      {
+         assert(nodepq->slots[0] != NULL);
+         return nodepq->slots[0]->lowerbound;
+      }
+      else
+         return set->infinity;
+   }
+   else
+   {
+      /* we use bookkeeping to remember the lowest bound */
 
-   assert(nodepq->validlowerbound);
-   assert(nodepq->lowerbound < SCIP_INVALID);
+      /* if the cached lower bound is invalid, calculate it */
+      if( !nodepq->validlowerbound )
+         nodepqCalcLowerbound(nodepq, set);
 
-   return nodepq->lowerbound;
+      assert(nodepq->validlowerbound);
+      assert(nodepq->lowerbound < SCIP_INVALID);
+
+      return nodepq->lowerbound;
+   }
 }
 
 /** gets the node with minimal lower bound of all nodes in the queue */
@@ -479,15 +508,31 @@ NODE* SCIPnodepqGetLowerboundNode(
    assert(set != NULL);
    assert(set->nodesel != NULL);
 
-   /* if the cached lower bound node is invalid, calculate it */
-   if( !nodepq->validlowerbound || nodepq->lowerboundnode == NULL )
-      nodepqCalcLowerbound(nodepq, set);
-   
-   assert(nodepq->validlowerbound);
-   assert(nodepq->lowerbound < SCIP_INVALID);
-   assert(nodepq->lowerbound == set->infinity || nodepq->lowerboundnode != NULL);
+   if( set->nodesel->lowestboundfirst )
+   {
+      /* the node selector's compare method sorts the minimal lower bound to the front */
+      if( nodepq->len > 0 )
+      {
+         assert(nodepq->slots[0] != NULL);
+         return nodepq->slots[0];
+      }
+      else
+         return NULL;
+   }
+   else
+   {
+      /* we use bookkeeping to remember the lowest bound */
 
-   return nodepq->lowerboundnode;
+      /* if the cached lower bound node is invalid, calculate it */
+      if( !nodepq->validlowerbound || nodepq->lowerboundnode == NULL )
+         nodepqCalcLowerbound(nodepq, set);
+      
+      assert(nodepq->validlowerbound);
+      assert(nodepq->lowerbound < SCIP_INVALID);
+      assert(nodepq->lowerbound == set->infinity || nodepq->lowerboundnode != NULL);
+
+      return nodepq->lowerboundnode;
+   }
 }
 
 /** gets the sum of lower bounds of all nodes in the queue */

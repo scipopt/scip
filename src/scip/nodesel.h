@@ -34,50 +34,50 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 /** destructor of node selector to free user data (called when SCIP is exiting)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    nodesel         : the node selector itself
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
  */
 #define DECL_NODESELFREE(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
 
 /** initialization method of node selector (called when problem solving starts)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    nodesel         : the node selector itself
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
  */
 #define DECL_NODESELINIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
 
 /** deinitialization method of node selector (called when problem solving exits)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    nodesel         : the node selector itself
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
  */
 #define DECL_NODESELEXIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
 
 /** node selection method of node selector
  *
  *  input:
- *    scip            : SCIP main data structure
- *    nodesel         : the node selector itself
- *    selnode         : pointer to store the selected node
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
+ *  - selnode         : pointer to store the selected node
  *
  *  possible return values for *selnode:
- *    NULL    : problem is solved, because tree is empty
- *    non-NULL: node to be solved next
+ *  - NULL    : problem is solved, because tree is empty
+ *  - non-NULL: node to be solved next
  */
 #define DECL_NODESELSELECT(x) RETCODE x (SCIP* scip, NODESEL* nodesel, NODE** selnode)
 
 /** node comparison method of node selector
  *
  *  input:
- *    scip            : SCIP main data structure
- *    nodesel         : the node selector itself
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
  *
  *  possible return values:
- *    < 0: node1 comes before (is better than) node2
- *    = 0: both nodes are identical, i.e. the pointers are equal
- *    > 0: node2 comes after (is worse than) node2
+ *  - value < 0: node1 comes before (is better than) node2
+ *  - value = 0: both nodes are identical, i.e. the pointers are equal
+ *  - value > 0: node2 comes after (is worse than) node2
  */
 #define DECL_NODESELCOMP(x) int x (SCIP* scip, NODESEL* nodesel, NODE* node1, NODE* node2)
 

@@ -1476,6 +1476,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -1536,7 +1537,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIPclockStart(conshdlr->enfopstime, set);
 
          /* call external method */
-         CHECK_OKAY( conshdlr->consenfops(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
+         CHECK_OKAY( conshdlr->consenfops(set->scip, conshdlr, conss, nconss, nusefulconss, objinfeasible, result) );
          debugMessage(" -> enforcing returned result <%d>\n", *result);
 
          /* stop timing */
@@ -1548,7 +1549,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          /* remember, that these constraints have already been processed */
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
-         if( *result != SCIP_CUTOFF
+         if( *result != SCIP_DIDNOTRUN
+            && *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_CONSADDED
@@ -1567,6 +1569,14 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
             conshdlr->nenfopscalls++;
             if( *result == SCIP_BRANCHED )
                conshdlr->nbranchings++;
+         }
+         else if( !objinfeasible )
+         {
+            char s[MAXSTRLEN];
+            sprintf(s, "enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible", 
+               conshdlr->name);
+            errorMessage(s);
+            return SCIP_INVALIDRESULT;
          }
       }
    }

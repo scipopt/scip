@@ -34,24 +34,24 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
 /** destructor of separator to free user data (called when SCIP is exiting)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sepa            : the separator itself
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
  */
 #define DECL_SEPAFREE(x) RETCODE x (SCIP* scip, SEPA* sepa)
 
 /** initialization method of separator (called when problem solving starts)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sepa            : the separator itself
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
  */
 #define DECL_SEPAINIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
 
 /** deinitialization method of separator (called when problem solving exits)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sepa            : the separator itself
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
  */
 #define DECL_SEPAEXIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
 
@@ -60,17 +60,17 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  Searches for cutting planes. The method is called in the LP solving loop.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sepa            : the separator itself
- *    result          : pointer to store the result of the separation call
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
+ *  - result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
- *    SCIP_CUTOFF     : at least one unmodifiable row is infeasible in the variable's bounds -> node is infeasible
- *    SCIP_SEPARATED  : a cutting plane was generated
- *    SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
- *    SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
- *    SCIP_DIDNOTFIND : the separator searched, but didn't found a feasible cutting plane
- *    SCIP_DIDNOTRUN  : the separator was skipped
+ *  - SCIP_CUTOFF     : at least one unmodifiable row is infeasible in the variable's bounds -> node is infeasible
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
+ *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but didn't found a feasible cutting plane
+ *  - SCIP_DIDNOTRUN  : the separator was skipped
  */
 #define DECL_SEPAEXEC(x) RETCODE x (SCIP* scip, SEPA* sepa, RESULT* result)
 
