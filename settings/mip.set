@@ -46,13 +46,13 @@ numerics/cutvioleps = 0.05
 # [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
-# minimal variable distance value to use for branching history updates
+# minimal variable distance value to use for branching pseudo cost updates
 # [type: real, range: [2.22044604925031e-13,1], default: 0.1]
-numerics/historyeps = 0.1
+numerics/pseudocosteps = 0.1
 
-# minimal objective distance value to use for branching history updates
+# minimal objective distance value to use for branching pseudo cost updates
 # [type: real, range: [0,1.79769313486232e+308], default: 0.0001]
-numerics/historydelta = 0.0001
+numerics/pseudocostdelta = 0.0001
 
 # fraction of maximal memory usage resulting in switch to memory saving mode
 # [type: real, range: [0,1], default: 0.8]
@@ -422,42 +422,6 @@ branching/fullstrong/priority = 0
 # [type: int, range: [-1,2147483647], default: -1]
 branching/fullstrong/maxdepth = -1
 
-# priority of branching rule <history>
-# [type: int, range: [-2147483648,2147483647], default: 10000]
-branching/history/priority = 10000
-
-# maximal depth level, up to which branching rule <history> should be used (-1 for no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-branching/history/maxdepth = -1
-
-# minimal value for minimum history size to regard history value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-branching/history/minreliable = 4
-
-# maximal value for minimum history size to regard history value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 16]
-branching/history/maxreliable = 16
-
-# maximal fraction of strong branching LP iterations compared to node relaxation LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
-branching/history/sbiterquot = 0.5
-
-# additional number of allowed strong branching LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-branching/history/sbiterofs = 10000
-
-# maximal number of further variables evaluated without better score
-# [type: int, range: [1,2147483647], default: 8]
-branching/history/maxlookahead = 8
-
-# maximal number of candidates initialized with strong branching per node
-# [type: int, range: [0,2147483647], default: 100]
-branching/history/initcand = 100
-
-# iteration limit for strong branching initializations of history entries (0: auto)
-# [type: int, range: [0,2147483647], default: 0]
-branching/history/inititer = 0
-
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]
 branching/mostinf/priority = 100
@@ -473,6 +437,42 @@ branching/leastinf/priority = 50
 # maximal depth level, up to which branching rule <leastinf> should be used (-1 for no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 branching/leastinf/maxdepth = -1
+
+# priority of branching rule <reliability>
+# [type: int, range: [-2147483648,2147483647], default: 10000]
+branching/reliability/priority = 10000
+
+# maximal depth level, up to which branching rule <reliability> should be used (-1 for no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/reliability/maxdepth = -1
+
+# minimal value for minimum pseudo cost size to regard pseudo cost value as reliable
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
+branching/relpscost/minreliable = 4
+
+# maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
+# [type: real, range: [0,1.79769313486232e+308], default: 16]
+branching/relpscost/maxreliable = 16
+
+# maximal fraction of strong branching LP iterations compared to node relaxation LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+branching/relpscost/sbiterquot = 0.5
+
+# additional number of allowed strong branching LP iterations
+# [type: int, range: [0,2147483647], default: 10000]
+branching/relpscost/sbiterofs = 10000
+
+# maximal number of further variables evaluated without better score
+# [type: int, range: [1,2147483647], default: 8]
+branching/relpscost/maxlookahead = 8
+
+# maximal number of candidates initialized with strong branching per node
+# [type: int, range: [0,2147483647], default: 100]
+branching/relpscost/initcand = 100
+
+# iteration limit for strong branching initializations of pseudo cost entries (0: auto)
+# [type: int, range: [0,2147483647], default: 0]
+branching/relpscost/inititer = 0
 
 # priority of heuristic <coefdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1001000]
@@ -546,69 +546,69 @@ heuristics/fracdiving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1e+99], default: 8]
 heuristics/fracdiving/maxdiveavgquotnosol = 8
 
-# priority of heuristic <histdiving>
-# [type: int, range: [-2147483648,2147483647], default: -1002000]
-heuristics/histdiving/priority = -1002000
-
-# frequency for calling primal heuristic <histdiving> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-heuristics/histdiving/freq = 10
-
-# frequency offset for calling primal heuristic <histdiving>
-# [type: int, range: [0,2147483647], default: 4]
-heuristics/histdiving/freqofs = 4
-
-# minimal relative depth to start diving
-# [type: real, range: [0,1], default: 0.5]
-heuristics/histdiving/divestartdepth = 0.5
-
-# maximal fraction of diving LP iterations compared to total iteration number
-# [type: real, range: [0,1], default: 0.1]
-heuristics/histdiving/maxlpiterquot = 0.1
-
-# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
-# [type: real, range: [0,1], default: 0.8]
-heuristics/histdiving/maxdiveubquot = 0.8
-
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1e+99], default: 4]
-heuristics/histdiving/maxdiveavgquot = 4
-
-# maximal UBQUOT when no solution was found yet
-# [type: real, range: [0,1], default: 0.1]
-heuristics/histdiving/maxdiveubquotnosol = 0.1
-
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1e+99], default: 8]
-heuristics/histdiving/maxdiveavgquotnosol = 8
-
-# priority of heuristic <objhistdiving>
+# priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1003000]
-heuristics/objhistdiving/priority = -1003000
+heuristics/objpscostdiving/priority = -1003000
 
-# frequency for calling primal heuristic <objhistdiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
-heuristics/objhistdiving/freq = 10
+heuristics/objpscostdiving/freq = 10
 
-# frequency offset for calling primal heuristic <objhistdiving>
+# frequency offset for calling primal heuristic <objpscostdiving>
 # [type: int, range: [0,2147483647], default: 6]
-heuristics/objhistdiving/freqofs = 6
+heuristics/objpscostdiving/freqofs = 6
 
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
-heuristics/objhistdiving/divestartdepth = 0.5
+heuristics/objpscostdiving/divestartdepth = 0.5
 
 # maximal fraction of diving LP iterations compared to total iteration number
 # [type: real, range: [0,1], default: 0.1]
-heuristics/objhistdiving/maxlpiterquot = 0.1
+heuristics/objpscostdiving/maxlpiterquot = 0.1
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
-heuristics/objhistdiving/depthfac = 0.5
+heuristics/objpscostdiving/depthfac = 0.5
 
 # maximal diving depth factor if no feasible solution was found yet
 # [type: real, range: [0,1.79769313486232e+308], default: 2]
-heuristics/objhistdiving/depthfacnosol = 2
+heuristics/objpscostdiving/depthfacnosol = 2
+
+# priority of heuristic <pscostdiving>
+# [type: int, range: [-2147483648,2147483647], default: -1002000]
+heuristics/pscostdiving/priority = -1002000
+
+# frequency for calling primal heuristic <pscostdiving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/pscostdiving/freq = 10
+
+# frequency offset for calling primal heuristic <pscostdiving>
+# [type: int, range: [0,2147483647], default: 4]
+heuristics/pscostdiving/freqofs = 4
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristics/pscostdiving/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.1]
+heuristics/pscostdiving/maxlpiterquot = 0.1
+
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristics/pscostdiving/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1e+99], default: 4]
+heuristics/pscostdiving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristics/pscostdiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1e+99], default: 8]
+heuristics/pscostdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <rounding>
 # [type: int, range: [-2147483648,2147483647], default: -1000]

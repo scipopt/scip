@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.2 2004/02/04 17:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_history.h,v 1.3 2004/04/06 15:21:07 bzfpfend Exp $"
 
 /**@file   struct_history.h
- * @brief  datastructures for branching history
+ * @brief  datastructures for branching and inference history
  * @author Tobias Achterberg
  */
 
@@ -31,11 +31,13 @@
 #include "type_history.h"
 
 
-/** branching history information for single variable and single direction */
+/** branching and inference history information for single variable */
 struct History
 {
-   Real             count[2];           /**< number of (partial) summands in down/upwards history (may be fractional) */
-   Real             sum[2];             /**< sum of (partial) history values for down/upwards branching */
+   Real             pscostcount[2];     /**< nr of (partial) summands in down/upwards pseudo costs (may be fractional) */
+   Real             pscostsum[2];       /**< sum of (partial) pseudo cost values for down/upwards branching */
+   Longint          nbranchings;        /**< nr of times, the variable changed its bounds due to branching */
+   Longint          ninferences;        /**< nr of times, branching on the variable lead to inference of another bound */
 };
 
 

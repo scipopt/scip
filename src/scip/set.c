@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.94 2004/03/31 14:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.95 2004/04/06 15:21:06 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -118,10 +118,10 @@
 #define SCIP_DEFAULT_CONSOBSOLETEAGE    100 /**< age of a constraint after which it is marked obsolete */
 
 
-/* History Settings */
+/* Pseudo Cost Settings */
 
-#define SCIP_DEFAULT_HISTORYEPS       1e-01 /**< default minimal variable distance value to use for history updates */
-#define SCIP_DEFAULT_HISTORYDELTA     1e-04 /**< default minimal objective distance value to use for history updates */
+#define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01 /**< default minimal variable distance value to use for pseudo cost updates */
+#define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04 /**< default minimal objective distance value to use for pseudo cost updates */
 
 
 /* Conflict Analysis */
@@ -343,14 +343,14 @@ RETCODE SCIPsetCreate(
                   &(*set)->cutviolepsroot, 0.05*SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_INVALID/10.0,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "numerics/historyeps",
-                  "minimal variable distance value to use for branching history updates",
-                  &(*set)->historyeps, SCIP_DEFAULT_HISTORYEPS, machineeps*1e+03, 1.0,
+                  "numerics/pseudocosteps",
+                  "minimal variable distance value to use for branching pseudo cost updates",
+                  &(*set)->pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, machineeps*1e+03, 1.0,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "numerics/historydelta",
-                  "minimal objective distance value to use for branching history updates",
-                  &(*set)->historydelta, SCIP_DEFAULT_HISTORYDELTA, 0.0, REAL_MAX,
+                  "numerics/pseudocostdelta",
+                  "minimal objective distance value to use for branching pseudo cost updates",
+                  &(*set)->pseudocostdelta, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, REAL_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
                   "memory/memsavefac",

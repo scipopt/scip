@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.99 2004/04/06 13:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.100 2004/04/06 15:21:07 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -135,9 +135,9 @@ RETCODE propagateDomains(
    return SCIP_OKAY;
 }
 
-/** returns whether the given variable with the old LP solution value should lead to an update of the history entry */
+/** returns whether the given variable with the old LP solution value should lead to an update of the pseudo cost entry */
 static
-Bool isHistoryUpdateValid(
+Bool isPseudocostUpdateValid(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
    Real             oldlpsolval         /**< solution value of variable in old LP */
@@ -147,7 +147,7 @@ Bool isHistoryUpdateValid(
 
    assert(var != NULL);
 
-   /* if the old LP solution value is unknown, the history update cannot be performed */
+   /* if the old LP solution value is unknown, the pseudo cost update cannot be performed */
    if( oldlpsolval >= SCIP_INVALID )
       return FALSE;
 
@@ -171,17 +171,17 @@ Bool isHistoryUpdateValid(
       return FALSE;
 }
 
-/** history flag stored in the variables to mark them for the history update */
-enum HistoryFlag
+/** pseudo cost flag stored in the variables to mark them for the pseudo cost update */
+enum PseudocostFlag
 {
-   HISTORY_NONE     = 0,                /**< variable's bounds were not changed */
-   HISTORY_IGNORE   = 1,                /**< bound changes on variable should be ignored for history updates */
-   HISTORY_UPDATE   = 2                 /**< history value of variable should be updated */
+   PSEUDOCOST_NONE     = 0,             /**< variable's bounds were not changed */
+   PSEUDOCOST_IGNORE   = 1,             /**< bound changes on variable should be ignored for pseudo cost updates */
+   PSEUDOCOST_UPDATE   = 2              /**< pseudo cost value of variable should be updated */
 };
 
-/** updates the variable's history values after the node's initial LP was solved */
+/** updates the variable's pseudo cost values after the node's initial LP was solved */
 static
-RETCODE updateHistory(
+RETCODE updatePseudocost(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -219,7 +219,7 @@ RETCODE updateHistory(
 
       /* search the nodes from LP fork down to current node for bound changes in between; move in this direction, 
        * because the bound changes closer to the LP fork are more likely to have a valid LP solution information
-       * attached; collect the bound changes for history value updates and mark the corresponding variables such
+       * attached; collect the bound changes for pseudo cost value updates and mark the corresponding variables such
        * that they are not updated twice in case of more than one bound change on the same variable
        */
       for( d = tree->actlpfork->depth+1; d <= tree->actnode->depth; ++d )
@@ -238,29 +238,29 @@ RETCODE updateHistory(
                if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   var = boundchgs[i].var;
-                  if( var->historyflag == HISTORY_NONE )
+                  if( var->pseudocostflag == PSEUDOCOST_NONE )
                   {
                      /* remember the bound change and mark the variable */
                      CHECK_OKAY( SCIPsetReallocBufferArray(set, &updates, nupdates+1) );
                      updates[nupdates] = &boundchgs[i];
                      nupdates++;
 
-                     /* check, if the bound change would lead to a valid history update */
-                     if( isHistoryUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval) )
+                     /* check, if the bound change would lead to a valid pseudo cost update */
+                     if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval) )
                      {
-                        var->historyflag = HISTORY_UPDATE;
+                        var->pseudocostflag = PSEUDOCOST_UPDATE;
                         nvalidupdates++;
                      }
                      else
-                        var->historyflag = HISTORY_IGNORE;
+                        var->pseudocostflag = PSEUDOCOST_IGNORE;
                   }
                }
             }
          }
       }
 
-      /* update the history values and reset the variables' flags; assume, that the responsibility for the dual gain
-       * is equally spread on all bound changes that lead to valid history updates
+      /* update the pseudo cost values and reset the variables' flags; assume, that the responsibility for the dual gain
+       * is equally spread on all bound changes that lead to valid pseudo cost updates
        */
       weight = nvalidupdates > 0 ? 1.0 / (Real)nvalidupdates : 1.0;
       lpgain = tree->actnode->lowerbound - tree->actlpfork->lowerbound;
@@ -268,13 +268,13 @@ RETCODE updateHistory(
       {
          assert(updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
          var = updates[i]->var;
-         assert(var->historyflag != HISTORY_NONE);
-         if( var->historyflag == HISTORY_UPDATE )
+         assert(var->pseudocostflag != PSEUDOCOST_NONE);
+         if( var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
-            SCIPvarUpdateLPHistory(var, set, stat, 
+            SCIPvarUpdatePseudocost(var, set, stat, 
                SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight);
          }
-         var->historyflag = HISTORY_NONE;
+         var->pseudocostflag = PSEUDOCOST_NONE;
       }
 
       /* free the buffer for the collected bound changes */
@@ -427,8 +427,8 @@ RETCODE solveNodeInitialLP(
       CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
       CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
       
-      /* update history values */
-      CHECK_OKAY( updateHistory(set, stat, tree, lp) );
+      /* update pseudo cost values */
+      CHECK_OKAY( updatePseudocost(set, stat, tree, lp) );
    }
 
    return SCIP_OKAY;

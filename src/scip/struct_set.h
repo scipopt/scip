@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.16 2004/03/31 14:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.17 2004/04/06 15:21:07 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -58,8 +58,8 @@ struct Set
    Real             boundstreps;        /**< minimal improve for strengthening bounds */
    Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
    Real             cutviolepsroot;     /**< epsilon for deciding if a cut is violated in the root node */
-   Real             historyeps;         /**< minimal variable distance value to use for branching history updates */
-   Real             historydelta;       /**< minimal objective distance value to use for branching history updates */
+   Real             pseudocosteps;      /**< minimal variable distance value to use for pseudo cost updates */
+   Real             pseudocostdelta;    /**< minimal objective distance value to use for pseudo cost updates */
    Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
    Real             treegrowfac;        /**< memory growing factor for tree array */
    Real             pathgrowfac;        /**< memory growing factor for path array */

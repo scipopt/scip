@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.141 2004/04/06 13:09:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.142 2004/04/06 15:21:05 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6736,66 +6736,66 @@ RETCODE SCIPdropVarEvent(
    return SCIP_OKAY;
 }
 
-/** updates the branching history of the given variable and the global history after a change of "solvaldelta" in the
+/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
  *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
-RETCODE SCIPupdateVarLPHistory(
+RETCODE SCIPupdateVarPseudocost(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
    Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
-   Real             weight              /**< weight in (0,1] of this update in history sum */
+   Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPupdateVarLPHistory", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPupdateVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   SCIPvarUpdateLPHistory(var, scip->set, scip->stat, solvaldelta, objdelta, weight);
+   SCIPvarUpdatePseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight);
 
    return SCIP_OKAY;
 }
 
-/** gets the variable's branching history value for the given direction */
-Real SCIPgetVarLPHistory(
+/** gets the variable's pseudo cost value for the given direction */
+Real SCIPgetVarPseudocost(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarLPHistory", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   return SCIPvarGetLPHistory(var, scip->stat, solvaldelta);
+   return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
 }
 
-/** gets the variable's (possible fractional) number of history updates for the given direction */
-Real SCIPgetVarLPHistoryCount(
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
+Real SCIPgetVarPseudocostCount(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    int              dir                 /**< branching direction: 0 (down), or 1 (up) */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarLPHistoryCount", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   return SCIPvarGetLPHistoryCount(var, dir);
+   return SCIPvarGetPseudocostCount(var, dir);
 }
 
-/** gets the variable's history score value for the given LP solution value */
-Real SCIPgetVarLPHistoryScore(
+/** gets the variable's pseudo cost score value for the given LP solution value */
+Real SCIPgetVarPseudocostScore(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Real             solval              /**< variable's LP solution value */
    )
 {
    Real frac;
-   Real histdown;
-   Real histup;
+   Real pscostdown;
+   Real pscostup;
 
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarLPHistoryScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    frac = solval - SCIPsetFloor(scip->set, solval);
-   histdown = SCIPvarGetLPHistory(var, scip->stat, -frac);
-   histup = SCIPvarGetLPHistory(var, scip->stat, 1.0-frac);
+   pscostdown = SCIPvarGetPseudocost(var, scip->stat, -frac);
+   pscostup = SCIPvarGetPseudocost(var, scip->stat, 1.0-frac);
 
-   return SCIPbranchGetScore(scip->set, var, histdown, histup);
+   return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
 }
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.35 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.36 2004/04/06 15:21:07 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -58,7 +58,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
-   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glblphistory, memhdr) );
+   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistory, memhdr) );
    CHECK_OKAY( SCIPvbcCreate(&(*stat)->vbc) );
 
    (*stat)->marked_nvaridx = 0;
@@ -89,7 +89,7 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->redcoststrtime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
 
-   SCIPhistoryFree(&(*stat)->glblphistory, memhdr);
+   SCIPhistoryFree(&(*stat)->glbhistory, memhdr);
    SCIPvbcFree(&(*stat)->vbc);
 
    freeMemory(stat);
@@ -136,7 +136,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->redcoststrtime);
    SCIPclockReset(stat->nodeactivationtime);
 
-   SCIPhistoryReset(stat->glblphistory);
+   SCIPhistoryReset(stat->glbhistory);
 
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
@@ -171,6 +171,7 @@ void SCIPstatReset(
    stat->maxdepth = -1;
    stat->plungedepth = 0;
    stat->memsavemode = FALSE;
+   stat->lastbranchvar = NULL;
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;

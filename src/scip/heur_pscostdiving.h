@@ -14,25 +14,25 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objhistdiving.h,v 1.2 2004/02/04 17:27:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.h,v 1.1 2004/04/06 15:21:05 bzfpfend Exp $"
 
-/**@file   heur_objhistdiving.h
- * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using history values as guide
+/**@file   heur_pscostdiving.h
+ * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __HEUR_OBJHISTDIVING_H__
-#define __HEUR_OBJHISTDIVING_H__
+#ifndef __HEUR_PSCOSTDIVING_H__
+#define __HEUR_PSCOSTDIVING_H__
 
 
 #include "scip.h"
 
 
-/** creates the objhistdiving heuristic and includes it in SCIP */
+/** creates the pscostdiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurObjhistdiving(
+RETCODE SCIPincludeHeurPscostdiving(
    SCIP*            scip                /**< SCIP data structure */
    );
 

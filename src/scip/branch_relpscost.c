@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.12 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.1 2004/04/06 15:21:00 bzfpfend Exp $"
 
-/**@file   branch_history.c
- * @brief  history branching rule
+/**@file   branch_relpscost.c
+ * @brief  reliable pseudo costs branching rule
  * @author Tobias Achterberg
  */
 
@@ -26,33 +26,33 @@
 #include <assert.h>
 #include <string.h>
 
-#include "branch_history.h"
+#include "branch_relpscost.h"
 
 
-#define BRANCHRULE_NAME          "history"
-#define BRANCHRULE_DESC          "history branching"
+#define BRANCHRULE_NAME          "reliability"
+#define BRANCHRULE_DESC          "reliability branching"
 #define BRANCHRULE_PRIORITY      10000
 #define BRANCHRULE_MAXDEPTH      -1
 
-#define DEFAULT_MINRELIABLE      4.0    /**< minimal value for minimum history size to regard history value as reliable */
-#define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum history size to regard history value as reliable */
+#define DEFAULT_MINRELIABLE      4.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
 #define DEFAULT_SBITEROFS    10000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
-#define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of history entries (0: auto) */
+#define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
 
 
 /** branching rule data */
 struct BranchruleData
 {
-   Real             minreliable;        /**< minimal value for minimum history size to regard history value as reliable */
-   Real             maxreliable;        /**< maximal value for minimum history size to regard history value as reliable */
+   Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+   Real             maxreliable;        /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iters */
    int              sbiterofs;          /**< additional number of allowed strong branching LP iterations */
    int              maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int              initcand;           /**< maximal number of candidates initialized with strong branching per node */
-   int              inititer;           /**< iteration limit for strong branching init of history entries (0: auto) */
+   int              inititer;           /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
 };
 
 
@@ -63,7 +63,7 @@ struct BranchruleData
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
-DECL_BRANCHFREE(branchFreeHistory)
+DECL_BRANCHFREE(branchFreeRelpscost)
 {  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
 
@@ -77,11 +77,11 @@ DECL_BRANCHFREE(branchFreeHistory)
 
 
 /** initialization method of branching rule (called when problem solving starts) */
-#define branchInitHistory NULL
+#define branchInitRelpscost NULL
 
 
 /** deinitialization method of branching rule (called when problem solving exits) */
-#define branchExitHistory NULL
+#define branchExitRelpscost NULL
 
 
 #define MINMAXDEPTH   20
@@ -90,7 +90,7 @@ DECL_BRANCHFREE(branchFreeHistory)
 #define FRACSCORE   1e-3
 /** branching execution method for fractional LP solutions */
 static
-DECL_BRANCHEXECLP(branchExeclpHistory)
+DECL_BRANCHEXECLP(branchExeclpRelpscost)
 {  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
    VAR** lpcands;
@@ -111,7 +111,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    assert(scip != NULL);
    assert(result != NULL);
 
-   debugMessage("Execlp method of history branching\n");
+   debugMessage("Execlp method of relpscost branching\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -207,7 +207,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       prio = depthfac * sizefac;
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
-      /* search for the best history candidate, while remembering unreliable candidates in a sorted buffer */
+      /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
       besthistcand = -1;
       besthistscore = -SCIPinfinity(scip);
       for( c = 0; c < nlpcands; ++c )
@@ -238,21 +238,21 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          }
          else
          {
-            /* get history score of candidate */
-            score = SCIPgetVarLPHistoryScore(scip, lpcands[c], lpcandssol[c]);
+            /* get pseudo cost score of candidate */
+            score = SCIPgetVarPseudocostScore(scip, lpcands[c], lpcandssol[c]);
 
-            /* check, if the history score of the variable is reliable */
-            downsize = SCIPgetVarLPHistoryCount(scip, lpcands[c], 0);
-            upsize = SCIPgetVarLPHistoryCount(scip, lpcands[c], 1);
+            /* check, if the pseudo cost score of the variable is reliable */
+            downsize = SCIPgetVarPseudocostCount(scip, lpcands[c], 0);
+            upsize = SCIPgetVarPseudocostCount(scip, lpcands[c], 1);
             size = MIN(downsize, upsize);
 
-            /* use strong branching on variables with unreliable history scores */
+            /* use strong branching on variables with unreliable pseudo cost scores */
             usesb = (size < reliable);
          }
 
          if( usesb )
          {
-            /* history of variable is not reliable: insert candidate in initcands buffer */
+            /* pseudo cost of variable is not reliable: insert candidate in initcands buffer */
             for( j = ninitcands; j > 0 && score > initcandscores[j-1]; --j )
             {
                initcands[j] = initcands[j-1];
@@ -265,7 +265,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          }
          else
          {
-            /* variable will keep it's history value: check for better history score of candidate */
+            /* variable will keep it's pseudo cost value: check for better pseudo cost score of candidate */
             if( score > besthistscore )
             {
                besthistscore = score;
@@ -301,8 +301,8 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          c = initcands[i];
          assert(!SCIPisIntegral(scip, lpcandssol[c]));
 
-         debugMessage("init history (%g/%g) of <%s> at %g with strong branching (%d iters) -- %lld/%lld iterations\n",
-            SCIPgetVarLPHistoryCount(scip, lpcands[c], 0), SCIPgetVarLPHistoryCount(scip, lpcands[c], 1), 
+         debugMessage("init pseudo cost (%g/%g) of <%s> at %g with strong branching (%d iters) -- %lld/%lld iterations\n",
+            SCIPgetVarPseudocostCount(scip, lpcands[c], 0), SCIPgetVarPseudocostCount(scip, lpcands[c], 1), 
             SCIPvarGetName(lpcands[c]), lpcandssol[c], inititer,
             SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
@@ -374,9 +374,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          else if( SCIPisLT(scip, score, bestsbscore) )
             lookahead++;
       
-         /* update history values */
-         CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
-         CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+         /* update pseudo cost values */
+         CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
+         CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
       
          debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, score, 
@@ -389,7 +389,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       else
          bestuninitsbscore = -SCIPinfinity(scip);
 
-      /* if the best history candidate is better than the best uninitialized strong branching candidate,
+      /* if the best pseudo cost candidate is better than the best uninitialized strong branching candidate,
        * compare it to the best initialized strong branching candidate
        */
       if( besthistscore > bestuninitsbscore && besthistscore > bestsbscore )
@@ -463,7 +463,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
 
 
 /** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsHistory NULL
+#define branchExecpsRelpscost NULL
 
 
 
@@ -472,49 +472,50 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
  * branching specific interface methods
  */
 
-/** creates the history braching rule and includes it in SCIP */
-RETCODE SCIPincludeBranchruleHistory(
+/** creates the reliable pseudo cost braching rule and includes it in SCIP */
+RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    BRANCHRULEDATA* branchruledata;
 
-   /* create history branching rule data */
+   /* create relpscost branching rule data */
    CHECK_OKAY( SCIPallocMemory(scip, &branchruledata) );
    
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                  branchFreeHistory, branchInitHistory, branchExitHistory, branchExeclpHistory, branchExecpsHistory,
+                  branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, 
+                  branchExeclpRelpscost, branchExecpsRelpscost,
                   branchruledata) );
 
-   /* history branching rule parameters */
+   /* relpscost branching rule parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/history/minreliable", 
-                  "minimal value for minimum history size to regard history value as reliable",
+                  "branching/relpscost/minreliable", 
+                  "minimal value for minimum pseudo cost size to regard pseudo cost value as reliable",
                   &branchruledata->minreliable, DEFAULT_MINRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/history/maxreliable", 
-                  "maximal value for minimum history size to regard history value as reliable",
+                  "branching/relpscost/maxreliable", 
+                  "maximal value for minimum pseudo cost size to regard pseudo cost value as reliable",
                   &branchruledata->maxreliable, DEFAULT_MAXRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/history/sbiterquot", 
+                  "branching/relpscost/sbiterquot", 
                   "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
                   &branchruledata->sbiterquot, DEFAULT_SBITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/history/sbiterofs", 
+                  "branching/relpscost/sbiterofs", 
                   "additional number of allowed strong branching LP iterations",
                   &branchruledata->sbiterofs, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/history/maxlookahead", 
+                  "branching/relpscost/maxlookahead", 
                   "maximal number of further variables evaluated without better score",
                   &branchruledata->maxlookahead, DEFAULT_MAXLOOKAHEAD, 1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/history/initcand", 
+                  "branching/relpscost/initcand", 
                   "maximal number of candidates initialized with strong branching per node",
                   &branchruledata->initcand, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/history/inititer", 
-                  "iteration limit for strong branching initializations of history entries (0: auto)",
+                  "branching/relpscost/inititer", 
+                  "iteration limit for strong branching initializations of pseudo cost entries (0: auto)",
                   &branchruledata->inititer, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

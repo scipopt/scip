@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.9 2004/03/31 13:41:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.10 2004/04/06 15:21:08 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -176,7 +176,7 @@ struct Var
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    VAR*             infervar;           /**< variable whose fixing was deduced (parent of var, or var itself) */
    CONS*            infercons;          /**< constraint that deduced the fixing (binary variables only), or NULL */
-   HISTORY*         lphistory;          /**< branching history information for downwards and upwards branching on LP */
+   HISTORY*         history;            /**< branching and inference history information */
    int              index;              /**< consecutively numbered variable identifier */
    int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
@@ -198,7 +198,7 @@ struct Var
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
-   unsigned int     historyflag:2;      /**< temporary flag used in branching history update */
+   unsigned int     pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
 };
 
 

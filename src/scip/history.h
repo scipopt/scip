@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.2 2004/02/04 17:27:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.3 2004/04/06 15:21:05 bzfpfend Exp $"
 
 /**@file   history.h
- * @brief  internal methods for branching history
+ * @brief  internal methods for branching and inference history
  * @author Tobias Achterberg
  */
 
@@ -42,33 +42,33 @@
 /** creates an empty history entry */
 extern
 RETCODE SCIPhistoryCreate(
-   HISTORY**        history,            /**< pointer to store branching history */
+   HISTORY**        history,            /**< pointer to store branching and inference history */
    MEMHDR*          memhdr              /**< block memory */
    );
 
 /** frees a history entry */
 extern
 void SCIPhistoryFree(
-   HISTORY**        history,            /**< pointer to branching history */
+   HISTORY**        history,            /**< pointer to branching and inference history */
    MEMHDR*          memhdr              /**< block memory */
    );
 
 /** resets history entry to zero */
 extern
 void SCIPhistoryReset(
-   HISTORY*         history             /**< branching history */
+   HISTORY*         history             /**< branching and inference history */
    );
 
-/** updates the history for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
+/** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
  *  in the LP's objective value
  */
 extern
-void SCIPhistoryUpdate(
-   HISTORY*         history,            /**< branching history */
+void SCIPhistoryUpdatePseudocost(
+   HISTORY*         history,            /**< branching and inference history */
    const SET*       set,                /**< global SCIP settings */
    Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
    Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
-   Real             weight              /**< weight of this update in history sum (added to count) */
+   Real             weight              /**< weight of this update in pseudo cost sum (added to pscostcount) */
    );
 
 
@@ -80,24 +80,24 @@ void SCIPhistoryUpdate(
 
 /** returns the expected dual gain for moving the corresponding variable by "solvaldelta" */
 extern
-Real SCIPhistoryGetValue(
-   HISTORY*         history,            /**< branching history */
+Real SCIPhistoryGetPseudocost(
+   HISTORY*         history,            /**< branching and inference history */
    Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    );
 
-/** returns the (possible fractional) number of (partial) history updates performed on this history entry in 
+/** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in 
  *  the given direction
  */
 extern
-Real SCIPhistoryGetCount(
-   HISTORY*         history,            /**< branching history */
+Real SCIPhistoryGetPseudocostCount(
+   HISTORY*         history,            /**< branching and inference history */
    int              dir                 /**< direction: downwards (0), or upwards (1) */
    );
 
-/** returns whether the history entry is empty in the given direction (whether no value was added since initialization) */
+/** returns whether the pseudo cost entry is empty in the given direction (whether no value was added yet) */
 extern
-Bool SCIPhistoryIsEmpty(
-   HISTORY*         history,            /**< branching history */
+Bool SCIPhistoryIsPseudocostEmpty(
+   HISTORY*         history,            /**< branching and inference history */
    int              dir                 /**< direction: downwards (0), or upwards (1) */
    );
 
@@ -107,11 +107,13 @@ Bool SCIPhistoryIsEmpty(
  * speed up the algorithms.
  */
 
-#define SCIPhistoryGetValue(history,solvaldelta) \
-   ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->count[1] > 0.0 ? (history)->sum[1] / (history)->count[1] : 1.0) \
-                          : -(solvaldelta) * ((history)->count[0] > 0.0 ? (history)->sum[0] / (history)->count[0] : 1.0) )
-#define SCIPhistoryGetCount(history,dir) ((history)->count[dir])
-#define SCIPhistoryIsEmpty(history,dir)  ((history)->count[dir] == 0.0)
+#define SCIPhistoryGetPseudocost(history,solvaldelta)                                       \
+   ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->pscostcount[1] > 0.0                \
+                            ? (history)->pscostsum[1] / (history)->pscostcount[1] : 1.0)    \
+                          : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
+                            ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
+#define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
+#define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
 
 #endif
 

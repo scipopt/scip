@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_history.h,v 1.2 2004/02/04 17:27:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_history.h,v 1.3 2004/04/06 15:21:08 bzfpfend Exp $"
 
 /**@file   type_history.h
- * @brief  type definitions for branching history
+ * @brief  type definitions for branching and inference history
  * @author Tobias Achterberg
  */
 
@@ -28,7 +28,7 @@
 
 
 
-typedef struct History HISTORY;         /**< branching history information for single variable and single direction */
+typedef struct History HISTORY;         /**< branching and inference history information for single variable */
 
 
 #endif

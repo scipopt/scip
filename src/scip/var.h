@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.55 2004/03/31 13:41:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.56 2004/04/06 15:21:08 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -606,30 +606,30 @@ RETCODE SCIPvarDropEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
 
-/** updates the branching history of the given variable and the global history after a change of "solvaldelta" in the
+/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
  *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
 extern
-void SCIPvarUpdateLPHistory(
+void SCIPvarUpdatePseudocost(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
    Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
-   Real             weight              /**< weight in (0,1] of this update in history sum */
+   Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    );
 
-/** gets the variable's branching history value for the given step size "solvaldelta" in the variable's LP solution value */
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
 extern
-Real SCIPvarGetLPHistory(
+Real SCIPvarGetPseudocost(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    );
 
-/** gets the variable's (possible fractional) number of history updates for the given direction */
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
 extern
-Real SCIPvarGetLPHistoryCount(
+Real SCIPvarGetPseudocostCount(
    VAR*             var,                /**< problem variable */
    int              dir                 /**< branching direction: 0 (down), or 1 (up) */
    );

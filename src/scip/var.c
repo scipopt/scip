@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.75 2004/03/31 13:41:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.76 2004/04/06 15:21:08 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -231,12 +231,14 @@ RETCODE SCIPboundchgApply(
    case SCIP_BOUNDTYPE_LOWER:
       if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
       {
+         debugMessage("branching: new lower bound of <%s> = %g\n", SCIPvarGetName(boundchg->var), boundchg->newbound);
          CHECK_OKAY( SCIPvarChgLbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound,
                         NULL, NULL, 0, depth, index, boundchg->boundchgtype) );
       }
       else
       {
          assert(boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+         debugMessage("  -> inference: new lower bound of <%s> = %g\n", SCIPvarGetName(boundchg->var), boundchg->newbound);
          CHECK_OKAY( SCIPvarChgLbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound,
                         boundchg->data.inferencedata.var, boundchg->data.inferencedata.cons,
                         boundchg->data.inferencedata.info, depth, index, boundchg->boundchgtype) );
@@ -245,12 +247,14 @@ RETCODE SCIPboundchgApply(
    case SCIP_BOUNDTYPE_UPPER:
       if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
       {
+         debugMessage("branching: new upper bound of <%s> = %g\n", SCIPvarGetName(boundchg->var), boundchg->newbound);
          CHECK_OKAY( SCIPvarChgUbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound, 
                         NULL, NULL, 0, depth, index, boundchg->boundchgtype) );
       }
       else
       {
          assert(boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
+         debugMessage("  -> inference: new upper bound of <%s> = %g\n", SCIPvarGetName(boundchg->var), boundchg->newbound);
          CHECK_OKAY( SCIPvarChgUbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound, 
                         boundchg->data.inferencedata.var, boundchg->data.inferencedata.cons,
                         boundchg->data.inferencedata.info, depth, index, boundchg->boundchgtype) );
@@ -260,6 +264,10 @@ RETCODE SCIPboundchgApply(
       errorMessage("Unknown bound type\n");
       abort();
    }
+
+   /* update last branching variable */
+   if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+      stat->lastbranchvar = boundchg->var;
 
    return SCIP_OKAY;
 }
@@ -295,6 +303,10 @@ RETCODE SCIPboundchgUndo(
       errorMessage("Unknown bound type\n");
       abort();
    }
+
+   /* update last branching variable */
+   if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+      stat->lastbranchvar = NULL;
 
    return SCIP_OKAY;
 }
@@ -753,6 +765,12 @@ RETCODE SCIPdomchgAddBoundchg(
    /* capture branching and inference data associated with the bound changes */
    CHECK_OKAY( boundchgCaptureData(boundchg) );
 
+   /* update the inference history */
+   if( boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE && stat->lastbranchvar != NULL )
+   {
+      /*abort();*/ /*????????????????????*/
+   }
+
    stat->nboundchgs++;
 
    return SCIP_OKAY;
@@ -914,15 +932,15 @@ RETCODE varCreate(
    (*var)->initial = initial;
    (*var)->removeable = removeable;
    (*var)->vartype = vartype; /*lint !e641*/
-   (*var)->historyflag = FALSE;
+   (*var)->pseudocostflag = FALSE;
 
    /* adjust bounds, if variable is integral */
    SCIPvarAdjustLb(*var, set, &lb);
    SCIPvarAdjustUb(*var, set, &ub);
    assert(lb <= ub);
 
-   /* create branching history entries */
-   CHECK_OKAY( SCIPhistoryCreate(&(*var)->lphistory, memhdr) );
+   /* create branching and inference history entries */
+   CHECK_OKAY( SCIPhistoryCreate(&(*var)->history, memhdr) );
 
    return SCIP_OKAY;
 }
@@ -1164,8 +1182,8 @@ RETCODE varFree(
    }
    assert((*var)->eventfilter == NULL);
 
-   /* free branching history entries */
-   SCIPhistoryFree(&(*var)->lphistory, memhdr);
+   /* free branching and inference history entries */
+   SCIPhistoryFree(&(*var)->history, memhdr);
 
    /* free variable data structure */
    freeBlockMemoryArray(memhdr, &(*var)->name, strlen((*var)->name)+1);
@@ -5125,28 +5143,28 @@ RETCODE SCIPvarDropEvent(
    return SCIP_OKAY;
 }
 
-/** updates the branching history of the given variable and the global history after a change of "solvaldelta" in the
+/** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
  *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
-void SCIPvarUpdateLPHistory(
+void SCIPvarUpdatePseudocost(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
    Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
-   Real             weight              /**< weight in (0,1] of this update in history sum */
+   Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
 
-   /* update variable's and global history values */
-   SCIPhistoryUpdate(var->lphistory, set, solvaldelta, objdelta, weight);
-   SCIPhistoryUpdate(stat->glblphistory, set, solvaldelta, objdelta, weight);
+   /* update variable's and global pseudo cost values */
+   SCIPhistoryUpdatePseudocost(var->history, set, solvaldelta, objdelta, weight);
+   SCIPhistoryUpdatePseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
 }
 
-/** gets the variable's branching history value for the given step size "solvaldelta" in the variable's LP solution value */
-Real SCIPvarGetLPHistory(
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
+Real SCIPvarGetPseudocost(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
@@ -5159,13 +5177,13 @@ Real SCIPvarGetLPHistory(
 
    dir = (solvaldelta >= 0.0 ? 1 : 0);
 
-   return SCIPhistoryGetCount(var->lphistory, dir) > 0.0
-      ? SCIPhistoryGetValue(var->lphistory, solvaldelta)
-      : SCIPhistoryGetValue(stat->glblphistory, solvaldelta);
+   return SCIPhistoryGetPseudocostCount(var->history, dir) > 0.0
+      ? SCIPhistoryGetPseudocost(var->history, solvaldelta)
+      : SCIPhistoryGetPseudocost(stat->glbhistory, solvaldelta);
 }
 
-/** gets the variable's (possible fractional) number of history updates for the given direction */
-Real SCIPvarGetLPHistoryCount(
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
+Real SCIPvarGetPseudocostCount(
    VAR*             var,                /**< problem variable */
    int              dir                 /**< branching direction: 0 (down), or 1 (up) */
    )
@@ -5173,7 +5191,7 @@ Real SCIPvarGetLPHistoryCount(
    assert(var != NULL);
    assert(dir == 0 || dir == 1);
 
-   return SCIPhistoryGetCount(var->lphistory, dir);
+   return SCIPhistoryGetPseudocostCount(var->history, dir);
 }
 
 

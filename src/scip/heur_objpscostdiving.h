@@ -14,25 +14,25 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.h,v 1.2 2004/02/04 17:27:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.h,v 1.1 2004/04/06 15:21:04 bzfpfend Exp $"
 
-/**@file   branch_history.h
- * @brief  history branching rule
+/**@file   heur_objpscostdiving.h
+ * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __BRANCH_HISTORY_H__
-#define __BRANCH_HISTORY_H__
+#ifndef __HEUR_OBJPSCOSTDIVING_H__
+#define __HEUR_OBJPSCOSTDIVING_H__
 
 
 #include "scip.h"
 
 
-/** creates the history braching rule and includes it in SCIP */
+/** creates the objpscostdiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeBranchruleHistory(
+RETCODE SCIPincludeHeurObjpscostdiving(
    SCIP*            scip                /**< SCIP data structure */
    );
 

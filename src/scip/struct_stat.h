@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.9 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.10 2004/04/06 15:21:08 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -63,7 +63,8 @@ struct Stat
    CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
    CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
-   HISTORY*         glblphistory;       /**< average branching history for downwards and upwards branching on LP */
+   HISTORY*         glbhistory;         /**< global history information over all variables */
+   VAR*             lastbranchvar;      /**< last variable, that was branched on */
    VBC*             vbc;                /**< VBC Tool information */
    int              nvaridx;            /**< number of used variable indices */
    int              ncolidx;            /**< number of used column indices */

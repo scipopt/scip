@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.8 2004/04/06 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.9 2004/04/06 15:21:01 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -66,7 +66,7 @@ struct HeurData
                                          *   where diving is performed */
    Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet */
    Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet */
-   Longint          nlpiterations;      /**< LP iterations used in fractional diving */
+   Longint          nlpiterations;      /**< LP iterations used in this heuristic */
 };
 
 
@@ -450,17 +450,17 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          oldobjval = objval;
          objval = SCIPgetLPObjval(scip);
 
-         /* update history values */
+         /* update pseudo cost values */
          if( SCIPisGT(scip, objval, oldobjval) )
          {
             if( bestcandroundup )
             {
-               CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand], 
+               CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand], 
                               objval - oldobjval, 1.0) );
             }
             else
             {
-               CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand], 
+               CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand], 
                               objval - oldobjval, 1.0) );
             }
          }

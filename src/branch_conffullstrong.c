@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_conffullstrong.c,v 1.5 2004/03/31 15:44:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_conffullstrong.c,v 1.6 2004/04/06 15:20:59 bzfpfend Exp $"
 
 /**@file   branch_conffullstrong.c
  * @brief  full strong LP branching rule, that creates infeasible children to give input to conflict analysis
@@ -161,9 +161,9 @@ DECL_BRANCHEXECLP(branchExeclpConffullstrong)
             }
          }
 
-         /* update history values */
-         CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
-         CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+         /* update pseudo cost values */
+         CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
+         CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
 
          debugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,
