@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.140 2004/09/01 16:53:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.141 2004/09/03 11:34:42 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6925,7 +6925,7 @@ RETCODE SCIPlpCalcMIR(
       act = 0.0;
       for( i = 0; i < nvars; ++i )
          act += mircoef[i] * SCIPvarGetLPSol(vars[i]);
-      assert(SCIPsetIsSumEQ(set, act, *cutactivity));
+      assert(SCIPsetIsFeasEQ(set, act, *cutactivity));
    }
 #endif
 

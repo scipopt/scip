@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.163 2004/09/03 08:35:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.164 2004/09/03 11:34:43 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1229,14 +1229,6 @@ CONS* SCIPfindCons(
    const char*      name                /**< name of constraint to find */
    );
 
-/** outputs constraint information to file stream */
-extern
-RETCODE SCIPprintCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   );
-
 /**@} */
 
 
@@ -2035,6 +2027,14 @@ VARDATA* SCIPgetVarData(
    VAR*             var                 /**< problem variable */
    );
 
+/** outputs variable information to file stream */
+extern
+RETCODE SCIPprintVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
 /**@} */
 
 
@@ -2290,6 +2290,14 @@ extern
 RETCODE SCIPsetConsChecked(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint */
+   );
+
+/** outputs constraint information to file stream */
+extern
+RETCODE SCIPprintCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */
