@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.11 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.12 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods and datastructures for presolvers
@@ -70,9 +70,32 @@ struct Presol
  * presolver methods
  */
 
+/** compares two presolvers w. r. to their priority */
+DECL_SORTPTRCOMP(SCIPpresolComp)
+{
+   return ((PRESOL*)elem2)->priority - ((PRESOL*)elem1)->priority;
+}
+
+/** method to call, when the priority of a presolver was changed */
+static
+DECL_PARAMCHGD(paramChgdPresolPriority)
+{
+   PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetPresolPriority() to mark the presols unsorted */
+   CHECK_OKAY( SCIPsetPresolPriority(scip, (PRESOL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
 /** creates a presolver */
 RETCODE SCIPpresolCreate(
    PRESOL**         presol,             /**< pointer to store presolver */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
@@ -83,6 +106,9 @@ RETCODE SCIPpresolCreate(
    PRESOLDATA*      presoldata          /**< presolver data */
    )
 {
+   char paramname[MAXSTRLEN];
+   char paramdesc[MAXSTRLEN];
+
    assert(presol != NULL);
    assert(name != NULL);
    assert(desc != NULL);
@@ -98,6 +124,13 @@ RETCODE SCIPpresolCreate(
    (*presol)->presoldata = presoldata;
    CHECK_OKAY( SCIPclockCreate(&(*presol)->clock, SCIP_CLOCKTYPE_DEFAULT) );
    (*presol)->initialized = FALSE;
+
+   /* add parameters */
+   sprintf(paramname, "presolving/%s/priority", name);
+   sprintf(paramdesc, "priority of presolver <%s>", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*presol)->priority, priority, INT_MIN, INT_MAX, 
+                  paramChgdPresolPriority, (PARAMDATA*)(*presol)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -349,6 +382,20 @@ int SCIPpresolGetPriority(
    assert(presol != NULL);
 
    return presol->priority;
+}
+
+/** sets priority of presolver */
+void SCIPpresolSetPriority(
+   PRESOL*          presol,             /**< presolver */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the presolver */
+   )
+{
+   assert(presol != NULL);
+   assert(set != NULL);
+   
+   presol->priority = priority;
+   set->presolssorted = FALSE;
 }
 
 /** is presolver initialized? */

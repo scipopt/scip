@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.6 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.7 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  methods and datastructures for conflict analysis
@@ -101,10 +101,16 @@ typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure fo
  * Conflict Handler
  */
 
+/** compares two conflict handlers w. r. to their priority */
+extern
+DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
+
 /** creates a conflict handler */
 extern
 RETCODE SCIPconflicthdlrCreate(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
    int              priority,           /**< priority of the conflict handler */
@@ -147,12 +153,6 @@ RETCODE SCIPconflicthdlrExec(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** gets name of conflict handler */
-extern
-const char* SCIPconflicthdlrGetName(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
-   );
-
 /** gets user data of conflict handler */
 extern
 CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
@@ -166,10 +166,24 @@ void SCIPconflicthdlrSetData(
    CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
    );
 
+/** gets name of conflict handler */
+extern
+const char* SCIPconflicthdlrGetName(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
 /** gets priority of conflict handler */
 extern
 int SCIPconflicthdlrGetPriority(
    CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
+/** sets priority of conflict handler */
+extern
+void SCIPconflicthdlrSetPriority(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the conflict handler */
    );
 
 /** is conflict handler initialized? */
@@ -220,7 +234,7 @@ RETCODE SCIPconflictAddVar(
 extern
 RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );

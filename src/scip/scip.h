@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.89 2003/11/21 10:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.90 2003/11/25 10:24:22 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -498,6 +498,14 @@ int SCIPgetNConflicthdlrs(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** sets the priority of a conflict handler */
+extern
+RETCODE SCIPsetConflicthdlrPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   int              priority            /**< new priority of the conflict handler */
+   );
+
 /** creates a presolver and includes it in SCIP */
 extern
 RETCODE SCIPincludePresol(
@@ -529,6 +537,14 @@ PRESOL** SCIPgetPresols(
 extern
 int SCIPgetNPresols(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of a presolver */
+extern
+RETCODE SCIPsetPresolPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRESOL*          presol,             /**< presolver */
+   int              priority            /**< new priority of the presolver */
    );
 
 /** creates a separator and includes it in SCIP */
@@ -565,6 +581,14 @@ int SCIPgetNSepas(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** sets the priority of a separator */
+extern
+RETCODE SCIPsetSepaPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   SEPA*            sepa,               /**< primal sepaistic */
+   int              priority            /**< new priority of the separator */
+   );
+
 /** creates a primal heuristic and includes it in SCIP */
 extern
 RETCODE SCIPincludeHeur(
@@ -599,6 +623,14 @@ HEUR** SCIPgetHeurs(
 extern
 int SCIPgetNHeurs(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of a primal heuristic */
+extern
+RETCODE SCIPsetHeurPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   HEUR*            heur,               /**< primal heuristic */
+   int              priority            /**< new priority of the primal heuristic */
    );
 
 /** creates an event handler and includes it in SCIP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.104 2003/11/24 12:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.105 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -885,7 +885,7 @@ RETCODE SCIPincludeConflicthdlr(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, name, desc, priority, 
+   CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->mem->setmem, name, desc, priority, 
                   conflictfree, conflictinit, conflictexit, conflictexec,
                   conflicthdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
@@ -926,6 +926,20 @@ int SCIPgetNConflicthdlrs(
    return scip->set->nconflicthdlrs;
 }
 
+/** sets the priority of a conflict handler */
+RETCODE SCIPsetConflicthdlrPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   int              priority            /**< new priority of the conflict handler */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetConflicthdlrPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPconflicthdlrSetPriority(conflicthdlr, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
 /** creates a presolver and includes it in SCIP */
 RETCODE SCIPincludePresol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -943,7 +957,7 @@ RETCODE SCIPincludePresol(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPpresolCreate(&presol, name, desc, priority,
+   CHECK_OKAY( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority,
                   presolfree, presolinit, presolexit, presolexec, presoldata) );
    CHECK_OKAY( SCIPsetIncludePresol(scip->set, presol) );
    
@@ -981,6 +995,20 @@ int SCIPgetNPresols(
    CHECK_ABORT( checkStage(scip, "SCIPgetNPresols", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return scip->set->npresols;
+}
+
+/** sets the priority of a presolver */
+RETCODE SCIPsetPresolPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRESOL*          presol,             /**< presolver */
+   int              priority            /**< new priority of the presolver */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetPresolPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPpresolSetPriority(presol, scip->set, priority);
+
+   return SCIP_OKAY;
 }
 
 /** creates a separator and includes it in SCIP */
@@ -1042,6 +1070,20 @@ int SCIPgetNSepas(
    return scip->set->nsepas;
 }
 
+/** sets the priority of a separator */
+RETCODE SCIPsetSepaPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   SEPA*            sepa,               /**< primal sepaistic */
+   int              priority            /**< new priority of the separator */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetSepaPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsepaSetPriority(sepa, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
 /** creates a primal heuristic and includes it in SCIP */
 RETCODE SCIPincludeHeur(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1101,6 +1143,20 @@ int SCIPgetNHeurs(
    CHECK_ABORT( checkStage(scip, "SCIPgetNHeurs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return scip->set->nheurs;
+}
+
+/** sets the priority of a primal heuristic */
+RETCODE SCIPsetHeurPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   HEUR*            heur,               /**< primal heuristic */
+   int              priority            /**< new priority of the primal heuristic */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetHeurPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPheurSetPriority(heur, scip->set, priority);
+
+   return SCIP_OKAY;
 }
 
 /** creates an event handler and includes it in SCIP */
@@ -2381,8 +2437,10 @@ RETCODE presolve(
       lastnchgcoefs = nchgcoefs;
       lastnchgsides = nchgsides;
 
+      /* sort presolvers by priority */
+      SCIPsetSortPresols(scip->set);
+
       /* call included presolvers */
-      /**@todo call presolvers in priority order -> see branching rules for an example */
       for( i = 0; i < scip->set->npresols && *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED; ++i )
       {
          CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, nrounds, 

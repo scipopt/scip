@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.72 2003/11/24 12:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.73 2003/11/25 10:24:22 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  global SCIP settings
@@ -195,21 +195,26 @@ RETCODE SCIPsetCreate(
    (*set)->pricers = NULL;
    (*set)->npricers = 0;
    (*set)->pricerssize = 0;
+   (*set)->pricerssorted = FALSE;
    (*set)->conshdlrs = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
    (*set)->conflicthdlrs = NULL;
    (*set)->nconflicthdlrs = 0;
    (*set)->conflicthdlrssize = 0;
+   (*set)->conflicthdlrssorted = FALSE;
    (*set)->presols = NULL;
    (*set)->npresols = 0;
    (*set)->presolssize = 0;
+   (*set)->presolssorted = FALSE;
    (*set)->sepas = NULL;
    (*set)->nsepas = 0;
    (*set)->sepassize = 0;
+   (*set)->sepassorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
+   (*set)->heurssorted = FALSE;
    (*set)->eventhdlrs = NULL;
    (*set)->neventhdlrs = 0;
    (*set)->eventhdlrssize = 0;
@@ -954,6 +959,7 @@ RETCODE SCIPsetIncludePricer(
    
    set->pricers[set->npricers] = pricer;
    set->npricers++;
+   set->pricerssorted = FALSE;
 
    return SCIP_OKAY;
 }   
@@ -980,6 +986,24 @@ PRICER* SCIPsetFindPricer(
    }
 
    return NULL;
+}
+
+/** sorts pricers by priorities */
+void SCIPsetSortPricers(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->pricerssorted )
+   {
+      /**@todo sort pricers */
+      warningMessage("sorting pricers not implemented yet\n");
+#if 0
+      SCIPbsortPtr((void**)set->pricers, set->npricers, SCIPpricerComp);
+#endif
+      set->pricerssorted = TRUE;
+   }
 }
 
 /** inserts constraint handler in constraint handler list */
@@ -1040,9 +1064,6 @@ RETCODE SCIPsetIncludeConflicthdlr(
    CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    )
 {
-   int priority;
-   int i;
-
    assert(set != NULL);
    assert(conflicthdlr != NULL);
    assert(!SCIPconflicthdlrIsInitialized(conflicthdlr));
@@ -1054,14 +1075,9 @@ RETCODE SCIPsetIncludeConflicthdlr(
    }
    assert(set->nconflicthdlrs < set->conflicthdlrssize);
 
-   priority = SCIPconflicthdlrGetPriority(conflicthdlr);
-   for( i = set->nconflicthdlrs; i > 0 && SCIPconflicthdlrGetPriority(set->conflicthdlrs[i-1]) < priority; --i )
-   {
-      set->conflicthdlrs[i] = set->conflicthdlrs[i-1];
-   }
-   
-   set->conflicthdlrs[i] = conflicthdlr;
+   set->conflicthdlrs[set->nconflicthdlrs] = conflicthdlr;
    set->nconflicthdlrs++;
+   set->conflicthdlrssorted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1086,14 +1102,26 @@ CONFLICTHDLR* SCIPsetFindConflicthdlr(
    return NULL;
 }
 
+/** sorts conflict handlers by priorities */
+void SCIPsetSortConflicthdlrs(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->conflicthdlrssorted )
+   {
+      SCIPbsortPtr((void**)set->conflicthdlrs, set->nconflicthdlrs, SCIPconflicthdlrComp);
+      set->conflicthdlrssorted = TRUE;
+   }
+}
+
 /** inserts presolver in presolver list */
 RETCODE SCIPsetIncludePresol(
    SET*             set,                /**< global SCIP settings */
    PRESOL*          presol              /**< presolver */
    )
 {
-   int i;
-
    assert(set != NULL);
    assert(presol != NULL);
 
@@ -1104,12 +1132,9 @@ RETCODE SCIPsetIncludePresol(
    }
    assert(set->npresols < set->presolssize);
    
-   for( i = set->npresols; i > 0 && SCIPpresolGetPriority(presol) > SCIPpresolGetPriority(set->presols[i-1]); --i )
-   {
-      set->presols[i] = set->presols[i-1];
-   }
-   set->presols[i] = presol;
+   set->presols[set->npresols] = presol;
    set->npresols++;
+   set->presolssorted = FALSE;
 
    return SCIP_OKAY;
 }   
@@ -1134,14 +1159,26 @@ PRESOL* SCIPsetFindPresol(
    return NULL;
 }
 
+/** sorts presolvers by priorities */
+void SCIPsetSortPresols(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->presolssorted )
+   {
+      SCIPbsortPtr((void**)set->presols, set->npresols, SCIPpresolComp);
+      set->presolssorted = TRUE;
+   }
+}
+
 /** inserts separator in separator list */
 RETCODE SCIPsetIncludeSepa(
    SET*             set,                /**< global SCIP settings */
    SEPA*            sepa                /**< separator */
    )
 {
-   int i;
-
    assert(set != NULL);
    assert(sepa != NULL);
    assert(!SCIPsepaIsInitialized(sepa));
@@ -1153,12 +1190,9 @@ RETCODE SCIPsetIncludeSepa(
    }
    assert(set->nsepas < set->sepassize);
    
-   for( i = set->nsepas; i > 0 && SCIPsepaGetPriority(sepa) > SCIPsepaGetPriority(set->sepas[i-1]); --i )
-   {
-      set->sepas[i] = set->sepas[i-1];
-   }
-   set->sepas[i] = sepa;
+   set->sepas[set->nsepas] = sepa;
    set->nsepas++;
+   set->sepassorted = FALSE;
 
    return SCIP_OKAY;
 }   
@@ -1183,14 +1217,26 @@ SEPA* SCIPsetFindSepa(
    return NULL;
 }
 
+/** sorts separators by priorities */
+void SCIPsetSortSepas(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->sepassorted )
+   {
+      SCIPbsortPtr((void**)set->sepas, set->nsepas, SCIPsepaComp);
+      set->sepassorted = TRUE;
+   }
+}
+
 /** inserts primal heuristic in primal heuristic list */
 RETCODE SCIPsetIncludeHeur(
    SET*             set,                /**< global SCIP settings */
    HEUR*            heur                /**< primal heuristic */
    )
 {
-   int i;
-
    assert(set != NULL);
    assert(heur != NULL);
    assert(!SCIPheurIsInitialized(heur));
@@ -1202,12 +1248,9 @@ RETCODE SCIPsetIncludeHeur(
    }
    assert(set->nheurs < set->heurssize);
    
-   for( i = set->nheurs; i > 0 && SCIPheurGetPriority(heur) > SCIPheurGetPriority(set->heurs[i-1]); --i )
-   {
-      set->heurs[i] = set->heurs[i-1];
-   }
-   set->heurs[i] = heur;
+   set->heurs[set->nheurs] = heur;
    set->nheurs++;
+   set->heurssorted = FALSE;
 
    return SCIP_OKAY;
 }   
@@ -1230,6 +1273,20 @@ HEUR* SCIPsetFindHeur(
    }
 
    return NULL;
+}
+
+/** sorts heuristics by priorities */
+void SCIPsetSortHeurs(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->heurssorted )
+   {
+      SCIPbsortPtr((void**)set->heurs, set->nheurs, SCIPheurComp);
+      set->heurssorted = TRUE;
+   }
 }
 
 /** inserts event handler in event handler list */
@@ -1416,7 +1473,6 @@ void SCIPsetSortBranchrules(
 
    if( !set->branchrulessorted )
    {
-      /* sort constraint handlers by priorities */
       SCIPbsortPtr((void**)set->branchrules, set->nbranchrules, SCIPbranchruleComp);
       set->branchrulessorted = TRUE;
    }

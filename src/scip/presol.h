@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.9 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.10 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  methods and datastructures for presolvers
@@ -108,10 +108,16 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
 
 
 
+/** compares two presolvers w. r. to their priority */
+extern
+DECL_SORTPTRCOMP(SCIPpresolComp);
+
 /** creates a presolver */
 extern
 RETCODE SCIPpresolCreate(
    PRESOL**         presol,             /**< pointer to store presolver */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
@@ -190,6 +196,14 @@ const char* SCIPpresolGetDesc(
 extern
 int SCIPpresolGetPriority(
    PRESOL*          presol              /**< presolver */
+   );
+
+/** sets priority of presolver */
+extern
+void SCIPpresolSetPriority(
+   PRESOL*          presol,             /**< presolver */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the presolver */
    );
 
 /** is presolver initialized? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.20 2003/11/24 12:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.21 2003/11/25 10:24:22 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  methods and datastructures for separators
@@ -84,6 +84,10 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
 #include "sepastore.h"
 
 
+
+/** compares two separators w. r. to their priority */
+extern
+DECL_SORTPTRCOMP(SCIPsepaComp);
 
 /** creates a separator */
 extern
@@ -163,6 +167,14 @@ const char* SCIPsepaGetDesc(
 extern
 int SCIPsepaGetPriority(
    SEPA*            sepa                /**< separator */
+   );
+
+/** sets priority of separator */
+extern
+void SCIPsepaSetPriority(
+   SEPA*            sepa,               /**< primal sepaistic */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the separator */
    );
 
 /** gets frequency of separator */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.68 2003/11/24 12:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.69 2003/11/25 10:24:22 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -228,7 +228,7 @@ RETCODE solveNodeInitialLP(
 static
 RETCODE solveNodeLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
@@ -386,9 +386,12 @@ RETCODE solveNodeLP(
             }
             
             /* separate LP, if no cuts have been found by the constraint handlers */
-            /**@todo call separators in priority order -> see branching rules for an example */
             if( SCIPsepastoreGetNCuts(sepastore) == 0 )
             {
+               /* sort separators by priority */
+               SCIPsetSortSepas(set);
+
+               /* call separators */
                for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts; ++s )
                {
                   CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, SCIPnodeGetDepth(tree->actnode), &result) );
@@ -844,7 +847,7 @@ RETCODE enforceConstraints(
 /** calls primal heuristics */
 static
 RETCODE primalHeuristics(
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
    PRIMAL*          primal,             /**< primal data */
    Bool*            foundsol            /**< pointer to store whether a solution has been found */
@@ -864,9 +867,12 @@ RETCODE primalHeuristics(
 
    if( SCIPtreeGetNNodes(tree) > 0 )
    {
+      /* sort heuristics by priority */
+      SCIPsetSortHeurs(set);
+
+      /* call heuristics */
       actdepth = SCIPnodeGetDepth(tree->actnode);
       lpforkdepth = tree->actlpfork != NULL ? SCIPnodeGetDepth(tree->actlpfork) : -1;
-      /**@todo call heuristics in priority order -> see branching rules for an example */
       for( h = 0; h < set->nheurs; ++h )
       {
          CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actdepth, lpforkdepth, tree->actnodehaslp, &result) );

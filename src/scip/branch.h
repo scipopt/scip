@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.17 2003/11/21 10:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.18 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  methods and datastructures for branching methods
@@ -204,6 +204,19 @@ RETCODE SCIPbranchruleExecPseudoSol(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets user data of branching rule */
+extern
+BRANCHRULEDATA* SCIPbranchruleGetData(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** sets user data of branching rule; user has to free old data in advance! */
+extern
+void SCIPbranchruleSetData(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
+   );
+
 /** gets name of branching rule */
 extern
 const char* SCIPbranchruleGetName(
@@ -228,19 +241,6 @@ void SCIPbranchruleSetPriority(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the branching rule */
-   );
-
-/** gets user data of branching rule */
-extern
-BRANCHRULEDATA* SCIPbranchruleGetData(
-   BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
-/** sets user data of branching rule; user has to free old data in advance! */
-extern
-void SCIPbranchruleSetData(
-   BRANCHRULE*      branchrule,         /**< branching rule */
-   BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
    );
 
 /** is branching rule initialized? */

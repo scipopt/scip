@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.26 2003/11/24 12:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.27 2003/11/25 10:24:22 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -52,6 +52,27 @@ struct Sepa
 };
 
 
+
+/** compares two separators w. r. to their priority */
+DECL_SORTPTRCOMP(SCIPsepaComp)
+{
+   return ((SEPA*)elem2)->priority - ((SEPA*)elem1)->priority;
+}
+
+/** method to call, when the priority of a separator was changed */
+static
+DECL_PARAMCHGD(paramChgdSepaPriority)
+{
+   PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetSepaPriority() to mark the sepas unsorted */
+   CHECK_OKAY( SCIPsetSepaPriority(scip, (SEPA*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
 
 /** creates a separator */
 RETCODE SCIPsepaCreate(
@@ -97,6 +118,11 @@ RETCODE SCIPsepaCreate(
    (*sepa)->initialized = FALSE;
 
    /* add parameters */
+   sprintf(paramname, "separating/%s/priority", name);
+   sprintf(paramdesc, "priority of separator <%s>", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*sepa)->priority, priority, INT_MIN, INT_MAX, 
+                  paramChgdSepaPriority, (PARAMDATA*)(*sepa)) ); /*lint !e740*/
    sprintf(paramname, "separating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
@@ -308,6 +334,20 @@ int SCIPsepaGetPriority(
    assert(sepa != NULL);
 
    return sepa->priority;
+}
+
+/** sets priority of separator */
+void SCIPsepaSetPriority(
+   SEPA*            sepa,               /**< primal sepaistic */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the separator */
+   )
+{
+   assert(sepa != NULL);
+   assert(set != NULL);
+   
+   sepa->priority = priority;
+   set->sepassorted = FALSE;
 }
 
 /** gets frequency of separator */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: price.c,v 1.31 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: price.c,v 1.32 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   price.c
  * @brief  methods and datastructures for pricing variables
@@ -494,6 +494,9 @@ RETCODE SCIPpriceVars(
    {
       CHECK_OKAY( priceProbVars(price, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
    }
+
+   /* sort pricer algorithms by priority */
+   /**@todo call SCIPsetSortPricers() */
 
    /* call external pricer algorithms */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )

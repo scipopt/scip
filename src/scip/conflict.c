@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.13 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.14 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -204,9 +204,32 @@ RETCODE lpconflictEnsureConflictvarsMem(
  * Conflict Handler
  */
 
+/** compares two conflict handlers w. r. to their priority */
+DECL_SORTPTRCOMP(SCIPconflicthdlrComp)
+{
+   return ((CONFLICTHDLR*)elem2)->priority - ((CONFLICTHDLR*)elem1)->priority;
+}
+
+/** method to call, when the priority of a conflict handler was changed */
+static
+DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
+{
+   PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetConflicthdlrPriority() to mark the conflicthdlrs unsorted */
+   CHECK_OKAY( SCIPsetConflicthdlrPriority(scip, (CONFLICTHDLR*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
 /** creates a conflict handler */
 RETCODE SCIPconflicthdlrCreate(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
    int              priority,           /**< priority of the conflict handler */
@@ -217,6 +240,9 @@ RETCODE SCIPconflicthdlrCreate(
    CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    )
 {
+   char paramname[MAXSTRLEN];
+   char paramdesc[MAXSTRLEN];
+
    assert(conflicthdlr != NULL);
    assert(name != NULL);
    assert(desc != NULL);
@@ -231,6 +257,13 @@ RETCODE SCIPconflicthdlrCreate(
    (*conflicthdlr)->conflictexec = conflictexec;
    (*conflicthdlr)->conflicthdlrdata = conflicthdlrdata;
    (*conflicthdlr)->initialized = FALSE;
+
+   /* add parameters */
+   sprintf(paramname, "conflict/%s/priority", name);
+   sprintf(paramdesc, "priority of conflict handler <%s>", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*conflicthdlr)->priority, priority, INT_MIN, INT_MAX, 
+                  paramChgdConflicthdlrPriority, (PARAMDATA*)(*conflicthdlr)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -340,16 +373,6 @@ RETCODE SCIPconflicthdlrExec(
    return SCIP_OKAY;
 }
 
-/** gets name of conflict handler */
-const char* SCIPconflicthdlrGetName(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
-   )
-{
-   assert(conflicthdlr != NULL);
-
-   return conflicthdlr->name;
-}
-
 /** gets user data of conflict handler */
 CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
    CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
@@ -371,6 +394,16 @@ void SCIPconflicthdlrSetData(
    conflicthdlr->conflicthdlrdata = conflicthdlrdata;
 }
 
+/** gets name of conflict handler */
+const char* SCIPconflicthdlrGetName(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return conflicthdlr->name;
+}
+
 /** gets priority of conflict handler */
 int SCIPconflicthdlrGetPriority(
    CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
@@ -379,6 +412,20 @@ int SCIPconflicthdlrGetPriority(
    assert(conflicthdlr != NULL);
 
    return conflicthdlr->priority;
+}
+
+/** sets priority of conflict handler */
+void SCIPconflicthdlrSetPriority(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(set != NULL);
+   
+   conflicthdlr->priority = priority;
+   set->conflicthdlrssorted = FALSE;
 }
 
 /** is conflict handler initialized? */
@@ -633,7 +680,7 @@ RETCODE conflictAnalyze(
  */
 RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
@@ -675,6 +722,9 @@ RETCODE SCIPconflictAnalyze(
 
       assert(conflict->conflictvars != NULL);
       assert(conflict->nconflictvars > 0);
+
+      /* sort conflict handlers by priority */
+      SCIPsetSortConflicthdlrs(set);
 
       /* call conflict handlers to create a conflict constraint */
       resolved = FALSE;

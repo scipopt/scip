@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.18 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.19 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  methods and datastructures for primal heuristics
@@ -81,6 +81,10 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
 #include "primal.h"
 
 
+
+/** compares two heuristics w. r. to their priority */
+extern
+DECL_SORTPTRCOMP(SCIPheurComp);
 
 /** creates a primal heuristic */
 extern
@@ -169,6 +173,14 @@ char SCIPheurGetDispchar(
 extern
 int SCIPheurGetPriority(
    HEUR*            heur                /**< primal heuristic */
+   );
+
+/** sets priority of primal heuristic */
+extern
+void SCIPheurSetPriority(
+   HEUR*            heur,               /**< primal heuristic */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the primal heuristic */
    );
 
 /** gets frequency of primal heuristic */

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.26 2003/11/21 10:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.27 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods and datastructures for branching methods
@@ -647,6 +647,27 @@ RETCODE SCIPbranchruleExecPseudoSol(
    return SCIP_OKAY;
 }
 
+/** gets user data of branching rule */
+BRANCHRULEDATA* SCIPbranchruleGetData(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->branchruledata;
+}
+
+/** sets user data of branching rule; user has to free old data in advance! */
+void SCIPbranchruleSetData(
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchruledata = branchruledata;
+}
+
 /** gets name of branching rule */
 const char* SCIPbranchruleGetName(
    BRANCHRULE*      branchrule          /**< branching rule */
@@ -689,27 +710,6 @@ void SCIPbranchruleSetPriority(
    
    branchrule->priority = priority;
    set->branchrulessorted = FALSE;
-}
-
-/** gets user data of branching rule */
-BRANCHRULEDATA* SCIPbranchruleGetData(
-   BRANCHRULE*      branchrule          /**< branching rule */
-   )
-{
-   assert(branchrule != NULL);
-
-   return branchrule->branchruledata;
-}
-
-/** sets user data of branching rule; user has to free old data in advance! */
-void SCIPbranchruleSetData(
-   BRANCHRULE*      branchrule,         /**< branching rule */
-   BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
-   )
-{
-   assert(branchrule != NULL);
-
-   branchrule->branchruledata = branchruledata;
 }
 
 /** is branching rule initialized? */

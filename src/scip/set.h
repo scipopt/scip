@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.55 2003/11/24 12:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.56 2003/11/25 10:24:22 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  global SCIP settings
@@ -76,21 +76,26 @@ struct Set
    PRICER**         pricers;            /**< variable pricers */
    int              npricers;           /**< number of variable pricers */
    int              pricerssize;        /**< size of pricers array */
+   Bool             pricerssorted;      /**< are the pricers sorted by priority? */
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
    CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
    int              nconflicthdlrs;     /**< number of conflict handlers */
    int              conflicthdlrssize;  /**< size of conflicthdlrs array */
+   Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
    PRESOL**         presols;            /**< presolvers */
    int              npresols;           /**< number of presolvers */
    int              presolssize;        /**< size of presols array */
+   Bool             presolssorted;      /**< are the presolvers sorted by priority? */
    SEPA**           sepas;              /**< separators */
    int              nsepas;             /**< number of separators */
    int              sepassize;          /**< size of sepas array */
+   Bool             sepassorted;        /**< are the separators sorted by priority? */
    HEUR**           heurs;              /**< primal heuristics */
    int              nheurs;             /**< number of primal heuristics */
    int              heurssize;          /**< size of heurs array */
+   Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    EVENTHDLR**      eventhdlrs;         /**< event handlers */
    int              neventhdlrs;        /**< number of event handlers */
    int              eventhdlrssize;     /**< size of eventhdlrs array */
@@ -403,6 +408,12 @@ PRICER* SCIPsetFindPricer(
    const char*      name                /**< name of variable pricer */
    );
 
+/** sorts pricers by priorities */
+extern
+void SCIPsetSortPricers(
+   SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts constraint handler in constraint handler list */
 extern
 RETCODE SCIPsetIncludeConshdlr(
@@ -431,6 +442,12 @@ CONFLICTHDLR* SCIPsetFindConflicthdlr(
    const char*      name                /**< name of conflict handler */
    );
 
+/** sorts conflict handlers by priorities */
+extern
+void SCIPsetSortConflicthdlrs(
+   SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts presolver in presolver list */
 extern
 RETCODE SCIPsetIncludePresol(
@@ -443,6 +460,12 @@ extern
 PRESOL* SCIPsetFindPresol(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of presolver */
+   );
+
+/** sorts presolvers by priorities */
+extern
+void SCIPsetSortPresols(
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts separator in separator list */
@@ -459,6 +482,12 @@ SEPA* SCIPsetFindSepa(
    const char*      name                /**< name of separator */
    );
 
+/** sorts separators by priorities */
+extern
+void SCIPsetSortSepas(
+   SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 RETCODE SCIPsetIncludeHeur(
@@ -471,6 +500,12 @@ extern
 HEUR* SCIPsetFindHeur(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of primal heuristic */
+   );
+
+/** sorts heuristics by priorities */
+extern
+void SCIPsetSortHeurs(
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts event handler in event handler list */

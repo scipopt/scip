@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.24 2003/11/24 12:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.25 2003/11/25 10:24:21 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods and datastructures for primal heuristics
@@ -51,6 +51,27 @@ struct Heur
 };
 
 
+
+/** compares two heuristics w. r. to their priority */
+DECL_SORTPTRCOMP(SCIPheurComp)
+{
+   return ((HEUR*)elem2)->priority - ((HEUR*)elem1)->priority;
+}
+
+/** method to call, when the priority of a heuristic was changed */
+static
+DECL_PARAMCHGD(paramChgdHeurPriority)
+{
+   PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetHeurPriority() to mark the heurs unsorted */
+   CHECK_OKAY( SCIPsetHeurPriority(scip, (HEUR*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
 
 /** creates a primal heuristic */
 RETCODE SCIPheurCreate(
@@ -97,6 +118,11 @@ RETCODE SCIPheurCreate(
    (*heur)->initialized = FALSE;
 
    /* add parameters */
+   sprintf(paramname, "heuristics/%s/priority", name);
+   sprintf(paramdesc, "priority of heuristic <%s>", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*heur)->priority, priority, INT_MIN, INT_MAX, 
+                  paramChgdHeurPriority, (PARAMDATA*)(*heur)) ); /*lint !e740*/
    sprintf(paramname, "heuristics/%s/freq", name);
    sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
@@ -316,6 +342,20 @@ int SCIPheurGetPriority(
    assert(heur != NULL);
 
    return heur->priority;
+}
+
+/** sets priority of primal heuristic */
+void SCIPheurSetPriority(
+   HEUR*            heur,               /**< primal heuristic */
+   SET*             set,                /**< global SCIP settings */
+   int              priority            /**< new priority of the primal heuristic */
+   )
+{
+   assert(heur != NULL);
+   assert(set != NULL);
+   
+   heur->priority = priority;
+   set->heurssorted = FALSE;
 }
 
 /** gets frequency of primal heuristic */
