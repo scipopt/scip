@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.15 2004/07/07 11:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.16 2004/09/14 16:12:14 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -171,6 +171,10 @@ RETCODE SCIPbufferReallocMem(
    assert(buffer->firstfree >= 1);
    assert(ptr != NULL);
    assert(size >= 0);
+
+   /* if the pointer doesn't exist yet, allocate it */
+   if( *ptr == NULL )
+      return SCIPbufferAllocMem(buffer, set, ptr, size);
 
    /* Search the pointer in the buffer list
     * Usally, buffers are allocated and freed like a stack, such that the currently used pointer is

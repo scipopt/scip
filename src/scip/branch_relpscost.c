@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.8 2004/08/03 16:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.9 2004/09/14 16:12:14 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -41,6 +41,7 @@
 #define DEFAULT_MAXLOOKAHEAD     4      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
+#define DEFAULT_MAXBDCHGS       -1      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 
 
 /** branching rule data */
@@ -53,7 +54,97 @@ struct BranchruleData
    int              maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int              initcand;           /**< maximal number of candidates initialized with strong branching per node */
    int              inititer;           /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
+   int              maxbdchgs;          /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 };
+
+
+
+/*
+ * local methods
+ */
+
+/** adds given index and direction to bound change arrays */
+static
+RETCODE addBdchg(
+   SCIP*            scip,               /**< SCIP data structure */
+   int**            bdchginds,          /**< pointer to bound change index array */
+   Bool**           bdchgdowninfs,      /**< pointer to bound change direction array */
+   int*             nbdchgs,            /**< pointer to number of bound changes */
+   int              ind,                /**< index to store in bound change array */
+   Bool             downinf             /**< is the down branch infeasible? */
+   )
+{
+   assert(bdchginds != NULL);
+   assert(bdchgdowninfs != NULL);
+   assert(nbdchgs != NULL);
+
+   CHECK_OKAY( SCIPreallocBufferArray(scip, bdchginds, (*nbdchgs) + 1) );
+   CHECK_OKAY( SCIPreallocBufferArray(scip, bdchgdowninfs, (*nbdchgs) + 1) );
+   assert(*bdchginds != NULL);
+   assert(*bdchgdowninfs != NULL);
+
+   (*bdchginds)[*nbdchgs] = ind;
+   (*bdchgdowninfs)[*nbdchgs] = downinf;
+   (*nbdchgs)++;
+
+   return SCIP_OKAY;
+}
+
+/** frees bound change arrays */
+static
+void freeBdchgs(
+   SCIP*            scip,               /**< SCIP data structure */
+   int**            bdchginds,          /**< pointer to bound change index array */
+   Bool**           bdchgdowninfs,      /**< pointer to bound change direction array */
+   int*             nbdchgs             /**< pointer to number of bound changes */
+   )
+{
+   assert(bdchginds != NULL);
+   assert(bdchgdowninfs != NULL);
+   assert(nbdchgs != NULL);
+
+   SCIPfreeBufferArrayNull(scip, bdchgdowninfs);
+   SCIPfreeBufferArrayNull(scip, bdchginds);
+   *nbdchgs = 0;
+}
+
+/** applies bound changes stored in bound change arrays */
+static
+RETCODE applyBdchgs(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR**            lpcands,            /**< fractional branching candidates */
+   Real*            lpcandssol,         /**< LP solution array of branching candidates */
+   int*             bdchginds,          /**< bound change index array */
+   Bool*            bdchgdowninfs,      /**< bound change direction array */
+   int              nbdchgs             /**< number of bound changes */
+   )
+{
+   int i;
+
+   debugMessage("applying %d bound changes\n", nbdchgs);
+
+   for( i = 0; i < nbdchgs; ++i )
+   {
+      int c;
+
+      c = bdchginds[i];
+      if( bdchgdowninfs[i] )
+      {
+         /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
+         CHECK_OKAY( SCIPchgVarLb(scip, lpcands[c], SCIPceil(scip, lpcandssol[c])) );
+      }
+      else
+      {
+         /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
+         CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfloor(scip, lpcandssol[c])) );
+      }
+      debugMessage(" -> <%s> (sol:%g) -> [%g,%g]\n",
+         SCIPvarGetName(lpcands[c]), lpcandssol[c], SCIPvarGetLbLocal(lpcands[c]), SCIPvarGetUbLocal(lpcands[c]));
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -151,8 +242,11 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
    {
       int* initcands;
       Real* initcandscores;
+      int* bdchginds;
+      Bool* bdchgdowninfs;
       int ninitcands;
       int maxninitcands;
+      int nbdchgs;
       Real downsize;
       Real upsize;
       Real size;
@@ -194,6 +288,11 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcands, maxninitcands+1) ); /* allocate one additional slot for convenience */
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcandscores, maxninitcands+1) );
       ninitcands = 0;
+
+      /* initialize bound change arrays */
+      bdchginds = NULL;
+      bdchgdowninfs = NULL;
+      nbdchgs = 0;
 
       /* get current node number, depth, maximal depth, and number of binary/integer variables */
       nodenum = SCIPgetNNodes(scip);
@@ -353,28 +452,24 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          if( allcolsinlp && !exactsolve )
          {
             /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-            if( downinf && upinf )
+            if( downinf || upinf )
             {
-               /* both roundings are infeasible -> node is infeasible */
-               *result = SCIP_CUTOFF;
-               debugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
-               break; /* terminate initialization loop, because node is infeasible */
-            }
-            else if( downinf )
-            {
-               /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-               CHECK_OKAY( SCIPchgVarLb(scip, lpcands[c], SCIPceil(scip, lpcandssol[c])) );
-               *result = SCIP_REDUCEDDOM;
-               debugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
-               break; /* terminate initialization loop, because LP was changed */
-            }
-            else if( upinf )
-            {
-               /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
-               CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfloor(scip, lpcandssol[c])) );
-               *result = SCIP_REDUCEDDOM;
-               debugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
-               break; /* terminate initialization loop, because LP was changed */
+               if( downinf && upinf )
+               {
+                  /* both roundings are infeasible -> node is infeasible */
+                  debugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
+                  *result = SCIP_CUTOFF;
+                  break; /* terminate initialization loop, because node is infeasible */
+               }
+               else
+               {
+                  /* rounding is infeasible in one direction -> round variable in other direction */
+                  debugMessage(" -> variable <%s> is infeasible in %s branch\n",
+                     SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward");
+                  CHECK_OKAY( addBdchg(scip, &bdchginds, &bdchgdowninfs, &nbdchgs, c, downinf) );
+                  if( branchruledata->maxbdchgs >= 0 && nbdchgs >= branchruledata->maxbdchgs )
+                     break; /* terminate initialization loop, because enough roundings are performed */
+               }
             }
             else
             {
@@ -418,7 +513,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
          }
       
-         debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
+         debugMessage(" -> variable <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, score, 
             SCIPvarGetName(lpcands[bestsbcand]), bestsbscore, lookahead, maxlookahead);
       }
@@ -450,6 +545,17 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          assert(ninitcands >= 1);
          bestcand = initcands[0];
          bestisstrongbranch = FALSE;
+      }
+
+      /* apply domain reductions */
+      if( nbdchgs > 0 )
+      {
+         if( *result != SCIP_CUTOFF )
+         {
+            CHECK_OKAY( applyBdchgs(scip, lpcands, lpcandssol, bdchginds, bdchgdowninfs, nbdchgs) );
+            *result = SCIP_REDUCEDDOM;
+         }
+         freeBdchgs(scip, &bdchginds, &bdchgdowninfs, &nbdchgs);
       }
 
       /* free buffer for the unreliable candidates */
@@ -528,39 +634,43 @@ RETCODE SCIPincludeBranchruleRelpscost(
    
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                  branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, 
-                  branchExeclpRelpscost, branchExecpsRelpscost,
-                  branchruledata) );
+         branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, 
+         branchExeclpRelpscost, branchExecpsRelpscost,
+         branchruledata) );
 
    /* relpscost branching rule parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/relpscost/minreliable", 
-                  "minimal value for minimum pseudo cost size to regard pseudo cost value as reliable",
-                  &branchruledata->minreliable, DEFAULT_MINRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
+         "branching/relpscost/minreliable", 
+         "minimal value for minimum pseudo cost size to regard pseudo cost value as reliable",
+         &branchruledata->minreliable, DEFAULT_MINRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/relpscost/maxreliable", 
-                  "maximal value for minimum pseudo cost size to regard pseudo cost value as reliable",
-                  &branchruledata->maxreliable, DEFAULT_MAXRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
+         "branching/relpscost/maxreliable", 
+         "maximal value for minimum pseudo cost size to regard pseudo cost value as reliable",
+         &branchruledata->maxreliable, DEFAULT_MAXRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/relpscost/sbiterquot", 
-                  "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
-                  &branchruledata->sbiterquot, DEFAULT_SBITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
+         "branching/relpscost/sbiterquot", 
+         "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
+         &branchruledata->sbiterquot, DEFAULT_SBITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/relpscost/sbiterofs", 
-                  "additional number of allowed strong branching LP iterations",
-                  &branchruledata->sbiterofs, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
+         "branching/relpscost/sbiterofs", 
+         "additional number of allowed strong branching LP iterations",
+         &branchruledata->sbiterofs, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/relpscost/maxlookahead", 
-                  "maximal number of further variables evaluated without better score",
-                  &branchruledata->maxlookahead, DEFAULT_MAXLOOKAHEAD, 1, INT_MAX, NULL, NULL) );
+         "branching/relpscost/maxlookahead", 
+         "maximal number of further variables evaluated without better score",
+         &branchruledata->maxlookahead, DEFAULT_MAXLOOKAHEAD, 1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/relpscost/initcand", 
-                  "maximal number of candidates initialized with strong branching per node",
-                  &branchruledata->initcand, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
+         "branching/relpscost/initcand", 
+         "maximal number of candidates initialized with strong branching per node",
+         &branchruledata->initcand, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/relpscost/inititer", 
-                  "iteration limit for strong branching initializations of pseudo cost entries (0: auto)",
-                  &branchruledata->inititer, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
+         "branching/relpscost/inititer", 
+         "iteration limit for strong branching initializations of pseudo cost entries (0: auto)",
+         &branchruledata->inititer, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "branching/relpscost/maxbdchgs", 
+         "maximal number of bound tightenings before the node is reevaluated (-1: unlimited)",
+         &branchruledata->maxbdchgs, DEFAULT_MAXBDCHGS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
