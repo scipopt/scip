@@ -250,19 +250,15 @@ misc/vbcfilename = "-"
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
 conflict/linear/priority = -1000000
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
-constraints/linear/relaxfreq = 5
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/linear/sepafreq = -1
+constraints/linear/sepafreq = 5
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/propfreq = 5
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/linear/eagerfreq = 100
 
@@ -278,19 +274,15 @@ constraints/linear/tightenboundsfreq = 1
 # [type: real, range: [0,1.79769313486232e+308], default: 5]
 constraints/linear/maxaggrnormscale = 5
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/and/relaxfreq = 1
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/and/sepafreq = -1
+constraints/and/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/and/eagerfreq = 100
 
@@ -298,11 +290,7 @@ constraints/and/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/and/maxprerounds = -1
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/conjunction/relaxfreq = -1
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = -1
 
@@ -310,7 +298,7 @@ constraints/conjunction/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/propfreq = -1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/conjunction/eagerfreq = 100
 
@@ -318,11 +306,7 @@ constraints/conjunction/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/maxprerounds = -1
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/integral/relaxfreq = -1
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/sepafreq = -1
 
@@ -330,7 +314,7 @@ constraints/integral/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/eagerfreq = -1
 
@@ -338,11 +322,7 @@ constraints/integral/eagerfreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/maxprerounds = -1
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/knapsack/relaxfreq = 5
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 constraints/knapsack/sepafreq = 10
 
@@ -350,7 +330,7 @@ constraints/knapsack/sepafreq = 10
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/knapsack/eagerfreq = 100
 
@@ -378,19 +358,15 @@ constraints/knapsack/maxsepacutsroot = 200
 # [type: int, range: [-2147483648,2147483647], default: 800000]
 conflict/logicor/priority = 800000
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
-constraints/logicor/relaxfreq = 5
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/logicor/sepafreq = -1
+constraints/logicor/sepafreq = 5
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/logicor/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/logicor/eagerfreq = 100
 
@@ -410,19 +386,15 @@ constraints/logicor/maxvarusefac = 1
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: -0.2]
 constraints/logicor/minvarusefac = -0.2
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/or/relaxfreq = 1
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/or/sepafreq = -1
+constraints/or/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/or/eagerfreq = 100
 
@@ -434,19 +406,15 @@ constraints/or/maxprerounds = -1
 # [type: int, range: [-2147483648,2147483647], default: 700000]
 conflict/setppc/priority = 700000
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
-constraints/setppc/relaxfreq = 5
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/setppc/sepafreq = -1
+constraints/setppc/sepafreq = 5
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/setppc/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/setppc/eagerfreq = 100
 
@@ -458,19 +426,15 @@ constraints/setppc/maxprerounds = -1
 # [type: int, range: [0,2147483647], default: 2]
 constraints/setppc/npseudobranches = 2
 
-# frequency for separating relaxation cuts (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/varbound/relaxfreq = 1
-
-# frequency for separating additional cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/varbound/sepafreq = -1
+constraints/varbound/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/varbound/eagerfreq = 100
 
