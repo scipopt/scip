@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.55 2003/11/26 16:09:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.56 2003/11/27 17:48:42 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  LP management methods and datastructures
@@ -775,6 +775,12 @@ Real SCIProwGetRhs(
    ROW*             row                 /**< LP row */
    );
 
+/** gets the dual LP solution of a row */
+extern
+Real SCIProwGetDualsol(
+   ROW*             row                 /**< LP row */
+   );
+
 /** returns the name of the row */
 extern
 const char* SCIProwGetName(
@@ -830,6 +836,7 @@ Bool SCIProwIsInLP(
 #define SCIProwGetNorm(row)             (sqrt((row)->sqrnorm))
 #define SCIProwGetLhs(row)              ((row)->lhs)
 #define SCIProwGetRhs(row)              ((row)->rhs)
+#define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
 #define SCIProwGetName(row)             ((row)->name)
 #define SCIProwGetIndex(row)            ((row)->index)
 #define SCIProwIsLocal(row)             ((row)->local)

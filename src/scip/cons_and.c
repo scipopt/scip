@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.11 2003/11/21 10:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.12 2003/11/27 17:48:39 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -53,11 +53,6 @@ struct ConsData
    CONS**           conss;              /**< constraints in concatenation */
    int              consssize;          /**< size of conss array */
    int              nconss;             /**< number of constraints in concatenation */
-};
-
-/** constraint handler data */
-struct ConshdlrData
-{
 };
 
 

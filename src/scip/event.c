@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.20 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.21 2003/11/27 17:48:41 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -26,8 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "event.h"
 #include "var.h"
+#include "event.h"
 
 
 /** event handler */

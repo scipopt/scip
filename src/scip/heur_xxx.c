@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.1 2003/11/26 16:08:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.2 2003/11/27 17:48:41 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -24,7 +24,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <string.h>
 
 #include "heur_xxx.h"
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.74 2003/11/24 12:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.75 2003/11/27 17:48:39 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4456,53 +4456,43 @@ RETCODE SCIPaddCoefLinear(
 }
 
 /** gets left hand side of linear constraint */
-RETCODE SCIPgetLhsLinear(
+Real SCIPgetLhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   Real*            lhs                 /**< pointer to store left hand side */
+   CONS*            cons                /**< constraint data */
    )
 {
    CONSDATA* consdata;
 
-   assert(lhs != NULL);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      return SCIP_INVALIDDATA;
+      abort();
    }
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   *lhs = consdata->lhs;
-
-   return SCIP_OKAY;
+   return consdata->lhs;
 }
 
 /** gets right hand side of linear constraint */
-RETCODE SCIPgetRhsLinear(
+Real SCIPgetRhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   Real*            rhs                 /**< pointer to store right hand side */
+   CONS*            cons                /**< constraint data */
    )
 {
    CONSDATA* consdata;
 
-   assert(rhs != NULL);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      return SCIP_INVALIDDATA;
+      abort();
    }
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   *rhs = consdata->rhs;
-
-   return SCIP_OKAY;
+   return consdata->rhs;
 }
 
 /** changes left hand side of linear constraint */
@@ -4539,6 +4529,29 @@ RETCODE SCIPchgRhsLinear(
    CHECK_OKAY( chgRhs(scip, cons, rhs) );
 
    return SCIP_OKAY;
+}
+
+/** gets the dual solution of the linear constraint in the current LP */
+Real SCIPgetDualsolLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIProwGetDualsol(consdata->row);
+   else
+      return 0.0;
 }
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */

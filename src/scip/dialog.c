@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.6 2003/11/24 12:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.7 2003/11/27 17:48:41 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  user interface dialog
@@ -27,13 +27,14 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "dialog.h"
-#include "memory.h"
-
 #ifdef WITH_READLINE
+#include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
+
+#include "memory.h"
+#include "dialog.h"
 
 
 
@@ -620,7 +621,6 @@ RETCODE SCIPdialogDisplayMenu(
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
-   int len;
    int i;
 
    assert(dialog != NULL);

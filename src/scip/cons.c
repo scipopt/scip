@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.57 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.58 2003/11/27 17:48:39 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods and datastructures for managing constraints
@@ -26,8 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "cons.h"
 #include "clock.h"
+#include "cons.h"
 
 
 /** constraint handler */

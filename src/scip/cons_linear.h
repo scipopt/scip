@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.26 2003/11/21 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.27 2003/11/27 17:48:40 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -125,18 +125,16 @@ RETCODE SCIPaddCoefLinear(
 
 /** gets left hand side of linear constraint */
 extern
-RETCODE SCIPgetLhsLinear(
+Real SCIPgetLhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   Real*            lhs                 /**< pointer to store left hand side */
+   CONS*            cons                /**< constraint data */
    );
 
 /** gets right hand side of linear constraint */
 extern
-RETCODE SCIPgetRhsLinear(
+Real SCIPgetRhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   Real*            rhs                 /**< pointer to store right hand side */
+   CONS*            cons                /**< constraint data */
    );
 
 /** changes left hand side of linear constraint */
@@ -153,6 +151,13 @@ RETCODE SCIPchgRhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real             rhs                 /**< new right hand side */
+   );
+
+/** gets the dual solution of the linear constraint in the current LP */
+extern
+Real SCIPgetDualsolLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
    );
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */

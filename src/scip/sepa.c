@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.27 2003/11/25 10:24:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.28 2003/11/27 17:48:47 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -26,8 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "sepa.h"
 #include "clock.h"
+#include "sepa.h"
 
 
 /** separators data */

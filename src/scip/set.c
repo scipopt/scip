@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.74 2003/11/26 16:09:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.75 2003/11/27 17:48:47 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  global SCIP settings
@@ -1531,11 +1531,7 @@ RETCODE SCIPsetInitCallbacks(
    /* variable pricers */
    for( i = 0; i < set->npricers; ++i )
    {
-      errorMessage("pricers not implemented yet\n");
-      abort();
-#if 0
       CHECK_OKAY( SCIPpricerInit(set->pricers[i], set->scip) );
-#endif
    }
 
    /* constraint handlers */
@@ -1608,11 +1604,7 @@ RETCODE SCIPsetExitCallbacks(
    /* variable pricers */
    for( i = 0; i < set->npricers; ++i )
    {
-      errorMessage("pricers not implemented yet\n");
-      abort();
-#if 0
       CHECK_OKAY( SCIPpricerExit(set->pricers[i], set->scip) );
-#endif
    }
 
    /* constraint handlers */

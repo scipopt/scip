@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.10 2003/11/26 16:08:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.11 2003/11/27 17:48:40 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -24,8 +24,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <string.h>
-#include <limits.h>
 
 #include "cons_xxx.h"
 
@@ -44,7 +42,7 @@
 #if 0
 #include "cons_linear.h"
 
-#define LINCONSUPGD_PRIORITY    +000000
+#define LINCONSUPGD_PRIORITY          0
 #endif
 
 

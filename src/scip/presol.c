@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.13 2003/11/26 16:09:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.14 2003/11/27 17:48:45 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods and datastructures for presolvers
@@ -26,8 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "presol.h"
 #include "clock.h"
+#include "presol.h"
 
 
 /** presolver */

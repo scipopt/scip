@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.35 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.36 2003/11/27 17:48:46 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -880,8 +880,8 @@ RETCODE readRhs(
             val = atof(mpsinputField3(mpsi));
 
             /* find out the row sense */
-            CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
-            CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
+            lhs = SCIPgetLhsLinear(scip, cons);
+            rhs = SCIPgetRhsLinear(scip, cons);
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
@@ -914,8 +914,8 @@ RETCODE readRhs(
             val = atof(mpsinputField5(mpsi));
          
             /* find out the row sense */
-            CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
-            CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
+            lhs = SCIPgetLhsLinear(scip, cons);
+            rhs = SCIPgetRhsLinear(scip, cons);
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
@@ -1001,8 +1001,8 @@ RETCODE readRanges(
             val = atof(mpsinputField3(mpsi));
 
             /* find out the row sense */
-            CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
-            CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
+            lhs = SCIPgetLhsLinear(scip, cons);
+            rhs = SCIPgetRhsLinear(scip, cons);
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
@@ -1037,8 +1037,8 @@ RETCODE readRanges(
                val = atof(mpsinputField5(mpsi));
 
                /* find out the row sense */
-               CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
-               CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
+               lhs = SCIPgetLhsLinear(scip, cons);
+               rhs = SCIPgetRhsLinear(scip, cons);
                if( SCIPisInfinity(scip, -lhs) )
                {
                   /* lhs = -infinity -> lower or equal */

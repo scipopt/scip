@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.45 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.46 2003/11/27 17:48:42 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0
@@ -36,6 +36,14 @@
                         {                                                           \
                            errorMessage("LP Error: CPLEX returned %d\n", _restat_); \
                            return SCIP_LPERROR;                                     \
+                        }                                                           \
+                      }
+
+#define ABORT_ZERO(x) { int _restat_;                                               \
+                        if( (_restat_ = (x)) != 0 )                                 \
+                        {                                                           \
+                           errorMessage("LP Error: CPLEX returned %d\n", _restat_); \
+                           abort();                                                 \
                         }                                                           \
                       }
 
@@ -1684,10 +1692,17 @@ RETCODE SCIPlpiGetBasisFeasibility(
    Bool*            dualfeasible        /**< stores dual feasibility status */
    )
 {
+   int pfeas;
+   int dfeas;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(primalfeasible != NULL);
+   assert(dualfeasible != NULL);
 
-   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, primalfeasible, dualfeasible) );
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &pfeas, &dfeas) );
+   *primalfeasible = (Bool)pfeas;
+   *dualfeasible = (Bool)dfeas;
 
    return SCIP_OKAY;
 }
@@ -1697,14 +1712,14 @@ Bool SCIPlpiIsPrimalUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
-   Bool primalfeasible;
+   int primalfeasible;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
+   ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
    return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
 }
@@ -1714,14 +1729,14 @@ Bool SCIPlpiIsPrimalInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
-   Bool primalfeasible;
+   int primalfeasible;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
+   ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
 
    return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && !primalfeasible));
 }
@@ -1731,14 +1746,14 @@ Bool SCIPlpiIsDualUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
-   Bool dualfeasible;
+   int dualfeasible;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
+   ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
    return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible));
 }
@@ -1748,14 +1763,14 @@ Bool SCIPlpiIsDualInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
-   Bool dualfeasible;
+   int dualfeasible;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
+   ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
    return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && !dualfeasible));
 }

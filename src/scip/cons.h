@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.52 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.53 2003/11/27 17:48:39 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  methods and datastructures for managing constraints
@@ -304,15 +304,15 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - nnewchgsides    : number of changed left or right hand sides since the last call to the presolving method
  *
  *  input/output:
- *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
- *  - naggrvars       : pointer to total number of variables aggregated of all presolvers
- *  - nchgvartypes    : pointer to total number of variable type changes of all presolvers
- *  - nchgbds         : pointer to total number of variable bounds tightend of all presolvers
- *  - naddholes       : pointer to total number of domain holes added of all presolvers
- *  - ndelconss       : pointer to total number of deleted constraints of all presolvers
- *  - nupgdconss      : pointer to total number of upgraded constraints of all presolvers
- *  - nchgcoefs       : pointer to total number of changed coefficients of all presolvers
- *  - nchgsides       : pointer to total number of changed left/right hand sides of all presolvers
+ *  - nfixedvars      : pointer to count total number of variables fixed of all presolvers
+ *  - naggrvars       : pointer to count total number of variables aggregated of all presolvers
+ *  - nchgvartypes    : pointer to count total number of variable type changes of all presolvers
+ *  - nchgbds         : pointer to count total number of variable bounds tightend of all presolvers
+ *  - naddholes       : pointer to count total number of domain holes added of all presolvers
+ *  - ndelconss       : pointer to count total number of deleted constraints of all presolvers
+ *  - nupgdconss      : pointer to count total number of upgraded constraints of all presolvers
+ *  - nchgcoefs       : pointer to count total number of changed coefficients of all presolvers
+ *  - nchgsides       : pointer to count total number of changed left/right hand sides of all presolvers
  *
  *  output:
  *  - result          : pointer to store the result of the presolving call
@@ -407,7 +407,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that should lock rounding of its variables
  *  - nlockspos       : number of times, the roundings should be locked for the constraint
- *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation?
+ *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation
  */
 #define DECL_CONSLOCK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, int nlockspos, int nlocksneg)
 
@@ -438,8 +438,8 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that should unlock rounding of its variables
- *  - nunlockspos     : number of times, the roundings should be unlocked for the constraint?
- *  - nunlocksneg     : number of times, the roundings should be unlocked for the constraint's negation?
+ *  - nunlockspos     : number of times, the roundings should be unlocked for the constraint
+ *  - nunlocksneg     : number of times, the roundings should be unlocked for the constraint's negation
  */
 #define DECL_CONSUNLOCK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, int nunlockspos, int nunlocksneg)
 

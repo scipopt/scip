@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.15 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.16 2003/11/27 17:48:43 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -51,16 +51,16 @@
 #define clearMemory(ptr)                   clearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
 #define clearMemoryArray(ptr, num)         clearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
 #define clearMemorySize(ptr, size)         clearMemory_call( (void*)(ptr), (size_t)(size) )
-#define copyMemory(ptr, source)            copyMemory_call( (void*)(ptr), (const void*)source, sizeof(*(ptr)) )
-#define copyMemoryArray(ptr, source, num)  copyMemory_call( (void*)(ptr), (const void*)source, (num)*sizeof(*(ptr)) )
-#define copyMemorySize(ptr, source, size)  copyMemory_call( (void*)(ptr), (const void*)source, (size_t)(size) )
-#define duplicateMemory(ptr, source)       (*(void**)(ptr) = duplicateMemory_call( (const void*)source, sizeof(**(ptr)), \
+#define copyMemory(ptr, source)            copyMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
+#define copyMemoryArray(ptr, source, num)  copyMemory_call( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
+#define copyMemorySize(ptr, source, size)  copyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
+#define duplicateMemory(ptr, source)       (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), sizeof(**(ptr)), \
                                            __FILE__, __LINE__ ))
 #define duplicateMemoryArray(ptr, source, num) \
-                                           (*(void**)(ptr) = duplicateMemory_call( (const void*)source, \
+                                           (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), \
                                            (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define duplicateMemorySize(ptr, source, size) \
-                                           (*(void**)(ptr) = duplicateMemory_call( (const void*)source, (size_t)(size), \
+                                           (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), (size_t)(size), \
                                            __FILE__, __LINE__ ))
 #define freeMemory(ptr)                    { freeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
                                              assert(*(ptr) == NULL); }
@@ -94,13 +94,13 @@ size_t memorySize(void *ptr);
 #define allocMemorySize(ptr,size)          (*(void**)(ptr) = malloc( (size_t)(size) ))
 #define reallocMemoryArray(ptr,num)        (*(void**)(ptr) = realloc( *(ptr), (num)*sizeof(**(ptr)) ))
 #define reallocMemorySize(ptr,size)        (*(void**)(ptr) = realloc( *(ptr), (size_t)(size) ))
-#define copyMemory(ptr, source)            memcpy( (void*)(ptr), (const void*)source, sizeof(*(ptr)) )
-#define copyMemoryArray(ptr, source, num)  memcpy( (void*)(ptr), (const void*)source, (num)*sizeof(*(ptr)) )
-#define copyMemorySize(ptr, source, size)  memcpy( (void*)(ptr), (const void*)source, (size_t)(size) )
-#define duplicateMemory(ptr, source)       (*(void**)(ptr) = duplicateMemory_call( (const void*)source, sizeof(**(ptr))))
-#define duplicateMemoryArray(ptr, source, num) (*(void**)(ptr) = duplicateMemory_call( (const void*)source, \
+#define copyMemory(ptr, source)            memcpy( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
+#define copyMemoryArray(ptr, source, num)  memcpy( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
+#define copyMemorySize(ptr, source, size)  memcpy( (void*)(ptr), (const void*)(source), (size_t)(size) )
+#define duplicateMemory(ptr, source)       (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), sizeof(**(ptr))))
+#define duplicateMemoryArray(ptr, source, num) (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), \
                                                (num)*sizeof(**(ptr))))
-#define duplicateMemorySize(ptr, source, size) (*(void**)(ptr) = duplicateMemory_call( (const void*)source, \
+#define duplicateMemorySize(ptr, source, size) (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), \
                                                (size_t)(size)))
 #define freeMemory(ptr)                    { free(*(ptr)); *(ptr) = NULL; }
 #define freeMemoryNull(ptr)                if( *(ptr) != NULL ) freeMemory( (ptr) )
@@ -151,10 +151,10 @@ typedef struct memory_header MEMHDR;
                                            (*(void**)(ptr) = reallocBlockMemory_call((mem), *(void**)(ptr), \
                                            (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
 #define duplicateBlockMemory(mem, ptr, source) \
-                                           (*(void**)(ptr) = duplicateBlockMemory_call((mem), (const void*)source, \
+                                           (*(void**)(ptr) = duplicateBlockMemory_call((mem), (const void*)(source), \
                                            sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define duplicateBlockMemoryArray(mem, ptr, source, num) \
-                                           (*(void**)(ptr) = duplicateBlockMemory_call( (mem), (const void*)source, \
+                                           (*(void**)(ptr) = duplicateBlockMemory_call( (mem), (const void*)(source), \
                                            (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define freeBlockMemory(mem,ptr)           { freeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
                                              __FILE__, __LINE__ ); \

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.9 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.10 2003/11/27 17:48:42 bzfpfend Exp $"
 
 /**@file   lpi_spx.c
  * @brief  LP interface for SOPLEX 1.2.1
@@ -23,7 +23,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
+#include <cassert>
 #include <fstream>
 
 /* remember original SCIP defines */
@@ -210,9 +210,9 @@ public:
       SoPlex::addCol(col);
       SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
-   virtual void addCol(SPxColId& id, const LPCol& col)
+   virtual void addCol(SPxColId& theid, const LPCol& col)
    {
-      SoPlex::addCol(id, col);
+      SoPlex::addCol(theid, col);
       SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCols(const LPColSet& pset)
@@ -220,9 +220,9 @@ public:
       SoPlex::addCols(pset);
       SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
-   virtual void addCols(SPxColId id[], const LPColSet& set)
+   virtual void addCols(SPxColId theid[], const LPColSet& theset)
    {
-      SoPlex::addCols(id, set);
+      SoPlex::addCols(theid, theset);
       SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
 
@@ -524,7 +524,7 @@ RETCODE SCIPlpiLoadColLP(
    int              nrows,              /**< number of rows */
    const Real*      lhs,                /**< left hand sides of rows */
    const Real*      rhs,                /**< right hand sides of rows */
-   char**           rownames,           /**< row names, or NULL */
+   char**           /*rownames*/,       /**< row names, or NULL */
    int              nnonz,              /**< number of nonzero elements in the constraint matrix */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
@@ -566,7 +566,7 @@ RETCODE SCIPlpiAddCols(
    const Real*      obj,                /**< objective function values of new columns */
    const Real*      lb,                 /**< lower bounds of new columns */
    const Real*      ub,                 /**< upper bounds of new columns */
-   char**           colnames,           /**< column names, or NULL */
+   char**           /*colnames*/,       /**< column names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
@@ -658,7 +658,7 @@ RETCODE SCIPlpiAddRows(
    int              nrows,              /**< number of rows to be added */
    const Real*      lhs,                /**< left hand sides of new rows */
    const Real*      rhs,                /**< right hand sides of new rows */
-   char**           rownames,           /**< row names, or NULL */
+   char**           /*rownames*/,       /**< row names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
@@ -1598,8 +1598,6 @@ RETCODE SCIPlpiGetSol(
    Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {
-   int dummy;
-
    debugMessage("calling SCIPlpiGetSol()\n");
 
    assert(lpi != NULL);
@@ -1634,8 +1632,8 @@ RETCODE SCIPlpiGetSol(
 
 /** gets primal ray for unbounded LPs */
 RETCODE SCIPlpiGetPrimalRay(
-   LPI*             lpi,                /**< LP interface structure */
-   Real*            ray                 /**< primal ray */
+   LPI*             /*lpi*/,            /**< LP interface structure */
+   Real*            /*ray*/             /**< primal ray */
    )
 {
    debugMessage("calling SCIPlpiGetPrimalRay()\n");
@@ -1650,8 +1648,8 @@ RETCODE SCIPlpiGetPrimalRay(
 
 /** gets dual farkas proof for infeasibility */
 RETCODE SCIPlpiGetDualfarkas(
-   LPI*             lpi,                /**< LP interface structure */
-   Real*            dualfarkas          /**< dual farkas row multipliers */
+   LPI*             /*lpi*/,            /**< LP interface structure */
+   Real*            /*dualfarkas*/      /**< dual farkas row multipliers */
    )
 {
    debugMessage("calling SCIPlpiGetDualfarkas()\n");
@@ -1892,7 +1890,7 @@ RETCODE SCIPlpiGetBInvARow(
    else
    {
       buf = NULL;
-      binv = (Real*)binvrow;
+      binv = const_cast<Real*>(binvrow);
    }
    assert(binv != NULL);
 
@@ -1962,13 +1960,12 @@ RETCODE SCIPlpiGetState(
 /** loads LPi state (like basis information) into solver */
 RETCODE SCIPlpiSetState(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   MEMHDR*          /*memhdr*/,         /**< block memory */
    LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
    debugMessage("calling SCIPlpiSetState()\n");
 
-   assert(memhdr != NULL);
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
@@ -1990,7 +1987,7 @@ RETCODE SCIPlpiSetState(
 
 /** frees LPi state information */
 RETCODE SCIPlpiFreeState(
-   LPI*             lpi,                /**< LP interface structure */
+   LPI*             /*lpi*/,            /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
@@ -2006,14 +2003,11 @@ RETCODE SCIPlpiFreeState(
 
 /** reads LP state (like basis information from a file */
 RETCODE SCIPlpiReadState(
-   LPI*             lpi,                /**< LP interface structure */
-   const char*      fname               /**< file name */
+   LPI*             /*lpi*/,            /**< LP interface structure */
+   const char*      /*fname*/           /**< file name */
    )
 {
    debugMessage("calling SCIPlpiReadState()\n");
-
-   assert(lpi != NULL);
-   assert(lpi->spx != NULL);
 
    errorMessage("SCIPlpiReadState() not implemented yet in SOPLEX interface\n");
    abort();
@@ -2021,14 +2015,11 @@ RETCODE SCIPlpiReadState(
 
 /** writes LP state (like basis information) to a file */
 RETCODE SCIPlpiWriteState(
-   LPI*             lpi,                /**< LP interface structure */
-   const char*      fname               /**< file name */
+   LPI*             /*lpi*/,            /**< LP interface structure */
+   const char*      /*fname*/           /**< file name */
    )
 {
    debugMessage("calling SCIPlpiWriteState()\n");
-
-   assert(lpi != NULL);
-   assert(lpi->spx != NULL);
 
    errorMessage("SCIPlpiWriteState() not implemented yet in SOPLEX interface\n");
    abort();
@@ -2208,7 +2199,7 @@ RETCODE SCIPlpiSetRealpar(
 
 /** returns value treated as infinity in the LP solver */
 Real SCIPlpiInfinity(
-   LPI*             lpi                 /**< LP interface structure */
+   LPI*             /*lpi*/             /**< LP interface structure */
    )
 {
    debugMessage("calling SCIPlpiInfinity()\n");
@@ -2218,7 +2209,7 @@ Real SCIPlpiInfinity(
 
 /** checks if given value is treated as infinity in the LP solver */
 Bool SCIPlpiIsInfinity(
-   LPI*             lpi,                /**< LP interface structure */
+   LPI*             /*lpi*/,            /**< LP interface structure */
    Real             val
    )
 {

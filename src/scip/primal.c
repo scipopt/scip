@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.22 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.23 2003/11/27 17:48:46 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods and datastructures for collecting primal CIP solutions and primal informations
@@ -25,8 +25,8 @@
 
 #include <assert.h>
 
-#include "primal.h"
 #include "disp.h"
+#include "primal.h"
 
 
 

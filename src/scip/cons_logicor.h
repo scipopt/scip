@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.6 2003/11/21 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.h,v 1.7 2003/11/27 17:48:40 bzfpfend Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
@@ -52,6 +52,13 @@ RETCODE SCIPcreateConsLogicor(
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** gets the dual solution of the logic or constraint in the current LP */
+extern
+Real SCIPgetDualsolLogicor(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
    );
 
 

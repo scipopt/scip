@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.8 2003/11/21 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.9 2003/11/27 17:48:40 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -88,6 +88,21 @@ RETCODE SCIPcreateConsSetcover(
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** adds coefficient in set partitioning / packing / covering constraint */
+extern
+RETCODE SCIPaddCoefSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
+   VAR*             var                 /**< variable to add to the constraint */
+   );
+
+/** gets the dual solution of the set partitioning / packing / covering constraint in the current LP */
+extern
+Real SCIPgetDualsolSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
    );
 
 #endif

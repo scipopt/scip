@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.1 2003/11/26 16:09:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.2 2003/11/27 17:48:45 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods and datastructures for variable pricers
@@ -26,8 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "pricer.h"
 #include "clock.h"
+#include "pricer.h"
 
 
 /** variable pricers data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.5 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.6 2003/11/27 17:48:38 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods and datastructures for taking timings
@@ -25,9 +25,9 @@
 
 #include <assert.h>
 
-#include "clock.h"
 #include "memory.h"
 #include "message.h"
+#include "clock.h"
 
 
 /*lint -esym(*,timeval)*/

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.25 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.26 2003/11/27 17:48:41 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods and datastructures for primal heuristics
@@ -26,8 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "heur.h"
 #include "clock.h"
+#include "heur.h"
 
 
 /** primal heuristics data */

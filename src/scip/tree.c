@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.63 2003/11/21 10:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.64 2003/11/27 17:48:48 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  branch-and-bound tree datastructures and operations
@@ -1383,7 +1383,6 @@ void treeCheckPath(
    int ncols;
    int nrows;
    int d;
-   char s[MAXSTRLEN];
 
    assert(tree != NULL);
    assert(tree->path != NULL);

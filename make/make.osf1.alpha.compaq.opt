@@ -1,9 +1,8 @@
-#--- $Id: make.osf1.alpha.compaq.opt,v 1.1 2003/11/21 09:18:58 bzfpfend Exp $
+#--- $Id: make.osf1.alpha.compaq.opt,v 1.2 2003/11/27 17:48:37 bzfpfend Exp $
 CC		=	cc
 CXX		=	cxx
-CPPFLAGS        +=      -DNDEBUG
-CFLAGS		=	-O4 -fast
-CXXFLAGS	=	-std strict_ansi -O4 -fast -noexceptions -nortti
-LDFLAGS		+=	-non_shared -om
+FLAGS		+=      -DNDEBUG -O4 -fast -std
+CFLAGS		+=	
+CXXFLAGS	+=	-noexceptions -nortti
+LDFLAGS		+=	-om # -non_shared
 ARFLAGS		=	crs
-

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.27 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.28 2003/11/27 17:48:38 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods and datastructures for branching methods
@@ -47,7 +47,7 @@ struct BranchCand
 
 
 /** branching rule */
-struct BranchRule
+struct Branchrule
 {
    char*            name;               /**< name of branching rule */
    char*            desc;               /**< description of branching rule */

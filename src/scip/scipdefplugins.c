@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.5 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.6 2003/11/27 17:48:47 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -23,7 +23,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scipdefplugins.h"
 #include "reader_cnf.h"
 #include "reader_mps.h"
 #include "cons_and.h"
@@ -50,6 +49,7 @@
 #include "sepa_gomory.h"
 #include "disp_default.h"
 #include "dialog_default.h"
+#include "scipdefplugins.h"
 
 
 

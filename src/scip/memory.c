@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.23 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.24 2003/11/27 17:48:43 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -39,7 +39,7 @@
 #ifdef DEBUG
 #define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
 #else
-#define debugMessage                    if( FALSE ) printf
+#define debugMessage(...)               /**/
 #endif
 
 #define TRUE     1

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.106 2003/11/26 16:09:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.107 2003/11/27 17:48:46 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -26,14 +26,14 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "scip.h"
-#include "set.h"
 #include "mem.h"
+#include "set.h"
 #include "interrupt.h"
 #include "prob.h"
 #include "stat.h"
 #include "solve.h"
 #include "lpi.h"
+#include "scip.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access

@@ -5,6 +5,3 @@ $(OBJDIR)/cmain.o: src/cmain.c src/scip.h src/def.h src/retcode.h src/result.h \
   src/nodesel.h src/sol.h src/heur.h src/primal.h src/event.h \
   src/branch.h src/sepastore.h src/conflict.h src/presol.h src/sepa.h \
   src/disp.h src/dialog.h src/scipdefplugins.h
-$(OBJDIR)/lpi_cpx.o: src/lpi_cpx.c lib/cpxinc/cplex.h src/bitencode.h src/lpi.h \
-  src/def.h src/retcode.h src/memory.h src/message.h
-$(OBJDIR)/bitencode.o: src/bitencode.c src/def.h src/retcode.h src/bitencode.h

@@ -1,7 +1,7 @@
-#--- $Id: make.linux.x86.gnu.gcov,v 1.1 2003/11/21 09:18:58 bzfpfend Exp $
-CPPFLAGS	+=	-DWITH_READLINE
-CFLAGS		=	-O0 -fprofile-arcs -ftest-coverage
-CXXFLAGS	=	-O0 -fprofile-arcs -ftest-coverage
+#--- $Id: make.linux.x86.gnu.gcov,v 1.2 2003/11/27 17:48:37 bzfpfend Exp $
+FLAGS		+=	-DWITH_READLINE -O0 -fprofile-arcs -ftest-coverage
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
 LDFLAGS		+=	-lreadline -lncurses
 # -static

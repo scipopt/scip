@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.14 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.15 2003/11/27 17:48:43 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods and datastructures
@@ -587,7 +587,7 @@ const int strhashshift[28] = {
 /** returns the hash value of the key (i.e. string) */
 DECL_HASHKEYVAL(SCIPhashKeyValString)
 {
-   unsigned char* string = (unsigned char*)key;
+   const char* string = (const char*)key;
    unsigned int sum;
    unsigned int val;
    int i;
@@ -597,7 +597,7 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
    while( *string != '\0' )
    {
       assert(0 <= i && i < 28);
-      val = *string;
+      val = (unsigned int)(*string);
       val <<= strhashshift[i];
       sum += val;
       i++;

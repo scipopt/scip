@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.53 2003/11/26 16:08:57 bzfpfend Exp $
+# $Id: Makefile,v 1.54 2003/11/27 17:48:36 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -48,26 +48,23 @@ MACHINENAME	:=	$(shell uname -n | tr A-Z a-z)
 
 OPT		=	dbg
 LPS		=	cpx
+COMP		=	gnu
 TIME     	=  	3600
 TEST		=	miplib
+SETTINGS        =       default
 
-COMP		=	gnu
+LINKER  	=	C
+
 CC		=	gcc
 CXX		=	g++
 DCC		=	gcc
 DCXX		=	g++
-LINT		=	flexelint
 AR		=	ar
 RANLIB		=	ranlib
+LINT		=	flexelint
 DOXY		=	doxygen
 
-SETTINGS        =       default
-
-SRCDIR		=	src
-BINDIR		=	bin
-LIBDIR		=	lib
-
-CPPFLAGS	=	-I$(SRCDIR)
+FLAGS		=	-I$(SRCDIR)
 CFLAGS		=	
 CXXFLAGS	=	
 LDFLAGS		=	-lpthread -lm
@@ -79,16 +76,19 @@ GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings \
 			-Wmissing-declarations -Wno-unknown-pragmas \
 			-Wno-unused
 
-GXXWARN		=	-Wall -W -Wpointer-arith -Wbad-function-cast \
+GXXWARN		=	-Wall -W -Wpointer-arith \
 			-Wcast-align -Wwrite-strings -Wconversion \
 			-Wstrict-prototypes -Wmissing-prototypes \
-			-Wmissing-declarations -Wno-unknown-pragmas \
+			-Wno-unknown-pragmas \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth -Wundef \
 			-Wcast-qual -Wold-style-cast -Wshadow 
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
+SRCDIR		=	src
+BINDIR		=	bin
+LIBDIR		=	lib
 
 
 #-----------------------------------------------------------------------------
@@ -100,61 +100,65 @@ include make/make.$(BASE)
 # Memory Management
 #-----------------------------------------------------------------------------
 
-#CFLAGS		+=	-DNOSAFEMEM
-#CFLAGS		+=	-DNOBLOCKMEM
+#FLAGS		+=	-DNOSAFEMEM
+#FLAGS		+=	-DNOBLOCKMEM
 
 
 #-----------------------------------------------------------------------------
-# Program Components
+# Main Program
 #-----------------------------------------------------------------------------
 
-NAME		=	scip
-OBJECTS		=
+MAINNAME	=	scip
+MAINOBJ		=	cmain.o
 
-OBJXXX		=	$(addprefix $(OBJDIR)/,$(OBJECTS))
-OBJSRC		=	$(addprefix $(SRCDIR)/,$(OBJECTS:.o=.c))
-OBJDEP		=	src/depend.obj
+MAIN		=	$(MAINNAME).$(BASE).$(LPS)
+MAINFILE	=	$(BINDIR)/$(MAIN)
+MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
+MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
+MAINDEP		=	src/depend.main
 
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
+LPILIBNAME	=	lpi$(LPS)
+
 ifeq ($(LPS),cpx)
-CPPFLAGS	+=	-I$(LIBDIR)/cpxinc
+FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLIB		=	cplex.$(OSTYPE).$(ARCH)
-LPIOBJ		=	lpi_cpx.o bitencode.o
-LPISRC  	=	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.c))
+LPILIBOBJ	=	lpi_cpx.o bitencode.o
+LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
 ifeq ($(LPS),spx)
-CPPFLAGS	+=	-I$(LIBDIR)/spxinc 
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLIB		=	soplex.$(OSTYPE).$(ARCH)
-LPIOBJ		=	lpi_spx.o bitencode.o
-LPISRC  	=	lpi_spx.cpp bitencode.c
+LPILIBOBJ	=	lpi_spx.o bitencode.o
+LPILIBSRC	=	src/lpi_spx.cpp src/bitencode.c
 endif
 
 ifeq ($(LPS),spxdbg)
-CPPFLAGS	+=	-I$(LIBDIR)/spxinc 
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLIB		=	soplexdbg.$(OSTYPE).$(ARCH)
-LPIOBJ		=	lpi_spxdbg.o bitencode.o
-LPISRC  	=	lpi_spxdbg.cpp bitencode.c
+LPILIBOBJ	=	lpi_spxdbg.o bitencode.o
+LPILIBSRC	=	lpi_spxdbg.cpp bitencode.c
 endif
 
-LPILIB		=	$(LPS)lp.$(BASE)
+LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).a
-LPIXXX		=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
-LPIDEP		=	src/depend.$(LPS)
-MAINOBJ		=	cmain.o
-MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
-MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
+LPILIBXXX	=	$(addprefix $(OBJDIR)/,$(LPILIBOBJ))
+LPILIBDEP	=	src/depend.lpilib.$(LPS)
 
 
 #-----------------------------------------------------------------------------
 # SCIP Library
 #-----------------------------------------------------------------------------
 
-SCIPOBJ		=	branch.o \
+SCIPLIBNAME	=	scip
+SCIPLIBOBJ	=	branch.o \
 			buffer.o \
 			clock.o \
 			conflict.o \
@@ -216,40 +220,45 @@ SCIPOBJ		=	branch.o \
 			reader_mps.o \
 			sepa_gomory.o
 
-SCIPLIB		=	$(NAME).$(BASE)
+SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).a
-SCIPDEP		=	src/depend.scip
-SCIPXXX		=	$(addprefix $(OBJDIR)/,$(SCIPOBJ))
-SCIPSRC		=	$(addprefix $(SRCDIR)/,$(SCIPOBJ:.o=.c))
+SCIPLIBXXX	=	$(addprefix $(OBJDIR)/,$(SCIPLIBOBJ))
+SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
+SCIPLIBDEP	=	src/depend.sciplib
 
 
 #-----------------------------------------------------------------------------
-# Target
+# Objective SCIP Library
 #-----------------------------------------------------------------------------
 
-TARGET		=	$(NAME).$(BASE).$(LPS)
-BINARY		=	$(BINDIR)/$(TARGET)
+OBJSCIPLIBNAME	=	objscip
+OBJSCIPLIBOBJ	=	objbranchrule.o \
+			objconshdlr.o \
+			objpricer.o
+
+OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
+OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).a
+OBJSCIPLIBXXX	=	$(addprefix $(OBJDIR)/,$(OBJSCIPLIBOBJ))
+OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
+OBJSCIPLIBDEP	=	src/depend.objsciplib
 
 
 #-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
 
-$(BINARY):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(OBJXXX) $(MAINXXX)
-		$(CXX) $(CXXFLAGS) $(OBJXXX) $(MAINXXX) \
-		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) \
-		$(LDFLAGS) -o $@
+all:            $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
-lint:		$(SCIPSRC) $(OBJSRC) $(MAINSRC)
-		$(LINT) lint/$(NAME).lnt -os\(lint.out\) \
-		$(CPPFLAGS) -UNDEBUG $^
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
+		$(LINT) lint/$(MAINNAME).lnt -os\(lint.out\) \
+		$(FLAGS) -UNDEBUG $^
 
 doc:		
-		cd doc; $(DOXY) $(NAME).dxy
+		cd doc; $(DOXY) $(MAINNAME).dxy
 
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(BINARY) $(SETTINGS) $(TARGET).$(MACHINENAME) $(TIME);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(TARGET).$(MACHINENAME) $(TIME);
 
 testcplex:		
 		cd check; \
@@ -265,44 +274,65 @@ $(BINDIR):
 		-mkdir -p $(BINDIR)
 
 clean:
-		-rm -rf $(OBJDIR)/* $(SCIPLIBFILE) $(LPILIBFILE) $(TARGET)
+		-rm -rf $(OBJDIR)/* $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
 depend:
-		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(SCIPSRC) \
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(SCIPDEP)'
-ifeq ($(LPS),cpx)
-		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(MAINSRC) $(LPISRC) \
+		>$(MAINDEP)'
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(LPIDEP)'
+		>$(SCIPLIBDEP)'
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
+		>$(OBJSCIPLIBDEP)'
+ifeq ($(LINKER),C)
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
+		>$(LPILIBDEP)'
 endif
-ifeq ($(LPS),spx)
-		$(SHELL) -ec '$(DCXX) $(DFLAGS) $(CPPFLAGS) $(MAINSRC) $(LPISRC) \
+ifeq ($(LINKER),CPP)
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(LPIDEP)'
+		>$(LPILIBDEP)'
 endif
-		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(OBJDEP)'
 
--include	$(SCIPDEP)
--include 	$(LPIDEP)
--include	$(OBJDEP)
+-include	$(MAINDEP)
+-include	$(SCIPLIBDEP)
+-include	$(OBJSCIPLIBDEP)
+-include 	$(LPILIBDEP)
 
-$(SCIPLIBFILE):	$(OBJDIR) $(LIBDIR) $(SCIPXXX) 
+$(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
+ifeq ($(LINKER),C)
+		$(CC) $(FLAGS) $(CFLAGS) $(MAINXXX) \
+		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) \
+		$(LDFLAGS) -o $@
+endif
+ifeq ($(LINKER),CPP)
+		$(CXX) $(FLAGS) $(CXXFLAGS) $(MAINXXX) \
+		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) \
+		$(LDFLAGS) -o $@
+endif
+
+$(SCIPLIBFILE):	$(OBJDIR) $(LIBDIR) $(SCIPLIBXXX) 
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(SCIPXXX) 
+		$(AR) $(ARFLAGS) $@ $(SCIPLIBXXX) 
 		$(RANLIB) $@
 
-$(LPILIBFILE):	$(OBJDIR) $(LIBDIR) $(LPIXXX)
+$(OBJSCIPLIBFILE):	$(OBJDIR) $(LIBDIR) $(OBJSCIPLIBXXX) 
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(LPIXXX)
+		$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBXXX) 
+		$(RANLIB) $@
+
+$(LPILIBFILE):	$(OBJDIR) $(LIBDIR) $(LPILIBXXX)
+		-rm -f $@
+		$(AR) $(ARFLAGS) $@ $(LPILIBXXX)
 		$(RANLIB) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
-		$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
-		$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+		$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
 
 # --- EOF ---------------------------------------------------------------------

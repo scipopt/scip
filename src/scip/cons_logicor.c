@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.22 2003/11/21 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.23 2003/11/27 17:48:40 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -80,7 +80,7 @@ struct ConsData
    int              watchedvar2;        /**< position of the second watched variable */
    int              watchedfeasvar;     /**< position of the feasible watched variable (a variable fixed to one) */
    int              watchedsolvar;      /**< position of the variable making the last solution feasible */
-   unsigned int     changed:1;          /**< was constraint changed since last preprocess/propagate call? */
+   unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
 };
 
 
@@ -328,7 +328,7 @@ RETCODE consdataCreate(
    (*consdata)->watchedvar2 = -1;
    (*consdata)->watchedfeasvar = -1;
    (*consdata)->watchedsolvar = -1;
-   (*consdata)->changed = TRUE;
+   (*consdata)->propagated = FALSE;
 
    return SCIP_OKAY;
 }   
@@ -473,7 +473,7 @@ RETCODE delCoefPos(
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
    consdata->nvars--;
 
-   consdata->changed = TRUE;
+   consdata->propagated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -585,7 +585,7 @@ RETCODE processWatchedVars(
    *mustcheck = FALSE;
 
    /* don't process the constraint, if the watched variables were not changed since last processing */
-   if( !consdata->changed )
+   if( consdata->propagated )
    {
       assert(0 <= consdata->watchedvar1 && consdata->watchedvar1 < consdata->nvars);
       assert(0 <= consdata->watchedvar2 && consdata->watchedvar2 < consdata->nvars);
@@ -677,7 +677,7 @@ RETCODE processWatchedVars(
       assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar2]), 0.0));
       assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar2]), 1.0));
       *mustcheck = TRUE;
-      consdata->changed = FALSE;
+      consdata->propagated = TRUE;
       return SCIP_OKAY;
    }
 
@@ -803,7 +803,7 @@ RETCODE processWatchedVars(
       /* remember the two watched variables for next time */
       consdata->watchedvar1 = watchedvar1;
       consdata->watchedvar2 = watchedvar2;
-      consdata->changed = FALSE;
+      consdata->propagated = TRUE;
 
       CHECK_OKAY( SCIPincConsAge(scip, cons) );
    }
@@ -2062,7 +2062,7 @@ DECL_EVENTEXEC(eventExecLogicor)
    consdata = (CONSDATA*)eventdata;
    assert(consdata != NULL);
 
-   consdata->changed = TRUE;
+   consdata->propagated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2216,3 +2216,27 @@ RETCODE SCIPcreateConsLogicor(
 
    return SCIP_OKAY;
 }
+
+/** gets the dual solution of the logic or constraint in the current LP */
+Real SCIPgetDualsolLogicor(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not a logic or constraint\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIProwGetDualsol(consdata->row);
+   else
+      return 0.0;
+}
+

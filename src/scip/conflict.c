@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.14 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.15 2003/11/27 17:48:38 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -97,8 +97,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "misc.h"
 #include "message.h"
+#include "misc.h"
 #include "conflict.h"
 
 

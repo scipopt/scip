@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.81 2003/11/26 16:09:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.82 2003/11/27 17:48:42 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -884,7 +884,8 @@ RETCODE rowAddCoeff(
    assert(!SCIPsetIsZero(set, val));
    /*assert(rowSearchCoeff(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
-   /*debugMessage("adding coefficient %g * <%s> at position %d to row <%s>\n", val, SCIPvarGetName(col->var), row->len, row->name);*/
+   /*debugMessage("adding coefficient %g * <%s> at position %d to row <%s>\n",
+     val, SCIPvarGetName(col->var), row->len, row->name);*/
 
    if( row->nlocks > 0 )
    {
@@ -937,7 +938,8 @@ RETCODE rowDelCoeffPos(
    col = row->cols[pos];
    val = row->vals[pos];
    
-   /*debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n", val, SCIPvarGetName(col->var), pos, row->name);*/
+   /*debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n",
+     val, SCIPvarGetName(col->var), pos, row->name);*/
 
    if( row->nlocks > 0 )
    {
@@ -3302,6 +3304,19 @@ Real SCIProwGetRhs(
    assert(row != NULL);
 
    return row->rhs;
+}
+
+/** gets the dual LP solution of a row */
+Real SCIProwGetDualsol(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   if( row->lppos >= 0 )
+      return row->dualsol;
+   else
+      return 0.0;
 }
 
 /** returns the name of the row */

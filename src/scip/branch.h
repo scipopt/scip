@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.18 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.19 2003/11/27 17:48:38 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  methods and datastructures for branching methods
@@ -27,8 +27,8 @@
 
 
 typedef struct BranchCand BRANCHCAND;   /**< branching candidate storage */
-typedef struct BranchRule BRANCHRULE;   /**< branching method data structure */
-typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific data */
+typedef struct Branchrule BRANCHRULE;   /**< branching method data structure */
+typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific data */
 
 
 /** destructor of branching method to free user data (called when SCIP is exiting)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.70 2003/11/26 16:09:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.71 2003/11/27 17:48:48 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -25,12 +25,12 @@
 
 #include <assert.h>
 
-#include "cons.h"
 #include "var.h"
+#include "cons.h"
 #include "disp.h"
-#include "solve.h"
 #include "clock.h"
 #include "interrupt.h"
+#include "solve.h"
 
 
 /** returns whether the solving process will be / was stopped before proving optimality */

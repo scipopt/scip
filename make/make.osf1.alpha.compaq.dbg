@@ -1,9 +1,7 @@
-#--- $Id: make.osf1.alpha.compaq.dbg,v 1.1 2003/11/21 09:18:58 bzfpfend Exp $
+#--- $Id: make.osf1.alpha.compaq.dbg,v 1.2 2003/11/27 17:48:37 bzfpfend Exp $
 CC		=	cc
 CXX		=	cxx
-CFLAGS		=	-w0 -gall -verbose -check \
-			-msg_disable strctpadding,nestincl,ignorecallval,unusedincl,unnecincl,hexoctunsign,questcompare2
-CXXFLAGS	=	-std strict_ansi -O0 -w0 -gall -verbose -check \
-			-msg_disable basclsnondto,boolexprconst,constrlitnondep
+FLAGS		+=	-w0 -gall -verbose -check -std -O0
+CFLAGS		+=	-msg_disable strctpadding,nestincl,ignorecallval,unusedincl,unnecincl,hexoctunsign,questcompare2,newc99,embedcomment,foundcr,unreachcode,falloffend,unusedtop
+CXXFLAGS	+=	-msg_disable basclsnondto,boolexprconst,constrlitnondep
 ARFLAGS		=	crs
-

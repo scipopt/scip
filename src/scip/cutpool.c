@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.18 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.19 2003/11/27 17:48:40 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods and datastructures for storing cuts in a cut pool
@@ -25,8 +25,8 @@
 
 #include <assert.h>
 
-#include "cutpool.h"
 #include "misc.h"
+#include "cutpool.h"
 
 
 /** datastructure for cuts in a cut pool */
