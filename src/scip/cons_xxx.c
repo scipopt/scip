@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.9 2003/11/21 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.10 2003/11/26 16:08:59 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -33,9 +33,9 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "xxx"
 #define CONSHDLR_DESC          "constraint handler template"
-#define CONSHDLR_SEPAPRIORITY  +0000000
-#define CONSHDLR_ENFOPRIORITY  +0000000
-#define CONSHDLR_CHECKPRIORITY +0000000
+#define CONSHDLR_SEPAPRIORITY         0
+#define CONSHDLR_ENFOPRIORITY         0
+#define CONSHDLR_CHECKPRIORITY        0
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE

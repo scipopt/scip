@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.21 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.22 2003/11/26 16:09:00 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -33,6 +33,9 @@
 #define NODESEL_DESC             "best first search"
 #define NODESEL_STDPRIORITY      100000
 #define NODESEL_MEMSAVEPRIORITY       0
+#define NODESEL_LOWESTFIRST        TRUE   /**< are the nodes sorted such that the lowest bound node comes first? */
+
+
 
 
 /*
@@ -200,8 +203,9 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+                  NODESEL_LOWESTFIRST,
                   nodeselFreeBfs, NULL, NULL, nodeselSelectBfs, nodeselCompBfs,
-                  nodeseldata, TRUE) );
+                  nodeseldata) );
 
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,

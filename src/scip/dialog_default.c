@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.7 2003/11/24 12:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.8 2003/11/26 16:08:59 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1378,8 +1378,6 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( SCIPdialogFindEntry(setmenu, "pricing", &submenu) != 1 )
       return SCIP_PLUGINNOTFOUND;
 
-   /**@todo include pricers in standard set dialog */
-#if 0
    for( i = 0; i < SCIPgetNPricers(scip); ++i )
    {
       PRICER* pricer = SCIPgetPricers(scip)[i];
@@ -1392,7 +1390,6 @@ RETCODE SCIPincludeDialogDefaultSet(
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
    }
-#endif
 
    /* set reading */
    if( !SCIPdialogHasEntry(setmenu, "reading") )

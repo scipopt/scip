@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.12 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.13 2003/11/26 16:09:01 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods and datastructures for presolvers
@@ -39,7 +39,7 @@ struct Presol
    DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver */
    DECL_PRESOLINIT  ((*presolinit));    /**< initialize presolver */
    DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialize presolver */
-   DECL_PRESOLEXEC  ((*presolexec));    /**< presolving execution method */
+   DECL_PRESOLEXEC  ((*presolexec));    /**< presolver execution method */
    PRESOLDATA*      presoldata;         /**< presolver data */
    CLOCK*           clock;              /**< presolving time */
    unsigned int     initialized:1;      /**< is presolver initialized? */
@@ -102,7 +102,7 @@ RETCODE SCIPpresolCreate(
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
-   DECL_PRESOLEXEC  ((*presolexec)),    /**< presolving execution method */
+   DECL_PRESOLEXEC  ((*presolexec)),    /**< presolver execution method */
    PRESOLDATA*      presoldata          /**< presolver data */
    )
 {

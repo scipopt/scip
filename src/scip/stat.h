@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.25 2003/11/21 10:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.26 2003/11/26 16:09:04 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  problem statistics
@@ -44,7 +44,6 @@ struct Stat
    CLOCK*           primallptime;       /**< primal LP solution time */
    CLOCK*           duallptime;         /**< dual LP solution time */
    CLOCK*           strongbranchtime;   /**< strong branching time */
-   CLOCK*           lppricingtime;      /**< LP pricing time */
    CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
@@ -54,8 +53,6 @@ struct Stat
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
    Longint          ndivinglpiterations;/**< number of iterations in diving */
    Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
-   Longint          nlppricings;        /**< number of times, the problem variables were priced */
-   Longint          nlppricingvars;     /**< number of times, a problem variable was priced into the LP */
    Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
    Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
    Longint          nnodes;             /**< number of nodes processed (including active node) */
@@ -74,6 +71,7 @@ struct Stat
    int              nprimallps;         /**< number of primal LPs solved */
    int              nduallps;           /**< number of dual LPs solved */
    int              nstrongbranch;      /**< number of strong branching calls */
+   int              npricerounds;       /**< number of pricing rounds performed in actual node */
    int              nseparounds;        /**< number of separation rounds performed in actual node */
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */

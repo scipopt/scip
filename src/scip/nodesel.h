@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.22 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.23 2003/11/26 16:09:00 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  methods and datastructures for node selectors
@@ -217,13 +217,13 @@ RETCODE SCIPnodeselCreate(
    const char*      desc,               /**< description of node selector */
    int              stdpriority,        /**< priority of the node selector in standard mode */
    int              memsavepriority,    /**< priority of the node selector in memory saving mode */
+   Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
-   NODESELDATA*     nodeseldata,        /**< node selector data */
-   Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+   NODESELDATA*     nodeseldata         /**< node selector data */
    );
 
 /** frees memory of node selector */

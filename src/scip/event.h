@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.18 2003/11/21 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.19 2003/11/26 16:08:59 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  methods and datastructures for managing events
@@ -147,12 +147,15 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
 
 
 #include "scip.h"
-#include "memory.h"
+#include "def.h"
 #include "retcode.h"
+#include "set.h"
+#include "memory.h"
 #include "var.h"
 #include "tree.h"
 #include "lp.h"
 #include "branch.h"
+#include "sol.h"
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.54 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.55 2003/11/26 16:09:00 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  LP management methods and datastructures
@@ -406,6 +406,12 @@ VAR* SCIPcolGetVar(
    COL*             col                 /**< LP column */
    );
 
+/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
+extern
+Bool SCIPcolIsRemoveable(
+   COL*             col                 /**< LP column */
+   );
+
 /** gets position of column in actual LP, or -1 if it is not in LP */
 extern
 int SCIPcolGetLPPos(
@@ -447,6 +453,7 @@ Real* SCIPcolGetVals(
 #define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)
 #define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
 #define SCIPcolGetVar(col)              ((col)->var)
+#define SCIPcolIsRemoveable(col)        ((col)->removeable)
 #define SCIPcolGetLPPos(col)            ((col)->lppos)
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
 #define SCIPcolGetNNonz(col)            ((col)->len)
@@ -786,6 +793,18 @@ Bool SCIProwIsLocal(
    ROW*             row                 /**< LP row */
    );
 
+/** returns TRUE iff row is modifiable during node processing (subject to column generation) */
+extern
+Bool SCIProwIsModifiable(
+   ROW*             row                 /**< LP row */
+   );
+
+/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
+extern
+Bool SCIProwIsRemoveable(
+   ROW*             row                 /**< LP row */
+   );
+
 /** gets position of row in actual LP, or -1 if it is not in LP */
 extern
 int SCIProwGetLPPos(
@@ -804,18 +823,20 @@ Bool SCIProwIsInLP(
  * speed up the algorithms.
  */
 
-#define SCIProwGetNNonz(row)            (row->len)
-#define SCIProwGetCols(row)             (row->cols)
-#define SCIProwGetVals(row)             (row->vals)
-#define SCIProwGetConstant(row)         (row->constant)
-#define SCIProwGetNorm(row)             (sqrt(row->sqrnorm))
-#define SCIProwGetLhs(row)              (row->lhs)
-#define SCIProwGetRhs(row)              (row->rhs)
-#define SCIProwGetName(row)             (row->name)
-#define SCIProwGetIndex(row)            (row->index)
-#define SCIProwIsLocal(row)             (row->local)
-#define SCIProwGetLPPos(row)            (row->lppos)
-#define SCIProwIsInLP(row)              (row->lppos >= 0)
+#define SCIProwGetNNonz(row)            ((row)->len)
+#define SCIProwGetCols(row)             ((row)->cols)
+#define SCIProwGetVals(row)             ((row)->vals)
+#define SCIProwGetConstant(row)         ((row)->constant)
+#define SCIProwGetNorm(row)             (sqrt((row)->sqrnorm))
+#define SCIProwGetLhs(row)              ((row)->lhs)
+#define SCIProwGetRhs(row)              ((row)->rhs)
+#define SCIProwGetName(row)             ((row)->name)
+#define SCIProwGetIndex(row)            ((row)->index)
+#define SCIProwIsLocal(row)             ((row)->local)
+#define SCIProwIsModifiable(row)        ((row)->modifiable)
+#define SCIProwIsRemoveable(row)        ((row)->removeable)
+#define SCIProwGetLPPos(row)            ((row)->lppos)
+#define SCIProwIsInLP(row)              ((row)->lppos >= 0)
 
 #endif
 

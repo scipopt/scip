@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.73 2003/11/25 10:24:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.74 2003/11/26 16:09:03 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  global SCIP settings
@@ -977,12 +977,8 @@ PRICER* SCIPsetFindPricer(
 
    for( i = 0; i < set->npricers; ++i )
    {
-      errorMessage("pricers not yet implemented\n");
-      abort();
-#if 0
       if( strcmp(SCIPpricerGetName(set->pricers[i]), name) == 0 )
          return set->pricers[i];
-#endif
    }
 
    return NULL;
@@ -997,11 +993,7 @@ void SCIPsetSortPricers(
 
    if( !set->pricerssorted )
    {
-      /**@todo sort pricers */
-      warningMessage("sorting pricers not implemented yet\n");
-#if 0
       SCIPbsortPtr((void**)set->pricers, set->npricers, SCIPpricerComp);
-#endif
       set->pricerssorted = TRUE;
    }
 }
@@ -1742,6 +1734,20 @@ RETCODE SCIPsetSetFeastol(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns the maximal number of variables priced into the LP per round */
+int SCIPsetGetMaxpricevars(
+   const SET*       set,                /**< global SCIP settings */
+   Bool             root                /**< are we at the root node? */
+   )
+{
+   assert(set != NULL);
+
+   if( root )
+      return set->maxpricevarsroot;
+   else
+      return set->maxpricevars;
 }
 
 /** returns the maximal number of cuts separated per round */

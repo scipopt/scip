@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.6 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.7 2003/11/26 16:09:03 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods and datastructures for storing separated cuts
@@ -263,7 +263,7 @@ RETCODE SCIPsepastoreAddCut(
    sepastore->ncutsfound++;
 
    /* check, if the cut is a bound change (i.e. a row with only one variable) */
-   if( SCIProwGetNNonz(cut) == 1 )
+   if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
    {
       COL** cols;
       VAR* var;
@@ -469,5 +469,5 @@ int SCIPsepastoreGetNCutsApplied(
 {
    assert(sepastore != NULL);
 
-   return sepastore->ncutsfound;
+   return sepastore->ncutsapplied;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.26 2003/11/21 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.27 2003/11/26 16:08:59 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -55,6 +55,8 @@
 #endif
 #define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
 
+
+/** type of setppc constraint: set partitioning, set packing, or set covering */
 enum SetppcType
 {
    SCIP_SETPPCTYPE_PARTITIONING = 0,     /**< constraint is a set partitioning constraint: a*x == 1 */

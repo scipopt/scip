@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.17 2003/11/21 10:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.18 2003/11/26 16:09:04 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  main solving loop and node processing
@@ -35,7 +35,7 @@
 #include "prob.h"
 #include "tree.h"
 #include "lp.h"
-#include "price.h"
+#include "pricestore.h"
 #include "sepastore.h"
 #include "cutpool.h"
 #include "primal.h"
@@ -65,7 +65,7 @@ RETCODE SCIPsolveCIP(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
-   PRICE*           price,              /**< pricing storage */
+   PRICESTORE*      pricestore,         /**< pricing storage */
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */

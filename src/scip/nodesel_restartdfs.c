@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.8 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.9 2003/11/26 16:09:01 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -33,6 +33,8 @@
 #define NODESEL_DESC             "depth first search with periodical selection of the best node"
 #define NODESEL_STDPRIORITY       50000
 #define NODESEL_MEMSAVEPRIORITY   50000
+#define NODESEL_LOWESTFIRST       FALSE   /**< are the nodes sorted such that the lowest bound node comes first? */
+
 
 
 
@@ -151,8 +153,9 @@ RETCODE SCIPincludeNodeselRestartdfs(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+                  NODESEL_LOWESTFIRST,
                   nodeselFreeRestartdfs, NULL, NULL, nodeselSelectRestartdfs, nodeselCompRestartdfs,
-                  nodeseldata, FALSE) );
+                  nodeseldata) );
 
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,

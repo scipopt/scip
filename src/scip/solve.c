@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.69 2003/11/25 10:24:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.70 2003/11/26 16:09:03 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -233,7 +233,7 @@ RETCODE solveNodeLP(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
-   PRICE*           price,              /**< pricing storage */
+   PRICESTORE*      pricestore,         /**< pricing storage */
    SEPASTORE*       sepastore,          /**< separation storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
@@ -260,7 +260,7 @@ RETCODE solveNodeLP(
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(lp != NULL);
-   assert(price != NULL);
+   assert(pricestore != NULL);
    assert(sepastore != NULL);
    assert(cutpool != NULL);
    assert(primal != NULL);
@@ -299,8 +299,35 @@ RETCODE solveNodeLP(
          assert(lp->solved);
          assert(lp->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDED);
 
-         debugMessage("pricing:\n");
-         CHECK_OKAY( SCIPpriceVars(price, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
+         /* price problem variables */
+         debugMessage("problem variable pricing\n");
+         assert(SCIPpricestoreGetNVars(pricestore) == 0);
+         assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
+         CHECK_OKAY( SCIPpricestoreAddProbVars(pricestore, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
+
+         /* if no additional problem variables were found, call external pricers to create additional problem variables */
+         if( SCIPpricestoreGetNVars(pricestore) == 0 )
+         {
+            Bool enoughvars;
+            int p;
+
+            debugMessage("external variable pricing\n");
+
+            /* sort pricer algorithms by priority */
+            SCIPsetSortPricers(set);
+            
+            /* call external pricer algorithms */
+            enoughvars = FALSE;
+            for( p = 0; p < set->npricers && !enoughvars; ++p )
+            {
+               CHECK_OKAY( SCIPpricerExec(set->pricers[p], set, prob, lp) );
+               enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetMaxpricevars(set, root)/2);
+            }
+         }
+
+         /* apply the priced variables to the LP */
+         CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
+         assert(SCIPpricestoreGetNVars(pricestore) == 0);
          mustprice = !lp->solved;
          mustsepar = mustsepar || !lp->solved;
          
@@ -312,15 +339,20 @@ RETCODE solveNodeLP(
          assert(lp->solved);
 
          /* reset bounds temporarily set by pricer to their original values */
-         debugMessage("reset bounds\n");
-         CHECK_OKAY( SCIPpriceResetBounds(price, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+         debugMessage("pricing: reset bounds\n");
+         CHECK_OKAY( SCIPpricestoreResetBounds(pricestore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+         assert(SCIPpricestoreGetNVars(pricestore) == 0);
+         assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
          mustprice = mustprice || !lp->solved;
          mustsepar = mustsepar || !lp->solved;
 
-         /* solve LP (with dual simplex) */
-         debugMessage("reset bounds: solve LP\n");
+         /* solve LP again after resetting bounds (with dual simplex) */
+         debugMessage("pricing: solve LP after resetting bounds\n");
          CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
          assert(lp->solved);
+
+         /* increase pricing round counter */
+         stat->npricerounds++;
 
          /* display node information line for root node */
          if( SCIPnodeGetDepth(tree->actnode) == 0 && mustprice && (VERBLEVEL)set->verblevel >= SCIP_VERBLEVEL_FULL )
@@ -891,7 +923,7 @@ RETCODE SCIPsolveCIP(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
-   PRICE*           price,              /**< pricing storage */
+   PRICESTORE*      pricestore,         /**< pricing storage */
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
@@ -918,7 +950,7 @@ RETCODE SCIPsolveCIP(
    assert(prob != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
-   assert(price != NULL);
+   assert(pricestore != NULL);
    assert(sepastore != NULL);
    assert(branchcand != NULL);
    assert(cutpool != NULL);
@@ -1044,6 +1076,7 @@ RETCODE SCIPsolveCIP(
             solveagain = FALSE;
             infeasible = FALSE;
             
+            stat->npricerounds = 0;
             stat->nseparounds = 0;
 
             /* check, if we want to solve the LP at this node */
@@ -1063,7 +1096,7 @@ RETCODE SCIPsolveCIP(
                do
                {
                   /* continue solving the LP with price and cut */
-                  CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepastore, cutpool, lpconflict,
+                  CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, lpconflict,
                                  primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa, &cutoff) );
                   assert(cutoff || lp->solved);
                   

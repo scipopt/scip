@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.105 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.106 2003/11/26 16:09:02 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -77,7 +77,7 @@ RETCODE checkStage(
       assert(scip->stat == NULL);
       assert(scip->transprob == NULL);
       assert(scip->lp == NULL);
-      assert(scip->price == NULL);
+      assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
@@ -99,7 +99,7 @@ RETCODE checkStage(
       assert(scip->stat != NULL);
       assert(scip->transprob == NULL);
       assert(scip->lp == NULL);
-      assert(scip->price == NULL);
+      assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
@@ -133,7 +133,7 @@ RETCODE checkStage(
       assert(scip->stat != NULL);
       assert(scip->transprob != NULL);
       assert(scip->lp != NULL);
-      assert(scip->price != NULL);
+      assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
@@ -155,7 +155,7 @@ RETCODE checkStage(
       assert(scip->stat != NULL);
       assert(scip->transprob != NULL);
       assert(scip->lp != NULL);
-      assert(scip->price != NULL);
+      assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
@@ -177,7 +177,7 @@ RETCODE checkStage(
       assert(scip->stat != NULL);
       assert(scip->transprob != NULL);
       assert(scip->lp != NULL);
-      assert(scip->price != NULL);
+      assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
@@ -199,7 +199,7 @@ RETCODE checkStage(
       assert(scip->stat != NULL);
       assert(scip->transprob != NULL);
       assert(scip->lp != NULL);
-      assert(scip->price != NULL);
+      assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
@@ -309,7 +309,7 @@ RETCODE SCIPcreate(
    (*scip)->transprob = NULL;
    (*scip)->tree = NULL;
    (*scip)->lp = NULL;
-   (*scip)->price = NULL;
+   (*scip)->pricestore = NULL;
    (*scip)->sepastore = NULL;
    (*scip)->branchcand = NULL;
    (*scip)->cutpool = NULL;
@@ -787,6 +787,79 @@ int SCIPgetNReaders(
    return scip->set->nreaders;
 }
 
+/** creates a variable pricer and includes it in SCIP */
+RETCODE SCIPincludePricer(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of variable pricer */
+   const char*      desc,               /**< description of variable pricer */
+   int              priority,           /**< priority of the variable pricer */
+   DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
+   DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
+   DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
+   PRICERDATA*      pricerdata          /**< variable pricer data */
+   )
+{
+   PRICER* pricer;
+
+   CHECK_OKAY( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPpricerCreate(&pricer, scip->set, scip->mem->setmem,
+                  name, desc, priority,
+                  pricerfree, pricerinit, pricerexit, pricerredcost, pricerfarkas, pricerdata) );
+   CHECK_OKAY( SCIPsetIncludePricer(scip->set, pricer) );
+   
+   return SCIP_OKAY;
+}
+
+/** returns the variable pricer of the given name, or NULL if not existing */
+PRICER* SCIPfindPricer(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of variable pricer */
+   )
+{
+   assert(name != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfindPricer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindPricer(scip->set, name);
+}
+
+/** returns the array of currently available variable pricers */
+PRICER** SCIPgetPricers(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPricers", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->pricers;
+}
+
+/** returns the number of currently available variable pricers */
+int SCIPgetNPricers(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPricers", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->npricers;
+}
+
+/** sets the priority of a variable pricer */
+RETCODE SCIPsetPricerPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRICER*          pricer,             /**< variable pricer */
+   int              priority            /**< new priority of the variable pricer */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetPricerPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPpricerSetPriority(pricer, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
 /** creates a constraint handler and includes it in SCIP */
 RETCODE SCIPincludeConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1224,21 +1297,21 @@ RETCODE SCIPincludeNodesel(
    const char*      desc,               /**< description of node selector */
    int              stdpriority,        /**< priority of the node selector in standard mode */
    int              memsavepriority,    /**< priority of the node selector in memory saving mode */
+   Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
-   NODESELDATA*     nodeseldata,        /**< node selector data */
-   Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+   NODESELDATA*     nodeseldata         /**< node selector data */
    )
 {
    NODESEL* nodesel;
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
-                  nodeselfree, nodeselinit, nodeselexit, nodeselselect, nodeselcomp, nodeseldata, lowestboundfirst) );
+   CHECK_OKAY( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority, 
+                  lowestboundfirst, nodeselfree, nodeselinit, nodeselexit, nodeselselect, nodeselcomp, nodeseldata) );
    CHECK_OKAY( SCIPsetIncludeNodesel(scip->set, nodesel) );
    
    return SCIP_OKAY;
@@ -1769,8 +1842,6 @@ RETCODE SCIPaddVar(
    VAR*             var                 /**< variable to add */
    )
 {
-   assert(var != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPaddVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    /* avoid inserting the same variable twice */
@@ -1819,6 +1890,49 @@ RETCODE SCIPaddVar(
       errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
+}
+
+/** adds variable to the problem and uses it as pricing candidate to enter the LP */
+RETCODE SCIPaddPricedVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to add */
+   Real             score               /**< pricing score of variable (the larger, the better the variable) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddPricedVar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   /* insert the negation variable x instead of the negated variable x' in x' = offset - x */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
+   {
+      assert(SCIPvarGetNegationVar(var) != NULL);
+      CHECK_OKAY( SCIPaddPricedVar(scip, SCIPvarGetNegationVar(var), score) );
+      return SCIP_OKAY;
+   }
+
+   /* add variable to problem if not yet inserted */
+   if( SCIPvarGetProbIndex(var) == -1 )
+   {
+      /* check variable's status */
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      {
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+         {
+            errorMessage("Cannot add original variables to transformed problem\n");
+         }
+         else
+         {
+            errorMessage("Cannot add fixed or aggregated variables to transformed problem\n");
+         }
+         return SCIP_INVALIDDATA;
+      }
+      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->tree, scip->branchcand, var) );
+   }
+
+   /* add variable to pricing storage */
+   CHECK_OKAY( SCIPpricestoreAddVar(scip->pricestore, scip->mem->solvemem, scip->set, scip->lp, var, score,
+                  (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
+   
+   return SCIP_OKAY;
 }
 
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
@@ -2535,7 +2649,7 @@ RETCODE SCIPpresolve(
 
    /* init solve data structures */
    CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
-   CHECK_OKAY( SCIPpriceCreate(&scip->price) );
+   CHECK_OKAY( SCIPpricestoreCreate(&scip->pricestore) );
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
@@ -2666,7 +2780,7 @@ RETCODE SCIPsolve(
 
       /* continue solution process */
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                     scip->lp, scip->price, scip->sepastore, scip->branchcand, scip->cutpool, scip->lpconflict,
+                     scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->cutpool, scip->lpconflict,
                      scip->primal, scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
@@ -2754,7 +2868,7 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
       CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPsepastoreFree(&scip->sepastore) );
-      CHECK_OKAY( SCIPpriceFree(&scip->price) );
+      CHECK_OKAY( SCIPpricestoreFree(&scip->pricestore) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
 
       /* free the solve block memory */
@@ -6274,6 +6388,46 @@ Longint SCIPgetNStrongbranchLPIterations(
    return scip->stat->nsblpiterations;
 }
 
+/** gets number of pricing rounds performed so far at the current node */
+int SCIPgetNPriceRounds(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPriceRounds", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->npricerounds;
+}
+
+/** get actual number of variables in the pricing store */
+int SCIPgetNPricevars(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPricevars", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPpricestoreGetNVars(scip->pricestore);
+}
+
+/** get total number of pricing variables found so far */
+int SCIPgetNPricevarsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPricevarsFound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPpricestoreGetNVarsFound(scip->pricestore);
+}
+
+/** get total number of pricing variables applied to the LPs */
+int SCIPgetNPricevarsApplied(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPricevarsApplied", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPpricestoreGetNVarsApplied(scip->pricestore);
+}
+
 /** gets number of separation rounds performed so far at the current node */
 int SCIPgetNSepaRounds(
    SCIP*            scip                /**< SCIP data structure */
@@ -6784,17 +6938,24 @@ void printPricerStatistics(
    FILE*            file                /**< output file */
    )
 {
+   int i;
+
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(file != NULL);
 
    fprintf(file, "Pricers            :         Time        Calls         Vars\n");
-   fprintf(file, "  LP pricing       : %12.2f %12lld %12lld\n",
-      SCIPclockGetTime(scip->stat->lppricingtime), 
-      scip->stat->nlppricings,
-      scip->stat->nlppricingvars);
+   fprintf(file, "  problem variables: %12.2f %12d %12d\n",
+      SCIPpricestoreGetProbPricingTime(scip->pricestore),
+      SCIPpricestoreGetNProbPricings(scip->pricestore),
+      SCIPpricestoreGetNProbvarsFound(scip->pricestore));
 
-   /**@todo pricer statistics */
+   for( i = 0; i < scip->set->npricers; ++i )
+      fprintf(file, "  %-17.17s: %12.2f %12d %12d\n",
+         SCIPpricerGetName(scip->set->pricers[i]),
+         SCIPpricerGetTime(scip->set->pricers[i]),
+         SCIPpricerGetNCalls(scip->set->pricers[i]),
+         SCIPpricerGetNVarsFound(scip->set->pricers[i]));
 }
 
 static

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.25 2003/11/21 10:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.26 2003/11/26 16:09:04 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  problem statistics
@@ -45,7 +45,6 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->lppricingtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -73,7 +72,6 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->primallptime);
    SCIPclockFree(&(*stat)->duallptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
-   SCIPclockFree(&(*stat)->lppricingtime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->redcoststrtime);
@@ -118,7 +116,6 @@ void SCIPstatReset(
    SCIPclockReset(stat->primallptime);
    SCIPclockReset(stat->duallptime);
    SCIPclockReset(stat->strongbranchtime);
-   SCIPclockReset(stat->lppricingtime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->redcoststrtime);
@@ -137,9 +134,8 @@ void SCIPstatReset(
    stat->ndivinglpiterations = 0;
    stat->nsblpiterations = 0;
    stat->nstrongbranch = 0;
+   stat->npricerounds = 0;
    stat->nseparounds = 0;
-   stat->nlppricings = 0;
-   stat->nlppricingvars = 0;
    stat->nredcoststrcalls = 0;
    stat->nredcoststrfound = 0;
    stat->nnodes = 0;

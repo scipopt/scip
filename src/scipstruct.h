@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipstruct.h,v 1.5 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipstruct.h,v 1.6 2003/11/26 16:09:03 bzfpfend Exp $"
 
 /**@file   scipstruct.h
  * @brief  SCIP main data structure
@@ -35,8 +35,8 @@
 #include "stat.h"
 #include "tree.h"
 #include "lp.h"
-#include "price.h"
-#include "sepa.h"
+#include "pricestore.h"
+#include "sepastore.h"
 #include "branch.h"
 #include "cutpool.h"
 #include "conflict.h"
@@ -58,7 +58,7 @@ struct Scip
    STAT*            stat;               /**< dynamic problem statistics */
    TREE*            tree;               /**< branch and bound tree */
    LP*              lp;                 /**< LP data */
-   PRICE*           price;              /**< storage for priced variables */
+   PRICESTORE*      pricestore;         /**< storage for priced variables */
    SEPASTORE*       sepastore;          /**< storage for separated cuts */
    BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    CUTPOOL*         cutpool;            /**< global cut pool */

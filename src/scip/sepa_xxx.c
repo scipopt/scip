@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.5 2003/11/26 16:09:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.1 2003/11/26 16:09:03 bzfpfend Exp $"
 
-/**@file   presol_xxx.c
- * @brief  xxx presolver
+/**@file   sepa_xxx.c
+ * @brief  xxx separator
  * @author Tobias Achterberg
  */
 
@@ -26,12 +26,13 @@
 #include <assert.h>
 #include <string.h>
 
-#include "presol_xxx.h"
+#include "sepa_xxx.h"
 
 
-#define PRESOL_NAME            "xxx"
-#define PRESOL_DESC            "presolver template"
-#define PRESOL_PRIORITY        0
+#define SEPA_NAME            "xxx"
+#define SEPA_DESC            "separator template"
+#define SEPA_PRIORITY        0
+#define SEPA_FREQ            8
 
 
 
@@ -40,10 +41,10 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary presolver data */
+/* TODO: fill in the necessary separator data */
 
-/** presolver data */
-struct PresolData
+/** separator data */
+struct SepaData
 {
 };
 
@@ -60,61 +61,61 @@ struct PresolData
 
 
 /*
- * Callback methods of presolver
+ * Callback methods of separator
  */
 
-/* TODO: Implement all necessary presolver methods. The methods with an #if 0 ... #else #define ... are optional */
+/* TODO: Implement all necessary separator methods. The methods with an #if 0 ... #else #define ... are optional */
 
-/** destructor of presolver to free user data (called when SCIP is exiting) */
+/** destructor of separator to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_PRESOLFREE(presolFreeXxx)
+DECL_SEPAFREE(sepaFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   errorMessage("method of xxx separator not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolFreeXxx NULL
+#define sepaFreeXxx NULL
 #endif
 
 
-/** initialization method of presolver (called when problem solving starts) */
+/** initialization method of separator (called when problem solving starts) */
 #if 0
 static
-DECL_PRESOLINIT(presolInitXxx)
+DECL_SEPAINIT(sepaInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   errorMessage("method of xxx separator not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolInitXxx NULL
+#define sepaInitXxx NULL
 #endif
 
 
-/** deinitialization method of presolver (called when problem solving exits) */
+/** deinitialization method of separator (called when problem solving exits) */
 #if 0
 static
-DECL_PRESOLEXIT(presolExitXxx)
+DECL_SEPAEXIT(sepaExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   errorMessage("method of xxx separator not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolExitXxx NULL
+#define sepaExitXxx NULL
 #endif
 
 
-/** execution method of presolver */
+/** execution method of separator */
 static
-DECL_PRESOLEXEC(presolExecXxx)
+DECL_SEPAEXEC(sepaExecXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   errorMessage("method of xxx separator not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -125,27 +126,27 @@ DECL_PRESOLEXEC(presolExecXxx)
 
 
 /*
- * presolver specific interface methods
+ * separator specific interface methods
  */
 
-/** creates the xxx presolver and includes it in SCIP */
-RETCODE SCIPincludePresolXxx(
+/** creates the xxx separator and includes it in SCIP */
+RETCODE SCIPincludeSepaXxx(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   PRESOLDATA* presoldata;
+   SEPADATA* sepadata;
 
-   /* create xxx presolver data */
-   presoldata = NULL;
-   /* TODO: (optional) create presolver specific data here */
+   /* create xxx separator data */
+   sepadata = NULL;
+   /* TODO: (optional) create separator specific data here */
 
-   /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY,
-                  presolFreeXxx, presolInitXxx, presolExitXxx, presolExecXxx,
-                  presoldata) );
+   /* include separator */
+   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
+                  sepaFreeXxx, sepaInitXxx, sepaExitXxx, sepaExecXxx,
+                  sepadata) );
 
-   /* add xxx presolver parameters */
-   /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */
+   /* add xxx separator parameters */
+   /* TODO: (optional) add separator specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
 }

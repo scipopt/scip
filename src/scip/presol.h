@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.10 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.11 2003/11/26 16:09:01 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  methods and datastructures for presolvers
@@ -55,7 +55,7 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
  */
 #define DECL_PRESOLEXIT(x) RETCODE x (SCIP* scip, PRESOL* presol)
 
-/** presolving execution method
+/** execution method of presolver
  *
  *  The presolver should go through the variables and constraints and tighten the domains or
  *  constraints. Each tightening should increase the given total numbers of changes.
@@ -124,7 +124,7 @@ RETCODE SCIPpresolCreate(
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
-   DECL_PRESOLEXEC  ((*presolexec)),    /**< presolving execution method */
+   DECL_PRESOLEXEC  ((*presolexec)),    /**< presolver execution method */
    PRESOLDATA*      presoldata          /**< presolver data */
    );
 

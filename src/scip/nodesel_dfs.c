@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.15 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.16 2003/11/26 16:09:00 bzfpfend Exp $"
 
 /**@file   nodesel_dfs.c
  * @brief  node selector for depth first search
@@ -33,6 +33,7 @@
 #define NODESEL_DESC             "depth first search"
 #define NODESEL_STDPRIORITY           0
 #define NODESEL_MEMSAVEPRIORITY  100000
+#define NODESEL_LOWESTFIRST       FALSE   /**< are the nodes sorted such that the lowest bound node comes first? */
 
 
 
@@ -100,8 +101,9 @@ RETCODE SCIPincludeNodeselDfs(
    )
 {
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+                  NODESEL_LOWESTFIRST,
                   NULL, NULL, NULL, nodeselSelectDfs, nodeselCompDfs,
-                  NULL, FALSE) );
+                  NULL) );
 
    return SCIP_OKAY;
 }

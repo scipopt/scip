@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.90 2003/11/25 10:24:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.91 2003/11/26 16:09:02 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -55,6 +55,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "memory.h"
 #include "message.h"
 #include "reader.h"
+#include "pricer.h"
 #include "cons.h"
 #include "var.h"
 #include "conflict.h"
@@ -411,6 +412,48 @@ int SCIPgetNReaders(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** creates a variable pricer and includes it in SCIP */
+extern
+RETCODE SCIPincludePricer(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of variable pricer */
+   const char*      desc,               /**< description of variable pricer */
+   int              priority,           /**< priority of the variable pricer */
+   DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
+   DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
+   DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
+   PRICERDATA*      pricerdata          /**< variable pricer data */
+   );
+
+/** returns the variable pricer of the given name, or NULL if not existing */
+extern
+PRICER* SCIPfindPricer(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of variable pricer */
+   );
+
+/** returns the array of currently available variable pricers */
+extern
+PRICER** SCIPgetPricers(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available variable pricers */
+extern
+int SCIPgetNPricers(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of a variable pricer */
+extern
+RETCODE SCIPsetPricerPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRICER*          pricer,             /**< variable pricer */
+   int              priority            /**< new priority of the variable pricer */
+   );
+
 /** creates a constraint handler and includes it in SCIP */
 extern
 RETCODE SCIPincludeConshdlr(
@@ -674,13 +717,13 @@ RETCODE SCIPincludeNodesel(
    const char*      desc,               /**< description of node selector */
    int              stdpriority,        /**< priority of the node selector in standard mode */
    int              memsavepriority,    /**< priority of the node selector in memory saving mode */
+   Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
-   NODESELDATA*     nodeseldata,        /**< node selector data */
-   Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+   NODESELDATA*     nodeseldata         /**< node selector data */
    );
 
 /** returns the node selector of the given name, or NULL if not existing */
@@ -937,6 +980,14 @@ extern
 RETCODE SCIPaddVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to add */
+   );
+
+/** adds variable to the problem and uses it as pricing candidate to enter the LP */
+extern
+RETCODE SCIPaddPricedVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to add */
+   Real             score               /**< pricing score of variable (the larger, the better the variable) */
    );
 
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
@@ -2590,6 +2641,30 @@ Longint SCIPgetNDivingLPIterations(
 /** gets total number of simplex iterations used so far in strong branching */
 extern
 Longint SCIPgetNStrongbranchLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of pricing rounds performed so far at the current node */
+extern
+int SCIPgetNPriceRounds(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get actual number of variables in the pricing store */
+extern
+int SCIPgetNPricevars(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get total number of pricing variables found so far */
+extern
+int SCIPgetNPricevarsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get total number of pricing variables applied to the LPs */
+extern
+int SCIPgetNPricevarsApplied(
    SCIP*            scip                /**< SCIP data structure */
    );
 

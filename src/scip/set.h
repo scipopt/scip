@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.56 2003/11/25 10:24:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.57 2003/11/26 16:09:03 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  global SCIP settings
@@ -623,6 +623,13 @@ RETCODE SCIPsetSetFeastol(
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data (or NULL) */
    Real             feastol             /**< new feasibility tolerance */
+   );
+
+/** returns the maximal number of variables priced into the LP per round */
+extern
+int SCIPsetGetMaxpricevars(
+   const SET*       set,                /**< global SCIP settings */
+   Bool             root                /**< are we at the root node? */
    );
 
 /** returns the maximal number of cuts separated per round */

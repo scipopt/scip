@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.52 2003/11/24 12:12:41 bzfpfend Exp $
+# $Id: Makefile,v 1.53 2003/11/26 16:08:57 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -173,7 +173,8 @@ SCIPOBJ		=	branch.o \
 			nodesel.o \
 			paramset.o \
 			presol.o \
-			price.o \
+			pricestore.o \
+			pricer.o \
 			primal.o \
 			prob.o \
 			reader.o \

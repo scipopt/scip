@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.80 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.81 2003/11/26 16:09:00 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1924,6 +1924,16 @@ VAR* SCIPcolGetVar(
    return col->var;
 }
 
+/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
+Bool SCIPcolIsRemoveable(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->removeable;
+}
+
 /** gets position of column in actual LP, or -1 if it is not in LP */
 int SCIPcolGetLPPos(
    COL*             col                 /**< LP column */
@@ -3322,6 +3332,26 @@ Bool SCIProwIsLocal(
    assert(row != NULL);
 
    return row->local;
+}
+
+/** returns TRUE iff row is modifiable during node processing (subject to column generation) */
+Bool SCIProwIsModifiable(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->modifiable;
+}
+
+/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
+Bool SCIProwIsRemoveable(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->removeable;
 }
 
 /** gets position of row in actual LP, or -1 if it is not in LP */
