@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.8 2004/02/04 17:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.9 2004/02/05 14:12:33 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -389,7 +389,7 @@ Real SCIPclockGetTime(
       struct timeval tp; /*lint !e86*/
       struct tms now;
          
-      /* the clock is currently running: we have to add the actual time to the clocks timer */
+      /* the clock is currently running: we have to add the current time to the clocks timer */
       switch( clock->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
@@ -449,7 +449,7 @@ void SCIPclockSetTime(
       struct timeval tp; /*lint !e86*/
       struct tms now;
          
-      /* the clock is currently running: we have to subtract the actual time from the new timer value */
+      /* the clock is currently running: we have to subtract the current time from the new timer value */
       switch( clock->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:

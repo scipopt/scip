@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.51 2004/02/04 17:27:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.52 2004/02/05 14:12:45 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -59,7 +59,7 @@ RETCODE SCIPboundchgApply(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -71,7 +71,7 @@ RETCODE SCIPboundchgUndo(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -99,7 +99,7 @@ RETCODE SCIPdomchgApply(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -111,7 +111,7 @@ RETCODE SCIPdomchgUndo(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -122,6 +122,7 @@ RETCODE SCIPdomchgAddBoundchg(
    DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    Real             oldbound,           /**< old value for bound */
@@ -139,6 +140,7 @@ RETCODE SCIPdomchgAddHolechg(
    DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    HOLELIST**       ptr,                /**< changed list pointer */
    HOLELIST*        newlist,            /**< new value of list pointer */
    HOLELIST*        oldlist             /**< old value of list pointer */
@@ -195,7 +197,7 @@ RETCODE SCIPvarRelease(
    VAR**            var,                /**< pointer to variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
+   LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    );
 
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
@@ -229,7 +231,7 @@ RETCODE SCIPvarColumn(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** converts variable into fixed variable */
@@ -240,7 +242,7 @@ RETCODE SCIPvarFix(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             fixedval,           /**< value to fix variable at */
@@ -255,7 +257,7 @@ RETCODE SCIPvarAggregate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
@@ -272,7 +274,7 @@ RETCODE SCIPvarMultiaggregate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -308,7 +310,7 @@ RETCODE SCIPvarChgObj(
    VAR*             var,                /**< variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newobj              /**< new objective value for variable */
@@ -321,7 +323,7 @@ RETCODE SCIPvarAddObj(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< transformed problem after presolve */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             addobj              /**< additional objective value for variable */
@@ -332,7 +334,7 @@ extern
 RETCODE SCIPvarChgObjDive(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    Real             newobj              /**< new objective value for variable */
    );
 
@@ -384,7 +386,7 @@ RETCODE SCIPvarChgLbLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
@@ -401,7 +403,7 @@ RETCODE SCIPvarChgUbLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
@@ -418,7 +420,7 @@ RETCODE SCIPvarChgBdLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
@@ -434,7 +436,7 @@ extern
 RETCODE SCIPvarChgLbDive(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    Real             newbound            /**< new bound for variable */
    );
 
@@ -443,7 +445,7 @@ extern
 RETCODE SCIPvarChgUbDive(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    Real             newbound            /**< new bound for variable */
    );
 
@@ -506,7 +508,7 @@ RETCODE SCIPvarAddToRow(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
    );

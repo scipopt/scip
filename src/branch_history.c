@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.7 2004/02/04 17:27:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.8 2004/02/05 14:12:33 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -155,9 +155,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       Real depthfac;
       Real sizefac;
       Real prio;
-      Longint actnodenum;
+      Longint nodenum;
       Bool usesb;
-      int actdepth;
+      int depth;
       int maxdepth;
       int nintvars;
       int reliable;
@@ -177,15 +177,15 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       nsbcands = 0;
 
       /* get current node number, depth, maximal depth, and number of binary/integer variables */
-      actnodenum = SCIPgetNodenum(scip);
-      actdepth = SCIPgetActDepth(scip);
+      nodenum = SCIPgetNodenum(scip);
+      depth = SCIPgetDepth(scip);
       maxdepth = SCIPgetMaxDepth(scip);
       maxdepth = MAX(maxdepth, MINMAXDEPTH);
       maxdepth = MIN(maxdepth, MAXMAXDEPTH);
       nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
 
       /* calculate value used as reliability */
-      depthfac = 1.1 - (Real)actdepth/(Real)maxdepth;
+      depthfac = 1.1 - (Real)depth/(Real)maxdepth;
       depthfac = MAX(depthfac, 0.0);
       depthfac = MIN(depthfac, 1.0);
       sizefac = 1.2 - sqrt((Real)nintvars/(Real)MAXSIZE);
@@ -205,7 +205,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          /* if strong branching was already applied to the variable at the current node, use the old strong branching
           * values and don't use strong branching again
           */
-         if( SCIPgetVarStrongbranchNode(scip, lpcands[c]) == actnodenum )
+         if( SCIPgetVarStrongbranchNode(scip, lpcands[c]) == nodenum )
          {
             Real solval;
             Real frac;

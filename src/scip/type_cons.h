@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.3 2004/02/04 17:27:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.4 2004/02/05 14:12:44 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -235,7 +235,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
  *  integrality).
  *
- *  In some cases, integrality conditions or rows of the actual LP don't have to be checked, because their
+ *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
  *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
  *  'checklprows' is FALSE.
  *
@@ -271,7 +271,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
- *  - SCIP_CUTOFF     : at least one constraint is infeasible for the actual domains -> node is infeasible
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible for the current domains -> node is infeasible
  *  - SCIP_REDUCEDDOM : at least one domain reduction was found
  *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped

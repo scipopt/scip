@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.34 2004/02/04 17:27:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.35 2004/02/05 14:12:35 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -80,8 +80,8 @@ struct ConsData
    VAR**            vars;               /**< variables of the constraint */
    int              varssize;           /**< size of vars array */
    int              nvars;              /**< number of variables in the constraint */
-   int              nfixedzeros;        /**< actual number of variables fixed to zero in the constraint */
-   int              nfixedones;         /**< actual number of variables fixed to one in the constraint */
+   int              nfixedzeros;        /**< current number of variables fixed to zero in the constraint */
+   int              nfixedones;         /**< current number of variables fixed to one in the constraint */
    unsigned int     setppctype:2;       /**< type of constraint: set partitioning, packing or covering */
    unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
 };
@@ -1155,7 +1155,7 @@ RETCODE enforcePseudo(
    Bool addcut;
    Bool mustcheck;
 
-   assert(!SCIPhasActnodeLP(scip));
+   assert(!SCIPhasActNodeLP(scip));
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
@@ -1350,7 +1350,7 @@ DECL_CONSSEPA(consSepaSetppc)
    /**@todo further cuts of set partitioning / packing / covering constraints */
 
    /* step 3: if no cuts were found and we are in the root node, separate remaining constraints */
-   if( SCIPgetActDepth(scip) == 0 )
+   if( SCIPgetDepth(scip) == 0 )
    {
       for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
       {
@@ -1389,7 +1389,7 @@ RETCODE branchLP(
    int nlpcands;
    int nsortcands;
    int nselcands;
-   int actuses;
+   int numuses;
    int i;
    int j;
 
@@ -1418,17 +1418,17 @@ RETCODE branchLP(
    for( i = 0; i < nlpcands; ++i )
    {
       var = lpcands[i];
-      actuses = SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var));
-      if( actuses > 0 )
+      numuses = SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var));
+      if( numuses > 0 )
       {
-         for( j = nsortcands; j > 0 && actuses > uses[j-1]; --j )
+         for( j = nsortcands; j > 0 && numuses > uses[j-1]; --j )
          {
             sortcands[j] = sortcands[j-1];
             uses[j] = uses[j-1];
          }
          assert(0 <= j && j <= nsortcands);
          sortcands[j] = var;
-         uses[j] = actuses;
+         uses[j] = numuses;
          nsortcands++;
       }
    }
@@ -1814,7 +1814,7 @@ DECL_CONSPROP(consPropSetppc)
    }
 
    /* step 2: every 10th propagation, propagate all obsolete logic or constraints */
-   if( SCIPgetActDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
+   if( SCIPgetDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
    {
       for( c = nusefulconss; c < nconss && !cutoff; ++c )
       {

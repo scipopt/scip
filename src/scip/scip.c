@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.126 2004/02/04 17:27:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.127 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1465,13 +1465,13 @@ RETCODE SCIPsetNodeselMemsavePriority(
 }
 
 /** returns the currently used node selector */
-NODESEL* SCIPgetActNodesel(
+NODESEL* SCIPgetNodesel(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNodesel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return SCIPsetGetActNodesel(scip->set, scip->stat);
+   return SCIPsetGetNodesel(scip->set, scip->stat);
 }
 
 /** creates a branching rule and includes it in SCIP */
@@ -2887,7 +2887,7 @@ RETCODE SCIPpresolve(
       return SCIP_OKAY;
 
    /* check, if a node selector exists */
-   if( SCIPsetGetActNodesel(scip->set, scip->stat) == NULL )
+   if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )
    {
       errorMessage("no node selector available\n");
       return SCIP_PLUGINNOTFOUND;
@@ -2908,7 +2908,7 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
    CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->lp, 
-                  SCIPsetGetActNodesel(scip->set, scip->stat)) );
+                  SCIPsetGetNodesel(scip->set, scip->stat)) );
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
@@ -3036,7 +3036,7 @@ RETCODE SCIPsolve(
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    /* check, if a node selector exists */
-   if( SCIPsetGetActNodesel(scip->set, scip->stat) == NULL )
+   if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )
    {
       errorMessage("no node selector available\n");
       return SCIP_PLUGINNOTFOUND;
@@ -3092,13 +3092,13 @@ RETCODE SCIPsolve(
          printf("\n");
          printf("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
          printf("Solving Nodes      : %lld\n", scip->stat->nnodes);
-         printf("Primal Bound       : %.19e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
-         printf("Dual Bound         : %.19e\n", SCIPgetDualbound(scip));
+         printf("Primal Bound       : %+.14e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
+         printf("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
          printf("Gap                : ");
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
             printf("infinite\n");
          else
-            printf("%.2f%%\n", 100.0*SCIPgetGap(scip));
+            printf("%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
       break;
 
@@ -4015,7 +4015,7 @@ RETCODE aggregateActiveIntVars(
    Longint c;
    Longint scm;
    Longint gcd;
-   Longint actclass;
+   Longint currentclass;
    Longint classstep;
    Longint xsol;
    Longint ysol;
@@ -4106,20 +4106,20 @@ RETCODE aggregateActiveIntVars(
 
    /* search upwards from ysol = 0 */
    ysol = 0;
-   actclass = c%a;
-   if( actclass < 0 )
-      actclass += a;
-   assert(0 <= actclass && actclass < a);
+   currentclass = c%a;
+   if( currentclass < 0 )
+      currentclass += a;
+   assert(0 <= currentclass && currentclass < a);
    classstep = (-b)%a;
    if( classstep < 0 )
       classstep += a;
    assert(0 < classstep && classstep < a);
-   while( actclass != 0 )
+   while( currentclass != 0 )
    {
-      assert(0 <= actclass && actclass < a);
-      actclass += classstep;
-      if( actclass >= a )
-         actclass -= a;
+      assert(0 <= currentclass && currentclass < a);
+      currentclass += classstep;
+      if( currentclass >= a )
+         currentclass -= a;
       ysol++;
    }
    assert(ysol < a);
@@ -4767,16 +4767,16 @@ RETCODE SCIPsetConsChecked(
  */
 
 /** checks, whether the LP was solved in the active node */
-Bool SCIPhasActnodeLP(
+Bool SCIPhasActNodeLP(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPhasActnodeLP", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPhasActNodeLP", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    return scip->tree->actnodehaslp;
 }
 
-/** gets solution status of actual LP */
+/** gets solution status of current LP */
 LPSOLSTAT SCIPgetLPSolstat(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -4786,7 +4786,7 @@ LPSOLSTAT SCIPgetLPSolstat(
    return SCIPlpGetSolstat(scip->lp);
 }
 
-/** gets objective value of actual LP */
+/** gets objective value of current LP */
 Real SCIPgetLPObjval(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -4796,7 +4796,7 @@ Real SCIPgetLPObjval(
    return SCIPlpGetObjval(scip->lp, scip->set);
 }
 
-/** gets pseudo objective value of the actual LP */
+/** gets pseudo objective value of the current LP */
 Real SCIPgetPseudoObjval(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -4806,7 +4806,7 @@ Real SCIPgetPseudoObjval(
    return SCIPlpGetPseudoObjval(scip->lp, scip->set);
 }
 
-/** gets actual LP columns along with the actual number of LP columns */
+/** gets current LP columns along with the current number of LP columns */
 RETCODE SCIPgetLPColsData(
    SCIP*            scip,               /**< SCIP data structure */
    COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
@@ -4833,7 +4833,7 @@ RETCODE SCIPgetLPColsData(
    return SCIP_OKAY;
 }
 
-/** gets actual LP columns */
+/** gets current LP columns */
 COL** SCIPgetLPCols(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -4846,7 +4846,7 @@ COL** SCIPgetLPCols(
       return NULL;
 }
 
-/** gets actual number of LP columns */
+/** gets current number of LP columns */
 int SCIPgetNLPCols(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -4859,7 +4859,7 @@ int SCIPgetNLPCols(
       return scip->tree->pathnlpcols[scip->tree->pathlen-1];
 }
 
-/** gets actual LP rows along with the actual number of LP rows */
+/** gets current LP rows along with the current number of LP rows */
 RETCODE SCIPgetLPRowsData(
    SCIP*            scip,               /**< SCIP data structure */
    ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
@@ -4886,7 +4886,7 @@ RETCODE SCIPgetLPRowsData(
    return SCIP_OKAY;
 }
 
-/** gets actual LP rows */
+/** gets current LP rows */
 ROW** SCIPgetLPRows(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -4899,7 +4899,7 @@ ROW** SCIPgetLPRows(
       return NULL;
 }
 
-/** gets actual number of LP rows */
+/** gets current number of LP rows */
 int SCIPgetNLPRows(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -5004,7 +5004,7 @@ RETCODE SCIPcalcMIR(
    return SCIP_OKAY;
 }
 
-/** writes actual LP to a file */
+/** writes current LP to a file */
 RETCODE SCIPwriteLP(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      fname               /**< file name */
@@ -5048,7 +5048,7 @@ RETCODE SCIPstartDive(
    return SCIP_OKAY;
 }
 
-/** quits LP diving and resets bounds and objective values of columns to the actual node's values */
+/** quits LP diving and resets bounds and objective values of columns to the current node's values */
 RETCODE SCIPendDive(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -5480,7 +5480,7 @@ Real SCIPgetRowLPFeasibility(
    return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
 }
 
-/** returns the activity of a row for the actual pseudo solution */
+/** returns the activity of a row for the current pseudo solution */
 Real SCIPgetRowPseudoActivity(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */
@@ -5491,7 +5491,7 @@ Real SCIPgetRowPseudoActivity(
    return SCIProwGetPseudoActivity(row, scip->stat);
 }
 
-/** returns the feasibility of a row for the actual pseudo solution */
+/** returns the feasibility of a row for the current pseudo solution */
 Real SCIPgetRowPseudoFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */
@@ -5637,7 +5637,7 @@ RETCODE SCIPpoolCut(
    return SCIP_OKAY;
 }
 
-/** gets actual number of rows in the global cut pool */
+/** gets current number of rows in the global cut pool */
 int SCIPgetPoolsize(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -5814,7 +5814,8 @@ RETCODE SCIPbranchLP(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < scip->set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecLPSol(scip->set->branchrules[i], scip->set, result) );
+      CHECK_OKAY( SCIPbranchruleExecLPSol(scip->set->branchrules[i], scip->set, scip->stat, scip->tree, scip->sepastore, 
+                     result) );
    }
 
    if( *result == SCIP_DIDNOTRUN )
@@ -5872,7 +5873,7 @@ RETCODE SCIPbranchPseudo(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < scip->set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecPseudoSol(scip->set->branchrules[i], scip->set, result) );
+      CHECK_OKAY( SCIPbranchruleExecPseudoSol(scip->set->branchrules[i], scip->set, scip->stat, scip->tree, result) );
    }
 
    if( *result == SCIP_DIDNOTRUN )
@@ -5924,7 +5925,7 @@ RETCODE SCIPcreateSol(
    return SCIP_OKAY;
 }
 
-/** creates a primal solution, initialized to the actual LP solution */
+/** creates a primal solution, initialized to the current LP solution */
 RETCODE SCIPcreateLPSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol,                /**< pointer to store the solution */
@@ -5944,7 +5945,7 @@ RETCODE SCIPcreateLPSol(
    return SCIP_OKAY;
 }
 
-/** creates a primal solution, initialized to the actual pseudo solution */
+/** creates a primal solution, initialized to the current pseudo solution */
 RETCODE SCIPcreatePseudoSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol,                /**< pointer to store the solution */
@@ -5958,16 +5959,16 @@ RETCODE SCIPcreatePseudoSol(
    return SCIP_OKAY;
 }
 
-/** creates a primal solution, initialized to the actual solution */
-RETCODE SCIPcreateActSol(
+/** creates a primal solution, initialized to the current solution */
+RETCODE SCIPcreateCurrentSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol,                /**< pointer to store the solution */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPcreateActSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPcreateCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolCreateActSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, heur) );
+   CHECK_OKAY( SCIPsolCreateCurrentSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, heur) );
 
    return SCIP_OKAY;
 }
@@ -5985,7 +5986,7 @@ RETCODE SCIPfreeSol(
    return SCIP_OKAY;
 }
 
-/** links a primal solution to the actual LP solution */
+/** links a primal solution to the current LP solution */
 RETCODE SCIPlinkLPSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
@@ -6004,7 +6005,7 @@ RETCODE SCIPlinkLPSol(
    return SCIP_OKAY;
 }
 
-/** links a primal solution to the actual pseudo solution */
+/** links a primal solution to the current pseudo solution */
 RETCODE SCIPlinkPseudoSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
@@ -6017,15 +6018,15 @@ RETCODE SCIPlinkPseudoSol(
    return SCIP_OKAY;
 }
 
-/** links a primal solution to the actual LP or pseudo solution */
-RETCODE SCIPlinkActSol(
+/** links a primal solution to the current LP or pseudo solution */
+RETCODE SCIPlinkCurrentSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPlinkActSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPlinkCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolLinkActSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp) );
+   CHECK_OKAY( SCIPsolLinkCurrentSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -6111,10 +6112,10 @@ RETCODE SCIPincSolVal(
    return SCIP_OKAY;
 }
 
-/** returns value of variable in primal CIP solution, or in actual LP/pseudo solution */
+/** returns value of variable in primal CIP solution, or in current LP/pseudo solution */
 Real SCIPgetSolVal(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    VAR*             var                 /**< variable to get value for */
    )
 {
@@ -6137,7 +6138,7 @@ Real SCIPgetSolVal(
 /** gets values of multiple variables in primal CIP solution */
 RETCODE SCIPgetSolVals(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    int              nvars,              /**< number of variables to get solution value for */
    VAR**            vars,               /**< array with variables to get value for */
    Real*            vals                /**< array to store solution values of variables */
@@ -6168,10 +6169,10 @@ RETCODE SCIPgetSolVals(
    return SCIP_OKAY;
 }
 
-/** returns objective value of primal CIP solution, or actual LP/pseudo objective value */
+/** returns objective value of primal CIP solution, or current LP/pseudo objective value */
 Real SCIPgetSolObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol                 /**< primal solution, or NULL for actual LP/pseudo objective value */
+   SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetSolObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
@@ -6191,10 +6192,10 @@ Real SCIPgetSolObj(
    }
 }
 
-/** returns transformed objective value of primal CIP solution, or transformed actual LP/pseudo objective value */
+/** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value */
 Real SCIPgetSolTransObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol                 /**< primal solution, or NULL for actual LP/pseudo objective value */
+   SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetSolTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
@@ -6856,7 +6857,7 @@ int SCIPgetNPriceRounds(
    return scip->stat->npricerounds;
 }
 
-/** get actual number of variables in the pricing store */
+/** get current number of variables in the pricing store */
 int SCIPgetNPricevars(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -6896,7 +6897,7 @@ int SCIPgetNSepaRounds(
    return scip->stat->nseparounds;
 }
 
-/** get actual number of cuts in the cut store */
+/** get current number of cuts in the cut store */
 int SCIPgetNCuts(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -6937,11 +6938,11 @@ Longint SCIPgetNConflictsFound(
 }
 
 /** gets depth of active node, or -1 if no active node exists */
-int SCIPgetActDepth(
+int SCIPgetDepth(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetActDepth", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetDepth", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    if( scip->tree->actnode != NULL )
       return SCIPnodeGetDepth(scip->tree->actnode);
@@ -6959,7 +6960,7 @@ int SCIPgetMaxDepth(
    return scip->stat->maxdepth;
 }
 
-/** gets actual plunging depth (succ. times, a child was selected as next node) */
+/** gets current plunging depth (succ. times, a child was selected as next node) */
 int SCIPgetPlungeDepth(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -7181,7 +7182,7 @@ void printPresolverStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Presolvers         :         Time   Fixed Vars   Aggr. Vars  Chg. Bounds  Added Holes    Del. Cons   Chg. Sides   Chg. Coefs\n");
+   fprintf(file, "Presolvers         :       Time  FixedVars   AggrVars  ChgBounds   AddHoles    DelCons   ChgSides   ChgCoefs\n");
 
 #if 0
    nfixedvars = 0;
@@ -7200,7 +7201,7 @@ void printPresolverStatistics(
       
       presol = scip->set->presols[i];
       fprintf(file, "  %-17.17s:", SCIPpresolGetName(presol));
-      fprintf(file, " %12.2f %12d %12d %12d %12d %12d %12d %12d\n",
+      fprintf(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
          SCIPpresolGetTime(presol),
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
@@ -7239,7 +7240,7 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNChgCoefs(conshdlr) > 0) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12.2f %12d %12d %12d %12d %12d %12d %12d\n",
+         fprintf(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPconshdlrGetPresolTime(conshdlr),
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
@@ -7263,7 +7264,7 @@ void printPresolverStatistics(
 #if 0
    /* print total */
    fprintf(file, "  total            :");
-   fprintf(file, " %12.2f %12d %12d %12d %12d %12d %12d %12d\n",
+   fprintf(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
       SCIPclockGetTime(scip->stat->presolvingtime),
       nfixedvars,
       naggrvars,
@@ -7287,7 +7288,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Constraints        : #Constraints    #Separate   #Propagate      #EnfoLP      #EnfoPS         Cuts   Branchings\n");
+   fprintf(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS    Cutoffs       Cuts    DomReds   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -7301,15 +7302,17 @@ void printConstraintStatistics(
       if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12d%c%12lld %12lld %12lld %12lld %12lld %12lld\n",
+         fprintf(file, " %10d%c%10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld\n",
             startnconss,
             maxnconss > startnconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr), 
             SCIPconshdlrGetNPropCalls(conshdlr), 
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
+            SCIPconshdlrGetNCutoffs(conshdlr), 
             SCIPconshdlrGetNCutsFound(conshdlr), 
-            SCIPconshdlrGetNBranchings(conshdlr));
+            SCIPconshdlrGetNDomredsFound(conshdlr), 
+            SCIPconshdlrGetNChildren(conshdlr));
       }
    }
 }
@@ -7326,7 +7329,7 @@ void printConstraintTimingStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Constraint Timings :   Total Time     Separate    Propagate       EnfoLP       EnfoPS\n");
+   fprintf(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -7338,7 +7341,7 @@ void printConstraintTimingStatistics(
       if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12.2f %12.2f %12.2f %12.2f %12.2f\n",
+         fprintf(file, " %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr) + SCIPconshdlrGetEnfoLPTime(conshdlr)
             + SCIPconshdlrGetEnfoPSTime(conshdlr),
             SCIPconshdlrGetSepaTime(conshdlr), 
@@ -7355,8 +7358,8 @@ void printRedcostStrengtheningStatistics(
    FILE*            file                /**< output file */
    )
 {
-   fprintf(file, "Reduced Cost Str.  :         Time        Calls        Found\n");
-   fprintf(file, "  total            : %12.2f %12lld %12lld\n",
+   fprintf(file, "Reduced Cost Str.  :       Time      Calls      Found\n");
+   fprintf(file, "  total            : %10.2f %10lld %10lld\n",
       SCIPclockGetTime(scip->stat->redcoststrtime),
       scip->stat->nredcoststrcalls,
       scip->stat->nredcoststrfound);
@@ -7368,12 +7371,12 @@ void printConflictStatistics(
    FILE*            file                /**< output file */
    )
 {
-   fprintf(file, "Conflict Analysis  :         Time        Calls    Conflicts\n");
-   fprintf(file, "  propagation      : %12.2f %12lld %12lld\n",
+   fprintf(file, "Conflict Analysis  :       Time      Calls  Conflicts\n");
+   fprintf(file, "  propagation      : %10.2f %10lld %10lld\n",
       SCIPconflictGetTime(scip->conflict),
       SCIPconflictGetNCalls(scip->conflict),
       SCIPconflictGetNConflicts(scip->conflict));
-   fprintf(file, "  infeasible LP    : %12.2f %12lld %12lld   (%lld LP iterations)\n",
+   fprintf(file, "  infeasible LP    : %10.2f %10lld %10lld   (%lld LP iterations)\n",
       SCIPlpconflictGetTime(scip->lpconflict),
       SCIPlpconflictGetNCalls(scip->lpconflict),
       SCIPlpconflictGetNConflicts(scip->lpconflict),
@@ -7392,15 +7395,15 @@ void printSeparatorStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Separators         :         Time        Calls         Cuts\n");
-   fprintf(file, "  cut pool         : %12.2f %12lld %12lld   (maximal pool size: %d)\n",
+   fprintf(file, "Separators         :       Time      Calls       Cuts\n");
+   fprintf(file, "  cut pool         : %10.2f %10lld %10lld   (maximal pool size: %d)\n",
       SCIPcutpoolGetTime(scip->cutpool), 
       SCIPcutpoolGetNCalls(scip->cutpool), 
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
    for( i = 0; i < scip->set->nsepas; ++i )
-      fprintf(file, "  %-17.17s: %12.2f %12lld %12lld\n",
+      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
          SCIPsepaGetNCalls(scip->set->sepas[i]),
@@ -7419,18 +7422,43 @@ void printPricerStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Pricers            :         Time        Calls         Vars\n");
-   fprintf(file, "  problem variables: %12.2f %12d %12d\n",
+   fprintf(file, "Pricers            :       Time      Calls       Vars\n");
+   fprintf(file, "  problem variables: %10.2f %10d %10d\n",
       SCIPpricestoreGetProbPricingTime(scip->pricestore),
       SCIPpricestoreGetNProbPricings(scip->pricestore),
       SCIPpricestoreGetNProbvarsFound(scip->pricestore));
 
    for( i = 0; i < scip->set->nactivepricers; ++i )
-      fprintf(file, "  %-17.17s: %12.2f %12d %12d\n",
+      fprintf(file, "  %-17.17s: %10.2f %10d %10d\n",
          SCIPpricerGetName(scip->set->pricers[i]),
          SCIPpricerGetTime(scip->set->pricers[i]),
          SCIPpricerGetNCalls(scip->set->pricers[i]),
          SCIPpricerGetNVarsFound(scip->set->pricers[i]));
+}
+
+static
+void printBranchruleStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(file != NULL);
+
+   fprintf(file, "Branching Rules    :       Time      Calls    Cutoffs       Cuts    DomReds   Children\n");
+
+   for( i = 0; i < scip->set->nbranchrules; ++i )
+      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld\n",
+         SCIPbranchruleGetName(scip->set->branchrules[i]),
+         SCIPbranchruleGetTime(scip->set->branchrules[i]),
+         SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
+         SCIPbranchruleGetNCutoffs(scip->set->branchrules[i]),
+         SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
+         SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i]),
+         SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
 }
 
 static
@@ -7446,16 +7474,16 @@ void printHeuristicStatistics(
    assert(scip->tree != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Primal Heuristics  :         Time        Calls        Found\n");
-   fprintf(file, "  LP solutions     : %12.2f            - %12lld\n",
+   fprintf(file, "Primal Heuristics  :       Time      Calls      Found\n");
+   fprintf(file, "  LP solutions     : %10.2f          - %10lld\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
       scip->stat->nlpsolsfound);
-   fprintf(file, "  pseudo solutions : %12.2f            - %12lld\n",
+   fprintf(file, "  pseudo solutions : %10.2f          - %10lld\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
 
    for( i = 0; i < scip->set->nheurs; ++i )
-      fprintf(file, "  %-17.17s: %12.2f %12lld %12lld\n",
+      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld\n",
          SCIPheurGetName(scip->set->heurs[i]),
          SCIPheurGetTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
@@ -7473,37 +7501,37 @@ void printLPStatistics(
    assert(scip->lp != NULL);
    assert(file != NULL);
 
-   fprintf(file, "LP                 :         Time        Calls   Iterations    Iter/call     Iter/sec\n");
+   fprintf(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec\n");
 
-   fprintf(file, "  primal LP        : %12.2f %12d %12lld %12.2f",
+   fprintf(file, "  primal LP        : %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->primallptime),
       scip->stat->nprimallps,
       scip->stat->nprimallpiterations,
       scip->stat->nprimallps > 0 ? (Real)scip->stat->nprimallpiterations/(Real)scip->stat->nprimallps : 0.0);
    if( SCIPclockGetTime(scip->stat->primallptime) >= 0.01 )
-      fprintf(file, " %12.2f\n", (Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
+      fprintf(file, " %10.2f\n", (Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
    else
-      fprintf(file, "            -\n");
+      fprintf(file, "          -\n");
 
-   fprintf(file, "  dual LP          : %12.2f %12d %12lld %12.2f",
+   fprintf(file, "  dual LP          : %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nduallps, 
       scip->stat->nduallpiterations,
       scip->stat->nduallps > 0 ? (Real)scip->stat->nduallpiterations/(Real)scip->stat->nduallps : 0.0);
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
-      fprintf(file, " %12.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
+      fprintf(file, " %10.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
-      fprintf(file, "            -\n");
+      fprintf(file, "          -\n");
 
-   fprintf(file, "  strong branching : %12.2f %12d %12lld %12.2f",
+   fprintf(file, "  strong branching : %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->strongbranchtime),
       scip->stat->nstrongbranchs,
       scip->stat->nsblpiterations,
       scip->stat->nstrongbranchs > 0 ? (Real)scip->stat->nsblpiterations/(Real)scip->stat->nstrongbranchs : 0.0);
    if( SCIPclockGetTime(scip->stat->strongbranchtime) >= 0.01 )
-      fprintf(file, " %12.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
+      fprintf(file, " %10.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else
-      fprintf(file, "            -\n");
+      fprintf(file, "          -\n");
 }
 
 static
@@ -7518,9 +7546,9 @@ void printTreeStatistics(
    assert(file != NULL);
 
    fprintf(file, "B&B Tree           :\n");
-   fprintf(file, "  nodes            : %12lld\n", scip->stat->nnodes);
-   fprintf(file, "  max depth        : %12d\n", scip->stat->maxdepth);
-   fprintf(file, "  switching time   : %12.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
+   fprintf(file, "  nodes            : %10lld\n", scip->stat->nnodes);
+   fprintf(file, "  max depth        : %10d\n", scip->stat->maxdepth);
+   fprintf(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 
 static
@@ -7544,22 +7572,22 @@ void printSolutionStatistics(
    gap = SCIPgetGap(scip);
 
    fprintf(file, "Solution           :\n");
-   fprintf(file, "  Solutions found  : %12lld\n", scip->primal->nsolsfound);
+   fprintf(file, "  Solutions found  : %10lld\n", scip->primal->nsolsfound);
    if( SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
    {
       if( scip->stage == SCIP_STAGE_SOLVED )
       {
          if( scip->primal->nsols == 0 )
-            fprintf(file, "  Primal Bound     :   infeasible\n");
+            fprintf(file, "  Primal Bound     : infeasible\n");
          else
-            fprintf(file, "  Primal Bound     :    unbounded\n");
+            fprintf(file, "  Primal Bound     :  unbounded\n");
       }
       else
-         fprintf(file, "  Primal Bound     :            -\n");
+         fprintf(file, "  Primal Bound     :          -\n");
    }
    else
    {
-      fprintf(file, "  Primal Bound     : %25.19e", primalbound);
+      fprintf(file, "  Primal Bound     : %+21.14e", primalbound);
       if( scip->primal->nsols == 0 )
          fprintf(file, "   (user objective limit)\n");
       else
@@ -7569,7 +7597,7 @@ void printSolutionStatistics(
          if( SCIPsetIsGT(scip->set, bestsol, primalbound) )
          {
             fprintf(file, "   (user objective limit)\n");
-            fprintf(file, "  Best Solution    : %25.19e", bestsol);
+            fprintf(file, "  Best Solution    : %+21.14e", bestsol);
          }
          fprintf(file, "   (after %lld nodes, %.2f seconds, depth %d, found by <%s>)\n", 
             SCIPsolGetNodenum(scip->primal->sols[0]), 
@@ -7580,13 +7608,13 @@ void printSolutionStatistics(
       }
    }
    if( SCIPsetIsInfinity(scip->set, ABS(dualbound)) )
-      fprintf(file, "  Dual Bound       :            -\n");
+      fprintf(file, "  Dual Bound       :          -\n");
    else
-      fprintf(file, "  Dual Bound       : %25.19e\n", dualbound);
+      fprintf(file, "  Dual Bound       : %+21.14e\n", dualbound);
    if( SCIPsetIsInfinity(scip->set, gap) )
-      fprintf(file, "  Gap              :     infinite\n");
+      fprintf(file, "  Gap              :   infinite\n");
    else
-      fprintf(file, "  Gap              : %10.4f %%\n", 100.0 * gap);
+      fprintf(file, "  Gap              : %10.2f %%\n", 100.0 * gap);
 }
 
 /** outputs SCIP status */
@@ -7672,7 +7700,7 @@ RETCODE SCIPprintStatistics(
       fprintf(file, "SCIP Status        : ");
       CHECK_OKAY( SCIPprintStatus(scip, file) );
       fprintf(file, "\n");
-      fprintf(file, "Solving Time       : %12.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       fprintf(file, "Transformed Problem:\n");
@@ -7686,7 +7714,7 @@ RETCODE SCIPprintStatistics(
       fprintf(file, "SCIP Status        : ");
       CHECK_OKAY( SCIPprintStatus(scip, file) );
       fprintf(file, "\n");
-      fprintf(file, "Solving Time       : %12.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       fprintf(file, "Transformed Problem:\n");
@@ -7698,6 +7726,7 @@ RETCODE SCIPprintStatistics(
       printConflictStatistics(scip, file);
       printSeparatorStatistics(scip, file);
       printPricerStatistics(scip, file);
+      printBranchruleStatistics(scip, file);
       printHeuristicStatistics(scip, file);
       printLPStatistics(scip, file);
       printTreeStatistics(scip, file);
@@ -8613,7 +8642,7 @@ RETCODE SCIPensureBlockMemoryArray_call(
    SCIP*            scip,               /**< SCIP data structure */
    void**           arrayptr,           /**< pointer to dynamically sized array */
    size_t           elemsize,           /**< size in bytes of each element in array */
-   int*             arraysize,          /**< pointer to actual array size */
+   int*             arraysize,          /**< pointer to current array size */
    int              minsize             /**< required minimal array size */
    )
 {

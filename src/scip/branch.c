@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.36 2004/02/04 17:27:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.37 2004/02/05 14:12:33 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -29,10 +29,13 @@
 #include "memory.h"
 #include "set.h"
 #include "stat.h"
+#include "clock.h"
 #include "paramset.h"
 #include "lp.h"
 #include "var.h"
 #include "prob.h"
+#include "tree.h"
+#include "sepastore.h"
 #include "scip.h"
 #include "branch.h"
 
@@ -143,7 +146,7 @@ RETCODE SCIPbranchcandGetLPCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
    Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
@@ -160,7 +163,7 @@ RETCODE SCIPbranchcandGetLPCands(
 
    debugMessage("getting LP branching candidates: validlp=%d, lpcount=%d\n", branchcand->validlpcandslp, stat->lpcount);
 
-   /* check, if the actual LP branching candidate array is invalid */
+   /* check, if the current LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
    {
       COL** cols;
@@ -245,7 +248,7 @@ RETCODE SCIPbranchcandGetPseudoCands(
    assert(branchcand != NULL);
 
 #ifndef NDEBUG
-   /* check, if the actual pseudo branching candidate array is correct */
+   /* check, if the current pseudo branching candidate array is correct */
    {
       VAR* var;
       int npcs;
@@ -492,6 +495,13 @@ RETCODE SCIPbranchruleCreate(
    (*branchrule)->branchexeclp = branchexeclp;
    (*branchrule)->branchexecps = branchexecps;
    (*branchrule)->branchruledata = branchruledata;
+   CHECK_OKAY( SCIPclockCreate(&(*branchrule)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   (*branchrule)->nlpcalls = 0;
+   (*branchrule)->npseudocalls = 0;
+   (*branchrule)->ncutoffs = 0;
+   (*branchrule)->ncutsfound = 0;
+   (*branchrule)->ndomredsfound = 0;
+   (*branchrule)->nchildren = 0;
    (*branchrule)->initialized = FALSE;
 
    /* add parameters */
@@ -520,6 +530,7 @@ RETCODE SCIPbranchruleFree(
       CHECK_OKAY( (*branchrule)->branchfree(scip, *branchrule) );
    }
 
+   SCIPclockFree(&(*branchrule)->clock);
    freeMemoryArray(&(*branchrule)->name);
    freeMemoryArray(&(*branchrule)->desc);
    freeMemory(branchrule);
@@ -541,6 +552,15 @@ RETCODE SCIPbranchruleInit(
       errorMessage("branching rule <%s> already initialized\n", branchrule->name);
       return SCIP_INVALIDCALL;
    }
+
+   SCIPclockReset(branchrule->clock);
+
+   branchrule->nlpcalls = 0;
+   branchrule->npseudocalls = 0;
+   branchrule->ncutoffs = 0;
+   branchrule->ncutsfound = 0;
+   branchrule->ndomredsfound = 0;
+   branchrule->nchildren = 0;
 
    if( branchrule->branchinit != NULL )
    {
@@ -579,27 +599,64 @@ RETCODE SCIPbranchruleExit(
 RETCODE SCIPbranchruleExecLPSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   SEPASTORE*       sepastore,          /**< separation storage */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(branchrule != NULL);
    assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexeclp != NULL )
    {
+      Longint oldndomchgs;
+      int oldncutsfound;
+
+      debugMessage("executing LP branching rule <%s>\n", branchrule->name);
+
+      oldndomchgs = stat->nboundchgs + stat->nholechgs;
+      oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+
+      /* start timing */
+      SCIPclockStart(branchrule->clock, set);
+   
+      /* call external method */
       CHECK_OKAY( branchrule->branchexeclp(set->scip, branchrule, result) );
+
+      /* stop timing */
+      SCIPclockStop(branchrule->clock, set);
+      
+      /* evaluate result */
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_SEPARATED
+         && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
          errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
             branchrule->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* update statistics */
+      if( *result != SCIP_DIDNOTRUN )
+         branchrule->nlpcalls++;
+      if( *result == SCIP_CUTOFF )
+         branchrule->ncutoffs++;
+      branchrule->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+      if( *result != SCIP_BRANCHED )
+      {
+         assert(tree->nchildren == 0);
+         branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+      }
+      else
+         branchrule->nchildren += tree->nchildren;
    }
 
    return SCIP_OKAY;
@@ -609,26 +666,59 @@ RETCODE SCIPbranchruleExecLPSol(
 RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(branchrule != NULL);
    assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecps != NULL )
    {
+      Longint oldndomchgs;
+
+      debugMessage("executing pseudo branching rule <%s>\n", branchrule->name);
+
+      oldndomchgs = stat->nboundchgs + stat->nholechgs;
+
+      /* start timing */
+      SCIPclockStart(branchrule->clock, set);
+   
+      /* call external method */
       CHECK_OKAY( branchrule->branchexecps(set->scip, branchrule, result) );
+
+      /* stop timing */
+      SCIPclockStop(branchrule->clock, set);
+      
+      /* evaluate result */
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
          errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
             branchrule->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* update statistics */
+      if( *result != SCIP_DIDNOTRUN )
+         branchrule->npseudocalls++;
+      if( *result == SCIP_CUTOFF )
+         branchrule->ncutoffs++;
+      if( *result != SCIP_BRANCHED )
+      {
+         assert(tree->nchildren == 0);
+         branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+      }
+      else
+         branchrule->nchildren += tree->nchildren;
    }
 
    return SCIP_OKAY;
@@ -697,6 +787,76 @@ void SCIPbranchruleSetPriority(
    
    branchrule->priority = priority;
    set->branchrulessorted = FALSE;
+}
+
+/** gets time in seconds used in this branching rule */
+Real SCIPbranchruleGetTime(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return SCIPclockGetTime(branchrule->clock);
+}
+
+/** gets the total number of times, the branching rule was called on an LP solution */
+Longint SCIPbranchruleGetNLPCalls(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->nlpcalls;
+}
+
+/** gets the total number of times, the branching rule was called on a pseudo solution */
+Longint SCIPbranchruleGetNPseudoCalls(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->npseudocalls;
+}
+
+/** gets the total number of times, the branching rule detected a cutoff */
+Longint SCIPbranchruleGetNCutoffs(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->ncutoffs;
+}
+
+/** gets the total number of cuts, the branching rule separated */
+Longint SCIPbranchruleGetNCutsFound(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->ncutsfound;
+}
+
+/** gets the total number of domain reductions, the branching rule found */
+Longint SCIPbranchruleGetNDomredsFound(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->ndomredsfound;
+}
+
+/** gets the total number of children, the branching rule created */
+Longint SCIPbranchruleGetNChildren(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->nchildren;
 }
 
 /** is branching rule initialized? */

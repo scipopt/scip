@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.34 2004/02/04 17:27:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.35 2004/02/05 14:12:37 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -414,7 +414,7 @@ Bool SCIPlpiIsOptimal(
    LPI*             lpi                 /**< LP interface structure */
    );
 
-/** returns TRUE iff actual LP basis is stable */
+/** returns TRUE iff current LP basis is stable */
 extern 
 Bool SCIPlpiIsStable(
    LPI*             lpi                 /**< LP interface structure */
@@ -482,7 +482,7 @@ RETCODE SCIPlpiGetDualfarkas(
 /**@name LP Basis Methods */
 /**@{ */
 
-/** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
+/** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 extern
 RETCODE SCIPlpiGetBase(
    LPI*             lpi,                /**< LP interface structure */
@@ -490,7 +490,7 @@ RETCODE SCIPlpiGetBase(
    int*             rstat               /**< array to store row basis status, or NULL */
    );
 
-/** sets actual basis status for columns and rows */
+/** sets current basis status for columns and rows */
 extern
 RETCODE SCIPlpiSetBase(
    LPI*             lpi,                /**< LP interface structure */

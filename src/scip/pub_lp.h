@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.4 2004/02/04 17:27:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.5 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -102,13 +102,13 @@ Bool SCIPcolIsRemoveable(
    COL*             col                 /**< LP column */
    );
 
-/** gets position of column in actual LP, or -1 if it is not in LP */
+/** gets position of column in current LP, or -1 if it is not in LP */
 extern
 int SCIPcolGetLPPos(
    COL*             col                 /**< LP column */
    );
 
-/** returns TRUE iff column is member of actual LP */
+/** returns TRUE iff column is member of current LP */
 extern
 Bool SCIPcolIsInLP(
    COL*             col                 /**< LP column */
@@ -272,13 +272,13 @@ Bool SCIProwIsRemoveable(
    ROW*             row                 /**< LP row */
    );
 
-/** gets position of row in actual LP, or -1 if it is not in LP */
+/** gets position of row in current LP, or -1 if it is not in LP */
 extern
 int SCIProwGetLPPos(
    ROW*             row                 /**< LP row */
    );
 
-/** returns TRUE iff row is member of actual LP */
+/** returns TRUE iff row is member of current LP */
 extern
 Bool SCIProwIsInLP(
    ROW*             row                 /**< LP row */

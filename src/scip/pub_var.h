@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.5 2004/02/04 17:27:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.6 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -448,8 +448,8 @@ Real SCIPvarGetBranchingPriority(
 #define SCIPvarGetObj(var)              (var)->obj
 #define SCIPvarGetLbGlobal(var)         (var)->glbdom.lb
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
-#define SCIPvarGetLbLocal(var)          (var)->actdom.lb
-#define SCIPvarGetUbLocal(var)          (var)->actdom.ub
+#define SCIPvarGetLbLocal(var)          (var)->locdom.lb
+#define SCIPvarGetUbLocal(var)          (var)->locdom.ub
 #define SCIPvarGetInferVar(var)         (var)->infervar
 #define SCIPvarGetInferCons(var)        (var)->infercons
 #define SCIPvarGetInferDepth(var)       ((int)((var)->inferdepth))
@@ -488,7 +488,7 @@ Real SCIPvarGetLPSol(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets pseudo solution value of variable at actual node */
+/** gets pseudo solution value of variable at current node */
 extern
 Real SCIPvarGetPseudoSol(
    VAR*             var                 /**< problem variable */

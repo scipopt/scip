@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.3 2004/02/04 17:27:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.4 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   pub_branch.h
  * @brief  public methods for branching rules
@@ -64,6 +64,48 @@ const char* SCIPbranchruleGetDesc(
 /** gets priority of branching rule */
 extern
 int SCIPbranchruleGetPriority(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets time in seconds used in this branching rule */
+extern
+Real SCIPbranchruleGetTime(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets the total number of times, the branching rule was called on an LP solution */
+extern
+Longint SCIPbranchruleGetNLPCalls(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets the total number of times, the branching rule was called on a pseudo solution */
+extern
+Longint SCIPbranchruleGetNPseudoCalls(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets the total number of times, the branching rule detected a cutoff */
+extern
+Longint SCIPbranchruleGetNCutoffs(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets the total number of cuts, the branching rule separated */
+extern
+Longint SCIPbranchruleGetNCutsFound(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets the total number of domain reductions, the branching rule found */
+extern
+Longint SCIPbranchruleGetNDomredsFound(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets the total number of children, the branching rule created */
+extern
+Longint SCIPbranchruleGetNChildren(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 

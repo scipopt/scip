@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.30 2004/02/04 17:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.31 2004/02/05 14:12:36 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -208,7 +208,7 @@ RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
    const SET*       set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
-   int              actdepth,           /**< depth of active node */
+   int              depth,              /**< depth of active node */
    int              lpforkdepth,        /**< depth of the last node with solved LP */
    Bool             actnodehaslp,       /**< is LP being processed in the active node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -223,13 +223,13 @@ RETCODE SCIPheurExec(
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(primal != NULL);
-   assert(actdepth >= 0);
+   assert(depth >= 0);
    assert(result != NULL);
 
    if( heur->pseudonodes )
    {
-      /* heuristic may be executed on every node: check, if the actual depth matches the execution frequency and offset */
-      execute = (actdepth == 0 && heur->freq == 0) || (heur->freq > 0 && (actdepth - heur->freqofs) % heur->freq == 0);
+      /* heuristic may be executed on every node: check, if the current depth matches the execution frequency and offset */
+      execute = (depth == 0 && heur->freq == 0) || (heur->freq > 0 && (depth - heur->freqofs) % heur->freq == 0);
    }
    else
    {
@@ -237,9 +237,9 @@ RETCODE SCIPheurExec(
        * execution frequency lies between the current node and the last LP node of the path
        */
       execute = actnodehaslp
-         && ((actdepth == 0 && heur->freq >= 0)
+         && ((depth == 0 && heur->freq >= 0)
             || (heur->freq > 0
-               && ((actdepth + heur->freq - heur->freqofs) / heur->freq
+               && ((depth + heur->freq - heur->freqofs) / heur->freq
                   != (lpforkdepth + heur->freq - heur->freqofs) / heur->freq)));
    }
 

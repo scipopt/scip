@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.24 2004/02/04 17:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.25 2004/02/05 14:12:35 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -193,7 +193,7 @@ RETCODE cutFree(
    CUT**            cut,                /**< pointer to store the cut */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(cut != NULL);
@@ -263,7 +263,7 @@ RETCODE SCIPcutpoolFree(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -355,7 +355,7 @@ RETCODE cutpoolDelCut(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    CUT*             cut                 /**< cut to remove */
    )
 {
@@ -405,7 +405,7 @@ RETCODE SCIPcutpoolDelRow(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    ROW*             row                 /**< row to remove */
    )
 {
@@ -434,7 +434,7 @@ RETCODE SCIPcutpoolSeparate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    SEPASTORE*       sepastore,          /**< separation storage */
    Bool             root,               /**< are we at the root node? */
    RESULT*          result              /**< pointer to store the result of the separation call */

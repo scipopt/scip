@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.27 2004/02/04 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.28 2004/02/05 14:12:35 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -382,8 +382,8 @@ RETCODE SCIPdispAutoActivate(
    )
 {
    DISP** disps;
+   int totalwidth;
    int width;
-   int actwidth;
    int i;
 
    assert(set != NULL);
@@ -392,18 +392,18 @@ RETCODE SCIPdispAutoActivate(
    ALLOC_OKAY( duplicateMemoryArray(&disps, set->disps, set->ndisps) );
    SCIPbsortPtr((void**)disps, set->ndisps, dispCmp);
 
-   width = 0;
+   totalwidth = 0;
 
    /* first activate all columns with display status ON */
    for( i = 0; i < set->ndisps; ++i )
    {
-      actwidth = disps[i]->width;
+      width = disps[i]->width;
       if( disps[i]->stripline )
-         actwidth++;
+         width++;
       if( disps[i]->dispstatus == SCIP_DISPSTATUS_ON )
       {
          disps[i]->active = TRUE;
-         width += actwidth;
+         totalwidth += width;
       }
       else
          disps[i]->active = FALSE;
@@ -416,13 +416,13 @@ RETCODE SCIPdispAutoActivate(
       {
          assert(!disps[i]->active);
 
-         actwidth = disps[i]->width;
+         width = disps[i]->width;
          if( disps[i]->stripline )
-            actwidth++;
-         if( width + actwidth <= set->dispwidth )
+            width++;
+         if( totalwidth + width <= set->dispwidth )
          {
             disps[i]->active = TRUE;
-            width += actwidth;
+            totalwidth += width;
          }
          else
          {

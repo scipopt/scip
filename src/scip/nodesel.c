@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.31 2004/02/04 17:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.32 2004/02/05 14:12:39 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -173,7 +173,7 @@ RETCODE SCIPnodepqFree(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -575,7 +575,7 @@ RETCODE SCIPnodepqBound(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
@@ -611,7 +611,7 @@ RETCODE SCIPnodepqBound(
          /* - if the slot was occupied by the parent, we have to check this slot (the parent) again; unfortunately,
           *   we will check the node which occupied the parent's slot again, even though it cannot be cut off;
           * - otherwise, the slot was the last slot or it was occupied by a node with a position greater than
-          *   the actual position; this node was already checked and we can decrease the position
+          *   the current position; this node was already checked and we can decrease the position
           */
          if( !parentfelldown )
             pos--;
@@ -867,7 +867,7 @@ void SCIPnodeselSetStdPriority(
    assert(set != NULL);
 
    nodesel->stdpriority = priority;
-   set->actnodesel = NULL;
+   set->nodesel = NULL;
 }
 
 /** gets priority of node selector in memory saving mode */
@@ -891,7 +891,7 @@ void SCIPnodeselSetMemsavePriority(
    assert(set != NULL);
    
    nodesel->memsavepriority = priority;
-   set->actnodesel = NULL;
+   set->nodesel = NULL;
 }
 
 /** gets user data of node selector */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.15 2004/02/04 17:27:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.16 2004/02/05 14:12:41 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory Cuts
@@ -92,7 +92,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    int ncols;
    int nrows;
    int ncalls;
-   int actdepth;
+   int depth;
    int maxdepth;
    int maxsepacuts;
    int ncuts;
@@ -110,12 +110,12 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   actdepth = SCIPgetActDepth(scip);
+   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the gomory cut separator a given number of times at each node */
-   if( (actdepth == 0 && ncalls >= sepadata->maxroundsroot)
-      || (actdepth > 0 && ncalls >= sepadata->maxrounds) )
+   if( (depth == 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
    /* only call separator, if an optimal LP solution is at hand */
@@ -136,17 +136,17 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
     */
    /**@todo find better but still stable gomory cut settings: look at dcmulti, gesa3, khb0525, misc06, p2756 */
    maxdepth = SCIPgetMaxDepth(scip);
-   if( actdepth == 0 )
+   if( depth == 0 )
    {
       maxdnom = 1000000;
       maxscale = 65536.0;
    }
-   else if( actdepth <= maxdepth/4 )
+   else if( depth <= maxdepth/4 )
    {
       maxdnom = 100;
       maxscale = 128.0;
    }
-   else if( actdepth <= maxdepth/2 )
+   else if( depth <= maxdepth/2 )
    {
       maxdnom = 10;
       maxscale = 16.0;
@@ -169,7 +169,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    CHECK_OKAY( SCIPgetLPBasisInd(scip, basisind) );
 
    /* get the maximal number of cuts allowed in a separation round */
-   if( actdepth == 0 )
+   if( depth == 0 )
       maxsepacuts = sepadata->maxsepacutsroot;
    else
       maxsepacuts = sepadata->maxsepacuts;
@@ -260,7 +260,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      /* create the cut */
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
-                                    (actdepth > 0), FALSE, sepadata->dynamiccuts) );
+                                    (depth > 0), FALSE, sepadata->dynamiccuts) );
 #if 0
                      debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f, norm=%f\n",
                         cutname, cutact, cutrhs, cutnorm);

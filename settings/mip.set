@@ -119,8 +119,12 @@ separating/maxsepacutsroot = 2000
 separating/cutagelimit = 100
 
 # maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
-# [type: int, range: [-1,2147483647], default: 2000]
+# [type: int, range: [-1,2147483647], default: 200]
 constraints/consagelimit = 2000
+
+# age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/consobsoleteage = 100
 
 # should propagation conflict analysis be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -330,7 +334,7 @@ nodeselection/bfs/minplungedepth = 2
 # [type: int, range: [0,2147483647], default: 25]
 nodeselection/bfs/maxplungedepth = 10
 
-# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed
 # [type: real, range: [0,1.79769313486232e+308], default: 1.5]
 nodeselection/bfs/maxplungequot = 1.5
 
@@ -414,11 +418,11 @@ heuristics/coefdiving/divestartdepth = 0.5
 # [type: real, range: [0,1], default: 0.1]
 heuristics/coefdiving/maxlpiterquot = 0.1
 
-# maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/coefdiving/maxdiveubquot = 0.8
 
-# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
 # [type: real, range: [0,1e+99], default: 4]
 heuristics/coefdiving/maxdiveavgquot = 4
 
@@ -450,11 +454,11 @@ heuristics/fracdiving/divestartdepth = 0.5
 # [type: real, range: [0,1], default: 0.1]
 heuristics/fracdiving/maxlpiterquot = 0.1
 
-# maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/fracdiving/maxdiveubquot = 0.8
 
-# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
 # [type: real, range: [0,1e+99], default: 4]
 heuristics/fracdiving/maxdiveavgquot = 4
 
@@ -486,11 +490,11 @@ heuristics/histdiving/divestartdepth = 0.5
 # [type: real, range: [0,1], default: 0.1]
 heuristics/histdiving/maxlpiterquot = 0.1
 
-# maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
 heuristics/histdiving/maxdiveubquot = 0.8
 
-# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
 # [type: real, range: [0,1e+99], default: 4]
 heuristics/histdiving/maxdiveavgquot = 4
 
@@ -606,9 +610,9 @@ display/lpiterations/active = 1
 # [type: int, range: [0,2], default: 1]
 display/memused/active = 1
 
-# display activation status of display column <actdepth> (0: off, 1: auto, 2:on)
+# display activation status of display column <depth> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/actdepth/active = 1
+display/depth/active = 1
 
 # display activation status of display column <maxdepth> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
@@ -622,17 +626,17 @@ display/vars/active = 1
 # [type: int, range: [0,2], default: 1]
 display/conss/active = 1
 
-# display activation status of display column <actconss> (0: off, 1: auto, 2:on)
+# display activation status of display column <curconss> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/actconss/active = 1
+display/curconss/active = 1
 
-# display activation status of display column <actcols> (0: off, 1: auto, 2:on)
+# display activation status of display column <curcols> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/actcols/active = 1
+display/curcols/active = 1
 
-# display activation status of display column <actrows> (0: off, 1: auto, 2:on)
+# display activation status of display column <currows> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/actrows/active = 1
+display/currows/active = 1
 
 # display activation status of display column <cuts> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
@@ -654,9 +658,9 @@ display/conflicts/active = 1
 # [type: int, range: [0,2], default: 1]
 display/strongbranchs/active = 1
 
-# display activation status of display column <actdualbound> (0: off, 1: auto, 2:on)
+# display activation status of display column <curdualbound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/actdualbound/active = 1
+display/curdualbound/active = 1
 
 # display activation status of display column <avgdualbound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.87 2004/02/04 17:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.88 2004/02/05 14:12:42 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -98,6 +98,7 @@ static
 RETCODE propagateDomains(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -119,7 +120,7 @@ RETCODE propagateDomains(
       propagain = FALSE;
       for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
       {
-         CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[h], memhdr, set, prob, SCIPnodeGetDepth(tree->actnode),
+         CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[h], memhdr, set, stat, prob, SCIPnodeGetDepth(tree->actnode),
                         &result) );
          propagain = propagain || (result == SCIP_REDUCEDDOM);
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
@@ -328,7 +329,7 @@ RETCODE initRootLP(
    debugMessage("init root LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], memhdr, set, prob, sepastore) );
+      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], memhdr, set, prob) );
    }
    CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
 
@@ -391,7 +392,7 @@ RETCODE solveNodeInitialLP(
    return SCIP_OKAY;
 }
 
-/** solve the actual LP of a node with price and cut */
+/** solve the current LP of a node with price and cut */
 static
 RETCODE solveNodeLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -577,7 +578,7 @@ RETCODE solveNodeLP(
                separateagain = FALSE;
                for( h = 0; h < set->nconshdlrs && !(*cutoff) && !enoughcuts; ++h )
                {
-                  CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, sepastore, 
+                  CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, stat, prob, sepastore, 
                                  SCIPnodeGetDepth(tree->actnode), &result) );
                   *cutoff = *cutoff || (result == SCIP_CUTOFF);
                   separateagain = separateagain || (result == SCIP_CONSADDED);
@@ -619,7 +620,7 @@ RETCODE solveNodeLP(
             /* if at least one of the cut was a bound change, propagate domains again */
             if( stat->nboundchanges != oldnboundchanges )
             {
-               CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, cutoff) );
+               CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, cutoff) );
             }
 
             mustprice = mustprice || !lp->solved;
@@ -680,7 +681,7 @@ RETCODE redcostStrengthening(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -891,11 +892,12 @@ RETCODE enforceConstraints(
          {
             assert(lp->solved);
             assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
-            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, prob, sepastore, &result) );
+            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, stat, prob, tree, sepastore, &result) );
          }
          else
          {
-            CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, prob, objinfeasible, &result) );
+            CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, stat, prob, tree, objinfeasible, 
+                           &result) );
             if( SCIPsepastoreGetNCuts(sepastore) != 0 )
             {
                errorMessage("pseudo enforcing method of constraint handler <%s> separated cuts\n",
@@ -1007,9 +1009,9 @@ RETCODE enforceConstraints(
        * -> branch on the pseudo solution
        * -> e.g. select non-fixed binary or integer variable x with value x', create three
        *    sons: x <= x'-1, x = x', and x >= x'+1.
-       *    In the left and right branch, the actual solution is cutted off. In the middle
+       *    In the left and right branch, the current solution is cut off. In the middle
        *    branch, the constraints can hopefully reduce domains of other variables to cut
-       *    off the actual solution.
+       *    off the current solution.
        */
 
       assert(!(*solveagain));
@@ -1073,7 +1075,7 @@ RETCODE primalHeuristics(
    )
 {
    RESULT result;
-   int actdepth;
+   int depth;
    int lpforkdepth;
    int h;
 
@@ -1090,11 +1092,11 @@ RETCODE primalHeuristics(
       SCIPsetSortHeurs(set);
 
       /* call heuristics */
-      actdepth = SCIPnodeGetDepth(tree->actnode);
+      depth = SCIPnodeGetDepth(tree->actnode);
       lpforkdepth = tree->actlpfork != NULL ? SCIPnodeGetDepth(tree->actlpfork) : -1;
       for( h = 0; h < set->nheurs; ++h )
       {
-         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actdepth, lpforkdepth, tree->actnodehaslp, &result) );
+         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, tree->actnodehaslp, &result) );
          *foundsol = *foundsol || (result == SCIP_FOUNDSOL);
       }
    }
@@ -1159,7 +1161,7 @@ RETCODE SCIPsolveCIP(
       SCIPstatUpdateMemsaveMode(stat, set, mem);
 
       /* get the current node selector */
-      nodesel = SCIPsetGetActNodesel(set, stat);
+      nodesel = SCIPsetGetNodesel(set, stat);
 
       /* inform tree about the current node selector */
       CHECK_OKAY( SCIPtreeSetNodesel(tree, set, stat, nodesel) );
@@ -1221,7 +1223,7 @@ RETCODE SCIPsolveCIP(
          stat->nnodes, SCIPnodeGetDepth(actnode), tree->nsiblings);
       
       /* domain propagation */
-      CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, &cutoff) );
+      CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, &cutoff) );
 
       if( cutoff )
       {
@@ -1232,7 +1234,7 @@ RETCODE SCIPsolveCIP(
       }
       else
       {
-         debugMessage("actual pseudosolution: obj=%g", SCIPlpGetPseudoObjval(lp, set));
+         debugMessage("current pseudosolution: obj=%g", SCIPlpGetPseudoObjval(lp, set));
          debug(SCIPprobPrintPseudoSol(prob, set));
          
          /* check, if we want to solve the LP at the selected node:
@@ -1300,7 +1302,7 @@ RETCODE SCIPsolveCIP(
                      /* apply further domain propagation, if addional bounds have been changed */
                      if( stat->nboundchanges != oldnboundchanges )
                      {
-                        CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, &cutoff) );
+                        CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, &cutoff) );
                         if( cutoff )
                         {
                            debugMessage("redcost domain propagation determined that node is infeasible\n");
@@ -1340,7 +1342,7 @@ RETCODE SCIPsolveCIP(
                /* apply further domain propagation, if addional bounds have been changed and the node is not yet finished */
                if( solveagain && stat->nboundchanges != oldnboundchanges )
                {
-                  CHECK_OKAY( propagateDomains(memhdr, set, prob, tree, &cutoff) );
+                  CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, &cutoff) );
                   if( cutoff )
                   {
                      debugMessage("enforced domain propagation determined that node is infeasible\n");

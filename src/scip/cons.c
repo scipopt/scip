@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.64 2004/02/04 17:27:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.65 2004/02/05 14:12:34 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -28,9 +28,11 @@
 
 #include "def.h"
 #include "set.h"
+#include "stat.h"
 #include "clock.h"
 #include "var.h"
 #include "prob.h"
+#include "tree.h"
 #include "sepastore.h"
 #include "scip.h"
 #include "cons.h"
@@ -1106,8 +1108,10 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nenfolpcalls = 0;
    (*conshdlr)->nenfopscalls = 0;
    (*conshdlr)->npropcalls = 0;
+   (*conshdlr)->ncutoffs = 0;
    (*conshdlr)->ncutsfound = 0;
-   (*conshdlr)->nbranchings = 0;
+   (*conshdlr)->ndomredsfound = 0;
+   (*conshdlr)->nchildren = 0;
    (*conshdlr)->lastnfixedvars = 0;
    (*conshdlr)->lastnaggrvars = 0;
    (*conshdlr)->lastnchgvartypes = 0;
@@ -1205,7 +1209,10 @@ RETCODE SCIPconshdlrInit(
    conshdlr->nenfolpcalls = 0;
    conshdlr->nenfopscalls = 0;
    conshdlr->npropcalls = 0;
+   conshdlr->ncutoffs = 0;
    conshdlr->ncutsfound = 0;
+   conshdlr->ndomredsfound = 0;
+   conshdlr->nchildren = 0;
    conshdlr->maxnconss = conshdlr->nconss;
    conshdlr->startnconss = 0;
    conshdlr->lastnfixedvars = 0;
@@ -1285,22 +1292,16 @@ RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   PROB*            prob,               /**< problem data */
-   SEPASTORE*       sepastore           /**< separation storage */
+   PROB*            prob                /**< problem data */
    )
 {
    assert(conshdlr != NULL);
 
    if( conshdlr->consinitlp != NULL )
    {
-      int oldncutsfound;
-      
       debugMessage("initializing LP with %d constraints of handler <%s>\n", conshdlr->nconss, conshdlr->name);
          
-      /* remember the current total number of found cuts */
-      oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
-
-      /* because the during constraint processing, constraints of this handler may be activated, deactivated,
+      /* because during constraint processing, constraints of this handler may be activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
        * external method; to avoid this, these changes will be buffered and processed after the method call
        */
@@ -1311,9 +1312,6 @@ RETCODE SCIPconshdlrInitLP(
 
       /* perform the cached constraint updates */
       CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
-      
-      /* update the number of found cuts */
-      conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
    }
 
    return SCIP_OKAY;
@@ -1324,9 +1322,10 @@ RETCODE SCIPconshdlrSeparate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SEPASTORE*       sepastore,          /**< separation storage */
-   int              actdepth,           /**< depth of active node */
+   int              depth,              /**< depth of current node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -1337,12 +1336,13 @@ RETCODE SCIPconshdlrSeparate(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(0 <= conshdlr->lastnsepaconss && conshdlr->lastnsepaconss <= conshdlr->nsepaconss);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
    if( conshdlr->conssepa != NULL
-      && ((actdepth == 0 && conshdlr->sepafreq == 0) || (conshdlr->sepafreq > 0 && actdepth % conshdlr->sepafreq == 0)) )
+      && ((depth == 0 && conshdlr->sepafreq == 0) || (conshdlr->sepafreq > 0 && depth % conshdlr->sepafreq == 0)) )
    {
       int nconss;
       int nusefulconss;
@@ -1371,6 +1371,7 @@ RETCODE SCIPconshdlrSeparate(
       if( !conshdlr->needscons || nconss > 0 )
       {
          CONS** conss;
+         Longint oldndomchgs;
          int oldncutsfound;
 
          debugMessage("separating constraints %d to %d of %d constraints of handler <%s>\n",
@@ -1378,10 +1379,10 @@ RETCODE SCIPconshdlrSeparate(
 
          conss = &(conshdlr->sepaconss[firstcons]);
          
-         /* remember the current total number of found cuts */
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
-         /* because the during constraint processing, constraints of this handler may be activated, deactivated,
+         /* because during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
           * external method; to avoid this, these changes will be buffered and processed after the method call
           */
@@ -1403,9 +1404,7 @@ RETCODE SCIPconshdlrSeparate(
          /* remember, that these constraints have already been processed */
          conshdlr->lastnsepaconss = conshdlr->nsepaconss;
 
-         /* update the number of found cuts */
-         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
-
+         /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_SEPARATED
             && *result != SCIP_REDUCEDDOM
@@ -1417,8 +1416,14 @@ RETCODE SCIPconshdlrSeparate(
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
+
+         /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
             conshdlr->nsepacalls++;
+         if( *result == SCIP_CUTOFF )
+            conshdlr->ncutoffs++;
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
+         conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
       }
    }
 
@@ -1432,7 +1437,9 @@ RETCODE SCIPconshdlrEnforceLPSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -1444,6 +1451,9 @@ RETCODE SCIPconshdlrEnforceLPSol(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(0 <= conshdlr->lastnenfoconss && conshdlr->lastnenfoconss <= conshdlr->nenfoconss);
    assert(set != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -1477,6 +1487,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
       if( !conshdlr->needscons || nconss > 0 )
       {
          CONS** conss;
+         Longint oldndomchgs;
          int oldncutsfound;
 
          debugMessage("enforcing constraints %d to %d of %d constraints of handler <%s>\n",
@@ -1484,10 +1495,10 @@ RETCODE SCIPconshdlrEnforceLPSol(
 
          conss = &(conshdlr->enfoconss[firstcons]);
 
-         /* remember the current total number of found cuts */
          oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
 
-         /* because the during constraint processing, constraints of this handler may be activated, deactivated,
+         /* because during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
           * external method; to avoid this, these changes will be buffered and processed after the method call
           */
@@ -1509,9 +1520,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          /* remember, that these constraints have already been processed */
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
-         /* update the number of found cuts */
-         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
-
+         /* evaluate result */
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
             && *result != SCIP_REDUCEDDOM
@@ -1524,12 +1533,20 @@ RETCODE SCIPconshdlrEnforceLPSol(
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
+
+         /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
-         {
             conshdlr->nenfolpcalls++;
-            if( *result == SCIP_BRANCHED )
-               conshdlr->nbranchings++;
+         if( *result == SCIP_CUTOFF )
+            conshdlr->ncutoffs++;
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
+         if( *result != SCIP_BRANCHED )
+         {
+            assert(tree->nchildren == 0);
+            conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
          }
+         else
+            conshdlr->nchildren += tree->nchildren;
       }
    }
 
@@ -1543,7 +1560,9 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -1555,6 +1574,9 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(0 <= conshdlr->lastnenfoconss && conshdlr->lastnenfoconss <= conshdlr->nenfoconss);
    assert(set != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -1588,13 +1610,16 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
       if( !conshdlr->needscons || nconss > 0 )
       {
          CONS** conss;
+         Longint oldndomchgs;
          
          debugMessage("enforcing constraints %d to %d of %d constraints of handler <%s>\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name);
 
          conss = &(conshdlr->enfoconss[firstcons]);
 
-         /* because the during constraint processing, constraints of this handler may be activated, deactivated,
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+
+         /* because during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
           * external method; to avoid this, these changes will be buffered and processed after the method call
           */
@@ -1629,18 +1654,25 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
+
+         /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
-         {
             conshdlr->nenfopscalls++;
-            if( *result == SCIP_BRANCHED )
-               conshdlr->nbranchings++;
-         }
          else if( !objinfeasible )
          {
             errorMessage("enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible\n", 
                conshdlr->name);
             return SCIP_INVALIDRESULT;
          }
+         if( *result == SCIP_CUTOFF )
+            conshdlr->ncutoffs++;
+         if( *result != SCIP_BRANCHED )
+         {
+            assert(tree->nchildren == 0);
+            conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         }
+         else
+            conshdlr->nchildren += tree->nchildren;
       }
    }
 
@@ -1673,7 +1705,7 @@ RETCODE SCIPconshdlrCheck(
    {
       debugMessage("checking %d constraints of handler <%s>\n", conshdlr->ncheckconss, conshdlr->name);
 
-      /* because the during constraint processing, constraints of this handler may be activated, deactivated,
+      /* because during constraint processing, constraints of this handler may be activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
        * external method; to avoid this, these changes will be buffered and processed after the method call
        */
@@ -1704,8 +1736,9 @@ RETCODE SCIPconshdlrPropagate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
-   int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
+   int              depth,              /**< depth of current node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -1715,15 +1748,20 @@ RETCODE SCIPconshdlrPropagate(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
    if( conshdlr->consprop != NULL
       && (!conshdlr->needscons || conshdlr->npropconss > 0)
-      && (actdepth == -1 || (conshdlr->propfreq > 0 && actdepth % conshdlr->propfreq == 0)) )
+      && (depth == -1 || (conshdlr->propfreq > 0 && depth % conshdlr->propfreq == 0)) )
    {
+      Longint oldndomchgs;
+      
       debugMessage("propagating %d constraints of handler <%s>\n", conshdlr->npropconss, conshdlr->name);
+
+      oldndomchgs = stat->nboundchgs + stat->nholechgs;
 
       /* because during constraint processing, constraints of this handler may be activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1755,8 +1793,13 @@ RETCODE SCIPconshdlrPropagate(
             conshdlr->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* update statistics */
       if( *result != SCIP_DIDNOTRUN )
          conshdlr->npropcalls++;
+      if( *result == SCIP_CUTOFF )
+         conshdlr->ncutoffs++;
+      conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
    }
 
    return SCIP_OKAY;
@@ -2067,6 +2110,16 @@ Longint SCIPconshdlrGetNPropCalls(
    return conshdlr->npropcalls;
 }
 
+/** gets total number of times, this constraint handler detected a cutoff */
+Longint SCIPconshdlrGetNCutoffs(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->ncutoffs;
+}
+
 /** gets total number of cuts found by this constraint handler */
 Longint SCIPconshdlrGetNCutsFound(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -2077,14 +2130,24 @@ Longint SCIPconshdlrGetNCutsFound(
    return conshdlr->ncutsfound;
 }
 
-/** gets number of branchings performed by this constraint handler */
-Longint SCIPconshdlrGetNBranchings(
+/** gets total number of domain reductions found by this constraint handler */
+Longint SCIPconshdlrGetNDomredsFound(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
    assert(conshdlr != NULL);
 
-   return conshdlr->nbranchings;
+   return conshdlr->ndomredsfound;
+}
+
+/** gets number of children created by this constraint handler */
+Longint SCIPconshdlrGetNChildren(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nchildren;
 }
 
 /** gets maximum number of active constraints of constraint handler existing at the same time */

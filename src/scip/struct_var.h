@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.5 2004/02/04 17:27:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.6 2004/02/05 14:12:44 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -175,7 +175,7 @@ struct Var
    CONS*            infercons;          /**< constraint that deduced the assignment (binary variables only), or NULL */
    HISTORY*         lphistory;          /**< branching history information for downwards and upwards branching on LP */
    DOM              glbdom;             /**< domain of variable in global problem */
-   DOM              actdom;             /**< domain of variable in actual subproblem */
+   DOM              locdom;             /**< domain of variable in current subproblem */
    Real             obj;                /**< objective function value of variable */
    Real             branchingpriority;  /**< priority of the variable to choose as branching variable */
    int              index;              /**< consecutively numbered variable identifier */

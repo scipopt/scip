@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.89 2004/02/04 17:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.90 2004/02/05 14:12:42 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -265,7 +265,7 @@ RETCODE SCIPsetCreate(
    (*set)->nodesels = NULL;
    (*set)->nnodesels = 0;
    (*set)->nodeselssize = 0;
-   (*set)->actnodesel = NULL;
+   (*set)->nodesel = NULL;
    (*set)->branchrules = NULL;
    (*set)->nbranchrules = 0;
    (*set)->branchrulessize = 0;
@@ -1471,7 +1471,7 @@ NODESEL* SCIPsetFindNodesel(
 }
 
 /** returns node selector with highest priority in the current mode */
-NODESEL* SCIPsetGetActNodesel(
+NODESEL* SCIPsetGetNodesel(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
    )
@@ -1480,32 +1480,32 @@ NODESEL* SCIPsetGetActNodesel(
    assert(stat != NULL);
 
    /* check, if old node selector is still valid */
-   if( set->actnodesel == NULL && set->nnodesels > 0 )
+   if( set->nodesel == NULL && set->nnodesels > 0 )
    {
       int i;
 
-      set->actnodesel = set->nodesels[0];
+      set->nodesel = set->nodesels[0];
 
       /* search highest priority node selector */
       if( stat->memsavemode )
       {
          for( i = 1; i < set->nnodesels; ++i )
          {
-            if( SCIPnodeselGetMemsavePriority(set->nodesels[i]) > SCIPnodeselGetMemsavePriority(set->actnodesel) )
-               set->actnodesel = set->nodesels[i];
+            if( SCIPnodeselGetMemsavePriority(set->nodesels[i]) > SCIPnodeselGetMemsavePriority(set->nodesel) )
+               set->nodesel = set->nodesels[i];
          }
       }
       else
       {
          for( i = 1; i < set->nnodesels; ++i )
          {
-            if( SCIPnodeselGetStdPriority(set->nodesels[i]) > SCIPnodeselGetStdPriority(set->actnodesel) )
-               set->actnodesel = set->nodesels[i];
+            if( SCIPnodeselGetStdPriority(set->nodesels[i]) > SCIPnodeselGetStdPriority(set->nodesel) )
+               set->nodesel = set->nodesels[i];
          }
       }
    }
    
-   return set->actnodesel;
+   return set->nodesel;
 }
 
 /** inserts branching rule in branching rule list */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.21 2004/02/04 17:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.22 2004/02/05 14:12:42 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -61,7 +61,7 @@ RETCODE SCIPsolCopy(
    SOL*             sourcesol           /**< primal CIP solution to copy */
    );
 
-/** creates primal CIP solution, initialized to the actual LP solution */
+/** creates primal CIP solution, initialized to the current LP solution */
 extern
 RETCODE SCIPsolCreateLPSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
@@ -69,11 +69,11 @@ RETCODE SCIPsolCreateLPSol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution, initialized to the actual pseudo solution */
+/** creates primal CIP solution, initialized to the current pseudo solution */
 extern
 RETCODE SCIPsolCreatePseudoSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
@@ -81,19 +81,19 @@ RETCODE SCIPsolCreatePseudoSol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution, initialized to the actual solution */
+/** creates primal CIP solution, initialized to the current solution */
 extern
-RETCODE SCIPsolCreateActSol(
+RETCODE SCIPsolCreateCurrentSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -104,7 +104,7 @@ RETCODE SCIPsolFree(
    MEMHDR*          memhdr              /**< block memory */
    );
 
-/** copies actual LP solution into CIP solution by linking */
+/** copies current LP solution into CIP solution by linking */
 extern
 RETCODE SCIPsolLinkLPSol(
    SOL*             sol,                /**< primal CIP solution */
@@ -112,10 +112,10 @@ RETCODE SCIPsolLinkLPSol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
-/** copies actual pseudo solution into CIP solution by linking */
+/** copies current pseudo solution into CIP solution by linking */
 extern
 RETCODE SCIPsolLinkPseudoSol(
    SOL*             sol,                /**< primal CIP solution */
@@ -123,18 +123,18 @@ RETCODE SCIPsolLinkPseudoSol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
-/** copies actual solution (LP or pseudo solution) into CIP solution by linking */
+/** copies current solution (LP or pseudo solution) into CIP solution by linking */
 extern
-RETCODE SCIPsolLinkActSol(
+RETCODE SCIPsolLinkCurrentSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** clears primal CIP solution */

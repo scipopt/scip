@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.77 2004/02/04 17:27:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.78 2004/02/05 14:12:44 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -136,7 +136,7 @@ static
 RETCODE forkReleaseLPIState(
    FORK*            fork,               /**< fork data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(fork != NULL);
@@ -174,7 +174,7 @@ static
 RETCODE subrootReleaseLPIState(
    SUBROOT*         subroot,            /**< subroot data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(subroot != NULL);
@@ -219,7 +219,7 @@ void SCIPnodeCaptureLPIState(
 RETCODE SCIPnodeReleaseLPIState(
    NODE*            node,               /**< fork/subroot node */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(node != NULL);
@@ -251,7 +251,7 @@ RETCODE junctionInit(
 
    junction->nchildren = tree->nchildren;
 
-   /* increase the LPI state usage counter of the actual LP fork */
+   /* increase the LPI state usage counter of the current LP fork */
    if( tree->actlpfork != NULL )
       SCIPnodeCaptureLPIState(tree->actlpfork, tree->nchildren);
 
@@ -264,7 +264,7 @@ RETCODE forkCreate(
    FORK**           fork,               /**< pointer to fork data */
    MEMHDR*          memhdr,             /**< block memory */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(fork != NULL);
@@ -318,7 +318,7 @@ RETCODE forkFree(
    FORK**           fork,               /**< fork data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -351,7 +351,7 @@ RETCODE subrootCreate(
    SUBROOT**        subroot,            /**< pointer to subroot data */
    MEMHDR*          memhdr,             /**< block memory */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -391,7 +391,7 @@ RETCODE subrootFree(
    SUBROOT**        subroot,            /**< subroot data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -472,7 +472,7 @@ RETCODE nodeReleaseParent(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    NODE* parent;
@@ -528,7 +528,7 @@ RETCODE nodeReleaseParent(
          abort();
       }
 
-      /* free parent, if it has no more children left and is not on the actual active path */
+      /* free parent, if it has no more children left and is not on the current active path */
       if( !hasChildren && !parent->active )
       {
          CHECK_OKAY( SCIPnodeFree(&node->parent, memhdr, set, tree, lp) );
@@ -634,7 +634,7 @@ RETCODE SCIPnodeFree(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(node != NULL);
@@ -713,7 +713,7 @@ RETCODE nodeDeactivate(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    Bool hasChildren = TRUE;
@@ -849,7 +849,7 @@ RETCODE SCIPnodeAddBoundchg(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
@@ -939,7 +939,7 @@ RETCODE SCIPnodeAddBoundchg(
          lpsolval = SCIP_INVALID;
 
       /* remember the bound change as branching decision (infervar/infercons are not important: use NULL) */
-      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
+      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
                      var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, node,
                      lpsolval, NULL, NULL) );
       
@@ -950,7 +950,7 @@ RETCODE SCIPnodeAddBoundchg(
    else
    {
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
-      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
+      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
                      var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, node, 
                      0.0, infervar, infercons) );
    }
@@ -1113,7 +1113,7 @@ RETCODE treeShrinkPath(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    int              lastdepth           /**< depth of the last node in the shrinked path */
    )
 {
@@ -1143,7 +1143,7 @@ RETCODE treeSwitchPath(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    NODE*            node                /**< last node of the new active path (= new active node), or NULL */
@@ -1318,7 +1318,7 @@ RETCODE subrootConstructLP(
    NODE*            subroot,            /**< subroot node to construct LP for */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    COL** cols;
@@ -1357,7 +1357,7 @@ RETCODE forkAddLP(
    NODE*            fork,               /**< fork node to construct additional LP for */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    COL** cols;
@@ -1446,7 +1446,7 @@ RETCODE SCIPtreeLoadLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    NODE* lpfork;
@@ -1465,7 +1465,7 @@ RETCODE SCIPtreeLoadLP(
    assert(set != NULL);
    assert(lp != NULL);
 
-   debugMessage("load LP for actual fork node %p at depth %d\n", 
+   debugMessage("load LP for current fork node %p at depth %d\n", 
       tree->actlpfork, tree->actlpfork == NULL ? -1 : (int)(tree->actlpfork->depth));
    debugMessage("-> old LP has %d cols and %d rows\n", SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
    debugMessage("-> correct LP has %d cols and %d rows\n", 
@@ -1599,7 +1599,7 @@ RETCODE nodeToLeaf(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    NODE*            lpfork,             /**< LP fork of the node */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
@@ -1644,7 +1644,7 @@ static
 RETCODE actnodeToDeadend(
    MEMHDR*          memhdr,             /**< block memory buffers */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(memhdr != NULL);
@@ -1673,7 +1673,7 @@ RETCODE actnodeToJunction(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(tree != NULL);
@@ -1709,7 +1709,7 @@ RETCODE actnodeToFork(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    FORK* fork;
@@ -1779,11 +1779,11 @@ RETCODE actnodeToFork(
       CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
    }
 
-   /* set new actual LP fork */
+   /* set new current LP fork */
    tree->actlpfork = tree->actnode;
 
    /* remember the current LP number to be able to recognize later if the current LP solution is still the solution
-    * of the actual LP fork
+    * of the current LP fork
     */
    tree->actlpforklpcount = stat->lpcount;
 
@@ -1800,7 +1800,7 @@ RETCODE actnodeToSubroot(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    SUBROOT* subroot;
@@ -1879,12 +1879,12 @@ RETCODE actnodeToSubroot(
       CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
    }
 
-   /* set new actual LP fork and actual subroot */
+   /* set new current LP fork and current subroot */
    tree->actlpfork = tree->actnode;
    tree->actsubroot = tree->actnode;
 
    /* remember the current LP number to be able to recognize later if the current LP solution is still the solution
-    * of the actual LP fork
+    * of the current LP fork
     */
    tree->actlpforklpcount = stat->lpcount;
 
@@ -1900,7 +1900,7 @@ RETCODE treeNodesToQueue(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    NODE**           nodes,              /**< array of nodes to put on the queue */
    int*             nnodes,             /**< pointer to number of nodes in the array */
    NODE*            lpfork,             /**< LP fork of the nodes */
@@ -1966,7 +1966,7 @@ RETCODE SCIPnodeActivate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
@@ -1984,7 +1984,7 @@ RETCODE SCIPnodeActivate(
    assert(tree != NULL);
    assert(lp != NULL);
 
-   /* remember the actual LP fork, which is also the LP fork for the siblings of the old active node */
+   /* remember the current LP fork, which is also the LP fork for the siblings of the old active node */
    oldlpfork = tree->actlpfork;
 
    /* deactivate old active node */
@@ -2115,7 +2115,7 @@ RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    )
 {
@@ -2162,7 +2162,7 @@ RETCODE SCIPtreeFree(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(tree != NULL);
@@ -2230,7 +2230,7 @@ RETCODE SCIPtreeCutoff(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
@@ -2291,7 +2291,7 @@ RETCODE SCIPtreeBranchVar(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable to branch on */

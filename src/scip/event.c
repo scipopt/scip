@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.27 2004/02/04 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.28 2004/02/05 14:12:35 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -525,7 +525,7 @@ RETCODE SCIPeventChgSol(
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
+   LP*              lp,                 /**< current LP data; only needed for BOUNDCHANGED events */
    BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
    EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for BOUNDCHANGED events */
    )
@@ -1047,7 +1047,7 @@ RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
+   LP*              lp,                 /**< current LP data; only needed for BOUNDCHANGED events */
    BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
    EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for BOUNDCHANGED events */
    EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
@@ -1272,7 +1272,7 @@ RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    )

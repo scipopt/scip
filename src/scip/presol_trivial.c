@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.10 2004/02/04 17:27:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.11 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -72,7 +72,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
    nvars = SCIPgetNVars(scip);
 
    /* scan the variables for trivial bound reductions
-    * (loop backwards, since a variable fixing can change the actual and the subsequent slots in the vars array)
+    * (loop backwards, since a variable fixing can change the current and the subsequent slots in the vars array)
     */
    for( v = nvars-1; v >= 0; --v )
    {

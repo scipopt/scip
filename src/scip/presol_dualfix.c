@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.9 2004/02/04 17:27:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.10 2004/02/05 14:12:39 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -57,7 +57,7 @@ DECL_PRESOLEXEC(presolExecDualfix)
    nvars = SCIPgetNVars(scip);
 
    /* look for fixable variables
-    * loop backwards, since a variable fixing can change the actual and the subsequent slots in the vars array
+    * loop backwards, since a variable fixing can change the current and the subsequent slots in the vars array
     */
    for( v = nvars-1; v >= 0; --v )
    {

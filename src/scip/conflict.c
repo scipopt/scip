@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.28 2004/02/04 17:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.29 2004/02/05 14:12:33 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -581,7 +581,7 @@ RETCODE conflictAnalyze(
 
       assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      /* if the first variable on the remaining queue is equal to the actual variable,
+      /* if the first variable on the remaining queue is equal to the current variable,
        * this is a multiple insertion in the conflict candidate queue and we can ignore the current
        * variable
        */
@@ -1184,7 +1184,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
   
    *success = FALSE;
 
-   debugMessage("conflict analysis of farkas solution: cutoff=%g, depth=%d\n", lp->cutoffbound, SCIPgetActDepth(set->scip));
+   debugMessage("conflict analysis of farkas solution: cutoff=%g, depth=%d\n", lp->cutoffbound, SCIPgetDepth(set->scip));
 
    /* get LP rows */
    rows = SCIPlpGetRows(lp);
@@ -1420,7 +1420,7 @@ RETCODE lpconflictAnalyzeDualsol(
    /* make sure, the dual values are stored in the rows, and the reduced costs in the columns */
    CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, &dualfeasible) );
    debugMessage("conflict analysis of dual solution: dualfeasible=%d, cutoff=%g, depth=%d\n",
-      dualfeasible, lp->cutoffbound, SCIPgetActDepth(set->scip));
+      dualfeasible, lp->cutoffbound, SCIPgetDepth(set->scip));
 
    /* if the solution is not dual feasible, we cannot do anything */
    if( !dualfeasible )

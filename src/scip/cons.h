@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.56 2004/02/04 17:27:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.57 2004/02/05 14:12:34 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -32,6 +32,7 @@
 #include "type_retcode.h"
 #include "type_result.h"
 #include "type_set.h"
+#include "type_stat.h"
 #include "type_mem.h"
 #include "type_misc.h"
 #include "type_prob.h"
@@ -123,8 +124,7 @@ RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   PROB*            prob,               /**< problem data */
-   SEPASTORE*       sepastore           /**< separation storage */
+   PROB*            prob                /**< problem data */
    );
 
 /** calls separator method of constraint handler to separate all constraints added after last conshdlrReset() call */
@@ -133,9 +133,10 @@ RETCODE SCIPconshdlrSeparate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SEPASTORE*       sepastore,          /**< separation storage */
-   int              actdepth,           /**< depth of active node */
+   int              depth,              /**< depth of current node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -147,7 +148,9 @@ RETCODE SCIPconshdlrEnforceLPSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -160,7 +163,9 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
    Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -184,8 +189,9 @@ RETCODE SCIPconshdlrPropagate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
-   int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
+   int              depth,              /**< depth of current node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

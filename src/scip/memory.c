@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.27 2004/02/04 17:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.28 2004/02/05 14:12:38 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -563,7 +563,7 @@ checkMem(MEMHDR *mem)
 static int
 linkChunk(BLKHDR* blk, CHKHDR* chk)
 {
-   CHKHDR* actchk;
+   CHKHDR* curchk;
    int left;
    int right;
    int middle;
@@ -582,13 +582,13 @@ linkChunk(BLKHDR* blk, CHKHDR* chk)
       middle = (left+right)/2;
       assert(0 <= middle && middle < blk->numChunks);
       assert(left < middle && middle < right);
-      actchk = blk->chunkarray[middle];
-      assert(actchk != NULL);
-      if( chk->store < actchk->store )
+      curchk = blk->chunkarray[middle];
+      assert(curchk != NULL);
+      if( chk->store < curchk->store )
          right = middle;
       else
       {
-         assert(chk->store >= actchk->storeend);
+         assert(chk->store >= curchk->storeend);
          left = middle;
       }
    }

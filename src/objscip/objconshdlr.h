@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.6 2004/02/04 17:27:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.7 2004/02/05 14:12:39 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -294,7 +294,7 @@ public:
     *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
     *  integrality).
     *
-    *  In some cases, integrality conditions or rows of the actual LP don't have to be checked, because their
+    *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
     *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
     *  'checklprows' is FALSE.
     *
@@ -320,7 +320,7 @@ public:
     *  nconss - nusefulconss constraints.
     *
     *  possible return values for *result:
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible for the actual domains -> node is infeasible
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible for the current domains -> node is infeasible
     *  - SCIP_REDUCEDDOM : at least one domain reduction was found
     *  - SCIP_DIDNOTFIND : the propagator searched, but did not find any domain reductions
     *  - SCIP_DIDNOTRUN  : the propagator was skipped

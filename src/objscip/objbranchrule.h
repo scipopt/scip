@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.5 2004/02/04 17:27:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.6 2004/02/05 14:12:39 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -95,7 +95,7 @@ public:
     *  possible return values for *result:
     *  - SCIP_CUTOFF     : the current node was detected to be infeasible
     *  - SCIP_BRANCHED   : branching was applied
-    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual LP solution infeasible
+    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
     *  - SCIP_SEPARATED  : a cutting plane was generated
     *  - SCIP_DIDNOTRUN  : the branching rule was skipped
     */
@@ -115,7 +115,7 @@ public:
     *  possible return values for *result:
     *  - SCIP_CUTOFF     : the current node was detected to be infeasible
     *  - SCIP_BRANCHED   : branching was applied
-    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
+    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
     *  - SCIP_DIDNOTRUN  : the branching rule was skipped
     */
    virtual RETCODE scip_execps(

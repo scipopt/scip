@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.13 2004/02/04 17:27:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.14 2004/02/05 14:12:38 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -1530,7 +1530,7 @@ Bool SCIPlpiIsOptimal(
    return (lpi->spx->getStatus() == SoPlex::OPTIMAL);
 }
 
-/** returns TRUE iff actual LP basis is stable */
+/** returns TRUE iff current LP basis is stable */
 Bool SCIPlpiIsStable(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1685,7 +1685,7 @@ RETCODE SCIPlpiGetDualfarkas(
 /**@name LP Basis Methods */
 /**@{ */
 
-/** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
+/** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 RETCODE SCIPlpiGetBase(
    LPI*             lpi,                /**< LP interface structure */
    int*             cstat,              /**< array to store column basis status, or NULL */
@@ -1760,7 +1760,7 @@ RETCODE SCIPlpiGetBase(
    return SCIP_OKAY;
 }
 
-/** sets actual basis status for columns and rows */
+/** sets current basis status for columns and rows */
 RETCODE SCIPlpiSetBase(
    LPI*             lpi,                /**< LP interface structure */
    int*             cstat,              /**< array with column basis status */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.9 2004/02/04 17:27:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.10 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -585,7 +585,7 @@ RETCODE SCIPpricestoreResetBounds(
    for( v = 0; v < pricestore->nbdviolvars; ++v )
    {
       debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", pricestore->bdviolvars[v]->name, 
-         pricestore->bdviolvars[v]->actdom.lb, pricestore->bdviolvars[v]->actdom.ub,
+         SCIPvarGetLbLocal(pricestore->bdviolvars[v]), SCIPvarGetUbLocal(pricestore->bdviolvars[v]),
          pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       CHECK_OKAY( SCIPvarChgLbLocal(pricestore->bdviolvars[v], memhdr, set, stat, lp, branchcand, eventqueue,
                      pricestore->bdviolvarslb[v], NULL, NULL, 0, 0) );

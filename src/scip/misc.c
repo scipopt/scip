@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.20 2004/02/04 17:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.21 2004/02/05 14:12:39 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -249,18 +249,18 @@ void hashlistFree(
    MEMHDR*          memhdr              /**< block memory */
    )
 {
-   HASHLIST* actlist;
+   HASHLIST* list;
    HASHLIST* nextlist;
 
    assert(hashlist != NULL);
    assert(memhdr != NULL);
    
-   actlist = *hashlist;
-   while( actlist != NULL )
+   list = *hashlist;
+   while( list != NULL )
    {
-      nextlist = actlist->next;
-      freeBlockMemory(memhdr, &actlist);
-      actlist = nextlist;
+      nextlist = list->next;
+      freeBlockMemory(memhdr, &list);
+      list = nextlist;
    }
 
    *hashlist = NULL;
@@ -277,17 +277,17 @@ void* hashlistRetrieve(
    void*            key                 /**< key to retrieve */
    )
 {
-   unsigned int actkeyval;
-   void* actkey;
+   unsigned int currentkeyval;
+   void* currentkey;
 
    assert(hashkeyeq != NULL);
    assert(key != NULL);
 
    while( hashlist != NULL )
    {
-      actkey = hashgetkey(hashlist->element);
-      actkeyval = hashkeyval(actkey);
-      if( actkeyval == keyval && hashkeyeq(actkey, key) )
+      currentkey = hashgetkey(hashlist->element);
+      currentkeyval = hashkeyval(currentkey);
+      if( currentkeyval == keyval && hashkeyeq(currentkey, key) )
          return hashlist->element;
       hashlist = hashlist->next;
    }
@@ -1604,7 +1604,7 @@ void SCIPbsort(
 {
    int firstpos;
    int lastpos;
-   int actpos;
+   int pos;
    int sortpos;
    int tmpind;
 
@@ -1612,8 +1612,8 @@ void SCIPbsort(
    assert(len == 0 || indarray != NULL);
 
    /* create identity permutation */
-   for( actpos = 0; actpos < len; ++actpos )
-      indarray[actpos] = actpos;
+   for( pos = 0; pos < len; ++pos )
+      indarray[pos] = pos;
 
    /* bubble sort index array */
    firstpos = 0;
@@ -1621,48 +1621,48 @@ void SCIPbsort(
    while( firstpos < lastpos )
    {
       /* bubble from left to right */
-      actpos = firstpos;
+      pos = firstpos;
       sortpos = firstpos;
-      while( actpos < lastpos )
+      while( pos < lastpos )
       {
-         while( actpos < lastpos && indcmp(dataptr, indarray[actpos], indarray[actpos+1]) <= 0 )
-            actpos++;
-         if( actpos >= lastpos )
+         while( pos < lastpos && indcmp(dataptr, indarray[pos], indarray[pos+1]) <= 0 )
+            pos++;
+         if( pos >= lastpos )
             break;
-         assert( indcmp(dataptr, indarray[actpos], indarray[actpos+1]) > 0 );
-         tmpind = indarray[actpos];
+         assert( indcmp(dataptr, indarray[pos], indarray[pos+1]) > 0 );
+         tmpind = indarray[pos];
          do
          {
-            indarray[actpos] = indarray[actpos+1];
-            actpos++;
+            indarray[pos] = indarray[pos+1];
+            pos++;
          }
-         while( actpos < lastpos && indcmp(dataptr, tmpind, indarray[actpos+1]) > 0 );
-         indarray[actpos] = tmpind;
-         sortpos = actpos;
-         actpos++;
+         while( pos < lastpos && indcmp(dataptr, tmpind, indarray[pos+1]) > 0 );
+         indarray[pos] = tmpind;
+         sortpos = pos;
+         pos++;
       }
       lastpos = sortpos-1;
 
       /* bubble from right to left */
-      actpos = lastpos;
+      pos = lastpos;
       sortpos = lastpos;
-      while( actpos > firstpos )
+      while( pos > firstpos )
       {
-         while( actpos > firstpos && indcmp(dataptr, indarray[actpos-1], indarray[actpos]) <= 0 )
-            actpos--;
-         if( actpos <= firstpos )
+         while( pos > firstpos && indcmp(dataptr, indarray[pos-1], indarray[pos]) <= 0 )
+            pos--;
+         if( pos <= firstpos )
             break;
-         assert( indcmp(dataptr, indarray[actpos-1], indarray[actpos]) > 0 );
-         tmpind = indarray[actpos];
+         assert( indcmp(dataptr, indarray[pos-1], indarray[pos]) > 0 );
+         tmpind = indarray[pos];
          do
          {
-            indarray[actpos] = indarray[actpos-1];
-            actpos--;
+            indarray[pos] = indarray[pos-1];
+            pos--;
          }
-         while( actpos > firstpos && indcmp(dataptr, indarray[actpos-1], tmpind) > 0 );
-         indarray[actpos] = tmpind;
-         sortpos = actpos;
-         actpos--;
+         while( pos > firstpos && indcmp(dataptr, indarray[pos-1], tmpind) > 0 );
+         indarray[pos] = tmpind;
+         sortpos = pos;
+         pos--;
       }
       firstpos = sortpos+1;
    }
@@ -1677,7 +1677,7 @@ void SCIPbsortPtr(
 {
    int firstpos;
    int lastpos;
-   int actpos;
+   int pos;
    int sortpos;
    void* tmpptr;
 
@@ -1689,48 +1689,48 @@ void SCIPbsortPtr(
    while( firstpos < lastpos )
    {
       /* bubble from left to right */
-      actpos = firstpos;
+      pos = firstpos;
       sortpos = firstpos;
-      while( actpos < lastpos )
+      while( pos < lastpos )
       {
-         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
-            actpos++;
-         if( actpos >= lastpos )
+         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+            pos++;
+         if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
-         tmpptr = ptrarray[actpos];
+         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         tmpptr = ptrarray[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos+1];
-            actpos++;
+            ptrarray[pos] = ptrarray[pos+1];
+            pos++;
          }
-         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
-         ptrarray[actpos] = tmpptr;
-         sortpos = actpos;
-         actpos++;
+         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         ptrarray[pos] = tmpptr;
+         sortpos = pos;
+         pos++;
       }
       lastpos = sortpos-1;
 
       /* bubble from right to left */
-      actpos = lastpos;
+      pos = lastpos;
       sortpos = lastpos;
-      while( actpos > firstpos )
+      while( pos > firstpos )
       {
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
-            actpos--;
-         if( actpos <= firstpos )
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+            pos--;
+         if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
-         tmpptr = ptrarray[actpos];
+         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         tmpptr = ptrarray[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos-1];
-            actpos--;
+            ptrarray[pos] = ptrarray[pos-1];
+            pos--;
          }
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
-         ptrarray[actpos] = tmpptr;
-         sortpos = actpos;
-         actpos--;
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         ptrarray[pos] = tmpptr;
+         sortpos = pos;
+         pos--;
       }
       firstpos = sortpos+1;
    }
@@ -1746,7 +1746,7 @@ void SCIPbsortPtrDbl(
 {
    int firstpos;
    int lastpos;
-   int actpos;
+   int pos;
    int sortpos;
    void* tmpptr;
    Real tmpdbl;
@@ -1760,54 +1760,54 @@ void SCIPbsortPtrDbl(
    while( firstpos < lastpos )
    {
       /* bubble from left to right */
-      actpos = firstpos;
+      pos = firstpos;
       sortpos = firstpos;
-      while( actpos < lastpos )
+      while( pos < lastpos )
       {
-         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
-            actpos++;
-         if( actpos >= lastpos )
+         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+            pos++;
+         if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
-         tmpptr = ptrarray[actpos];
-         tmpdbl = dblarray[actpos];
+         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpdbl = dblarray[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos+1];
-            dblarray[actpos] = dblarray[actpos+1];
-            actpos++;
+            ptrarray[pos] = ptrarray[pos+1];
+            dblarray[pos] = dblarray[pos+1];
+            pos++;
          }
-         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
-         ptrarray[actpos] = tmpptr;
-         dblarray[actpos] = tmpdbl;
-         sortpos = actpos;
-         actpos++;
+         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         ptrarray[pos] = tmpptr;
+         dblarray[pos] = tmpdbl;
+         sortpos = pos;
+         pos++;
       }
       lastpos = sortpos-1;
 
       /* bubble from right to left */
-      actpos = lastpos;
+      pos = lastpos;
       sortpos = lastpos;
-      while( actpos > firstpos )
+      while( pos > firstpos )
       {
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
-            actpos--;
-         if( actpos <= firstpos )
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+            pos--;
+         if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
-         tmpptr = ptrarray[actpos];
-         tmpdbl = dblarray[actpos];
+         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpdbl = dblarray[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos-1];
-            dblarray[actpos] = dblarray[actpos-1];
-            actpos--;
+            ptrarray[pos] = ptrarray[pos-1];
+            dblarray[pos] = dblarray[pos-1];
+            pos--;
          }
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
-         ptrarray[actpos] = tmpptr;
-         dblarray[actpos] = tmpdbl;
-         sortpos = actpos;
-         actpos--;
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         ptrarray[pos] = tmpptr;
+         dblarray[pos] = tmpdbl;
+         sortpos = pos;
+         pos--;
       }
       firstpos = sortpos+1;
    }
@@ -1824,7 +1824,7 @@ void SCIPbsortPtrDblInt(
 {
    int firstpos;
    int lastpos;
-   int actpos;
+   int pos;
    int sortpos;
    void* tmpptr;
    Real tmpdbl;
@@ -1840,60 +1840,60 @@ void SCIPbsortPtrDblInt(
    while( firstpos < lastpos )
    {
       /* bubble from left to right */
-      actpos = firstpos;
+      pos = firstpos;
       sortpos = firstpos;
-      while( actpos < lastpos )
+      while( pos < lastpos )
       {
-         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
-            actpos++;
-         if( actpos >= lastpos )
+         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+            pos++;
+         if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
-         tmpptr = ptrarray[actpos];
-         tmpdbl = dblarray[actpos];
-         tmpint = intarray[actpos];
+         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpdbl = dblarray[pos];
+         tmpint = intarray[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos+1];
-            dblarray[actpos] = dblarray[actpos+1];
-            intarray[actpos] = intarray[actpos+1];
-            actpos++;
+            ptrarray[pos] = ptrarray[pos+1];
+            dblarray[pos] = dblarray[pos+1];
+            intarray[pos] = intarray[pos+1];
+            pos++;
          }
-         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
-         ptrarray[actpos] = tmpptr;
-         dblarray[actpos] = tmpdbl;
-         intarray[actpos] = tmpint;
-         sortpos = actpos;
-         actpos++;
+         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         ptrarray[pos] = tmpptr;
+         dblarray[pos] = tmpdbl;
+         intarray[pos] = tmpint;
+         sortpos = pos;
+         pos++;
       }
       lastpos = sortpos-1;
 
       /* bubble from right to left */
-      actpos = lastpos;
+      pos = lastpos;
       sortpos = lastpos;
-      while( actpos > firstpos )
+      while( pos > firstpos )
       {
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
-            actpos--;
-         if( actpos <= firstpos )
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+            pos--;
+         if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
-         tmpptr = ptrarray[actpos];
-         tmpdbl = dblarray[actpos];
-         tmpint = intarray[actpos];
+         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpdbl = dblarray[pos];
+         tmpint = intarray[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos-1];
-            dblarray[actpos] = dblarray[actpos-1];
-            intarray[actpos] = intarray[actpos-1];
-            actpos--;
+            ptrarray[pos] = ptrarray[pos-1];
+            dblarray[pos] = dblarray[pos-1];
+            intarray[pos] = intarray[pos-1];
+            pos--;
          }
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
-         ptrarray[actpos] = tmpptr;
-         dblarray[actpos] = tmpdbl;
-         intarray[actpos] = tmpint;
-         sortpos = actpos;
-         actpos--;
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         ptrarray[pos] = tmpptr;
+         dblarray[pos] = tmpdbl;
+         intarray[pos] = tmpint;
+         sortpos = pos;
+         pos--;
       }
       firstpos = sortpos+1;
    }
@@ -1911,7 +1911,7 @@ void SCIPbsortPtrDblIntInt(
 {
    int firstpos;
    int lastpos;
-   int actpos;
+   int pos;
    int sortpos;
    void* tmpptr;
    Real tmpdbl;
@@ -1929,66 +1929,66 @@ void SCIPbsortPtrDblIntInt(
    while( firstpos < lastpos )
    {
       /* bubble from left to right */
-      actpos = firstpos;
+      pos = firstpos;
       sortpos = firstpos;
-      while( actpos < lastpos )
+      while( pos < lastpos )
       {
-         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
-            actpos++;
-         if( actpos >= lastpos )
+         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+            pos++;
+         if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
-         tmpptr = ptrarray[actpos];
-         tmpdbl = dblarray[actpos];
-         tmpint1 = intarray1[actpos];
-         tmpint2 = intarray2[actpos];
+         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpdbl = dblarray[pos];
+         tmpint1 = intarray1[pos];
+         tmpint2 = intarray2[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos+1];
-            dblarray[actpos] = dblarray[actpos+1];
-            intarray1[actpos] = intarray1[actpos+1];
-            intarray2[actpos] = intarray2[actpos+1];
-            actpos++;
+            ptrarray[pos] = ptrarray[pos+1];
+            dblarray[pos] = dblarray[pos+1];
+            intarray1[pos] = intarray1[pos+1];
+            intarray2[pos] = intarray2[pos+1];
+            pos++;
          }
-         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
-         ptrarray[actpos] = tmpptr;
-         dblarray[actpos] = tmpdbl;
-         intarray1[actpos] = tmpint1;
-         intarray2[actpos] = tmpint2;
-         sortpos = actpos;
-         actpos++;
+         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         ptrarray[pos] = tmpptr;
+         dblarray[pos] = tmpdbl;
+         intarray1[pos] = tmpint1;
+         intarray2[pos] = tmpint2;
+         sortpos = pos;
+         pos++;
       }
       lastpos = sortpos-1;
 
       /* bubble from right to left */
-      actpos = lastpos;
+      pos = lastpos;
       sortpos = lastpos;
-      while( actpos > firstpos )
+      while( pos > firstpos )
       {
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
-            actpos--;
-         if( actpos <= firstpos )
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+            pos--;
+         if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
-         tmpptr = ptrarray[actpos];
-         tmpdbl = dblarray[actpos];
-         tmpint1 = intarray1[actpos];
-         tmpint2 = intarray2[actpos];
+         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpdbl = dblarray[pos];
+         tmpint1 = intarray1[pos];
+         tmpint2 = intarray2[pos];
          do
          {
-            ptrarray[actpos] = ptrarray[actpos-1];
-            dblarray[actpos] = dblarray[actpos-1];
-            intarray1[actpos] = intarray1[actpos-1];
-            intarray2[actpos] = intarray2[actpos-1];
-            actpos--;
+            ptrarray[pos] = ptrarray[pos-1];
+            dblarray[pos] = dblarray[pos-1];
+            intarray1[pos] = intarray1[pos-1];
+            intarray2[pos] = intarray2[pos-1];
+            pos--;
          }
-         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
-         ptrarray[actpos] = tmpptr;
-         dblarray[actpos] = tmpdbl;
-         intarray1[actpos] = tmpint1;
-         intarray2[actpos] = tmpint2;
-         sortpos = actpos;
-         actpos--;
+         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         ptrarray[pos] = tmpptr;
+         dblarray[pos] = tmpdbl;
+         intarray1[pos] = tmpint1;
+         intarray2[pos] = tmpint2;
+         sortpos = pos;
+         pos--;
       }
       firstpos = sortpos+1;
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.11 2004/02/04 17:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.12 2004/02/05 14:12:35 bzfpfend Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -53,7 +53,7 @@ RETCODE SCIPcutpoolFree(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** if not already existing, adds row to cut pool and captures it */
@@ -81,7 +81,7 @@ RETCODE SCIPcutpoolDelRow(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    ROW*             row                 /**< row to remove */
    );
 
@@ -92,7 +92,7 @@ RETCODE SCIPcutpoolSeparate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    SEPASTORE*       sepastore,          /**< separation storage */
    Bool             root,               /**< are we at the root node? */
    RESULT*          result              /**< pointer to store the result of the separation call */

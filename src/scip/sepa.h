@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.24 2004/02/04 17:27:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.25 2004/02/05 14:12:41 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -85,7 +85,7 @@ RETCODE SCIPsepaExec(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    SEPASTORE*       sepastore,          /**< separation storage */
-   int              actdepth,           /**< depth of active node */
+   int              depth,              /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.4 2004/02/04 17:27:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.5 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -150,15 +150,27 @@ Longint SCIPconshdlrGetNPropCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets total number of times, this constraint handler detected a cutoff */
+extern
+Longint SCIPconshdlrGetNCutoffs(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets total number of cuts found by this constraint handler */
 extern
 Longint SCIPconshdlrGetNCutsFound(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets number of branchings performed by this constraint handler */
+/** gets total number of domain reductions found by this constraint handler */
 extern
-Longint SCIPconshdlrGetNBranchings(
+Longint SCIPconshdlrGetNDomredsFound(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of children created by this constraint handler */
+extern
+Longint SCIPconshdlrGetNChildren(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

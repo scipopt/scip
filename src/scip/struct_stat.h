@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.5 2004/02/04 17:27:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.6 2004/02/05 14:12:44 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -59,6 +59,8 @@ struct Stat
    Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    Longint          lastdispnode;       /**< last node for which an information line was displayed */
    Longint          lastdivenode;       /**< last node where LP diving was applied */
+   Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
+   Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    int              nvaridx;            /**< number of used variable indices */
    int              ncolidx;            /**< number of used column indices */
    int              nrowidx;            /**< number of used row indices */
@@ -71,11 +73,11 @@ struct Stat
    int              nduallps;           /**< number of dual LPs solved */
    int              ndivinglps;         /**< number of LPs solved during diving */
    int              nstrongbranchs;     /**< number of strong branching calls */
-   int              npricerounds;       /**< number of pricing rounds performed in actual node */
-   int              nseparounds;        /**< number of separation rounds performed in actual node */
+   int              npricerounds;       /**< number of pricing rounds performed in current node */
+   int              nseparounds;        /**< number of separation rounds performed in current node */
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */
-   int              plungedepth;        /**< actual plunging depth (successive times, a child was selected as next node) */
+   int              plungedepth;        /**< current plunging depth (successive times, a child was selected as next node) */
    Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
 };
 

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.2 2004/02/04 17:27:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.3 2004/02/05 14:12:44 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -65,7 +65,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  possible return values for *result:
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
  *  - SCIP_BRANCHED   : branching was applied
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual LP solution infeasible
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
@@ -81,7 +81,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  possible return values for *result:
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
  *  - SCIP_BRANCHED   : branching was applied
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)

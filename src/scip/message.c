@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.10 2004/02/04 17:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.11 2004/02/05 14:12:38 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -31,7 +31,7 @@
 
 /** prints a message depending on the verbosity level, acting like the printf() command */
 void infoMessage(
-   VERBLEVEL        verblevel,          /**< actual verbosity level */
+   VERBLEVEL        verblevel,          /**< current verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
    const char*      formatstr,          /**< format string like in printf() function */
    ...                                  /**< format arguments line in printf() function */
@@ -53,7 +53,7 @@ void infoMessage(
 
 /** prints a message depending on the verbosity level, acting like the vprintf() command */
 void vinfoMessage(
-   VERBLEVEL        verblevel,          /**< actual verbosity level */
+   VERBLEVEL        verblevel,          /**< current verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
    const char*      formatstr,          /**< format string like in printf() function */
    va_list          ap                  /**< variable argument list */

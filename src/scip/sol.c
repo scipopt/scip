@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.30 2004/02/04 17:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.31 2004/02/05 14:12:42 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -102,14 +102,14 @@ RETCODE SCIPsolCopy(
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution, initialized to the actual LP solution */
+/** creates primal CIP solution, initialized to the current LP solution */
 RETCODE SCIPsolCreateLPSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -126,14 +126,14 @@ RETCODE SCIPsolCreateLPSol(
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution, initialized to the actual pseudo solution */
+/** creates primal CIP solution, initialized to the current pseudo solution */
 RETCODE SCIPsolCreatePseudoSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -147,20 +147,20 @@ RETCODE SCIPsolCreatePseudoSol(
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution, initialized to the actual solution */
-RETCODE SCIPsolCreateActSol(
+/** creates primal CIP solution, initialized to the current solution */
+RETCODE SCIPsolCreateCurrentSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(tree != NULL);
 
-   debugMessage("creating solution from actual solution\n");
+   debugMessage("creating solution from current solution\n");
 
    if( tree->actnodehaslp )
    {
@@ -194,14 +194,14 @@ RETCODE SCIPsolFree(
    return SCIP_OKAY;
 }
 
-/** copies actual LP solution into CIP solution by linking */
+/** copies current LP solution into CIP solution by linking */
 RETCODE SCIPsolLinkLPSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
@@ -265,14 +265,14 @@ RETCODE SCIPsolLinkLPSol(
    return SCIP_OKAY;
 }
 
-/** copies actual pseudo solution into CIP solution by linking */
+/** copies current pseudo solution into CIP solution by linking */
 RETCODE SCIPsolLinkPseudoSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
@@ -306,19 +306,19 @@ RETCODE SCIPsolLinkPseudoSol(
    return SCIP_OKAY;
 }
 
-/** copies actual solution (LP or pseudo solution) into CIP solution by linking */
-RETCODE SCIPsolLinkActSol(
+/** copies current solution (LP or pseudo solution) into CIP solution by linking */
+RETCODE SCIPsolLinkCurrentSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(tree != NULL);
 
-   debugMessage("linking solution to actual solution\n");
+   debugMessage("linking solution to current solution\n");
 
    if( tree->actnodehaslp )
    {

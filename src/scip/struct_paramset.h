@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_paramset.h,v 1.2 2004/02/04 17:27:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_paramset.h,v 1.3 2004/02/05 14:12:43 bzfpfend Exp $"
 
 /**@file   struct_paramset.h
  * @brief  datastructures for handling parameter settings
@@ -36,7 +36,7 @@
 struct BoolParam
 {
    Bool*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   Bool             actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
+   Bool             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    Bool             defaultvalue;       /**< default value of the parameter */
 };
 typedef struct BoolParam BOOLPARAM;
@@ -45,7 +45,7 @@ typedef struct BoolParam BOOLPARAM;
 struct IntParam
 {
    int*             valueptr;           /**< pointer to store the current parameter value, or NULL */
-   int              actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
+   int              curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    int              defaultvalue;       /**< default value of the parameter */
    int              minvalue;           /**< minimum value for parameter */
    int              maxvalue;           /**< maximum value for parameter */
@@ -56,7 +56,7 @@ typedef struct IntParam INTPARAM;
 struct LongintParam
 {
    Longint*         valueptr;           /**< pointer to store the current parameter value, or NULL */
-   Longint          actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
+   Longint          curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    Longint          defaultvalue;       /**< default value of the parameter */
    Longint          minvalue;           /**< minimum value for parameter */
    Longint          maxvalue;           /**< maximum value for parameter */
@@ -67,7 +67,7 @@ typedef struct LongintParam LONGINTPARAM;
 struct RealParam
 {
    Real*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   Real             actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
+   Real             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    Real             defaultvalue;       /**< default value of the parameter */
    Real             minvalue;           /**< minimum value for parameter */
    Real             maxvalue;           /**< maximum value for parameter */
@@ -78,7 +78,7 @@ typedef struct RealParam REALPARAM;
 struct CharParam
 {
    char*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   char             actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
+   char             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    char             defaultvalue;       /**< default value of the parameter */
    char*            allowedvalues;      /**< array with possible parameter values, or NULL if not restricted */
 };
@@ -88,7 +88,7 @@ typedef struct CharParam CHARPARAM;
 struct StringParam
 {
    char**           valueptr;           /**< pointer to store the current parameter value, or NULL */
-   char*            actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
+   char*            curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
    char*            defaultvalue;       /**< default value of the parameter */
 };
 typedef struct StringParam STRINGPARAM;

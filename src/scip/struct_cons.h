@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.3 2004/02/04 17:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.4 2004/02/05 14:12:42 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -152,8 +152,10 @@ struct Conshdlr
    Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
    Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    Longint          npropcalls;         /**< number of times, the propagator was called */
-   Longint          ncutsfound;         /**< total number of cuts found by this constraint handler */
-   Longint          nbranchings;        /**< number of times, the constraint handler performed a branching */
+   Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
+   Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
+   Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
+   Longint          nchildren;          /**< number of children the constraint handler created during branching */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */

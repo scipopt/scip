@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.62 2004/02/04 17:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.63 2004/02/05 14:12:42 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -433,7 +433,7 @@ NODESEL* SCIPsetFindNodesel(
 
 /** returns node selector with highest priority in the current mode */
 extern
-NODESEL* SCIPsetGetActNodesel(
+NODESEL* SCIPsetGetNodesel(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
    );

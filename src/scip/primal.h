@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.17 2004/02/04 17:27:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.18 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -50,7 +50,7 @@ RETCODE SCIPprimalCreate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** frees primal data */
@@ -68,7 +68,7 @@ RETCODE SCIPprimalSetUpperbound(
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    Real             upperbound          /**< new upper bound */
    );
 
@@ -81,7 +81,7 @@ RETCODE SCIPprimalAddSol(
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
    Bool*            stored              /**< stores whether given solution was good enough to keep */
@@ -96,7 +96,7 @@ RETCODE SCIPprimalAddSolFree(
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool*            stored              /**< stores whether given solution was good enough to keep */
@@ -111,7 +111,7 @@ RETCODE SCIPprimalTrySol(
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
    Bool             chckintegrality,    /**< has integrality to be checked? */
@@ -128,7 +128,7 @@ RETCODE SCIPprimalTrySolFree(
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.25 2004/02/04 17:27:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.26 2004/02/05 14:12:39 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -44,7 +44,7 @@
 
 #define MINPLUNGEDEPTH                5 /**< minimal plunging depth, before new best node may be selected */
 #define MAXPLUNGEDEPTH               25 /**< maximal plunging depth, before new best node is forced to be selected */
-#define MAXPLUNGEQUOT               1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+#define MAXPLUNGEQUOT               1.5 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                          *   where plunging is performed */
 
 
@@ -52,7 +52,7 @@
 /** node selector data for best first search node selection */
 struct NodeselData
 {
-   Real             maxplungequot;      /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+   Real             maxplungequot;      /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                          *   where plunging is performed */
    int              maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected */
    int              minplungedepth;     /**< minimal plunging depth, before new best node may be selected */
@@ -86,7 +86,7 @@ static
 DECL_NODESELSELECT(nodeselSelectBfs)
 {  /*lint --e{715}*/
    NODESELDATA* nodeseldata;
-   Real actlowerbound;
+   Real curlowerbound;
    Real avglowerbound;
    Real lowerbound;
    int plungedepth;
@@ -103,14 +103,14 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    assert(nodeseldata != NULL);
 
    /* check, if we want to plunge once more */
-   actlowerbound = SCIPgetLocalLowerbound(scip);
+   curlowerbound = SCIPgetLocalLowerbound(scip);
    avglowerbound = SCIPgetAvgLowerbound(scip);
    lowerbound = SCIPgetLowerbound(scip);
    plungedepth = SCIPgetPlungeDepth(scip);
    if( plungedepth < nodeseldata->minplungedepth
       || (plungedepth < nodeseldata->maxplungedepth
          && (SCIPisEQ(scip, avglowerbound, lowerbound)
-            || (actlowerbound - lowerbound)/(avglowerbound - lowerbound) < nodeseldata->maxplungequot)) )
+            || (curlowerbound - lowerbound)/(avglowerbound - lowerbound) < nodeseldata->maxplungequot)) )
    {
       /* we want to plunge again: prefer children over siblings, and siblings over leaves */
       *selnode = SCIPgetBestChild(scip);
@@ -218,7 +218,7 @@ RETCODE SCIPincludeNodeselBfs(
                   &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "nodeselection/bfs/maxplungequot",
-                  "maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed",
+                  "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed",
                   &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;

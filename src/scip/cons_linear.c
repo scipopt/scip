@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.86 2004/02/04 17:27:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.87 2004/02/05 14:12:34 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -81,7 +81,7 @@ struct ConsData
    Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             rhs;                /**< right hand side of row */
    Real             maxabsval;          /**< maximum absolute value of all coefficients */
-   Real             pseudoactivity;     /**< pseudo activity value in actual pseudo solution */
+   Real             pseudoactivity;     /**< pseudo activity value in current pseudo solution */
    Real             minactivity;        /**< minimal value w.r.t. the variable's bounds for the constraint's activity,
                                          *   ignoring the coefficients contributing with infinite value */
    Real             maxactivity;        /**< maximal value w.r.t. the variable's bounds for the constraint's activity,
@@ -1161,7 +1161,7 @@ static
 Real consdataGetActivity(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< linear constraint data */
-   SOL*             sol                 /**< solution to get activity for, NULL to actual solution */
+   SOL*             sol                 /**< solution to get activity for, NULL to current solution */
    )
 {
    Real activity;
@@ -1169,7 +1169,7 @@ Real consdataGetActivity(
 
    assert(consdata != NULL);
 
-   if( sol == NULL && !SCIPhasActnodeLP(scip) )
+   if( sol == NULL && !SCIPhasActNodeLP(scip) )
    {
       /* for performance reasons, the pseudo activity is updated with each bound change, so we don't have to
        * recalculate it
@@ -1203,7 +1203,7 @@ static
 Real consdataGetFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< linear constraint data */
-   SOL*             sol                 /**< solution to get feasibility for, NULL to actual solution */
+   SOL*             sol                 /**< solution to get feasibility for, NULL to current solution */
    )
 {
    Real activity;
@@ -2044,7 +2044,7 @@ RETCODE scaleCons(
 /** normalizes a linear constraint with the following rules:
  *  - multiplication with +1 or -1:
  *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
- *      if the actual rule doesn't determine the sign):
+ *      if the current rule doesn't determine the sign):
  *        1. the right hand side must not be negative
  *        2. the right hand side must not be infinite
  *        3. the absolute value of the right hand side must be greater than that of the left hand side
@@ -2444,12 +2444,12 @@ RETCODE tightenBounds(
    return SCIP_OKAY;
 }
 
-/** checks linear constraint for feasibility of given solution or actual solution */
+/** checks linear constraint for feasibility of given solution or current solution */
 static
 RETCODE checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
-   SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
+   SOL*             sol,                /**< solution to be checked, or NULL for current solution */
    Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
    Real*            violation,          /**< pointer to store the constraint's violation, or NULL */
    Bool*            violated            /**< pointer to store whether the constraint is violated */
@@ -2472,7 +2472,7 @@ RETCODE checkCons(
    {
       if( !checklprows && SCIProwIsInLP(consdata->row) )
          return SCIP_OKAY;
-      else if( sol == NULL && !SCIPhasActnodeLP(scip) )
+      else if( sol == NULL && !SCIPhasActNodeLP(scip) )
          feasibility = consdataGetPseudoFeasibility(scip, consdata);
       else
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
@@ -2482,7 +2482,7 @@ RETCODE checkCons(
    
    debugMessage("  consdata feasibility=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hasactnodelp=%d)\n",
       feasibility, consdata->lhs, consdata->rhs, consdata->row, checklprows,
-      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol, SCIPhasActnodeLP(scip));
+      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol, SCIPhasActNodeLP(scip));
 
    if( SCIPisFeasible(scip, feasibility) )
    {
@@ -2744,7 +2744,7 @@ DECL_CONSSEPA(consSepaLinear)
    /**@todo further cuts of linear constraints */
 
    /* step 3: if no cuts were found and we are in the root node, check remaining linear constraints for feasibility */
-   if( SCIPgetActDepth(scip) == 0 )
+   if( SCIPgetDepth(scip) == 0 )
    {
       for( c = nusefulconss; c < nconss && *result == SCIP_DIDNOTFIND; ++c )
       {
@@ -2868,7 +2868,7 @@ DECL_CONSPROP(consPropLinear)
    Real maxactivity;
    Bool tightenbounds;
    int propfreq;
-   int actdepth;
+   int depth;
    int nchgbds;
    int c;
 
@@ -2882,9 +2882,9 @@ DECL_CONSPROP(consPropLinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    propfreq = SCIPconshdlrGetPropFreq(conshdlr);
-   actdepth = SCIPgetActDepth(scip);
-   tightenbounds = (conshdlrdata->tightenboundsfreq == 0 && actdepth == 0)
-      || (conshdlrdata->tightenboundsfreq >= 1 && (actdepth % (propfreq * conshdlrdata->tightenboundsfreq) == 0));
+   depth = SCIPgetDepth(scip);
+   tightenbounds = (conshdlrdata->tightenboundsfreq == 0 && depth == 0)
+      || (conshdlrdata->tightenboundsfreq >= 1 && (depth % (propfreq * conshdlrdata->tightenboundsfreq) == 0));
    nchgbds = 0;
 
    /* process useful constraints */
@@ -3302,9 +3302,9 @@ RETCODE convertLongEquality(
    VAR* var;
    Real val;
    VARTYPE bestslacktype;
-   VARTYPE actslacktype;
+   VARTYPE slacktype;
    Real bestslackdomrng;
-   Real actslackdomrng;
+   Real slackdomrng;
    Bool integral;
    int bestslackpos;
    int v;
@@ -3332,8 +3332,8 @@ RETCODE convertLongEquality(
       var = vars[v];
       val = vals[v];
             
-      actslacktype = SCIPvarGetType(var);
-      integral = integral && (actslacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
+      slacktype = SCIPvarGetType(var);
+      integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
 
       assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
       assert(SCIPvarGetNLocksUp(var) >= 1);
@@ -3342,19 +3342,19 @@ RETCODE convertLongEquality(
          /* variable is only locked in this equality: if variable is continuous or if the value is 1.0,
           * it is a candidate for being a slack variable
           */
-         if( actslacktype == SCIP_VARTYPE_CONTINUOUS
-            || actslacktype == SCIP_VARTYPE_IMPLINT
+         if( slacktype == SCIP_VARTYPE_CONTINUOUS
+            || slacktype == SCIP_VARTYPE_IMPLINT
             || (integral && SCIPisEQ(scip, ABS(val), 1.0))
              )
          {
-            actslackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
+            slackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
             if( bestslackpos == -1
-               || actslacktype > bestslacktype
-               || (actslacktype == bestslacktype && actslackdomrng > bestslackdomrng) )
+               || slacktype > bestslacktype
+               || (slacktype == bestslacktype && slackdomrng > bestslackdomrng) )
             {
                bestslackpos = v;
-               bestslacktype = actslacktype;
-               bestslackdomrng = actslackdomrng;
+               bestslacktype = slacktype;
+               bestslackdomrng = slackdomrng;
             }
          }
       }
@@ -3625,11 +3625,11 @@ RETCODE aggregateConstraints(
    Real a;
    Real b;
    Real aggrcoef;
-   Real actscalarsum;
+   Real scalarsum;
    Real bestscalarsum;
    Bool betterscalarsum;
-   int actvarweight;
-   int actnvars;
+   int varweight;
+   int nvars;
    int bestvarweight;
    int bestnvars;
    int bestv;
@@ -3685,26 +3685,26 @@ RETCODE aggregateConstraints(
       if( SCIPisIntegral(scip, a) && SCIPisIntegral(scip, b) )
       {
          /* count the number of variables in the potential new constraint  a * consdata0 + b * consdata1 */
-         actvarweight = diffidx0minus1weight + diffidx1minus0weight;
-         actnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
-         actscalarsum = ABS(a) + ABS(b);
-         betterscalarsum = (actscalarsum < bestscalarsum);
+         varweight = diffidx0minus1weight + diffidx1minus0weight;
+         nvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
+         scalarsum = ABS(a) + ABS(b);
+         betterscalarsum = (scalarsum < bestscalarsum);
          for( i = 0; i < nvarscommon
-                 && (actvarweight < bestvarweight || (actvarweight == bestvarweight && betterscalarsum)); ++i )
+                 && (varweight < bestvarweight || (varweight == bestvarweight && betterscalarsum)); ++i )
          {
             aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
             if( !SCIPisZero(scip, aggrcoef) )
             {
-               actvarweight += getVarWeight(consdata0->vars[commonidx0[i]]);
-               actnvars++;
+               varweight += getVarWeight(consdata0->vars[commonidx0[i]]);
+               nvars++;
             }
          }
-         if( actvarweight < bestvarweight || (actvarweight == bestvarweight && betterscalarsum) )
+         if( varweight < bestvarweight || (varweight == bestvarweight && betterscalarsum) )
          {
             bestv = v;
-            bestvarweight = actvarweight;
-            bestnvars = actnvars;
-            bestscalarsum = actscalarsum;
+            bestvarweight = varweight;
+            bestnvars = nvars;
+            bestscalarsum = scalarsum;
          }
       }
    }

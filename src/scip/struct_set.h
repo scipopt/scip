@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.11 2004/02/04 17:27:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.12 2004/02/05 14:12:44 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -86,7 +86,7 @@ struct Set
    NODESEL**        nodesels;           /**< node selectors */
    int              nnodesels;          /**< number of node selectors */
    int              nodeselssize;       /**< size of nodesels array */
-   NODESEL*         actnodesel;         /**< currently used node selector, or NULL if invalid */
+   NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    BRANCHRULE**     branchrules;        /**< branching rules */
    int              nbranchrules;       /**< number of branching rules */
    int              branchrulessize;    /**< size of branchrules array */

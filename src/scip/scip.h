@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.106 2004/02/04 17:27:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.107 2004/02/05 14:12:41 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -793,7 +793,7 @@ RETCODE SCIPsetNodeselMemsavePriority(
 
 /** returns the currently used node selector */
 extern
-NODESEL* SCIPgetActNodesel(
+NODESEL* SCIPgetNodesel(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -1828,29 +1828,29 @@ RETCODE SCIPsetConsChecked(
 
 /** checks, whether the LP was solved in the active node */
 extern
-Bool SCIPhasActnodeLP(
+Bool SCIPhasActNodeLP(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets solution status of actual LP */
+/** gets solution status of current LP */
 extern
 LPSOLSTAT SCIPgetLPSolstat(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets objective value of actual LP */
+/** gets objective value of current LP */
 extern
 Real SCIPgetLPObjval(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets pseudo objective value of the actual LP */
+/** gets pseudo objective value of the current LP */
 extern
 Real SCIPgetPseudoObjval(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets actual LP columns along with the actual number of LP columns */
+/** gets current LP columns along with the current number of LP columns */
 extern
 RETCODE SCIPgetLPColsData(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1858,19 +1858,19 @@ RETCODE SCIPgetLPColsData(
    int*             ncols               /**< pointer to store the number of LP columns, or NULL */
    );
 
-/** gets actual LP columns */
+/** gets current LP columns */
 extern
 COL** SCIPgetLPCols(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets actual number of LP columns */
+/** gets current number of LP columns */
 extern
 int SCIPgetNLPCols(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets actual LP rows along with the actual number of LP rows */
+/** gets current LP rows along with the current number of LP rows */
 extern
 RETCODE SCIPgetLPRowsData(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1878,13 +1878,13 @@ RETCODE SCIPgetLPRowsData(
    int*             nrows               /**< pointer to store the number of LP rows, or NULL */
    );
 
-/** gets actual LP rows */
+/** gets current LP rows */
 extern
 ROW** SCIPgetLPRows(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets actual number of LP rows */
+/** gets current number of LP rows */
 extern
 int SCIPgetNLPRows(
    SCIP*            scip                /**< SCIP data structure */
@@ -1947,7 +1947,7 @@ RETCODE SCIPcalcMIR(
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
    );
 
-/** writes actual LP to a file */
+/** writes current LP to a file */
 extern
 RETCODE SCIPwriteLP(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1972,7 +1972,7 @@ RETCODE SCIPstartDive(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** quits LP diving and resets bounds and objective values of columns to the actual node's values */
+/** quits LP diving and resets bounds and objective values of columns to the current node's values */
 extern
 RETCODE SCIPendDive(
    SCIP*            scip                /**< SCIP data structure */
@@ -2179,14 +2179,14 @@ Real SCIPgetRowLPFeasibility(
    ROW*             row                 /**< LP row */
    );
 
-/** returns the activity of a row for the actual pseudo solution */
+/** returns the activity of a row for the current pseudo solution */
 extern
 Real SCIPgetRowPseudoActivity(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */
    );
 
-/** returns the feasibility of a row for the actual pseudo solution */
+/** returns the feasibility of a row for the current pseudo solution */
 extern
 Real SCIPgetRowPseudoFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2258,7 +2258,7 @@ RETCODE SCIPpoolCut(
    ROW*             row                 /**< cutting plane to add */
    );
 
-/** gets actual number of rows in the global cut pool */
+/** gets current number of rows in the global cut pool */
 extern
 int SCIPgetPoolsize(
    SCIP*            scip                /**< SCIP data structure */
@@ -2367,7 +2367,7 @@ RETCODE SCIPcreateSol(
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates a primal solution, initialized to the actual LP solution */
+/** creates a primal solution, initialized to the current LP solution */
 extern
 RETCODE SCIPcreateLPSol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2375,7 +2375,7 @@ RETCODE SCIPcreateLPSol(
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates a primal solution, initialized to the actual pseudo solution */
+/** creates a primal solution, initialized to the current pseudo solution */
 extern
 RETCODE SCIPcreatePseudoSol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2383,9 +2383,9 @@ RETCODE SCIPcreatePseudoSol(
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates a primal solution, initialized to the actual solution */
+/** creates a primal solution, initialized to the current solution */
 extern
-RETCODE SCIPcreateActSol(
+RETCODE SCIPcreateCurrentSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol,                /**< pointer to store the solution */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -2398,23 +2398,23 @@ RETCODE SCIPfreeSol(
    SOL**            sol                 /**< pointer to the solution */
    );
 
-/** links a primal solution to the actual LP solution */
+/** links a primal solution to the current LP solution */
 extern
 RETCODE SCIPlinkLPSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
    );
 
-/** links a primal solution to the actual pseudo solution */
+/** links a primal solution to the current pseudo solution */
 extern
 RETCODE SCIPlinkPseudoSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
    );
 
-/** links a primal solution to the actual LP or pseudo solution */
+/** links a primal solution to the current LP or pseudo solution */
 extern
-RETCODE SCIPlinkActSol(
+RETCODE SCIPlinkCurrentSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
    );
@@ -2461,11 +2461,11 @@ RETCODE SCIPincSolVal(
    Real             incval              /**< increment for solution value of variable */
    );
 
-/** returns value of variable in primal CIP solution, or in actual LP/pseudo solution */
+/** returns value of variable in primal CIP solution, or in current LP/pseudo solution */
 extern
 Real SCIPgetSolVal(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    VAR*             var                 /**< variable to get value for */
    );
 
@@ -2473,24 +2473,24 @@ Real SCIPgetSolVal(
 extern
 RETCODE SCIPgetSolVals(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    int              nvars,              /**< number of variables to get solution value for */
    VAR**            vars,               /**< array with variables to get value for */
    Real*            vals                /**< array to store solution values of variables */
    );
 
-/** returns objective value of primal CIP solution, or actual LP/pseudo objective value */
+/** returns objective value of primal CIP solution, or current LP/pseudo objective value */
 extern
 Real SCIPgetSolObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol                 /**< primal solution, or NULL for actual LP/pseudo objective value */
+   SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
-/** returns transformed objective value of primal CIP solution, or transformed actual LP/pseudo objective value */
+/** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value */
 extern
 Real SCIPgetSolTransObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol                 /**< primal solution, or NULL for actual LP/pseudo objective value */
+   SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
 /** maps original space objective value into transformed objective value */
@@ -2844,7 +2844,7 @@ int SCIPgetNPriceRounds(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** get actual number of variables in the pricing store */
+/** get current number of variables in the pricing store */
 extern
 int SCIPgetNPricevars(
    SCIP*            scip                /**< SCIP data structure */
@@ -2868,7 +2868,7 @@ int SCIPgetNSepaRounds(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** get actual number of cuts in the cut store */
+/** get current number of cuts in the cut store */
 extern
 int SCIPgetNCuts(
    SCIP*            scip                /**< SCIP data structure */
@@ -2894,7 +2894,7 @@ Longint SCIPgetNConflictsFound(
 
 /** gets depth of active node, or -1 if no active node exists */
 extern
-int SCIPgetActDepth(
+int SCIPgetDepth(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2904,7 +2904,7 @@ int SCIPgetMaxDepth(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets actual plunging depth (succ. times, a child was selected as next node) */
+/** gets current plunging depth (succ. times, a child was selected as next node) */
 extern
 int SCIPgetPlungeDepth(
    SCIP*            scip                /**< SCIP data structure */
@@ -3670,7 +3670,7 @@ RETCODE SCIPensureBlockMemoryArray_call(
    SCIP*            scip,               /**< SCIP data structure */
    void**           arrayptr,           /**< pointer to dynamically sized array */
    size_t           elemsize,           /**< size in bytes of each element in array */
-   int*             arraysize,          /**< pointer to actual array size */
+   int*             arraysize,          /**< pointer to current array size */
    int              minsize             /**< required minimal array size */
    );
 

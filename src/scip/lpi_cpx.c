@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.53 2004/02/04 17:27:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.54 2004/02/05 14:12:37 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -90,7 +90,7 @@ struct LPi
 {
    CPXLPptr         cpxlp;              /**< CPLEX LP pointer */
    int              solstat;            /**< solution status of last optimization call */
-   CPXPARAM         cpxparam;           /**< actual parameter values for this LP */
+   CPXPARAM         cpxparam;           /**< current parameter values for this LP */
    char*            larray;             /**< array with 'L' entries for changing lower bounds */
    char*            uarray;             /**< array with 'U' entries for changing upper bounds */
    char*            senarray;           /**< array for storing row senses */
@@ -121,7 +121,7 @@ struct LPiState
 
 static CPXENVptr    cpxenv = NULL;      /**< CPLEX environment */
 static CPXPARAM     defparam;           /**< default CPLEX parameters */
-static CPXPARAM     actparam;           /**< actual CPLEX parameters in the environment */
+static CPXPARAM     curparam;           /**< current CPLEX parameters in the environment */
 static int          numlp = 0;          /**< number of open LP objects */
 
 
@@ -382,9 +382,9 @@ void checkParameterValues(void)
    
    getParameterValues(&par);
    for( i = 0; i < NUMINTPARAM; ++i )
-      assert(actparam.intparval[i] == par.intparval[i]);
+      assert(curparam.intparval[i] == par.intparval[i]);
    for( i = 0; i < NUMDBLPARAM; ++i )
-      assert(actparam.dblparval[i] == par.dblparval[i]);
+      assert(curparam.dblparval[i] == par.dblparval[i]);
 #endif
 }
 
@@ -398,18 +398,18 @@ RETCODE setParameterValues(const CPXPARAM* cpxparam)
    
    for( i = 0; i < NUMINTPARAM; ++i )
    {
-      if( actparam.intparval[i] != cpxparam->intparval[i] )
+      if( curparam.intparval[i] != cpxparam->intparval[i] )
       {
-         actparam.intparval[i] = cpxparam->intparval[i];
-         CHECK_ZERO( CPXsetintparam(cpxenv, intparam[i], actparam.intparval[i]) );
+         curparam.intparval[i] = cpxparam->intparval[i];
+         CHECK_ZERO( CPXsetintparam(cpxenv, intparam[i], curparam.intparval[i]) );
       }
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
    {
-      if( actparam.dblparval[i] != cpxparam->dblparval[i] )
+      if( curparam.dblparval[i] != cpxparam->dblparval[i] )
       {
-         actparam.dblparval[i] = cpxparam->dblparval[i];
-         CHECK_ZERO( CPXsetdblparam(cpxenv, dblparam[i], actparam.dblparval[i]) );
+         curparam.dblparval[i] = cpxparam->dblparval[i];
+         CHECK_ZERO( CPXsetdblparam(cpxenv, dblparam[i], curparam.dblparval[i]) );
       }
    }
 
@@ -706,7 +706,7 @@ RETCODE SCIPlpiCreate(
 
       /* get default parameter values */
       getParameterValues(&defparam);
-      copyParameterValues(&actparam, &defparam);
+      copyParameterValues(&curparam, &defparam);
    }
    assert(cpxenv != NULL);
 
@@ -1817,7 +1817,7 @@ Bool SCIPlpiIsOptimal(
    return (lpi->solstat == CPX_STAT_OPTIMAL);
 }
 
-/** returns TRUE iff actual LP basis is stable */
+/** returns TRUE iff current LP basis is stable */
 Bool SCIPlpiIsStable(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1977,7 +1977,7 @@ RETCODE SCIPlpiGetDualfarkas(
 /**@name LP Basis Methods */
 /**@{ */
 
-/** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
+/** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 RETCODE SCIPlpiGetBase(
    LPI*             lpi,                /**< LP interface structure */
    int*             cstat,              /**< array to store column basis status, or NULL */
@@ -1998,7 +1998,7 @@ RETCODE SCIPlpiGetBase(
    return SCIP_OKAY;
 }
 
-/** sets actual basis status for columns and rows */
+/** sets current basis status for columns and rows */
 RETCODE SCIPlpiSetBase(
    LPI*             lpi,                /**< LP interface structure */
    int*             cstat,              /**< array with column basis status */

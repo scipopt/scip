@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.29 2004/02/04 17:27:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.30 2004/02/05 14:12:35 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -759,7 +759,7 @@ RETCODE processWatchedVars(
       {
          /* fixed remaining variable to one and disable constraint */
          debugMessage("single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
-            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetActDepth(scip));
+            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetDepth(scip));
          CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons) ); /* provide cons for conflict analysis */
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
@@ -993,7 +993,7 @@ RETCODE enforcePseudo(
    Bool addcut;
    Bool mustcheck;
 
-   assert(!SCIPhasActnodeLP(scip));
+   assert(!SCIPhasActNodeLP(scip));
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
@@ -1190,7 +1190,7 @@ DECL_CONSSEPA(consSepaLogicor)
    /**@todo further cuts of logic or constraints */
 
    /* step 3: if no cuts were found and we are in the root node, separate remaining constraints */
-   if( SCIPgetActDepth(scip) == 0 )
+   if( SCIPgetDepth(scip) == 0 )
    {
       for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
       {
@@ -1227,7 +1227,7 @@ RETCODE branchLP(
    Real* usescores;
    Real maxvarusefac;
    Real minvarusefac;
-   Real actusescore;
+   Real usescore;
    Real branchweight;
    Real solval;
    int varindex;
@@ -1274,8 +1274,8 @@ RETCODE branchLP(
       neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
       if( posuse + neguse > 0 )
       {
-         actusescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
-         for( j = nbranchcands; j > 0 && actusescore > usescores[j-1]; --j )
+         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
+         for( j = nbranchcands; j > 0 && usescore > usescores[j-1]; --j )
          {
             branchcands[j] = branchcands[j-1];
             usescores[j] = usescores[j-1];
@@ -1291,7 +1291,7 @@ RETCODE branchLP(
          }
          else
             branchcands[j] = var;
-         usescores[j] = actusescore;
+         usescores[j] = usescore;
          nbranchcands++;
       }
    }
@@ -1394,7 +1394,7 @@ RETCODE branchPseudo(
    Real* usescores;
    Real maxvarusefac;
    Real minvarusefac;
-   Real actusescore;
+   Real usescore;
    int varindex;
    int npseudocands;
    int maxnbranchcands;
@@ -1441,10 +1441,10 @@ RETCODE branchPseudo(
       neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
       if( posuse + neguse > 0 )
       {
-         actusescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
-         if( nbranchcands < maxnbranchcands || actusescore > usescores[nbranchcands-1] )
+         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
+         if( nbranchcands < maxnbranchcands || usescore > usescores[nbranchcands-1] )
          {
-            for( j = MIN(nbranchcands, maxnbranchcands-1); j > 0 && actusescore > usescores[j-1]; --j )
+            for( j = MIN(nbranchcands, maxnbranchcands-1); j > 0 && usescore > usescores[j-1]; --j )
             {
                branchcands[j] = branchcands[j-1];
                usescores[j] = usescores[j-1];
@@ -1460,7 +1460,7 @@ RETCODE branchPseudo(
             }
             else
                branchcands[j] = var;
-            usescores[j] = actusescore;
+            usescores[j] = usescore;
             if( nbranchcands < maxnbranchcands )
                nbranchcands++;
          }
@@ -1711,7 +1711,7 @@ DECL_CONSPROP(consPropLogicor)
    }
 
    /* step 2: every 10th propagation, propagate all obsolete logic or constraints */
-   if( SCIPgetActDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
+   if( SCIPgetDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
    {
       for( c = nusefulconss; c < nconss && !cutoff; ++c )
       {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.35 2004/02/04 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.36 2004/02/05 14:12:35 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -77,13 +77,13 @@
 #define DISP_POSI_MEMUSED       1500
 #define DISP_STRI_MEMUSED       TRUE
 
-#define DISP_NAME_ACTDEPTH      "actdepth"
-#define DISP_DESC_ACTDEPTH      "depth of actual node"
-#define DISP_HEAD_ACTDEPTH      "depth"
-#define DISP_WIDT_ACTDEPTH      5
-#define DISP_PRIO_ACTDEPTH      500
-#define DISP_POSI_ACTDEPTH      2000
-#define DISP_STRI_ACTDEPTH      TRUE
+#define DISP_NAME_DEPTH         "depth"
+#define DISP_DESC_DEPTH         "depth of current node"
+#define DISP_HEAD_DEPTH         "depth"
+#define DISP_WIDT_DEPTH         5
+#define DISP_PRIO_DEPTH         500
+#define DISP_POSI_DEPTH         2000
+#define DISP_STRI_DEPTH         TRUE
 
 #define DISP_NAME_MAXDEPTH      "maxdepth"
 #define DISP_DESC_MAXDEPTH      "maximal depth of all processed nodes"
@@ -109,29 +109,29 @@
 #define DISP_POSI_CONSS         3100
 #define DISP_STRI_CONSS         TRUE
 
-#define DISP_NAME_ACTCONSS      "actconss"
-#define DISP_DESC_ACTCONSS      "number of enabled constraints in actual node"
-#define DISP_HEAD_ACTCONSS      "acons"
-#define DISP_WIDT_ACTCONSS      5
-#define DISP_PRIO_ACTCONSS      70
-#define DISP_POSI_ACTCONSS      3200
-#define DISP_STRI_ACTCONSS      TRUE
+#define DISP_NAME_CURCONSS      "curconss"
+#define DISP_DESC_CURCONSS      "number of enabled constraints in current node"
+#define DISP_HEAD_CURCONSS      "ccons"
+#define DISP_WIDT_CURCONSS      5
+#define DISP_PRIO_CURCONSS      70
+#define DISP_POSI_CURCONSS      3200
+#define DISP_STRI_CURCONSS      TRUE
 
-#define DISP_NAME_ACTCOLS       "actcols"
-#define DISP_DESC_ACTCOLS       "number of LP columns in actual node"
-#define DISP_HEAD_ACTCOLS       "cols"
-#define DISP_WIDT_ACTCOLS       5
-#define DISP_PRIO_ACTCOLS       100
-#define DISP_POSI_ACTCOLS       3300
-#define DISP_STRI_ACTCOLS       TRUE
+#define DISP_NAME_CURCOLS       "curcols"
+#define DISP_DESC_CURCOLS       "number of LP columns in current node"
+#define DISP_HEAD_CURCOLS       "cols"
+#define DISP_WIDT_CURCOLS       5
+#define DISP_PRIO_CURCOLS       100
+#define DISP_POSI_CURCOLS       3300
+#define DISP_STRI_CURCOLS       TRUE
 
-#define DISP_NAME_ACTROWS       "actrows"
-#define DISP_DESC_ACTROWS       "number of LP rows in actual node"
-#define DISP_HEAD_ACTROWS       "rows"
-#define DISP_WIDT_ACTROWS       5
-#define DISP_PRIO_ACTROWS       110
-#define DISP_POSI_ACTROWS       3400
-#define DISP_STRI_ACTROWS       TRUE
+#define DISP_NAME_CURROWS       "currows"
+#define DISP_DESC_CURROWS       "number of LP rows in current node"
+#define DISP_HEAD_CURROWS       "rows"
+#define DISP_WIDT_CURROWS       5
+#define DISP_PRIO_CURROWS       110
+#define DISP_POSI_CURROWS       3400
+#define DISP_STRI_CURROWS       TRUE
 
 #define DISP_NAME_CUTS          "cuts"
 #define DISP_DESC_CUTS          "total number of cuts applied to the LPs"
@@ -142,7 +142,7 @@
 #define DISP_STRI_CUTS          TRUE
 
 #define DISP_NAME_SEPAROUNDS    "separounds"
-#define DISP_DESC_SEPAROUNDS    "number of separation rounds performed at the actual node"
+#define DISP_DESC_SEPAROUNDS    "number of separation rounds performed at the current node"
 #define DISP_HEAD_SEPAROUNDS    "sepa"
 #define DISP_WIDT_SEPAROUNDS    4
 #define DISP_PRIO_SEPAROUNDS    10
@@ -173,13 +173,13 @@
 #define DISP_POSI_STRONGBRANCHS 5000
 #define DISP_STRI_STRONGBRANCHS TRUE
 
-#define DISP_NAME_ACTDUALBOUND  "actdualbound"
-#define DISP_DESC_ACTDUALBOUND  "dual bound of actual node"
-#define DISP_HEAD_ACTDUALBOUND  "actdualbound"
-#define DISP_WIDT_ACTDUALBOUND  14
-#define DISP_PRIO_ACTDUALBOUND  50
-#define DISP_POSI_ACTDUALBOUND  7000
-#define DISP_STRI_ACTDUALBOUND  TRUE
+#define DISP_NAME_CURDUALBOUND  "curdualbound"
+#define DISP_DESC_CURDUALBOUND  "dual bound of current node"
+#define DISP_HEAD_CURDUALBOUND  "curdualbound"
+#define DISP_WIDT_CURDUALBOUND  14
+#define DISP_PRIO_CURDUALBOUND  50
+#define DISP_POSI_CURDUALBOUND  7000
+#define DISP_STRI_CURDUALBOUND  TRUE
 
 #define DISP_NAME_AVGDUALBOUND  "avgdualbound"
 #define DISP_DESC_AVGDUALBOUND  "average dual bound of all unprocessed nodes"
@@ -291,13 +291,13 @@ DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputActdepth)
+DECL_DISPOUTPUT(SCIPdispOutputDepth)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTDEPTH) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_DEPTH) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetActDepth(scip), DISP_WIDT_ACTDEPTH);
+   SCIPdispDecimal(file, (Longint)SCIPgetDepth(scip), DISP_WIDT_DEPTH);
 
    return SCIP_OKAY;
 }
@@ -339,13 +339,13 @@ DECL_DISPOUTPUT(SCIPdispOutputVars)
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputActconss)
+DECL_DISPOUTPUT(SCIPdispOutputCurconss)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCONSS) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCONSS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNEnabledConss(scip), DISP_WIDT_ACTCONSS);
+   SCIPdispDecimal(file, (Longint)SCIPgetNEnabledConss(scip), DISP_WIDT_CURCONSS);
 
    return SCIP_OKAY;
 }
@@ -363,25 +363,25 @@ DECL_DISPOUTPUT(SCIPdispOutputConss)
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputActcols)
+DECL_DISPOUTPUT(SCIPdispOutputCurcols)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCOLS) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCOLS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNLPCols(scip), DISP_WIDT_ACTCOLS);
+   SCIPdispDecimal(file, (Longint)SCIPgetNLPCols(scip), DISP_WIDT_CURCOLS);
 
    return SCIP_OKAY;
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputActrows)
+DECL_DISPOUTPUT(SCIPdispOutputCurrows)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTROWS) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURROWS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNLPRows(scip), DISP_WIDT_ACTROWS);
+   SCIPdispDecimal(file, (Longint)SCIPgetNLPRows(scip), DISP_WIDT_CURROWS);
 
    return SCIP_OKAY;
 }
@@ -447,10 +447,10 @@ DECL_DISPOUTPUT(SCIPdispOutputStrongbranchs)
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputActdualbound)
+DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTDUALBOUND) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURDUALBOUND) == 0);
    assert(scip != NULL);
 
    fprintf(file, "%13.6e ", SCIPgetLocalDualbound(scip));
@@ -551,9 +551,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MEMUSED, DISP_DESC_MEMUSED, DISP_HEAD_MEMUSED,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputMemused, NULL, 
                   DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDEPTH, DISP_DESC_ACTDEPTH, DISP_HEAD_ACTDEPTH,
-                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActdepth, NULL, 
-                  DISP_WIDT_ACTDEPTH, DISP_PRIO_ACTDEPTH, DISP_POSI_ACTDEPTH, DISP_STRI_ACTDEPTH) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_DEPTH, DISP_DESC_DEPTH, DISP_HEAD_DEPTH,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputDepth, NULL, 
+                  DISP_WIDT_DEPTH, DISP_PRIO_DEPTH, DISP_POSI_DEPTH, DISP_STRI_DEPTH) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MAXDEPTH, DISP_DESC_MAXDEPTH, DISP_HEAD_MAXDEPTH,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputMaxdepth, NULL, 
                   DISP_WIDT_MAXDEPTH, DISP_PRIO_MAXDEPTH, DISP_POSI_MAXDEPTH, DISP_STRI_MAXDEPTH) );
@@ -563,15 +563,15 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CONSS, DISP_DESC_CONSS, DISP_HEAD_CONSS,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputConss, NULL, 
                   DISP_WIDT_CONSS, DISP_PRIO_CONSS, DISP_POSI_CONSS, DISP_STRI_CONSS) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCONSS, DISP_DESC_ACTCONSS, DISP_HEAD_ACTCONSS,
-                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActconss, NULL, 
-                  DISP_WIDT_ACTCONSS, DISP_PRIO_ACTCONSS, DISP_POSI_ACTCONSS, DISP_STRI_ACTCONSS) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCOLS, DISP_DESC_ACTCOLS, DISP_HEAD_ACTCOLS,
-                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActcols, NULL, 
-                  DISP_WIDT_ACTCOLS, DISP_PRIO_ACTCOLS, DISP_POSI_ACTCOLS, DISP_STRI_ACTCOLS) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTROWS, DISP_DESC_ACTROWS, DISP_HEAD_ACTROWS,
-                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActrows, NULL, 
-                  DISP_WIDT_ACTROWS, DISP_PRIO_ACTROWS, DISP_POSI_ACTROWS, DISP_STRI_ACTROWS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CURCONSS, DISP_DESC_CURCONSS, DISP_HEAD_CURCONSS,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputCurconss, NULL, 
+                  DISP_WIDT_CURCONSS, DISP_PRIO_CURCONSS, DISP_POSI_CURCONSS, DISP_STRI_CURCONSS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CURCOLS, DISP_DESC_CURCOLS, DISP_HEAD_CURCOLS,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputCurcols, NULL, 
+                  DISP_WIDT_CURCOLS, DISP_PRIO_CURCOLS, DISP_POSI_CURCOLS, DISP_STRI_CURCOLS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CURROWS, DISP_DESC_CURROWS, DISP_HEAD_CURROWS,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputCurrows, NULL, 
+                  DISP_WIDT_CURROWS, DISP_PRIO_CURROWS, DISP_POSI_CURROWS, DISP_STRI_CURROWS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CUTS, DISP_DESC_CUTS, DISP_HEAD_CUTS,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputCuts, NULL, 
                   DISP_WIDT_CUTS, DISP_PRIO_CUTS, DISP_POSI_CUTS, DISP_STRI_CUTS) );
@@ -587,9 +587,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_STRONGBRANCHS, DISP_DESC_STRONGBRANCHS, DISP_HEAD_STRONGBRANCHS,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputStrongbranchs, NULL, 
                   DISP_WIDT_STRONGBRANCHS, DISP_PRIO_STRONGBRANCHS, DISP_POSI_STRONGBRANCHS, DISP_STRI_STRONGBRANCHS) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDUALBOUND, DISP_DESC_ACTDUALBOUND, DISP_HEAD_ACTDUALBOUND,
-                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActdualbound, NULL, 
-                  DISP_WIDT_ACTDUALBOUND, DISP_PRIO_ACTDUALBOUND, DISP_POSI_ACTDUALBOUND, DISP_STRI_ACTDUALBOUND) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CURDUALBOUND, DISP_DESC_CURDUALBOUND, DISP_HEAD_CURDUALBOUND,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputCurdualbound, NULL, 
+                  DISP_WIDT_CURDUALBOUND, DISP_PRIO_CURDUALBOUND, DISP_POSI_CURDUALBOUND, DISP_STRI_CURDUALBOUND) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_AVGDUALBOUND, DISP_DESC_AVGDUALBOUND, DISP_HEAD_AVGDUALBOUND,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputAvgdualbound, NULL, 
                   DISP_WIDT_AVGDUALBOUND, DISP_PRIO_AVGDUALBOUND, DISP_POSI_AVGDUALBOUND, DISP_STRI_AVGDUALBOUND) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.31 2004/02/04 17:27:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.32 2004/02/05 14:12:41 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -205,7 +205,7 @@ RETCODE SCIPsepaExec(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    SEPASTORE*       sepastore,          /**< separation storage */
-   int              actdepth,           /**< depth of active node */
+   int              depth,              /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -215,10 +215,10 @@ RETCODE SCIPsepaExec(
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(stat != NULL);
-   assert(actdepth >= 0);
+   assert(depth >= 0);
    assert(result != NULL);
 
-   if( (actdepth == 0 && sepa->freq == 0) || (sepa->freq > 0 && actdepth % sepa->freq == 0) )
+   if( (depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) )
    {
       int oldncutsfound;
       int ncutsfound;

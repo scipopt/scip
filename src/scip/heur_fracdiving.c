@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.3 2004/02/04 17:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.4 2004/02/05 14:12:36 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -45,9 +45,9 @@
 
 #define DEFAULT_DIVESTARTDEPTH      0.5 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT       0.1 /**< maximal fraction of diving LP iterations compared to total iteration number */
-#define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound)
+#define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
                                          *   where diving is performed */
-#define DEFAULT_MAXDIVEAVGQUOT      4.0 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+#define DEFAULT_MAXDIVEAVGQUOT      4.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                          *   where diving is performed */
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 8.0 /**< maximal AVGQUOT when no solution was found yet */
@@ -60,9 +60,9 @@ struct HeurData
    SOL*             sol;                /**< working solution */
    Real             divestartdepth;     /**< minimal relative depth to start diving */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
-   Real             maxdiveubquot;      /**< maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound)
+   Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
                                          *   where diving is performed */
-   Real             maxdiveavgquot;     /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+   Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                          *   where diving is performed */
    Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet */
    Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet */
@@ -178,7 +178,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    Longint nsolsfound;
    int nlpcands;
    int startnlpcands;
-   int actdepth;
+   int depth;
    int maxdepth;
    int maxdivedepth;
    int divedepth;
@@ -189,7 +189,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActnodeLP(scip));
+   assert(SCIPhasActNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 
@@ -206,9 +206,9 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* don't try to dive, if we are in the higher fraction of the tree, given by divestartdepth */
-   actdepth = SCIPgetActDepth(scip);
+   depth = SCIPgetDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
-   if( actdepth < heurdata->divestartdepth*maxdepth )
+   if( depth < heurdata->divestartdepth*maxdepth )
       return SCIP_OKAY;
 
    /* don't try to dive, if we took too many LP iterations during diving */
@@ -250,7 +250,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
    debugMessage("(node %lld) executing fracdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
-      SCIPgetNodenum(scip), SCIPgetActDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
+      SCIPgetNodenum(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective limits and fractional variables exist, but
     * - if the last rounding was in a direction, that never destroys feasibility, we continue in any case
@@ -516,11 +516,11 @@ RETCODE SCIPincludeHeurFracdiving(
                   &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "heuristics/fracdiving/maxdiveubquot",
-                  "maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
+                  "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
                   &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "heuristics/fracdiving/maxdiveavgquot", 
-                  "maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
+                  "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
                   &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_INVALID, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "heuristics/fracdiving/maxdiveubquotnosol", 

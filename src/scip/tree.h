@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.52 2004/02/04 17:27:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.53 2004/02/05 14:12:44 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -64,7 +64,7 @@ RETCODE SCIPnodeFree(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** increases the reference counter of the LP state in the fork or subroot node */
@@ -79,7 +79,7 @@ extern
 RETCODE SCIPnodeReleaseLPIState(
    NODE*            node,               /**< fork/subroot node */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** activates a leaf node */
@@ -90,7 +90,7 @@ RETCODE SCIPnodeActivate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
@@ -120,7 +120,7 @@ RETCODE SCIPnodeDisableCons(
    CONS*            cons                /**< constraint to disable */
    );
 
-/** adds bound change to actual node, child or sibling of actual node; if possible, adjusts bound to integral value */
+/** adds bound change to current node, child or sibling of current node; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
@@ -128,7 +128,7 @@ RETCODE SCIPnodeAddBoundchg(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
@@ -173,7 +173,7 @@ RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    );
 
@@ -183,7 +183,7 @@ RETCODE SCIPtreeFree(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** returns the node selector associated with the given node priority queue */
@@ -207,7 +207,7 @@ RETCODE SCIPtreeCutoff(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
@@ -218,7 +218,7 @@ RETCODE SCIPtreeLoadLP(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
 /** branches on a variable; if solution value x' is fractional, two child nodes are created
@@ -231,7 +231,7 @@ RETCODE SCIPtreeBranchVar(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable to branch on */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.18 2004/02/04 17:27:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.19 2004/02/05 14:12:36 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -389,7 +389,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActnodeLP(scip));
+   assert(SCIPhasActNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 
@@ -441,7 +441,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    sol = heurdata->sol;
    assert(sol != NULL);
 
-   /* copy the actual LP solution to the working solution */
+   /* copy the current LP solution to the working solution */
    CHECK_OKAY( SCIPlinkLPSol(scip, sol) );
 
    /* first step: round all roundable fractional columns in the corresponding direction */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lp.h,v 1.2 2004/02/04 17:27:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lp.h,v 1.3 2004/02/05 14:12:45 bzfpfend Exp $"
 
 /**@file   type_lp.h
  * @brief  type definitions for LP management
@@ -59,7 +59,7 @@ typedef enum SideType SIDETYPE;
 
 typedef struct Col COL;                 /**< column of an LP */
 typedef struct Row ROW;                 /**< row of an LP */
-typedef struct Lp LP;                   /**< actual LP data */
+typedef struct Lp LP;                   /**< current LP data */
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.17 2004/02/04 17:27:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.18 2004/02/05 14:12:39 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -247,7 +247,7 @@ Bool SCIPparamGetBool(
    if( param->data.boolparam.valueptr != NULL )
       return *param->data.boolparam.valueptr;
    else
-      return param->data.boolparam.actvalue;
+      return param->data.boolparam.curvalue;
 }
 
 /** returns default value of Bool parameter */
@@ -272,7 +272,7 @@ int SCIPparamGetInt(
    if( param->data.intparam.valueptr != NULL )
       return *param->data.intparam.valueptr;
    else
-      return param->data.intparam.actvalue;
+      return param->data.intparam.curvalue;
 }
 
 /** returns minimal value of int parameter */
@@ -319,7 +319,7 @@ Longint SCIPparamGetLongint(
    if( param->data.longintparam.valueptr != NULL )
       return *param->data.longintparam.valueptr;
    else
-      return param->data.longintparam.actvalue;
+      return param->data.longintparam.curvalue;
 }
 
 /** returns minimal value of longint parameter */
@@ -366,7 +366,7 @@ Real SCIPparamGetReal(
    if( param->data.realparam.valueptr != NULL )
       return *param->data.realparam.valueptr;
    else
-      return param->data.realparam.actvalue;
+      return param->data.realparam.curvalue;
 }
 
 /** returns minimal value of real parameter */
@@ -413,7 +413,7 @@ char SCIPparamGetChar(
    if( param->data.charparam.valueptr != NULL )
       return *param->data.charparam.valueptr;
    else
-      return param->data.charparam.actvalue;
+      return param->data.charparam.curvalue;
 }
 
 /** returns default value of char parameter */
@@ -438,7 +438,7 @@ char* SCIPparamGetString(
    if( param->data.stringparam.valueptr != NULL )
       return *param->data.stringparam.valueptr;
    else
-      return param->data.stringparam.actvalue;
+      return param->data.stringparam.curvalue;
 }
 
 /** returns default value of String parameter */
@@ -464,11 +464,11 @@ RETCODE SCIPparamSetBool(
    /* check, if value is possible for the parameter */
    CHECK_OKAY_QUIET( paramCheckBool(param, value) );
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    if( param->data.boolparam.valueptr != NULL )
       *param->data.boolparam.valueptr = value;
    else
-      param->data.boolparam.actvalue = value;
+      param->data.boolparam.curvalue = value;
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
@@ -491,11 +491,11 @@ RETCODE SCIPparamSetInt(
    /* check, if value is possible for the parameter */
    CHECK_OKAY_QUIET( paramCheckInt(param, value) );
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    if( param->data.intparam.valueptr != NULL )
       *param->data.intparam.valueptr = value;
    else
-      param->data.intparam.actvalue = value;
+      param->data.intparam.curvalue = value;
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
@@ -518,11 +518,11 @@ RETCODE SCIPparamSetLongint(
    /* check, if value is possible for the parameter */
    CHECK_OKAY_QUIET( paramCheckLongint(param, value) );
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    if( param->data.longintparam.valueptr != NULL )
       *param->data.longintparam.valueptr = value;
    else
-      param->data.longintparam.actvalue = value;
+      param->data.longintparam.curvalue = value;
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
@@ -545,11 +545,11 @@ RETCODE SCIPparamSetReal(
    /* check, if value is possible for the parameter */
    CHECK_OKAY_QUIET( paramCheckReal(param, value) );
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    if( param->data.realparam.valueptr != NULL )
       *param->data.realparam.valueptr = value;
    else
-      param->data.realparam.actvalue = value;
+      param->data.realparam.curvalue = value;
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
@@ -572,11 +572,11 @@ RETCODE SCIPparamSetChar(
    /* check, if value is possible for the parameter */
    CHECK_OKAY_QUIET( paramCheckChar(param, value) );
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    if( param->data.charparam.valueptr != NULL )
       *param->data.charparam.valueptr = value;
    else
-      param->data.charparam.actvalue = value;
+      param->data.charparam.curvalue = value;
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
@@ -599,7 +599,7 @@ RETCODE SCIPparamSetString(
    /* check, if value is possible for the parameter */
    CHECK_OKAY_QUIET( paramCheckString(param, value) );
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    if( param->data.stringparam.valueptr != NULL )
    {
       freeMemoryArrayNull(param->data.stringparam.valueptr);
@@ -607,8 +607,8 @@ RETCODE SCIPparamSetString(
    }
    else
    {
-      freeMemoryArrayNull(&param->data.stringparam.actvalue);
-      duplicateMemoryArray(&param->data.stringparam.actvalue, value, strlen(value)+1);
+      freeMemoryArrayNull(&param->data.stringparam.curvalue);
+      duplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1);
    }
 
    /* call the parameter's change information method */
@@ -898,7 +898,7 @@ RETCODE paramCreateString(
    (*param)->paramtype = SCIP_PARAMTYPE_STRING;
    (*param)->data.stringparam.valueptr = valueptr;
    ALLOC_OKAY( duplicateMemoryArray(&(*param)->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
-   (*param)->data.stringparam.actvalue = NULL;
+   (*param)->data.stringparam.curvalue = NULL;
 
    CHECK_OKAY( SCIPparamSetString(*param, NULL, defaultvalue) );
 
@@ -929,7 +929,7 @@ void paramFree(
       freeMemoryArray(&(*param)->data.stringparam.defaultvalue);
       if( (*param)->data.stringparam.valueptr == NULL )
       {
-         freeMemoryArray(&(*param)->data.stringparam.actvalue);
+         freeMemoryArray(&(*param)->data.stringparam.curvalue);
       }
       else
       {
@@ -1458,7 +1458,7 @@ RETCODE SCIPparamsetGetBool(
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* get the actual parameter's value */
+   /* get the parameter's current value */
    *value = SCIPparamGetBool(param);
 
    return SCIP_OKAY;
@@ -1483,7 +1483,7 @@ RETCODE SCIPparamsetGetInt(
    if( param->paramtype != SCIP_PARAMTYPE_INT )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* get the actual parameter's value */
+   /* get the parameter's current value */
    *value = SCIPparamGetInt(param);
 
    return SCIP_OKAY;
@@ -1508,7 +1508,7 @@ RETCODE SCIPparamsetGetLongint(
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* get the actual parameter's value */
+   /* get the parameter's current value */
    *value = SCIPparamGetLongint(param);
 
    return SCIP_OKAY;
@@ -1533,7 +1533,7 @@ RETCODE SCIPparamsetGetReal(
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* get the actual parameter's value */
+   /* get the parameter's current value */
    *value = SCIPparamGetReal(param);
 
    return SCIP_OKAY;
@@ -1558,7 +1558,7 @@ RETCODE SCIPparamsetGetChar(
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* get the actual parameter's value */
+   /* get the parameter's current value */
    *value = SCIPparamGetChar(param);
 
    return SCIP_OKAY;
@@ -1583,7 +1583,7 @@ RETCODE SCIPparamsetGetString(
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* get the actual parameter's value */
+   /* get the parameter's current value */
    *value = SCIPparamGetString(param);
 
    return SCIP_OKAY;
@@ -1608,7 +1608,7 @@ RETCODE SCIPparamsetSetBool(
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    CHECK_OKAY( SCIPparamSetBool(param, scip, value) );
    
    return SCIP_OKAY;
@@ -1633,7 +1633,7 @@ RETCODE SCIPparamsetSetInt(
    if( param->paramtype != SCIP_PARAMTYPE_INT )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    CHECK_OKAY( SCIPparamSetInt(param, scip, value) );
 
    return SCIP_OKAY;
@@ -1658,7 +1658,7 @@ RETCODE SCIPparamsetSetLongint(
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    CHECK_OKAY( SCIPparamSetLongint(param, scip, value) );
 
    return SCIP_OKAY;
@@ -1683,7 +1683,7 @@ RETCODE SCIPparamsetSetReal(
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    CHECK_OKAY( SCIPparamSetReal(param, scip, value) );
 
    return SCIP_OKAY;
@@ -1708,7 +1708,7 @@ RETCODE SCIPparamsetSetChar(
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    CHECK_OKAY( SCIPparamSetChar(param, scip, value) );
 
    return SCIP_OKAY;
@@ -1733,7 +1733,7 @@ RETCODE SCIPparamsetSetString(
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
       return SCIP_PARAMETERWRONGTYPE;
 
-   /* set the actual parameter's value */
+   /* set the parameter's current value */
    CHECK_OKAY( SCIPparamSetString(param, scip, value) );
 
    return SCIP_OKAY;

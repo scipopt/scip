@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.32 2004/02/04 17:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.33 2004/02/05 14:12:42 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -159,6 +159,8 @@ void SCIPstatReset(
    stat->npssolsfound = 0;
    stat->lastdispnode = 0;
    stat->lastdivenode = 0;
+   stat->nboundchgs = 0;
+   stat->nholechgs = 0;
    stat->ndisplines = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
@@ -202,7 +204,7 @@ void SCIPstatUpdateMemsaveMode(
             "(node %lld) switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (Real)memused/(1024.0*1024.0), set->memlimit);
          stat->memsavemode = TRUE;
-         set->actnodesel = NULL;
+         set->nodesel = NULL;
       }
       else if( stat->memsavemode && memused < 0.5 * set->memsavefac * set->memlimit * 1024.0 * 1024.0 )
       {
@@ -211,7 +213,7 @@ void SCIPstatUpdateMemsaveMode(
             "(node %lld) switching to standard mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (Real)memused/(1024.0*1024.0), set->memlimit);
          stat->memsavemode = FALSE;
-         set->actnodesel = NULL;
+         set->nodesel = NULL;
       }
    }
    else

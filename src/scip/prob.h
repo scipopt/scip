@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.28 2004/02/04 17:27:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.29 2004/02/05 14:12:40 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -68,7 +68,7 @@ RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's the original problem) */
+   LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    );
 
 /** transform problem data into normalized form */
@@ -78,7 +78,7 @@ RETCODE SCIPprobTransform(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PROB**           target              /**< pointer to target problem data structure */
    );
@@ -103,7 +103,7 @@ RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
+   LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var                 /**< variable to add */
    );
@@ -147,7 +147,7 @@ RETCODE SCIPprobDelCons(
    CONS*            cons                /**< constraint to remove */
    );
 
-/** resets maximum number of constraints to current number of constraints, remembers actual number of constraints
+/** resets maximum number of constraints to current number of constraints, remembers current number of constraints
  *  as starting number of constraints
  */
 extern
@@ -274,10 +274,10 @@ extern
 Bool SCIPprobAllColsInLP(
    PROB*            prob,               /**< problem data */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp                  /**< current LP data */
    );
 
-/** displays actual pseudo solution */
+/** displays current pseudo solution */
 extern
 void SCIPprobPrintPseudoSol(
    PROB*            prob,               /**< problem data */
