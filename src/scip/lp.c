@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.163 2004/11/17 15:53:57 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.164 2004/11/26 14:22:12 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3606,12 +3606,12 @@ RETCODE rowScale(
    debugMessage("scaled row <%s> (integral: %d)\n", row->name, row->integral);
    debug(SCIProwPrint(row, NULL));
 
-   //#ifdef DEBUG
+#ifdef DEBUG
    /* check integrality status of row */
    for( c = 0; c < row->len && SCIPcolIsIntegral(row->cols[c]) && SCIPsetIsIntegral(set, row->vals[c]); ++c )
    {}
    assert(row->integral == (c == row->len));
-   //#endif
+#endif
 
    return SCIP_OKAY;
 }
@@ -7475,8 +7475,8 @@ void substituteMIRRow(
 
       /* calculate slack variable's coefficient a°_r in the cut */
       if( row->integral
-         && ((slacksign[r] == +1 && SCIPsetIsIntegral(set, row->rhs - row->constant))
-            || (slacksign[r] == -1 && SCIPsetIsIntegral(set, row->lhs - row->constant))) )
+         && ((slacksign[r] == +1 && SCIPsetIsFeasIntegral(set, row->rhs - row->constant))
+            || (slacksign[r] == -1 && SCIPsetIsFeasIntegral(set, row->lhs - row->constant))) )
       {
          /* slack variable is always integral:
           *    a°_r = a~_r = down(a'_r)                      , if f_r <= f0
@@ -8304,8 +8304,8 @@ void substituteStrongCGRow(
 
       /* calculate slack variable's coefficient a°_r in the cut */
       if( row->integral
-         && ((slacksign[r] == +1 && SCIPsetIsIntegral(set, row->rhs - row->constant))
-            || (slacksign[r] == -1 && SCIPsetIsIntegral(set, row->lhs - row->constant))) )
+         && ((slacksign[r] == +1 && SCIPsetIsFeasIntegral(set, row->rhs - row->constant))
+            || (slacksign[r] == -1 && SCIPsetIsFeasIntegral(set, row->lhs - row->constant))) )
       {
          /* slack variable is always integral: */
          downar = SCIPsetFloor(set, ar);

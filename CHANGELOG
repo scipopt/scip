@@ -9,6 +9,7 @@ interface:
 - if more than one result code applies to a plugin's execution, it should return the one that is higher in the
   call's documentation list
 - new method SCIPaddCoefKnapsack() in knapsack constraint handler
+- removed SCIPisFeasible(); use !SCIPisFeasNegative() instead
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm
@@ -31,6 +32,8 @@ fixed bugs:
 - removed bug with infinite solving loop if LP solving is turned off
 - removed bug in knapsack presolver
 - removed bug with aborted solving in root node (e.g. due to time limit) that is tagged to be restarted
+- changed numerics for integrality check of coefficients (fixed bug with accumulated errors in rows s.t. the
+  row's activity is no longer integral although the row is marked being integer)
 
 
 SCIP version 0.77

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.230 2004/11/24 17:46:20 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.231 2004/11/26 14:22:12 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4417,8 +4417,8 @@ RETCODE SCIPgetVarStrongbranch(
          && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
          && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
       {
-         if( (downcutoff && SCIPsetCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
-            || (upcutoff && SCIPsetFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
+         if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
+            || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
          {
             CHECK_OKAY( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
                   scip->transprob, scip->tree, scip->lp, col, downconflict, upconflict) );
@@ -5539,7 +5539,7 @@ RETCODE SCIPfixVar(
 
    *fixed = FALSE;
 
-   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsIntegral(scip->set, fixedval))
+   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(scip->set, fixedval))
       || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
       || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
    {
@@ -5660,7 +5660,7 @@ RETCODE aggregateActiveIntVars(
    assert(b != 0);
 
    /* check, if right hand side is integral */
-   if( !SCIPsetIsIntegral(scip->set, rhs) )
+   if( !SCIPsetIsFeasIntegral(scip->set, rhs) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -5806,9 +5806,9 @@ RETCODE aggregateActiveVars(
       agg = 0;
    else if( SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT )
       agg = 1;
-   else if( SCIPsetIsIntegral(scip->set, scalary/scalarx) )
+   else if( SCIPsetIsFeasIntegral(scip->set, scalary/scalarx) )
       agg = 0;
-   else if( SCIPsetIsIntegral(scip->set, scalarx/scalary) )
+   else if( SCIPsetIsFeasIntegral(scip->set, scalarx/scalary) )
       agg = 1;
    if( agg == 1 )
    {
@@ -5839,7 +5839,7 @@ RETCODE aggregateActiveVars(
       /* check aggregation for integer feasibility */
       if( SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINUOUS
          && SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINUOUS
-         && SCIPsetIsIntegral(scip->set, scalar) && !SCIPsetIsIntegral(scip->set, constant) )
+         && SCIPsetIsFeasIntegral(scip->set, scalar) && !SCIPsetIsFeasIntegral(scip->set, constant) )
       {
          *infeasible = TRUE;
          return SCIP_OKAY;
@@ -6088,8 +6088,8 @@ Real SCIPgetVarPseudocostScore(
 
    CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   downsol = SCIPsetCeil(scip->set, solval-1.0);
-   upsol = SCIPsetFloor(scip->set, solval+1.0);
+   downsol = SCIPsetFeasCeil(scip->set, solval-1.0);
+   upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
    pscostdown = SCIPvarGetPseudocost(var, scip->stat, downsol-solval);
    pscostup = SCIPvarGetPseudocost(var, scip->stat, upsol-solval);
 
@@ -6112,8 +6112,8 @@ Real SCIPgetVarPseudocostScoreCurrentRun(
 
    CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   downsol = SCIPsetCeil(scip->set, solval-1.0);
-   upsol = SCIPsetFloor(scip->set, solval+1.0);
+   downsol = SCIPsetFeasCeil(scip->set, solval-1.0);
+   upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
    pscostdown = SCIPvarGetPseudocostCurrentRun(var, scip->stat, downsol-solval);
    pscostup = SCIPvarGetPseudocostCurrentRun(var, scip->stat, upsol-solval);
 
@@ -11361,6 +11361,77 @@ Bool SCIPisFeasNegative(
    return SCIPsetIsFeasNegative(scip->set, val);
 }
 
+/** checks, if value is integral within the LP feasibility bounds */
+/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
+Bool SCIPisIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   if( scip->set->misc_exactsolve )
+      return (val == SCIPsetFeasFloor(scip->set, val));
+   else
+      return SCIPsetIsFeasIntegral(scip->set, val);
+}
+
+/** checks, if given fractional part is smaller than feastol */
+/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
+Bool SCIPisFracIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   if( scip->set->misc_exactsolve )
+      return (val == 0.0);
+   else
+      return SCIPsetIsFeasFracIntegral(scip->set, val);
+}
+
+/** rounds value + feasibility tolerance down to the next integer */
+/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
+Real SCIPfloor(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetFeasFloor(scip->set, val);
+}
+
+/** rounds value - feasibility tolerance up to the next integer */
+/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
+Real SCIPceil(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetFeasCeil(scip->set, val);
+}
+
+/** returns fractional part of value, i.e. x - floor(x) */
+/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
+Real SCIPfrac(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to return fractional part for */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetFeasFrac(scip->set, val);
+}
+
 /** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
 Bool SCIPisLbBetter(
    SCIP*            scip,               /**< SCIP data structure */
@@ -11525,84 +11596,6 @@ Bool SCIPisInfinity(
    assert(scip->set != NULL);
 
    return SCIPsetIsInfinity(scip->set, val);
-}
-
-/** checks, if value is non-negative within the LP feasibility bounds */
-Bool SCIPisFeasible(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetIsFeasible(scip->set, val);
-}
-
-/** checks, if value is integral within the LP feasibility bounds */
-Bool SCIPisIntegral(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   if( scip->set->misc_exactsolve )
-      return (val == SCIPsetFloor(scip->set, val));
-   else
-      return SCIPsetIsIntegral(scip->set, val);
-}
-
-/** checks, if given fractional part is smaller than feastol */
-Bool SCIPisFracIntegral(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   if( scip->set->misc_exactsolve )
-      return (val == 0.0);
-   else
-      return SCIPsetIsFracIntegral(scip->set, val);
-}
-
-/** rounds value + feasibility tolerance down to the next integer */
-Real SCIPfloor(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetFloor(scip->set, val);
-}
-
-/** rounds value - feasibility tolerance up to the next integer */
-Real SCIPceil(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetCeil(scip->set, val);
-}
-
-/** returns fractional part of value, i.e. x - floor(x) */
-Real SCIPfrac(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to return fractional part for */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetFrac(scip->set, val);
 }
 
 #endif

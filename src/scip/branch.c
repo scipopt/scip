@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.54 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.55 2004/11/26 14:22:11 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -212,8 +212,8 @@ RETCODE branchcandCalcLPCands(
          vartype = SCIPvarGetType(var);
          if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
          {
-            frac = SCIPsetFrac(set, primsol);
-            if( !SCIPsetIsFracIntegral(set, frac) )
+            frac = SCIPsetFeasFrac(set, primsol);
+            if( !SCIPsetIsFeasFracIntegral(set, frac) )
             {
                assert(branchcand->nlpcands < branchcand->lpcandssize);
 
@@ -346,8 +346,8 @@ RETCODE SCIPbranchcandGetPseudoCands(
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
             || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
             || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
-         assert(SCIPsetIsIntegral(set, SCIPvarGetLbLocal(var)));
-         assert(SCIPsetIsIntegral(set, SCIPvarGetUbLocal(var)));
+         assert(SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+         assert(SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
          assert(SCIPsetIsLE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
          if( SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )

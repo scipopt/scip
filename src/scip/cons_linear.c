@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.133 2004/11/24 15:29:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.134 2004/11/26 14:22:11 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2402,15 +2402,15 @@ RETCODE checkCons(
       feasibility, consdata->lhs, consdata->rhs, consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol, SCIPhasCurrentNodeLP(scip));
 
-   if( SCIPisFeasible(scip, feasibility) )
-   {
-      *violated = FALSE;
-      CHECK_OKAY( SCIPincConsAge(scip, cons) );
-   }
-   else
+   if( SCIPisFeasNegative(scip, feasibility) )
    {
       *violated = TRUE;
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+   }
+   else
+   {
+      *violated = FALSE;
+      CHECK_OKAY( SCIPincConsAge(scip, cons) );
    }
 
    return SCIP_OKAY;

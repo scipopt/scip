@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.123 2004/11/24 17:46:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.124 2004/11/26 14:22:13 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -275,8 +275,8 @@ RETCODE varAddLbchginfo(
 {
    assert(var != NULL);
    assert(SCIPsetIsLT(set, oldbound, newbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, oldbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, newbound));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, oldbound));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, oldbound, 0.0));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 1.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
@@ -343,8 +343,8 @@ RETCODE varAddUbchginfo(
 {
    assert(var != NULL);
    assert(SCIPsetIsGT(set, oldbound, newbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, oldbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, newbound));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, oldbound));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, oldbound, 1.0));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
@@ -890,7 +890,7 @@ RETCODE SCIPdomchgMakeStatic(
          int i;
          for( i = 0; i < (*domchg)->domchgbound.nboundchgs; ++i )
             assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
-               || SCIPsetIsIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
+               || SCIPsetIsFeasIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
       }
 #endif
    }
@@ -1148,7 +1148,7 @@ RETCODE SCIPdomchgAddBoundchg(
    assert(stat != NULL);
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, newbound));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
       || SCIPsetIsEQ(set, newbound, boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : 0.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
@@ -1214,7 +1214,7 @@ RETCODE SCIPdomchgAddBoundchg(
       int i;
       for( i = 0; i < (*domchg)->domchgbound.nboundchgs; ++i )
          assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
-            || SCIPsetIsIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
+            || SCIPsetIsFeasIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
    }
 #endif
 
@@ -1780,7 +1780,7 @@ Real adjustedLb(
    if( SCIPsetIsInfinity(set, -lb) )
       return -SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      return SCIPsetCeil(set, lb);
+      return SCIPsetFeasCeil(set, lb);
    else if( SCIPsetIsZero(set, lb) )
       return 0.0;
    else
@@ -1798,7 +1798,7 @@ Real adjustedUb(
    if( SCIPsetIsInfinity(set, ub) )
       return SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      return SCIPsetFloor(set, ub);
+      return SCIPsetFeasFloor(set, ub);
    else if( SCIPsetIsZero(set, ub) )
       return 0.0;
    else
@@ -2930,7 +2930,7 @@ RETCODE SCIPvarFix(
    
    debugMessage("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
 
-   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsIntegral(set, fixedval))
+   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->locdom.ub) )
    {

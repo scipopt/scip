@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.12 2004/11/23 16:09:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.13 2004/11/26 14:22:12 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -626,7 +626,7 @@ RETCODE separateCons(
    if( !SCIProwIsInLP(consdata->row) )
    {
       feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
-      if( !SCIPisFeasible(scip, feasibility) )
+      if( SCIPisFeasNegative(scip, feasibility) )
       {
          CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
          *separated = TRUE;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.23 2004/11/23 16:09:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.24 2004/11/26 14:22:12 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -798,7 +798,7 @@ RETCODE separateCons(
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
          feasibility = SCIPgetRowLPFeasibility(scip, consdata->rows[r]);
-         if( !SCIPisFeasible(scip, feasibility) )
+         if( SCIPisFeasNegative(scip, feasibility) )
          {
             CHECK_OKAY( SCIPaddCut(scip, consdata->rows[r], FALSE) );
             *separated = TRUE;

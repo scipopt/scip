@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.69 2004/11/24 17:46:20 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.70 2004/11/26 14:22:12 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1199,7 +1199,7 @@ RETCODE separateCons(
 
          assert(!SCIProwIsInLP(consdata->row));
          feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
-         addcut = !SCIPisFeasible(scip, feasibility);
+         addcut = SCIPisFeasNegative(scip, feasibility);
       }
       else
          addcut = !checkCons(scip, consdata, NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.64 2004/11/23 16:09:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.65 2004/11/26 14:22:12 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -799,7 +799,7 @@ RETCODE separateCons(
             
             assert(!SCIProwIsInLP(consdata->row));
             feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
-            addcut = !SCIPisFeasible(scip, feasibility);
+            addcut = SCIPisFeasNegative(scip, feasibility);
          }
       }
       else

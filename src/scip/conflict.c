@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.77 2004/11/17 12:53:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.78 2004/11/26 14:22:11 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3984,8 +3984,10 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(lp->flushed);
    assert(lp->solved);
    assert(col != NULL);
-   assert((SCIPsetIsGE(set, col->strongbranchdown, lp->cutoffbound) && SCIPsetCeil(set, col->primsol-1.0) >= col->lb - 0.5)
-      || (SCIPsetIsGE(set, col->strongbranchup, lp->cutoffbound) && SCIPsetFloor(set, col->primsol+1.0) <= col->ub + 0.5));
+   assert((SCIPsetIsGE(set, col->strongbranchdown, lp->cutoffbound)
+         && SCIPsetFeasCeil(set, col->primsol-1.0) >= col->lb - 0.5)
+      || (SCIPsetIsGE(set, col->strongbranchup, lp->cutoffbound)
+         && SCIPsetFeasFloor(set, col->primsol+1.0) <= col->ub + 0.5));
 
    if( downconflict != NULL )
       *downconflict = FALSE;
@@ -4024,7 +4026,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    /* is down branch infeasible? */
    if( col->strongbranchdown >= lp->cutoffbound )
    {
-      newub = SCIPsetCeil(set, col->primsol-1.0);
+      newub = SCIPsetFeasCeil(set, col->primsol-1.0);
       if( newub >= col->lb - 0.5 )
       {
          debugMessage("analyzing conflict on infeasible downwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
@@ -4073,7 +4075,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    /* is up branch infeasible? */
    if( col->strongbranchup >= lp->cutoffbound )
    {
-      newlb = SCIPsetFloor(set, col->primsol+1.0);
+      newlb = SCIPsetFeasFloor(set, col->primsol+1.0);
       if( newlb <= col->ub + 0.5 )
       {
          debugMessage("analyzing conflict on infeasible upwards strongbranch for variable <%s>[%g,%g] in depth %d\n",

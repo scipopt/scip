@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.184 2004/11/24 17:46:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.185 2004/11/26 14:22:12 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4626,13 +4626,6 @@ Bool SCIPisInfinity(
    Real             val                 /**< value to be compared against infinity */
    );
 
-/** checks, if value is non-negative within the LP feasibility bounds */
-extern
-Bool SCIPisFeasible(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   );
-
 /** checks, if value is integral within the LP feasibility bounds */
 extern
 Bool SCIPisIntegral(
@@ -4674,6 +4667,7 @@ Real SCIPfrac(
  * speed up the algorithms.
  */
 
+#define SCIPisInfinity(scip, val)        SCIPsetIsInfinity((scip)->set, val)        
 #define SCIPisEQ(scip, val1, val2)       SCIPsetIsEQ((scip)->set, val1, val2)       
 #define SCIPisLT(scip, val1, val2)       SCIPsetIsLT((scip)->set, val1, val2)       
 #define SCIPisLE(scip, val1, val2)       SCIPsetIsLE((scip)->set, val1, val2)       
@@ -4700,6 +4694,12 @@ Real SCIPfrac(
 #define SCIPisFeasZero(scip, val)        SCIPsetIsFeasZero((scip)->set, val)        
 #define SCIPisFeasPositive(scip, val)    SCIPsetIsFeasPositive((scip)->set, val)    
 #define SCIPisFeasNegative(scip, val)    SCIPsetIsFeasNegative((scip)->set, val)    
+#define SCIPisIntegral(scip, val)        SCIPsetIsFeasIntegral((scip)->set, val)     /*???????????????????*/
+#define SCIPisFracIntegral(scip, val)    SCIPsetIsFeasFracIntegral((scip)->set, val) /*???????????????????*/   
+#define SCIPfloor(scip, val)             SCIPsetFeasFloor((scip)->set, val)          /*???????????????????*/
+#define SCIPceil(scip, val)              SCIPsetFeasCeil((scip)->set, val)           /*???????????????????*/
+#define SCIPfrac(scip, val)              SCIPsetFeasFrac((scip)->set, val)           /*???????????????????*/
+
                                                                            
 #define SCIPisLbBetter(scip, lb1, lb2)   SCIPsetIsLbBetter(scip->set, lb1, lb2)
 #define SCIPisUbBetter(scip, ub1, ub2)   SCIPsetIsUbBetter(scip->set, ub1, ub2)
@@ -4716,15 +4716,6 @@ Real SCIPfrac(
 #define SCIPisSumRelGT(scip, val1, val2) SCIPsetIsSumRelGT((scip)->set, val1, val2) 
 #define SCIPisSumRelGE(scip, val1, val2) SCIPsetIsSumRelGE((scip)->set, val1, val2) 
                                                                            
-#define SCIPisInfinity(scip, val)        SCIPsetIsInfinity((scip)->set, val)        
-#define SCIPisFeasible(scip, val)        SCIPsetIsFeasible((scip)->set, val)        
-#define SCIPisIntegral(scip, val)        SCIPsetIsIntegral((scip)->set, val)        
-#define SCIPisFracIntegral(scip, val)    SCIPsetIsFracIntegral((scip)->set, val)    
-
-#define SCIPfloor(scip, val)             SCIPsetFloor((scip)->set, val)             
-#define SCIPceil(scip, val)              SCIPsetCeil((scip)->set, val)              
-#define SCIPfrac(scip, val)              SCIPsetFrac((scip)->set, val)              
-
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.122 2004/11/17 15:53:59 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.123 2004/11/26 14:22:13 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -3202,8 +3202,8 @@ RETCODE SCIPtreeBranchVar(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
       || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
       || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
-   assert(SCIPsetIsIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    solval = SCIPvarGetSol(var, tree->focusnodehaslp);
@@ -3228,7 +3228,7 @@ RETCODE SCIPtreeBranchVar(
       return SCIP_INVALIDDATA;
    }
 
-   if( SCIPsetIsIntegral(set, solval) )
+   if( SCIPsetIsFeasIntegral(set, solval) )
    {
       Real fixval;
 
@@ -3236,8 +3236,8 @@ RETCODE SCIPtreeBranchVar(
        * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
        * as the deviation from the variable's root solution; evaluate x = x' first in any way
        */
-      fixval = SCIPsetCeil(set, solval);
-      assert(SCIPsetIsEQ(set, SCIPsetCeil(set, solval), SCIPsetFloor(set, solval)));
+      fixval = SCIPsetFeasCeil(set, solval);
+      assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), SCIPsetFeasFloor(set, solval)));
       
       debugMessage("pseudo branch on variable <%s> with value %g, priority %d\n", 
          SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var));
@@ -3287,17 +3287,17 @@ RETCODE SCIPtreeBranchVar(
          SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var));
       
       /* create child node with x <= floor(x') */
-      debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFloor(set, solval));
+      debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFeasFloor(set, solval));
       CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, downprio) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-            var, SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER, FALSE) );
+            var, SCIPsetFeasFloor(set, solval), SCIP_BOUNDTYPE_UPPER, FALSE) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x >= ceil(x') */
-      debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), SCIPsetCeil(set, solval));
+      debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), SCIPsetFeasCeil(set, solval));
       CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, -downprio) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                     var, SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER, FALSE) );
+            var, SCIPsetFeasCeil(set, solval), SCIP_BOUNDTYPE_LOWER, FALSE) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
    }
 

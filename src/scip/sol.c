@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.46 2004/11/17 14:47:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.47 2004/11/26 14:22:13 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -791,7 +791,7 @@ RETCODE SCIPsolRound(
       solval = solGetArrayVal(sol, var);
 
       /* if solution value is already integral, there is nothing to do */
-      if( SCIPsetIsIntegral(set, solval) )
+      if( SCIPsetIsFeasIntegral(set, solval) )
          continue;
 
       /* get rounding possibilities */
@@ -803,14 +803,14 @@ RETCODE SCIPsolRound(
       {
          /* we can round in both directions: round in objective function direction */
          if( SCIPvarGetObj(var) >= 0.0 )
-            solval = SCIPsetFloor(set, solval);
+            solval = SCIPsetFeasFloor(set, solval);
          else
-            solval = SCIPsetCeil(set, solval);
+            solval = SCIPsetFeasCeil(set, solval);
       }
       else if( mayrounddown )
-         solval = SCIPsetFloor(set, solval);
+         solval = SCIPsetFeasFloor(set, solval);
       else if( mayroundup )
-         solval = SCIPsetCeil(set, solval);
+         solval = SCIPsetFeasCeil(set, solval);
       else
          break;
 

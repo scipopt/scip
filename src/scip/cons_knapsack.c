@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.73 2004/11/24 17:46:19 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.74 2004/11/26 14:22:11 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1640,7 +1640,7 @@ DECL_CONSSEPA(consSepaKnapsack)
    nrounds = SCIPgetNSepaRounds(scip);
    
    debugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
-		nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
+      nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
 
    /* only call the separator a given number of times at each node */
    if( (depth == 0 && conshdlrdata->maxroundsroot >= 0 && nrounds >= conshdlrdata->maxroundsroot)
