@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.131 2004/03/10 17:00:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.132 2004/03/12 08:54:46 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2754,9 +2754,11 @@ RETCODE SCIPupdateNodeLowerbound(
 static
 RETCODE presolve(
    SCIP*            scip,               /**< SCIP data structure */
-   RESULT*          result              /**< result of presolving */
+   Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
+   RESULT result;
    Bool aborted;
    Real abortfac;
    int maxnrounds;
@@ -2781,7 +2783,8 @@ RETCODE presolve(
    int lastnchgsides;
    int i;
 
-   assert(result != NULL);
+   assert(unbounded != NULL);
+   assert(infeasible != NULL);
 
    nrounds = 0;
    nfixedvars = 0;
@@ -2801,7 +2804,7 @@ RETCODE presolve(
    abortfac = scip->set->presolabortfac;
 
    aborted = SCIPsolveIsStopped(scip->set, scip->stat);
-   *result = SCIP_DIDNOTRUN;
+   result = SCIP_DIDNOTRUN;
 
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
@@ -2821,19 +2824,19 @@ RETCODE presolve(
       SCIPsetSortPresols(scip->set);
 
       /* call included presolvers */
-      for( i = 0; i < scip->set->npresols && *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED; ++i )
+      for( i = 0; i < scip->set->npresols && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
       {
          CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, nrounds, 
                         &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
-                        &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, result) );
+                        &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
       }
 
       /* call presolve methods of constraint handlers */
-      for( i = 0; i < scip->set->nconshdlrs && *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED; ++i )
+      for( i = 0; i < scip->set->nconshdlrs && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
       {
          CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->transprob, nrounds,
                         &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
-                        &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, result) );
+                        &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
       }
 
       /* check, if we should abort presolving due to not enough changes in the last round */
@@ -2860,7 +2863,7 @@ RETCODE presolve(
       aborted = aborted || SCIPsolveIsStopped(scip->set, scip->stat);
 
       /* abort if problem is infeasible or unbounded */
-      aborted = aborted || (*result == SCIP_CUTOFF) || (*result == SCIP_UNBOUNDED);
+      aborted = aborted || (result == SCIP_CUTOFF) || (result == SCIP_UNBOUNDED);
 
       /* increase round number */
       nrounds++;
@@ -2881,6 +2884,10 @@ RETCODE presolve(
       " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
       nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
 
+   /* check for unboundness and infeasibility */
+   *unbounded = (result == SCIP_UNBOUNDED);
+   *infeasible = (result == SCIP_CUTOFF);
+
    return SCIP_OKAY;
 }
 
@@ -2890,6 +2897,8 @@ RETCODE SCIPpresolve(
    )
 {
    RESULT result;
+   Bool unbounded;
+   Bool infeasible;
    int h;
 
    CHECK_OKAY( checkStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -2935,12 +2944,14 @@ RETCODE SCIPpresolve(
    SCIPclockStart(scip->stat->presolvingtime, scip->set);
 
    /* presolve problem */
-   CHECK_OKAY( presolve(scip, &result) );
+   CHECK_OKAY( presolve(scip, &unbounded, &infeasible) );
 
    /* inform constraint handlers that presolving is finished and the branch and bound process starts now */
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrSolstart(scip->set->conshdlrs[h], scip) );
+      CHECK_OKAY( SCIPconshdlrSolstart(scip->set->conshdlrs[h], scip, &result) );
+      unbounded = unbounded || (result == SCIP_UNBOUNDED);
+      infeasible = infeasible || (result == SCIP_INFEASIBLE);
    }
 
    /* check, whether the objective value is always integral */
@@ -2963,7 +2974,22 @@ RETCODE SCIPpresolve(
    /* inform problem, that presolving is finished and the branch and bound process starts now */
    SCIPprobSolvingStarts(scip->transprob);
 
-   if( result != SCIP_CUTOFF && result != SCIP_UNBOUNDED )
+   if( infeasible )
+   {
+      /* print solution message */
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.\n");
+
+      /* switch stage to SOLVED */
+      scip->stage = SCIP_STAGE_SOLVED;
+   }
+   else if( unbounded )
+   {
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
+
+      /* switch stage to SOLVED */
+      scip->stage = SCIP_STAGE_SOLVED;
+   }
+   else
    {
       /* print presolved problem statistics */
       infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
@@ -2987,21 +3013,6 @@ RETCODE SCIPpresolve(
       {
          infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "objective value is always integral\n");
       }
-   }
-   else
-   {
-      /* print solution message */
-      if( result == SCIP_CUTOFF )
-      {
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.\n");
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
-      }
-
-      /* switch stage to SOLVED */
-      scip->stage = SCIP_STAGE_SOLVED;
    }
 
    /* display timing statistics */
@@ -3842,6 +3853,8 @@ RETCODE SCIPinferBinVar(
    CHECK_OKAY( checkStage(scip, "SCIPinferBinVar", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
 
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
@@ -3853,13 +3866,7 @@ RETCODE SCIPinferBinVar(
    /* check, if variable is already fixed */
    if( (lb > 0.5) || (ub < 0.5) )
    {
-      if( fixedval == (lb > 0.5) )
-      {
-         if( tightened != NULL )
-            *tightened = FALSE;
-      }
-      else
-         *infeasible = TRUE;
+      *infeasible = (fixedval == (lb < 0.5));
 
       return SCIP_OKAY;
    }

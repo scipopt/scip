@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.68 2004/03/08 18:05:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.69 2004/03/12 08:54:45 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1271,16 +1271,32 @@ RETCODE SCIPconshdlrExit(
 /** informs constraint handler that the presolving was finished and the branch and bound process is being started */
 RETCODE SCIPconshdlrSolstart(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*            scip,               /**< SCIP data structure */   
+   RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    /* call solution start method of constraint handler */
    if( conshdlr->conssolstart != NULL )
    {
-      CHECK_OKAY( conshdlr->conssolstart(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+      CHECK_OKAY( conshdlr->conssolstart(scip, conshdlr, conshdlr->conss, conshdlr->nconss, result) );
    }
+
+   /* evaluate result */
+   if( *result != SCIP_CUTOFF
+      && *result != SCIP_UNBOUNDED
+      && *result != SCIP_FEASIBLE )
+   {
+      errorMessage("solstart method of constraint handler <%s> returned invalid result <%d>\n", 
+         conshdlr->name, *result);
+      return SCIP_INVALIDRESULT;
+   }
+
+   /* update statistics */
    conshdlr->maxnconss = conshdlr->nconss;
    conshdlr->startnconss = conshdlr->nconss;
 

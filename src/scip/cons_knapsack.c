@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.19 2004/03/11 17:04:40 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.20 2004/03/12 08:54:45 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -194,10 +194,10 @@ static
 RETCODE dynProgKnapsack(
    SCIP*            scip,               /**< SCIP data structure */
    int              nitems,             /**< number of available items */
-   int*             items,              /**< item numbers, or NULL */
    int*             weights,            /**< item weights */
    Real*            profits,            /**< item profits */
    int              capacity,           /**< capacity of knapsack */
+   int*             items,              /**< item numbers, or NULL */
    int*             solitems,           /**< array to store items in solution, or NULL */
    int*             nonsolitems,        /**< array to store items not in solution, or NULL */
    int*             nsolitems,          /**< pointer to store number of items in solution, or NULL */
@@ -262,6 +262,7 @@ RETCODE dynProgKnapsack(
       }
       assert(*nsolitems + *nnonsolitems == nitems);
    }
+
    *solval = optvalues[IDX(nitems,capacity)];
 
    CHECK_OKAY( SCIPfreeBufferArray(scip, &optvalues) );
@@ -276,9 +277,9 @@ RETCODE liftCover(
    ROW*             row,                /**< cover inequality */
    CONS*            cons,               /**< knapsack constraint */
    int*             covervars,          /**< cover elements */
-   int*             noncovervars,       /**< noncover elements */
+   int*             noncovervars,       /**< non-cover elements */
    int              ncovervars,         /**< number of cover elements */
-   int              nnoncovervars       /**< number of noncover elements */
+   int              nnoncovervars       /**< number of non-cover elements */
    )
 {
    int* weights;
@@ -288,7 +289,6 @@ RETCODE liftCover(
    Real solval;
    Real beta;
    int weighti;
-
    int i;
 
    consdata = SCIPconsGetData(cons);
@@ -298,17 +298,17 @@ RETCODE liftCover(
    CHECK_OKAY( SCIPallocBufferArray(scip, &profits, nnoncovervars + ncovervars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &weights, nnoncovervars + ncovervars) );
 
-   for( i = 0; i < ncovervars; i++)
+   for( i = 0; i < ncovervars; i++ )
    {
       profits[i] = 1.0;
       weights[i] = consdata->weights[covervars[i]];
    }
 
-   for( i = 0; i < nnoncovervars; i++)
+   for( i = 0; i < nnoncovervars; i++ )
    {
       weighti = consdata->weights[noncovervars[i]];
-      CHECK_OKAY( dynProgKnapsack(scip, ncovervars+i, NULL, weights, profits, capacity - weighti, 
-                     NULL, NULL, NULL, NULL, &solval) ); 
+      CHECK_OKAY( dynProgKnapsack(scip, ncovervars+i, weights, profits, capacity - weighti, 
+                     NULL, NULL, NULL, NULL, NULL, &solval) ); 
       beta = ncovervars - 1 - solval;
       CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[noncovervars[i]], beta) );
       if( i != nnoncovervars - 1 )
@@ -415,8 +415,8 @@ RETCODE separateCovers(
       /* solve separation knapsack with dynamic programming */
       CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, consdata->nvars) );
       CHECK_OKAY( SCIPallocBufferArray(scip, &noncovervars, consdata->nvars) );
-      CHECK_OKAY( dynProgKnapsack(scip, nitems, items, weights, profits, capacity, 
-                     noncovervars, covervars, &nnoncovervars, &ncovervars, &transsol) ); 
+      CHECK_OKAY( dynProgKnapsack(scip, nitems, weights, profits, capacity, 
+                     items, noncovervars, covervars, &nnoncovervars, &ncovervars, &transsol) ); 
       
       /* generate cutting plane */
       infeasibility = transsol - nitems - nfixedones + 1.0 + solvalsum;
@@ -440,13 +440,14 @@ RETCODE separateCovers(
                coverweight += consdata->weights[fixedones[i]];
             }  
          }
+         assert(coverweight > consdata->capacity);
+
+         /* add variables with LP value zero to non-cover vars */
          for( i = 0; i < nfixedzeros; i++)
          {
             noncovervars[nnoncovervars] = fixedzeros[i];
             nnoncovervars++;
          }  
-      
-         assert(coverweight > consdata->capacity);
 
          /* create LP row */
          sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));

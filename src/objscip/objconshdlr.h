@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.7 2004/02/05 14:12:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.8 2004/03/12 08:54:46 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -127,9 +127,12 @@ public:
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       CONS**        conss,              /**< final array of constraints in transformed problem */
-      int           nconss              /**< final number of constraints in transformed problem */
+      int           nconss,             /**< final number of constraints in transformed problem */
+      RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {
+      assert(result != NULL);
+      *result = SCIP_FEASIBLE;
       return SCIP_OKAY;
    }
    

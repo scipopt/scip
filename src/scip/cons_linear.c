@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.88 2004/02/25 16:49:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.89 2004/03/12 08:54:45 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2634,6 +2634,8 @@ DECL_CONSSOLSTART(consSolstartLinear)
          CHECK_OKAY( SCIPdelCons(scip, conss[c]) );
       }
    }
+
+   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.4 2004/02/04 17:27:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.5 2004/03/12 08:54:46 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -118,7 +118,7 @@ DECL_CONSSOLSTART(consSolstartObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_solstart(scip, conshdlr, conss, nconss) );
+   CHECK_OKAY( conshdlrdata->objconshdlr->scip_solstart(scip, conshdlr, conss, nconss, result) );
 
    return SCIP_OKAY;
 }

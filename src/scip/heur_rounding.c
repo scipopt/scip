@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.20 2004/03/10 17:00:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.21 2004/03/12 08:54:46 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -51,6 +51,64 @@ struct HeurData
  * local methods
  */
 
+/** update row violation arrays after a row's activity value changed */
+static
+void updateViolations(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   ROW**            violrows,           /**< array with currently violated rows */
+   int*             violrowpos,         /**< position of LP rows in violrows array */
+   int*             nviolrows,          /**< pointer to the number of currently violated rows */
+   Real             oldactivity,        /**< old activity value of LP row */
+   Real             newactivity         /**< new activity value of LP row */
+   )
+{
+   Real lhs;
+   Real rhs;
+   Bool oldviol;
+   Bool newviol;
+
+   assert(violrows != NULL);
+   assert(violrowpos != NULL);
+   assert(nviolrows != NULL);
+
+   lhs = SCIProwGetLhs(row);
+   rhs = SCIProwGetRhs(row);
+   oldviol = (SCIPisFeasLT(scip, oldactivity, lhs) || SCIPisFeasGT(scip, oldactivity, rhs));
+   newviol = (SCIPisFeasLT(scip, newactivity, lhs) || SCIPisFeasGT(scip, newactivity, rhs));
+   if( oldviol != newviol )
+   {
+      int rowpos;
+      int violpos;
+      
+      rowpos = SCIProwGetLPPos(row);
+      assert(rowpos >= 0);
+
+      if( oldviol )
+      {
+         /* the row violation was repaired: remove row from violrows array, decrease violation count */
+         violpos = violrowpos[rowpos];
+         assert(0 <= violpos && violpos < *nviolrows);
+         assert(violrows[violpos] == row);
+         violrowpos[rowpos] = -1;
+         if( violpos != *nviolrows-1 )
+         {
+            violrows[violpos] = violrows[*nviolrows-1];
+            violrowpos[SCIProwGetLPPos(violrows[violpos])] = violpos;
+         }
+         (*nviolrows)--;
+      }
+      else
+      {
+         /* the row is now violated: add row to violrows array, increase violation count */
+         assert(violrowpos[rowpos] == -1);
+         violrows[*nviolrows] = row;
+         violrowpos[rowpos] = *nviolrows;
+         (*nviolrows)++;
+      }
+   }
+}
+
 /** update row activities after a variable's solution value changed */
 static
 RETCODE updateActivities(
@@ -73,8 +131,6 @@ RETCODE updateActivities(
    int r;
 
    assert(activities != NULL);
-   assert(violrows != NULL);
-   assert(violrowpos != NULL);
    assert(nviolrows != NULL);
    assert(0 <= *nviolrows && *nviolrows <= nlprows);
 
@@ -84,6 +140,11 @@ RETCODE updateActivities(
    colvals = SCIPcolGetVals(col);
    ncolrows = SCIPcolGetNNonz(col);
    assert(ncolrows == 0 || (colrows != NULL && colvals != NULL));
+   /**@todo This is awfully slow, because the loop runs over ALL non-zero coefficients of the column, not only the
+    *       ones that are currently in the LP. Solution: implement a SCIPcolGetLPRowInds() call, that returns an
+    *       int array with the positions of the LP rows in the column's rows- and vals- arrays. This array
+    *       should be cached and declared invalid if the LP is modified. (analoguosly for SCIProwGetLPColInds())
+    */
    for( r = 0; r < ncolrows; ++r )
    {
       ROW* row;
@@ -97,10 +158,6 @@ RETCODE updateActivities(
       {
          Real oldactivity;
          Real newactivity;
-         Real lhs;
-         Real rhs;
-         Bool oldviol;
-         Bool newviol;
          
          assert(SCIProwIsInLP(row));
          
@@ -110,37 +167,7 @@ RETCODE updateActivities(
          activities[rowpos] = newactivity;
 
          /* update row violation arrays */
-         lhs = SCIProwGetLhs(row);
-         rhs = SCIProwGetRhs(row);
-         oldviol = (SCIPisFeasLT(scip, oldactivity, lhs) || SCIPisFeasGT(scip, oldactivity, rhs));
-         newviol = (SCIPisFeasLT(scip, newactivity, lhs) || SCIPisFeasGT(scip, newactivity, rhs));
-         if( oldviol != newviol )
-         {
-            int violpos;
-            
-            if( oldviol )
-            {
-               /* the row violation was repaired: remove row from violrows array, decrease violation count */
-               violpos = violrowpos[rowpos];
-               assert(0 <= violpos && violpos < *nviolrows);
-               assert(violrows[violpos] == row);
-               violrowpos[rowpos] = -1;
-               if( violpos != *nviolrows-1 )
-               {
-                  violrows[violpos] = violrows[*nviolrows-1];
-                  violrowpos[SCIProwGetLPPos(violrows[violpos])] = violpos;
-               }
-               (*nviolrows)--;
-            }
-            else
-            {
-               /* the row is now violated: add row to violrows array, increase violation count */
-               assert(violrowpos[rowpos] == -1);
-               violrows[*nviolrows] = row;
-               violrowpos[rowpos] = *nviolrows;
-               (*nviolrows)++;
-            }
-         }
+         updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
       }            
    }
 

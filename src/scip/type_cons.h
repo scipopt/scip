@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.5 2004/03/08 18:05:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.6 2004/03/12 08:54:46 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -72,8 +72,16 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - conss           : final array of constraints in transformed problem
  *  - nconss          : final number of constraints in transformed problem
+ *
+ *  output:
+ *  - result          : pointer to store the result of the call
+ *
+ *  possible return values for *result:
+ *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
  */
-#define DECL_CONSSOLSTART(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+#define DECL_CONSSOLSTART(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
 
 /** frees specific constraint data
  *

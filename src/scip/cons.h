@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.59 2004/03/01 09:54:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.60 2004/03/12 08:54:45 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -115,7 +115,8 @@ RETCODE SCIPconshdlrExit(
 extern
 RETCODE SCIPconshdlrSolstart(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*            scip,               /**< SCIP data structure */   
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** calls LP initialization method of constraint handler to separate all initial constraints */
