@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.161 2004/09/02 09:55:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.162 2004/09/02 13:08:05 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -167,6 +167,12 @@ Bool SCIPisTransformed(
 /** returns whether the solution process should be provably correct */
 extern
 Bool SCIPisExactSolve(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns whether the user pressed CTRL-C to interrupt the solving process */
+extern
+Bool SCIPpressedCtrlC(
    SCIP*            scip                /**< SCIP data structure */
    );
 
