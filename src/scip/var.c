@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.78 2004/04/06 16:05:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.79 2004/04/07 14:48:29 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -818,6 +818,108 @@ RETCODE SCIPdomchgAddHolechg(
 
 
 /*
+ * methods for variable bounds
+ */
+
+/** creates a variable bounds data structure */
+static
+RETCODE vboundsCreate(
+   VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(vbounds != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, vbounds) );
+   (*vbounds)->vars = NULL;
+   (*vbounds)->coefs = NULL;
+   (*vbounds)->constants = NULL;
+   (*vbounds)->len = 0;
+   (*vbounds)->size = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees a variable bounds data structure */
+static
+void vboundsFree(
+   VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(vbounds != NULL);
+
+   if( *vbounds != NULL )
+   {
+      freeBlockMemoryArrayNull(memhdr, &(*vbounds)->vars, (*vbounds)->size);
+      freeBlockMemoryArrayNull(memhdr, &(*vbounds)->coefs, (*vbounds)->size);
+      freeBlockMemoryArrayNull(memhdr, &(*vbounds)->constants, (*vbounds)->size);
+      freeBlockMemory(memhdr, vbounds);
+   }
+}
+
+/** ensures, that variable bounds arrays can store at least num entries */
+static
+RETCODE vboundsEnsureSize(
+   VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(vbounds != NULL);
+   
+   /* create variable bounds data structure, if not yet existing */
+   if( *vbounds == NULL )
+   {
+      CHECK_OKAY( vboundsCreate(vbounds, memhdr) );
+   }
+   assert(*vbounds != NULL);
+   assert((*vbounds)->len <= (*vbounds)->size);
+
+   if( num > (*vbounds)->size )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*vbounds)->vars, (*vbounds)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*vbounds)->coefs, (*vbounds)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*vbounds)->constants, (*vbounds)->size, newsize) );
+      (*vbounds)->size = newsize;
+   }
+   assert(num <= (*vbounds)->size);
+
+   return SCIP_OKAY;
+}
+
+/** adds a variable bound to the variable bounds data structure */
+static
+RETCODE vboundsAdd(
+   VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable z    in x <= b*z + d  or  x >= b*z + d */
+   Real             coef,               /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
+   Real             constant            /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+   )
+{
+   assert(vbounds != NULL);
+
+   CHECK_OKAY( vboundsEnsureSize(vbounds, memhdr, set, (*vbounds)->len+1) );
+   assert(*vbounds != NULL);
+
+   (*vbounds)->vars[(*vbounds)->len] = var;
+   (*vbounds)->coefs[(*vbounds)->len] = coef;
+   (*vbounds)->constants[(*vbounds)->len] = constant;
+   (*vbounds)->len++;
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * methods for variables 
  */
 
@@ -905,6 +1007,8 @@ RETCODE varCreate(
    (*var)->locdom.holelist = NULL;
    (*var)->locdom.lb = lb;
    (*var)->locdom.ub = ub;
+   (*var)->vlbs = NULL;
+   (*var)->vubs = NULL;
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->branchpriority = 0;
@@ -1175,6 +1279,10 @@ RETCODE varFree(
       CHECK_OKAY( SCIPeventfilterFree(&(*var)->eventfilter, memhdr, set) );
    }
    assert((*var)->eventfilter == NULL);
+
+   /* free variable bounds data structures */
+   vboundsFree(&(*var)->vlbs, memhdr);
+   vboundsFree(&(*var)->vubs, memhdr);
 
    /* free branching and inference history entries */
    SCIPhistoryFree(&(*var)->history, memhdr);
@@ -1611,6 +1719,8 @@ RETCODE SCIPvarTransform(
    assert(SCIPvarGetStatus(origvar) == SCIP_VARSTATUS_ORIGINAL);
    assert(origvar->glbdom.lb == origvar->locdom.lb); /*lint !e777*/
    assert(origvar->glbdom.ub == origvar->locdom.ub); /*lint !e777*/
+   assert(origvar->vlbs == NULL);
+   assert(origvar->vubs == NULL);
    assert(transvar != NULL);
 
    /* check if variable is already transformed */
@@ -1785,7 +1895,11 @@ RETCODE SCIPvarFix(
       holelistFree(&var->locdom.holelist, memhdr);
       CHECK_OKAY( SCIPvarSetLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, fixedval) );
       CHECK_OKAY( SCIPvarSetUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, fixedval) );
-      
+
+      /* delete variable bounds information */
+      vboundsFree(&var->vlbs, memhdr);
+      vboundsFree(&var->vubs, memhdr);
+
       /* convert variable into fixed variable */
       var->varstatus = SCIP_VARSTATUS_FIXED; /*lint !e641*/
       
@@ -2026,11 +2140,16 @@ RETCODE SCIPvarAggregate(
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
+   VAR** vars;
+   Real* coefs;
+   Real* constants;
    Real obj;
    Real branchfactor;
    int branchpriority;
    int nlocksdown;
    int nlocksup;
+   int nvbds;
+   int i;
 
    assert(var != NULL);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
@@ -2092,6 +2211,35 @@ RETCODE SCIPvarAggregate(
 
    /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
    varAddRoundLocks(var, nlocksdown, nlocksup);
+
+   /* move the variable bounds to the aggregation variable:
+    *  - add all variable bounds again to the variable, thus adding it to the aggregated variable
+    *  - free the variable bounds data structures
+    */
+   if( var->vlbs != NULL )
+   {
+      nvbds = var->vlbs->len;
+      vars = var->vlbs->vars;
+      coefs = var->vlbs->coefs;
+      constants = var->vlbs->constants;
+      for( i = 0; i < nvbds; ++i )
+      {
+         CHECK_OKAY( SCIPvarAddVlb(var, memhdr, set, vars[i], coefs[i], constants[i]) );
+      }
+   }
+   if( var->vubs != NULL )
+   {
+      nvbds = var->vubs->len;
+      vars = var->vubs->vars;
+      coefs = var->vubs->coefs;
+      constants = var->vubs->constants;
+      for( i = 0; i < nvbds; ++i )
+      {
+         CHECK_OKAY( SCIPvarAddVub(var, memhdr, set, vars[i], coefs[i], constants[i]) );
+      }
+   }
+   vboundsFree(&var->vlbs, memhdr);
+   vboundsFree(&var->vubs, memhdr);
 
    /* update flags of aggregation variable */
    aggvar->removeable &= var->removeable;
@@ -2193,6 +2341,10 @@ RETCODE SCIPvarMultiaggregate(
 
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
       varAddRoundLocks(var, nlocksdown, nlocksup);
+
+      /* free the variable bounds data structures */
+      vboundsFree(&var->vlbs, memhdr);
+      vboundsFree(&var->vubs, memhdr);
 
       /* update flags and branching factors and priorities of aggregation variables */
       branchfactor = var->branchfactor;
@@ -3858,6 +4010,161 @@ RETCODE SCIPvarAddHoleLocal(
    return SCIP_OKAY;
 }
 
+/** informs variable x about a globally valid variable lower bound x >= b*z with integer variable z */
+RETCODE SCIPvarAddVlb(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
+   Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
+   Real             vlbconstant         /**< constant d    in x >= b*z + d */
+   )
+{
+   assert(var != NULL);
+   assert(vlbvar->varstatus == SCIP_VARSTATUS_COLUMN || vlbvar->varstatus == SCIP_VARSTATUS_LOOSE);
+   assert(vlbvar->vartype != SCIP_VARTYPE_CONTINUOUS);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      CHECK_OKAY( SCIPvarAddVlb(var->data.transvar, memhdr, set, vlbvar, vlbcoef, vlbconstant) );
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      CHECK_OKAY( vboundsAdd(&var->vlbs, memhdr, set, vlbvar, vlbcoef, vlbconstant) );
+      break;
+      
+   case SCIP_VARSTATUS_FIXED:
+      errorMessage("cannot add variable bounds to a fixed variable\n");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_AGGREGATED:
+      /* x = a*y + c:  x >= b*z + d  <=>  a*y + c >= b*z + d  <=>  y >= b/a * z + (d-c)/a, if a > 0
+       *                                                           y <= b/a * z + (d-c)/a, if a < 0
+       */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> add variable lower bound */
+         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, memhdr, set, vlbvar,
+                        vlbcoef/var->data.aggregate.scalar,
+                        (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> add variable upper bound */
+         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, memhdr, set, vlbvar,
+                        vlbcoef/var->data.aggregate.scalar,
+                        (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      errorMessage("cannot add variable bounds to a multiple aggregated variable\n");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_NEGATED:
+      /* x = offset - x':  x >= b*z + d  <=>  offset - x' >= b*z + d  <=>  x' <= -b*z + (offset-d) */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarAddVub(var->negatedvar, memhdr, set, vlbvar,
+                     -vlbcoef, var->data.negate.constant - vlbconstant) );
+      break;
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs variable x about a globally valid variable upper bound x <= b*z with integer variable z */
+RETCODE SCIPvarAddVub(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             vubvar,             /**< variable z    in x <= b*z + d */
+   Real             vubcoef,            /**< coefficient b in x <= b*z + d */
+   Real             vubconstant         /**< constant d    in x <= b*z + d */
+   )
+{
+   assert(var != NULL);
+
+   assert(vubvar->varstatus == SCIP_VARSTATUS_COLUMN || vubvar->varstatus == SCIP_VARSTATUS_LOOSE);
+   assert(vubvar->vartype != SCIP_VARTYPE_CONTINUOUS);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      CHECK_OKAY( SCIPvarAddVub(var->data.transvar, memhdr, set, vubvar, vubcoef, vubconstant) );
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      CHECK_OKAY( vboundsAdd(&var->vubs, memhdr, set, vubvar, vubcoef, vubconstant) );
+      break;
+      
+   case SCIP_VARSTATUS_FIXED:
+      errorMessage("cannot add variable bounds to a fixed variable\n");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_AGGREGATED:
+      /* x = a*y + c:  x <= b*z + d  <=>  a*y + c <= b*z + d  <=>  y <= b/a * z + (d-c)/a, if a > 0
+       *                                                           y >= b/a * z + (d-c)/a, if a < 0
+       */
+      assert(var->data.aggregate.var != NULL);
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> add variable upper bound */
+         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, memhdr, set, vubvar,
+                        vubcoef/var->data.aggregate.scalar,
+                        (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         /* a < 0 -> add variable lower bound */
+         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, memhdr, set, vubvar,
+                        vubcoef/var->data.aggregate.scalar,
+                        (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      }
+      else
+      {
+         errorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      errorMessage("cannot add variable bounds to a multiple aggregated variable\n");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_NEGATED:
+      /* x = offset - x':  x <= b*z + d  <=>  offset - x' <= b*z + d  <=>  x' >= -b*z + (offset-d) */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarAddVlb(var->negatedvar, memhdr, set, vubvar,
+                     -vubcoef, var->data.negate.constant - vubconstant) );
+      break;
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+
+   return SCIP_OKAY;
+}
+
 /** actually changes the branch factor of the variable and of all parent variables */
 static
 void varProcessChgBranchFactor(
@@ -5191,14 +5498,15 @@ Real SCIPvarGetPseudocostCount(
 /** increases the number of branchings counter of the variable */
 void SCIPvarIncNBranchings(
    VAR*             var,                /**< problem variable */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   int              depth               /**< depth at which the bound change took place */
    )
 {
    assert(var != NULL);
    assert(stat != NULL);
 
-   SCIPhistoryIncNBranchings(var->history);
-   SCIPhistoryIncNBranchings(stat->glbhistory);
+   SCIPhistoryIncNBranchings(var->history, depth);
+   SCIPhistoryIncNBranchings(stat->glbhistory, depth);
 }
 
 /** increases the number of inferences counter of the variable */
@@ -5249,6 +5557,16 @@ Real SCIPvarGetAvgInferences(
    assert(var != NULL);
 
    return  SCIPhistoryGetAvgInferences(var->history);
+}
+
+/** returns the average depth of bound changes due to branching on the variable */
+Real SCIPvarGetAvgBranchdepth(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return  SCIPhistoryGetAvgBranchdepth(var->history);
 }
 
 #endif

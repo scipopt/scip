@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.10 2004/04/06 16:05:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.11 2004/04/07 14:48:28 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -461,6 +461,12 @@ Real SCIPvarGetAvgInferences(
    VAR*             var                 /**< problem variable */
    );
 
+/** returns the average depth of bound changes due to branching on the variable */
+extern
+Real SCIPvarGetAvgBranchdepth(
+   VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -512,6 +518,7 @@ Real SCIPvarGetAvgInferences(
 #define SCIPvarGetNBranchings(var)      (SCIPhistoryGetNBranchings(var->history))
 #define SCIPvarGetNInferences(var)      (SCIPhistoryGetNInferences(var->history))
 #define SCIPvarGetAvgInferences(var)    (SCIPhistoryGetAvgInferences(var->history))
+#define SCIPvarGetAvgBranchdepth(var)   (SCIPhistoryGetAvgBranchdepth(var->history))
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.5 2004/04/06 15:53:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.6 2004/04/07 14:48:28 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -80,6 +80,7 @@ void SCIPhistoryReset(
    history->pscostsum[1] = 0.0;
    history->nbranchings = 0;
    history->ninferences = 0;
+   history->branchdepthsum = 0;
 }
 
 /** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
@@ -188,12 +189,14 @@ Bool SCIPhistoryIsPseudocostEmpty(
 
 /** increases the number of branchings counter */
 void SCIPhistoryIncNBranchings(
-   HISTORY*         history             /**< branching and inference history */
+   HISTORY*         history,            /**< branching and inference history */
+   int              depth               /**< depth at which the bound change took place */
    )
 {
    assert(history != NULL);
 
    history->nbranchings++;
+   history->branchdepthsum += depth;
 }
 
 /** increases the number of inferences counter */
@@ -226,7 +229,7 @@ Longint SCIPhistoryGetNInferences(
    return history->ninferences;
 }
 
-/** get number of branchings counter */
+/** returns the average number of inferences per branching */
 Real SCIPhistoryGetAvgInferences(
    HISTORY*         history             /**< branching and inference history */
    )
@@ -234,6 +237,16 @@ Real SCIPhistoryGetAvgInferences(
    assert(history != NULL);
 
    return history->nbranchings > 0 ? (Real)history->ninferences/(Real)history->nbranchings : 0;
+}
+
+/** returns the average depth of bound changes due to branching */
+Real SCIPhistoryGetAvgBranchdepth(
+   HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   return history->nbranchings > 0 ? (Real)history->branchdepthsum/(Real)history->nbranchings : 0;
 }
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.144 2004/04/06 16:05:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.146 2004/04/07 14:48:28 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7934,16 +7934,24 @@ RETCODE SCIPprintStatistics(
       printTreeStatistics(scip, file);
       printSolutionStatistics(scip, file);
       
+#if 0
       { /*????????????????????????????????*/
          /**@todo remove this! */
          int v;
          for( v = 0; v < scip->transprob->nvars; ++v )
          {
-            printf(" <%s>: %4lld branchings, %6lld inferences  ->  %g inferences/branching\n",
-               SCIPvarGetName(scip->transprob->vars[v]), SCIPvarGetNBranchings(scip->transprob->vars[v]),
-               SCIPvarGetNInferences(scip->transprob->vars[v]), SCIPvarGetAvgInferences(scip->transprob->vars[v]));
+            if( SCIPvarGetNBranchings(scip->transprob->vars[v]) > 0 )
+            {
+               char s[MAXSTRLEN];
+               sprintf(s, "<%s>", SCIPvarGetName(scip->transprob->vars[v]));
+               printf(" %16s: %6lld branchings, %8lld inferences  ->  %7.2f inferences/branching (avg. depth: %7.2f)\n",
+                  s, SCIPvarGetNBranchings(scip->transprob->vars[v]),
+                  SCIPvarGetNInferences(scip->transprob->vars[v]), SCIPvarGetAvgInferences(scip->transprob->vars[v]),
+                  SCIPvarGetAvgBranchdepth(scip->transprob->vars[v]));
+            }
          }
       }
+#endif
 
       return SCIP_OKAY;
 

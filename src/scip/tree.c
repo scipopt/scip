@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.88 2004/04/06 15:53:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.89 2004/04/07 14:48:29 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -969,7 +969,7 @@ RETCODE SCIPnodeAddBoundinfer(
       SCIPnodeUpdateLowerbound(node, newpseudoobjval);
 
       /* update the inference history */
-      SCIPvarIncNBranchings(var, stat);
+      SCIPvarIncNBranchings(var, stat, node->depth);
    }
    else
    {

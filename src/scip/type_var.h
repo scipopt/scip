@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.4 2004/02/04 17:27:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.5 2004/04/07 14:48:29 bzfpfend Exp $"
 
 /**@file   type_var.h
  * @brief  type definitions for problem variables
@@ -79,6 +79,7 @@ typedef struct HoleChg HOLECHG;         /**< changes in holelist of variables */
 typedef struct Hole HOLE;               /**< hole in a domain of an integer variable */
 typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an integer variable */
 typedef struct Dom DOM;                 /**< datastructures for storing domains of variables */
+typedef struct VBounds VBOUNDS;         /**< variable bounds of a variable x in the form x <= c*y or x >= c*y */
 typedef struct Aggregate AGGREGATE;     /**< aggregation information */
 typedef struct Multaggr MULTAGGR;       /**< multiple aggregation information */
 typedef struct Negate NEGATE;           /**< negation information */

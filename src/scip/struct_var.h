@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.10 2004/04/06 15:21:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.11 2004/04/07 14:48:29 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -131,6 +131,16 @@ struct Dom
    HOLELIST*        holelist;           /**< list of holes */
 };
 
+/** variable bounds of a variable x in the form x <= c*y or x >= c*y */
+struct VBounds
+{
+   VAR**            vars;               /**< variables z    in variable bounds x <= b*z + d  or  x >= b*z + d */
+   Real*            coefs;              /**< coefficients b in variable bounds x <= b*z + d  or  x >= b*z + d */
+   Real*            constants;          /**< constants d    in variable bounds x <= b*z + d  or  x >= b*z + d */
+   int              len;                /**< number of existing variable bounds (used slots in arrays) */
+   int              size;               /**< size of vars, coefs, and constants arrays */
+};
+
 /** aggregation information: x = a*y + c */
 struct Aggregate
 {
@@ -173,6 +183,8 @@ struct Var
    char*            name;               /**< name of the variable */
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
    VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
+   VBOUNDS*         vlbs;               /**< variable lower bounds x >= b*y + d */
+   VBOUNDS*         vubs;               /**< variable upper bounds x <= b*y + d */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    VAR*             infervar;           /**< variable whose fixing was deduced (parent of var, or var itself) */
    CONS*            infercons;          /**< constraint that deduced the fixing (binary variables only), or NULL */

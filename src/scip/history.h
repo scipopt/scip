@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.4 2004/04/06 15:53:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.5 2004/04/07 14:48:28 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -104,7 +104,8 @@ Bool SCIPhistoryIsPseudocostEmpty(
 /** increases the number of branchings counter */
 extern
 void SCIPhistoryIncNBranchings(
-   HISTORY*         history             /**< branching and inference history */
+   HISTORY*         history,            /**< branching and inference history */
+   int              depth               /**< depth at which the bound change took place */
    );
 
 /** increases the number of inferences counter */
@@ -125,9 +126,15 @@ Longint SCIPhistoryGetNInferences(
    HISTORY*         history             /**< branching and inference history */
    );
 
-/** get number of branchings counter */
+/** returns the average number of inferences per branching */
 extern
 Real SCIPhistoryGetAvgInferences(
+   HISTORY*         history             /**< branching and inference history */
+   );
+
+/** returns the average depth of bound changes due to branching */
+extern
+Real SCIPhistoryGetAvgBranchdepth(
    HISTORY*         history             /**< branching and inference history */
    );
 
@@ -144,12 +151,15 @@ Real SCIPhistoryGetAvgInferences(
                             ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
-#define SCIPhistoryIncNBranchings(history)         (history)->nbranchings++;
+#define SCIPhistoryIncNBranchings(history,depth)   { (history)->nbranchings++; (history)->branchdepthsum += depth; }
 #define SCIPhistoryIncNInferences(history)         (history)->ninferences++;
 #define SCIPhistoryGetNBranchings(history)         ((history)->nbranchings)
 #define SCIPhistoryGetNInferences(history)         ((history)->ninferences)
 #define SCIPhistoryGetAvgInferences(history)       ((history)->nbranchings > 0 \
                                                    ? (Real)(history)->ninferences/(Real)(history)->nbranchings : 0)
+#define SCIPhistoryGetAvgBranchdepth(history)      ((history)->nbranchings > 0 \
+                                                   ? (Real)(history)->branchdepthsum/(Real)(history)->nbranchings : 0)
+
 #endif
 
 

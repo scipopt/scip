@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.58 2004/04/06 16:05:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.59 2004/04/07 14:48:29 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -530,6 +530,28 @@ RETCODE SCIPvarAddHoleLocal(
    Real             right               /**< right bound of open interval in new hole */
    );
 
+/** informs variable x about a globally valid variable lower bound x >= b*z with integer variable z */
+extern
+RETCODE SCIPvarAddVlb(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
+   Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
+   Real             vlbconstant         /**< constant d    in x >= b*z + d */
+   );
+
+/** informs variable x about a globally valid variable upper bound x <= b*z with integer variable z */
+extern
+RETCODE SCIPvarAddVub(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             vubvar,             /**< variable z    in x <= b*z + d */
+   Real             vubcoef,            /**< coefficient b in x <= b*z + d */
+   Real             vubconstant         /**< constant d    in x <= b*z + d */
+   );
+
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
@@ -638,7 +660,8 @@ Real SCIPvarGetPseudocostCount(
 extern
 void SCIPvarIncNBranchings(
    VAR*             var,                /**< problem variable */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   int              depth               /**< depth at which the bound change took place */
    );
 
 /** increases the number of inferences counter of the variable */
