@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.90 2004/10/12 14:06:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.91 2004/10/13 14:36:38 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -389,6 +389,8 @@ RETCODE SCIProwCalcIntegralScalar(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -403,6 +405,8 @@ RETCODE SCIProwMakeIntegral(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */

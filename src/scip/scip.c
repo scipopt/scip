@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.214 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.215 2004/10/13 14:36:38 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5324,9 +5324,11 @@ RETCODE aggregateActiveIntVars(
    *aggregated = FALSE;
 
    /* get rational representation of coefficients */
-   success = SCIPrealToRational(scalarx, SCIPsetEpsilon(scip->set), MAXDNOM, &scalarxn, &scalarxd);
+   success = SCIPrealToRational(scalarx, -SCIPsetEpsilon(scip->set), SCIPsetEpsilon(scip->set), MAXDNOM,
+      &scalarxn, &scalarxd);
    if( success )
-      success = SCIPrealToRational(scalary, SCIPsetEpsilon(scip->set), MAXDNOM, &scalaryn, &scalaryd);
+      success = SCIPrealToRational(scalary, -SCIPsetEpsilon(scip->set), SCIPsetEpsilon(scip->set), MAXDNOM,
+         &scalaryn, &scalaryd);
    if( !success )
       return SCIP_OKAY;
    assert(scalarxd >= 1);
@@ -7008,6 +7010,8 @@ RETCODE SCIPaddVarsToRowSameCoef(
 RETCODE SCIPcalcRowIntegralScalar(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
+   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -7017,8 +7021,8 @@ RETCODE SCIPcalcRowIntegralScalar(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcalcRowIntegralScalar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwCalcIntegralScalar(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, usecontvars,
-         intscalar, success) );
+   CHECK_OKAY( SCIProwCalcIntegralScalar(row, scip->set, scip->stat, scip->lp, mindelta, maxdelta, maxdnom, maxscale, 
+         usecontvars, intscalar, success) );
 
    return SCIP_OKAY;
 }
@@ -7027,6 +7031,8 @@ RETCODE SCIPcalcRowIntegralScalar(
 RETCODE SCIPmakeRowIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
+   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -7035,7 +7041,8 @@ RETCODE SCIPmakeRowIntegral(
 {
    CHECK_OKAY( checkStage(scip, "SCIPmakeRowIntegral", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwMakeIntegral(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, usecontvars, success) );
+   CHECK_OKAY( SCIProwMakeIntegral(row, scip->set, scip->stat, scip->lp, mindelta, maxdelta, maxdnom, maxscale,
+         usecontvars, success) );
 
    return SCIP_OKAY;
 }

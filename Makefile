@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.87 2004/10/13 12:24:18 bzfpfend Exp $
+# $Id: Makefile,v 1.88 2004/10/13 14:36:37 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -74,13 +74,11 @@ ARFLAGS		=	cr
 DFLAGS		=	-MM
 
 GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings \
-			-Wstrict-prototypes -Wmissing-prototypes \
 			-Wmissing-declarations -Wno-unknown-pragmas \
 			-Wno-unused
 
 GXXWARN		=	-Wall -W -Wpointer-arith \
 			-Wcast-align -Wwrite-strings -Wconversion \
-			-Wstrict-prototypes -Wmissing-prototypes \
 			-Wno-unknown-pragmas \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \

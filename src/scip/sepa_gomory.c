@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.33 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.34 2004/10/13 14:36:39 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -42,18 +42,19 @@
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
+#define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
 #define MAKECONTINTEGRAL          FALSE
-#define MAXWEIGHTRANGE            1e+04
 #define MINFRAC                    0.05
 
 
 /** separator data */
 struct SepaData
 {
+   Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    int              maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
    int              maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    int              maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
@@ -154,22 +155,29 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    maxdepth = SCIPgetMaxDepth(scip);
    if( depth == 0 )
    {
+#if 0 /*??????????????????????*/
       maxdnom = 1000000;
       maxscale = 10000000.0;
+#else
+      maxdnom = 100;
+      maxscale = 1000.0;
+      maxdnom = 1000; /*????????????????*/
+      maxscale = 1000.0; /*???????????????*/
+#endif
    }
    else if( depth <= maxdepth/4 )
    {
-      maxdnom = 100;
+      maxdnom = 1000;
       maxscale = 1000.0;
    }
    else if( depth <= maxdepth/2 )
    {
-      maxdnom = 10;
+      maxdnom = 100;
       maxscale = 100.0;
    }
    else
    {
-      maxdnom = 1;
+      maxdnom = 10;
       maxscale = 10.0;
    }
 
@@ -211,7 +219,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
             primsol = SCIPcolGetPrimsol(cols[c]);
             assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
 
-            if( !SCIPisIntegral(scip, primsol) )
+            if( SCIPfrac(scip, primsol) >= MINFRAC )
             {
                debugMessage("trying gomory cut for <%s> [%g]\n", SCIPvarGetName(var), primsol);
 
@@ -219,10 +227,10 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                CHECK_OKAY( SCIPgetLPBInvRow(scip, i, binvrow) );
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, MAXWEIGHTRANGE, MINFRAC, binvrow, 1.0,
-                     cutcoef, &cutrhs, &cutact, &success, &cutislocal) );
+               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
+                     binvrow, 1.0, cutcoef, &cutrhs, &cutact, &success, &cutislocal) );
                assert(ALLOWLOCAL || !cutislocal);
-               debugMessage("  -> success=%d: %g <= %g\n", success, cutact, cutrhs);
+               debugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
                /* if successful, convert dense cut into sparse row, and add the row as a cut */
                if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
@@ -270,6 +278,9 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   }
                   cutnorm = SQRT(cutsqrnorm);
 
+                  debugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                     SCIPvarGetName(var), cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
+
                   if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
                   {
                      ROW* cut;
@@ -279,23 +290,27 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
                            cutislocal, FALSE, sepadata->dynamiccuts) );
+                     debug(SCIPprintRow(scip, cut, NULL));
 
                      /* try to scale the cut to integral values */
-                     CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+                     CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+                           maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+
                      if( success )
                      {
                         if( !SCIPisCutEfficacious(scip, cut) )
                         {
                            debugMessage(" -> gomory cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                              cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+                              cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                              SCIPgetCutEfficacy(scip, cut));
                            debug(SCIPprintRow(scip, cut, NULL));
                            success = FALSE;
                         }
                         else
                         {
                            debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                              cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut),
-                              SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                              cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                              SCIPgetCutEfficacy(scip, cut), SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                               SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                            debug(SCIPprintRow(scip, cut, NULL));
                            CHECK_OKAY( SCIPaddCut(scip, cut, FALSE) );
@@ -306,6 +321,11 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                            *result = SCIP_SEPARATED;
                            ncuts++;
                         }
+                     }
+                     else
+                     {
+                        debugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
                      }
 
                      /* release the row */
@@ -351,30 +371,34 @@ RETCODE SCIPincludeSepaGomory(
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-                  SCIPsepaFreeGomory, NULL, NULL, SCIPsepaExecGomory,
-                  sepadata) );
+         SCIPsepaFreeGomory, NULL, NULL, SCIPsepaExecGomory,
+         sepadata) );
 
    /* add separator parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separating/gomory/maxrounds",
-                  "maximal number of gomory separation rounds per node (-1: unlimited)",
-                  &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+         "separating/gomory/maxrounds",
+         "maximal number of gomory separation rounds per node (-1: unlimited)",
+         &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separating/gomory/maxroundsroot",
-                  "maximal number of gomory separation rounds in the root node (-1: unlimited)",
-                  &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+         "separating/gomory/maxroundsroot",
+         "maximal number of gomory separation rounds in the root node (-1: unlimited)",
+         &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separating/gomory/maxsepacuts",
-                  "maximal number of gomory cuts separated per separation round",
-                  &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         "separating/gomory/maxsepacuts",
+         "maximal number of gomory cuts separated per separation round",
+         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separating/gomory/maxsepacutsroot",
-                  "maximal number of gomory cuts separated per separation round in the root node",
-                  &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         "separating/gomory/maxsepacutsroot",
+         "maximal number of gomory cuts separated per separation round in the root node",
+         &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+         "separating/gomory/maxweightrange",
+         "maximal valid range max(|weights|)/min(|weights|) of row weights",
+         &sepadata->maxweightrange, DEFAULT_MAXWEIGHTRANGE, 1.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "separating/gomory/dynamiccuts",
-                  "should generated cuts be removed from the LP if they are no longer tight?",
-                  &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+         "separating/gomory/dynamiccuts",
+         "should generated cuts be removed from the LP if they are no longer tight?",
+         &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

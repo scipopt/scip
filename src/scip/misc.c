@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.26 2004/06/30 14:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.27 2004/10/13 14:36:38 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2760,11 +2760,12 @@ Longint SCIPcalcSmaComMul(
  *  successful
  */
 Bool SCIPrealToRational(
-   Real             val,                /**< real value to convert into rational number */
-   Real             epsilon,            /**< maximal allowed difference between rational and real value */
+   Real             val,                /**< real value r to convert into rational number */
+   Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
+   Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
    Longint          maxdnom,            /**< maximal denominator allowed */
-   Longint*         nominator,          /**< pointer to store the nominator of the rational number */
-   Longint*         denominator         /**< pointer to store the denominator of the rational number */
+   Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    )
 {
    Real a;
@@ -2775,18 +2776,27 @@ Bool SCIPrealToRational(
    Real h0;
    Real h1;
    Real hx;
+   Real delta0;
+   Real delta1;
+   Real epsilon;
 
+   assert(mindelta < 0.0);
+   assert(maxdelta > 0.0);
    assert(nominator != NULL);
    assert(denominator != NULL);
+
+   epsilon = MIN(-mindelta, maxdelta);
 
    b = val;
    a = EPSFLOOR(b, epsilon);
    g0 = a;
-   g1 = 1.0;
    h0 = 1.0;
+   g1 = 1.0;
    h1 = 0.0;
+   delta0 = val - g0/h0;
+   delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
 
-   while( !EPSEQ(val, g0/h0, epsilon) )
+   while( (delta0 < mindelta || delta0 > maxdelta) && (delta1 < mindelta || delta1 > maxdelta) )
    {
       assert(EPSGT(b, a, epsilon));
       assert(h0 >= 0.0);
@@ -2808,15 +2818,36 @@ Bool SCIPrealToRational(
       
       if( h0 > maxdnom )
          return FALSE;
+      
+      delta0 = val - g0/h0;
+      delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
 
    if( ABS(g0) > (LONGINT_MAX >> 4) || h0 > (LONGINT_MAX >> 4) )
       return FALSE;
 
-   assert(h0 >= 0.0);
+   assert(h0 > 0.5);
 
-   *nominator = (Longint)g0;
-   *denominator = (Longint)h0;
+   if( delta0 < mindelta )
+   {
+      assert(mindelta <= delta1 && delta1 <= maxdelta);
+      *nominator = (Longint)(g0 - 1.0);
+      *denominator = (Longint)h0;
+   }
+   else if( delta0 > maxdelta )
+   {
+      assert(mindelta <= delta1 && delta1 <= maxdelta);
+      *nominator = (Longint)(g0 + 1.0);
+      *denominator = (Longint)h0;
+   }
+   else
+   {
+      *nominator = (Longint)g0;
+      *denominator = (Longint)h0;
+   }
+   assert(*denominator >= 1);
+   assert(val - (Real)(*nominator)/(Real)(*denominator) >= mindelta);
+   assert(val - (Real)(*nominator)/(Real)(*denominator) <= maxdelta);
 
    return TRUE;
 }

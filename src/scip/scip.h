@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.171 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.172 2004/10/13 14:36:38 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2687,6 +2687,8 @@ extern
 RETCODE SCIPcalcRowIntegralScalar(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
+   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -2699,6 +2701,8 @@ extern
 RETCODE SCIPmakeRowIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
+   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */

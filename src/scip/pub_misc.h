@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.4 2004/06/30 14:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.5 2004/10/13 14:36:38 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -301,11 +301,12 @@ Longint SCIPcalcSmaComMul(
  */
 extern
 Bool SCIPrealToRational(
-   Real             val,                /**< real value to convert into rational number */
-   Real             epsilon,            /**< maximal allowed difference between rational and real value */
+   Real             val,                /**< real value r to convert into rational number */
+   Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
+   Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
    Longint          maxdnom,            /**< maximal denominator allowed */
-   Longint*         nominator,          /**< pointer to store the nominator of the rational number */
-   Longint*         denominator         /**< pointer to store the denominator of the rational number */
+   Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
 

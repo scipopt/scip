@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86.gnu.opt,v 1.8 2004/05/28 11:16:30 bzfpfend Exp $
+#--- $Id: make.linux.x86.gnu.opt,v 1.9 2004/10/13 14:36:37 bzfpfend Exp $
 FLAGS		+=	-DNDEBUG -DROUNDING_FE -DWITH_READLINE -O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	
-CXXFLAGS	+=	-fno-exceptions
+CXXFLAGS	+=	# -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
 LDFLAGS		+=	-lreadline -lncurses # -static
