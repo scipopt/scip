@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.89 2004/10/05 11:01:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.90 2004/10/12 14:06:06 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -391,6 +391,7 @@ RETCODE SCIProwCalcIntegralScalar(
    LP*              lp,                 /**< current LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral */
    Bool*            success             /**< stores whether returned value is valid */
    );
@@ -404,6 +405,7 @@ RETCODE SCIProwMakeIntegral(
    LP*              lp,                 /**< current LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Bool*            success             /**< stores whether row could be made rational */
    );
 
@@ -518,6 +520,16 @@ Bool SCIProwIsEfficacious(
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< current LP data */
    Bool             root                /**< should the root's minimal cut efficacy be used? */
+   );
+
+/** gets parallelism of row with objective function: if the returned value is 1, the row is parellel to the objective
+ *  function, if the value is 0, it is orthogonal to the objective function
+ */
+extern
+Real SCIProwGetObjParallelism(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
    );
 
 
@@ -649,6 +661,7 @@ RETCODE SCIPlpCalcMIR(
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */

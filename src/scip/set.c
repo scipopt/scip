@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.114 2004/10/05 16:08:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.115 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -170,6 +170,12 @@
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
+                                                 *   price-and-cut loops (-1: no additional restriction) */
+#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS    100 /**< maximal number of consecutive separation rounds without objective
+                                                 *   improvement (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
@@ -677,6 +683,26 @@ RETCODE SCIPsetCreate(
          "separating/orthofac",
          "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
          &(*set)->sepa_orthofac, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/maxrounds",
+         "maximal number of separation rounds per node (-1: unlimited)",
+         &(*set)->sepa_maxrounds, SCIP_DEFAULT_SEPA_MAXROUNDS, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/maxroundsroot",
+         "maximal number of separation rounds in the root node (-1: unlimited)",
+         &(*set)->sepa_maxroundsroot, SCIP_DEFAULT_SEPA_MAXROUNDSROOT, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/maxaddrounds",
+         "maximal additional number of separation rounds in subsequent price-and-cut loops (-1: no additional restriction)",
+         &(*set)->sepa_maxaddrounds, SCIP_DEFAULT_SEPA_MAXADDROUNDS, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/maxstallrounds",
+         "maximal number of consecutive separation rounds without objective improvement (-1: no additional restriction)",
+         &(*set)->sepa_maxstallrounds, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "separating/maxcuts",
@@ -2786,6 +2812,4 @@ Real SCIPsetFrac(
    return EPSFRAC(val, set->num_feastol);
 }
 
-
 #endif
-

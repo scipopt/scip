@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.27 2004/10/05 16:08:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.28 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -279,8 +279,8 @@ RETCODE sepastoreAddCut(
    CHECK_OKAY( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
    assert(sepastore->ncuts < sepastore->cutssize);
 
-   debugMessage("adding cut to separation storage of size %d/%d (forcecut=%d, efficacy=%g, score=%g)\n", 
-      sepastore->ncuts, maxsepacuts, forcecut, cutefficacy, cutscore);
+   debugMessage("adding cut to separation storage of size %d/%d (forcecut=%d, efficacy=%g, objparallelity=%g, score=%g)\n", 
+      sepastore->ncuts, maxsepacuts, forcecut, cutefficacy, SCIProwGetObjParallelism(cut, set, lp), cutscore);
    /*debug(SCIProwPrint(cut, NULL));*/
 
    /* search the correct position of the cut in the cuts array */

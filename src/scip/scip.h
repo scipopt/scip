@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.170 2004/10/05 16:08:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.171 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2539,6 +2539,7 @@ RETCODE SCIPcalcMIR(
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
@@ -2688,18 +2689,34 @@ RETCODE SCIPcalcRowIntegralScalar(
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
    Bool*            success             /**< stores whether returned value is valid */
    );
 
-/** tries to scale row, s.t. all coefficients become integral */
+/** tries to scale row, s.t. all coefficients (of integer variables) become integral */
 extern
 RETCODE SCIPmakeRowIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Bool*            success             /**< stores whether row could be made rational */
+   );
+
+/** returns minimal absolute value of row vector's non-zero coefficients */
+extern
+Real SCIPgetRowMinCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
+/** returns maximal absolute value of row vector's non-zero coefficients */
+extern
+Real SCIPgetRowMaxCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
    );
 
 /** returns the minimal activity of a row w.r.t. the column's bounds */
@@ -3719,6 +3736,20 @@ Longint SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets total number of LPs solved so far that were resolved from an advanced start basis */
+extern
+int SCIPgetNResolveLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far in primal and dual simplex calls where an advanced start basis
+ *  was available
+ */
+extern
+Longint SCIPgetNResolveLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets total number of LPs solved so far for node relaxations */
 extern
 int SCIPgetNNodeLPs(
@@ -3728,6 +3759,18 @@ int SCIPgetNNodeLPs(
 /** gets total number of simplex iterations used so far for node relaxations */
 extern
 Longint SCIPgetNNodeLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of LPs solved so far for initial LP in node relaxations */
+extern
+int SCIPgetNNodeInitLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far for initial LP in node relaxations */
+extern
+Longint SCIPgetNNodeInitLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -3752,6 +3795,18 @@ int SCIPgetNStrongbranchs(
 /** gets total number of simplex iterations used so far in strong branching */
 extern
 Longint SCIPgetNStrongbranchLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of times, strong branching was called at the root node (each call represents solving two LPs) */
+extern
+int SCIPgetNRootStrongbranchs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far in strong branching at the root node */
+extern
+Longint SCIPgetNRootStrongbranchLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 

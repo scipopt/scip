@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.37 2004/10/05 16:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.38 2004/10/12 14:06:06 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -245,6 +245,22 @@ RETCODE SCIPnodepqSetNodesel(
    }
 
    return SCIP_OKAY;
+}
+
+/** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
+int SCIPnodepqCompare(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   SET*             set,                /**< global SCIP settings */
+   NODE*            node1,              /**< first node to compare */
+   NODE*            node2               /**< second node to compare */
+   )
+{
+   assert(nodepq != NULL);
+   assert(nodepq->nodesel != NULL);
+   assert(nodepq->nodesel->nodeselcomp != NULL);
+   assert(set != NULL);
+
+   return SCIPnodeselCompare(nodepq->nodesel, set, node1, node2);
 }
 
 /** inserts node into node priority queue */

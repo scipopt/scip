@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.11 2004/08/25 14:56:41 bzfpfend Exp $
+# $Id: check.sh,v 1.12 2004/10/12 14:06:05 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -42,12 +42,12 @@ do
         echo @01 $i ===========
 	echo @01 $i ===========                >> $ERRFILE
 	echo set load $SETFILE                 >  $TMPFILE
-	echo set limits timelimit $TIMELIMIT   >> $TMPFILE
-	echo set limits nodelimit $NODELIMIT   >> $TMPFILE
-	echo set limits memlimit $MEMLIMIT     >> $TMPFILE
+	echo set limits time $TIMELIMIT        >> $TMPFILE
+	echo set limits nodes $NODELIMIT       >> $TMPFILE
+	echo set limits memory $MEMLIMIT       >> $TMPFILE
 	echo set timing clocktype 1            >> $TMPFILE
 	echo set display verblevel 3           >> $TMPFILE
-	echo set display dispfreq 10000        >> $TMPFILE
+	echo set display freq 10000            >> $TMPFILE
 	echo read $i                           >> $TMPFILE
 	echo optimize                          >> $TMPFILE
 	echo display statistics                >> $TMPFILE

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.32 2004/10/05 16:08:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.33 2004/10/12 14:06:08 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -199,6 +199,12 @@ struct Set
    Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
+   int              sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
+   int              sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */
+   int              sepa_maxaddrounds;  /**< maximal additional number of separation rounds in subsequent price-and-cut
+                                         *   loops (-1: no additional restriction) */
+   int              sepa_maxstallrounds;/**< maximal number of consecutive separation rounds without objective
+                                         *   improvement (-1: no additional restriction) */
    int              sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int              sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int              sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */

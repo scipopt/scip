@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.13 2004/09/07 18:22:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.14 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -278,7 +278,7 @@ Real SCIProwGetConstant(
    ROW*             row                 /**< LP row */
    );
 
-/** get euclidean norm of row vector */
+/** gets euclidean norm of row vector */
 extern
 Real SCIProwGetNorm(
    ROW*             row                 /**< LP row */

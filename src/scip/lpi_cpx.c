@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.72 2004/10/05 11:01:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.73 2004/10/12 14:06:06 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -29,6 +29,7 @@
 #include "bitencode.h"
 #include "lpi.h"
 #include "message.h"
+
 
 
 #define CHECK_ZERO(x) { int _restat_;                                               \
@@ -886,7 +887,7 @@ RETCODE SCIPlpiCreate(
       cpxenv = CPXopenCPLEX(&restat);
       CHECK_ZERO( restat );
 
-#if 1 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
+#if 0 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
       /* turn presolve off, s.t. for an infeasible problem, a ray is always available */
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
 #endif

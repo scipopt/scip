@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.51 2004/10/05 16:08:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.52 2004/10/12 14:06:08 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -146,39 +146,45 @@ void SCIPstatReset(
 
    SCIPhistoryReset(stat->glbhistory);
 
-   stat->nruns = 0;
-   stat->nvaridx = stat->marked_nvaridx;
-   stat->ncolidx = stat->marked_ncolidx;
-   stat->nrowidx = stat->marked_nrowidx;
    stat->nlpiterations = 0;
+   stat->nresolvelpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
    stat->nnodelpiterations = 0;
+   stat->ninitlpiterations = 0;
    stat->ndivinglpiterations = 0;
    stat->nsblpiterations = 0;
+   stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
-   stat->lpcount = 0;
-   stat->nlps = 0;
-   stat->nprimallps = 0;
-   stat->nduallps = 0;
-   stat->nnodelps = 0;
-   stat->ndivinglps = 0;
-   stat->nstrongbranchs = 0;
-   stat->nconflictlps = 0;
    stat->nredcoststrcalls = 0;
    stat->nredcoststrfound = 0;
    stat->ntotalnodes = 0;
    stat->ncreatednodes = 0;
-   stat->domchgcount = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
+   stat->domchgcount = 0;
    stat->nrootboundchgs = 0;
    stat->nrepropboundchgs = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;
+   stat->nruns = 0;
+   stat->nvaridx = stat->marked_nvaridx;
+   stat->ncolidx = stat->marked_ncolidx;
+   stat->nrowidx = stat->marked_nrowidx;
+   stat->lpcount = 0;
+   stat->nlps = 0;
+   stat->nresolvelps = 0;
+   stat->nprimallps = 0;
+   stat->nduallps = 0;
+   stat->nnodelps = 0;
+   stat->ninitlps = 0;
+   stat->ndivinglps = 0;
+   stat->nstrongbranchs = 0;
+   stat->nrootstrongbranchs = 0;
+   stat->nconflictlps = 0;
+   stat->maxtotaldepth = -1;
    stat->nactiveconss = 0;
    stat->nenabledconss = 0;
-   stat->maxtotaldepth = -1;
    stat->memsavemode = FALSE;
 
    stat->marked_nvaridx = -1;
@@ -195,20 +201,20 @@ void SCIPstatResetCurrentRun(
 {
    assert(stat != NULL);
 
-   stat->rootlowerbound = REAL_MIN;
-   stat->npricerounds = 0;
-   stat->nseparounds = 0;
-   stat->ncreatednodesrun = 0;
    stat->nnodes = 0;
+   stat->ncreatednodesrun = 0;
    stat->nbacktracks = 0;
    stat->ndelayedcutoffs = 0;
    stat->nreprops = 0;
-   stat->nrootboundchgsrun = 0;
-   stat->maxdepth = -1;
-   stat->plungedepth = 0;
    stat->lastdivenode = 0;
+   stat->rootlowerbound = REAL_MIN;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
+   stat->nrootboundchgsrun = 0;
+   stat->npricerounds = 0;
+   stat->nseparounds = 0;
+   stat->maxdepth = -1;
+   stat->plungedepth = 0;
 
    SCIPhistoryReset(stat->glbhistorycrun);
 

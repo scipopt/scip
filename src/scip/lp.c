@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.148 2004/10/05 16:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.149 2004/10/12 14:06:06 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -573,7 +573,7 @@ void rowSortNonLP(
 
 /** searches coefficient in part of the column, returns position in col vector or -1 if not found */
 static
-int colSearchCoeffPart(
+int colSearchCoefPart(
    COL*             col,                /**< column to be searched in */
    const ROW*       row,                /**< coefficient to be searched for */
    int              minpos,             /**< first position of search range */
@@ -628,7 +628,7 @@ int colSearchCoef(
       colSortLP(col);
       assert(col->lprowssorted);
 
-      pos = colSearchCoeffPart(col, row, 0, col->nlprows-1);
+      pos = colSearchCoefPart(col, row, 0, col->nlprows-1);
       if( pos >= 0 )
          return pos;
    }
@@ -640,7 +640,7 @@ int colSearchCoef(
       colSortNonLP(col);
       assert(col->nonlprowssorted);
 
-      pos = colSearchCoeffPart(col, row, col->nlprows, col->len-1);
+      pos = colSearchCoefPart(col, row, col->nlprows, col->len-1);
    }
 
    return pos;
@@ -776,7 +776,7 @@ void colMoveCoef(
 
 /** swaps two coefficients in a column, and updates all corresponding data structures */
 static
-void colSwapCoeffs(
+void colSwapCoefs(
    COL*             col,                /**< LP column */
    int              pos1,               /**< position of first coefficient */
    int              pos2                /**< position of second coefficient */
@@ -873,7 +873,7 @@ void rowMoveCoef(
 
 /** swaps two coefficients in a row, and updates all corresponding data structures */
 static
-void rowSwapCoeffs(
+void rowSwapCoefs(
    ROW*             row,                /**< LP row */
    int              pos1,               /**< position of first coefficient */
    int              pos2                /**< position of second coefficient */
@@ -1169,7 +1169,7 @@ RETCODE colAddCoef(
       if( col->lppos >= 0 )
       {
          row->nlpcols++;
-         rowSwapCoeffs(row, linkpos, row->nlpcols-1);
+         rowSwapCoefs(row, linkpos, row->nlpcols-1);
       }
    }
 
@@ -1199,7 +1199,7 @@ RETCODE colAddCoef(
 
 /** deletes coefficient at given position from column */
 static
-RETCODE colDelCoeffPos(
+RETCODE colDelCoefPos(
    COL*             col,                /**< column to be changed */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
@@ -1244,16 +1244,14 @@ RETCODE colDelCoeffPos(
 
 /** changes a coefficient at given position of an LP column */
 static
-RETCODE colChgCoeffPos(
+RETCODE colChgCoefPos(
    COL*             col,                /**< LP column */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    int              pos,                /**< position in column vector to change */
    Real             val                 /**< value of coefficient */
    )
 {
-   assert(memhdr != NULL);
    assert(col != NULL);
    assert(col->var != NULL);
    assert(0 <= pos && pos < col->len);
@@ -1266,7 +1264,7 @@ RETCODE colChgCoeffPos(
    if( SCIPsetIsZero(set, val) )
    {
       /* delete existing coefficient */
-      CHECK_OKAY( colDelCoeffPos(col, set, lp, pos) );
+      CHECK_OKAY( colDelCoefPos(col, set, lp, pos) );
    }
    else if( !SCIPsetIsEQ(set, col->vals[pos], val) )
    {
@@ -1285,13 +1283,13 @@ RETCODE colChgCoeffPos(
  * local row changing methods
  */
 
-/** update row norms after addition of new coefficient */
+/** update row norms after addition of coefficient */
 static
 void rowAddNorms(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
-   int              colidx,             /**< column index of new coefficient, or -1 */
-   Real             val                 /**< value of new coefficient */
+   COL*             col,                /**< column of added coefficient */
+   Real             val                 /**< value of added coefficient */
    )
 {
    Real absval;
@@ -1300,20 +1298,20 @@ void rowAddNorms(
    assert(row->nummaxval >= 0);
    assert(row->numminval >= 0);
    assert(set != NULL);
-   assert(colidx >= -1);
+   assert(col != NULL);
 
    absval = ABS(val);
    assert(!SCIPsetIsZero(set, absval));
 
    /* update min/maxidx */
-   if( colidx >= 0 )
-   {
-      row->minidx = MIN(row->minidx, colidx);
-      row->maxidx = MAX(row->maxidx, colidx);
-   }
+   row->minidx = MIN(row->minidx, col->index);
+   row->maxidx = MAX(row->maxidx, col->index);
 
    /* update squared euclidean norm */
    row->sqrnorm += SQR(absval);
+
+   /* update objective function scalar product */
+   row->objprod += val * col->obj;
 
    /* update maximal and minimal non-zero value */
    if( row->nummaxval > 0 )
@@ -1343,8 +1341,9 @@ static
 void rowDelNorms(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
-   int              colidx,             /**< column index of deleted coefficient, or -1 */
-   Real             val                 /**< value of deleted coefficient */
+   COL*             col,                /**< column of deleted coefficient */
+   Real             val,                /**< value of deleted coefficient */
+   Bool             updateindex         /**< should the minimal/maximal column index of row be updated? */
    )
 {
    Real absval;
@@ -1353,7 +1352,7 @@ void rowDelNorms(
    assert(row->nummaxval >= 0);
    assert(row->numminval >= 0);
    assert(set != NULL);
-   assert(colidx >= -1);
+   assert(col != NULL);
 
    absval = ABS(val);
    assert(!SCIPsetIsZero(set, absval));
@@ -1361,15 +1360,15 @@ void rowDelNorms(
    assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
 
    /* update min/maxidx validity */
-   if( colidx >= 0 )
-   {
-      if( colidx == row->minidx || colidx == row->maxidx )
-         row->validminmaxidx = FALSE;
-   }
+   if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
+      row->validminmaxidx = FALSE;
 
    /* update squared euclidean norm */
    row->sqrnorm -= SQR(absval);
    row->sqrnorm = MAX(row->sqrnorm, 0.0);
+
+   /* update objective function scalar product */
+   row->objprod -= val * col->obj;
 
    /* update maximal and minimal non-zero value */
    if( row->nummaxval > 0 )
@@ -1477,7 +1476,7 @@ RETCODE rowAddCoef(
       if( row->lppos >= 0 )
       {
          col->nlprows++;
-         colSwapCoeffs(col, linkpos, col->nlprows-1);
+         colSwapCoefs(col, linkpos, col->nlprows-1);
       }
    }
 
@@ -1503,7 +1502,7 @@ RETCODE rowAddCoef(
       }
    }
    
-   rowAddNorms(row, set, col->index, val);
+   rowAddNorms(row, set, col, val);
 
    coefChanged(row, col, lp);
 
@@ -1515,7 +1514,7 @@ RETCODE rowAddCoef(
 
 /** deletes coefficient at given position from row */
 static
-RETCODE rowDelCoeffPos(
+RETCODE rowDelCoefPos(
    ROW*             row,                /**< row to be changed */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
@@ -1560,7 +1559,7 @@ RETCODE rowDelCoeffPos(
    rowMoveCoef(row, row->len-1, pos);
    row->len--;
 
-   rowDelNorms(row, set, col->index, val);
+   rowDelNorms(row, set, col, val, TRUE);
 
    coefChanged(row, col, lp);
 
@@ -1569,16 +1568,14 @@ RETCODE rowDelCoeffPos(
 
 /** changes a coefficient at given position of an LP row */
 static
-RETCODE rowChgCoeffPos(
+RETCODE rowChgCoefPos(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    int              pos,                /**< position in row vector to change */
    Real             val                 /**< value of coefficient */
    )
 {
-   assert(memhdr != NULL);
    assert(row != NULL);
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
@@ -1596,15 +1593,15 @@ RETCODE rowChgCoeffPos(
    if( SCIPsetIsZero(set, val) )
    {
       /* delete existing coefficient */
-      CHECK_OKAY( rowDelCoeffPos(row, set, lp, pos) );
+      CHECK_OKAY( rowDelCoefPos(row, set, lp, pos) );
    }
    else if( !SCIPsetIsEQ(set, row->vals[pos], val) )
    {
       /* change existing coefficient */
-      rowDelNorms(row, set, -1, row->vals[pos]);
+      rowDelNorms(row, set, row->cols[pos], row->vals[pos], FALSE);
       row->vals[pos] = val;
-      row->integral = row->integral && SCIPsetIsIntegral(set, val);
-      rowAddNorms(row, set, -1, row->vals[pos]);
+      row->integral = row->integral && SCIPcolIsIntegral(row->cols[pos]) && SCIPsetIsIntegral(set, val);
+      rowAddNorms(row, set, row->cols[pos], row->vals[pos]);
       coefChanged(row, row->cols[pos], lp);
    }
 
@@ -1731,7 +1728,7 @@ RETCODE colUnlink(
          if( col->linkpos[i] >= 0 )
          {
             assert(col->rows[i]->cols[col->linkpos[i]] == col);
-            CHECK_OKAY( rowDelCoeffPos(col->rows[i], set, lp, col->linkpos[i]) );
+            CHECK_OKAY( rowDelCoefPos(col->rows[i], set, lp, col->linkpos[i]) );
             col->linkpos[i] = -1;
             col->nunlinked++;
          }
@@ -1810,7 +1807,7 @@ RETCODE rowUnlink(
          if( row->linkpos[i] >= 0 )
          {
             assert(row->cols[i]->rows[row->linkpos[i]] == row);
-            CHECK_OKAY( colDelCoeffPos(row->cols[i], set, lp, row->linkpos[i]) );
+            CHECK_OKAY( colDelCoefPos(row->cols[i], set, lp, row->linkpos[i]) );
             row->nunlinked++;
          }
       }
@@ -2318,11 +2315,11 @@ RETCODE SCIPcolDelCoef(
       assert(row->cols[col->linkpos[pos]] == col);
       assert(row->cols_index[col->linkpos[pos]] == col->index);
       assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
-      CHECK_OKAY( rowDelCoeffPos(row, set, lp, col->linkpos[pos]) );
+      CHECK_OKAY( rowDelCoefPos(row, set, lp, col->linkpos[pos]) );
    }
 
    /* delete the row from the column's row vector */
-   CHECK_OKAY( colDelCoeffPos(col, set, lp, pos) );
+   CHECK_OKAY( colDelCoefPos(col, set, lp, pos) );
    
    checkLinks(lp);
 
@@ -2367,11 +2364,11 @@ RETCODE SCIPcolChgCoef(
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_index[col->linkpos[pos]] == col->index);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
-         CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, col->linkpos[pos], val) );
+         CHECK_OKAY( rowChgCoefPos(row, set, lp, col->linkpos[pos], val) );
       }
 
       /* change the coefficient in the column */
-      CHECK_OKAY( colChgCoeffPos(col, memhdr, set, lp, pos, val) );
+      CHECK_OKAY( colChgCoefPos(col, set, lp, pos, val) );
    }
 
    checkLinks(lp);
@@ -2420,11 +2417,11 @@ RETCODE SCIPcolIncCoef(
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_index[col->linkpos[pos]] == col->index);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
-         CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, col->linkpos[pos], col->vals[pos] + incval) );
+         CHECK_OKAY( rowChgCoefPos(row, set, lp, col->linkpos[pos], col->vals[pos] + incval) );
       }
 
       /* change the coefficient in the column */
-      CHECK_OKAY( colChgCoeffPos(col, memhdr, set, lp, pos, col->vals[pos] + incval) );
+      CHECK_OKAY( colChgCoefPos(col, set, lp, pos, col->vals[pos] + incval) );
    }
 
    checkLinks(lp);
@@ -2467,6 +2464,10 @@ RETCODE SCIPcolChgObj(
       assert(lp->nchgcols > 0);
    }  
 
+   /* update squared euclidean norm of objective function vector */
+   lp->objsqrnorm += SQR(newobj) - SQR(col->obj);
+
+   /* store new objective function value */
    col->obj = newobj;
 
    return SCIP_OKAY;
@@ -2918,7 +2919,6 @@ RETCODE colStrongbranch(
    SCIPclockStart(stat->strongbranchtime, set);
       
    /* call LPI strong branching */
-   stat->nstrongbranchs++;
    col->strongbranchitlim = itlim;
    retcode = SCIPlpiStrongbranch(lp->lpi, col->lpipos, col->primsol, itlim,
       &strongbranchdown, &strongbranchup, &iter);
@@ -2946,11 +2946,18 @@ RETCODE colStrongbranch(
       if( iter == -1 )
       {
          /* calculate avergate iteration number */
-         iter = stat->nlps > 0 ? (int)(2*stat->nlpiterations / stat->nlps) : 0;
+         iter = stat->nresolvelps > 0 ? (int)(2*stat->nresolvelpiterations / stat->nresolvelps)
+            : stat->nlps > 0 ? (int)((stat->nlpiterations / stat->nlps) / 5) : 0;
          if( iter/2 >= itlim )
             iter = 2*itlim;
       }
+      stat->nstrongbranchs++;
       stat->nsblpiterations += iter;
+      if( stat->nnodes == 1 )
+      {
+         stat->nrootstrongbranchs++;
+         stat->nrootsblpiterations += iter;
+      }
    }
 
    /* stop timing */
@@ -3282,6 +3289,7 @@ void rowCalcNorms(
    assert(set != NULL);
 
    row->sqrnorm = 0.0;
+   row->objprod = 0.0;
    row->maxval = 0.0;
    row->nummaxval = 1;
    row->minval = SCIPsetInfinity(set);
@@ -3303,7 +3311,7 @@ void rowCalcNorms(
       assert(row->linkpos[i] >= 0);
       assert(row->cols[i]->index == row->cols_index[i]);
 
-      rowAddNorms(row, set, row->cols_index[i], row->vals[i]);
+      rowAddNorms(row, set, row->cols[i], row->vals[i]);
       if( i > 0 )
       {
          assert(row->cols[i-1]->index == row->cols_index[i-1]);
@@ -3317,7 +3325,7 @@ void rowCalcNorms(
       assert(row->cols[i]->lppos == -1 || row->linkpos[i] == -1);
       assert(row->cols[i]->index == row->cols_index[i]);
 
-      rowAddNorms(row, set, row->cols_index[i], row->vals[i]);
+      rowAddNorms(row, set, row->cols[i], row->vals[i]);
       if( i > row->nlpcols )
       {
          assert(row->cols[i-1]->index == row->cols_index[i-1]);
@@ -3337,6 +3345,8 @@ RETCODE rowScale(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    Real             scaleval,           /**< value to scale row with */
+   Bool             integralcontvars,   /**< should the coefficients of the continuous variables also be made integral,
+                                         *   if they are close to integral values? */
    Real             roundtol            /**< rounding tolerance, upto which values are rounded to next integer */
    )
 {
@@ -3349,6 +3359,8 @@ RETCODE rowScale(
    Real absscaleval;
    Real lb;
    Real ub;
+   Bool mindeltainf;
+   Bool maxdeltainf;
    int pos;
    int c;
 
@@ -3370,6 +3382,8 @@ RETCODE rowScale(
 
    mindelta = 0.0;
    maxdelta = 0.0;
+   mindeltainf = FALSE;
+   maxdeltainf = FALSE;
 
    /* don't scale the row, if the scalar is 1.0 */
    if( SCIPsetIsEQ(set, scaleval, 1.0) )
@@ -3416,43 +3430,37 @@ RETCODE rowScale(
 
          /* calculate scaled coefficient */
          newval = val * scaleval;
-         if( EPSISINT(newval, roundtol) )
+         if( ((integralcontvars || SCIPcolIsIntegral(col)) && EPSISINT(newval, roundtol))
+            || SCIPsetIsIntegral(set, newval) )
          {
             intval = EPSFLOOR(newval, roundtol);
             if( intval < newval )
             {
                mindelta += (intval - newval)*ub;
                maxdelta += (intval - newval)*lb;
+               mindeltainf = mindeltainf || SCIPsetIsInfinity(set, ub);
+               maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, -lb);
             }
             else
             {
                mindelta += (intval - newval)*lb;
                maxdelta += (intval - newval)*ub;
+               mindeltainf = mindeltainf || SCIPsetIsInfinity(set, -lb);
+               maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, ub);
             }
             newval = intval;
          }
-         assert(!SCIPsetIsZero(set, newval));
 
-         row->vals[c] = newval;
-         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, newval);
-
-         /* update the norms of the row */
-         rowDelNorms(row, set, -1, val);
-         rowAddNorms(row, set, -1, newval);
-
-         /* update the value in the corresponding column vector, if already linked */
-         pos = row->linkpos[c];
-         if( pos >= 0 )
+         /* if column knows of the row, change the corresponding coefficient in the column */
+         if( row->linkpos[c] >= 0 )
          {
-            assert(col->rows != NULL);
-            assert(col->vals != NULL);
-            assert(col->rows[pos] == row);
-            assert(SCIPsetIsEQ(set, col->vals[pos], val));
-            col->vals[pos] = newval;
+            assert(col->rows[row->linkpos[c]] == row);
+            assert(SCIPsetIsEQ(set, col->vals[row->linkpos[c]], row->vals[c]));
+            CHECK_OKAY( colChgCoefPos(col, set, lp, row->linkpos[c], newval) );
          }
-
-         /* mark the coefficient changed */
-         coefChanged(row, col, lp);
+         
+         /* change the coefficient in the row */
+         CHECK_OKAY( rowChgCoefPos(row, set, lp, c, newval) );
       }
    }
 
@@ -3461,14 +3469,14 @@ RETCODE rowScale(
     */
    if( !SCIPsetIsInfinity(set, -row->lhs) )
    {
-      newval = (row->lhs - row->constant) * scaleval + mindelta;
+      newval = mindeltainf ? -SCIPsetInfinity(set) : (row->lhs - row->constant) * scaleval + mindelta;
       if( EPSISINT(newval, roundtol) || (row->integral && !row->modifiable) )
          newval = EPSCEIL(newval, roundtol);
       CHECK_OKAY( SCIProwChgLhs(row, set, lp, newval) );
    }
    if( !SCIPsetIsInfinity(set, row->rhs) )
    {
-      newval = (row->rhs - row->constant) * scaleval + maxdelta;
+      newval = maxdeltainf ? SCIPsetInfinity(set) : (row->rhs - row->constant) * scaleval + maxdelta;
       if( EPSISINT(newval, roundtol) || (row->integral && !row->modifiable) )
          newval = EPSFLOOR(newval, roundtol);
       CHECK_OKAY( SCIProwChgRhs(row, set, lp, newval) );
@@ -3476,6 +3484,8 @@ RETCODE rowScale(
 
    /* clear the row constant */
    CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, 0.0) );
+
+   debug(SCIProwPrint(row, NULL));
 
    return SCIP_OKAY;
 }
@@ -3543,6 +3553,7 @@ RETCODE SCIProwCreate(
    (*row)->flushedlhs = -SCIPsetInfinity(set);
    (*row)->flushedrhs = SCIPsetInfinity(set);
    (*row)->sqrnorm = 0.0;
+   (*row)->objprod = 0.0;
    (*row)->maxval = 0.0;
    (*row)->minval = SCIPsetInfinity(set);
    (*row)->dualsol = 0.0;
@@ -3740,11 +3751,11 @@ RETCODE SCIProwDelCoef(
    {
       assert(col->rows[row->linkpos[pos]] == row);
       assert(SCIPsetIsEQ(set, col->vals[row->linkpos[pos]], row->vals[pos]));
-      CHECK_OKAY( colDelCoeffPos(col, set, lp, row->linkpos[pos]) );
+      CHECK_OKAY( colDelCoefPos(col, set, lp, row->linkpos[pos]) );
    }
 
    /* delete the column from the row's col vector */
-   CHECK_OKAY( rowDelCoeffPos(row, set, lp, pos) );
+   CHECK_OKAY( rowDelCoefPos(row, set, lp, pos) );
    
    checkLinks(lp);
 
@@ -3790,11 +3801,11 @@ RETCODE SCIProwChgCoef(
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(SCIPsetIsEQ(set, col->vals[row->linkpos[pos]], row->vals[pos]));
-         CHECK_OKAY( colChgCoeffPos(col, memhdr, set, lp, row->linkpos[pos], val) );
+         CHECK_OKAY( colChgCoefPos(col, set, lp, row->linkpos[pos], val) );
       }
 
       /* change the coefficient in the row */
-      CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, pos, val) );
+      CHECK_OKAY( rowChgCoefPos(row, set, lp, pos, val) );
    }
 
    checkLinks(lp);
@@ -3843,11 +3854,11 @@ RETCODE SCIProwIncCoef(
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(SCIPsetIsEQ(set, col->vals[row->linkpos[pos]], row->vals[pos]));
-         CHECK_OKAY( colChgCoeffPos(col, memhdr, set, lp, row->linkpos[pos], row->vals[pos] + incval) );
+         CHECK_OKAY( colChgCoefPos(col, set, lp, row->linkpos[pos], row->vals[pos] + incval) );
       }
 
       /* change the coefficient in the row */
-      CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, pos, row->vals[pos] + incval) );
+      CHECK_OKAY( rowChgCoefPos(row, set, lp, pos, row->vals[pos] + incval) );
    }
 
    checkLinks(lp);
@@ -3979,6 +3990,7 @@ RETCODE SCIProwCalcIntegralScalar(
    LP*              lp,                 /**< current LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
    Bool*            success             /**< stores whether returned value is valid */
    )
@@ -3988,7 +4000,6 @@ RETCODE SCIProwCalcIntegralScalar(
    Real minval;
    Real maxval;
    Real usedtol;
-   Bool contvars;
    Bool fractional;
    int c;
 
@@ -3998,6 +4009,8 @@ RETCODE SCIProwCalcIntegralScalar(
    assert(row->len == 0 || row->vals != NULL);
    assert(maxdnom >= 1);
    assert(success != NULL);
+
+   debugMessage("trying to find rational representation for row <%s> (contvars: %d)\n", SCIProwGetName(row), usecontvars);
 
    if( intscalar != NULL )
       *intscalar = SCIP_INVALID;
@@ -4018,8 +4031,7 @@ RETCODE SCIProwCalcIntegralScalar(
    assert(SCIPsetIsPositive(set, minval));
    assert(SCIPsetIsPositive(set, maxval));
 
-   /* check, if there are fractional coefficients and continuous variables in the row */
-   contvars = FALSE;
+   /* check, if there are fractional coefficients in the row that have to be made integral */
    fractional = FALSE;
    for( c = 0; c < row->len; ++c )
    {
@@ -4030,9 +4042,12 @@ RETCODE SCIProwCalcIntegralScalar(
       assert(SCIPvarGetCol(col->var) == col);
       val = row->vals[c];
       assert(!SCIPsetIsZero(set, val));
-      
-      contvars = contvars || !SCIPcolIsIntegral(col);
-      fractional = fractional || !SCIPsetIsIntegral(set, val);
+
+      if( (usecontvars || SCIPcolIsIntegral(col)) && !SCIPsetIsIntegral(set, val) )
+      {
+         fractional = TRUE;
+         break;
+      }
    }
 
    /* if fractional coefficients exist, try to find a rational representation */
@@ -4040,6 +4055,7 @@ RETCODE SCIProwCalcIntegralScalar(
    {
       Bool scalable;
       Bool twomult;
+      Real absval;
       Real scaleval;
       Real twomultval;
 
@@ -4053,16 +4069,22 @@ RETCODE SCIProwCalcIntegralScalar(
       twomultval = 1.0;
       for( c = 0; c < row->len && (scalable || twomult); ++c )
       {
+         /* don't look at continuous variables, if we don't have to */
+         if( !usecontvars && !SCIPcolIsIntegral(row->cols[c]) )
+            continue;
+
+         /* check, if the coefficient can be scaled with a simple scalar */
          val = row->vals[c];
+         absval = ABS(val);
          if( scalable )
          {
-            while( scaleval <= maxscale && !EPSISINT(val * scaleval, DIVTOL) )
+            while( scaleval <= maxscale && (absval * scaleval < 0.5 || !EPSISINT(val * scaleval, DIVTOL)) )
                scaleval *= 2.0;
             scalable = (scaleval <= maxscale);
          }
          if( twomult )
          {
-            while( twomultval <= maxscale && !EPSISINT(val * twomultval, TWOMULTTOL) )
+            while( twomultval <= maxscale && (absval * twomultval < 0.5 || !EPSISINT(val * twomultval, TWOMULTTOL)) )
                twomultval *= 2.0;
             twomult = (twomultval <= maxscale);
          }
@@ -4070,11 +4092,14 @@ RETCODE SCIProwCalcIntegralScalar(
 
       if( scalable )
       {
-         /* make row coefficients integral by dividing them by the smallest coefficient */
+         /* make row coefficients integral by dividing them by the smallest coefficient
+          * (and multiplying them with a power of 2)
+          */
          assert(scaleval <= maxscale);
          if( intscalar != NULL )
             *intscalar = scaleval;
          *success = TRUE;
+         debugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
       }
       else if( twomult )
       {
@@ -4083,6 +4108,7 @@ RETCODE SCIProwCalcIntegralScalar(
          if( intscalar != NULL )
             *intscalar = twomultval;
          *success = TRUE;
+         debugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
       }
       else
       {
@@ -4098,28 +4124,36 @@ RETCODE SCIProwCalcIntegralScalar(
          gcd = 1;
          scm = 1;
          rational = TRUE;
-         if( row->len > 0 )
+
+         /* first coefficient (to initialize gcd) */
+         for( c = 0; c < row->len && rational; ++c )
          {
-            /* first coefficient (to initialize gcd) */
-            val = row->vals[0];
-            rational = SCIPrealToRational(val, RATIONALTOL, maxdnom, &nominator, &denominator);
-            if( rational )
-            {
-               assert(denominator > 0);
-               gcd = (nominator == 0 ? 1 : ABS(nominator));
-               scm = denominator;
-               rational = ((Real)scm/(Real)gcd <= maxscale);
-            }
-            /* remaining coefficients */
-            for( c = 1; c < row->len && rational; ++c )
+            if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
             {
                val = row->vals[c];
                rational = SCIPrealToRational(val, RATIONALTOL, maxdnom, &nominator, &denominator);
-               if( rational )
+               if( rational && nominator != 0 )
                {
                   assert(denominator > 0);
-                  if( nominator != 0 )
-                     gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+                  gcd = ABS(nominator);
+                  scm = denominator;
+                  rational = ((Real)scm/(Real)gcd <= maxscale);
+                  break;
+               }
+            }
+         }
+
+         /* remaining coefficients */
+         for( ++c; c < row->len && rational; ++c )
+         {
+            if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
+            {
+               val = row->vals[c];
+               rational = SCIPrealToRational(val, RATIONALTOL, maxdnom, &nominator, &denominator);
+               if( rational && nominator != 0 )
+               {
+                  assert(denominator > 0);
+                  gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
                   scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
                   rational = ((Real)scm/(Real)gcd <= maxscale);
                }
@@ -4133,6 +4167,8 @@ RETCODE SCIProwCalcIntegralScalar(
             if( intscalar != NULL )
                *intscalar = (Real)scm/(Real)gcd;
             *success = TRUE;
+            debugMessage(" -> integrality can be achieved by scaling with %g (rational:%lld/%lld)\n", 
+               (Real)scm/(Real)gcd, scm, gcd);
          }
       }
    }
@@ -4142,6 +4178,7 @@ RETCODE SCIProwCalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = 1.0;
       *success = TRUE;
+      debugMessage(" -> row is already integral\n");
    }
 
    return SCIP_OKAY;
@@ -4155,6 +4192,7 @@ RETCODE SCIProwMakeIntegral(
    LP*              lp,                 /**< current LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Bool*            success             /**< stores whether row could be made rational */
    )
 {
@@ -4163,12 +4201,12 @@ RETCODE SCIProwMakeIntegral(
    assert(success != NULL);
 
    /* calculate scalar to make coefficients integral */
-   CHECK_OKAY( SCIProwCalcIntegralScalar(row, set, stat, lp, maxdnom, maxscale, &intscalar, success) );
+   CHECK_OKAY( SCIProwCalcIntegralScalar(row, set, stat, lp, maxdnom, maxscale, usecontvars, &intscalar, success) );
 
    if( *success )
    {
       /* scale the row */
-      CHECK_OKAY( rowScale(row, set, stat, lp, intscalar, DIVTOL) );
+      CHECK_OKAY( rowScale(row, set, stat, lp, intscalar, usecontvars, DIVTOL) );
    }
 
    return SCIP_OKAY;
@@ -4250,7 +4288,7 @@ void rowMerge(
             /* go to the next entry, overwriting current entry if coefficient is zero */
             if( !SCIPsetIsZero(set, vals[t]) )
             {
-               row->integral = row->integral && SCIPvarIsIntegral(cols[t]->var) && SCIPsetIsIntegral(set, vals[t]);
+               row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
                t++;
             }
             cols[t] = cols[s];
@@ -4260,7 +4298,7 @@ void rowMerge(
       }
       if( !SCIPsetIsZero(set, vals[t]) )
       {
-         row->integral = row->integral && SCIPvarIsIntegral(cols[t]->var) && SCIPsetIsIntegral(set, vals[t]);
+         row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
          t++;
       }
       assert(t <= row->len);
@@ -4541,8 +4579,8 @@ void rowCalcActivityBounds(
       val = row->vals[i];
       if( val >= 0.0 )
       {
-         mininfinite |= SCIPsetIsInfinity(set, -col->lb);
-         maxinfinite |= SCIPsetIsInfinity(set, col->ub);
+         mininfinite = mininfinite || SCIPsetIsInfinity(set, -col->lb);
+         maxinfinite = maxinfinite || SCIPsetIsInfinity(set, col->ub);
          if( !mininfinite )
             row->minactivity += val * col->lb;
          if( !maxinfinite )
@@ -4550,8 +4588,8 @@ void rowCalcActivityBounds(
       }
       else
       {
-         mininfinite |= SCIPsetIsInfinity(set, col->ub);
-         maxinfinite |= SCIPsetIsInfinity(set, -col->lb);
+         mininfinite = mininfinite || SCIPsetIsInfinity(set, col->ub);
+         maxinfinite = maxinfinite || SCIPsetIsInfinity(set, -col->lb);
          if( !mininfinite )
             row->minactivity += val * col->ub;
          if( !maxinfinite )
@@ -4752,6 +4790,30 @@ Real SCIProwGetOrthogonality(
    return 1.0 - SCIProwGetParallelism(row1, row2);
 }
 
+/** gets parallelism of row with objective function: if the returned value is 1, the row is parellel to the objective
+ *  function, if the value is 0, it is orthogonal to the objective function
+ */
+Real SCIProwGetObjParallelism(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   Real prod;
+   Real parallelism;
+
+   assert(row != NULL);
+   assert(lp != NULL);
+
+   prod = row->sqrnorm * lp->objsqrnorm;
+
+   parallelism = SCIPsetIsPositive(set, prod) ? ABS(row->objprod) / sqrt(prod) : 0.0;
+   assert(SCIPsetIsGE(set, parallelism, 0.0));
+   assert(SCIPsetIsLE(set, parallelism, 1.0));
+
+   return parallelism;
+}
+
 /** output row to file stream */
 void SCIProwPrint(
    ROW*             row,                /**< LP row */
@@ -4849,7 +4911,7 @@ Real SCIProwGetConstant(
    return row->constant;
 }
 
-/** get euclidean norm of row vector */
+/** gets euclidean norm of row vector */
 Real SCIProwGetNorm(
    ROW*             row                 /**< LP row */
    )
@@ -5839,7 +5901,7 @@ void colUpdateAddLP(
          assert(row->nlpcols <= pos && pos < row->len);
 
          row->nlpcols++;
-         rowSwapCoeffs(row, pos, row->nlpcols-1);
+         rowSwapCoefs(row, pos, row->nlpcols-1);
       }
    }
 }
@@ -5870,7 +5932,7 @@ void rowUpdateAddLP(
          assert(col->nlprows <= pos && pos < col->len);
 
          col->nlprows++;
-         colSwapCoeffs(col, pos, col->nlprows-1);
+         colSwapCoefs(col, pos, col->nlprows-1);
       }
    }
 }
@@ -5901,7 +5963,7 @@ void colUpdateDelLP(
          assert(0 <= pos && pos < row->nlpcols);
 
          row->nlpcols--;
-         rowSwapCoeffs(row, pos, row->nlpcols);
+         rowSwapCoefs(row, pos, row->nlpcols);
       }
    }
 }
@@ -5932,7 +5994,7 @@ void rowUpdateDelLP(
          assert(col->rows[pos] == row);
 
          col->nlprows--;
-         colSwapCoeffs(col, pos, col->nlprows);
+         colSwapCoefs(col, pos, col->nlprows);
       }
    }
 }
@@ -5967,6 +6029,7 @@ RETCODE SCIPlpCreate(
    (*lp)->looseobjvalinf = 0;
    (*lp)->nloosevars = 0;
    (*lp)->cutoffbound = SCIPsetInfinity(set);
+   (*lp)->objsqrnorm = 0.0;
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
    (*lp)->lpirowssize = 0;
@@ -6098,6 +6161,9 @@ RETCODE SCIPlpAddCol(
    /* mark the current LP unflushed */
    lp->flushed = FALSE;
 
+   /* update squared euclidean norm of objective function vector */
+   lp->objsqrnorm += SQR(col->obj);
+
    /* update column arrays of all linked rows */
    colUpdateAddLP(col);
 
@@ -6192,6 +6258,10 @@ RETCODE SCIPlpShrinkCols(
          /* count removeable columns */
          if( col->removeable )
             lp->nremoveablecols--;
+
+         /* update squared euclidean norm of objective function vector */
+         lp->objsqrnorm -= SQR(col->obj);
+         lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
 
          /* update column arrays of all linked rows */
          colUpdateDelLP(col);
@@ -6422,19 +6492,19 @@ RETCODE SCIPlpSumRows(
          /* add the row sides to the sum, depending on the sign of the weight */
          if( weights[r] > 0.0 )
          {
-            lhsinfinite |= SCIPsetIsInfinity(set, -row->lhs);
+            lhsinfinite = lhsinfinite || SCIPsetIsInfinity(set, -row->lhs);
             if( !lhsinfinite )
                (*sumlhs) += weights[r] * (row->lhs - row->constant);
-            rhsinfinite |= SCIPsetIsInfinity(set, row->rhs);
+            rhsinfinite = rhsinfinite || SCIPsetIsInfinity(set, row->rhs);
             if( !rhsinfinite )
                (*sumrhs) += weights[r] * (row->rhs - row->constant);
          }
          else
          {
-            lhsinfinite |= SCIPsetIsInfinity(set, row->rhs);
+            lhsinfinite = lhsinfinite || SCIPsetIsInfinity(set, row->rhs);
             if( !lhsinfinite )
                (*sumlhs) += weights[r] * (row->rhs - row->constant);
-            rhsinfinite |= SCIPsetIsInfinity(set, -row->lhs);
+            rhsinfinite = rhsinfinite || SCIPsetIsInfinity(set, -row->lhs);
             if( !rhsinfinite )
                (*sumrhs) += weights[r] * (row->lhs - row->constant);
          }
@@ -6459,6 +6529,7 @@ void sumMIRRow(
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
    Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
+   Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size prob->nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*             slacksign,          /**< stores the sign of the row's slack variable in summation */
@@ -6467,7 +6538,9 @@ void sumMIRRow(
    )
 {
    ROW* row;
-   Real rowactivity;
+   Real weight;
+   Real absweight;
+   Real maxweight;
    int idx;
    int r;
    int i;
@@ -6476,12 +6549,23 @@ void sumMIRRow(
    assert(lp != NULL);
    assert(weights != NULL);
    assert(SCIPsetIsPositive(set, scale));
+   assert(maxweightrange >= 1.0);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
    assert(slacksign != NULL);
    assert(emptyrow != NULL);
    assert(localrowsused != NULL);
 
+   /* search the maximal absolute weight */
+   maxweight = 0.0;
+   for( r = 0; r < lp->nrows; ++r )
+   {
+      weight = scale * weights[r];
+      absweight = ABS(weight);
+      maxweight = MAX(maxweight, absweight);
+   }
+
+   /* calculate the row summation */
    clearMemoryArray(mircoef, prob->nvars);
    *mirrhs = 0.0;
    *emptyrow = TRUE;
@@ -6496,31 +6580,28 @@ void sumMIRRow(
 
       /* modifiable rows cannot be part of a MIR row summation;
        * local rows are only included, if the allowlocal flag is set;
-       * close to zero weights are ignored
+       * close to zero weights or weights outside the maximal range are ignored
        */
-      if( !row->modifiable && (allowlocal || !row->local) && !SCIPsetIsFeasZero(set, scale * weights[r]) )
+      weight = scale * weights[r];
+      absweight = ABS(weight);
+      if( !row->modifiable && (allowlocal || !row->local)
+         && absweight * maxweightrange >= maxweight && !SCIPsetIsSumZero(set, weight) )
       {
-         /* Decide, if we want to use the left or the right hand side of the row in the summation.
-          * If the current row activity is closer to the left hand side, we use the  lhs <= a*x  part of the row,
-          * and treat it implicitly as  a*x - s == lhs. Otherwise, we use the  a*x <= rhs  part of the row,
-          * and treat it implicitly as  a*x + s == rhs. We have to remember, which sign the implicit slack variable
-          * has.
-          */
          *emptyrow = FALSE;
          *localrowsused = *localrowsused || row->local;
-         rowactivity = SCIProwGetLPActivity(row, stat, lp);
-         assert(SCIPsetIsFeasGE(set, rowactivity, row->lhs));
-         assert(SCIPsetIsFeasLE(set, rowactivity, row->rhs));
-            
-         if( rowactivity < (row->lhs + row->rhs)/2.0 )
+
+         /* Decide, if we want to use the left or the right hand side of the row in the summation.
+          * If possible, use the side that leads to a positive slack value in the summation.
+          */
+         if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
          {
             slacksign[r] = -1;
-            (*mirrhs) += scale * weights[r] * (row->lhs - row->constant);
+            (*mirrhs) += weight * (row->lhs - row->constant);
          }
          else
          {
             slacksign[r] = +1;
-            (*mirrhs) += scale * weights[r] * (row->rhs - row->constant);
+            (*mirrhs) += weight * (row->rhs - row->constant);
          }
 
          /* add the row coefficients to the sum */
@@ -6533,11 +6614,12 @@ void sumMIRRow(
             assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
             idx = row->cols[i]->var_probindex;
             assert(0 <= idx && idx < prob->nvars);
-            mircoef[idx] += scale * weights[r] * row->vals[i];
+            mircoef[idx] += weight * row->vals[i];
          }
-         
-         debugMessage("MIR: %d: row <%s>, scale = %g, weight = %g, slacksign = %d\n",
-            r, SCIProwGetName(row), scale, weights[r], slacksign[r]);
+
+         debugMessage("MIR: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
+            r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
+            scale, weights[r], slacksign[r], *mirrhs);
          debug(SCIProwPrint(row, NULL));
       }
       else
@@ -6546,6 +6628,52 @@ void sumMIRRow(
          weights[r] = 0.0;
       }
    }
+}
+
+/** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
+ *  prevent numerical rounding errors
+ */
+static
+void cleanupMIRRow(
+   SET*             set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   Bool             cutislocal          /**< is the cut only valid locally? */
+   )
+{
+   Real bd;
+   Bool rhsinf;
+   int v;
+
+   assert(prob != NULL);
+   assert(mircoef != NULL);
+   assert(mirrhs != NULL);
+
+   rhsinf = SCIPsetIsInfinity(set, *mirrhs);
+   for( v = 0; v < prob->nvars && !rhsinf; ++v )
+   {
+      if( mircoef[v] != 0.0 && SCIPsetIsSumZero(set, mircoef[v]) )
+      {
+         debugMessage("coefficient of <%s> in transformed MIR row is too small: %.12f\n",
+            SCIPvarGetName(prob->vars[v]), mircoef[v]);
+
+         if( mircoef[v] > 0.0 )
+         {
+            bd = cutislocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]);
+            rhsinf = rhsinf || SCIPsetIsInfinity(set, -bd);
+         }
+         else
+         {
+            bd = cutislocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]);
+            rhsinf = rhsinf || SCIPsetIsInfinity(set, bd);
+         }
+         *mirrhs -= bd * mircoef[v];
+         mircoef[v] = 0.0;
+      }
+   }
+   if( rhsinf )
+      *mirrhs = SCIPsetInfinity(set);
 }
 
 /** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value */
@@ -6634,20 +6762,16 @@ void getClosestVub(
  *    a'*x' == b, 0 <= x' <= ub'.
  *  
  *  Transform variables (lb or ub):
- *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       a'_j =  a_j,      if x^_j is closer to lb
- *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       a'_j = -a_j,      if x^_j is closer to ub
- *  and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
+ *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
+ *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
+ *  and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
  *
  *  Transform variables (vlb or vub):
- *    x'_j := x_j - (b_j * z_j + d_j),   trans  x_j <- x'_j + (b_j * z_j + d_j),      if x_j is closer to vlb
- *    x'_j := (b_j * z_j + d_j) - x_j,   trans  x_j <- (b_j * z_j + d_j) - x'_j,      if x_j is closer to vub
- *  and change
- *    a'_j :=  a_j,                           if x_j is closer to vlb
- *    a'_j := -a_j,                           if x_j is closer to vub
- *    mircoef[z_j] += a_j * b_j (of vlb),     if x_j is closer to vlb
- *    mircoef[z_j] += a_j * b_j (of vub),     if x_j is closer to vub
- *    mirrhs -= a_j * d_j (of vlb),           if x_j is closer to vlb
- *    mirrhs -= a_j * d_j (of vub),           if x_j is closer to vub.
+ *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
+ *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
+ *  move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
+ *    a_{zl_j} := a_{zl_j} + a_j * bl_j, or
+ *    a_{zu_j} := a_{zu_j} + a_j * bu_j
  */
 static
 void transformMIRRow(
@@ -6671,7 +6795,6 @@ void transformMIRRow(
    Real bestub;
    int bestlbtype;
    int bestubtype;
-   int idx;
    int v;
 
    assert(prob != NULL);
@@ -6693,14 +6816,13 @@ void transformMIRRow(
    for( v = prob->nvars-1; v >= 0; --v )
    {
       var = prob->vars[v];
-      idx = SCIPvarGetProbindex(var);
-      assert(0 <= idx && idx < prob->nvars);
+      assert(v == SCIPvarGetProbindex(var));
 
       /* ignore variables that don't exist in the MIR row */
-      if( SCIPsetIsZero(set, mircoef[idx]) )
+      if( SCIPsetIsZero(set, mircoef[v]) )
       {
-         varsign[idx] = +1;
-         boundtype[idx] = -2;
+         varsign[v] = +1;
+         boundtype[v] = -2;
          continue;
       }
 
@@ -6725,8 +6847,7 @@ void transformMIRRow(
 
          getClosestVlb(var, &bestvlb, &bestvlbidx);
          if( bestvlbidx >= 0
-            && (bestvlb > bestlb
-               || (bestlbtype == -2 && SCIPsetIsGE(set, bestvlb, bestlb))) )
+            && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
          {
             bestlb = bestvlb;
             bestlbtype = bestvlbidx;
@@ -6754,8 +6875,7 @@ void transformMIRRow(
 
          getClosestVub(var, &bestvub, &bestvubidx);
          if( bestvubidx >= 0
-            && (bestvub < bestub
-               || (bestubtype == -2 && SCIPsetIsLE(set, bestvub, bestub))) )
+            && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
          {
             bestub = bestvub;
             bestubtype = bestvubidx;
@@ -6777,13 +6897,13 @@ void transformMIRRow(
       if( varsol <= (1.0 - boundswitch) * bestlb + boundswitch * bestub )
       {
          /* use lower bound as transformation bound: x'_j := x_j - lb_j */
-         varsign[idx] = +1;
-         boundtype[idx] = bestlbtype;
+         boundtype[v] = bestlbtype;
+         varsign[v] = +1;
     
          /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
          if( bestlbtype < 0 )
          {
-            (*mirrhs) -= mircoef[idx] * bestlb;
+            (*mirrhs) -= mircoef[v] * bestlb;
             *localbdsused = *localbdsused || (bestlbtype == -2);
          }
          else
@@ -6795,22 +6915,22 @@ void transformMIRRow(
 
             assert(0 <= bestlbtype && bestlbtype < SCIPvarGetNVlbs(var));
             zidx = SCIPvarGetProbindex(vlbvars[bestlbtype]);
-            assert(zidx >= 0);
+            assert(0 <= zidx && zidx < v);
                
-            (*mirrhs) -= mircoef[idx] * vlbconsts[bestlbtype];
-            mircoef[zidx] += mircoef[idx] * vlbcoefs[bestlbtype];
+            (*mirrhs) -= mircoef[v] * vlbconsts[bestlbtype];
+            mircoef[zidx] += mircoef[v] * vlbcoefs[bestlbtype];
          }
       }
       else
       {
          /* use upper bound as transformation bound: x'_j := ub_j - x_j */
-         varsign[idx] = -1;
-         boundtype[idx] = bestubtype;
+         boundtype[v] = bestubtype;
+         varsign[v] = -1;
          
          /* standard (bestubtype < 0) or variable (bestubtype >= 0) upper bound? */
          if( bestubtype < 0 )
          {
-            (*mirrhs) -= mircoef[idx] * bestub;
+            (*mirrhs) -= mircoef[v] * bestub;
             *localbdsused = *localbdsused || (bestubtype == -2);
          }
          else
@@ -6824,45 +6944,42 @@ void transformMIRRow(
             zidx = SCIPvarGetProbindex(vubvars[bestubtype]);
             assert(zidx >= 0);
                
-            (*mirrhs) -= mircoef[idx] * vubconsts[bestubtype];
-            mircoef[zidx] += mircoef[idx] * vubcoefs[bestubtype];
+            (*mirrhs) -= mircoef[v] * vubconsts[bestubtype];
+            mircoef[zidx] += mircoef[v] * vubcoefs[bestubtype];
          }
       }
 
-      debugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g\n", 
-         SCIPvarGetName(var), varsign[idx], boundtype[idx], mircoef[idx]);
+      debugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g, lb=%g, ub=%g -> rhs=%g\n", 
+         SCIPvarGetName(var), varsign[v], boundtype[v], mircoef[v], bestlb, bestub, *mirrhs);
    }
 }
 
 /** Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
  *    a~*x' <= down(b)
- *  integers :  a~_j = down(a'_j)                      , if f_j <= f0
- *              a~_j = down(a'_j) + (f_j - f0)/(1 - f0), if f_j >  f0
+ *  integers :  a~_j = down(a'_j)                      , if f_j <= f_0
+ *              a~_j = down(a'_j) + (f_j - f0)/(1 - f0), if f_j >  f_0
  *  continuous: a~_j = 0                               , if a'_j >= 0
  *              a~_j = a'_j/(1 - f0)                   , if a'_j <  0
  *
- *  Transform inequality back to a°*x <= down(b):
+ *  Transform inequality back to a°*x <= rhs:
  *
  *  (lb or ub):
- *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       a'_j =  a_j,      if x^_j is closer to lb
- *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       a'_j = -a_j,      if x^_j is closer to ub
- *    a°_j :=  a~_j, if x^_j is closer to lb
- *    a°_j := -a~_j, if x^_j is closer to ub
+ *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
+ *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
  *  and move the constant terms
  *    -a~_j * lb_j == -a°_j * lb_j, or
  *     a~_j * ub_j == -a°_j * ub_j
  *  to the rhs.
  *
  *  (vlb or vub):
- *  trans  x_j <- x'_j + (b_j * z_j + d_j),  retrans  x'_j <- x_j - (b_j * z_j + d_j),       if x_j is closer to vlb
- *  trans  x_j <- (b_j * z_j + d_j) - x'_j,  retrans  x'_j <- (b_j * z_j + d_j) - x_j,       if x_j is closer to vub
- *  and change
- *  a°_j :=  a~_j,    if x_j is closer to vlb
- *  a°_j := -a~_j,    if x_j is closer to vub
- *  mirrhs = mirrhs + a~_j * d_j = mirrhs + a°_j * d_j,    if x_j is closer to vlb
- *  mirrhs = mirrhs - a~_j * d_j = mirrhs + a°_j * d_j,    if x_j is closer to vub
- *  mircoef[z_j] = mircoef[z_j] - a~_j * b_j = mircoef[z_j] - a°_j * b_j,    if x_j is closer to vlb
- *  mircoef[z_j] = mircoef[z_j] + a~_j * b_j = mircoef[z_j] - a°_j * b_j,    if x_j is closer to vub.
+ *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
+ *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+ *  move the constant terms
+ *    -a~_j * dl_j == -a°_j * dl_j, or
+ *     a~_j * du_j == -a°_j * du_j
+ *  to the rhs, and update the VB variable coefficients:
+ *    a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
+ *    a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
  */
 static
 void roundMIRRow(
@@ -6876,14 +6993,6 @@ void roundMIRRow(
    Real*            cutactivity         /**< pointer to store the activity of the resulting cut */
    )
 {
-   Real* bvlb;
-   VAR** zvlb;
-   Real* dvlb;
-
-   Real* bvub;
-   VAR** zvub;
-   Real* dvub;
-
    VAR* var;
    Real onedivoneminusf0;
    Real aj;
@@ -6891,7 +7000,6 @@ void roundMIRRow(
    Real cutaj;
    Real fj;
    int nintvars;
-   int idx;
    int v;
 
    assert(prob != NULL);
@@ -6906,38 +7014,38 @@ void roundMIRRow(
 
    nintvars = prob->nvars - prob->ncontvars;
 
-   /* integer variable */
+   /* integer variables */
    for( v = 0; v < nintvars; ++v )
    {
       var = prob->vars[v];
       assert(var != NULL);
       assert(SCIPvarIsIntegral(var));
-      idx = SCIPvarGetProbindex(var);
-      assert(0 <= idx && idx < prob->nvars);
-      assert(boundtype[idx] == -1 || boundtype[idx] == -2);
+      assert(SCIPvarGetProbindex(var) == v);
+      assert(boundtype[v] == -1 || boundtype[v] == -2);
+      assert(varsign[v] == +1 || varsign[v] == -1);
 
       /* calculate the coefficient in the retransformed cut */
-      aj = varsign[idx] * mircoef[idx];
+      aj = varsign[v] * mircoef[v]; /* a'_j */
       downaj = SCIPsetFloor(set, aj);
       fj = aj - downaj;
       
       if( SCIPsetIsSumLE(set, fj, f0) )
-         cutaj = varsign[idx] * downaj;
+         cutaj = varsign[v] * downaj; /* a°_j */
       else
-         cutaj = varsign[idx] * (downaj + (fj - f0) * onedivoneminusf0);
+         cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* a°_j */
 
       if( SCIPsetIsZero(set, cutaj) )
-         mircoef[idx] = 0.0;
+         mircoef[v] = 0.0;
       else
       {
-         mircoef[idx] = cutaj;
+         mircoef[v] = cutaj;
          (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
 
          /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
-         if( varsign[idx] == +1 )
+         if( varsign[v] == +1 )
          {
             /* lower bound was used */
-            if( boundtype[idx] == -1 )
+            if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
                (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
@@ -6951,7 +7059,7 @@ void roundMIRRow(
          else
          {
             /* upper bound was used */
-            if( boundtype[idx] == -1 )
+            if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
                (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
@@ -6965,41 +7073,41 @@ void roundMIRRow(
       }
    }
 
-   /* continuous variable */
+   /* continuous variables */
    for( v = nintvars; v < prob->nvars; ++v )
    {
       var = prob->vars[v];
       assert(var != NULL);
       assert(!SCIPvarIsIntegral(var));
-      idx = SCIPvarGetProbindex(var);
-      assert(0 <= idx && idx < prob->nvars);
+      assert(SCIPvarGetProbindex(var) == v);
+      assert(varsign[v] == +1 || varsign[v] == -1);
 
       /* calculate the coefficient in the retransformed cut */
-      aj = varsign[idx] * mircoef[idx];
-      if( SCIPsetIsSumGE(set, aj, 0.0) )
+      aj = varsign[v] * mircoef[v]; /* a'_j */
+      if( aj >= 0.0 )
       {
-         mircoef[idx] = 0.0;
+         mircoef[v] = 0.0;
          continue;
       }
-      cutaj = varsign[idx] * aj * onedivoneminusf0;
+      cutaj = varsign[v] * aj * onedivoneminusf0; /* a°_j */
       if( SCIPsetIsZero(set, cutaj) )
       {
-         mircoef[idx] = 0.0;
+         mircoef[v] = 0.0;
          continue;
       }
-
+      mircoef[v] = cutaj;
+      (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
+         
       /* check for variable bound use */
-      if( boundtype[idx] < 0 )
+      if( boundtype[v] < 0 )
       {
          /* standard bound */
-         mircoef[idx] = cutaj;
-         (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
-         
+
          /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
-         if( varsign[idx] == +1 )
+         if( varsign[v] == +1 )
          {
             /* lower bound was used */
-            if( boundtype[idx] == -1 )
+            if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
                (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
@@ -7013,7 +7121,7 @@ void roundMIRRow(
          else
          {
             /* upper bound was used */
-            if( boundtype[idx] == -1 )
+            if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
                (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
@@ -7027,50 +7135,38 @@ void roundMIRRow(
       }
       else
       {
-         /* variable bound */
-         assert(boundtype[idx] >= 0);
-         mircoef[idx] = cutaj;
-         (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
-         
-         /* change mirrhs and cutaj of integer variable z_j of variable bound */
-         if( varsign[idx] == +1 )
-         {
-            VAR* z;
-            int zidx;
-            int j;
+         VAR** vbz;
+         Real* vbb;
+         Real* vbd;
+         int vbidx;
+         int zidx;
 
+         /* variable bound */
+         vbidx = boundtype[v];
+
+         /* change mirrhs and cutaj of integer variable z_j of variable bound */
+         if( varsign[v] == +1 )
+         {
             /* variable lower bound was used */
-            j = boundtype[idx];
-            assert(0 <= j && j < SCIPvarGetNVlbs(var));
-            zvlb = SCIPvarGetVlbVars(var);
-            z = zvlb[j];
-            zidx =  SCIPvarGetProbindex(z);
-            bvlb = SCIPvarGetVlbCoefs(var);
-            dvlb = SCIPvarGetVlbConstants(var);
-               
-            (*mirrhs) += cutaj * dvlb[j];
-            mircoef[zidx] -= cutaj * bvlb[j];
-            (*cutactivity) -= cutaj * bvlb[j] * SCIPvarGetLPSol(z);
+            assert(0 <= vbidx && vbidx < SCIPvarGetNVlbs(var));
+            vbz = SCIPvarGetVlbVars(var);
+            vbb = SCIPvarGetVlbCoefs(var);
+            vbd = SCIPvarGetVlbConstants(var);
          }
          else
          {
-            VAR* z;
-            int zidx;
-            int j;
-
             /* variable upper bound was used */
-            j = boundtype[idx];
-            assert(0 <= j && j < SCIPvarGetNVubs(var));
-            zvub = SCIPvarGetVubVars(var);
-            z = zvub[j];
-            zidx =  SCIPvarGetProbindex(z);
-            bvub = SCIPvarGetVubCoefs(var);
-            dvub = SCIPvarGetVubConstants(var);
-               
-            (*mirrhs) += cutaj * dvub[j];
-            mircoef[zidx] -= cutaj * bvub[j];
-            (*cutactivity) -= cutaj * bvub[j] * SCIPvarGetLPSol(z);
+            assert(0 <= vbidx && vbidx < SCIPvarGetNVubs(var));
+            vbz = SCIPvarGetVubVars(var);
+            vbb = SCIPvarGetVubCoefs(var);
+            vbd = SCIPvarGetVubConstants(var);
          }
+         zidx =  SCIPvarGetProbindex(vbz[vbidx]);
+         assert(0 <= zidx && zidx < v);
+
+         (*mirrhs) += cutaj * vbd[vbidx];
+         mircoef[zidx] -= cutaj * vbb[vbidx];
+         (*cutactivity) -= cutaj * vbb[vbidx] * SCIPvarGetLPSol(vbz[vbidx]);
       }
    }
 }
@@ -7079,7 +7175,7 @@ void roundMIRRow(
  *
  *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
  *  variable only appears in its own row:
- *     a'_r = weight[r] * slacksign[r].
+ *     a'_r = scale * weight[r] * slacksign[r].
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
  *    integers :  a°_r = a~_r = down(a'_r)                      , if f_r <= f0
@@ -7109,7 +7205,6 @@ void substituteMIRRow(
    Real downar;
    Real cutar;
    Real fr;
-
    Real mul;
    int idx;
    int r;
@@ -7127,10 +7222,11 @@ void substituteMIRRow(
    onedivoneminusf0 = 1.0 / (1.0 - f0);
    for( r = 0; r < lp->nrows; ++r )
    {
-      /* unused rows can be ignored */
+      /* unused slacks can be ignored */
       if( slacksign[r] == 0 )
          continue;
 
+      assert(slacksign[r] == -1 || slacksign[r] == +1);
       assert(!SCIPsetIsZero(set, weights[r]));
 
       row = lp->rows[r];
@@ -7164,7 +7260,7 @@ void substituteMIRRow(
           *    a°_r = a~_r = 0                               , if a'_r >= 0
           *    a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
           */
-         if( !SCIPsetIsNegative(set, ar) )
+         if( ar >= 0.0 )
             continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
          else
             cutar = ar * onedivoneminusf0;
@@ -7199,11 +7295,13 @@ void substituteMIRRow(
       if( slacksign[r] == +1 )
       {
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a°_r * (rhs - c) to the right hand side */
+         assert(!SCIPsetIsInfinity(set, row->rhs));
          (*mirrhs) -= cutar * (row->rhs - row->constant);
       }
       else
       {
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a°_r * (c - lhs) to the right hand side */
+         assert(!SCIPsetIsInfinity(set, -row->lhs));
          (*mirrhs) -= cutar * (row->constant - row->lhs);
       }
    }
@@ -7246,6 +7344,7 @@ RETCODE SCIPlpCalcMIR(
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
@@ -7289,22 +7388,37 @@ RETCODE SCIPlpCalcMIR(
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &slacksign, lp->nrows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &varsign, prob->nvars) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
-   
+
    /* calculate the row summation */
-   sumMIRRow(set, stat, prob, lp, weights, scale, allowlocal, mircoef, &rhs, slacksign, &emptyrow, &localrowsused);
+   sumMIRRow(set, stat, prob, lp, weights, scale, allowlocal, 
+      maxweightrange, mircoef, &rhs, slacksign, &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;
    if( emptyrow )
       goto TERMINATE;
 
    debug(printMIR(prob, mircoef, rhs));
+   
+   /* remove all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
+    *  prevent numerical rounding errors
+    */
+   cleanupMIRRow(set, prob, mircoef, &rhs, *cutislocal);
+   debug(printMIR(prob, mircoef, rhs));
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
-    *   a*x' == b, 0 <= x' <= ub'.
-    * Transform variables:
-    *   x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       if x^_j is closer to lb
-    *   x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
-    * and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
+    *   a'*x' == b, 0 <= x' <= ub'.
+    * 
+    * Transform variables (lb or ub):
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
+    * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+    *
+    * Transform variables (vlb or vub):
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
+    * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
+    *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
+    *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
    transformMIRRow(set, prob, boundswitch, usevbds, allowlocal, 
       mircoef, &rhs, varsign, boundtype, &freevariable, &localbdsused);
@@ -7312,23 +7426,34 @@ RETCODE SCIPlpCalcMIR(
    *cutislocal = *cutislocal || localbdsused;
    if( freevariable )
       goto TERMINATE;
+   debug(printMIR(prob, mircoef, rhs));
 
-   /* Calculate fractionalities  f0 := b - down(b), f_j := a_j - down(a_j) , and derive MIR cut
+   /* Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
     *   a~*x' <= down(b)
-    * integers:   a~_j = down(a_j)                      , if f_j <= f0
-    *             a~_j = down(a_j) + (f_j - f0)/(1 - f0), if f_j >  f0
-    * continuous: a~_j = 0                              , if a_j >= 0
-    *             a~_j = a_j/(1 - f0)                   , if a_j <  0
-    * Keep in mind, that the varsign has to be implicitly incorporated into a~_j.
-    * Transform inequality back to a°*x <= down(b):
-    *   x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       if x^_j is closer to lb
-    *   x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
-    *   a°_j :=  a~_j, if x^_j is closer to lb
-    *   a°_j := -a~_j, if x^_j is closer to ub
+    * integers :  a~_j = down(a'_j)                      , if f_j <= f_0
+    *             a~_j = down(a'_j) + (f_j - f0)/(1 - f0), if f_j >  f_0
+    * continuous: a~_j = 0                               , if a'_j >= 0
+    *             a~_j = a'_j/(1 - f0)                   , if a'_j <  0
+    *
+    * Transform inequality back to a°*x <= rhs:
+    *
+    * (lb or ub):
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
     * and move the constant terms
     *   -a~_j * lb_j == -a°_j * lb_j, or
     *    a~_j * ub_j == -a°_j * ub_j
     * to the rhs.
+    *
+    * (vlb or vub):
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+    * move the constant terms
+    *   -a~_j * dl_j == -a°_j * dl_j, or
+    *    a~_j * du_j == -a°_j * du_j
+    * to the rhs, and update the VB variable coefficients:
+    *   a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
+    *   a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
     */
    downrhs = SCIPsetFloor(set, rhs);
    f0 = rhs - downrhs;
@@ -7337,16 +7462,24 @@ RETCODE SCIPlpCalcMIR(
 
    *mirrhs = downrhs;
    roundMIRRow(set, prob, mircoef, mirrhs, varsign, boundtype, f0, cutactivity);
+   debug(printMIR(prob, mircoef, *mirrhs));
 
-   /* substitute negatively aggregated slack variables:
-    * - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continuous
-    *   slack variable is a_j > 0, which leads to a°_j = 0, so we can ignore the slack variable in
-    *   the resulting cut
-    * - if row was aggregated with a negative factor (weight * slacksign), the a_j for the continuous
-    *   slack variable is a_j < 0, which leads to a°_j = a_j/(1 - f0), so we have to subtract 
-    *   a°_j times the row to the cut to eliminate the slack variable
+   /* substitute aggregated slack variables:
+    *
+    * The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
+    * variable only appears in its own row:
+    *    a'_r = scale * weight[r] * slacksign[r].
+    *
+    * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
+    *   integers :  a°_r = a~_r = down(a'_r)                      , if f_r <= f0
+    *               a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+    *   continuous: a°_r = a~_r = 0                               , if a'_r >= 0
+    *               a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+    *
+    * Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
     */
    substituteMIRRow(set, stat, lp, weights, scale, mircoef, mirrhs, slacksign, f0, cutactivity);
+   debug(printMIR(prob, mircoef, *mirrhs));
 
    *success = TRUE;
 
@@ -7512,6 +7645,11 @@ RETCODE lpPrimalSimplex(
    {
       stat->nlps++;
       stat->nlpiterations += iterations;
+      if( !lp->lpifromscratch && stat->nlps > 1 )
+      {
+         stat->nresolvelps++;
+         stat->nresolvelpiterations += iterations;
+      }
       if( lp->diving )
       {
          stat->ndivinglps++;
@@ -7581,6 +7719,11 @@ RETCODE lpDualSimplex(
    {
       stat->nlps++;
       stat->nlpiterations += iterations;
+      if( !lp->lpifromscratch && stat->nlps > 1  )
+      {
+         stat->nresolvelps++;
+         stat->nresolvelpiterations += iterations;
+      }
       if( lp->diving )
       {
          stat->ndivinglps++;
@@ -7912,7 +8055,7 @@ RETCODE SCIPlpSolveAndEval(
       Bool fromscratch;
 
       /* set initial LP solver settings */
-      fastmip = set->lp_fastmip && !lp->flushaddedcols && !lp->flushdeletedcols;
+      fastmip = set->lp_fastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1;
       fromscratch = FALSE;
 
    SOLVEAGAIN:

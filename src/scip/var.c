@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.114 2004/10/05 16:08:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.115 2004/10/12 14:06:08 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2062,9 +2062,9 @@ void SCIPvarPrint(
    /* bounds */
    fprintf(file, ", bounds=");
    if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-      fprintf(file, " [-inf,");
+      fprintf(file, "[-inf,");
    else
-      fprintf(file, " [%g,", var->glbdom.lb);
+      fprintf(file, "[%g,", var->glbdom.lb);
    if( SCIPsetIsInfinity(set, var->glbdom.ub) )
       fprintf(file, "+inf]");
    else
@@ -6682,7 +6682,10 @@ Real SCIPvarGetAvgSol(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return var->primsolavg;
+      avgsol = var->primsolavg;
+      avgsol = MIN(avgsol, var->glbdom.lb);
+      avgsol = MAX(avgsol, var->glbdom.ub);
+      return avgsol;
 
    case SCIP_VARSTATUS_FIXED:
       assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/

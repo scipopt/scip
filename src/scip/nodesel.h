@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.31 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.32 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -79,6 +79,15 @@ RETCODE SCIPnodepqSetNodesel(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
    SET*             set,                /**< global SCIP settings */
    NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
+   );
+
+/** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
+extern
+int SCIPnodepqCompare(
+   NODEPQ*          nodepq,             /**< node priority queue */
+   SET*             set,                /**< global SCIP settings */
+   NODE*            node1,              /**< first node to compare */
+   NODE*            node2               /**< second node to compare */
    );
 
 /** inserts node into node priority queue */

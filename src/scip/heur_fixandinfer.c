@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.1 2004/09/23 15:46:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.2 2004/10/12 14:06:06 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -32,12 +32,13 @@
 #define HEUR_DESC             "iteratively fixes variables and propagates inferences"
 #define HEUR_DISPCHAR         'i'
 #define HEUR_PRIORITY         -500000
-#define HEUR_FREQ             5
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      TRUE      /* call heuristic at nodes where only a pseudo solution exist? */
-#define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
+#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
+#define MAXDIVEDEPTH          100
 
 
 
@@ -119,8 +120,10 @@ RETCODE fixVariable(
 static
 DECL_HEUREXEC(heurExecFixandinfer)
 {  /*lint --e{715}*/
-   VAR** pseudocands;
-   int npseudocands;
+   VAR** cands;
+   int ncands;
+   int startncands;
+   int divedepth;
    Bool cutoff;
 
    *result = SCIP_DIDNOTRUN;
@@ -135,18 +138,23 @@ DECL_HEUREXEC(heurExecFixandinfer)
    CHECK_OKAY( SCIPstartProbing(scip) );
 
    /* get unfixed variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands, NULL) );
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
 
-   debugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", npseudocands);
+   debugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
 
    /* fix variables and propagate inferences as long as the problem is still feasible and there are 
     * unfixed integral variables
     */
    cutoff = FALSE;
-   while( !cutoff && npseudocands > 0 )
+   divedepth = 0;
+   startncands = ncands;
+   while( !cutoff && ncands > 0
+      && (divedepth < MAXDIVEDEPTH || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) )
    {
+      divedepth++;
+
       /* fix next variable */
-      CHECK_OKAY( fixVariable(scip, pseudocands, npseudocands) );
+      CHECK_OKAY( fixVariable(scip, cands, ncands) );
 
       /* propagate the fixing */
       CHECK_OKAY( SCIPpropagateProbing(scip, &cutoff) );
@@ -154,7 +162,7 @@ DECL_HEUREXEC(heurExecFixandinfer)
       /* get remaining unfixed variables */
       if( !cutoff )
       {
-         CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands, NULL) );
+         CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
       }
    }
 
@@ -163,7 +171,7 @@ DECL_HEUREXEC(heurExecFixandinfer)
    {
       Bool success;
 
-      assert(npseudocands == 0);
+      assert(ncands == 0);
       success = FALSE;
 
       /* try to add solution to SCIP */

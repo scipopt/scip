@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.115 2004/10/05 16:08:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.116 2004/10/12 14:06:08 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2826,9 +2826,16 @@ RETCODE SCIPnodeFocus(
    }
    else
    {
+      NODE* bestleaf;
+
       switch( SCIPnodeGetType(*node) )
       {  
       case SCIP_NODETYPE_SIBLING:
+         /* reset plunging depth, if the selected node is better than all leaves */
+         bestleaf = SCIPtreeGetBestLeaf(tree);
+         if( bestleaf == NULL || SCIPnodepqCompare(tree->leaves, set, *node, bestleaf) <= 0 )
+            stat->plungedepth = 0;
+
          /* move children to the queue, make them LEAFs */
          CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->children, &tree->nchildren, childrenlpfork,
                primal->cutoffbound) );
@@ -2840,6 +2847,13 @@ RETCODE SCIPnodeFocus(
          break;
          
       case SCIP_NODETYPE_CHILD:
+         /* reset plunging depth, if the selected node is better than all leaves; otherwise, increase plunging depth */
+         bestleaf = SCIPtreeGetBestLeaf(tree);
+         if( bestleaf == NULL || SCIPnodepqCompare(tree->leaves, set, *node, bestleaf) <= 0 )
+            stat->plungedepth = 0;
+         else
+            stat->plungedepth++;
+
          /* move siblings to the queue, make them LEAFs */
          CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
                primal->cutoffbound) );
@@ -2850,7 +2864,6 @@ RETCODE SCIPnodeFocus(
          /* move remaining children to the siblings array, make them SIBLINGs */
          treeChildrenToSiblings(tree);
          
-         stat->plungedepth++;
          debugMessage("selected child node, lowerbound=%g, plungedepth=%d\n", (*node)->lowerbound, stat->plungedepth);
          break;
          

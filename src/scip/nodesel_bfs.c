@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.33 2004/10/05 11:01:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.34 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -118,81 +118,94 @@ DECL_NODESELSELECT(nodeselSelectBfs)
       logdepth = 0;
       for( n = nnodes; n > 0; n >>= 1 )
          logdepth++;
-#if 1 /*???????????????????*/
       if( minplungedepth == -1 )
          minplungedepth = logdepth/2;
       if( maxplungedepth == -1 )
          maxplungedepth = logdepth*2;
-#else
-      if( minplungedepth == -1 )
-      {
-         minplungedepth = logdepth/2;
-         if( SCIPgetNBacktracks(scip) % 10 == 0 )
-            minplungedepth = INT_MAX;
-      }         
-      if( maxplungedepth == -1 )
-      {
-         maxplungedepth = logdepth*2;
-         if( SCIPgetNBacktracks(scip) % 10 == 0 )
-            maxplungedepth = INT_MAX;
-      }
-#endif
    }
-   
+
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);
    if( plungedepth > maxplungedepth )
    {
       /* we don't want to plunge again: select best node from the tree */
+      debugMessage("plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);
       *selnode = SCIPgetBestNode(scip);
+      debugMessage("  -> best node   : lower=%g\n",
+         *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
    }
    else
    {
       NODE* node;
+      Real lowerbound;
+      Real upperbound;
       Real maxbound;
 
+      /* get global lower and upper bound */
+      lowerbound = SCIPgetLowerbound(scip);
+      upperbound = SCIPgetUpperbound(scip);
+
+      /* if we didn't find a solution yet, the upper bound is usually very bad:
+       * use only 20% of the gap as upper bound
+       */
+      if( SCIPgetNSolsFound(scip) == 0 )
+         upperbound = lowerbound + 0.2 * (upperbound - lowerbound);
+         
       /* check, if plunging is forced at the current depth */
       if( plungedepth < minplungedepth )
-         maxbound = REAL_MAX;
+         maxbound = SCIPinfinity(scip);
       else
       {
-         Real lowerbound;
-         Real upperbound;
-
-         /* get global lower and upper bound */
-         lowerbound = SCIPgetLowerbound(scip);
-         upperbound = SCIPgetUpperbound(scip);
-         
-         /* if we didn't find a solution yet, the upper bound is usually very bad:
-          * use only 20% of the gap as upper bound
-          */
-         if( SCIPgetNSolsFound(scip) == 0 )
-            upperbound = lowerbound + 0.2 * (upperbound - lowerbound);
-         
          /* calculate maximal plunging bound */
          maxbound = lowerbound + nodeseldata->maxplungequot * (upperbound - lowerbound);
       }
+
+      debugMessage("plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
+         minplungedepth, maxplungedepth, plungedepth, lowerbound, upperbound, maxbound);
 
       /* we want to plunge again: prefer children over siblings, and siblings over leaves,
        * but only select a child or sibling, if its dual bound is small enough;
        * prefer using nodes with higher node selection priority assigned by the branching rule
        */
       node = SCIPgetPrioChild(scip);
-      if( node == NULL || SCIPnodeGetLowerbound(node) > maxbound )
+      if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+      {
+         *selnode = node;
+         debugMessage("  -> selected prio child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+      }
+      else
       {
          node = SCIPgetBestChild(scip);
-         if( node == NULL || SCIPnodeGetLowerbound(node) > maxbound )
+         if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+         {
+            *selnode = node;
+            debugMessage("  -> selected best child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+         }
+         else
          {
             node = SCIPgetPrioSibling(scip);
-            if( node == NULL || SCIPnodeGetLowerbound(node) > maxbound )
+            if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+            {
+               *selnode = node;
+               debugMessage("  -> selected prio sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+            }
+            else
             {
                node = SCIPgetBestSibling(scip);
-               if( node == NULL || SCIPnodeGetLowerbound(node) > maxbound )
-                  node = SCIPgetBestNode(scip);
+               if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+               {
+                  *selnode = node;
+                  debugMessage("  -> selected best sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+               }
+               else
+               {
+                  *selnode = SCIPgetBestNode(scip);
+                  debugMessage("  -> selected best leaf: lower=%g\n",
+                     *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
+               }
             }
          }
       }
-      *selnode = node;
    }
 
    return SCIP_OKAY;
@@ -211,9 +224,9 @@ DECL_NODESELCOMP(nodeselCompBfs)
 
    lowerbound1 = SCIPnodeGetLowerbound(node1);
    lowerbound2 = SCIPnodeGetLowerbound(node2);
-   if( lowerbound1 < lowerbound2 )
+   if( SCIPisLT(scip, lowerbound1, lowerbound2) )
       return -1;
-   else if( lowerbound1 > lowerbound2 )
+   else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
       return +1;
    else
    {
@@ -237,9 +250,9 @@ DECL_NODESELCOMP(nodeselCompBfs)
          
          depth1 = SCIPnodeGetDepth(node1);
          depth2 = SCIPnodeGetDepth(node2);
-         if( depth1 > depth2 )
+         if( depth1 < depth2 )
             return -1;
-         else if( depth1 < depth2 )
+         else if( depth1 > depth2 )
             return +1;
          else
             return 0;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.213 2004/10/05 16:08:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.214 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3335,9 +3335,9 @@ RETCODE initSolve(
    /* inform primal heuristics that the branch and bound process starts now */
    for( h = 0; h < scip->set->nheurs; ++h )
    {
-      CHECK_OKAY( SCIPheurInitsol(scip->set->heurs[h]) );
+      CHECK_OKAY( SCIPheurInitsol(scip->set->heurs[h], scip->set) );
    }
-   
+
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
 
@@ -4439,6 +4439,7 @@ RETCODE SCIPtightenVarLb(
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+   newbound = MIN(newbound, ub);
 
    if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
    {
@@ -4506,6 +4507,7 @@ RETCODE SCIPtightenVarUb(
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+   newbound = MAX(newbound, lb);
 
    if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
    {
@@ -4575,7 +4577,8 @@ RETCODE SCIPinferVarLbCons(
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
-
+   newbound = MIN(newbound, ub);
+   
    if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
    {
       if( tightened != NULL )
@@ -4645,6 +4648,7 @@ RETCODE SCIPinferVarUbCons(
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+   newbound = MAX(newbound, lb);
 
    if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
    {
@@ -4804,6 +4808,7 @@ RETCODE SCIPinferVarLbProp(
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+   newbound = MIN(newbound, ub);
 
    if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
    {
@@ -4874,6 +4879,7 @@ RETCODE SCIPinferVarUbProp(
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+   newbound = MAX(newbound, lb);
 
    if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
    {
@@ -6741,6 +6747,7 @@ RETCODE SCIPcalcMIR(
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
@@ -6754,7 +6761,8 @@ RETCODE SCIPcalcMIR(
    CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
-         boundswitch, usevbds, allowlocal, minfrac, weights, scale, mircoef, mirrhs, cutactivity, success, cutislocal) );
+         boundswitch, usevbds, allowlocal, maxweightrange, minfrac, weights, scale,
+         mircoef, mirrhs, cutactivity, success, cutislocal) );
 
    return SCIP_OKAY;
 }
@@ -7002,13 +7010,15 @@ RETCODE SCIPcalcRowIntegralScalar(
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
    Bool*            success             /**< stores whether returned value is valid */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPcalcRowIntegralScalar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwCalcIntegralScalar(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, intscalar, success) );
+   CHECK_OKAY( SCIProwCalcIntegralScalar(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, usecontvars,
+         intscalar, success) );
 
    return SCIP_OKAY;
 }
@@ -7019,14 +7029,37 @@ RETCODE SCIPmakeRowIntegral(
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
+   Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    Bool*            success             /**< stores whether row could be made rational */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPmakeRowIntegral", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwMakeIntegral(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, success) );
+   CHECK_OKAY( SCIProwMakeIntegral(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, usecontvars, success) );
 
    return SCIP_OKAY;
+}
+
+/** returns minimal absolute value of row vector's non-zero coefficients */
+Real SCIPgetRowMinCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetRowMinCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   return SCIProwGetMinval(row, scip->set);
+}
+
+/** returns maximal absolute value of row vector's non-zero coefficients */
+Real SCIPgetRowMaxCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetRowMaxCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   return SCIProwGetMaxval(row, scip->set);
 }
 
 /** returns the minimal activity of a row w.r.t. the column's bounds */
@@ -9045,6 +9078,28 @@ Longint SCIPgetNLPIterations(
    return scip->stat->nlpiterations;
 }
 
+/** gets total number of LPs solved so far that were resolved from an advanced start basis */
+int SCIPgetNResolveLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNResolveLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nresolvelps;
+}
+
+/** gets total number of simplex iterations used so far in primal and dual simplex calls where an advanced start basis
+ *  was available
+ */
+Longint SCIPgetNResolveLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNResolveLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nresolvelpiterations;
+}
+
 /** gets total number of LPs solved so far for node relaxations */
 int SCIPgetNNodeLPs(
    SCIP*            scip                /**< SCIP data structure */
@@ -9063,6 +9118,26 @@ Longint SCIPgetNNodeLPIterations(
    CHECK_ABORT( checkStage(scip, "SCIPgetNNodeLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->stat->nnodelpiterations;
+}
+
+/** gets total number of LPs solved so far for initial LP in node relaxations */
+int SCIPgetNNodeInitLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNInitNodeLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->ninitlps;
+}
+
+/** gets total number of simplex iterations used so far for initial LP in node relaxations */
+Longint SCIPgetNNodeInitLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNNodeInitLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->ninitlpiterations;
 }
 
 /** gets total number of LPs solved so far during diving */
@@ -9103,6 +9178,26 @@ Longint SCIPgetNStrongbranchLPIterations(
    CHECK_ABORT( checkStage(scip, "SCIPgetNStrongbranchLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->stat->nsblpiterations;
+}
+
+/** gets total number of times, strong branching was called at the root node (each call represents solving two LPs) */
+int SCIPgetNRootStrongbranchs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNRootStrongbranchs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nrootstrongbranchs;
+}
+
+/** gets total number of simplex iterations used so far in strong branching at the root node */
+Longint SCIPgetNRootStrongbranchLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNRootStrongbranchLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nrootsblpiterations;
 }
 
 /** gets number of pricing rounds performed so far at the current node */
@@ -9950,6 +10045,12 @@ void printLPStatistics(
       fprintf(file, " %10.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else
       fprintf(file, "          -\n");
+
+   fprintf(file, "    (at root node) :          - %10d %10lld %10.2f          -\n",
+      scip->stat->nrootstrongbranchs,
+      scip->stat->nrootsblpiterations,
+      scip->stat->nrootstrongbranchs > 0
+      ? (Real)scip->stat->nrootsblpiterations/(Real)scip->stat->nrootstrongbranchs : 0.0);
 
    fprintf(file, "  conflict analysis: %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->conflictlptime),

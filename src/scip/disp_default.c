@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.42 2004/10/05 11:01:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.43 2004/10/12 14:06:06 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -92,6 +92,14 @@
 #define DISP_PRIO_MAXDEPTH      5000
 #define DISP_POSI_MAXDEPTH      2100
 #define DISP_STRI_MAXDEPTH      TRUE
+
+#define DISP_NAME_PLUNGEDEPTH   "plungedepth"
+#define DISP_DESC_PLUNGEDEPTH   "current plunging depth"
+#define DISP_HEAD_PLUNGEDEPTH   "pdpt"
+#define DISP_WIDT_PLUNGEDEPTH   5
+#define DISP_PRIO_PLUNGEDEPTH   10
+#define DISP_POSI_PLUNGEDEPTH   2200
+#define DISP_STRI_PLUNGEDEPTH   TRUE
 
 #define DISP_NAME_VARS          "vars"
 #define DISP_DESC_VARS          "number of variables in the problem"
@@ -323,6 +331,18 @@ DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
    assert(scip != NULL);
 
    SCIPdispDecimal(file, (Longint)SCIPgetMaxDepth(scip), DISP_WIDT_MAXDEPTH);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_DISPOUTPUT(SCIPdispOutputPlungedepth)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PLUNGEDEPTH) == 0);
+   assert(scip != NULL);
+
+   SCIPdispDecimal(file, (Longint)SCIPgetPlungeDepth(scip), DISP_WIDT_PLUNGEDEPTH);
 
    return SCIP_OKAY;
 }
@@ -576,6 +596,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MAXDEPTH, DISP_DESC_MAXDEPTH, DISP_HEAD_MAXDEPTH,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputMaxdepth, NULL, 
                   DISP_WIDT_MAXDEPTH, DISP_PRIO_MAXDEPTH, DISP_POSI_MAXDEPTH, DISP_STRI_MAXDEPTH) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_PLUNGEDEPTH, DISP_DESC_PLUNGEDEPTH, DISP_HEAD_PLUNGEDEPTH,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputPlungedepth, NULL, 
+                  DISP_WIDT_PLUNGEDEPTH, DISP_PRIO_PLUNGEDEPTH, DISP_POSI_PLUNGEDEPTH, DISP_STRI_PLUNGEDEPTH) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_VARS, DISP_DESC_VARS, DISP_HEAD_VARS,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputVars, NULL, 
                   DISP_WIDT_VARS, DISP_PRIO_VARS, DISP_POSI_VARS, DISP_STRI_VARS) );

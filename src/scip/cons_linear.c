@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.120 2004/10/05 11:01:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.121 2004/10/12 14:06:06 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3694,6 +3694,8 @@ RETCODE convertLongEquality(
    assert(consdata != NULL);
    assert(consdata->nvars > 2);
    assert(SCIPisEQ(scip, consdata->lhs, consdata->rhs));
+
+   debugMessage("linear constraint <%s>: try to multi-aggregate equality\n", SCIPconsGetName(cons));
 
    /* look for a slack variable s to convert a*x + s == b into lhs <= a*x <= rhs */
    vars = consdata->vars;

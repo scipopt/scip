@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.138 2004/10/05 16:08:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.139 2004/10/12 14:06:08 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -679,6 +679,7 @@ RETCODE priceAndCutLoop(
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers sorted by separation priority */
+   Bool             initialloop,        /**< is this the first price-and-cut loop call at the current node? */
    Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
@@ -693,6 +694,9 @@ RETCODE priceAndCutLoop(
    Bool mustprice;
    Bool mustsepar;
    Bool root;
+   int maxseparounds;
+   int nsepastallrounds;
+   int maxnsepastallrounds;
    int actdepth;
    int ncolvars;
    int h;
@@ -724,6 +728,16 @@ RETCODE priceAndCutLoop(
    upperbound = primal->upperbound;
    separate = SCIPsetIsLE(set, loclowerbound - glblowerbound, set->sepa_maxbounddist * (upperbound - glblowerbound));
 
+   /* get maximal number of separation rounds */
+   maxseparounds = (root ? set->sepa_maxroundsroot : set->sepa_maxrounds);
+   if( maxseparounds == -1 )
+      maxseparounds = INT_MAX;
+   if( initialloop && set->sepa_maxaddrounds >= 0 )
+      maxseparounds = MIN(maxseparounds, stat->nseparounds + set->sepa_maxaddrounds);
+   maxnsepastallrounds = set->sepa_maxstallrounds;
+   if( maxnsepastallrounds == -1 )
+      maxnsepastallrounds = INT_MAX;
+
    /* solve initial LP of price-and-cut loop */
    debugMessage("node: solve LP with price and cut\n");
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
@@ -741,6 +755,7 @@ RETCODE priceAndCutLoop(
    mustprice = TRUE;
    mustsepar = separate;
    *cutoff = FALSE;
+   nsepastallrounds = 0;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepar) )
    {
       debugMessage("-------- node solving loop --------\n");
@@ -846,6 +861,8 @@ RETCODE priceAndCutLoop(
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
       mustsepar = mustsepar
          && separate
+         && stat->nseparounds < maxseparounds
+         && nsepastallrounds < maxnsepastallrounds
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE)
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT)
          && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
@@ -855,12 +872,15 @@ RETCODE priceAndCutLoop(
        */
       if( !(*cutoff) && !(*lperror) && mustsepar )
       {
+         Real oldlpobjval;
          Bool separateagain;
          Bool enoughcuts;
 
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+
+         oldlpobjval = SCIPlpGetObjval(lp, set);
 
          mustsepar = FALSE;
          enoughcuts = (SCIPsetGetSepaMaxcuts(set, root) == 0);
@@ -967,11 +987,19 @@ RETCODE priceAndCutLoop(
                
                if( !(*cutoff) )
                {
+                  Real lpobjval;
+
                   /* solve LP (with dual simplex) */
                   debugMessage("separation: solve LP\n");
                   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
                   assert(lp->flushed);
                   assert(lp->solved || lperror);
+
+                  lpobjval = SCIPlpGetObjval(lp, set);
+                  if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval) )
+                     nsepastallrounds = 0;
+                  else
+                     nsepastallrounds++;
                }
             }
          }
@@ -1063,6 +1091,10 @@ RETCODE solveNodeLP(
       assert(*cutoff || *lperror || (lp->flushed && lp->solved));
       debugMessage("price-and-cut-loop: initial LP status: %d, LP obj: %g\n", 
          SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set));
+
+      /* update initial LP iteration counter */
+      stat->ninitlps += stat->nlps - nlps;
+      stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -1070,7 +1102,7 @@ RETCODE solveNodeLP(
    {
       /* solve the LP with price-and-cut*/
       CHECK_OKAY( priceAndCutLoop(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, cutpool, 
-            branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa, cutoff, lperror) );
+            branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa, initiallpsolved, cutoff, lperror) );
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
@@ -1801,6 +1833,9 @@ RETCODE SCIPsolveCIP(
    while( !SCIPsolveIsStopped(set, stat) && !(*restart) )
    {
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+      foundsol = FALSE;
+      infeasible = FALSE;
 
       do
       {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.32 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.33 2004/10/12 14:06:07 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -46,6 +46,9 @@
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
+#define MAKECONTINTEGRAL          FALSE
+#define MAXWEIGHTRANGE            1e+04
+#define MINFRAC                    0.05
 
 
 /** separator data */
@@ -216,7 +219,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                CHECK_OKAY( SCIPgetLPBInvRow(scip, i, binvrow) );
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, 0.05, binvrow, 1.0,
+               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, MAXWEIGHTRANGE, MINFRAC, binvrow, 1.0,
                      cutcoef, &cutrhs, &cutact, &success, &cutislocal) );
                assert(ALLOWLOCAL || !cutislocal);
                debugMessage("  -> success=%d: %g <= %g\n", success, cutact, cutrhs);
@@ -278,28 +281,31 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                            cutislocal, FALSE, sepadata->dynamiccuts) );
 
                      /* try to scale the cut to integral values */
-                     CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, maxdnom, maxscale, &success) );
-                     if( success && !SCIPisCutEfficacious(scip, cut) )
-                     {
-                        debugMessage(" -> gomory cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
-                        debug(SCIPprintRow(scip, cut, NULL));
-                        success = FALSE;
-                     }
-
-                     /* if scaling was successful, add the cut */
+                     CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
                      if( success )
                      {
-                        debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
-                        debug(SCIPprintRow(scip, cut, NULL));
-                        CHECK_OKAY( SCIPaddCut(scip, cut, 1.0) );
-                        if( !cutislocal )
+                        if( !SCIPisCutEfficacious(scip, cut) )
                         {
-                           CHECK_OKAY( SCIPaddPoolCut(scip, cut) );
+                           debugMessage(" -> gomory cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                              cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+                           debug(SCIPprintRow(scip, cut, NULL));
+                           success = FALSE;
                         }
-                        *result = SCIP_SEPARATED;
-                        ncuts++;
+                        else
+                        {
+                           debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                              cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut),
+                              SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                              SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+                           debug(SCIPprintRow(scip, cut, NULL));
+                           CHECK_OKAY( SCIPaddCut(scip, cut, FALSE) );
+                           if( !cutislocal )
+                           {
+                              CHECK_OKAY( SCIPaddPoolCut(scip, cut) );
+                           }
+                           *result = SCIP_SEPARATED;
+                           ncuts++;
+                        }
                      }
 
                      /* release the row */
