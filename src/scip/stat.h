@@ -35,7 +35,7 @@ typedef struct Stat STAT;
 
 
 extern
-STAT* SCIPcreateStat(                   /**< creates problem statistics data */
+STAT* SCIPstatCreate(                   /**< creates problem statistics data */
    void
    );
 

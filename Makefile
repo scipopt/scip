@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 2002/10/31 15:15:22 bzfpfend Exp $
+# $Id: Makefile,v 1.6 2002/11/01 10:25:03 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -114,7 +114,7 @@ ifeq ($(LPS),cpx)
 	CPPFLAGS+=	-I$(LIBDIR)/cpxinc
 	OBJECT	=	cmain.o
 	LPSLIB	=	cplex.$(OSTYPE).$(ARCH)
-	LPIOBJ	=	lp_cpx.o
+	LPIOBJ	=	lpi_cpx.o
 	LPILIB	=	$(LIBDIR)/libcpxlp.$(BASE).a
 	LPIXXX	=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
 	LPISRC  =	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.c))
@@ -137,7 +137,7 @@ ifeq ($(LPS),spx)
 	CPPFLAGS+=	-I$(LIBDIR)/spxinc 
 	OBJECT	=	cppmain.o
 	LPSLIB	=	soplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT)
-	LPIOBJ	=	lp_spx.o
+	LPIOBJ	=	lpi_spx.o
 	LPILIB	=	$(LIBDIR)/libspxlp.$(BASE).a
 	LPIXXX	=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
 	LPISRC  =	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.cpp))

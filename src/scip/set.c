@@ -33,7 +33,7 @@
 #define DEFAULT_MEMGROWADD    4
 #define DEFAULT_MEMGROWINIT   4
 
-SET* SCIPcreateSet(                     /**< creates global SCIP settings */
+SET* SCIPsetCreate(                     /**< creates global SCIP settings */
    void
    )
 {

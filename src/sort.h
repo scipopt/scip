@@ -38,7 +38,7 @@ typedef struct PQueue PQUEUE;           /**< priority queue */
 
 
 extern
-RETCODE SCIPinitPQueue(                 /**< initializes priority queue */
+RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
    double           sizefac,            /**< memory growing factor applied, if more element slots are needed */
@@ -46,19 +46,19 @@ RETCODE SCIPinitPQueue(                 /**< initializes priority queue */
    );
 
 extern
-RETCODE SCIPinsertPQueueElem(           /**< inserts element into priority queue */
+RETCODE SCIPpqueueInsert(               /**< inserts element into priority queue */
    PQUEUE*          pqueue,             /**< pointer to a priority queue */
    void*            elem                /**< element to be inserted */
    );
 
 extern
-void* SCIPremovePQueueElem(             /**< removes and returns best element from the priority queue */
+void* SCIPpqueueRemove(                 /**< removes and returns best element from the priority queue */
    PQUEUE*          pqueue              /**< pointer to a priority queue */
    );
 
 extern
-void* SCIPbestPQueueElem(               /**< returns the best element of the queue without removing it */
-   PQUEUE*          pqueue              /**< pointer to a priority queue */
+void* SCIPpqueueFirst(                  /**< returns the best element of the queue without removing it */
+   const PQUEUE*    pqueue              /**< pointer to a priority queue */
    );
 
 

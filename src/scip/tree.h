@@ -45,28 +45,28 @@ typedef struct Tree TREE;               /**< branch and bound tree */
 
 
 extern
-NODE* SCIPcreateLeaf(                   /**< creates a leaf node */
+NODE* SCIPnodeCreate(                   /**< creates a leaf node */
    MEM*             mem,                /**< block memory buffers */
    NODE*            parent,             /**< parent node in the tree */
    LPSTATE*         lpstate             /**< pointer to LP state information */
    );
 
 extern
-void SCIPfreeNode(                      /**< frees node */
-   MEM*             mem,                /**< block memory buffers */
-   NODE**           node                /**< node data */
+void SCIPnodeFree(                      /**< frees node */
+   NODE**           node,               /**< node data */
+   MEM*             mem                 /**< block memory buffers */
    );
 
 extern
-RETCODE SCIPleafToFork(                 /**< converts a leaf into a fork node */
-   MEM*             mem,                /**< block memory buffers */
-   NODE*            node                /**< node to convert */
-   );
-
-extern
-RETCODE SCIPforkToSubroot(              /**< converts a fork into a subroot node */
-   MEM*             mem,                /**< block memory buffers */
+RETCODE SCIPleafToFork(                 /**< converts a leaf node into a fork node */
    NODE*            node,               /**< node to convert */
+   MEM*             mem                 /**< block memory buffers */
+   );
+
+extern
+RETCODE SCIPforkToSubroot(              /**< converts a fork node into a subroot node */
+   NODE*            node,               /**< node to convert */
+   MEM*             mem,                /**< block memory buffers */
    LP*              lp                  /**< actual LP data */
    );
 

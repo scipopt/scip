@@ -55,7 +55,7 @@ struct PQueue
 
 
 static
-RETCODE resizePQueue(                   /**< resizes element memory to hold at least the given number of elements */
+RETCODE pqueueResize(                   /**< resizes element memory to hold at least the given number of elements */
    PQUEUE*          pqueue,             /**< pointer to a priority queue */
    int              minsize             /**< minimal number of storeable elements */
    )
@@ -71,7 +71,7 @@ RETCODE resizePQueue(                   /**< resizes element memory to hold at l
    return SCIP_OKAY;
 }
 
-RETCODE SCIPinitPQueue(                 /**< initializes priority queue */
+RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
    double           sizefac,            /**< memory growing factor applied, if more element slots are needed */
@@ -90,12 +90,12 @@ RETCODE SCIPinitPQueue(                 /**< initializes priority queue */
    (*pqueue)->sizefac = sizefac;
    (*pqueue)->slots = NULL;
    (*pqueue)->ptrcmp = ptrcmp;
-   CHECK_OKAY( resizePQueue(*pqueue, initsize) );
+   CHECK_OKAY( pqueueResize(*pqueue, initsize) );
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPinsertPQueueElem(           /**< inserts element into priority queue */
+RETCODE SCIPpqueueInsert(               /**< inserts element into priority queue */
    PQUEUE*          pqueue,             /**< pointer to a priority queue */
    void*            elem                /**< element to be inserted */
    )
@@ -106,7 +106,7 @@ RETCODE SCIPinsertPQueueElem(           /**< inserts element into priority queue
    assert(pqueue->len >= 0);
    assert(elem != NULL);
 
-   CHECK_OKAY( resizePQueue(pqueue, pqueue->len+1) );
+   CHECK_OKAY( pqueueResize(pqueue, pqueue->len+1) );
 
    /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = pqueue->len;
@@ -121,7 +121,7 @@ RETCODE SCIPinsertPQueueElem(           /**< inserts element into priority queue
    return SCIP_OKAY;
 }
 
-void* SCIPremovePQueueElem(             /**< removes and returns best element from the priority queue */
+void* SCIPpqueueRemove(                 /**< removes and returns best element from the priority queue */
    PQUEUE*          pqueue              /**< pointer to a priority queue */
    )
 {
@@ -160,8 +160,8 @@ void* SCIPremovePQueueElem(             /**< removes and returns best element fr
    return root;
 }
 
-void* SCIPbestPQueueElem(               /**< returns the best element of the queue without removing it */
-   PQUEUE*          pqueue              /**< pointer to a priority queue */
+void* SCIPpqueueFirst(                  /**< returns the best element of the queue without removing it */
+   const PQUEUE*    pqueue              /**< pointer to a priority queue */
    )
 {
    assert(pqueue != NULL);

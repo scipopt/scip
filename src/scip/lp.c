@@ -230,7 +230,7 @@ RETCODE addRowCoeff(                    /**< adds a coefficient to an LP row */
    return SCIP_OKAY;
 }
 
-COL* SCIPcreateCol(                     /**< creates an LP column */
+COL* SCIPcolCreate(                     /**< creates an LP column */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -283,9 +283,9 @@ COL* SCIPcreateCol(                     /**< creates an LP column */
    return col;
 }
 
-void SCIPfreeCol(                       /**< frees an LP column */
-   MEM*             mem,                /**< block memory buffers */
-   COL**            col                 /**< pointer to LP column */
+void SCIPcolFree(                       /**< frees an LP column */
+   COL**            col,                /**< pointer to LP column */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    int i;
@@ -304,7 +304,7 @@ void SCIPfreeCol(                       /**< frees an LP column */
    freeBlockMemory(mem->lpmem, *col);
 }
 
-void SCIPcaptureCol(                    /**< increases usage counter of LP column */
+void SCIPcolCapture(                    /**< increases usage counter of LP column */
    COL*             col                 /**< LP column */
    )
 {
@@ -314,9 +314,9 @@ void SCIPcaptureCol(                    /**< increases usage counter of LP colum
    col->numuses++;
 }
 
-void SCIPreleaseCol(                    /**< decreases usage counter of LP column, and frees memory if necessary */
-   MEM*             mem,                /**< block memory buffers */
-   COL**            col                 /**< pointer to LP column */
+void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
+   COL**            col,                /**< pointer to LP column */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    assert(mem != NULL);
@@ -326,10 +326,10 @@ void SCIPreleaseCol(                    /**< decreases usage counter of LP colum
 
    (*col)->numuses--;
    if( (*col)->numuses == 0 )
-      SCIPfreeCol(mem, col);
+      SCIPcolFree(col, mem);
 }
 
-ROW* SCIPcreateRow(                     /**< creates an LP row */
+ROW* SCIProwCreate(                     /**< creates an LP row */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -389,9 +389,9 @@ ROW* SCIPcreateRow(                     /**< creates an LP row */
    return row;
 }
 
-void SCIPfreeRow(                       /**< frees an LP row */
-   MEM*             mem,                /**< block memory buffers */
-   ROW**            row                 /**< pointer to LP row */
+void SCIProwFree(                       /**< frees an LP row */
+   ROW**            row,                /**< pointer to LP row */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    int i;
@@ -410,7 +410,7 @@ void SCIPfreeRow(                       /**< frees an LP row */
    freeBlockMemory(mem->lpmem, *row);
 }
 
-void SCIPcaptureRow(                    /**< increases usage counter of LP row */
+void SCIProwCapture(                    /**< increases usage counter of LP row */
    ROW*             row                 /**< LP row */
    )
 {
@@ -420,9 +420,9 @@ void SCIPcaptureRow(                    /**< increases usage counter of LP row *
    row->numuses++;
 }
 
-void SCIPreleaseRow(                    /**< decreases usage counter of LP row, and frees memory if necessary */
-   MEM*             mem,                /**< block memory buffers */
-   ROW**            row                 /**< pointer to LP row */
+void SCIProwRelease(                    /**< decreases usage counter of LP row, and frees memory if necessary */
+   ROW**            row,                /**< pointer to LP row */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    assert(mem != NULL);
@@ -432,6 +432,6 @@ void SCIPreleaseRow(                    /**< decreases usage counter of LP row, 
 
    (*row)->numuses--;
    if( (*row)->numuses == 0 )
-      SCIPfreeRow(mem, row);
+      SCIProwFree(row, mem);
 }
 

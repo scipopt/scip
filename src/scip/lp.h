@@ -74,7 +74,7 @@ typedef struct Lp LP;
 
 
 extern
-COL* SCIPcreateCol(                     /**< creates an LP column */
+COL* SCIPcolCreate(                     /**< creates an LP column */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -88,24 +88,24 @@ COL* SCIPcreateCol(                     /**< creates an LP column */
    );
 
 extern
-void SCIPfreeCol(                       /**< frees an LP column */
-   MEM*             mem,                /**< block memory buffers */
-   COL**            col                 /**< pointer to LP column */
+void SCIPcolFree(                       /**< frees an LP column */
+   COL**            col,                /**< pointer to LP column */
+   MEM*             mem                 /**< block memory buffers */
    );
 
 extern
-void SCIPcaptureCol(                    /**< increases usage counter of LP column */
+void SCIPcolCapture(                    /**< increases usage counter of LP column */
    COL*             col                 /**< LP column */
    );
 
 extern
-void SCIPreleaseCol(                    /**< decreases usage counter of LP column, and frees memory if necessary */
-   MEM*             mem,                /**< block memory buffers */
-   COL**            col                 /**< pointer to LP column */
+void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
+   COL**            col,                /**< pointer to LP column */
+   MEM*             mem                 /**< block memory buffers */
    );
 
 extern
-ROW* SCIPcreateRow(                     /**< creates an LP row */
+ROW* SCIProwCreate(                     /**< creates an LP row */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -118,20 +118,20 @@ ROW* SCIPcreateRow(                     /**< creates an LP row */
    );
 
 extern
-void SCIPfreeRow(                       /**< frees an LP row */
-   MEM*             mem,                /**< block memory buffers */
-   ROW**            row                 /**< pointer to LP row */
+void SCIProwFree(                       /**< frees an LP row */
+   ROW**            row,                /**< pointer to LP row */
+   MEM*             mem                 /**< block memory buffers */
    );
 
 extern
-void SCIPcaptureRow(                    /**< increases usage counter of LP row */
+void SCIProwCapture(                    /**< increases usage counter of LP row */
    ROW*             row                 /**< LP row */
    );
 
 extern
-void SCIPreleaseRow(                    /**< decreases usage counter of LP row, and frees memory if necessary */
-   MEM*             mem,                /**< block memory buffers */
-   ROW**            row                 /**< pointer to LP row */
+void SCIProwRelease(                    /**< decreases usage counter of LP row, and frees memory if necessary */
+   ROW**            row,                /**< pointer to LP row */
+   MEM*             mem                 /**< block memory buffers */
    );
 
 

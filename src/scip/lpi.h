@@ -66,19 +66,39 @@ enum Pricing                            /**< LP pricing strategy */
 typedef enum Pricing PRICING;
 
 
+/*
+ * LP state methods
+ */
+
+extern
+void SCIPlpstateCapture(                /**< increases usage counter of LP state */
+   LPSTATE*         lpstate             /**< LP state information (like basis information) */
+   );
+   
+extern
+void SCIPlpstateRelease(                /**< decreases usage counter of LP state, and frees memory if necessary */
+   LPSTATE**        lpstate,            /**< LP state information (like basis information) */
+   MEM*             mem                 /**< block memory buffers */
+   );
+
+
+/*
+ * LP interface methods
+ */
+
 extern 
-RETCODE SCIPopenLP(                     /**< creates an LP problem object */
+RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
    LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*      name                /**< name of the LP */
    );
 
 extern
-RETCODE SCIPcloseLP(                    /**< deletes an LP problem object */
+RETCODE SCIPlpiClose(                   /**< deletes an LP problem object */
    LPI**            lpi                 /**< pointer to an LP interface structure */
    );
 
 extern 
-RETCODE SCIPcopyLP(                     /**< copies data into LP problem object */
+RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object */
    LPI*             lpi,                /**< LP interface structure */
    int              ncol,               /**< number of columns */
    int              nrow,               /**< number of rows */
@@ -97,7 +117,7 @@ RETCODE SCIPcopyLP(                     /**< copies data into LP problem object 
    );
 
 extern 
-RETCODE SCIPaddLPRows(                  /**< adds rows to the LP */
+RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
@@ -110,7 +130,7 @@ RETCODE SCIPaddLPRows(                  /**< adds rows to the LP */
    );
 
 extern 
-RETCODE SCIPdelLPRows(                  /**< deletes rows from LP */
+RETCODE SCIPlpiDelRows(                 /**< deletes rows from LP */
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of rows
                                          *   input:  neg. value if row should be deleted, non-neg. value if not
@@ -118,14 +138,14 @@ RETCODE SCIPdelLPRows(                  /**< deletes rows from LP */
    );
 
 extern 
-RETCODE SCIPgetrowBinv(                 /**< get dense row of inverse basis matrix (A_B)^-1 */
+RETCODE SCIPlpiGetBinvRow(              /**< get dense row of inverse basis matrix (A_B)^-1 */
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    double*          val                 /**< vector to return coefficients */
    );
 
 extern 
-RETCODE SCIPgetrowBinvA(                /**< get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
+RETCODE SCIPlpiGetBinvARow(             /**< get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    const double*    binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
@@ -133,7 +153,7 @@ RETCODE SCIPgetrowBinvA(                /**< get dense row of inverse basis matr
    );
 
 extern 
-RETCODE SCIPgetLb(                      /**< gets lower bounds of variables */
+RETCODE SCIPlpiGetLb(                   /**< gets lower bounds of variables */
    LPI*             lpi,                /**< LP interface structure */
    int              beg,                /**< first variable to get bound for */
    int              end,                /**< last variable to get bound for */
@@ -141,7 +161,7 @@ RETCODE SCIPgetLb(                      /**< gets lower bounds of variables */
    );
 
 extern 
-RETCODE SCIPgetUb(                      /**< gets upper bounds of variables */
+RETCODE SCIPlpiGetUb(                   /**< gets upper bounds of variables */
    LPI*             lpi,                /**< LP interface structure */
    int              beg,                /**< first variable to get bound for */
    int              end,                /**< last variable to get bound for */
@@ -149,7 +169,7 @@ RETCODE SCIPgetUb(                      /**< gets upper bounds of variables */
    );
 
 extern 
-RETCODE SCIPchgBd(                      /**< changes bounds of the variables in the LP */
+RETCODE SCIPlpiChgBd(                   /**< changes bounds of the variables in the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              n,                  /**< number of bounds to be changed */
    const int*       ind,                /**< column indices */
@@ -158,7 +178,7 @@ RETCODE SCIPchgBd(                      /**< changes bounds of the variables in 
    );
 
 extern 
-RETCODE SCIPchgRhs(                     /**< changes right hand sides of rows in the LP */
+RETCODE SCIPlpiChgRhs(                  /**< changes right hand sides of rows in the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              n,                  /**< number of rows to change */
    const int*       ind,                /**< row indices */
@@ -166,47 +186,47 @@ RETCODE SCIPchgRhs(                     /**< changes right hand sides of rows in
    );
 
 extern 
-RETCODE SCIPchgObjsen(                  /**< changes the objective sense */
+RETCODE SCIPlpiChgObjsen(               /**< changes the objective sense */
    LPI*             lpi,                /**< LP interface structure */
    OBJSEN           objsen              /**< new objective sense */
    );
 
 extern 
-RETCODE SCIPgetBind(                    /**< returns the indices of the basic columns and rows */
+RETCODE SCIPlpiGetBind(                 /**< returns the indices of the basic columns and rows */
    LPI*             lpi,                /**< LP interface structure */
    int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
    );
 
 extern 
-RETCODE SCIPgetLPIntpar(                /**< gets integer parameter of LP */
+RETCODE SCIPlpiGetIntpar(               /**< gets integer parameter of LP */
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    int*             ival                /**< buffer to store the parameter value */
    );
 
 extern 
-RETCODE SCIPsetLPIntpar(                /**< sets integer parameter of LP */
+RETCODE SCIPlpiSetIntpar(               /**< sets integer parameter of LP */
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    int              ival                /**< parameter value */
    );
 
 extern 
-RETCODE SCIPgetLPDblpar(                /**< gets double parameter of LP */
+RETCODE SCIPlpiGetDblpar(               /**< gets double parameter of LP */
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    double*          dval                /**< buffer to store the parameter value */
    );
 
 extern 
-RETCODE SCIPsetLPDblpar(                /**< sets double parameter of LP */
+RETCODE SCIPlpiSetDblpar(               /**< sets double parameter of LP */
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    double           dval                /**< parameter value */
    );
 
 extern 
-RETCODE SCIPgetSol(                     /**< gets primal and dual solution vectors */
+RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
    LPI*             lpi,                /**< LP interface structure */
    double*          objval,             /**< stores the objective value */
    double*          psol,               /**< primal solution vector */
@@ -216,7 +236,7 @@ RETCODE SCIPgetSol(                     /**< gets primal and dual solution vecto
    );
 
 extern 
-RETCODE SCIPstrongbranch(               /**< performs strong branching iterations on all candidates */
+RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iterations on all candidates */
    LPI*             lpi,                /**< LP interface structure */
    const double*    psol,               /**< primal LP solution vector */
    int              ncand,              /**< size of candidate list */
@@ -227,94 +247,82 @@ RETCODE SCIPstrongbranch(               /**< performs strong branching iteration
    );
 
 extern 
-RETCODE SCIPoptLPPrimal(                /**< calls primal simplex to solve the LP */
+RETCODE SCIPlpiOptPrimal(               /**< calls primal simplex to solve the LP */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-RETCODE SCIPoptLPDual(                  /**< calls dual simplex to solve the LP */
+RETCODE SCIPlpiOptDual(                 /**< calls dual simplex to solve the LP */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisPrimalUnbounded(             /**< returns TRUE iff LP is primal unbounded */
+Bool SCIPlpiIsPrimalUnbounded(          /**< returns TRUE iff LP is primal unbounded */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisPrimalInfeasible(            /**< returns TRUE iff LP is primal infeasible */
+Bool SCIPlpiIsPrimalInfeasible(         /**< returns TRUE iff LP is primal infeasible */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisOptimal(                     /**< returns TRUE iff LP was solved to optimality */
+Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to optimality */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisDualValid(                   /**< returns TRUE iff actual LP solution is dual valid */
+Bool SCIPlpiIsDualValid(                /**< returns TRUE iff actual LP solution is dual valid */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisStable(                      /**< returns TRUE iff actual LP basis is stable */
+Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is stable */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisLPError(                     /**< returns TRUE iff an error occured while solving the LP */
+Bool SCIPlpiIsError(                    /**< returns TRUE iff an error occured while solving the LP */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisObjlimExc(                   /**< returns TRUE iff the objective limit was reached */
+Bool SCIPlpiIsObjlimExc(                /**< returns TRUE iff the objective limit was reached */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisIterlimExc(                  /**< returns TRUE iff the iteration limit was reached */
+Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limit was reached */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern 
-Bool SCIPisTimelimExc(                  /**< returns TRUE iff the time limit was reached */
+Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was reached */
    LPI*             lpi                 /**< LP interface structure */
    );
 
 extern
-RETCODE SCIPsaveLPState(                /**< stores LP state (like basis information) */
-   MEM*             mem,                /**< block memory buffers */
+RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpstate object */
    LPI*             lpi,                /**< LP interface structure */
+   MEM*             mem,                /**< block memory buffers */
    LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    );
 
 extern
-RETCODE SCIPloadLPState(                /**< loads LP state (like basis information) into solver */
-   MEM*             mem,                /**< block memory buffers */
+RETCODE SCIPlpiSetState(                /**< loads LP state (like basis information) into solver */
    LPI*             lpi,                /**< LP interface structure */
-   LPSTATE*         lpstate             /**< LP state information (like basis information) */
-   );
-
-extern
-void SCIPcaptureLPState(                /**< increases usage counter of LP state */
-   LPSTATE*         lpstate             /**< LP state information (like basis information) */
-   );
-   
-extern
-void SCIPreleaseLPState(                /**< decreases usage counter of LP state, and frees memory if necessary */
    MEM*             mem,                /**< block memory buffers */
-   LPSTATE**        lpstate             /**< LP state information (like basis information) */
+   LPSTATE*         lpstate             /**< LP state information (like basis information) */
    );
-
 
 extern 
-RETCODE SCIPwriteLPState(               /**< writes LP state (like basis information) to a file */
+RETCODE SCIPlpiWriteState(              /**< writes LP state (like basis information) to a file */
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    );
 
 extern 
-RETCODE SCIPwriteLP(                    /**< writes LP to a file */
+RETCODE SCIPlpiWriteLP(                 /**< writes LP to a file */
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    );

@@ -77,7 +77,7 @@ struct Tree                             /**< branch and bound tree */
 
 
 static
-void captureParent(                     /**< increases number of children of the given parent node */
+void parentCapture(                     /**< increases number of children of the given parent node */
    NODE*            node                /**< parent node */
    )
 {
@@ -103,9 +103,9 @@ void captureParent(                     /**< increases number of children of the
 }
 
 static
-void releaseParent(                     /**< decreases number of children, frees parent if no children left */
-   MEM*             mem,                /**< block memory buffers */
-   NODE*            node                /**< parent node */
+void parentRelease(                     /**< decreases number of children, frees parent if no children left */
+   NODE*            node,               /**< parent node */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    assert(mem != NULL);
@@ -121,14 +121,14 @@ void releaseParent(                     /**< decreases number of children, frees
       assert(node->data.fork->nchildren > 0);
       node->data.fork->nchildren--;
       if( node->data.fork->nchildren == 0 )
-         SCIPfreeNode(mem, &node);
+         SCIPnodeFree(&node, mem);
       break;
    case SCIP_NODETYPE_SUBROOT:
       assert(node->data.subroot != NULL);
       assert(node->data.subroot->nchildren > 0);
       node->data.subroot->nchildren--;
       if( node->data.subroot->nchildren == 0 )
-         SCIPfreeNode(mem, &node);
+         SCIPnodeFree(&node, mem);
       break;
    default:
       errorMessage("Unknown node type");
@@ -147,13 +147,13 @@ void assignParent(                      /**< assigns the node to be a child of t
 
    node->parent = parent;
    if( parent != NULL )
-      captureParent(parent);
+      parentCapture(parent);
 }
 
 static
 void dismissParent(                     /**< releases the parent-child relation of the given child node */
-   MEM*             mem,                /**< block memory buffers */
-   NODE*            node                /**< child node */
+   NODE*            node,               /**< child node */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    assert(mem != NULL);
@@ -161,7 +161,7 @@ void dismissParent(                     /**< releases the parent-child relation 
 
    if( node->parent != NULL )
    {
-      releaseParent(mem, node->parent);
+      parentRelease(node->parent, mem);
       node->parent = NULL;
    }
 }
@@ -176,25 +176,25 @@ void assignLPState(                     /**< assigns the given LP state to the n
    assert(leaf->lpstate == NULL);
 
    leaf->lpstate = lpstate;
-   SCIPcaptureLPState(lpstate);
+   SCIPlpstateCapture(lpstate);
 }
 
 static
 void dismissLPState(                    /**< releases the LP state from the given child node */
-   MEM*             mem,                /**< block memory buffers */
-   LEAF*            leaf                /**< leaf data of the node */
+   LEAF*            leaf,               /**< leaf data of the node */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    assert(mem != NULL);
    assert(leaf != NULL);
    assert(leaf->lpstate != NULL);
 
-   SCIPreleaseLPState(mem, &(leaf->lpstate));
+   SCIPlpstateRelease(&(leaf->lpstate), mem);
 }
 
 
 static
-LEAF* createLeafData(                   /**< creates leaf data */
+LEAF* leafCreate(                       /**< creates leaf data */
    MEM*             mem                 /**< block memory buffers */
    )
 {
@@ -211,9 +211,9 @@ LEAF* createLeafData(                   /**< creates leaf data */
 }
 
 static
-void freeLeafData(                      /**< frees leaf data */
-   MEM*             mem,                /**< block memory buffers */
-   LEAF**           leaf                /**< leaf data */
+void leafFree(                          /**< frees leaf data */
+   LEAF**           leaf,               /**< leaf data */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    int r;
@@ -222,16 +222,16 @@ void freeLeafData(                      /**< frees leaf data */
    assert(leaf != NULL);
    assert(*leaf != NULL);
 
-   dismissLPState(mem, *leaf);
+   dismissLPState(*leaf, mem);
    for( r = 0; r < (*leaf)->naddedRows; ++r )
-      SCIPreleaseRow(mem, &((*leaf)->addedRows[r]));
+      SCIProwRelease(&((*leaf)->addedRows[r]), mem);
    
    freeBlockMemoryArrayNull(mem->treemem, (*leaf)->addedRows, (*leaf)->naddedRows);
    freeBlockMemory(mem->treemem, *leaf);
 }
 
 static
-FORK* createForkData(                   /**< creates fork data */
+FORK* forkCreate(                       /**< creates fork data */
    MEM*             mem                 /**< block memory buffers */
    )
 {
@@ -248,9 +248,9 @@ FORK* createForkData(                   /**< creates fork data */
 }
 
 static
-void freeForkData(                      /**< frees fork data */
-   MEM*             mem,                /**< block memory buffers */
-   FORK**           fork                /**< fork data */
+void forkFree(                          /**< frees fork data */
+   FORK**           fork,               /**< fork data */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    int r;
@@ -260,14 +260,14 @@ void freeForkData(                      /**< frees fork data */
    assert(*fork != NULL);
 
    for( r = 0; r < (*fork)->naddedRows; ++r )
-      SCIPreleaseRow(mem, &((*fork)->addedRows[r]));
+      SCIProwRelease(&((*fork)->addedRows[r]), mem);
    
    freeBlockMemoryArrayNull(mem->treemem, (*fork)->addedRows, (*fork)->naddedRows);
    freeBlockMemory(mem->treemem, *fork);
 }
 
 static
-SUBROOT* createSubrootData(             /**< creates subroot data */
+SUBROOT* subrootCreate(                 /**< creates subroot data */
    MEM*             mem                 /**< block memory buffers */
    )
 {
@@ -284,9 +284,9 @@ SUBROOT* createSubrootData(             /**< creates subroot data */
 }
 
 static
-void freeSubrootData(                   /**< frees subroot */
-   MEM*             mem,                /**< block memory buffers */
-   SUBROOT**        subroot             /**< subroot data */
+void subrootFree(                       /**< frees subroot */
+   SUBROOT**        subroot,            /**< subroot data */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    int r;
@@ -296,13 +296,13 @@ void freeSubrootData(                   /**< frees subroot */
    assert(*subroot != NULL);
 
    for( r = 0; r < (*subroot)->nrows; ++r )
-      SCIPreleaseRow(mem, &((*subroot)->rows[r]));
+      SCIProwRelease(&((*subroot)->rows[r]), mem);
 
    freeBlockMemoryArrayNull(mem->treemem, (*subroot)->rows, (*subroot)->nrows);
    freeBlockMemory(mem->treemem, *subroot);
 }
 
-NODE* SCIPcreateLeaf(                   /**< creates a leaf node */
+NODE* SCIPnodeCreate(                   /**< creates a leaf node */
    MEM*             mem,                /**< block memory buffers */
    NODE*            parent,             /**< parent node in the tree */
    LPSTATE*         lpstate             /**< pointer to LP state information */
@@ -314,7 +314,7 @@ NODE* SCIPcreateLeaf(                   /**< creates a leaf node */
    assert(lpstate != NULL);
 
    ALLOC_NULL( allocBlockMemory(mem->treemem, node) );
-   ALLOC_NULL( node->data.leaf = createLeafData(mem) );
+   ALLOC_NULL( node->data.leaf = leafCreate(mem) );
    node->parent = NULL;
    node->conslist = NULL;
    node->vardomChg = NULL;
@@ -339,9 +339,9 @@ NODE* SCIPcreateLeaf(                   /**< creates a leaf node */
    return node;
 }
 
-void SCIPfreeNode(                      /**< frees node */
-   MEM*             mem,                /**< block memory buffers */
-   NODE**           node                /**< node data */
+void SCIPnodeFree(                      /**< frees node */
+   NODE**           node,               /**< node data */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    assert(mem != NULL);
@@ -352,13 +352,13 @@ void SCIPfreeNode(                      /**< frees node */
    switch((*node)->nodetype)
    {
    case SCIP_NODETYPE_LEAF:
-      freeLeafData(mem, &((*node)->data.leaf));
+      leafFree(&((*node)->data.leaf), mem);
       break;
    case SCIP_NODETYPE_FORK:
-      freeForkData(mem, &((*node)->data.fork));
+      forkFree(&((*node)->data.fork), mem);
       break;
    case SCIP_NODETYPE_SUBROOT:
-      freeSubrootData(mem, &((*node)->data.subroot));
+      subrootFree(&((*node)->data.subroot), mem);
       break;
    default:
       errorMessage("Unknown node type");
@@ -366,16 +366,16 @@ void SCIPfreeNode(                      /**< frees node */
    }
 
    /* free common data */
-   dismissParent(mem, *node);
+   dismissParent(*node, mem);
    SCIPfreeConslist(mem, &((*node)->conslist));
    SCIPfreeVardomChg(mem, &((*node)->vardomChg));
 
    freeBlockMemory(mem->treemem, *node);
 }
 
-RETCODE SCIPleafToFork(                 /**< converts a leaf into a fork node */
-   MEM*             mem,                /**< block memory buffers */
-   NODE*            node                /**< node to convert */
+RETCODE SCIPleafToFork(                 /**< converts a leaf node into a fork node */
+   NODE*            node,               /**< node to convert */
+   MEM*             mem                 /**< block memory buffers */
    )
 {
    FORK* fork;
@@ -385,11 +385,11 @@ RETCODE SCIPleafToFork(                 /**< converts a leaf into a fork node */
    assert(node->nodetype == SCIP_NODETYPE_LEAF);
    assert(node->data.leaf != NULL);
 
-   ALLOC_OKAY( fork = createForkData(mem) );
+   ALLOC_OKAY( fork = forkCreate(mem) );
    fork->addedRows = node->data.leaf->addedRows;
    fork->naddedRows = node->data.leaf->naddedRows;
    
-   freeLeafData(mem, &(node->data.leaf));
+   leafFree(&(node->data.leaf), mem);
 
    node->nodetype = SCIP_NODETYPE_FORK;
    node->data.fork = fork;
@@ -397,9 +397,9 @@ RETCODE SCIPleafToFork(                 /**< converts a leaf into a fork node */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPforkToSubroot(              /**< converts a fork into a subroot node */
-   MEM*             mem,                /**< block memory buffers */
+RETCODE SCIPforkToSubroot(              /**< converts a fork node into a subroot node */
    NODE*            node,               /**< node to convert */
+   MEM*             mem,                /**< block memory buffers */
    LP*              lp                  /**< actual LP data */
    )
 {
@@ -411,12 +411,12 @@ RETCODE SCIPforkToSubroot(              /**< converts a fork into a subroot node
    assert(node->data.fork != NULL);
    assert(lp != NULL);
 
-   ALLOC_OKAY( subroot = createSubrootData(mem) );
+   ALLOC_OKAY( subroot = subrootCreate(mem) );
    ALLOC_OKAY( duplicateBlockMemoryArray(mem->treemem, subroot->rows, lp->rows, lp->nrows) );
    subroot->nrows = lp->nrows;
    subroot->nchildren = node->data.fork->nchildren;
 
-   freeForkData(mem, &(node->data.fork));
+   forkFree(&(node->data.fork), mem);
 
    node->nodetype = SCIP_NODETYPE_SUBROOT;
    node->data.subroot = subroot;

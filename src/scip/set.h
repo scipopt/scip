@@ -37,7 +37,7 @@ typedef struct Set SET;
 
 
 extern
-SET* SCIPcreateSet(                     /**< creates global SCIP settings */
+SET* SCIPsetCreate(                     /**< creates global SCIP settings */
    void
    );
 
