@@ -866,7 +866,7 @@ RETCODE SCIPsolveCIP(
                SCIPclockStart(stat->lpsoltime, set);
 
                /* add solution to storage */
-               CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, stat, lp, NULL) );
+               CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, stat, tree, lp, NULL) );
                CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
                tree->nlpsolsfound += primal->nsolsfound - oldnsolsfound;
 

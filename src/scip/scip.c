@@ -3767,7 +3767,7 @@ RETCODE SCIPcreateSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateSol", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolCreate(sol, scip->mem->solvemem, scip->stat, heur) );
+   CHECK_OKAY( SCIPsolCreate(sol, scip->mem->solvemem, scip->stat, scip->tree, heur) );
 
    return SCIP_OKAY;
 }
@@ -3787,7 +3787,7 @@ RETCODE SCIPcreateLPSol(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPsolCreateLPSol(sol, scip->mem->solvemem, scip->stat, scip->lp, heur) );
+   CHECK_OKAY( SCIPsolCreateLPSol(sol, scip->mem->solvemem, scip->stat, scip->tree, scip->lp, heur) );
 
    return SCIP_OKAY;
 }
@@ -3847,7 +3847,7 @@ RETCODE SCIPlinkLPSol(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPsolLinkLPSol(sol, scip->mem->solvemem, scip->stat, scip->lp) );
+   CHECK_OKAY( SCIPsolLinkLPSol(sol, scip->mem->solvemem, scip->stat, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -3886,7 +3886,7 @@ RETCODE SCIPclearSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPclearSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolClear(sol, scip->stat) );
+   CHECK_OKAY( SCIPsolClear(sol, scip->stat, scip->tree) );
 
    return SCIP_OKAY;
 }
@@ -3914,7 +3914,7 @@ RETCODE SCIPsetSolVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolSetVal(sol, scip->set, scip->stat, var, val) );
+   CHECK_OKAY( SCIPsolSetVal(sol, scip->set, scip->stat, scip->tree, var, val) );
 
    return SCIP_OKAY;
 }
@@ -3929,7 +3929,7 @@ RETCODE SCIPincSolVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPincSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolIncVal(sol, scip->set, scip->stat, var, incval) );
+   CHECK_OKAY( SCIPsolIncVal(sol, scip->set, scip->stat, scip->tree, var, incval) );
 
    return SCIP_OKAY;
 }
@@ -5078,8 +5078,12 @@ void printSolutionStatistics(
             fprintf(file, "   (user objective limit)\n");
             fprintf(file, "  Best Solution    : %25.19e", bestsol);
          }
-         fprintf(file, "   (after %lld nodes, %.2f seconds)\n", 
-            SCIPsolGetNodenum(scip->primal->sols[0]), SCIPsolGetTime(scip->primal->sols[0]));
+         fprintf(file, "   (after %lld nodes, %.2f seconds, depth %d, found by <%s>)\n", 
+            SCIPsolGetNodenum(scip->primal->sols[0]), 
+            SCIPsolGetTime(scip->primal->sols[0]),
+            SCIPsolGetDepth(scip->primal->sols[0]),
+            SCIPsolGetHeur(scip->primal->sols[0]) != NULL
+            ? SCIPheurGetName(SCIPsolGetHeur(scip->primal->sols[0])) : "tree");
       }
    }
    if( SCIPsetIsInfinity(scip->set, ABS(dualbound)) )
