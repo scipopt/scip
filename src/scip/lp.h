@@ -130,6 +130,7 @@ struct Row
    COL**            col;                /**< columns of row entries, that may have a nonzero primal solution value */
    Real*            val;                /**< coefficients of row entries */
    int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
+   Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    Real             lhs;                /**< left hand side of row */
    Real             rhs;                /**< right hand side of row */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
@@ -138,6 +139,8 @@ struct Row
    Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
    Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
+   Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
+   Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
@@ -148,15 +151,16 @@ struct Row
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int              validactivitylp;    /**< lp number for which activity value is valid */
-   int              validpsactivitybc;  /**< bound change number for which pseudo activity value is valid */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
+   unsigned int     validpsactivity:1;  /**< is the pseudo activity valid? */
+   unsigned int     validactivitybds:1; /**< are the activity bounds minactivity/maxactivity valid? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
    unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
    unsigned int     rhschanged:1;       /**< was right hand side changed, and has data of LP solver to be updated? */
    unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
    unsigned int     inlp:1;             /**< is row in actual LP? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int     nlocks:23;          /**< number of sealed locks of an unmodifiable row */
 };
 
 /** actual LP data */
@@ -268,7 +272,14 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   Real             oldbound,           /**< old bound value */
+   Real             newbound            /**< new bound value */
+   );
+
+extern
+VAR* SCIPcolGetVar(                     /**< gets variable this column represents */
+   COL*             col                 /**< LP column */
    );
 
 extern
@@ -416,14 +427,6 @@ RETCODE SCIProwAddConst(                /**< add constant value to a row, i.e. s
    );
 
 extern
-RETCODE SCIProwSideChanged(             /**< notifies LP row, that its sides were changed */
-   ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   SIDETYPE         sidetype            /**< type of side: left or right hand side */
-   );
-
-extern
 RETCODE SCIProwChgLhs(                  /**< changes left hand side of LP row */
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
@@ -472,19 +475,50 @@ Real SCIProwGetFeasibility(             /**< returns the feasibility of a row in
    );
 
 extern
-Real SCIProwGetPseudoActivity(          /**< returns the activity of a row for the actual pseudo solution */
+RETCODE SCIProwGetPseudoActivity(       /**< returns the pseudo activity of a row */
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real*            pseudoactivity      /**< pointer to store the pseudo activity */
    );
 
 extern
-Real SCIProwGetPseudoFeasibility(       /**< returns the feasibility of a row in the actual pseudo solution */
+RETCODE SCIProwGetPseudoFeasibility(    /**< returns the feasibility of a row in the actual pseudo solution */
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real*            pseudofeasibility   /**< pointer to store the pseudo feasibility */
+   );
+
+extern
+RETCODE SCIProwGetActivityBounds(       /**< returns the minimal and maximal activity of a row w.r.t. the column's bounds */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
+   Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
    );
 
 extern
 int SCIProwGetNNonz(                    /**< get number of nonzero entries in row vector */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+COL** SCIProwGetCols(                   /**< gets array with columns of nonzero entries */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+Real* SCIProwGetVals(                   /**< gets array with coefficients of nonzero entries */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+Real SCIProwGetConstant(                /**< gets constant shift of row */
    ROW*             row                 /**< LP row */
    );
 

@@ -53,7 +53,8 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    SEPA*            sepa,               /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
-   PRIMAL*          primal              /**< primal data */
+   PRIMAL*          primal,             /**< primal data */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 

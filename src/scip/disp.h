@@ -50,6 +50,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
 
 
 #include "scip.h"
+#include "def.h"
 #include "retcode.h"
 #include "set.h"
 #include "stat.h"
@@ -139,7 +140,7 @@ RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting
 extern
 void SCIPdispDecimal(                   /**< displays an integer in decimal form fitting in a given width */
    FILE*            file,               /**< output stream */
-   int              val,                /**< value to display */
+   Longint          val,                /**< value to display */
    int              width               /**< width to fit into */
    );
 

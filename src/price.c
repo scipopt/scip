@@ -215,6 +215,8 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable, where zero violates the bounds */
    )
 {
@@ -248,11 +250,11 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
     */
    if( SCIPsetIsPos(set, var->dom.lb) )
    {
-      CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, stat, lp, tree, 0.0) );
+      CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 0.0) );
    }
    else
    {
-      CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, stat, lp, tree, 0.0) );
+      CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -266,7 +268,9 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    LP*              lp,                 /**< LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    VAR* var;
@@ -314,7 +318,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          {
             if( SCIPsetIsNeg(set, var->dom.ub) )
             {
-               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
+               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
             }
             else if( SCIPsetIsPos(set, var->obj) )
             {
@@ -325,7 +329,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          {
             if( SCIPsetIsPos(set, var->dom.lb) )
             {
-               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
+               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
             }
             else if( SCIPsetIsNeg(set, var->obj) )
             {
@@ -355,7 +359,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             {
                if( SCIPsetIsNeg(set, var->dom.ub) )
                {
-                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
+                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
                   added = TRUE;
                }
                else if( SCIPsetIsPos(set, var->obj) )
@@ -368,7 +372,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             {
                if( SCIPsetIsPos(set, var->dom.lb) )
                {
-                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
+                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
                   added = TRUE;
                }
                else if( SCIPsetIsNeg(set, var->obj) )
@@ -508,7 +512,9 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    int v;
@@ -527,8 +533,10 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
       debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", price->bdviolvars[v]->name, 
          price->bdviolvars[v]->dom.lb, price->bdviolvars[v]->dom.ub,
          price->bdviolvarslb[v], price->bdviolvarsub[v]);
-      CHECK_OKAY( SCIPvarChgLb(price->bdviolvars[v], memhdr, set, stat, lp, tree, price->bdviolvarslb[v]) );
-      CHECK_OKAY( SCIPvarChgUb(price->bdviolvars[v], memhdr, set, stat, lp, tree, price->bdviolvarsub[v]) );
+      CHECK_OKAY( SCIPvarChgLb(price->bdviolvars[v], memhdr, set, stat, lp, tree, branchcand, eventqueue,
+                     price->bdviolvarslb[v]) );
+      CHECK_OKAY( SCIPvarChgUb(price->bdviolvars[v], memhdr, set, stat, lp, tree, branchcand, eventqueue,
+                     price->bdviolvarsub[v]) );
       CHECK_OKAY( SCIPvarRelease(&price->bdviolvars[v], memhdr, set, lp) );
    }
    price->naddedbdviolvars = 0;

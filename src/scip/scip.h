@@ -23,22 +23,18 @@
 
 /** Creating, capturing, releasing, and adding data objects.
  *
- *  If the user wants to add a data object (variable, constraint, row) to SCIP
- *  without using it for himself, he has to call the object's create() method
- *  and the corresponding add() method. He doesn't have to take care of the
- *  destruction, because SCIP will free the object if no longer needed. The
- *  user should not use the object after it was added to SCIP, because he cannot
- *  assume, that the object is still living.
+ *  Data objects (variables, constraints, rows) are subject to reference counting
+ *  to avoid expensive copying operations. Creating such an object will set the
+ *  reference count to one. Capturing an object increases the reference counter,
+ *  releasing it decreases the counter. If the reference counter gets zero, the
+ *  object is destroyed.
  *
- *  If the user wants to use the data object for himself, he has to call the
- *  object's create() method and the capture() method to tell SCIP, the object
- *  is in use by the user. The user may add the object to SCIP with a call to
- *  the add() method. If the user doesn't need the object any more, he must
- *  call the release() method to tell SCIP, that the object may be destroyed,
- *  if it is no longer in use.
- *  
- *  Don't call the release() method of an object, if you didn't call the capture()
- *  method before, because this can destroy an object used by SCIP.
+ *  Remember that a created data object is automatically captured. If the user
+ *  doesn't need the object anymore, he has to call the object's release() method.
+ *
+ *  When a data object is added to SCIP, it is captured again, such that a
+ *  release() call does not destroy the object. If SCIP doesn't need the object
+ *  anymore, it is automatically relased.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -108,6 +104,8 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "nodesel.h"
 #include "disp.h"
 #include "branch.h"
+#include "event.h"
+
 
 
 extern
@@ -219,7 +217,7 @@ RETCODE SCIPfindVar(                    /**< finds variable of given name in the
    );
 
 extern
-RETCODE SCIPgetActVarSol(               /**< gets solution value for variable in active node */
+RETCODE SCIPgetVarSol(                  /**< gets solution value for variable in active node */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to get solution value for */
    Real*            solval              /**< pointer to store the solution value */
@@ -288,6 +286,14 @@ RETCODE SCIPaddVarToRow(                /**< resolves variable to columns and ad
    );
 
 extern
+RETCODE SCIPgetRowActivityBounds(       /**< returns the minimal and maximal activity of a row w.r.t. the column's bounds */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
+   Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
+   );
+
+extern
 RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in the last LP solution */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
@@ -298,7 +304,7 @@ extern
 RETCODE SCIPgetRowPseudoFeasibility(    /**< returns the feasibility of a row for the actual pseudo solution */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
-   Real*            feasibility         /**< pointer to store the row's feasibility */
+   Real*            pseudofeasibility   /**< pointer to store the row's pseudo feasibility */
    );
 
 extern
@@ -328,6 +334,20 @@ RETCODE SCIPcreateChild(                /**< creates a child node of the active 
    );
 
 extern
+RETCODE SCIPbranchVar(                  /**< branches on a variable; if solution value x' is fractional, two child nodes
+                                         *   are created (x <= floor(x'), x >= ceil(x')), if solution value is integral,
+                                         *   three child nodes are created (x <= x'-1, x == x', x >= x'+1) */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to branch on */
+   );
+
+extern
+RETCODE SCIPbranchLP(                   /**< calls branching rules to branch on an LP solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
+extern
 RETCODE SCIPincludeReader(              /**< creates a reader and includes it in SCIP */
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of reader */
@@ -348,6 +368,7 @@ RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and in
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
@@ -370,6 +391,26 @@ RETCODE SCIPfindConsHdlr(               /**< finds the constraint handler of the
    );
 
 extern
+RETCODE SCIPincludeEventhdlr(           /**< creates an event handler and includes it in SCIP */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of event handler */
+   const char*      desc,               /**< description of event handler */
+   DECL_EVENTFREE((*eventfree)),        /**< destructor of event handler */
+   DECL_EVENTINIT((*eventinit)),        /**< initialise event handler */
+   DECL_EVENTEXIT((*eventexit)),        /**< deinitialise event handler */
+   DECL_EVENTDELE((*eventdele)),        /**< free specific event data */
+   DECL_EVENTEXEC((*eventexec)),        /**< execute event handler */
+   EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   );
+
+extern
+RETCODE SCIPfindEventHdlr(              /**< finds the event handler of the given name */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of event handler */
+   EVENTHDLR**      eventhdlr           /**< pointer for storing the event handler (returns NULL, if not found) */
+   );
+
+extern
 RETCODE SCIPincludeNodesel(             /**< creates a node selector and includes it in SCIP */
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of node selector */
@@ -381,6 +422,20 @@ RETCODE SCIPincludeNodesel(             /**< creates a node selector and include
    DECL_NODESELCOMP((*nodeselcomp)),    /**< node comparison method */
    NODESELDATA*     nodeseldata,        /**< node selector data */
    Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+   );
+
+extern
+RETCODE SCIPincludeBranchrule(          /**< creates a branching rule and includes it in SCIP */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of branching rule */
+   const char*      desc,               /**< description of branching rule */
+   int              priority,           /**< priority of the branching rule */
+   DECL_BRANCHFREE((*branchfree)),      /**< destructor of branching rule */
+   DECL_BRANCHINIT((*branchinit)),      /**< initialise branching rule */
+   DECL_BRANCHEXIT((*branchexit)),      /**< deinitialise branching rule */
+   DECL_BRANCHEXLP((*branchexlp)),      /**< branching execution method for fractional LP solutions */
+   DECL_BRANCHEXPS((*branchexps)),      /**< branching execution method for not completely fixed pseudo solutions */
+   BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    );
 
 extern
@@ -502,6 +557,23 @@ RETCODE SCIPchgType(                    /**< changes type of variable in the pro
    );
 
 extern
+RETCODE SCIPcatchVarEvent(              /**< catches an event on the given variable */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to catch event for */
+   EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   );
+
+extern
+RETCODE SCIPdropVarEvent(               /**< drops an event (stops to track event) on the given variable */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to drop event for */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   );
+
+extern
 RETCODE SCIPgetChildren(                /**< gets children of active node */
    SCIP*            scip,               /**< SCIP data structure */
    NODE***          children,           /**< pointer to store children array */
@@ -542,7 +614,7 @@ RETCODE SCIPgetBestNode(                /**< gets the best node from the tree (c
 extern
 RETCODE SCIPgetNodenum(                 /**< gets number of processed nodes, including the active node */
    SCIP*            scip,               /**< SCIP data structure */
-   int*             nodenum             /**< pointer to store the number of processed nodes */
+   Longint*         nodenum             /**< pointer to store the number of processed nodes */
    );
 
 extern
@@ -663,6 +735,41 @@ Real SCIPepsilon(                       /**< returns value treated as zero */
 extern
 Real SCIPsumepsilon(                    /**< returns value treated as zero for sums of floating point values */
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+extern
+Bool SCIPisRelEQ(                       /**< checks, if relative difference of values is in range of epsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisRelL(                        /**< checks, if relative difference of val1 and val2 is lower than epsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisRelLE(                       /**< checks, if relative difference of val1 and val2 is not greater than epsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisRelG(                        /**< checks, if relative difference of val1 and val2 is greater than epsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisRelGE(                       /**< checks, if relative difference of val1 and val2 is not lower than -epsilon */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
    );
 
 extern

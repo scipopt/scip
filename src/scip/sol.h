@@ -50,7 +50,7 @@ struct Sol
    int              valssize;           /**< size of vars and vals array */
    int              firstindex;         /**< first index of the index range */
    int              nuses;              /**< number of times, this solution is referenced */
-   int              nodenum;            /**< node number, where this solution was found */
+   Longint          nodenum;            /**< node number, where this solution was found */
 };
 
 

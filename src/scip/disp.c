@@ -336,11 +336,12 @@ RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting
 }
 
 static
-const char powerchar[] = {' ', 'k', 'M', 'G', 'T'};
+const char powerchar[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E'};
+#define MAXPOWER 6
 
 void SCIPdispDecimal(                   /**< displays an integer in decimal form fitting in a given width */
    FILE*            file,               /**< output stream */
-   int              val,                /**< value to display */
+   Longint          val,                /**< value to display */
    int              width               /**< width to fit into */
    )
 {
@@ -351,14 +352,14 @@ void SCIPdispDecimal(                   /**< displays an integer in decimal form
       if( val < 0 )
          fprintf(file, "-");
       else if( val < 10 )
-         fprintf(file, "%d", val);
+         fprintf(file, "%lld", val);
       else
          fprintf(file, "+");
    }
    else
    {
       char format[255];
-      int maxval;
+      Longint maxval;
       int power;
       int i;
 
@@ -368,13 +369,12 @@ void SCIPdispDecimal(                   /**< displays an integer in decimal form
       if( val < 0 )
          maxval /= 10;
       power = 0;
-      while( ABS(val) >= maxval )
+      while( ABS(val) >= maxval && power < MAXPOWER )
       {
          power++;
          val /= 1000;
       }
-      assert(power <= 4);
-      sprintf(format, "%%%dd%c", width-1, powerchar[power]);
+      sprintf(format, "%%%dlld%c", width-1, powerchar[power]);
 
       if( width == 2 && val < 0 )
          fprintf(file, "-%c", powerchar[power]);

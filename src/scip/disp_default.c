@@ -152,7 +152,7 @@ static
 DECL_DISPOUTP(SCIPdispOutpSolfound)
 {
    SOL* sol;
-   int nodenum;
+   Longint nodenum;
 
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
@@ -173,7 +173,7 @@ DECL_DISPOUTP(SCIPdispOutpSolfound)
 static
 DECL_DISPOUTP(SCIPdispOutpNodenum)
 {
-   int nodenum;
+   Longint nodenum;
 
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NODENUM) == 0);

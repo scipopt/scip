@@ -55,7 +55,7 @@
 
 /* LP solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ        35 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ        30 /**< frequency for solving LP at the nodes */
 
 
 /* Pricing */
@@ -63,7 +63,7 @@
 #define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS       32 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 1024 /**< maximal number of priced variables at the root node */
-#define SCIP_DEFAULT_ABORTPRICEVARSFAC 5.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+#define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
 
 
 /* Cut Separation */
@@ -80,14 +80,14 @@
 
 /* Tree */
 
-#define SCIP_DEFAULT_NODELIMIT     INT_MAX /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT LONGINT_MAX /**< maximal number of nodes to create */
 /*#define SCIP_DEFAULT_NODELIMIT    10000000*/ /**< maximal number of nodes to create */
 
 
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ      1000000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ    100000000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -146,10 +146,16 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->conshdlrs = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
+   (*set)->eventhdlrs = NULL;
+   (*set)->neventhdlrs = 0;
+   (*set)->eventhdlrssize = 0;
    (*set)->nodesels = NULL;
    (*set)->nnodesels = 0;
    (*set)->nodeselssize = 0;
    (*set)->nodesel = NULL;
+   (*set)->branchrules = NULL;
+   (*set)->nbranchrules = 0;
+   (*set)->branchrulessize = 0;
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
@@ -186,28 +192,42 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    {
       CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i], (*set)->scip) );
    }
-   freeMemoryArray((*set)->readers);
+   freeMemoryArrayNull((*set)->readers);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], (*set)->scip) );
    }
-   freeMemoryArray((*set)->conshdlrs);
+   freeMemoryArrayNull((*set)->conshdlrs);
+
+   /* free event handlers */
+   for( i = 0; i < (*set)->neventhdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPeventhdlrFree(&(*set)->eventhdlrs[i], (*set)->scip) );
+   }
+   freeMemoryArrayNull((*set)->eventhdlrs);
 
    /* free node selectors */
    for( i = 0; i < (*set)->nnodesels; ++i )
    {
       CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i], (*set)->scip) );
    }
-   freeMemoryArray((*set)->nodesels);
+   freeMemoryArrayNull((*set)->nodesels);
+
+   /* free branching methods */
+   for( i = 0; i < (*set)->nbranchrules; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleFree(&(*set)->branchrules[i], (*set)->scip) );
+   }
+   freeMemoryArrayNull((*set)->branchrules);
 
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
    {
       CHECK_OKAY( SCIPdispFree(&(*set)->disps[i], (*set)->scip) );
    }
-   freeMemoryArray((*set)->disps);
+   freeMemoryArrayNull((*set)->disps);
 
    freeMemory(*set);
 
@@ -308,6 +328,53 @@ RETCODE SCIPsetFindConsHdlr(            /**< finds the constraint handler of the
    return SCIP_OKAY;
 }
 
+RETCODE SCIPsetIncludeEventHdlr(        /**< inserts event handler in event handler list */
+   SET*             set,                /**< global SCIP settings */
+   EVENTHDLR*       eventhdlr           /**< event handler */
+   )
+{
+   assert(set != NULL);
+   assert(eventhdlr != NULL);
+   assert(!SCIPeventhdlrIsInitialized(eventhdlr));
+
+   if( set->neventhdlrs >= set->eventhdlrssize )
+   {
+      set->eventhdlrssize = SCIPsetCalcMemGrowSize(set, set->neventhdlrs+1);
+      ALLOC_OKAY( reallocMemoryArray(set->eventhdlrs, set->eventhdlrssize) );
+   }
+   assert(set->neventhdlrs < set->eventhdlrssize);
+   
+   set->eventhdlrs[set->neventhdlrs] = eventhdlr;
+   set->neventhdlrs++;
+
+   return SCIP_OKAY;
+}   
+
+RETCODE SCIPsetFindEventHdlr(           /**< finds the event handler of the given name */
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of event handler */
+   EVENTHDLR**      eventhdlr           /**< pointer for storing the event handler (returns NULL, if not found) */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+   assert(eventhdlr != NULL);
+
+   *eventhdlr = NULL;
+   for( i = 0; i < set->neventhdlrs; ++i )
+   {
+      if( strcmp(SCIPeventhdlrGetName(set->eventhdlrs[i]), name) == 0 )
+      {
+         *eventhdlr = set->eventhdlrs[i];
+         return SCIP_OKAY;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPsetIncludeNodesel(          /**< inserts node selector in node selector list */
    SET*             set,                /**< global SCIP settings */
    NODESEL*         nodesel             /**< node selector */
@@ -329,6 +396,35 @@ RETCODE SCIPsetIncludeNodesel(          /**< inserts node selector in node selec
 
    if( set->nodesel == NULL )
       set->nodesel = nodesel;
+
+   return SCIP_OKAY;
+}   
+
+RETCODE SCIPsetIncludeBranchrule(       /**< inserts branching rule in branching rule list */
+   SET*             set,                /**< global SCIP settings */
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(branchrule != NULL);
+   assert(!SCIPbranchruleIsInitialized(branchrule));
+
+   if( set->nbranchrules >= set->branchrulessize )
+   {
+      set->branchrulessize = SCIPsetCalcMemGrowSize(set, set->nbranchrules+1);
+      ALLOC_OKAY( reallocMemoryArray(set->branchrules, set->branchrulessize) );
+   }
+   assert(set->nbranchrules < set->branchrulessize);
+
+   for( i = set->nbranchrules; i > 0
+           && SCIPbranchruleGetPriority(branchrule) > SCIPbranchruleGetPriority(set->branchrules[i-1]); --i )
+   {
+      set->branchrules[i] = set->branchrules[i-1];
+   }
+   set->branchrules[i] = branchrule;
+   set->nbranchrules++;
 
    return SCIP_OKAY;
 }   
@@ -381,10 +477,22 @@ RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback funct
       CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], set->scip) );
    }
 
+   /* event handlers */
+   for( i = 0; i < set->neventhdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPeventhdlrInit(set->eventhdlrs[i], set->scip) );
+   }
+
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
       CHECK_OKAY( SCIPnodeselInit(set->nodesels[i], set->scip) );
+   }
+
+   /* branching rules */
+   for( i = 0; i < set->nbranchrules; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleInit(set->branchrules[i], set->scip) );
    }
 
    /* display columns */
@@ -417,10 +525,22 @@ RETCODE SCIPsetExitCallbacks(           /**< calls exit methods of all user call
       CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], set->scip) );
    }
 
+   /* event handlers */
+   for( i = 0; i < set->neventhdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPeventhdlrExit(set->eventhdlrs[i], set->scip) );
+   }
+
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
       CHECK_OKAY( SCIPnodeselExit(set->nodesels[i], set->scip) );
+   }
+
+   /* branchruleing rules */
+   for( i = 0; i < set->nbranchrules; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleExit(set->branchrules[i], set->scip) );
    }
 
    /* display columns */
@@ -494,6 +614,27 @@ RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
 }
 
 
+Real SCIPsetRelDiff(                    /**< returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real absval1;
+   Real absval2;
+   Real quot;
+
+   assert(set != NULL);
+
+   absval1 = ABS(val1);
+   absval2 = ABS(val2);
+   quot = MAX(absval1, absval2);
+   quot = MAX(quot, 1.0);
+   
+   return (val1-val2)/quot;
+}
+
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -508,7 +649,7 @@ Bool SCIPsetIsEQ(                       /**< checks, if values are in range of e
 {
    assert(set != NULL);
 
-   return( ABS(val1-val2) <= set->epsilon );
+   return (ABS(val1-val2) <= set->epsilon);
 }
 
 Bool SCIPsetIsL(                        /**< checks, if val1 is (more than epsilon) lower than val2 */
@@ -519,7 +660,7 @@ Bool SCIPsetIsL(                        /**< checks, if val1 is (more than epsil
 {
    assert(set != NULL);
 
-   return( val1 < val2 - set->epsilon );
+   return (val1 - val2 < -set->epsilon);
 }
 
 Bool SCIPsetIsLE(                       /**< checks, if val1 is not (more than epsilon) greater than val2 */
@@ -530,7 +671,7 @@ Bool SCIPsetIsLE(                       /**< checks, if val1 is not (more than e
 {
    assert(set != NULL);
 
-   return( val1 <= val2 + set->epsilon );
+   return (val1 - val2 <= set->epsilon);
 }
 
 Bool SCIPsetIsG(                        /**< checks, if val1 is (more than epsilon) greater than val2 */
@@ -541,7 +682,7 @@ Bool SCIPsetIsG(                        /**< checks, if val1 is (more than epsil
 {
    assert(set != NULL);
 
-   return( val1 > val2 + set->epsilon );
+   return (val1 - val2 > set->epsilon);
 }
 
 Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than epsilon) lower than val2 */
@@ -552,7 +693,7 @@ Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than e
 {
    assert(set != NULL);
 
-   return( val1 >= val2 - set->epsilon );
+   return (val1 - val2 >= -set->epsilon);
 }
 
 Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilon of 0.0 */
@@ -562,7 +703,7 @@ Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilo
 {
    assert(set != NULL);
 
-   return( ABS(val) <= set->epsilon );
+   return (ABS(val) <= set->epsilon);
 }
 
 Bool SCIPsetIsPos(                      /**< checks, if value is greater than epsilon */
@@ -572,7 +713,7 @@ Bool SCIPsetIsPos(                      /**< checks, if value is greater than ep
 {
    assert(set != NULL);
 
-   return( val > set->epsilon );
+   return (val > set->epsilon);
 }
 
 Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -epsilon */
@@ -582,7 +723,7 @@ Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -eps
 {
    assert(set != NULL);
 
-   return( val < -set->epsilon );
+   return (val < -set->epsilon);
 }
 
 Bool SCIPsetIsSumEQ(                    /**< checks, if values are in range of sumepsilon */
@@ -593,7 +734,7 @@ Bool SCIPsetIsSumEQ(                    /**< checks, if values are in range of s
 {
    assert(set != NULL);
 
-   return( ABS(val1-val2) <= set->sumepsilon );
+   return (ABS(val1-val2) <= set->sumepsilon);
 }
 
 Bool SCIPsetIsSumL(                     /**< checks, if val1 is (more than sumepsilon) lower than val2 */
@@ -604,7 +745,7 @@ Bool SCIPsetIsSumL(                     /**< checks, if val1 is (more than sumep
 {
    assert(set != NULL);
 
-   return( val1 < val2 - set->sumepsilon );
+   return (val1 - val2 < -set->sumepsilon);
 }
 
 Bool SCIPsetIsSumLE(                    /**< checks, if val1 is not (more than sumepsilon) greater than val2 */
@@ -615,7 +756,7 @@ Bool SCIPsetIsSumLE(                    /**< checks, if val1 is not (more than s
 {
    assert(set != NULL);
 
-   return( val1 <= val2 + set->sumepsilon );
+   return (val1 - val2 <= set->sumepsilon);
 }
 
 Bool SCIPsetIsSumG(                     /**< checks, if val1 is (more than sumepsilon) greater than val2 */
@@ -626,7 +767,7 @@ Bool SCIPsetIsSumG(                     /**< checks, if val1 is (more than sumep
 {
    assert(set != NULL);
 
-   return( val1 > val2 + set->sumepsilon );
+   return (val1 - val2 > set->sumepsilon);
 }
 
 Bool SCIPsetIsSumGE(                    /**< checks, if val1 is not (more than sumepsilon) lower than val2 */
@@ -637,7 +778,7 @@ Bool SCIPsetIsSumGE(                    /**< checks, if val1 is not (more than s
 {
    assert(set != NULL);
 
-   return( val1 >= val2 - set->sumepsilon );
+   return (val1 - val2 >= -set->sumepsilon);
 }
 
 Bool SCIPsetIsSumZero(                  /**< checks, if value is in range sumepsilon of 0.0 */
@@ -647,7 +788,7 @@ Bool SCIPsetIsSumZero(                  /**< checks, if value is in range sumeps
 {
    assert(set != NULL);
 
-   return( ABS(val) <= set->sumepsilon );
+   return (ABS(val) <= set->sumepsilon);
 }
 
 Bool SCIPsetIsSumPos(                   /**< checks, if value is greater than sumepsilon */
@@ -657,7 +798,7 @@ Bool SCIPsetIsSumPos(                   /**< checks, if value is greater than su
 {
    assert(set != NULL);
 
-   return( val > set->sumepsilon );
+   return (val > set->sumepsilon);
 }
 
 Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sumepsilon */
@@ -667,7 +808,60 @@ Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sum
 {
    assert(set != NULL);
 
-   return( val < -set->sumepsilon );
+   return (val < -set->sumepsilon);
+}
+
+Bool SCIPsetIsRelEQ(                    /**< checks, if relative difference of values is in range of epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   return (ABS(SCIPsetRelDiff(set, val1, val2)) <= set->epsilon);
+}
+
+Bool SCIPsetIsRelL(                     /**< checks, if relative difference of val1 and val2 is lower than epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return (SCIPsetRelDiff(set, val1, val2) < -set->epsilon);
+}
+
+Bool SCIPsetIsRelLE(                    /**< checks, if relative difference of val1 and val2 is not greater than epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return (SCIPsetRelDiff(set, val1, val2) <= set->epsilon);
+}
+
+Bool SCIPsetIsRelG(                     /**< checks, if relative difference of val1 and val2 is greater than epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return (SCIPsetRelDiff(set, val1, val2) > set->epsilon);
+}
+
+Bool SCIPsetIsRelGE(                    /**< checks, if relative difference of val1 and val2 is not lower than -epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return (SCIPsetRelDiff(set, val1, val2) >= -set->epsilon);
 }
 
 Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
@@ -677,7 +871,7 @@ Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infi
 {
    assert(set != NULL);
 
-   return( val >= set->infinity );
+   return (val >= set->infinity);
 }
 
 Bool SCIPsetIsFeasible(                 /**< checks, if value is non-negative within the LP feasibility bounds */
@@ -687,7 +881,7 @@ Bool SCIPsetIsFeasible(                 /**< checks, if value is non-negative wi
 {
    assert(set != NULL);
 
-   return( val >= -set->feastol );
+   return (val >= -set->feastol);
 }
 
 Real SCIPsetFloor(                      /**< rounds value down to the next integer */

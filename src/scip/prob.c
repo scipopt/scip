@@ -112,6 +112,9 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
    
    freeMemoryArray((*prob)->name);
 
+   /* release constraints and free constraint list */
+   CHECK_OKAY( SCIPconslistFree(&(*prob)->conslist, memhdr, set) );
+   
    /* release problem variables */
    for( v = 0; v < (*prob)->nvars; ++v )
    {
@@ -121,9 +124,6 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
    }
    freeMemoryArrayNull((*prob)->vars);
 
-   /* release constraints and free constraint list */
-   CHECK_OKAY( SCIPconslistFree(&(*prob)->conslist, memhdr, set) );
-   
    /* free hash tables for names */
    SCIPhashtableFree(&(*prob)->varnames, memhdr);
    SCIPhashtableFree(&(*prob)->consnames, memhdr);

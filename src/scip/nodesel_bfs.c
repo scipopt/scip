@@ -62,36 +62,10 @@ DECL_NODESELFREE(SCIPnodeselFreeBfs)
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
-   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "destruct best first search node selector");
-
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    freeMemory(nodeseldata);
-
-   return SCIP_OKAY;
-}
-
-static
-DECL_NODESELINIT(SCIPnodeselInitBfs)
-{
-   assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
-
-   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "initialise best first search node selector");
-
-   return SCIP_OKAY;
-}
-
-static
-DECL_NODESELEXIT(SCIPnodeselExitBfs)
-{
-   assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
-
-   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "exit best first search node selector");
 
    return SCIP_OKAY;
 }
@@ -207,7 +181,7 @@ RETCODE SCIPincludeNodeselBfs(          /**< creates the node selector for best 
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
-                  SCIPnodeselFreeBfs, SCIPnodeselInitBfs, SCIPnodeselExitBfs, SCIPnodeselSlctBfs, SCIPnodeselCompBfs,
+                  SCIPnodeselFreeBfs, NULL, NULL, SCIPnodeselSlctBfs, SCIPnodeselCompBfs,
                   nodeseldata, FALSE) );
 
    return SCIP_OKAY;

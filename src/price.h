@@ -63,6 +63,8 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable, where zero violates the bounds */
    );
 
@@ -75,7 +77,9 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricers, prices 
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    LP*              lp,                 /**< LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 extern
@@ -85,7 +89,9 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 

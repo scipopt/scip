@@ -83,6 +83,21 @@ typedef int Bool;                       /**< type used for boolean values */
 
 
 /*
+ * Long Integer values
+ */
+
+#ifndef LLONG_MAX
+#define LLONG_MAX	9223372036854775807LL
+#define LLONG_MIN	(-LLONG_MAX - 1LL)
+#endif
+
+typedef long long Longint;              /**< type used for long integer values */
+#define LONGINT_MAX          LLONG_MAX
+#define LONGINT_MIN          LLONG_MIN
+
+
+
+/*
  * Floating point values
  */
 

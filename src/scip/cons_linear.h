@@ -63,7 +63,7 @@ RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constrai
    CONS*            cons,               /**< constraint data */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable of constraint entry */
-   Real             val                 /**< coefficients of constraint entry */
+   Real             val                 /**< coefficient of constraint entry */
    );
 
 extern

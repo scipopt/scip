@@ -16,90 +16,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nodesel_dfs.c
- * @brief  node selector for depth first search
+/**@file   branch_leastinf.h
+ * @brief  most infeasible LP branching rule
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "nodesel_dfs.h"
+#ifndef __BRANCH_LEASTINF_H__
+#define __BRANCH_LEASTINF_H__
 
 
-#define NODESEL_NAME "dfs"
-#define NODESEL_DESC "Depth First Search"
+#include "scip.h"
 
 
-
-
-/*
- * Callback methods
- */
-
-static
-DECL_NODESELSLCT(SCIPnodeselSlctDfs)
-{
-   assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
-   assert(selnode != NULL);
-
-   CHECK_OKAY( SCIPgetBestNode(scip, selnode) );
-
-   return SCIP_OKAY;
-}
-
-static
-DECL_NODESELCOMP(SCIPnodeselCompDfs)
-{
-   int depth1;
-   int depth2;
-
-   assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
-
-   depth1 = SCIPnodeGetDepth(node1);
-   depth2 = SCIPnodeGetDepth(node2);
-   if( depth1 > depth2 )
-      return -1;
-   else if( depth1 < depth2 )
-      return +1;
-   else
-   {
-      Real lowerbound1;
-      Real lowerbound2;
-
-      lowerbound1 = SCIPnodeGetLowerBound(node1);
-      lowerbound2 = SCIPnodeGetLowerBound(node2);
-      if( lowerbound1 < lowerbound2 )
-         return -1;
-      else if( lowerbound1 > lowerbound2 )
-         return +1;
-      else
-         return 0;
-   }
-}
-
-
-
-
-
-/*
- * dfs specific interface methods
- */
-
-RETCODE SCIPincludeNodeselDfs(          /**< creates the node selector for depth first search and includes it in SCIP */
+extern
+RETCODE SCIPincludeBranchruleLeastinf(  /**< creates the least infeasible LP braching rule and includes it in SCIP */
    SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
-                  NULL, NULL, NULL, SCIPnodeselSlctDfs, SCIPnodeselCompDfs,
-                  NULL, FALSE) );
+   );
 
-   return SCIP_OKAY;
-}
-
+#endif

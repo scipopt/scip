@@ -39,6 +39,7 @@ struct NodePQ
    Real             lowerboundsum;      /**< sum of lower bounds of all nodes in the queue */
    Real             lowerbound;         /**< minimal lower bound value of all nodes in the queue */
    int              nlowerbounds;       /**< number of nodes in the queue with minimal lower bound (0 if invalid) */
+   unsigned int     validlowerbound:1;  /**< is lower bound value valid? */
 };
 
 /** node selector */
@@ -94,8 +95,9 @@ void nodepqUpdateLowerbound(            /**< updates the cached minimal lower bo
 
    debugMessage("update queue's lower bound: nodebound=%g, queuebound=%g, nlowerbounds=%d\n",
       node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds);
-   if( nodepq->lowerbound < SCIP_INVALID )
+   if( nodepq->validlowerbound )
    {
+      assert(nodepq->lowerbound < SCIP_INVALID);
       if( SCIPsetIsLE(set, node->lowerbound, nodepq->lowerbound) )
       {
          if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
@@ -124,6 +126,7 @@ RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
    (*nodepq)->lowerboundsum = 0.0;
    (*nodepq)->lowerbound = set->infinity;
    (*nodepq)->nlowerbounds = 0;
+   (*nodepq)->validlowerbound = TRUE;
 
    return SCIP_OKAY;
 }
@@ -244,7 +247,10 @@ Bool nodepqDelPos(                      /**< deletes node at given position from
       {
          nodepq->nlowerbounds--;
          if( nodepq->nlowerbounds == 0 )
+         {
+            nodepq->validlowerbound = FALSE;
             nodepq->lowerbound = SCIP_INVALID;
+         }
       }
       debugMessage(" -> new queuebound=%g, nlowerbounds=%d\n", nodepq->lowerbound, nodepq->nlowerbounds);
    }
@@ -381,14 +387,17 @@ Real SCIPnodepqGetLowerbound(           /**< gets the minimal lower bound of all
    else
    {
       /* if we don't know the minimal lower bound, compare all nodes */
-      if( nodepq->nlowerbounds == 0 )
+      if( !nodepq->validlowerbound )
       {
+         assert(nodepq->nlowerbounds == 0);
+         nodepq->validlowerbound = TRUE;
          nodepq->lowerbound = set->infinity;
          nodepq->nlowerbounds = 0;
          for( i = 0; i < nodepq->len; ++i )
             nodepqUpdateLowerbound(nodepq, set, nodepq->slots[i]);
       }
    }
+   assert(nodepq->validlowerbound);
    assert(nodepq->lowerbound < SCIP_INVALID);
 
    return nodepq->lowerbound;

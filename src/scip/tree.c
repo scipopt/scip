@@ -853,6 +853,8 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to active node, c
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
@@ -888,7 +890,7 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to active node, c
    case SCIP_NODETYPE_ACTNODE:
       assert(tree->actnode == node);
       CHECK_OKAY( SCIPdomchgdynAddBoundchg(tree->actnodedomchg, memhdr, set, var, newbound, oldbound, boundtype) );
-      CHECK_OKAY( SCIPvarChgBd(var, memhdr, set, stat, lp, tree, newbound, boundtype) );
+      CHECK_OKAY( SCIPvarChgBd(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, newbound, boundtype) );
       return SCIP_OKAY;
 
    case SCIP_NODETYPE_SIBLING:
@@ -1081,6 +1083,8 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    NODE*            node                /**< last node of the new active path (= new active node), or NULL */
    )
 {
@@ -1193,7 +1197,7 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    for( i = tree->pathlen-1; i > commonforkdepth; --i )
    {
       debugMessage("switch path: undo domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, stat, lp, tree) );
+      CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
    }
 
    /* shrink active path to the common fork and deactivate the corresponding nodes */
@@ -1218,7 +1222,7 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
    {
       debugMessage("switch path: apply domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, tree) );
+      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
    }
 
    /* remember LP defining fork and subroot */
@@ -1755,7 +1759,9 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    assert(node == NULL
@@ -1866,7 +1872,7 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
    }
 
    /* track the path from the old active node to the new node, and perform domain changes */
-   CHECK_OKAY( treeSwitchPath(tree, memhdr, set, stat, lp, node) );
+   CHECK_OKAY( treeSwitchPath(tree, memhdr, set, stat, lp, branchcand, eventqueue, node) );
    assert(node == NULL || tree->pathlen > 0);
    assert(node != NULL || tree->pathlen == 0);
    assert(node == NULL || tree->path[tree->pathlen-1] == node);
@@ -2082,13 +2088,101 @@ RETCODE SCIPtreeAddGlobalCons(          /**< adds global constraint to the probl
    return SCIP_OKAY;
 }
 
+RETCODE SCIPtreeBranchVar(              /**< branches on a variable; if solution value x' is fractional, two child nodes
+                                         *   are created (x <= floor(x'), x >= ceil(x')), if solution value is integral,
+                                         *   three child nodes are created (x <= x'-1, x == x', x >= x'+1) */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             var                 /**< variable to branch on */
+   )
+{
+   NODE* node;
+   Real solval;
+
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(var->vartype == SCIP_VARTYPE_BINARY
+      || var->vartype == SCIP_VARTYPE_INTEGER
+      || var->vartype == SCIP_VARTYPE_IMPLINT);
+   assert(SCIPsetIsIntegral(set, var->dom.lb));
+   assert(SCIPsetIsIntegral(set, var->dom.ub));
+   assert(!SCIPsetIsFixed(set, var->dom.lb, var->dom.ub));
+
+   solval = SCIPvarGetSol(var, tree);
+   assert(SCIPsetIsGE(set, solval, var->dom.lb));
+   assert(SCIPsetIsLE(set, solval, var->dom.ub));
+   
+   if( SCIPsetIsIntegral(set, solval) )
+   {
+      Real fixval;
+
+      /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
+      fixval = SCIPsetCeil(set, solval);
+      assert(SCIPsetIsEQ(set, SCIPsetCeil(set, solval), SCIPsetFloor(set, solval)));
+      
+      debugMessage("pseudo branch on variable <%s> with value %g\n", var->name, solval);
+      
+      /* create child node with x = x' */
+      debugMessage(" -> creating child: <%s> == %g\n", var->name, fixval);
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+      if( !SCIPsetIsEQ(set, var->dom.lb, fixval) )
+      {
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval,
+                        SCIP_BOUNDTYPE_LOWER) );
+      }
+      if( !SCIPsetIsEQ(set, var->dom.ub, fixval) )
+      {
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval,
+                        SCIP_BOUNDTYPE_UPPER) );
+      }
+      
+      /* create child node with x <= x'-1, if this would be feasible */
+      if( SCIPsetIsGE(set, fixval-1, var->dom.lb) )
+      {
+         debugMessage(" -> creating child: <%s> <= %g\n", var->name, fixval-1);
+         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval-1,
+                        SCIP_BOUNDTYPE_UPPER) );
+      }
+                  
+      /* create child node with x >= x'+1, if this would be feasible */
+      if( SCIPsetIsLE(set, fixval+1, var->dom.ub) )
+      {
+         debugMessage(" -> creating child: <%s> >= %g\n", var->name, fixval+1);
+         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval+1,
+                        SCIP_BOUNDTYPE_LOWER) );
+      }
+   }
+   else
+   {   
+      /* create child node with x <= floor(x') */
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var,
+                     SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER) );
+      
+      /* create child node with x >= ceil(x') */
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var,
+                     SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER) );
+   }
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a variable changed */
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   Real             oldbound            /**< old bound value */
+   Real             oldbound,           /**< old bound value */
+   Real             newbound            /**< new bound value */
    )
 {
    assert(var != NULL);
@@ -2099,9 +2193,9 @@ RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a va
    case SCIP_VARSTATUS_COLUMN:
       assert(tree != NULL);
       if( var->obj > 0.0 && boundtype == SCIP_BOUNDTYPE_LOWER )
-         tree->actpseudoobjval += (var->dom.lb - oldbound) * var->obj;
+         tree->actpseudoobjval += (newbound - oldbound) * var->obj;
       else if( var->obj < 0.0 && boundtype == SCIP_BOUNDTYPE_UPPER )
-         tree->actpseudoobjval += (var->dom.ub - oldbound) * var->obj;
+         tree->actpseudoobjval += (newbound - oldbound) * var->obj;
       break;
 
    case SCIP_VARSTATUS_ORIGINAL:
@@ -2291,7 +2385,8 @@ Real SCIPtreeGetActLowerbound(          /**< gets the lower bound of the active 
 }
 
 Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all nodes in the tree */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   Real             upperbound          /**< global upper bound */
    )
 {
    Real lowerboundsum;
@@ -2302,11 +2397,13 @@ Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all
 
    /* get sum of lower bounds from nodes in the queue */
    lowerboundsum = SCIPnodepqGetLowerboundSum(tree->leaves);
-   
+   nnodes = SCIPtreeGetNLeaves(tree);
+
    /* add lower bound of active node */
-   if( tree->actnode != NULL )
+   if( tree->actnode != NULL && tree->actnode->lowerbound < upperbound )
    {
       lowerboundsum += tree->actnode->lowerbound;
+      nnodes++;
    }
 
    /* add lower bounds of siblings */
@@ -2315,6 +2412,7 @@ Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all
       assert(tree->siblings[i] != NULL);
       lowerboundsum += tree->siblings[i]->lowerbound;
    }
+   nnodes += tree->nsiblings;
 
    /* add lower bounds of children */
    for( i = 0; i < tree->nchildren; ++i )
@@ -2322,8 +2420,7 @@ Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all
       assert(tree->children[i] != NULL);
       lowerboundsum += tree->children[i]->lowerbound;
    }
-
-   nnodes = SCIPtreeGetNNodes(tree);
+   nnodes += tree->nchildren;
 
    return nnodes == 0 ? 0.0 : lowerboundsum/nnodes;
 }

@@ -16,8 +16,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_integral.c
- * @brief  constraint handler for integral constraints
+/**@file   branch_leastinf.c
+ * @brief  least infeasible LP branching rule
  * @author Tobias Achterberg
  */
 
@@ -25,18 +25,13 @@
 
 #include <assert.h>
 #include <string.h>
-#include <limits.h>
 
-#include "cons_integral.h"
+#include "branch_leastinf.h"
 
 
-#define CONSHDLR_NAME          "integral"
-#define CONSHDLR_DESC          "Integrality constraint"
-#define CONSHDLR_SEPAPRIORITY  -1000000
-#define CONSHDLR_ENFOPRIORITY         0
-#define CONSHDLR_CHCKPRIORITY         0
-#define CONSHDLR_PROPFREQ            -1
-#define CONSHDLR_NEEDSCONS        FALSE /**< the constraint handler is called without constraints */
+#define BRANCHRULE_NAME          "leastinf"
+#define BRANCHRULE_DESC          "least infeasible branching"
+#define BRANCHRULE_PRIORITY      50
 
 
 
@@ -45,31 +40,50 @@
  */
 
 static
-DECL_CONSENLP(consEnlpIntegral)
+DECL_BRANCHEXLP(branchExlpLeastinf)
 {
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   VAR** lpcands;
+   Real* lpcandsfrac;
+   int nlpcands;
+   Real infeasibility;
+   Real mininfeasibility;
+   int bestcand;
+   int i;
+
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
-   assert(conss == NULL);
-   assert(nconss == 0);
    assert(result != NULL);
 
-   debugMessage("Enlp method of integrality constraint\n");
+   debugMessage("Exlp method of leastinf branching\n");
 
-   /* call branching methods */
-   CHECK_OKAY( SCIPbranchLP(scip, result) );
+   /* get branching candidates */
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandsfrac, &nlpcands) );
+   assert(nlpcands > 0);
 
-   return SCIP_OKAY;
-}
+   /* search the least infeasible candidate */
+   mininfeasibility = 1.0;
+   bestcand = -1;
+   for( i = 0; i < nlpcands; ++i )
+   {
+      assert(lpcands[i] != NULL);
 
-static
-DECL_CONSCHCK(consChckIntegral)
-{
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
+      infeasibility = lpcandsfrac[i];
+      infeasibility = MIN(infeasibility, 1.0-infeasibility);
+      if( infeasibility < mininfeasibility )
+      {
+         mininfeasibility = infeasibility;
+         bestcand = i;
+      }
+   }
+   assert(bestcand >= 0);
 
-   todoMessage("Chck method of integrality constraint");
+   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, infeasibility=%g)\n",
+      nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand], mininfeasibility);
+
+   /* perform the branching */
+   CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand]) );
+   *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
 }
@@ -79,19 +93,15 @@ DECL_CONSCHCK(consChckIntegral)
 
 
 /*
- * constraint specific interface methods
+ * branching specific interface methods
  */
 
-RETCODE SCIPincludeConsHdlrIntegral(      /**< creates the handler for integrality constraint and includes it in SCIP */
+RETCODE SCIPincludeBranchruleLeastinf(  /**< creates the least infeasible LP braching rule and includes it in SCIP */
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY, CONSHDLR_PROPFREQ,
-                  CONSHDLR_NEEDSCONS,
-                  NULL, NULL, NULL, 
-                  NULL, NULL, 
-                  NULL, consEnlpIntegral, NULL, consChckIntegral, NULL,
+   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+                  NULL, NULL, NULL, branchExlpLeastinf, NULL,
                   NULL) );
 
    return SCIP_OKAY;

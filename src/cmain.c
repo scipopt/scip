@@ -34,9 +34,11 @@
 #include "cons_linear.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
+#include "branch_mostinf.h"
+#include "branch_leastinf.h"
 
 
-#if 1
+#if 0
 static const int   nrows = 2;
 static const int   nvars = 2;
 
@@ -52,6 +54,24 @@ static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2: 0 <= + x1
 static const Real  row_val [] = { 2.0, 1.0, 1.0, 2.0 };
 static const Real  row_lhs [] = {      0.0,      0.0 };
 static const Real  row_rhs [] = {      4.0,      3.0 };
+#endif
+
+#if 1
+static const int   nrows = 3;
+static const int   nvars = 2;
+
+static const OBJSENSE objsen  = SCIP_OBJSENSE_MAXIMIZE;
+static const char* var_name[] = { "var1"  , "var2"   };
+static const Real  var_obj [] = {  1.0    ,  1.0     };           /* max  +x1 +x2 */
+static const Real  var_lb  [] = {  1.0    ,  0.0     };           /*   1 <= x1 <= 10 integer */
+static const Real  var_ub  [] = { 10.0    ,  5.0     };           /*   0 <= x2 <= 5  integer */
+
+static const char* row_name[] = { "lin1"  , "lin2"  , "lin3"   }; /* such that */
+static const int   row_len [] = {        2,        2,        2 }; /*   lin1: 0 <= +2x1 + x2 <=  4 */
+static const int   row_idx [] = {   0,   1,   0,   1,   0,   1 }; /*   lin2: 0 <= + x1 +2x2 <=  3 */
+static const Real  row_val [] = { 2.0, 1.0, 1.0, 2.0, 1.0, 1.0 }; /*   lin3: 0 <= + x1 + x2 <= 20 */
+static const Real  row_lhs [] = {      0.0,      0.0,      0.0 };
+static const Real  row_rhs [] = {      4.0,      3.0,     20.0 };
 #endif
 
 #if 0
@@ -73,21 +93,21 @@ static const Real  row_rhs [] = { 100000.0, 100000.0 };
 #endif
 
 #if 0
-static const int   nrows = 2;
+static const int   nrows = 3;
 static const int   nvars = 3;
 
 static const OBJSENSE objsen  = SCIP_OBJSENSE_MINIMIZE;
-static const char* var_name[] = { "var1"  , "var2",   "var3"  };     /* min -2x1 +x2 + 100000x3 */
-static const Real  var_obj [] = { -2.0    ,  +1.0 , 100000.0  };     /*   0 <= x1 <=  10 integer */
-static const Real  var_lb  [] = {  0.0    ,   0.0 ,      0.0  };     /*   0 <= x2 <=  10 integer */
-static const Real  var_ub  [] = { 10.0    ,  10.0 ,    100.0  };     /*   0 <= x3 <= 100 integer */
+static const char* var_name[] = { "var1"  , "var2",   "var3"  };       /* min -2x1 +x2 + 100000x3 */
+static const Real  var_obj [] = { -2.0    ,  +1.0 , 100000.0  };       /*   0 <= x1 <=  10 integer */
+static const Real  var_lb  [] = {  0.0    ,   0.0 ,      0.0  };       /*   0 <= x2 <=  10 integer */
+static const Real  var_ub  [] = { 10.0    ,  10.0 ,    100.0  };       /*   0 <= x3 <= 100 integer */
 
-static const char* row_name[] = { "lin1"       , "lin2"   };        /* such that */
-static const int   row_len [] = {             3,        1 };        /*   lin1: 1 <= -x1 +x2 +x3 */
-static const int   row_idx [] = {   0,   1,   2,        1 };        /*   lin2: 0 <=     -x2     */
-static const Real  row_val [] = {-1.0, 1.0, 1.0,     -1.0 };
-static const Real  row_lhs [] = {           1.0,      0.0 };
-static const Real  row_rhs [] = {      100000.0, 100000.0 };
+static const char* row_name[] = { "lin1"       , "lin2"  , "lin3"   }; /* such that */
+static const int   row_len [] = {             3,        1,        2 }; /*   lin1: 1 <= -x1 +x2 +x3       */
+static const int   row_idx [] = {   0,   1,   2,        1,   0,   1 }; /*   lin2: 0 <=     -x2           */
+static const Real  row_val [] = {-1.0, 1.0, 1.0,     -1.0, 1.0, 1.0 }; /*   lin3: 0 <=  x1 +x2     <= 30 */
+static const Real  row_lhs [] = {           1.0,      0.0,      0.0 };
+static const Real  row_rhs [] = {      100000.0, 100000.0,     30.0 };
 #endif
 
 int
@@ -132,6 +152,8 @@ main(int argc, char **argv)
    CHECK_SCIP( SCIPincludeConsHdlrLinear(scip) );
    CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
    CHECK_SCIP( SCIPincludeNodeselBfs(scip) );
+   CHECK_SCIP( SCIPincludeBranchruleMostinf(scip) );
+   CHECK_SCIP( SCIPincludeBranchruleLeastinf(scip) );
 
 
    /********************

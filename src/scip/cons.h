@@ -30,7 +30,7 @@
 typedef struct ConsHdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct Cons CONS;               /**< constraint data structure */
 typedef struct ConsList CONSLIST;       /**< list of constraints */
-typedef struct ConsHdlrData CONSHDLRDATA;/**< constraint handler data */
+typedef struct ConsHdlrData CONSHDLRDATA; /**< constraint handler data */
 typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
 
 
@@ -124,9 +124,10 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
- *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied
- *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced
- *    SCIP_SEPARATED  : at least one constraint is infeasible, and a cutting plane was generated
+ *    SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
+ *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied to resolve infeasibility
+ *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced to resolve infeasibility
+ *    SCIP_SEPARATED  : at least one constraint is infeasible, and a cutting plane was generated to resolve infeasibility
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
@@ -152,8 +153,9 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
- *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied
- *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced
+ *    SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
+ *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied to resolve infeasibility
+ *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced to resolve infeasibility
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
@@ -195,6 +197,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
+ *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible for the actual domains
  *    SCIP_REDUCEDDOM : at least one domain reduction was found
  *    SCIP_DIDNOTFIND : the propagator searched and did not find any domain reductions
  *    SCIP_DIDNOTRUN  : the propagator was skipped
@@ -237,6 +240,7 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
@@ -302,6 +306,8 @@ extern
 RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -402,7 +408,7 @@ CONSHDLR* SCIPconsGetConsHdlr(          /**< returns the constraint handler of t
    );
 
 extern
-CONSDATA* SCIPconsGetConsdata(          /**< returns the constraint data field of the constraint */
+CONSDATA* SCIPconsGetConsData(          /**< returns the constraint data field of the constraint */
    CONS*            cons                /**< constraint */
    );
 

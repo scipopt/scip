@@ -46,8 +46,10 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "scip.h"
 #include "reader.h"
 #include "cons.h"
+#include "event.h"
 #include "nodesel.h"
 #include "disp.h"
+#include "branch.h"
 #include "lp.h"
 #include "message.h"
 #include "buffer.h"
@@ -75,10 +77,16 @@ struct Set
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
+   EVENTHDLR**      eventhdlrs;         /**< event handlers */
+   int              neventhdlrs;        /**< number of event handlers */
+   int              eventhdlrssize;     /**< size of eventhdlrs array */
    NODESEL**        nodesels;           /**< node selectors */
    int              nnodesels;          /**< number of node selectors */
    int              nodeselssize;       /**< size of nodesels array */
    NODESEL*         nodesel;            /**< active node selector */
+   BRANCHRULE**     branchrules;        /**< branching rules */
+   int              nbranchrules;       /**< number of branching rules */
+   int              branchrulessize;    /**< size of branchrules array */
    DISP**           disps;              /**< display columns */
    int              ndisps;             /**< number of display columns */
    int              dispssize;          /**< size of disps array */
@@ -92,7 +100,7 @@ struct Set
    int              maxsepacutsroot;    /**< maximal number of separated cuts at the root node */
    int              agelimit;           /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
-   int              nodelimit;          /**< maximal number of nodes to process */
+   Longint          nodelimit;          /**< maximal number of nodes to process */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes */
    unsigned int     usepricing:1;       /**< use pricing of variables */
 };
@@ -136,9 +144,28 @@ RETCODE SCIPsetFindConsHdlr(            /**< finds the constraint handler of the
    );
 
 extern
+RETCODE SCIPsetIncludeEventHdlr(        /**< inserts event handler in event handler list */
+   SET*             set,                /**< global SCIP settings */
+   EVENTHDLR*       eventhdlr           /**< event handler */
+   );
+
+extern
+RETCODE SCIPsetFindEventHdlr(           /**< finds the event handler of the given name */
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of event handler */
+   EVENTHDLR**      eventhdlr           /**< pointer for storing the event handler (returns NULL, if not found) */
+   );
+
+extern
 RETCODE SCIPsetIncludeNodesel(          /**< inserts node selector in node selector list */
    SET*             set,                /**< global SCIP settings */
    NODESEL*         nodesel             /**< node selector */
+   );
+
+extern
+RETCODE SCIPsetIncludeBranchrule(       /**< inserts branching rule in branching rule list */
+   SET*             set,                /**< global SCIP settings */
+   BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 extern
@@ -186,6 +213,14 @@ RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data (or NULL) */
    Real             feastol             /**< new feasibility tolerance */
+   );
+
+
+extern
+Real SCIPsetRelDiff(                    /**< returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
    );
 
 
@@ -302,6 +337,41 @@ Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sum
    );
 
 extern
+Bool SCIPsetIsRelEQ(                    /**< checks, if relative difference of values is in range of epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsRelL(                     /**< checks, if relative difference of val1 and val2 is lower than epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsRelLE(                    /**< checks, if relative difference of val1 and val2 is not greater than epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsRelG(                     /**< checks, if relative difference of val1 and val2 is greater than epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsRelGE(                    /**< checks, if relative difference of val1 and val2 is not lower than -epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
 Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against infinity */
@@ -357,22 +427,28 @@ Bool SCIPsetIsFixed(                    /**< checks, if the given integer bounds
  */
 
 #define SCIPsetIsEQ(set, val1, val2)    ( ABS((val1)-(val2)) <= (set)->epsilon )
-#define SCIPsetIsL(set, val1, val2)     ( (val1) < (val2) - (set)->epsilon )
-#define SCIPsetIsLE(set, val1, val2)    ( (val1) <= (val2) + (set)->epsilon )
-#define SCIPsetIsG(set, val1, val2)     ( (val1) > (val2) + (set)->epsilon )
-#define SCIPsetIsGE(set, val1, val2)    ( (val1) >= (val2) - (set)->epsilon )
+#define SCIPsetIsL(set, val1, val2)     ( (val1) - (val2) < -(set)->epsilon )
+#define SCIPsetIsLE(set, val1, val2)    ( (val1) - (val2) <= (set)->epsilon )
+#define SCIPsetIsG(set, val1, val2)     ( (val1) - (val2) > (set)->epsilon )
+#define SCIPsetIsGE(set, val1, val2)    ( (val1) - (val2) >= -(set)->epsilon )
 #define SCIPsetIsZero(set, val)         ( ABS(val) <= (set)->epsilon )
 #define SCIPsetIsPos(set, val)          ( (val) > (set)->epsilon )
 #define SCIPsetIsNeg(set, val)          ( (val) < -(set)->epsilon )
 
 #define SCIPsetIsSumEQ(set, val1, val2) ( ABS((val1)-(val2)) <= (set)->sumepsilon )
-#define SCIPsetIsSumL(set, val1, val2)  ( (val1) < (val2) - (set)->sumepsilon )
-#define SCIPsetIsSumLE(set, val1, val2) ( (val1) <= (val2) + (set)->sumepsilon )
-#define SCIPsetIsSumG(set, val1, val2)  ( (val1) > (val2) + (set)->sumepsilon )
-#define SCIPsetIsSumGE(set, val1, val2) ( (val1) >= (val2) - (set)->sumepsilon )
+#define SCIPsetIsSumL(set, val1, val2)  ( (val1) - (val2) < -(set)->sumepsilon )
+#define SCIPsetIsSumLE(set, val1, val2) ( (val1) - (val2) <= (set)->sumepsilon )
+#define SCIPsetIsSumG(set, val1, val2)  ( (val1) - (val2) > (set)->sumepsilon )
+#define SCIPsetIsSumGE(set, val1, val2) ( (val1) - (val2) >= -(set)->sumepsilon )
 #define SCIPsetIsSumZero(set, val)      ( ABS(val) <= (set)->sumepsilon )
 #define SCIPsetIsSumPos(set, val)       ( (val) > (set)->sumepsilon )
 #define SCIPsetIsSumNeg(set, val)       ( (val) < -(set)->sumepsilon )
+
+#define SCIPsetIsRelEQ(set, val1, val2) ( ABS(SCIPsetRelDiff(set, val1, val2)) <= set->epsilon )
+#define SCIPsetIsRelL(set, val1, val2)  ( SCIPsetRelDiff(set, val1, val2) < -set->epsilon )
+#define SCIPsetIsRelLE(set, val1, val2) ( SCIPsetRelDiff(set, val1, val2) <= set->epsilon )
+#define SCIPsetIsRelG(set, val1, val2)  ( SCIPsetRelDiff(set, val1, val2) > set->epsilon )
+#define SCIPsetIsRelGE(set, val1, val2) ( SCIPsetRelDiff(set, val1, val2) >= -set->epsilon )
 
 #define SCIPsetIsInfinity(set, val)     ( (val) >= (set)->infinity )
 #define SCIPsetIsFeasible(set, val)     ( (val) >= -(set)->feastol )

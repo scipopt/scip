@@ -1162,6 +1162,7 @@ RETCODE readBounds(
             case 'B' : // Ilog extension (Binary)
                CHECK_OKAY( SCIPchgLb(scip, var, 0.0) );
                CHECK_OKAY( SCIPchgUb(scip, var, 1.0) );
+               CHECK_OKAY( SCIPchgType(scip, var, SCIP_VARTYPE_BINARY) );
                break;
             default:
                mpsinputSyntaxerror(mpsi);

@@ -31,6 +31,8 @@
 #include "message.h"
 #include "memory.h"
 
+#define DEBUG 1
+
 
 
 /******************************
@@ -241,7 +243,7 @@ freeMemory_call(void **ptr, const char *filename, int line)
       *ptr = NULL;
    }
    else
-      errorMessage_call("Warning! Try to free null pointer.", filename, line);
+      errorMessage_call("Tried to free null pointer.", filename, line);
 }
 
 
@@ -1020,7 +1022,7 @@ freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
 
 #ifdef DEBUG
    /* check, if ptr belongs to block */
-   if( findChunk(blk, ptr) == NULL )
+   if( !isPtrInBlock(blk, ptr) )
    {
       BLKHDR *correctblk;
       char    s[255];
@@ -1130,7 +1132,7 @@ clearBlockMemory_call(MEMHDR *mem, const char *filename, int line)
       }
    }
    else
-      errorMessage_call("Error! Try to clear null block.", filename, line);
+      errorMessage_call("Tried to clear null block.", filename, line);
 }
 
 /*-----------------------------------------------------------------------------
@@ -1151,7 +1153,7 @@ destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
       *mem = NULL;
    }
    else
-      errorMessage_call("Error! Try to destroy null block.", filename, line);
+      errorMessage_call("Tried to destroy null block.", filename, line);
 }
 
 /*-----------------------------------------------------------------------------
@@ -1272,7 +1274,7 @@ garbageCollection(BLKHDR * blk)
 
       /* identify the chunk of the element */
       chk = findChunk(blk, (void *) lazyFree);
-#ifdef DEBUG
+#ifndef NDEBUG
       if( chk == NULL )
       {
          char s[255];
@@ -1338,7 +1340,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       {
 	 char    s[255];
 
-	 sprintf(s, "Error! Tried to free pointer <%p> of unknown size %ld.", *ptr, (long) size);
+	 sprintf(s, "Error! Tried to free pointer <%p> in block memory <%p> of unknown size %ld.", *ptr, mem, (long) size);
 	 errorMessage_call(s, filename, line);
 	 return;
       }
@@ -1363,7 +1365,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       }
    }
    else
-      errorMessage_call("Warning! Try to free null block pointer.", filename, line);
+      errorMessage_call("Tried to free null block pointer.", filename, line);
 
    checkMem(mem);
 }

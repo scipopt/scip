@@ -201,11 +201,11 @@ RETCODE ensureRowsSize(                 /**< ensures, that rows array can store 
 }
 
 static
-RETCODE ensureColSize(                  /**< ensures, that row array of column can store at least num additional entries */
+RETCODE ensureColSize(                  /**< ensures, that row array of column can store at least num entries */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    COL*             col,                /**< LP column */
-   int              num                 /**< minimum number of additional entries to store */
+   int              num                 /**< minimum number of entries to store */
    )
 {
    assert(col->len <= col->size);
@@ -226,11 +226,11 @@ RETCODE ensureColSize(                  /**< ensures, that row array of column c
 }
 
 static
-RETCODE ensureRowSize(                  /**< ensures, that column array of row can store at least num additional entries */
+RETCODE ensureRowSize(                  /**< ensures, that column array of row can store at least num entries */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row,                /**< LP row */
-   int              num                 /**< minimum number of additional entries to store */
+   int              num                 /**< minimum number of entries to store */
    )
 {
    assert(row->len <= row->size);
@@ -390,11 +390,10 @@ int colSearchCoeff(                     /**< searches coefficient in column, ret
    searchidx = row->index;
    minpos = 0;
    maxpos = col->len-1;
-   actpos = 0;
    while(minpos <= maxpos)
    {
-      assert(0 <= actpos && actpos < col->len);
       actpos = (minpos + maxpos)/2;
+      assert(0 <= actpos && actpos < col->len);
       actidx = col->row[actpos]->index;
       if( searchidx == actidx )
          return actpos;
@@ -610,11 +609,10 @@ int rowSearchCoeff(                     /**< searches coefficient in row, return
    searchidx = col->index;
    minpos = 0;
    maxpos = row->len-1;
-   actpos = 0;
    while(minpos <= maxpos)
    {
-      assert(0 <= actpos && actpos < row->len);
       actpos = (minpos + maxpos)/2;
+      assert(0 <= actpos && actpos < row->len);
       actidx = row->col[actpos]->index;
       if( searchidx == actidx )
          return actpos;
@@ -754,6 +752,12 @@ RETCODE rowAddCoeff(                    /**< adds a previously non existing coef
       row->nunlinked++;
    row->len++;
 
+   row->pseudoactivity = SCIP_INVALID;
+   row->minactivity = SCIP_INVALID;
+   row->maxactivity = SCIP_INVALID;
+   row->validpsactivity = FALSE;
+   row->validactivitybds = FALSE;
+
    rowAddNorms(row, set, col->index, val);
 
    coefChanged(row, col, lp);
@@ -809,6 +813,12 @@ RETCODE rowDelCoeffPos(                 /**< deletes coefficient at given positi
    }
    row->len--;
    
+   row->pseudoactivity = SCIP_INVALID;
+   row->minactivity = SCIP_INVALID;
+   row->maxactivity = SCIP_INVALID;
+   row->validpsactivity = FALSE;
+   row->validactivitybds = FALSE;
+
    rowDelNorms(row, set, col->index, val);
 
    coefChanged(row, col, lp);
@@ -855,9 +865,170 @@ RETCODE rowChgCoeffPos(                 /**< changes a coefficient at given posi
       row->val[pos] = val;
       rowAddNorms(row, set, -1, row->val[pos]);
       coefChanged(row, row->col[pos], lp);
+
+      row->pseudoactivity = SCIP_INVALID;
+      row->minactivity = SCIP_INVALID;
+      row->maxactivity = SCIP_INVALID;
+      row->validpsactivity = FALSE;
+      row->validactivitybds = FALSE;
    }
 
    return SCIP_OKAY;
+}
+
+static
+RETCODE rowSideChanged(                 /**< notifies LP row, that its sides were changed */
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   SIDETYPE         sidetype            /**< type of side: left or right hand side */
+   )
+{
+   assert(row != NULL);
+   assert(lp != NULL);
+
+   if( row->lpipos >= 0 )
+   {
+      /* insert row in the chgrows list (if not already there) */
+      if( !row->lhschanged && !row->rhschanged )
+      {
+         CHECK_OKAY( ensureChgrowsSize(lp, set, lp->nchgrows+1) );
+         lp->chgrows[lp->nchgrows] = row;
+         lp->nchgrows++;
+      }
+      
+      /* mark side change in the row */
+      switch( sidetype )
+      {
+      case SCIP_SIDETYPE_LEFT:
+         row->lhschanged = TRUE;
+         break;
+      case SCIP_SIDETYPE_RIGHT:
+         row->rhschanged = TRUE;
+         break;
+      default:
+         errorMessage("Unknown row side type");
+         abort();
+      }
+      
+      lp->flushed = FALSE;
+      lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
+      lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+
+      assert(lp->nchgrows > 0);
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+void rowUpdatePseudoActivity(           /**< updates rows pseudo activity after the best bound of column changed */
+   ROW*             row,                /**< row data */
+   int              pos,                /**< position of column in row, that was changed */
+   Real             oldbestbound,       /**< old best (w.r.t. objective function) bound of column */
+   Real             newbestbound        /**< new best (w.r.t. objective function) bound of column */
+   )
+{
+   assert(row != NULL);
+   assert(pos >= 0 && pos < row->len);
+   assert(row->col[pos] != NULL);
+   assert(row->col[pos]->var != NULL);
+   assert(row->col[pos]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(row->col[pos]->var->data.col == row->col[pos]);
+
+   if( row->validpsactivity )
+   {
+      assert(row->pseudoactivity < SCIP_INVALID);
+      row->pseudoactivity += (newbestbound - oldbestbound) * row->val[pos];
+   }
+}
+
+static
+void rowUpdatePseudoActivityConstant(   /**< updates rows pseudo activity after the constant was changed */
+   ROW*             row,                /**< row data */
+   Real             oldconstant,        /**< old constant of row */
+   Real             newconstant         /**< new constant of row */
+   )
+{
+   assert(row != NULL);
+
+   if( row->validpsactivity )
+   {
+      assert(row->pseudoactivity < SCIP_INVALID);
+      row->pseudoactivity += newconstant - oldconstant;
+   }
+}
+
+static
+void rowUpdateActivityBoundsLb(         /**< updates rows activity bounds after the lower bound of column changed */
+   ROW*             row,                /**< row data */
+   int              pos,                /**< position of column in row, that was changed */
+   Real             oldlb,              /**< old lower bound of column */
+   Real             newlb               /**< new lower bound of column */
+   )
+{
+   assert(row != NULL);
+   assert(pos >= 0 && pos < row->len);
+   assert(row->col[pos] != NULL);
+   assert(row->col[pos]->var != NULL);
+   assert(row->col[pos]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(row->col[pos]->var->data.col == row->col[pos]);
+
+   if( row->validactivitybds )
+   {
+      assert(row->minactivity < SCIP_INVALID);
+      assert(row->maxactivity < SCIP_INVALID);
+      if( row->val[pos] >= 0.0 )
+         row->minactivity += (newlb - oldlb) * row->val[pos];
+      else
+         row->maxactivity += (newlb - oldlb) * row->val[pos];
+   }
+}
+
+static
+void rowUpdateActivityBoundsUb(         /**< updates rows activity bounds after the upper bound of column changed */
+   ROW*             row,                /**< row data */
+   int              pos,                /**< position of column in row, that was changed */
+   Real             oldub,              /**< old upper bound of column */
+   Real             newub               /**< new upper bound of column */
+   )
+{
+   assert(row != NULL);
+   assert(pos >= 0 && pos < row->len);
+   assert(row->col[pos] != NULL);
+   assert(row->col[pos]->var != NULL);
+   assert(row->col[pos]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(row->col[pos]->var->data.col == row->col[pos]);
+
+   if( row->validactivitybds )
+   {
+      assert(row->minactivity < SCIP_INVALID);
+      assert(row->maxactivity < SCIP_INVALID);
+      if( row->val[pos] >= 0.0 )
+         row->maxactivity += (newub - oldub) * row->val[pos];
+      else
+         row->minactivity += (newub - oldub) * row->val[pos];
+   }
+}
+
+static
+void rowUpdateActivityBoundsConstant(   /**< updates rows activity bounds after the constant was changed */
+   ROW*             row,                /**< row data */
+   Real             oldconstant,        /**< old constant of row */
+   Real             newconstant         /**< new constant of row */
+   )
+{
+   assert(row != NULL);
+
+   if( row->validactivitybds )
+   {
+      assert(row->minactivity < SCIP_INVALID);
+      assert(row->maxactivity < SCIP_INVALID);
+      row->minactivity += newconstant - oldconstant;
+      row->maxactivity += newconstant - oldconstant;
+   }
 }
 
 
@@ -1312,10 +1483,17 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   Real             oldbound,           /**< old bound value */
+   Real             newbound            /**< new bound value */
    )
 {
+   int r;
+
    assert(col != NULL);
+   assert(col->var != NULL);
+   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(col->var->data.col == col);
    assert(lp != NULL);
    
    if( col->lpipos >= 0 )
@@ -1350,6 +1528,79 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
 
       assert(lp->nchgcols > 0);
    }  
+
+   /* update pseudo activity of rows */
+   if( col->var->obj >= 0.0 && boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      ROW** row;
+      int* linkpos;
+
+      row = col->row;
+      linkpos = col->linkpos;
+      for( r = 0; r < col->len; ++r )
+      {
+         assert(row[r] != NULL);
+         if( linkpos[r] >= 0 )
+         {
+            assert(row[r]->col[linkpos[r]] == col);
+            rowUpdatePseudoActivity(row[r], linkpos[r], oldbound, newbound);
+         }
+      }
+   }
+   else if( col->var->obj < 0.0 && boundtype == SCIP_BOUNDTYPE_UPPER )
+   {
+      ROW** row;
+      int* linkpos;
+
+      row = col->row;
+      linkpos = col->linkpos;
+      for( r = 0; r < col->len; ++r )
+      {
+         assert(row[r] != NULL);
+         if( linkpos[r] >= 0 )
+         {
+            assert(row[r]->col[linkpos[r]] == col);
+            rowUpdatePseudoActivity(row[r], linkpos[r], oldbound, newbound);
+         }
+      }
+   }
+
+   /* update activity bounds of rows */
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      ROW** row;
+      int* linkpos;
+
+      row = col->row;
+      linkpos = col->linkpos;
+      for( r = 0; r < col->len; ++r )
+      {
+         assert(row[r] != NULL);
+         if( linkpos[r] >= 0 )
+         {
+            assert(row[r]->col[linkpos[r]] == col);
+            rowUpdateActivityBoundsLb(row[r], linkpos[r], oldbound, newbound);
+         }
+      }
+   }
+   else
+   {
+      ROW** row;
+      int* linkpos;
+
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+      row = col->row;
+      linkpos = col->linkpos;
+      for( r = 0; r < col->len; ++r )
+      {
+         assert(row[r] != NULL);
+         if( linkpos[r] >= 0 )
+         {
+            assert(row[r]->col[linkpos[r]] == col);
+            rowUpdateActivityBoundsUb(row[r], linkpos[r], oldbound, newbound);
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1491,6 +1742,15 @@ RETCODE SCIPcolGetStrongbranch(         /**< gets strong branching information o
    return SCIP_OKAY;
 }
 
+VAR* SCIPcolGetVar(                     /**< gets variable this column represents */
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->var;
+}
+
 Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member of actual LP */
    COL*             col                 /**< LP column */
    )
@@ -1610,6 +1870,7 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    }
    
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->name, name, strlen(name)+1) );
+   (*row)->constant = 0.0;
    (*row)->lhs = lhs;
    (*row)->rhs = rhs;
    (*row)->sqrnorm = 0.0;
@@ -1617,6 +1878,9 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    (*row)->dualsol = 0.0;
    (*row)->activity = SCIP_INVALID;
    (*row)->dualfarkas = 0.0;
+   (*row)->pseudoactivity = SCIP_INVALID;
+   (*row)->minactivity = SCIP_INVALID;
+   (*row)->maxactivity = SCIP_INVALID;
    (*row)->index = stat->nrowidx++;
    (*row)->size = len;
    (*row)->len = len;
@@ -1627,8 +1891,9 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
    (*row)->validactivitylp = -1;
-   (*row)->validpsactivitybc = -1;
    (*row)->sorted = FALSE;
+   (*row)->validpsactivity = FALSE;
+   (*row)->validactivitybds = FALSE;
    (*row)->validminmaxidx = FALSE;
    (*row)->lhschanged = FALSE;
    (*row)->rhschanged = FALSE;
@@ -1928,17 +2193,27 @@ RETCODE SCIProwAddConst(                /**< add constant value to a row, i.e. s
 {
    assert(row != NULL);
    assert(row->lhs <= row->rhs);
-   assert(!SCIPsetIsInfinity(set, ABS(row->rhs)));
    assert(!SCIPsetIsInfinity(set, ABS(constant)));
 
-   if( !SCIPsetIsInfinity(set, -row->lhs) )
+   if( !SCIPsetIsZero(set, constant) )
    {
-      row->lhs -= constant;
-      CHECK_OKAY( SCIProwSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
-   }
+      Real oldconstant;
 
-   row->rhs -= constant;
-   CHECK_OKAY( SCIProwSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
+      oldconstant = row->constant;
+      row->constant += constant;
+
+      rowUpdatePseudoActivityConstant(row, oldconstant, row->constant);
+      rowUpdateActivityBoundsConstant(row, oldconstant, row->constant);
+
+      if( !SCIPsetIsInfinity(set, -row->lhs) )
+      {
+         CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
+      }
+      if( !SCIPsetIsInfinity(set, row->rhs) )
+      {
+         CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1979,7 +2254,7 @@ void rowCalcActivity(                   /**< recalculates the actual activity of
 
    assert(row != NULL);
 
-   row->activity = 0.0;
+   row->activity = row->constant;
    for( c = 0; c < row->len; ++c )
    {
       col = row->col[c];
@@ -2019,51 +2294,170 @@ Real SCIProwGetFeasibility(             /**< returns the feasibility of a row in
 }
 
 static
-void rowCalcPseudoActivity(             /**< recalculates the actual pseudo activity of a row */
-   ROW*             row                 /**< LP row */
+RETCODE rowCalcPseudoActivity(          /**< calculates the actual pseudo activity of a row */
+   ROW*             row,                /**< row data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
-   COL* col;
-   int c;
+   int i;
 
    assert(row != NULL);
+   assert(!row->validpsactivity);
+   assert(row->pseudoactivity >= SCIP_INVALID);
 
-   row->pseudoactivity = 0.0;
-   for( c = 0; c < row->len; ++c )
+   /* link row to the columns, such that a column bound change affects the now valid activity bounds */
+   CHECK_OKAY( rowLink(row, memhdr, set, lp) );
+   
+   /* calculate activity bounds */
+   row->validpsactivity = TRUE;
+   row->pseudoactivity = row->constant;
+   for( i = 0; i < row->len; ++i )
    {
-      col = row->col[c];
-      row->pseudoactivity += row->val[c] * SCIPvarGetPseudoSol(col->var);
+      assert(row->col[i] != NULL);
+      assert(row->col[i]->var != NULL);
+      rowUpdatePseudoActivity(row, i, 0.0, SCIPvarGetPseudoSol(row->col[i]->var));
    }
+
+   return SCIP_OKAY;
 }
 
-Real SCIProwGetPseudoActivity(          /**< returns the activity of a row for the actual pseudo solution */
+RETCODE SCIProwGetPseudoActivity(       /**< returns the pseudo activity of a row */
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real*            pseudoactivity      /**< pointer to store the pseudo activity */
    )
 {
    assert(row != NULL);
-   assert(row->validpsactivitybc <= stat->nboundchanges);
+   assert(pseudoactivity != NULL);
 
-   if( row->validpsactivitybc != stat->nboundchanges )
-      rowCalcPseudoActivity(row);
+   /* check, if activity bounds has to be calculated */
+   if( !row->validpsactivity )
+   {
+      assert(row->pseudoactivity >= SCIP_INVALID);
+      CHECK_OKAY( rowCalcPseudoActivity(row, memhdr, set, lp) );
+   }
+#ifdef DEBUG
+   else
+   {
+      Real oldpseudoactivity;
+
+      /* test, if updating of pseudo activity was correct */
+      oldpseudoactivity = row->pseudoactivity;
+      row->validpsactivity = FALSE;
+      row->pseudoactivity = SCIP_INVALID;
+      CHECK_OKAY( rowCalcPseudoActivity(row, memhdr, set, lp) );
+      assert(SCIPsetIsSumEQ(set, row->pseudoactivity, oldpseudoactivity));
+      row->pseudoactivity = oldpseudoactivity;
+   }
+#endif
+
+   assert(row->validpsactivity);
    assert(row->pseudoactivity < SCIP_INVALID);
-   row->validpsactivitybc = stat->nboundchanges;
 
-   return row->pseudoactivity;
+   *pseudoactivity = row->pseudoactivity;
+
+   return SCIP_OKAY;
 }
 
-Real SCIProwGetPseudoFeasibility(       /**< returns the feasibility of a row in the actual pseudo solution */
+RETCODE SCIProwGetPseudoFeasibility(    /**< returns the feasibility of a row in the actual pseudo solution */
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real*            pseudofeasibility   /**< pointer to store the pseudo feasibility */
    )
 {
    Real pseudoactivity;
 
    assert(row != NULL);
+   assert(pseudofeasibility != NULL);
 
-   pseudoactivity = SCIProwGetPseudoActivity(row, stat);
+   CHECK_OKAY( SCIProwGetPseudoActivity(row, memhdr, set, lp, &pseudoactivity) );
 
-   return MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
+   *pseudofeasibility = MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE rowCalcActivityBounds(          /**< calculates minimal and maximal activity of row w.r.t. the column's bounds */
+   ROW*             row,                /**< row data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   int i;
+
+   assert(row != NULL);
+
+   /* link row to the columns, such that a column bound change affects the now valid activity bounds */
+   CHECK_OKAY( rowLink(row, memhdr, set, lp) );
+   
+   /* calculate activity bounds */
+   row->validactivitybds = TRUE;
+   row->minactivity = row->constant;
+   row->maxactivity = row->constant;
+   for( i = 0; i < row->len; ++i )
+   {
+      assert(row->col[i] != NULL);
+      assert(row->col[i]->var != NULL);
+      rowUpdateActivityBoundsLb(row, i, 0.0, row->col[i]->var->dom.lb);
+      rowUpdateActivityBoundsUb(row, i, 0.0, row->col[i]->var->dom.ub);      
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIProwGetActivityBounds(       /**< returns the minimal and maximal activity of a row w.r.t. the column's bounds */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
+   Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
+   )
+{
+   assert(row != NULL);
+
+   /* check, if activity bounds has to be calculated */
+   if( !row->validactivitybds )
+   {
+      assert(row->minactivity >= SCIP_INVALID);
+      assert(row->maxactivity >= SCIP_INVALID);
+      CHECK_OKAY( rowCalcActivityBounds(row, memhdr, set, lp) );
+   }
+#ifdef DEBUG
+   else
+   {
+      Real oldminactivity;
+      Real oldmaxactivity;
+
+      /* test, if updating of activity bounds was correct */
+      oldminactivity = row->minactivity;
+      oldmaxactivity = row->maxactivity;
+      CHECK_OKAY( rowCalcActivityBounds(row, memhdr, set, lp) );
+      assert(SCIPsetIsSumEQ(set, row->minactivity, oldminactivity));
+      assert(SCIPsetIsSumEQ(set, row->maxactivity, oldmaxactivity));
+      row->minactivity = oldminactivity;
+      row->maxactivity = oldmaxactivity;
+   }
+#endif
+
+   assert(row->validactivitybds);
+   assert(row->minactivity < SCIP_INVALID);
+   assert(row->maxactivity < SCIP_INVALID);
+
+   if( minactivity != NULL )
+      *minactivity = row->minactivity;
+   if( maxactivity != NULL )
+      *maxactivity = row->maxactivity;
+
+   return SCIP_OKAY;
 }
 
 int SCIProwGetNNonz(                    /**< get number of nonzero entries in row vector */
@@ -2073,6 +2467,33 @@ int SCIProwGetNNonz(                    /**< get number of nonzero entries in ro
    assert(row != NULL);
 
    return row->len;
+}
+
+COL** SCIProwGetCols(                   /**< gets array with columns of nonzero entries */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->col;
+}
+
+Real* SCIProwGetVals(                   /**< gets array with coefficients of nonzero entries */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->val;
+}
+
+Real SCIProwGetConstant(                /**< gets constant shift of row */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->constant;
 }
 
 Real SCIProwGetNorm(                    /**< get euclidean norm of row vector */
@@ -2099,52 +2520,6 @@ Real SCIProwGetMaxval(                  /**< gets maximal absolute value of row 
    return row->maxval;
 }
 
-RETCODE SCIProwSideChanged(             /**< notifies LP row, that its sides were changed */
-   ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   SIDETYPE         sidetype            /**< type of side: left or right hand side */
-   )
-{
-   assert(row != NULL);
-   assert(lp != NULL);
-
-   if( row->lpipos >= 0 )
-   {
-      /* insert row in the chgrows list (if not already there) */
-      if( !row->lhschanged && !row->rhschanged )
-      {
-         CHECK_OKAY( ensureChgrowsSize(lp, set, lp->nchgrows+1) );
-         lp->chgrows[lp->nchgrows] = row;
-         lp->nchgrows++;
-      }
-      
-      /* mark side change in the row */
-      switch( sidetype )
-      {
-      case SCIP_SIDETYPE_LEFT:
-         row->lhschanged = TRUE;
-         break;
-      case SCIP_SIDETYPE_RIGHT:
-         row->rhschanged = TRUE;
-         break;
-      default:
-         errorMessage("Unknown row side type");
-         abort();
-      }
-      
-      lp->flushed = FALSE;
-      lp->solved = FALSE;
-      lp->primalfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
-      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-
-      assert(lp->nchgrows > 0);
-   }
-
-   return SCIP_OKAY;
-}
-
 RETCODE SCIProwChgLhs(                  /**< changes left hand side of LP row */
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
@@ -2157,7 +2532,7 @@ RETCODE SCIProwChgLhs(                  /**< changes left hand side of LP row */
    if( !SCIPsetIsEQ(set, row->lhs, lhs) )
    {
       row->lhs = lhs;
-      CHECK_OKAY( SCIProwSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
+      CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
    }
 
    return SCIP_OKAY;
@@ -2175,7 +2550,7 @@ RETCODE SCIProwChgRhs(                  /**< changes right hand side of LP row *
    if( !SCIPsetIsEQ(set, row->rhs, rhs) )
    {
       row->rhs = rhs;
-      CHECK_OKAY( SCIProwSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
+      CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
    }
 
    return SCIP_OKAY;
@@ -2546,7 +2921,11 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
       row->rhschanged = FALSE;
       row->coefchanged = FALSE;
       lhs[pos] = row->lhs;
+      if( !SCIPsetIsInfinity(set, -lhs[pos]) )
+         lhs[pos] += row->constant;
       rhs[pos] = row->rhs;
+      if( !SCIPsetIsInfinity(set, rhs[pos]) )
+         rhs[pos] += row->constant;
       beg[pos] = nnonz;
       name[pos] = row->name;
 
@@ -2692,7 +3071,11 @@ RETCODE lpFlushChgRows(                 /**< applies all cached row changes to t
             assert(nchg < lp->nrows);
             ind[nchg] = row->lpipos;
             lhs[nchg] = row->lhs;
+            if( !SCIPsetIsInfinity(set, -lhs[nchg]) )
+               lhs[nchg] += row->constant;
             rhs[nchg] = row->rhs;
+            if( !SCIPsetIsInfinity(set, rhs[nchg]) )
+               rhs[nchg] += row->constant;
             nchg++;
             row->lhschanged = FALSE;
             row->rhschanged = FALSE;

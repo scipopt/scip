@@ -37,6 +37,7 @@ struct ConsHdlr
    int              sepapriority;       /**< priority of the constraint handler for separation */
    int              enfopriority;       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority;       /**< priority of the constraint handler for checking infeasibility */
+   int              propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
    DECL_CONSFREE((*consfree));          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit));          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit));          /**< deinitialise constraint handler */
@@ -217,6 +218,7 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE((*consfree)),          /**< destructor of constraint handler */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
@@ -231,12 +233,18 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
+   assert(conshdlr != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert((propfreq >= 0) ^ (consprop == NULL));
+
    ALLOC_OKAY( allocMemory(*conshdlr) );
    ALLOC_OKAY( duplicateMemoryArray((*conshdlr)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray((*conshdlr)->desc, desc, strlen(desc)+1) );
    (*conshdlr)->sepapriority = sepapriority;
    (*conshdlr)->enfopriority = enfopriority;
    (*conshdlr)->chckpriority = chckpriority;
+   (*conshdlr)->propfreq = propfreq;
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
@@ -266,6 +274,7 @@ RETCODE SCIPconshdlrFree(               /**< calls destructor and frees memory o
    assert(conshdlr != NULL);
    assert(*conshdlr != NULL);
    assert(!(*conshdlr)->initialized);
+   assert(scip != NULL);
 
    /* call destructor of constraint handler */
    if( (*conshdlr)->consfree != NULL )
@@ -340,6 +349,7 @@ RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constrain
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(set->scip != NULL);
    assert(result != NULL);
 
    if( conshdlr->conssepa != NULL && (!conshdlr->needscons || conshdlr->nconss > 0) )
@@ -371,13 +381,15 @@ RETCODE SCIPconshdlrEnforceLPSol(       /**< calls enforcing method of constrain
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(set->scip != NULL);
    assert(result != NULL);
 
    if( conshdlr->consenlp != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
    {
       debugMessage("enforcing constraints of handler <%s> for LP solutions\n", conshdlr->name);
       CHECK_OKAY( conshdlr->consenlp(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
-      if( *result != SCIP_BRANCHED
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_SEPARATED
          && *result != SCIP_INFEASIBLE
@@ -404,13 +416,15 @@ RETCODE SCIPconshdlrEnforcePseudoSol(   /**< calls enforcing method of constrain
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(set->scip != NULL);
    assert(result != NULL);
 
    if( conshdlr->consenps != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
    {
       debugMessage("enforcing constraints of handler <%s> for pseudo solutions\n", conshdlr->name);
       CHECK_OKAY( conshdlr->consenps(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
-      if( *result != SCIP_BRANCHED
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
@@ -437,6 +451,7 @@ RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of c
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(set->scip != NULL);
    assert(result != NULL);
 
    if( conshdlr->conschck != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
@@ -462,18 +477,24 @@ RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of c
 RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(set->scip != NULL);
    assert(result != NULL);
 
-   if( conshdlr->consprop != NULL && (!conshdlr->needscons || conshdlr->nconss > 0) )
+   if( conshdlr->consprop != NULL
+      && (!conshdlr->needscons || conshdlr->nconss > 0)
+      && (actdepth == -1 || (conshdlr->propfreq > 0 && actdepth % conshdlr->propfreq == 0)) )
    {
       debugMessage("propagating constraints of handler <%s>\n", conshdlr->name);
       CHECK_OKAY( conshdlr->consprop(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss, result) );
-      if( *result != SCIP_REDUCEDDOM
+      if( *result != SCIP_INFEASIBLE
+         && *result != SCIP_REDUCEDDOM
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
@@ -714,7 +735,7 @@ CONSHDLR* SCIPconsGetConsHdlr(          /**< returns the constraint handler of t
    return cons->conshdlr;
 }
 
-CONSDATA* SCIPconsGetConsdata(          /**< returns the constraint data field of the constraint */
+CONSDATA* SCIPconsGetConsData(          /**< returns the constraint data field of the constraint */
    CONS*            cons                /**< constraint */
    )
 {

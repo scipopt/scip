@@ -69,6 +69,8 @@ typedef struct Var VAR;                 /**< variable of the problem */
 #include "stat.h"
 #include "tree.h"
 #include "prob.h"
+#include "branch.h"
+#include "event.h"
 
 
 /** tracks changes of the variable's domains (fixed sized arrays) */
@@ -115,12 +117,18 @@ struct Var
       AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
       MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
    } data;
-   VAR*             origvar;            /**< pointer to original problem variable this var represents, or NULL */
    char*            name;               /**< name of the variable */
+   VAR**            parentvars;         /**< parent variables in the aggregation tree */
+   EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    DOM              dom;                /**< domain of variable */
    Real             obj;                /**< objective function value of variable */
    int              index;              /**< consecutively numbered variable identifier */
    int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
+   int              parentvarssize;     /**< available slots in parentvars array */
+   int              nparentvars;        /**< number of parent variables in aggregation tree (used slots of parentvars) */
+   int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
+   int              eventqueueindexlb;  /**< array position in event queue of lower bound change event, or -1 */
+   int              eventqueueindexub;  /**< array position in event queue of upper bound change event, or -1 */
    int              nuses;              /**< number of times, this variable is referenced */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
@@ -145,7 +153,9 @@ RETCODE SCIPdomchgApply(                /**< applies domain change */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 extern
@@ -155,7 +165,9 @@ RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 
@@ -252,14 +264,6 @@ RETCODE SCIPvarCreateTransformed(       /**< creates and captures a loose variab
    );
 
 extern
-RETCODE SCIPvarFree(                    /**< frees a variable */
-   VAR**            var,                /**< pointer to variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
-   );
-
-extern
 void SCIPvarCapture(                    /**< increases usage counter of variable */
    VAR*             var                 /**< variable */
    );
@@ -336,6 +340,8 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound            /**< new bound for variable */
    );
 
@@ -347,6 +353,8 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound            /**< new bound for variable */
    );
 
@@ -358,6 +366,8 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
@@ -370,6 +380,21 @@ RETCODE SCIPvarChgObj(                  /**< changes objective value of variable
 
 extern
 const char* SCIPvarGetName(             /**< get name of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+VARSTATUS SCIPvarGetStatus(             /**< gets status of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+VARTYPE SCIPvarGetType(                 /**< gets type of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+VAR* SCIPvarGetTransformed(             /**< gets corresponding transformed variable of an original variable */
    VAR*             var                 /**< problem variable */
    );
 
@@ -409,6 +434,16 @@ RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and ad
    STAT*            stat,               /**< problem statistics */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
+   );
+
+extern
+RETCODE SCIPvarCatchEvent(              /**< includes event handler in variable's event filter */
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
 
 

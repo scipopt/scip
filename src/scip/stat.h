@@ -30,6 +30,7 @@
 typedef struct Stat STAT;               /**< problem and runtime specific statistics */
 
 
+#include "def.h"
 #include "retcode.h"
 
 
@@ -49,9 +50,9 @@ struct Stat
    int              nprimallpiterations;/**< number of iterations in primal simplex */
    int              nduallpiterations;  /**< number of iterations in dual simplex */
    int              nstrongbranch;      /**< number of strong branching calls */
-   int              nnodes;             /**< number of nodes processed (including active node) */
-   int              nboundchanges;      /**< number of times a variable's bound has been changed */
-   int              lastdispnode;       /**< last node for which an information line was displayed */
+   Longint          nnodes;             /**< number of nodes processed (including active node) */
+   Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
+   Longint          lastdispnode;       /**< last node for which an information line was displayed */
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */
    int              plungedepth;        /**< actual plunging depth (successive times, a child was selected as next node) */

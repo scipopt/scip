@@ -40,22 +40,22 @@ struct BranchCand
    int              pseudocandssize;    /**< number of available slots in pseudocands array */
    int              npseudocands;       /**< number of candidates for branching on pseudo solution */
    int              validlpcandslp;     /**< lp number for which lpcands are valid */
-   int              validpseudocandsbc; /**< bound change number for which pseudocands are valid */
 };
 
 
-/** branching method data */
-struct Branch
+/** branching rule */
+struct BranchRule
 {
-   char*            name;               /**< name of branching method */
-   char*            desc;               /**< description of branching method */
-   DECL_BRANCHFREE((*branchfree));      /**< destructor of branching method */
-   DECL_BRANCHINIT((*branchinit));      /**< initialise branching method */
-   DECL_BRANCHEXIT((*branchexit));      /**< deinitialise branching method */
+   char*            name;               /**< name of branching rule */
+   char*            desc;               /**< description of branching rule */
+   int              priority;           /**< priority of the branching rule */
+   DECL_BRANCHFREE((*branchfree));      /**< destructor of branching rule */
+   DECL_BRANCHINIT((*branchinit));      /**< initialise branching rule */
+   DECL_BRANCHEXIT((*branchexit));      /**< deinitialise branching rule */
    DECL_BRANCHEXLP((*branchexlp));      /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXPS((*branchexps));      /**< branching execution method for not completely fixed pseudo solutions */
-   BRANCHDATA*      branchdata;         /**< branching method data */
-   unsigned int     initialized:1;      /**< is branching method initialized? */
+   BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
+   unsigned int     initialized:1;      /**< is branching rule initialized? */
 };
 
 
@@ -117,10 +117,15 @@ RETCODE ensurePseudocandsSize(          /**< ensures, that pseudocands array can
  */
 
 RETCODE SCIPbranchcandCreate(           /**< creates a branching candidate storage */
-   BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
+   BRANCHCAND**     branchcand,         /**< pointer to store branching candidate storage */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob                /**< problem data */
    )
 {
+   int v;
+
    assert(branchcand != NULL);
+   assert(prob != NULL);
 
    ALLOC_OKAY( allocMemory(*branchcand) );
    (*branchcand)->lpcands = NULL;
@@ -131,8 +136,14 @@ RETCODE SCIPbranchcandCreate(           /**< creates a branching candidate stora
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
    (*branchcand)->validlpcandslp = -1;
-   (*branchcand)->validpseudocandsbc = -1;
 
+   /* init pseudo branching candidate list */
+   CHECK_OKAY( ensurePseudocandsSize(*branchcand, set, prob->nbin + prob->nint + prob->nimpl) );
+   for( v = 0; v < prob->nbin + prob->nint + prob->nimpl; ++v )
+   {
+      CHECK_OKAY( SCIPbranchcandUpdateVar(*branchcand, set, prob->vars[v]) );
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -232,51 +243,49 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
 RETCODE SCIPbranchcandGetPseudoCands(   /**< gets branching candidates for pseudo solution branching (nonfixed variables) */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
    int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
    )
 {
    assert(branchcand != NULL);
-   assert(stat != NULL);
-   assert(prob != NULL);
 
-   /* check, if the actual pseudo branching candidate array is invalid */
-   if( branchcand->validpseudocandsbc != stat->nboundchanges )
+#ifndef NDEBUG
+   /* check, if the actual pseudo branching candidate array is correct */
    {
       VAR* var;
+      int npseudocands;
       int v;
-
-      /* construct the pseudo branching candidate set */
-      CHECK_OKAY( ensurePseudocandsSize(branchcand, set, prob->nbin + prob->nint + prob->nimpl) );
-
-      branchcand->npseudocands = 0;
-      for( v = 0; v < prob->nvars; ++v )
+      
+      assert(prob != NULL);
+      
+      /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
+      npseudocands = 0;
+      for( v = 0; v < prob->nbin + prob->nint + prob->nimpl; ++v )
       {
          var = prob->vars[v];
          assert(var != NULL);
          assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
-
-         /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
-         if( var->vartype == SCIP_VARTYPE_BINARY
+         assert(var->vartype == SCIP_VARTYPE_BINARY
             || var->vartype == SCIP_VARTYPE_INTEGER
-            || var->vartype == SCIP_VARTYPE_IMPLINT )
+            || var->vartype == SCIP_VARTYPE_IMPLINT);
+         assert(SCIPsetIsIntegral(set, var->dom.lb));
+         assert(SCIPsetIsIntegral(set, var->dom.ub));
+         
+         if( !SCIPsetIsFixed(set, var->dom.lb, var->dom.ub) )
          {
-            assert(SCIPsetIsIntegral(set, var->dom.lb));
-            assert(SCIPsetIsIntegral(set, var->dom.ub));
-            
-            if( !SCIPsetIsFixed(set, var->dom.lb, var->dom.ub) )
-            {
-               assert(branchcand->npseudocands < branchcand->pseudocandssize);
-               branchcand->pseudocands[branchcand->npseudocands] = var;
-               branchcand->npseudocands++;
-            }
+            assert(0 <= var->pseudocandindex && var->pseudocandindex < branchcand->npseudocands);
+            assert(branchcand->pseudocands[var->pseudocandindex] == var);
+            npseudocands++;
+         }
+         else
+         {
+            assert(var->pseudocandindex == -1);
          }
       }
-
-      branchcand->validpseudocandsbc = stat->nboundchanges;
+      assert(branchcand->npseudocands == npseudocands);
    }
+#endif
 
    /* assign return values */
    if( pseudocands != NULL )
@@ -287,186 +296,262 @@ RETCODE SCIPbranchcandGetPseudoCands(   /**< gets branching candidates for pseud
    return SCIP_OKAY;
 }
 
+RETCODE SCIPbranchcandUpdateVar(        /**< updates branching candidate list for a given variable */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable that changed its bounds */
+   )
+{
+   assert(branchcand != NULL);
+   assert(var != NULL);
+
+   if( var->vartype == SCIP_VARTYPE_BINARY
+      || var->vartype == SCIP_VARTYPE_INTEGER
+      || var->vartype == SCIP_VARTYPE_IMPLINT )
+   {
+      if( SCIPsetIsFixed(set, var->dom.lb, var->dom.ub) )
+      {
+         /* variable is fixed: make sure it is not member of the pseudo branching candidate list */
+         if( var->pseudocandindex >= 0 )
+         {
+            assert(var->pseudocandindex < branchcand->npseudocands);
+            assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
+            branchcand->pseudocands[var->pseudocandindex] = branchcand->pseudocands[branchcand->npseudocands-1];
+            branchcand->pseudocands[var->pseudocandindex]->pseudocandindex = var->pseudocandindex;
+            branchcand->npseudocands--;
+            var->pseudocandindex = -1;
+         }
+      }
+      else
+      {
+         /* variable is not fixed: make sure it is member of the pseudo branching candidate list */
+         if( var->pseudocandindex == -1 )
+         {
+            CHECK_OKAY( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
+            branchcand->pseudocands[branchcand->npseudocands] = var;
+            var->pseudocandindex = branchcand->npseudocands;
+            branchcand->npseudocands++;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 /*
- * branching methods
+ * branching rule methods
  */
 
-RETCODE SCIPbranchCreate(               /**< creates a branching method */
-   BRANCH**         branch,             /**< pointer to store branching method */
-   const char*      name,               /**< name of branching method */
-   const char*      desc,               /**< description of branching method */
-   DECL_BRANCHFREE((*branchfree)),      /**< destructor of branching method */
-   DECL_BRANCHINIT((*branchinit)),      /**< initialise branching method */
-   DECL_BRANCHEXIT((*branchexit)),      /**< deinitialise branching method */
+RETCODE SCIPbranchruleCreate(           /**< creates a branching rule */
+   BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
+   const char*      name,               /**< name of branching rule */
+   const char*      desc,               /**< description of branching rule */
+   int              priority,           /**< priority of the branching rule */
+   DECL_BRANCHFREE((*branchfree)),      /**< destructor of branching rule */
+   DECL_BRANCHINIT((*branchinit)),      /**< initialise branching rule */
+   DECL_BRANCHEXIT((*branchexit)),      /**< deinitialise branching rule */
    DECL_BRANCHEXLP((*branchexlp)),      /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXPS((*branchexps)),      /**< branching execution method for not completely fixed pseudo solutions */
-   BRANCHDATA*      branchdata          /**< branching method data */
+   BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
    assert(name != NULL);
    assert(desc != NULL);
 
-   ALLOC_OKAY( allocMemory(*branch) );
-   ALLOC_OKAY( duplicateMemoryArray((*branch)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*branch)->desc, desc, strlen(desc)+1) );
-   (*branch)->branchfree = branchfree;
-   (*branch)->branchinit = branchinit;
-   (*branch)->branchexit = branchexit;
-   (*branch)->branchexlp = branchexlp;
-   (*branch)->branchexps = branchexps;
-   (*branch)->branchdata = branchdata;
-   (*branch)->initialized = FALSE;
+   ALLOC_OKAY( allocMemory(*branchrule) );
+   ALLOC_OKAY( duplicateMemoryArray((*branchrule)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray((*branchrule)->desc, desc, strlen(desc)+1) );
+   (*branchrule)->priority = priority;
+   (*branchrule)->branchfree = branchfree;
+   (*branchrule)->branchinit = branchinit;
+   (*branchrule)->branchexit = branchexit;
+   (*branchrule)->branchexlp = branchexlp;
+   (*branchrule)->branchexps = branchexps;
+   (*branchrule)->branchruledata = branchruledata;
+   (*branchrule)->initialized = FALSE;
 
    return SCIP_OKAY;
 }
    
-RETCODE SCIPbranchFree(                 /**< frees memory of branching method */
-   BRANCH**         branch,             /**< pointer to branching method data structure */
+RETCODE SCIPbranchruleFree(             /**< frees memory of branching rule */
+   BRANCHRULE**     branchrule,         /**< pointer to branching rule data structure */
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
-   assert(branch != NULL);
-   assert(*branch != NULL);
-   assert(!(*branch)->initialized);
+   assert(branchrule != NULL);
+   assert(*branchrule != NULL);
+   assert(!(*branchrule)->initialized);
 
-   /* call destructor of branching method */
-   if( (*branch)->branchfree != NULL )
+   /* call destructor of branching rule */
+   if( (*branchrule)->branchfree != NULL )
    {
-      CHECK_OKAY( (*branch)->branchfree(*branch, scip) );
+      CHECK_OKAY( (*branchrule)->branchfree(*branchrule, scip) );
    }
 
-   freeMemoryArray((*branch)->name);
-   freeMemoryArray((*branch)->desc);
-   freeMemory(*branch);
+   freeMemoryArray((*branchrule)->name);
+   freeMemoryArray((*branchrule)->desc);
+   freeMemory(*branchrule);
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchInit(                 /**< initializes branching method */
-   BRANCH*          branch,             /**< branching method */
+RETCODE SCIPbranchruleInit(             /**< initializes branching rule */
+   BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
    assert(scip != NULL);
 
-   if( branch->initialized )
+   if( branchrule->initialized )
    {
       char s[255];
-      sprintf(s, "branching method <%s> already initialized", branch->name);
+      sprintf(s, "branching rule <%s> already initialized", branchrule->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;
    }
 
-   if( branch->branchinit != NULL )
+   if( branchrule->branchinit != NULL )
    {
-      CHECK_OKAY( branch->branchinit(branch, scip) );
+      CHECK_OKAY( branchrule->branchinit(branchrule, scip) );
    }
-   branch->initialized = TRUE;
+   branchrule->initialized = TRUE;
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchExit(                 /**< deinitializes branching method */
-   BRANCH*          branch,             /**< branching method */
+RETCODE SCIPbranchruleExit(             /**< deinitializes branching rule */
+   BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
    assert(scip != NULL);
 
-   if( !branch->initialized )
+   if( !branchrule->initialized )
    {
       char s[255];
-      sprintf(s, "branching method <%s> not initialized", branch->name);
+      sprintf(s, "branching rule <%s> not initialized", branchrule->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;
    }
 
-   if( branch->branchexit != NULL )
+   if( branchrule->branchexit != NULL )
    {
-      CHECK_OKAY( branch->branchexit(branch, scip) );
+      CHECK_OKAY( branchrule->branchexit(branchrule, scip) );
    }
-   branch->initialized = FALSE;
+   branchrule->initialized = FALSE;
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchExecLPSol(            /**< executes branching method for fractional LP solution */
-   BRANCH*          branch,             /**< branching method */
+RETCODE SCIPbranchruleExecLPSol(        /**< executes branching rule for fractional LP solution */
+   BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip,               /**< SCIP data structure */   
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
    assert(scip != NULL);
    assert(result != NULL);
 
-   *result = SCIP_FEASIBLE;
-   if( branch->branchexlp != NULL )
+   *result = SCIP_DIDNOTRUN;
+   if( branchrule->branchexlp != NULL )
    {
-      CHECK_OKAY( branch->branchexlp(branch, scip, result) );
+      CHECK_OKAY( branchrule->branchexlp(branchrule, scip, result) );
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_BRANCHED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_SEPARATED
+         && *result != SCIP_DIDNOTRUN )
+      {
+         char s[255];
+         sprintf(s, "branching rule <%s> returned invalid result code <%d> from LP solution branching",
+            branchrule->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
    }
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchExecPseudoSol(        /**< executes branching method for not completely fixed pseudo solution */
-   BRANCH*          branch,             /**< branching method */
+RETCODE SCIPbranchruleExecPseudoSol(    /**< executes branching rule for not completely fixed pseudo solution */
+   BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip,               /**< SCIP data structure */   
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
    assert(scip != NULL);
    assert(result != NULL);
 
-   *result = SCIP_FEASIBLE;
-   if( branch->branchexps != NULL )
+   *result = SCIP_DIDNOTRUN;
+   if( branchrule->branchexps != NULL )
    {
-      CHECK_OKAY( branch->branchexps(branch, scip, result) );
+      CHECK_OKAY( branchrule->branchexps(branchrule, scip, result) );
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_BRANCHED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_DIDNOTRUN )
+      {
+         char s[255];
+         sprintf(s, "branching rule <%s> returned invalid result code <%d> from LP solution branching",
+            branchrule->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
    }
 
    return SCIP_OKAY;
 }
 
-const char* SCIPbranchGetName(          /**< gets name of branching method */
-   BRANCH*          branch              /**< branching method */
+const char* SCIPbranchruleGetName(      /**< gets name of branching rule */
+   BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
 
-   return branch->name;
+   return branchrule->name;
 }
 
-BRANCHDATA* SCIPbranchGetData(          /**< gets user data of branching method */
-   BRANCH*          branch              /**< branching method */
+int SCIPbranchruleGetPriority(          /**< gets priority of branching rule */
+   BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
 
-   return branch->branchdata;
+   return branchrule->priority;
 }
 
-void SCIPbranchSetData(                 /**< sets user data of branching method; user has to free old data in advance! */
-   BRANCH*          branch,             /**< branching method */
-   BRANCHDATA*      branchdata          /**< new branching method user data */
+BRANCHRULEDATA* SCIPbranchruleGetData(  /**< gets user data of branching rule */
+   BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
 
-   branch->branchdata = branchdata;
+   return branchrule->branchruledata;
 }
 
-Bool SCIPbranchIsInitialized(           /**< is branching method initialized? */
-   BRANCH*          branch              /**< branching method */
+void SCIPbranchruleSetData(             /**< sets user data of branching rule; user has to free old data in advance! */
+   BRANCHRULE*      branchrule,         /**< branching rule */
+   BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
    )
 {
-   assert(branch != NULL);
+   assert(branchrule != NULL);
 
-   return branch->initialized;
+   branchrule->branchruledata = branchruledata;
+}
+
+Bool SCIPbranchruleIsInitialized(       /**< is branching rule initialized? */
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->initialized;
 }
 

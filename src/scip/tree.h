@@ -57,6 +57,8 @@ typedef struct Tree TREE;               /**< branch and bound tree */
 #include "nodesel.h"
 #include "prob.h"
 #include "sol.h"
+#include "branch.h"
+#include "event.h"
 
 
 
@@ -202,7 +204,9 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 extern
@@ -221,6 +225,8 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to actual node, c
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
@@ -318,13 +324,28 @@ RETCODE SCIPtreeAddGlobalCons(          /**< adds global constraint to the probl
    );
 
 extern
+RETCODE SCIPtreeBranchVar(              /**< branches on a variable; if solution value x' is fractional, two child nodes
+                                         *   are created (x <= floor(x'), x >= ceil(x')), if solution value is integral,
+                                         *   three child nodes are created (x <= x'-1, x == x', x >= x'+1) */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             var                 /**< variable to branch on */
+   );
+
+extern
 RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a variable changed */
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   Real             oldbound            /**< old bound value */
+   Real             oldbound,           /**< old bound value */
+   Real             newbound            /**< new bound value */
    );
 
 extern
@@ -373,7 +394,8 @@ Real SCIPtreeGetActLowerbound(          /**< gets the lower bound of the active 
 
 extern
 Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all nodes in the tree */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   Real             upperbound          /**< global upper bound */
    );
 
 #endif

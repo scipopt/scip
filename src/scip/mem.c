@@ -40,6 +40,9 @@ RETCODE SCIPmemCreate(                  /**< creates block memory structures */
    ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, TRUE, 10 ) );
    ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, FALSE, 10) );
 
+   debugMessage("created probmem  block memory at <%p>\n", (*mem)->probmem);
+   debugMessage("created solvemem block memory at <%p>\n", (*mem)->solvemem);
+
    return SCIP_OKAY;
 }
 
