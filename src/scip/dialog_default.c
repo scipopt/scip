@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.31 2004/10/05 11:01:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.32 2004/10/05 16:46:49 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1833,10 +1833,10 @@ RETCODE SCIPincludeDialogDefaultSet(
    }
 
    /* set propagation */
-   if( !SCIPdialogHasEntry(setmenu, "propagation") )
+   if( !SCIPdialogHasEntry(setmenu, "propagating") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-            "propagation", "change parameters for constraint propagation", TRUE, NULL) );
+            "propagating", "change parameters for constraint propagation", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
