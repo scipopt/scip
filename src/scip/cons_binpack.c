@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.26 2005/02/14 13:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.27 2005/03/21 11:37:28 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -453,7 +453,8 @@ DECL_LINCONSUPGD(linconsUpgdBinpack)
       CHECK_OKAY( SCIPcreateConsBinpack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -520,7 +521,8 @@ RETCODE SCIPcreateConsBinpack(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -543,7 +545,7 @@ RETCODE SCIPcreateConsBinpack(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, removeable) );
+         local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.30 2005/03/15 13:43:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.31 2005/03/21 11:37:31 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -49,6 +49,7 @@
 #define DEFAULT_MINRELDEPTH         0.0  /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0  /**< maximal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT       0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITEROFS    10000    /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8  /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                           *   where diving is performed */
 #define DEFAULT_MAXDIVEAVGQUOT      4.0  /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
@@ -65,6 +66,7 @@ struct HeurData
    Real             minreldepth;        /**< minimal relative depth to start diving */
    Real             maxreldepth;        /**< maximal relative depth to start diving */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   int              maxlpiterofs;       /**< additional number of allowed LP iterations */
    Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed */
    Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
@@ -239,7 +241,8 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations;
+   maxnlpiterations += heurdata->maxlpiterofs;
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( heurdata->nlpiterations >= maxnlpiterations )
@@ -561,6 +564,10 @@ RETCODE SCIPincludeHeurCoefdiving(
          "heuristics/coefdiving/maxlpiterquot", 
          "maximal fraction of diving LP iterations compared to node LP iterations",
          &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "heuristics/coefdiving/maxlpiterofs", 
+         "additional number of allowed LP iterations",
+         &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/coefdiving/maxdiveubquot",
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed",

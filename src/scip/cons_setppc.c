@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.80 2005/02/14 13:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.81 2005/03/21 11:37:30 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -844,7 +844,7 @@ RETCODE processFixings(
       if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
          debugMessage(" -> disabling set covering constraint <%s>\n", SCIPconsGetName(cons));
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
       }
       else
       {
@@ -897,7 +897,7 @@ RETCODE processFixings(
          if( !SCIPconsIsModifiable(cons) && consdata->nfixedones == 1 )
          {
             debugMessage(" -> disabling set packing/partitioning constraint <%s>\n", SCIPconsGetName(cons));
-            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
          }
       }
       *mustcheck = FALSE;
@@ -912,7 +912,7 @@ RETCODE processFixings(
       if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
          debugMessage(" -> disabling set covering constraint <%s>\n", SCIPconsGetName(cons));
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
       }
       else
       {
@@ -942,7 +942,7 @@ RETCODE processFixings(
          if( !SCIPconsIsModifiable(cons) )
          {
             debugMessage(" -> disabling set packing constraint <%s>\n", SCIPconsGetName(cons));
-            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
          }
       }
       else
@@ -975,7 +975,7 @@ RETCODE processFixings(
          if( !SCIPconsIsModifiable(cons) )
          {
             debugMessage(" -> disabling set packing constraint <%s>\n", SCIPconsGetName(cons));
-            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
          }
          *mustcheck = FALSE;
       }
@@ -1010,7 +1010,7 @@ RETCODE processFixings(
          assert(consdata->nfixedzeros == consdata->nvars - 1);
          assert(consdata->nfixedones == 1);
 
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
          *reduceddom = TRUE;
          *mustcheck = FALSE;
       }
@@ -1392,7 +1392,8 @@ DECL_CONSTRANS(consTransSetppc)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    /* catch bound change events of variables */
    CHECK_OKAY( catchAllEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
@@ -2405,8 +2406,9 @@ RETCODE createConsSetppc(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -2436,7 +2438,7 @@ RETCODE createConsSetppc(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, removeable) );
+         local, modifiable, dynamic, removeable) );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -2471,8 +2473,9 @@ RETCODE createNormalizedSetppc(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    VAR** transvars;
@@ -2499,7 +2502,7 @@ RETCODE createNormalizedSetppc(
 
    /* create the constraint */
    CHECK_OKAY( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
-         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
 
    /* release temporary memory */
    SCIPfreeBufferArray(scip, &transvars);
@@ -2544,7 +2547,8 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                SCIP_SETPPCTYPE_PARTITIONING,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+               SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
       }
       else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0 - ncoeffsnone))
          || (SCIPisEQ(scip, lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, rhs)) )
@@ -2560,7 +2564,8 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                SCIP_SETPPCTYPE_PACKING,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+               SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
       }
       else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
@@ -2576,7 +2581,8 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                SCIP_SETPPCTYPE_COVERING,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+               SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
       }
    }
 
@@ -2662,7 +2668,7 @@ DECL_CONFLICTEXEC(conflictExecSetppc)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%lld", SCIPgetNConflictClausesFound(scip));
    CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
@@ -2739,12 +2745,13 @@ RETCODE SCIPcreateConsSetpart(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PARTITIONING,
-      initial, separate, enforce, check, propagate, local, modifiable, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable);
 }
 
 /** creates and captures a set packing constraint */
@@ -2760,12 +2767,13 @@ RETCODE SCIPcreateConsSetpack(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PACKING,
-      initial, separate, enforce, check, propagate, local, modifiable, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable);
 }
 
 /** creates and captures a set covering constraint */
@@ -2781,12 +2789,13 @@ RETCODE SCIPcreateConsSetcover(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_COVERING,
-      initial, separate, enforce, check, propagate, local, modifiable, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable);
 }
 
 /** adds coefficient in set partitioning / packing / covering constraint */

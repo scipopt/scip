@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.17 2005/03/16 09:30:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.18 2005/03/21 11:37:31 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -49,6 +49,7 @@
 #define DEFAULT_MINRELDEPTH        0.0  /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH        1.0  /**< maximal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT      0.01 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITEROFS    10000    /**< additional number of allowed LP iterations */
 #define DEFAULT_DEPTHFAC           0.5  /**< maximal diving depth: number of binary/integer variables times depthfac */
 #define DEFAULT_DEPTHFACNOSOL      2.0  /**< maximal diving depth factor if no feasible solution was found yet */
 
@@ -60,6 +61,7 @@ struct HeurData
    Real             minreldepth;        /**< minimal relative depth to start diving */
    Real             maxreldepth;        /**< maximal relative depth to start diving */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   int              maxlpiterofs;       /**< additional number of allowed LP iterations */
    Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */
    Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
    Longint          nlpiterations;      /**< LP iterations used in this heuristic */
@@ -206,7 +208,8 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations;
+   maxnlpiterations += heurdata->maxlpiterofs;
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( heurdata->nlpiterations >= maxnlpiterations )
@@ -444,25 +447,29 @@ RETCODE SCIPincludeHeurRootsoldiving(
 
    /* rootsoldiving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/rootsoldiving/minreldepth", 
-                  "minimal relative depth to start diving",
-                  &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         "heuristics/rootsoldiving/minreldepth", 
+         "minimal relative depth to start diving",
+         &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/rootsoldiving/maxreldepth", 
-                  "maximal relative depth to start diving",
-                  &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         "heuristics/rootsoldiving/maxreldepth", 
+         "maximal relative depth to start diving",
+         &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/rootsoldiving/maxlpiterquot", 
-                  "maximal fraction of diving LP iterations compared to node LP iterations",
-                  &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
+         "heuristics/rootsoldiving/maxlpiterquot", 
+         "maximal fraction of diving LP iterations compared to node LP iterations",
+         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "heuristics/rootsoldiving/maxlpiterofs", 
+         "additional number of allowed LP iterations",
+         &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/rootsoldiving/depthfac",
-                  "maximal diving depth: number of binary/integer variables times depthfac",
-                  &heurdata->depthfac, DEFAULT_DEPTHFAC, 0.0, REAL_MAX, NULL, NULL) );
+         "heuristics/rootsoldiving/depthfac",
+         "maximal diving depth: number of binary/integer variables times depthfac",
+         &heurdata->depthfac, DEFAULT_DEPTHFAC, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/rootsoldiving/depthfacnosol",
-                  "maximal diving depth factor if no feasible solution was found yet",
-                  &heurdata->depthfacnosol, DEFAULT_DEPTHFACNOSOL, 0.0, REAL_MAX, NULL, NULL) );
+         "heuristics/rootsoldiving/depthfacnosol",
+         "maximal diving depth factor if no feasible solution was found yet",
+         &heurdata->depthfacnosol, DEFAULT_DEPTHFACNOSOL, 0.0, REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

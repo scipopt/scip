@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.89 2005/02/14 13:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.90 2005/03/21 11:37:29 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1113,7 +1113,7 @@ RETCODE propagateCons(
    {
       debugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%lld, zerosweightsum=%lld, capacity=%lld\n",
          SCIPconsGetName(cons), consdata->weightsum, zerosweightsum, consdata->capacity);
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
       *redundant = TRUE;
    }
 
@@ -1638,7 +1638,8 @@ DECL_CONSTRANS(consTransKnapsack)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -2034,7 +2035,8 @@ RETCODE createNormalizedKnapsack(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    VAR** transvars;
@@ -2086,7 +2088,7 @@ RETCODE createNormalizedKnapsack(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsKnapsack(scip, cons, name, nvars, transvars, weights, capacity,
-         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &weights);
@@ -2121,7 +2123,8 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
       CHECK_OKAY( createNormalizedKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -2258,7 +2261,8 @@ RETCODE SCIPcreateConsKnapsack(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLRDATA* conshdlrdata;
@@ -2283,7 +2287,7 @@ RETCODE SCIPcreateConsKnapsack(
         
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, removeable) );
+         local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
 }

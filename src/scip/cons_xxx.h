@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.h,v 1.12 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.h,v 1.13 2005/03/21 11:37:31 bzfpfend Exp $"
 
 /**@file   cons_xxx.h
  * @brief  constraint handler for xxx constraints
@@ -54,7 +54,8 @@ RETCODE SCIPcreateConsXxx(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
 #endif

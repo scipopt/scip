@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.218 2005/03/15 13:43:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.219 2005/03/21 11:37:32 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1446,23 +1446,32 @@ RETCODE SCIPaddConsLocal(
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes);
- *  if the method is called at the root node, the constraint is globally deleted from the problem
+ *  if the method is called at the root node, the constraint is globally deleted from the problem;
+ *  the constraint deletion is being remembered at the given node, s.t. after leaving the node's subtree, the constraint
+ *  is automatically enabled again, and after entering the node's subtree, it is automatically disabled;
+ *  this may improve performance because redundant checks on this constraint are avoided, but it consumes memory;
+ *  alternatively, use SCIPdisableCons()
  */
 extern
-RETCODE SCIPdisableConsNode(
+RETCODE SCIPdelConsNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to disable constraint in */
-   CONS*            cons                /**< constraint to disable */
+   CONS*            cons                /**< constraint to locally delete */
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the current node (and all subnodes);
  *  if the method is called during problem modification or at the root node, the constraint is globally deleted from
- *  the problem
+ *  the problem;
+ *  the constraint deletion is being remembered at the current node, s.t. after leaving the current subtree, the
+ *  constraint is automatically enabled again, and after reentering the current node's subtree, it is automatically
+ *  disabled again;
+ *  this may improve performance because redundant checks on this constraint are avoided, but it consumes memory;
+ *  alternatively, use SCIPdisableCons()
  */
 extern
-RETCODE SCIPdisableConsLocal(
+RETCODE SCIPdelConsLocal(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to disable */
+   CONS*            cons                /**< constraint to locally delete */
    );
 
 /** gets dual bound of current node */
@@ -2471,7 +2480,8 @@ RETCODE SCIPcreateCons(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
 /** increases usage counter of constraint */
@@ -2570,6 +2580,47 @@ RETCODE SCIPresetConsAge(
    CONS*            cons                /**< constraint */
    );
 
+/** enables constraint's separation, propagation, and enforcing capabilities */
+extern
+RETCODE SCIPenableCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   );
+
+/** disables constraint's separation, propagation, and enforcing capabilities, s.t. the constraint is not propagated,
+ *  separated, and enforced anymore until it is enabled again with a call to SCIPenableCons();
+ *  in contrast to SCIPdelConsLocal() and SCIPdelConsNode(), the disabling is not associated to a node in the tree and
+ *  does not consume memory; therefore, the constraint is neither automatically enabled on leaving the node nor
+ *  automatically disabled again on entering the node again;
+ *  note that the constraints enforcing capabilities are necessary for the solution's feasibility, if the constraint
+ *  is a model constraint; that means, you must be sure that the constraint cannot be violated in the current subtree,
+ *  and you have to enable it again manually by calling SCIPenableCons(), if this subtree is left (e.g. by using
+ *  an appropriate event handler that watches the corresponding variables' domain changes)
+ */
+extern
+RETCODE SCIPdisableCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   );
+
+/** enables constraint's separation capabilities */
+extern
+RETCODE SCIPenableConsSeparation(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   );
+
+/** disables constraint's separation capabilities s.t. the constraint is not propagated anymore until the separation
+ *  is enabled again with a call to SCIPenableConsSeparation(); in contrast to SCIPdelConsLocal() and SCIPdelConsNode(),
+ *  the disabling is not associated to a node in the tree and does not consume memory; therefore, the constraint
+ *  is neither automatically enabled on leaving the node nor automatically disabled again on entering the node again
+ */
+extern
+RETCODE SCIPdisableConsSeparation(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   );
+
 /** enables constraint's propagation capabilities */
 extern
 RETCODE SCIPenableConsPropagation(
@@ -2578,7 +2629,9 @@ RETCODE SCIPenableConsPropagation(
    );
 
 /** disables constraint's propagation capabilities s.t. the constraint is not propagated anymore until the propagation
- *  is enabled again with a call to SCIPenableConsPropagation()
+ *  is enabled again with a call to SCIPenableConsPropagation(); in contrast to SCIPdelConsLocal() and SCIPdelConsNode(),
+ *  the disabling is not associated to a node in the tree and does not consume memory; therefore, the constraint
+ *  is neither automatically enabled on leaving the node nor automatically disabled again on entering the node again
  */
 extern
 RETCODE SCIPdisableConsPropagation(

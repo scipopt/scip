@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.89 2005/02/18 14:06:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.90 2005/03/21 11:37:28 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -336,8 +336,8 @@ RETCODE SCIPconflicthdlrExec(
    *result = SCIP_DIDNOTRUN;
    if( conflicthdlr->conflictexec != NULL )
    {
-      CHECK_OKAY( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, conflictvars, nconflictvars, local, resolved, 
-            result) );
+      CHECK_OKAY( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, conflictvars, nconflictvars, 
+            local, set->conf_dynamic, set->conf_removeable, resolved, result) );
 
       if( *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTFIND

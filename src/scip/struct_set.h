@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.48 2005/03/10 17:11:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.49 2005/03/21 11:37:33 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -125,6 +125,8 @@ struct Set
    Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
    Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                          *   decisions by deductions */
+   Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
+   Bool             conf_removeable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 
    /* constraint settings */
    int              cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted, or -1 */

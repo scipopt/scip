@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.53 2005/02/16 17:46:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.54 2005/03/21 11:37:28 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -866,7 +866,7 @@ RETCODE propagateCons(
          }
          else
          {
-            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
             if( tightened )
             {
                CHECK_OKAY( SCIPresetConsAge(scip, cons) );
@@ -905,7 +905,7 @@ RETCODE propagateCons(
 
       if( !(*cutoff) )
       {
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
       }
 
       return SCIP_OKAY;
@@ -984,7 +984,7 @@ RETCODE propagateCons(
       }
       else
       {
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
          if( tightened )
          {
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
@@ -1014,7 +1014,7 @@ RETCODE propagateCons(
       }
       else
       {
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
          if( tightened )
          {
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
@@ -1227,7 +1227,8 @@ DECL_CONSTRANS(consTransAnd)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1603,7 +1604,8 @@ RETCODE SCIPcreateConsAnd(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -1626,7 +1628,7 @@ RETCODE SCIPcreateConsAnd(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, removeable) );
+         local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
 }

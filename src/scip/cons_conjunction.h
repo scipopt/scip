@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.h,v 1.4 2005/02/14 13:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.h,v 1.5 2005/03/21 11:37:29 bzfpfend Exp $"
 
 /**@file   cons_conjunction.h
  * @brief  constraint handler for conjunction constraints
@@ -47,7 +47,8 @@ RETCODE SCIPcreateConsConjunction(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable          /**< is constraint modifiable (subject to column generation)? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             dynamic             /**< is constraint subject to aging? */
    );
 
 /** adds constraint to the conjunction of constraints */

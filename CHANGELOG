@@ -48,6 +48,15 @@ interface:
 - method SCIPconshdlrGetStartNConss() is now called SCIPconshdlrGetStartNActiveConss()
 - method SCIPconshdlrGetMaxNConss() is now called SCIPconshdlrGetMaxNActiveConss()
 - new flag "afterrelaxation" for primal heuristics
+- method SCIPdisableConsNode() is replaced by SCIPdelConsNode()
+- method SCIPdisableConsLocal() is replaced by SCIPdelConsLocal()
+- new method SCIPenableCons()
+- new method SCIPdisableCons()
+- new method SCIPenableConsSeparation()
+- new method SCIPdisableConsSeparation()
+- new method SCIPconsIsSeparationEnabled()
+- added new parameter "dynamic" to SCIPcreateCons() and all plugin methods SCIPcreateCons...()
+- callback method CONFLICTEXEC of conflict handlers receive additional parameters "dynamic" and "removeable"
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -96,6 +105,19 @@ parameters:
 - default parameter heuristics/objfeaspump/freq changed to 20
 - default parameter heuristics/objpscostdiving/freq changed to 20
 - default parameter heuristics/rootsoldiving/freq changed to 20
+- new parameter conflict/dynamic
+- new parameter conflict/removeable
+- new parameter reading/mpsreader/dynamicconss
+- new parameter reading/cnfreader/dynamicconss
+- new parameter heuristics/coefdiving/maxlpiterofs
+- new parameter heuristics/feaspump/maxlpiterofs
+- new parameter heuristics/fracdiving/maxlpiterofs
+- new parameter heuristics/guideddiving/maxlpiterofs
+- new parameter heuristics/linesearchdiving/maxlpiterofs
+- new parameter heuristics/objfeaspump/maxlpiterofs
+- new parameter heuristics/objpscostdiving/maxlpiterofs
+- new parameter heuristics/pscostdiving/maxlpiterofs
+- new parameter heuristics/rootsoldiving/maxlpiterofs
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
@@ -146,6 +168,7 @@ fixed bugs:
 - fixed bugs in intobj separator
 - fixed bug in CPLEX LP interface with dual norms
 - heuristic's display character is now only shown the first time, the new solution was found
+- fixed bug that SCIPreadProb() doesn't discard the transformed problem
 
 
 SCIP version 0.78

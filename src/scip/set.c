@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.146 2005/03/10 17:11:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.147 2005/03/21 11:37:32 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -77,6 +77,8 @@
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions */
+#define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
+#define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 
 
 /* Constraints */
@@ -432,7 +434,17 @@ RETCODE SCIPsetCreate(
          "should reconvergence clauses be created for UIPs of last depth level?",
          &(*set)->conf_reconvclauses, SCIP_DEFAULT_CONF_RECONVCLAUSES,
          NULL, NULL) );
-
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/dynamic",
+         "should the conflict constraints be subject to aging?",
+         &(*set)->conf_dynamic, SCIP_DEFAULT_CONF_DYNAMIC,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/removeable",
+         "should the conflict's relaxations be subject to LP aging and cleanup?",
+         &(*set)->conf_removeable, SCIP_DEFAULT_CONF_REMOVEABLE,
+         NULL, NULL) );
+   
    /* constraint parameters */
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "constraints/agelimit",

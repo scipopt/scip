@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.75 2005/03/10 17:11:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.76 2005/03/21 11:37:33 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -143,17 +143,17 @@ RETCODE SCIPnodeAddCons(
    CONS*            cons                /**< constraint to add */
    );
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the node, and captures constraint;
- *  disables constraint, if node is active
+/** locally deletes constraint at the given node by disabling its separation, enforcing, and propagation capabilities
+ *  at the node; captures constraint; disables constraint, if node is active
  */
 extern
-RETCODE SCIPnodeDisableCons(
+RETCODE SCIPnodeDelCons(
    NODE*            node,               /**< node to add constraint to */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
-   CONS*            cons                /**< constraint to disable */
+   CONS*            cons                /**< constraint to locally delete */
    );
 
 /** adds bound change with inference information to focus node, child of focus node, or probing node;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.24 2005/03/16 09:30:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.25 2005/03/21 11:37:31 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -42,6 +42,7 @@
 #define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved? */
 
 #define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITEROFS    10000   /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
@@ -57,8 +58,9 @@ struct HeurData
    SOL*             roundedsol;         /**< rounded solution */ 
    Longint          nlpiterations;      /**< number of LP iterations used in this heuristic */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   int              maxlpiterofs;       /**< additional number of allowed LP iterations */
    Real             objfactor;          /**< factor by which the regard of the objective is decreased in each round, 
-                                         * 1.0 for dynamic, depending on solutions already found */
+                                         *   1.0 for dynamic, depending on solutions already found */
    int              maxloops;           /**< maximum number of loops (-1: no limit) */ 
    int              minflips;           /**< minimum number of random variables to flip, if a 1-cycle is encountered */
    int              cyclelength;        /**< maximum length of cycles to be checked explicitly in each round */
@@ -349,7 +351,8 @@ DECL_HEUREXEC(heurExecFeaspump)
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations;
+   maxnlpiterations += heurdata->maxlpiterofs;
   
    /* initialize some heuristic data */
    maxflips = 3*heurdata->minflips;
@@ -590,6 +593,10 @@ RETCODE SCIPincludeHeurFeaspump(
          "heuristics/feaspump/maxlpiterquot", 
          "maximal fraction of diving LP iterations compared to node LP iterations",
          &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "heuristics/feaspump/maxlpiterofs", 
+         "additional number of allowed LP iterations",
+         &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/feaspump/objfactor", 
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",

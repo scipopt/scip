@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.20 2005/02/28 13:26:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.21 2005/03/21 11:37:32 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -399,6 +399,12 @@ Bool SCIPconsIsEnabled(
    CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint's separation is enabled in the current node */
+extern
+Bool SCIPconsIsSeparationEnabled(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint's propagation is enabled in the current node */
 extern
 Bool SCIPconsIsPropagationEnabled(
@@ -471,7 +477,13 @@ Bool SCIPconsIsModifiable(
    CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint should be removed from the LP due to aging or cleanup */
+/** returns TRUE iff constraint is subject to aging */
+extern
+Bool SCIPconsIsDynamic(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint's relaxation should be removed from the LP due to aging or cleanup */
 extern
 Bool SCIPconsIsRemoveable(
    CONS*            cons                /**< constraint */
@@ -526,7 +538,9 @@ Bool SCIPconsIsLocked(
 #define SCIPconsGetActiveDepth(cons)    (cons)->activedepth
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
-#define SCIPconsIsPropagationEnabled(cons)      \
+#define SCIPconsIsSeparationEnabled(cons)                               \
+   (SCIPconsIsEnabled(cons) && ((cons)->updatesepaenable || ((cons)->sepaenabled && !(cons)->updatesepadisable)))
+#define SCIPconsIsPropagationEnabled(cons)                              \
    (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.119 2005/02/28 13:26:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.120 2005/03/21 11:37:28 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -225,6 +225,7 @@ void checkConssArrays(
       assert(!conshdlr->sepaconss[c]->original);
       assert(conshdlr->sepaconss[c]->active);
       assert(conshdlr->sepaconss[c]->separate);
+      assert(conshdlr->sepaconss[c]->sepaenabled);
       assert(conshdlr->sepaconss[c]->obsolete == (c >= conshdlr->nusefulsepaconss));
    }
 
@@ -270,7 +271,7 @@ Bool consExceedsAgelimit(
    assert(cons != NULL);
    assert(set != NULL);
 
-   return (set->cons_agelimit >= 0 && cons->age > set->cons_agelimit);
+   return (set->cons_agelimit >= 0 && cons->dynamic && cons->age > set->cons_agelimit);
 }
 
 /** returns whether the constraint's age exceeds the obsolete age limit */
@@ -283,7 +284,7 @@ Bool consExceedsObsoleteage(
    assert(cons != NULL);
    assert(set != NULL);
 
-   return (set->cons_obsoleteage >= 0 && cons->age > set->cons_obsoleteage);
+   return (set->cons_obsoleteage >= 0 && cons->dynamic && cons->age > set->cons_obsoleteage);
 }
 
 /** marks constraint to be obsolete; it will be moved to the last part of the constraint arrays, such that
@@ -328,7 +329,7 @@ RETCODE conshdlrMarkConsObsolete(
    }
    if( cons->enabled )
    {
-      if( cons->separate )
+      if( cons->separate && cons->sepaenabled )
       {
          assert(0 <= cons->sepaconsspos && cons->sepaconsspos < conshdlr->nusefulsepaconss);
          
@@ -449,7 +450,7 @@ RETCODE conshdlrMarkConsUseful(
    }
    if( cons->enabled )
    {
-      if( cons->separate )
+      if( cons->separate && cons->sepaenabled )
       {
          assert(conshdlr->nusefulsepaconss <= cons->sepaconsspos && cons->sepaconsspos < conshdlr->nsepaconss);
          
@@ -562,6 +563,7 @@ RETCODE conshdlrAddSepacons(
    assert(!cons->original);
    assert(cons->active);
    assert(cons->separate);
+   assert(cons->sepaenabled);
    assert(cons->sepaconsspos == -1);
 
    CHECK_OKAY( conshdlrEnsureSepaconssMem(conshdlr, set, conshdlr->nsepaconss+1) );
@@ -600,6 +602,7 @@ void conshdlrDelSepacons(
    assert(cons->conshdlr == conshdlr);
    assert(!cons->original);
    assert(cons->separate);
+   assert(cons->sepaenabled);
    assert(cons->sepaconsspos != -1);
 
    delpos = cons->sepaconsspos;
@@ -902,6 +905,64 @@ void conshdlrDelPropcons(
    checkConssArrays(conshdlr);
 }
 
+/** enables separation of constraint */
+static
+RETCODE conshdlrEnableConsSeparation(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   SET*             set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(!cons->sepaenabled);
+   assert(cons->sepaconsspos == -1);
+
+   debugMessage("enable separation of constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
+
+   /* enable separation of constraint */
+   cons->sepaenabled = TRUE;
+
+   /* add constraint to the separation array */
+   if( cons->enabled && cons->separate )
+   {
+      CHECK_OKAY( conshdlrAddSepacons(conshdlr, set, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** disables separation of constraint */
+static
+RETCODE conshdlrDisableConsSeparation(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   CONS*            cons                /**< constraint to remove */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(cons->sepaenabled);
+   assert((cons->separate && cons->enabled) == (cons->sepaconsspos != -1));
+
+   debugMessage("disable separation of constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
+
+   /* delete constraint from the separation array */
+   if( cons->separate && cons->enabled )
+   {
+      conshdlrDelSepacons(conshdlr, cons);
+   }
+   assert(cons->sepaconsspos == -1);
+
+   /* disable separation of constraint */
+   cons->sepaenabled = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** enables propagation of constraint */
 static
 RETCODE conshdlrEnableConsPropagation(
@@ -993,7 +1054,7 @@ RETCODE conshdlrEnableCons(
    stat->nenabledconss++;
 
    /* add constraint to the separation array */
-   if( cons->separate )
+   if( cons->separate && cons->sepaenabled )
    {
       CHECK_OKAY( conshdlrAddSepacons(conshdlr, set, cons) );
    }
@@ -1042,12 +1103,11 @@ RETCODE conshdlrDisableCons(
    assert(!cons->original);
    assert(cons->active);
    assert(cons->enabled);
-   assert(cons->separate == (cons->sepaconsspos != -1));
+   assert((cons->separate && cons->sepaenabled) == (cons->sepaconsspos != -1));
    assert(cons->enforce == (cons->enfoconsspos != -1));
    assert((cons->propagate && cons->propenabled) == (cons->propconsspos != -1));
 
-   debugMessage("disable constraint <%s> at sepa position %d in constraint handler <%s> (%d/%d)\n", 
-      cons->name, cons->sepaconsspos, conshdlr->name, conshdlr->nusefulsepaconss, conshdlr->nsepaconss);
+   debugMessage("disable constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
    /* call constraint handler's disabling notification method */
    if( conshdlr->consdisable != NULL )
@@ -1056,7 +1116,7 @@ RETCODE conshdlrDisableCons(
    }
 
    /* delete constraint from the separation array */
-   if( cons->separate )
+   if( cons->separate && cons->sepaenabled )
    {
       conshdlrDelSepacons(conshdlr, cons);
    }
@@ -1254,13 +1314,17 @@ RETCODE conshdlrProcessUpdates(
       assert(cons->conshdlr == conshdlr);
       assert(cons->update);
       assert(cons->updateinsert || cons->updateactivate || cons->updatedeactivate
-         || cons->updateenable || cons->updatedisable || cons->updatepropenable || cons->updatepropdisable
+         || cons->updateenable || cons->updatedisable
+         || cons->updatesepaenable || cons->updatesepadisable
+         || cons->updatepropenable || cons->updatepropdisable
          || cons->updateobsolete || cons->updatefree);
 
-      debugMessage(" -> constraint <%s>: insert=%d, activate=%d, deactivate=%d, enable=%d, disable=%d, propenable=%d, propdisable=%d, obsolete=%d, free=%d (consdata=%p)\n",
+      debugMessage(" -> constraint <%s>: insert=%d, activate=%d, deactivate=%d, enable=%d, disable=%d, sepaenable=%d, sepadisable=%d, propenable=%d, propdisable=%d, obsolete=%d, free=%d (consdata=%p)\n",
          cons->name, cons->updateinsert, cons->updateactivate, cons->updatedeactivate, 
          cons->updateenable, cons->updatedisable,
-         cons->updatepropenable, cons->updatepropdisable, cons->updateobsolete, cons->updatefree, cons->consdata);
+         cons->updatesepaenable, cons->updatesepadisable, 
+         cons->updatepropenable, cons->updatepropdisable, 
+         cons->updateobsolete, cons->updatefree, cons->consdata);
 
       if( cons->updateinsert )
       {
@@ -1312,6 +1376,26 @@ RETCODE conshdlrProcessUpdates(
          cons->updatedisable = FALSE;
       }
 
+      if( cons->updatesepaenable )
+      {
+         assert(!cons->updatesepadisable);
+         if( !cons->sepaenabled )
+         {
+            CHECK_OKAY( conshdlrEnableConsSeparation(conshdlr, set, cons) );
+            assert(cons->sepaenabled);
+         }
+         cons->updatesepaenable = FALSE;
+      }
+      else if( cons->updatesepadisable )
+      {
+         if( cons->sepaenabled )
+         {         
+            CHECK_OKAY( conshdlrDisableConsSeparation(conshdlr, cons) );
+            assert(!cons->sepaenabled);
+         }
+         cons->updatesepadisable = FALSE;
+      }
+
       if( cons->updatepropenable )
       {
          assert(!cons->updatepropdisable);
@@ -1358,6 +1442,8 @@ RETCODE conshdlrProcessUpdates(
       assert(!cons->updatedeactivate);
       assert(!cons->updateenable);
       assert(!cons->updatedisable);
+      assert(!cons->updatesepaenable);
+      assert(!cons->updatesepadisable);
       assert(!cons->updatepropenable);
       assert(!cons->updatepropdisable);
       assert(!cons->updateobsolete);
@@ -3568,13 +3654,11 @@ RETCODE SCIPconssetchgApply(
    CONS* cons;
    int i;
 
-   debugMessage("applying constraint set changes at %p\n", conssetchg);
-
    if( conssetchg == NULL )
       return SCIP_OKAY;
 
-   debugMessage(" -> %d constraint additions, %d constraint disablings\n", 
-      conssetchg->naddedconss, conssetchg->ndisabledconss);
+   debugMessage("applying constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
+      conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* apply constraint additions */
    for( i = 0; i < conssetchg->naddedconss; ++i )
@@ -3648,13 +3732,11 @@ RETCODE SCIPconssetchgUndo(
    CONS* cons;
    int i;
 
-   debugMessage("undoing constraint set changes at %p\n", conssetchg);
-
    if( conssetchg == NULL )
       return SCIP_OKAY;
 
-   debugMessage(" -> %d constraint additions, %d constraint disablings\n", 
-      conssetchg->naddedconss, conssetchg->ndisabledconss);
+   debugMessage("undoing constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
+      conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* undo constraint disablings */
    for( i = conssetchg->ndisabledconss-1; i >= 0; --i )
@@ -3756,7 +3838,8 @@ RETCODE SCIPconsCreate(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable,         /**< should the relaxation be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
    )
 {
@@ -3795,9 +3878,11 @@ RETCODE SCIPconsCreate(
    (*cons)->enforce = enforce;
    (*cons)->check = check;
    (*cons)->propagate = propagate;
+   (*cons)->sepaenabled = separate;
    (*cons)->propenabled = propagate;
    (*cons)->local = local;
    (*cons)->modifiable = modifiable;
+   (*cons)->dynamic = dynamic;
    (*cons)->removeable = removeable;
    (*cons)->original = original;
    (*cons)->active = FALSE;
@@ -3810,6 +3895,8 @@ RETCODE SCIPconsCreate(
    (*cons)->updatedeactivate = FALSE;
    (*cons)->updateenable = FALSE;
    (*cons)->updatedisable = FALSE;
+   (*cons)->updatesepaenable = FALSE;
+   (*cons)->updatesepadisable = FALSE;
    (*cons)->updatepropenable = FALSE;
    (*cons)->updatepropdisable = FALSE;
    (*cons)->updateobsolete = FALSE;
@@ -4054,7 +4141,7 @@ RETCODE SCIPconsTransform(
          /* create new constraint with empty constraint data */
          CHECK_OKAY( SCIPconsCreate(transcons, blkmem, set, origcons->name, origcons->conshdlr, NULL, origcons->initial,
                origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
-               origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
+               origcons->local, origcons->modifiable, origcons->dynamic, origcons->removeable, FALSE) );
       }
 
       /* link original and transformed constraint */
@@ -4168,13 +4255,13 @@ RETCODE SCIPconsEnable(
 {
    assert(cons != NULL);
    assert(!cons->original);
-   assert(cons->active);
-   assert(!cons->enabled);
-   assert(!cons->updateactivate);
-   assert(!cons->updateenable);
-   assert(!cons->updatedisable);
    assert(cons->conshdlr != NULL);
-   
+
+   if( !cons->active || cons->updatedeactivate || cons->updateenable || (cons->enabled && !cons->updatedisable) )
+      return SCIP_OKAY;
+
+   assert(!cons->updateactivate);
+
    if( cons->conshdlr->delayupdates )
    {
       cons->updateenable = TRUE;
@@ -4199,12 +4286,13 @@ RETCODE SCIPconsDisable(
 {
    assert(cons != NULL);
    assert(!cons->original);
-   assert(cons->active);
-   assert(cons->enabled);
-   assert(!cons->updateactivate);
-   assert(!cons->updateenable);
-   assert(!cons->updatedisable);
    assert(cons->conshdlr != NULL);
+
+   if( cons->updatedisable || (!cons->enabled && !cons->updateenable) )
+      return SCIP_OKAY;
+
+   assert(cons->active);
+   assert(!cons->updateactivate);
 
    if( cons->conshdlr->delayupdates )
    {
@@ -4216,6 +4304,62 @@ RETCODE SCIPconsDisable(
    {
       CHECK_OKAY( conshdlrDisableCons(cons->conshdlr, set, stat, cons) );
       assert(!cons->enabled);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** enables constraint's separation capabilities or marks them to be enabled in next update */
+RETCODE SCIPconsEnableSeparation(
+   CONS*            cons,               /**< constraint */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+
+   if( cons->updatesepaenable || (cons->sepaenabled && !cons->updatesepadisable) )
+      return SCIP_OKAY;
+
+   if( cons->conshdlr->delayupdates )
+   {
+      cons->updatesepadisable = FALSE;
+      cons->updatesepaenable = TRUE;
+      CHECK_OKAY( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
+      assert(cons->update);
+   }
+   else
+   {
+      CHECK_OKAY( conshdlrEnableConsSeparation(cons->conshdlr, set, cons) );
+      assert(cons->sepaenabled);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** disables constraint's separation capabilities or marks them to be disabled in next update */
+RETCODE SCIPconsDisableSeparation(
+   CONS*            cons,               /**< constraint */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+
+   if( cons->updatesepadisable || (!cons->sepaenabled && !cons->updatesepaenable) )
+      return SCIP_OKAY;
+
+   if( cons->conshdlr->delayupdates )
+   {
+      cons->updatesepaenable = FALSE;
+      cons->updatesepadisable = TRUE;
+      CHECK_OKAY( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
+      assert(cons->update);
+   }
+   else
+   {
+      CHECK_OKAY( conshdlrDisableConsSeparation(cons->conshdlr, cons) );
+      assert(!cons->sepaenabled);
    }
 
    return SCIP_OKAY;
@@ -4579,6 +4723,7 @@ DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsGetActiveDepth
 #undef SCIPconsIsActive
 #undef SCIPconsIsEnabled
+#undef SCIPconsIsSeparationEnabled
 #undef SCIPconsIsPropagationEnabled
 #undef SCIPconsIsDeleted
 #undef SCIPconsIsObsolete
@@ -4591,6 +4736,7 @@ DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsIsGlobal
 #undef SCIPconsIsLocal
 #undef SCIPconsIsModifiable
+#undef SCIPconsIsDynamic
 #undef SCIPconsIsRemoveable
 #undef SCIPconsIsInProb
 #undef SCIPconsIsOriginal
@@ -4670,6 +4816,17 @@ Bool SCIPconsIsEnabled(
    assert(cons != NULL);
 
    return cons->updateenable || (cons->enabled && !cons->updatedisable);
+}
+
+/** returns TRUE iff constraint's separation is enabled in the current node */
+Bool SCIPconsIsSeparationEnabled(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return SCIPconsIsEnabled(cons)
+      && (cons->updatesepaenable || (cons->sepaenabled && !cons->updatesepadisable));
 }
 
 /** returns TRUE iff constraint's propagation is enabled in the current node */
@@ -4793,7 +4950,17 @@ Bool SCIPconsIsModifiable(
    return cons->modifiable;
 }
 
-/** returns TRUE iff constraint should be removed from the LP due to aging or cleanup */
+/** returns TRUE iff constraint is subject to aging */
+Bool SCIPconsIsDynamic(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->dynamic;
+}
+
+/** returns TRUE iff constraint's relaxation should be removed from the LP due to aging or cleanup */
 Bool SCIPconsIsRemoveable(
    CONS*            cons                /**< constraint */
    )

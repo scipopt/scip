@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.78 2005/03/17 14:58:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.79 2005/03/21 11:37:30 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -283,25 +283,29 @@ RETCODE switchWatchedvars(
    {
       assert(consdata->filterpos1 != -1);
       CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)cons, consdata->filterpos1) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (EVENTDATA*)cons,
+            consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
       CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
-            SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)cons, consdata->filterpos2) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (EVENTDATA*)cons, 
+            consdata->filterpos2) );
    }
 
    /* catch events on new watched variables */
    if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 )
    {
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar1],
-            SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)cons, &consdata->filterpos1) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (EVENTDATA*)cons,
+            &consdata->filterpos1) );
    }
    if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar2 )
    {
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar2],
-            SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)cons, &consdata->filterpos2) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (EVENTDATA*)cons,
+            &consdata->filterpos2) );
    }
 
    /* set the new watched variables */
@@ -483,18 +487,26 @@ RETCODE processWatchedVars(
    vars = consdata->vars;
    nvars = consdata->nvars;
    assert(nvars == 0 || vars != NULL);
-   watchedvar1 = consdata->watchedvar1;
-   watchedvar2 = consdata->watchedvar2;
 
    /* check watched variables if they are fixed to one */
-   if( (watchedvar1 >= 0 && SCIPvarGetLbLocal(vars[watchedvar1]) > 0.5)
-      || (watchedvar2 >= 0 && SCIPvarGetLbLocal(vars[watchedvar2]) > 0.5) )
+   if( (consdata->watchedvar1 >= 0 && SCIPvarGetLbLocal(vars[consdata->watchedvar1]) > 0.5) )
    {
       /* the variable is fixed to one, making the constraint redundant;
        * remember the variable and disable the constraint
        */
-      debugMessage(" -> disabling constraint <%s> (watchedvar fixed to 1.0)\n", SCIPconsGetName(cons));
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      debugMessage(" -> disabling constraint <%s> (watchedvar1 fixed to 1.0)\n", SCIPconsGetName(cons));
+      CHECK_OKAY( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar1, -1) );
+      CHECK_OKAY( SCIPdisableCons(scip, cons) );
+      return SCIP_OKAY;
+   }
+   if( (consdata->watchedvar2 >= 0 && SCIPvarGetLbLocal(vars[consdata->watchedvar2]) > 0.5) )
+   {
+      /* the variable is fixed to one, making the constraint redundant;
+       * remember the variable and disable the constraint
+       */
+      debugMessage(" -> disabling constraint <%s> (watchedvar2 fixed to 1.0)\n", SCIPconsGetName(cons));
+      CHECK_OKAY( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar2, -1) );
+      CHECK_OKAY( SCIPdisableCons(scip, cons) );
       return SCIP_OKAY;
    }
 
@@ -509,12 +521,16 @@ RETCODE processWatchedVars(
       {
          if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
          {
+            assert(v != consdata->watchedvar1);
+            assert(v != consdata->watchedvar2);
+
             /* the variable is fixed to one, making the constraint redundant;
-             * remember the variable and disable the constraint
+             * make sure, the feasible variable is watched and disable the constraint
              */
             debugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
                SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
-            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            CHECK_OKAY( switchWatchedvars(scip, cons, eventhdlr, v, -1) );
+            CHECK_OKAY( SCIPdisableCons(scip, cons) );
             return SCIP_OKAY;
          }
 
@@ -581,7 +597,8 @@ RETCODE processWatchedVars(
          CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
          assert(!infeasible);
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         CHECK_OKAY( switchWatchedvars(scip, cons, eventhdlr, watchedvar1, -1) );
+         CHECK_OKAY( SCIPdisableCons(scip, cons) );
          *reduceddom = TRUE;
       }
    }
@@ -640,7 +657,21 @@ RETCODE checkCons(
       {
          if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
          {
-            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            CONSHDLR* conshdlr;
+            CONSHDLRDATA* conshdlrdata;
+
+            debugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
+               SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
+
+            /* the variable is fixed to one: disable the constraint; watch the feasible variable to reenable
+             * the constraint if it is no longer fixed to one
+             */
+            conshdlr = SCIPconsGetHdlr(cons);
+            conshdlrdata = SCIPconshdlrGetData(conshdlr);
+            assert(conshdlrdata != NULL);
+            CHECK_OKAY( switchWatchedvars(scip, cons, conshdlrdata->eventhdlr, v, -1) );
+            CHECK_OKAY( SCIPdisableCons(scip, cons) );
+
             return SCIP_OKAY;
          }
       }
@@ -959,7 +990,8 @@ DECL_CONSTRANS(consTransLogicor)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1384,6 +1416,7 @@ DECL_CONSACTIVE(consActiveLogicor)
    assert(conshdlrdata != NULL);
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    debugMessage("activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
    debug(consdataPrint(scip, consdata, NULL));
@@ -1392,12 +1425,14 @@ DECL_CONSACTIVE(consActiveLogicor)
    if( consdata->watchedvar1 != -1 )
    {
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, &consdata->filterpos1) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (EVENTDATA*)cons,
+            &consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 )
    {
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[consdata->watchedvar2],
-            SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, &consdata->filterpos2) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (EVENTDATA*)cons,
+            &consdata->filterpos2) );
    }
 
    return SCIP_OKAY;
@@ -1420,6 +1455,7 @@ DECL_CONSDEACTIVE(consDeactiveLogicor)
    assert(conshdlrdata != NULL);
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    debugMessage("deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
    debug(consdataPrint(scip, consdata, NULL));
@@ -1429,13 +1465,15 @@ DECL_CONSDEACTIVE(consDeactiveLogicor)
    {
       assert(consdata->filterpos1 != -1);
       CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, consdata->filterpos1) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (EVENTDATA*)cons,
+            consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 )
    {
       assert(consdata->filterpos2 != -1);
       CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
-            SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (EVENTDATA*)cons, consdata->filterpos2) );
+            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (EVENTDATA*)cons,
+            consdata->filterpos2) );
    }
 
    return SCIP_OKAY;
@@ -1483,7 +1521,8 @@ RETCODE createNormalizedLogicor(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    VAR** transvars;
@@ -1510,7 +1549,7 @@ RETCODE createNormalizedLogicor(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsLogicor(scip, cons, name, nvars, transvars,
-         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &transvars);
@@ -1550,7 +1589,8 @@ DECL_LINCONSUPGD(linconsUpgdLogicor)
       CHECK_OKAY( createNormalizedLogicor(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -1572,6 +1612,13 @@ DECL_EVENTEXEC(eventExecLogicor)
    assert(event != NULL);
 
    debugMessage("exec method of event handler for logic or constraints\n");
+
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBRELAXED )
+   {
+      CHECK_OKAY( SCIPenableCons(scip, (CONS*)eventdata) );
+   }
+   else
+      assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED);
 
    CHECK_OKAY( SCIPenableConsPropagation(scip, (CONS*)eventdata) );
 
@@ -1606,7 +1653,7 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%d_%lld", SCIPgetNRuns(scip), SCIPgetNConflictClausesFound(scip));
    CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
-         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
@@ -1678,8 +1725,9 @@ RETCODE SCIPcreateConsLogicor(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -1700,7 +1748,7 @@ RETCODE SCIPcreateConsLogicor(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, removeable) );
+         local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
 }

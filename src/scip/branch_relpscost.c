@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.30 2005/03/17 08:44:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.31 2005/03/21 11:37:28 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -434,8 +434,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          inititer = MIN(inititer, 10000);
       }
 
-      debugMessage("applying strong branching on unreliable candidates (%d cands, %d uninit, maxlookahead=%g, inititer=%d)\n",
-         ninitcands, nuninitcands, maxlookahead, inititer);
+      debugMessage("applying strong branching on unreliable candidates (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%lld/%lld, basic:%d)\n",
+         reliable, ninitcands, nlpcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
+         SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 
       bestsbcand = -1;
       bestsbscore = -SCIPinfinity(scip);

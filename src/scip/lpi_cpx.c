@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.89 2005/03/10 17:11:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.90 2005/03/21 11:37:31 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -127,7 +127,9 @@ struct LPiState
    int              nrows;              /**< number of LP rows */
    COLPACKET*       packcstat;          /**< column basis status in compressed form */
    ROWPACKET*       packrstat;          /**< row basis status in compressed form */
+#if 0 /*????????????????????*/
    double*          dnorm;              /**< dual norms of variables */
+#endif
 };
 
 
@@ -412,7 +414,9 @@ RETCODE lpistateCreate(
    ALLOC_OKAY( allocBlockMemory(blkmem, lpistate) );
    ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum(ncols)) );
    ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum(nrows)) );
+#if 0 /*??????????????????*/
    (*lpistate)->dnorm = NULL;
+#endif
 
    return SCIP_OKAY;
 }
@@ -430,7 +434,9 @@ void lpistateFree(
 
    freeBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols));
    freeBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrows));
+#if 0 /*??????????????????*/
    freeBlockMemoryArrayNull(blkmem, &(*lpistate)->dnorm, (*lpistate)->nrows);
+#endif
    freeBlockMemory(blkmem, lpistate);
 }
 
@@ -2771,6 +2777,7 @@ RETCODE SCIPlpiGetState(
    debugMessage("storing CPLEX LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
 
    /* get unpacked basis information from CPLEX */
+#if 0 /*?????????????????????*/
    pricing = getIntParam(lpi, CPX_PARAM_DPRIIND);
    if( pricing == CPX_DPRIIND_STEEP || pricing == CPX_DPRIIND_FULLSTEEP || pricing == CPX_DPRIIND_STEEPQSTART )
    {
@@ -2785,8 +2792,11 @@ RETCODE SCIPlpiGetState(
       }
    }
    else
+#endif
    {
+#if 0 /*?????????????????*/
       (*lpistate)->dnorm = NULL;
+#endif
       CHECK_OKAY( getBase(lpi, NULL, NULL) );
    }
 
@@ -2829,6 +2839,7 @@ RETCODE SCIPlpiSetState(
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
    /* load basis information into CPLEX */
+#if 0 /*???????????????????????*/
    if( lpistate->dnorm != NULL )
    {
       int pricing;
@@ -2844,6 +2855,7 @@ RETCODE SCIPlpiSetState(
       }
    }
    else
+#endif
    {
       CHECK_OKAY( setBase(lpi, NULL) );
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.30 2005/02/28 13:26:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.31 2005/03/21 11:37:32 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -59,10 +59,12 @@ struct Cons
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
    unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
    unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
+   unsigned int     sepaenabled:1;      /**< TRUE iff constraint should be separated in the next separation call */
    unsigned int     propenabled:1;      /**< TRUE iff constraint should be propagated in the next propagation call */
    unsigned int     local:1;            /**< TRUE iff constraint is only valid locally */
    unsigned int     modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
-   unsigned int     removeable:1;       /**< TRUE iff constraint should be removed from the LP due to aging or cleanup */
+   unsigned int     dynamic:1;          /**< TRUE iff constraint is subject to aging */
+   unsigned int     removeable:1;       /**< TRUE iff relaxation should be removed from the LP due to aging or cleanup */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the current node */
    unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
@@ -74,6 +76,8 @@ struct Cons
    unsigned int     updatedeactivate:1; /**< TRUE iff constraint has to be deactivated in update phase */
    unsigned int     updateenable:1;     /**< TRUE iff constraint has to be enabled in update phase */
    unsigned int     updatedisable:1;    /**< TRUE iff constraint has to be disabled in update phase */
+   unsigned int     updatesepaenable:1; /**< TRUE iff constraint's separation has to be enabled in update phase */
+   unsigned int     updatesepadisable:1;/**< TRUE iff constraint's separation has to be disabled in update phase */
    unsigned int     updatepropenable:1; /**< TRUE iff constraint's propagation has to be enabled in update phase */
    unsigned int     updatepropdisable:1;/**< TRUE iff constraint's propagation has to be disabled in update phase */
    unsigned int     updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.15 2005/02/14 13:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.16 2005/03/21 11:37:29 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -198,7 +198,7 @@ RETCODE addAllConss(
       /* disable conjunction constraint, if it is unmodifiable */
       if( !SCIPconsIsModifiable(conss[c]) )
       {
-         CHECK_OKAY( SCIPdisableConsLocal(scip, conss[c]) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, conss[c]) );
       }
    }
 
@@ -237,7 +237,7 @@ RETCODE checkAllConss(
       /* disable conjunction constraint, if it is unmodifiable */
       if( !SCIPconsIsModifiable(conss[c]) )
       {
-         CHECK_OKAY( SCIPdisableConsLocal(scip, conss[c]) );
+         CHECK_OKAY( SCIPdelConsLocal(scip, conss[c]) );
       }
    }
 
@@ -323,7 +323,8 @@ DECL_CONSTRANS(consTransConjunction)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -540,7 +541,8 @@ RETCODE SCIPcreateConsConjunction(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable          /**< is constraint modifiable (subject to column generation)? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             dynamic             /**< is constraint subject to aging? */
    )
 {
    CONSHDLR* conshdlr;
@@ -559,7 +561,7 @@ RETCODE SCIPcreateConsConjunction(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, enforce, check, FALSE,
-         local, modifiable, FALSE) );
+         local, modifiable, dynamic, FALSE) );
 
    return SCIP_OKAY;
 }

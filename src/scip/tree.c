@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.138 2005/03/10 17:11:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.139 2005/03/21 11:37:33 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1188,16 +1188,16 @@ RETCODE SCIPnodeAddCons(
    return SCIP_OKAY;
 }
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the node, and captures constraint;
- *  disables constraint, if node is active
+/** locally deletes constraint at the given node by disabling its separation, enforcing, and propagation capabilities
+ *  at the node; captures constraint; disables constraint, if node is active
  */
-RETCODE SCIPnodeDisableCons(
+RETCODE SCIPnodeDelCons(
    NODE*            node,               /**< node to add constraint to */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
-   CONS*            cons                /**< constraint to disable */
+   CONS*            cons                /**< constraint to locally delete */
    )
 {
    assert(node != NULL);

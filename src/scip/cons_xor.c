@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.27 2005/02/16 17:46:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.28 2005/03/21 11:37:30 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -739,7 +739,7 @@ RETCODE propagateCons(
          *cutoff = TRUE;
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       }
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
 
       return SCIP_OKAY;
    }
@@ -756,7 +756,7 @@ RETCODE propagateCons(
       assert(tightened);
       (*nfixedvars)++;
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
 
       return SCIP_OKAY;
    }
@@ -927,7 +927,8 @@ DECL_CONSTRANS(consTransXor)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1375,7 +1376,8 @@ RETCODE SCIPcreateConsXor(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -1398,7 +1400,7 @@ RETCODE SCIPcreateConsXor(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, removeable) );
+         local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
 }

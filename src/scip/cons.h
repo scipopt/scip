@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.90 2005/02/28 13:26:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.91 2005/03/21 11:37:28 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -357,7 +357,8 @@ RETCODE SCIPconsCreate(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable,         /**< should the relaxation be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
    );
 
@@ -459,6 +460,20 @@ RETCODE SCIPconsDisable(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
+   );
+
+/** enables constraint's separation capabilities or marks them to be enabled in next update */
+extern
+RETCODE SCIPconsEnableSeparation(
+   CONS*            cons,               /**< constraint */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** disables constraint's separation capabilities or marks them to be disabled in next update */
+extern
+RETCODE SCIPconsDisableSeparation(
+   CONS*            cons,               /**< constraint */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** enables constraint's propagation capabilities or marks them to be enabled in next update */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.154 2005/03/09 14:10:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.155 2005/03/21 11:37:29 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3004,7 +3004,7 @@ RETCODE propagateCons(
          {
             debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+            CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
          }
       }
    }
@@ -3019,403 +3019,7 @@ RETCODE propagateCons(
 
 
 /*
- * Callback methods of constraint handler
- */
-
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-static
-DECL_CONSFREE(consFreeLinear)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* free constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   conshdlrdataFree(scip, &conshdlrdata);
-
-   SCIPconshdlrSetData(conshdlr, NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLinear NULL
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLinear NULL
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreLinear NULL
-
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-static
-DECL_CONSEXITPRE(consExitpreLinear)
-{  /*lint --e{715}*/
-   CONSDATA* consdata;
-   int c;
-
-   /* delete all linear constraints that were upgraded to a more specific constraint type;
-    * make sure, only active variables remain in the remaining constraints
-    */
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->upgraded )
-      {
-         CHECK_OKAY( SCIPdelCons(scip, conss[c]) );
-      }
-      else
-      {
-         CHECK_OKAY( applyFixings(scip, conss[c]) );
-      }
-   }
-
-   *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLinear NULL
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-static
-DECL_CONSEXITSOL(consExitsolLinear)
-{
-   CONSDATA* consdata;
-   int c;
-
-   /* release the rows of all constraints */
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->row != NULL )
-      {
-         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** frees specific constraint data */
-static
-DECL_CONSDELETE(consDeleteLinear)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* get event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
-   
-   /* free linear constraint */
-   CHECK_OKAY( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
-
-   return SCIP_OKAY;
-}
-
-
-/** transforms constraint data into data belonging to the transformed problem */ 
-static
-DECL_CONSTRANS(consTransLinear)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   CONSDATA* sourcedata;
-   CONSDATA* targetdata;
-
-   /*debugMessage("Trans method of linear constraints\n");*/
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
-   assert(sourcecons != NULL);
-   assert(targetcons != NULL);
-
-   sourcedata = SCIPconsGetData(sourcecons);
-   assert(sourcedata != NULL);
-   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
-
-   /* get event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
-
-   /* create linear constraint data for target constraint */
-   CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
-         sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
-
-   /* create target constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
-
-   return SCIP_OKAY;
-}
-
-
-/** LP initialization method of constraint handler */
-static
-DECL_CONSINITLP(consInitlpLinear)
-{  /*lint --e{715}*/
-   int c;
-
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   for( c = 0; c < nconss; ++c )
-   {
-      if( SCIPconsIsInitial(conss[c]) )
-      {
-         CHECK_OKAY( addRelaxation(scip, conss[c]) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** separation method of constraint handler */
-static
-DECL_CONSSEPA(consSepaLinear)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   int c;
-   int depth;
-   int nrounds;
-   int maxsepacuts;
-   int ncuts;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   depth = SCIPgetDepth(scip);
-   nrounds = SCIPgetNSepaRounds(scip);
-
-   /*debugMessage("Sepa method of linear constraints\n");*/
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* only call the separator a given number of times at each node */
-   if( (depth == 0 && conshdlrdata->maxroundsroot >= 0 && nrounds >= conshdlrdata->maxroundsroot)
-      || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
-      return SCIP_OKAY;
-
-   /* get the maximal number of cuts allowed in a separation round */
-   maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
-
-   *result = SCIP_DIDNOTFIND;
-   ncuts = 0;
-
-   /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
-   {
-      /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      CHECK_OKAY( separateCons(scip, conss[c], &ncuts) );
-   }
-
-   /* adjust return value */
-   if( ncuts > 0 )
-      *result = SCIP_SEPARATED;
- 
-   /* combine linear constraints to get more cuts */
-   /**@todo further cuts of linear constraints */
-
-   return SCIP_OKAY;
-}
-
-
-/** constraint enforcing method of constraint handler for LP solutions */
-static
-DECL_CONSENFOLP(consEnfolpLinear)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   Bool violated;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /*debugMessage("Enfolp method of linear constraints\n");*/
-
-   /* check for violated constraints
-    * LP is processed at current node -> we can add violated linear constraints to the LP
-    */
-   *result = SCIP_FEASIBLE;
-
-   /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss; ++c )
-   {
-      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violated) );
-      
-      if( violated )
-      {
-         /* insert LP row as cut */
-         CHECK_OKAY( addRelaxation(scip, conss[c]) );
-         *result = SCIP_SEPARATED;
-      }
-   }
-
-   /* check all obsolete linear constraints for feasibility */
-   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
-   {
-      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violated) );
-
-      if( violated )
-      {
-         /* insert LP row as cut */
-         CHECK_OKAY( addRelaxation(scip, conss[c]) );
-         *result = SCIP_SEPARATED;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** constraint enforcing method of constraint handler for pseudo solutions */
-static
-DECL_CONSENFOPS(consEnfopsLinear)
-{  /*lint --e{715}*/
-   Bool violated;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   /*debugMessage("Enfops method of linear constraints\n");*/
-
-   /* if the solution is infeasible anyway due to objective value, skip the enforcement */
-   if( objinfeasible )
-   {
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
-
-   /* check all linear constraints for feasibility */
-   violated = FALSE;
-   for( c = 0; c < nconss && !violated; ++c )
-   {
-      CHECK_OKAY( checkCons(scip, conss[c], NULL, TRUE, &violated) );
-   }
-
-   if( violated )
-      *result = SCIP_INFEASIBLE;
-   else
-      *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
-/** feasibility check method of constraint handler for integral solutions */
-static
-DECL_CONSCHECK(consCheckLinear)
-{  /*lint --e{715}*/
-   Bool violated;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   /*debugMessage("Check method of linear constraints\n");*/
-
-   /* check all linear constraints for feasibility */
-   violated = FALSE;
-   for( c = 0; c < nconss && !violated; ++c )
-   {
-      CHECK_OKAY( checkCons(scip, conss[c], sol, checklprows, &violated) );
-   }
-
-   if( violated )
-      *result = SCIP_INFEASIBLE;
-   else
-      *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
-/** domain propagation method of constraint handler */
-static
-DECL_CONSPROP(consPropLinear)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   Bool tightenbounds;
-   Bool cutoff;
-   int nchgbds;
-   int propfreq;
-   int tightenboundsfreq;
-   int depth;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   /*debugMessage("Prop method of linear constraints\n");*/
-
-   /* check, if we want to tighten variable's bounds */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   depth = SCIPgetDepth(scip);
-   propfreq = SCIPconshdlrGetPropFreq(conshdlr);
-   tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
-   tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
-      && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
-
-   cutoff = FALSE;
-   nchgbds = 0;
-
-   /* process useful constraints */
-   for( c = 0; c < nusefulconss && !cutoff; ++c )
-   {
-      CHECK_OKAY( propagateCons(scip, conss[c], tightenbounds, &cutoff, &nchgbds) );
-   }
-
-   /* adjust result code */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( nchgbds > 0 )
-      *result = SCIP_REDUCEDDOM;
-   else
-      *result = SCIP_DIDNOTFIND;
-
-   return SCIP_OKAY;
-}
-
-
-
-
-/*
- * Presolving
+ * Presolving methods
  */
 
 /* tightens left and right hand side of constraint due to integrality */
@@ -4250,7 +3854,8 @@ RETCODE aggregateConstraints(
       CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newlhs, newrhs,
             SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
             SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
-            SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
+            SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), 
+            SCIPconsIsDynamic(cons0), SCIPconsIsRemoveable(cons0)) );
 
       newconsdata = SCIPconsGetData(newcons);
       assert(newconsdata != NULL);
@@ -4779,6 +4384,404 @@ RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
+
+
+
+/*
+ * Callback methods of constraint handler
+ */
+
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+static
+DECL_CONSFREE(consFreeLinear)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* free constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdataFree(scip, &conshdlrdata);
+
+   SCIPconshdlrSetData(conshdlr, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of constraint handler (called after problem was transformed) */
+#define consInitLinear NULL
+
+
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
+#define consExitLinear NULL
+
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreLinear NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+DECL_CONSEXITPRE(consExitpreLinear)
+{  /*lint --e{715}*/
+   CONSDATA* consdata;
+   int c;
+
+   /* delete all linear constraints that were upgraded to a more specific constraint type;
+    * make sure, only active variables remain in the remaining constraints
+    */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->upgraded )
+      {
+         CHECK_OKAY( SCIPdelCons(scip, conss[c]) );
+      }
+      else
+      {
+         CHECK_OKAY( applyFixings(scip, conss[c]) );
+      }
+   }
+
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolLinear NULL
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+DECL_CONSEXITSOL(consExitsolLinear)
+{
+   CONSDATA* consdata;
+   int c;
+
+   /* release the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->row != NULL )
+      {
+         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** frees specific constraint data */
+static
+DECL_CONSDELETE(consDeleteLinear)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+   
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+   
+   /* free linear constraint */
+   CHECK_OKAY( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
+
+   return SCIP_OKAY;
+}
+
+
+/** transforms constraint data into data belonging to the transformed problem */ 
+static
+DECL_CONSTRANS(consTransLinear)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+   CONSDATA* sourcedata;
+   CONSDATA* targetdata;
+
+   /*debugMessage("Trans method of linear constraints\n");*/
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
+   assert(sourcecons != NULL);
+   assert(targetcons != NULL);
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
+
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+
+   /* create linear constraint data for target constraint */
+   CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+         sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+
+   /* create target constraint */
+   CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+
+   return SCIP_OKAY;
+}
+
+
+/** LP initialization method of constraint handler */
+static
+DECL_CONSINITLP(consInitlpLinear)
+{  /*lint --e{715}*/
+   int c;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsInitial(conss[c]) )
+      {
+         CHECK_OKAY( addRelaxation(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** separation method of constraint handler */
+static
+DECL_CONSSEPA(consSepaLinear)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+   int c;
+   int depth;
+   int nrounds;
+   int maxsepacuts;
+   int ncuts;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   depth = SCIPgetDepth(scip);
+   nrounds = SCIPgetNSepaRounds(scip);
+
+   /*debugMessage("Sepa method of linear constraints\n");*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call the separator a given number of times at each node */
+   if( (depth == 0 && conshdlrdata->maxroundsroot >= 0 && nrounds >= conshdlrdata->maxroundsroot)
+      || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* get the maximal number of cuts allowed in a separation round */
+   maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
+
+   *result = SCIP_DIDNOTFIND;
+   ncuts = 0;
+
+   /* check all useful linear constraints for feasibility */
+   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
+   {
+      /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+      CHECK_OKAY( separateCons(scip, conss[c], &ncuts) );
+   }
+
+   /* adjust return value */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+ 
+   /* combine linear constraints to get more cuts */
+   /**@todo further cuts of linear constraints */
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for LP solutions */
+static
+DECL_CONSENFOLP(consEnfolpLinear)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+   Bool violated;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /*debugMessage("Enfolp method of linear constraints\n");*/
+
+   /* check for violated constraints
+    * LP is processed at current node -> we can add violated linear constraints to the LP
+    */
+   *result = SCIP_FEASIBLE;
+
+   /* check all useful linear constraints for feasibility */
+   for( c = 0; c < nusefulconss; ++c )
+   {
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violated) );
+      
+      if( violated )
+      {
+         /* insert LP row as cut */
+         CHECK_OKAY( addRelaxation(scip, conss[c]) );
+         *result = SCIP_SEPARATED;
+      }
+   }
+
+   /* check all obsolete linear constraints for feasibility */
+   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   {
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         CHECK_OKAY( addRelaxation(scip, conss[c]) );
+         *result = SCIP_SEPARATED;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+static
+DECL_CONSENFOPS(consEnfopsLinear)
+{  /*lint --e{715}*/
+   Bool violated;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   /*debugMessage("Enfops method of linear constraints\n");*/
+
+   /* if the solution is infeasible anyway due to objective value, skip the enforcement */
+   if( objinfeasible )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* check all linear constraints for feasibility */
+   violated = FALSE;
+   for( c = 0; c < nconss && !violated; ++c )
+   {
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, TRUE, &violated) );
+   }
+
+   if( violated )
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
+/** feasibility check method of constraint handler for integral solutions */
+static
+DECL_CONSCHECK(consCheckLinear)
+{  /*lint --e{715}*/
+   Bool violated;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   /*debugMessage("Check method of linear constraints\n");*/
+
+   /* check all linear constraints for feasibility */
+   violated = FALSE;
+   for( c = 0; c < nconss && !violated; ++c )
+   {
+      CHECK_OKAY( checkCons(scip, conss[c], sol, checklprows, &violated) );
+   }
+
+   if( violated )
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
+/** domain propagation method of constraint handler */
+static
+DECL_CONSPROP(consPropLinear)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+   Bool tightenbounds;
+   Bool cutoff;
+   int nchgbds;
+   int propfreq;
+   int tightenboundsfreq;
+   int depth;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   /*debugMessage("Prop method of linear constraints\n");*/
+
+   /* check, if we want to tighten variable's bounds */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   depth = SCIPgetDepth(scip);
+   propfreq = SCIPconshdlrGetPropFreq(conshdlr);
+   tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
+   tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
+      && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
+
+   cutoff = FALSE;
+   nchgbds = 0;
+
+   /* process useful constraints */
+   for( c = 0; c < nusefulconss && !cutoff; ++c )
+   {
+      CHECK_OKAY( propagateCons(scip, conss[c], tightenbounds, &cutoff, &nchgbds) );
+   }
+
+   /* adjust result code */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( nchgbds > 0 )
+      *result = SCIP_REDUCEDDOM;
+   else
+      *result = SCIP_DIDNOTFIND;
+
+   return SCIP_OKAY;
+}
+
+
 /** presolving method of constraint handler */
 static
 DECL_CONSPRESOL(consPresolLinear)
@@ -5245,7 +5248,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%lld", SCIPgetNConflictClausesFound(scip));
    CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
-         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
 
    /* release the vals buffer */
    SCIPfreeBufferArray(scip, &vals);
@@ -5392,7 +5395,8 @@ RETCODE SCIPcreateConsLinear(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLRDATA* conshdlrdata;
@@ -5418,7 +5422,7 @@ RETCODE SCIPcreateConsLinear(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, removeable) );
+         local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
 }

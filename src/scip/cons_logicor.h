@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.15 2005/02/14 13:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.h,v 1.16 2005/03/21 11:37:30 bzfpfend Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
@@ -51,8 +51,9 @@ RETCODE SCIPcreateConsLogicor(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   Bool             dynamic,            /**< is constraint subject to aging? */
+   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
 /** gets the dual solution of the logic or constraint in the current LP */
