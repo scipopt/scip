@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.115 2004/06/29 17:55:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.116 2004/06/30 10:40:13 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -718,7 +718,7 @@ RETCODE priceAndCutLoop(
          /* apply the priced variables to the LP */
          CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
-         mustprice = !lp->solved || prob->ncolvars != ncolvars;
+         mustprice = !lp->solved || (prob->ncolvars != ncolvars);
          mustsepar = mustsepar || !lp->solved;
          
          /* after adding columns, the LP should be primal feasible such that primal simplex is applicable;
@@ -733,7 +733,7 @@ RETCODE priceAndCutLoop(
          CHECK_OKAY( SCIPpricestoreResetBounds(pricestore, memhdr, set, stat, lp, branchcand, eventqueue) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
-         mustprice = mustprice || !lp->solved || prob->ncolvars != ncolvars;
+         mustprice = mustprice || !lp->solved || (prob->ncolvars != ncolvars);
          mustsepar = mustsepar || !lp->solved;
 
          /* solve LP again after resetting bounds (with dual simplex) */
@@ -784,6 +784,7 @@ RETCODE priceAndCutLoop(
          assert(lp->solved);
          assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
+         mustsepar = FALSE;
          enoughcuts = FALSE;
 
          /* global cut pool separation */
@@ -805,7 +806,7 @@ RETCODE priceAndCutLoop(
          
          /* separate constraints and LP */
          separateagain = TRUE;
-         while( !(*cutoff) && !(*lperror) && separateagain && lp->solved )
+         while( !(*cutoff) && !(*lperror) && separateagain && lp->solved && lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
          {
             separateagain = FALSE;
 
@@ -842,11 +843,15 @@ RETCODE priceAndCutLoop(
                separateagain = TRUE;
             }
          }
-         assert(*cutoff || *lperror || (lp->solved && lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL));
+         assert(*cutoff || *lperror || lp->solved);
+         assert(!lp->solved
+            || lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL
+            || lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE
+            || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT);
 
-         if( *cutoff )
+         if( *cutoff || *lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
          {
-            /* the found cuts are of no use, because the node is infeasible anyway */
+            /* the found cuts are of no use, because the node is infeasible anyway (or we have an error in the LP) */
             CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
          }
          else

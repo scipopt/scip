@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.43 2004/06/01 16:40:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.44 2004/06/30 10:40:13 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1751,37 +1751,6 @@ RETCODE conflictAnalyzeLPDualsol(
          goto TERMINATE;
       }
 
-#if 0 /*??????????????????*/
-      /* add column's bound to dual row lhs: redcost > 0 -> lb, redcost < 0 -> ub */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-      {
-         /* binary variables: use local bound */
-         if( redcosts[c] > 0.0 )
-            bd = getLbLocal(var);
-         else
-            bd = getUbLocal(var);
-      }
-      else
-      {
-         /* local bounds of non-binary variables cannot be used: use global bound */
-         if( redcosts[c] > 0.0 )
-         {
-            bd = SCIPvarGetLbGlobal(var);
-
-            /* if the global bound is infinite, we have to abort */
-            if( SCIPsetIsInfinity(set, -bd) )
-               goto TERMINATE;
-         }
-         else
-         {
-            bd = SCIPvarGetUbGlobal(var);
-
-            /* if the global bound is infinite, we have to abort */
-            if( SCIPsetIsInfinity(set, bd) )
-               goto TERMINATE;
-         }
-      }
-#else
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lbs[c], SCIPvarGetLbGlobal(var)));
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ubs[c], SCIPvarGetUbGlobal(var)));
 
@@ -1798,7 +1767,6 @@ RETCODE conflictAnalyzeLPDualsol(
          if( SCIPsetIsInfinity(set, bd) )
             goto TERMINATE;
       }
-#endif
 
       duallhs += redcosts[c] * bd;
       debugMessage(" col <%s>: loc=[%g,%g], glb=[%g,%g], used=[%g,%g], redcost=%g -> %g\n", 
@@ -2490,7 +2458,7 @@ RETCODE SCIPconflictAnalyzePseudo(
    {
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
       assert(pseudoobjval >= lp->cutoffbound);
-
+      
       debugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
          pseudoobjval, lp->cutoffbound);
 
