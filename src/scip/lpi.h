@@ -245,6 +245,12 @@ RETCODE SCIPlpiSetRealpar(              /**< sets floating point parameter of LP
    Real             dval                /**< parameter value */
    );
 
+extern
+RETCODE SCIPlpiGetObjval(               /**< gets objective value of solution */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            objval              /**< stores the objective value */
+   );
+
 extern 
 RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
    LPI*             lpi,                /**< LP interface structure */
@@ -253,6 +259,12 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    Real*            dualsol,            /**< dual solution vector */
    Real*            slack,              /**< slack vector */
    Real*            redcost             /**< reduced cost vector */
+   );
+
+extern
+RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasibility */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            dualfarkas          /**< dual farkas row multipliers */
    );
 
 extern 
@@ -292,17 +304,7 @@ Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to o
    );
 
 extern 
-Bool SCIPlpiIsDualValid(                /**< returns TRUE iff actual LP solution is dual valid */
-   LPI*             lpi                 /**< LP interface structure */
-   );
-
-extern 
 Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is stable */
-   LPI*             lpi                 /**< LP interface structure */
-   );
-
-extern 
-Bool SCIPlpiIsError(                    /**< returns TRUE iff an error occured while solving the LP */
    LPI*             lpi                 /**< LP interface structure */
    );
 

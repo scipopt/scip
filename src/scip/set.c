@@ -71,8 +71,6 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->feastol = SCIP_DEFAULT_FEASTOL;
    (*set)->memGrowFac = SCIP_DEFAULT_MEMGROWFAC;
    (*set)->memGrowInit = SCIP_DEFAULT_MEMGROWINIT;
-   (*set)->bufGrowFac = SCIP_DEFAULT_BUFGROWFAC;
-   (*set)->bufGrowInit = SCIP_DEFAULT_BUFGROWINIT;
    (*set)->treeGrowFac = SCIP_DEFAULT_TREEGROWFAC;
    (*set)->treeGrowInit = SCIP_DEFAULT_TREEGROWINIT;
    (*set)->pathGrowFac = SCIP_DEFAULT_PATHGROWFAC;
@@ -84,8 +82,15 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->nnodesels = 0;
    (*set)->nodeselssize = 0;
    (*set)->nodesel = NULL;
+   (*set)->disps = NULL;
+   (*set)->ndisps = 0;
+   (*set)->dispssize = 0;
+   (*set)->dispwidth = SCIP_DEFAULT_DISPWIDTH;
+   (*set)->dispfreq = SCIP_DEFAULT_DISPFREQ;
+   (*set)->dispheaderfreq = SCIP_DEFAULT_DISPHEADERFREQ;
    (*set)->maxpricevars = SCIP_DEFAULT_MAXPRICEVARS;
    (*set)->maxsepacuts = SCIP_DEFAULT_MAXSEPACUTS;
+   (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
 
    return SCIP_OKAY;
 }
@@ -111,6 +116,13 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
       CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i]) );
    }
    freeMemoryArray((*set)->nodesels);
+
+   /* free display columns */
+   for( i = 0; i < (*set)->ndisps; ++i )
+   {
+      CHECK_OKAY( SCIPdispFree(&(*set)->disps[i]) );
+   }
+   freeMemoryArray((*set)->disps);
 
    freeMemory(*set);
 
@@ -189,6 +201,34 @@ RETCODE SCIPsetIncludeNodesel(          /**< inserts node selector in node selec
    return SCIP_OKAY;
 }   
 
+RETCODE SCIPsetIncludeDisp(             /**< inserts display column in display column list */
+   SET*             set,                /**< global SCIP settings */
+   DISP*            disp                /**< display column */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(disp != NULL);
+   assert(!SCIPdispIsInitialized(disp));
+
+   if( set->ndisps >= set->dispssize )
+   {
+      set->dispssize = SCIPsetCalcMemGrowSize(set, set->ndisps+1);
+      ALLOC_OKAY( reallocMemoryArray(set->disps, set->dispssize) );
+   }
+   assert(set->ndisps < set->dispssize);
+
+   for( i = set->ndisps; i > 0 && SCIPdispGetPosition(disp) < SCIPdispGetPosition(set->disps[i-1]); --i )
+   {
+      set->disps[i] = set->disps[i-1];
+   }
+   set->disps[i] = disp;
+   set->ndisps++;
+
+   return SCIP_OKAY;
+}   
+
 RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback functions */
    const SET*       set                 /**< global SCIP settings */
    )
@@ -208,6 +248,13 @@ RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback funct
    {
       CHECK_OKAY( SCIPnodeselInit(set->nodesels[i], set->scip) );
    }
+
+   /* display columns */
+   for( i = 0; i < set->ndisps; ++i )
+   {
+      CHECK_OKAY( SCIPdispInit(set->disps[i], set->scip) );
+   }
+   CHECK_OKAY( SCIPdispAutoActivate(set) );
 
    return SCIP_OKAY;
 }
@@ -232,6 +279,12 @@ RETCODE SCIPsetExitCallbacks(           /**< calls exit methods of all user call
       CHECK_OKAY( SCIPnodeselExit(set->nodesels[i], set->scip) );
    }
 
+   /* display columns */
+   for( i = 0; i < set->ndisps; ++i )
+   {
+      CHECK_OKAY( SCIPdispExit(set->disps[i], set->scip) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -241,14 +294,6 @@ int SCIPsetCalcMemGrowSize(             /**< calculate memory size for dynamical
    )
 {
    return calcGrowSize(set->memGrowInit, set->memGrowFac, num);
-}
-
-int SCIPsetCalcBufGrowSize(             /**< calculate memory size for buffer arrays */
-   const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
-   )
-{
-   return calcGrowSize(set->bufGrowInit, set->bufGrowFac, num);
 }
 
 int SCIPsetCalcTreeGrowSize(            /**< calculate memory size for tree array */
@@ -349,7 +394,7 @@ Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than e
    return( val1 >= val2 - set->epsilon );
 }
 
-Bool SCIPsetIsInfinity(                 /**< checks, if value is infinite */
+Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against infinity */
    )

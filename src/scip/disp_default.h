@@ -16,19 +16,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bab.h
- * @brief  branch-and-bound main algorithm
+/**@file   disp_default.c
+ * @brief  default display columns
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __BAB_H__
-#define __BAB_H__
+#ifndef __DISP_DEFAULT_H__
+#define __DISP_DEFAULT_H__
 
 
-#include "def.h"
+#include "scip.h"
 
 
+extern
+RETCODE SCIPincludeDispDefault(         /**< includes the default display columns in SCIP */
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
 #endif

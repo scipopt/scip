@@ -679,7 +679,7 @@ RETCODE SCIPvarCreate(                  /**< creates an original problem variabl
    (*var)->dom.lb = lb;
    (*var)->dom.ub = ub;
    (*var)->obj = obj;
-   (*var)->index = stat->numvaridx++;
+   (*var)->index = stat->nvaridx++;
    (*var)->numuses = 0;
    (*var)->vartype = vartype;
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL;
@@ -711,7 +711,7 @@ RETCODE SCIPvarCreateTransformed(       /**< creates a loose variable belonging 
    (*var)->dom.lb = lb;
    (*var)->dom.ub = ub;
    (*var)->obj = obj;
-   (*var)->index = stat->numvaridx++;
+   (*var)->index = stat->nvaridx++;
    (*var)->numuses = 0;
    (*var)->vartype = vartype;
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE;
@@ -822,6 +822,7 @@ RETCODE SCIPvarTransform(               /**< copies original variable into loose
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
    VAR**            transvar            /**< pointer to transformed variable */
    )
 {
@@ -831,7 +832,7 @@ RETCODE SCIPvarTransform(               /**< copies original variable into loose
    assert(transvar != NULL);
 
    CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
-                  origvar->name, origvar->dom.lb, origvar->dom.ub, origvar->obj, origvar->vartype) );
+                  origvar->name, origvar->dom.lb, origvar->dom.ub, objsense * origvar->obj, origvar->vartype) );
 
    CHECK_OKAY( holelistDuplicate(&(*transvar)->dom.holelist, memhdr, set, origvar->dom.holelist) );
 
@@ -879,19 +880,22 @@ RETCODE SCIPvarFix(                     /**< converts variable into fixed variab
    {
    case SCIP_VARSTATUS_ORIGINAL:
       errorMessage("Cannot fix an original variable");
-      abort();
+      return SCIP_INVALIDDATA;
    case SCIP_VARSTATUS_LOOSE:
+      todoMessage("apply fixings to problem: objoffset, move var from vars to fixedvars array");
+      abort();
       break;
    case SCIP_VARSTATUS_COLUMN:
       /* fix column */
       todoMessage("apply fixings to LP (change rows, offset obj)");
+      todoMessage("apply fixings to problem: objoffset, move var from vars to fixedvars array");
       abort();
       break;
    case SCIP_VARSTATUS_FIXED:
       errorMessage("Cannot fix a fixed variable again");
-      abort();
+      return SCIP_INVALIDDATA;
    case SCIP_VARSTATUS_AGGREGATED:
-      errorMessage("Cannot fix an aggregated variable");
+      todoMessage("fix aggregation variable of aggregated variable, transform aggregated to fixed");
       abort();
    default:
       errorMessage("Unknown variable status");

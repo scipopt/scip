@@ -76,8 +76,14 @@ RETCODE SCIPprobCreate(                 /**< creates problem data structure */
    ALLOC_OKAY( allocMemoryArray((*prob)->name, strlen(name)+1) );
    copyMemoryArray((*prob)->name, name, strlen(name)+1);
 
+   (*prob)->fixedvars = NULL;
    (*prob)->vars = NULL;
    (*prob)->conslist = NULL;
+   (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
+   (*prob)->objoffset = 0.0;
+   (*prob)->objlim = SCIP_INVALID;
+   (*prob)->fixedvarssize = 0;
+   (*prob)->nfixedvars = 0;
    (*prob)->varssize = 0;
    (*prob)->nvars = 0;
    (*prob)->nbin = 0;
@@ -146,7 +152,7 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
    for( v = 0; v < source->nvars; ++v )
    {
-      CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, &targetvar) );
+      CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
       CHECK_OKAY( SCIPprobAddVar(*target, set, targetvar) );
    }
    assert((*target)->nvars == source->nvars);
@@ -289,6 +295,40 @@ RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and 
    return SCIP_OKAY;
 }
 
+void SCIPprobSetObjsense(               /**< sets objective sense: minimization or maximization */
+   PROB*            prob,               /**< problem data */
+   OBJSENSE         objsense            /**< new objective sense */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->objsense == SCIP_OBJSENSE_MAXIMIZE || prob->objsense == SCIP_OBJSENSE_MINIMIZE);
+   assert(objsense == SCIP_OBJSENSE_MAXIMIZE || objsense == SCIP_OBJSENSE_MINIMIZE);
+
+   if( prob->objlim < SCIP_INVALID && objsense != prob->objsense )
+      prob->objlim *= -1;
+   prob->objsense = objsense;
+}
+
+void SCIPprobSetObjlim(                 /**< sets limit on objective function, such that only solutions better than this
+                                           limit are accepted */
+   PROB*            prob,               /**< problem data */
+   Real             objlim              /**< objective limit */
+   )
+{
+   assert(prob != NULL);
+
+   prob->objlim = objlim;
+}
+
+Real SCIPprobExternObjval(              /**< returns the external value of the given internal objective value */
+   PROB*            prob,               /**< problem data */
+   Real             objval              /**< internal objective value */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->objsense * (objval + prob->objoffset);
+}
 
 
 /*

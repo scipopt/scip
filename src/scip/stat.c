@@ -36,9 +36,10 @@ RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
    assert(stat != NULL);
 
    ALLOC_OKAY( allocMemory(*stat) );
-   (*stat)->numvaridx = 0;
-   (*stat)->numcolidx = 0;
-   (*stat)->numrowidx = 0;
+   (*stat)->marked_nvaridx = 0;
+   (*stat)->marked_ncolidx = 0;
+   (*stat)->marked_nrowidx = 0;
+   SCIPstatReset(*stat);
 
    return SCIP_OKAY;
 }
@@ -55,3 +56,42 @@ RETCODE SCIPstatFree(                   /**< frees problem statistics data */
    return SCIP_OKAY;
 }
 
+void SCIPstatMark(                      /**< marks statistics to be able to reset them when solving process is freed */
+   STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+   assert(stat->marked_nvaridx == -1);
+   assert(stat->marked_ncolidx == -1);
+   assert(stat->marked_nrowidx == -1);
+   assert(stat->nlp == 0);
+   assert(stat->nprimallp == 0);
+   assert(stat->nduallp == 0);
+
+   stat->marked_nvaridx = stat->nvaridx;
+   stat->marked_ncolidx = stat->ncolidx;
+   stat->marked_nrowidx = stat->nrowidx;
+}
+
+void SCIPstatReset(                     /**< reset statistics to the data before solving started */
+   STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+   assert(stat->marked_nvaridx >= 0);
+   assert(stat->marked_ncolidx >= 0);
+   assert(stat->marked_nrowidx >= 0);
+   
+   stat->nvaridx = stat->marked_nvaridx;
+   stat->ncolidx = stat->marked_ncolidx;
+   stat->nrowidx = stat->marked_nrowidx;
+   stat->nlp = 0;
+   stat->nprimallp = 0;
+   stat->nduallp = 0;
+   stat->nnodes = 0;
+   stat->lastdispnode = 0;
+
+   stat->marked_nvaridx = -1;
+   stat->marked_ncolidx = -1;
+   stat->marked_nrowidx = -1;
+}

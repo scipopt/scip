@@ -21,6 +21,32 @@
  * @author Tobias Achterberg
  */
 
+/** Linear constraints can be stored in two different ways: as LP rows with
+ *  coefficients for the columns, or as LINCONS objects with coefficients for
+ *  the variables. The second way is needed to be able to create the constraints
+ *  before the solution process started, and before the necessary columns exist.
+ *  At the first moment, a linear constraint is separated, it gets converted into
+ *  an LP row.
+ *
+ *  Linear constraints are separated with a high priority, because they are easy
+ *  to separate. The cut pool is implemented by adding linear constraints to the
+ *  root node, such that it is separated each time, the linear constraints are
+ *  separated. A constraint handler, which generates cuts for the pool should have
+ *  a lower separation priority than the linear constraint handler, and it should
+ *  have a separation frequency that is a multiple of the frequency of the linear
+ *  constraint handler. In this way, it can be avoided to separate the same cut
+ *  twice, because if a separation run of the handler is always preceded by a
+ *  separation of the linear constraints, the pooled cuts are always satisfied.
+ *
+ *  Linear constraints are enforced and checked with a very low priority. Checking
+ *  of (many) linear constraints is much more involved than checking the solution
+ *  values for integrality. Because we are separating the linear constraints quite
+ *  often, it is only necessary to enforce them for integral solutions. A constraint
+ *  handler which generates pool cuts in its enforcing method should have an
+ *  enforcing priority smaller than that of the linear constraint handler to avoid
+ *  regenerating cuts which are already in the cut pool.
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -196,7 +222,7 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
    Bool found;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(nconss == 0 || conss != NULL);
    assert(nconss >= 0);
@@ -279,7 +305,7 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
 DECL_CONSINIT(SCIPconsInitLinear)
 {
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
    infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "initialise linear constraint handler");
@@ -290,7 +316,7 @@ DECL_CONSINIT(SCIPconsInitLinear)
 DECL_CONSEXIT(SCIPconsExitLinear)
 {
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
    infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "exit linear constraint handler");
@@ -301,7 +327,7 @@ DECL_CONSEXIT(SCIPconsExitLinear)
 DECL_CONSFREE(SCIPconsFreeLinear)
 {
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(consdata != NULL);
    assert(*consdata != NULL);
@@ -326,9 +352,9 @@ DECL_CONSTRAN(SCIPconsTranLinear)
    debugMessage("Tran method of linear constraints\n");
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
-   assert(SCIPstage(scip) == SCIP_STAGE_SOLVING);
+   assert(SCIPstage(scip) == SCIP_STAGE_INITSOLVE);
    assert(sourcedata != NULL);
    assert(!sourcedata->islprow);  /* in original problem, there cannot be LP rows */
    assert(sourcedata->data.lincons != NULL);
@@ -350,7 +376,7 @@ DECL_CONSSEPA(SCIPconsSepaLinear)
    RETCODE retcode;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
    debugMessage("Sepa method of linear constraints\n");
@@ -371,7 +397,7 @@ DECL_CONSSEPA(SCIPconsSepaLinear)
 DECL_CONSENFO(SCIPconsEnfoLinear)
 {
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
    debugMessage("Enfo method of linear constraints\n");
@@ -383,7 +409,7 @@ DECL_CONSENFO(SCIPconsEnfoLinear)
 DECL_CONSCHCK(SCIPconsChckLinear)
 {
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
    todoMessage("Chck method of linear constraints");
@@ -394,7 +420,7 @@ DECL_CONSCHCK(SCIPconsChckLinear)
 DECL_CONSPROP(SCIPconsPropLinear)
 {
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
    todoMessage("Prop method of linear constraints");

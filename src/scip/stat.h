@@ -36,9 +36,17 @@ typedef struct Stat STAT;               /**< problem and runtime specific statis
 /** problem and runtime specific statistics */
 struct Stat
 {
-   int              numvaridx;          /**< number of used variable indices */
-   int              numcolidx;          /**< number of used column indices */
-   int              numrowidx;          /**< number of used row indices */
+   int              nvaridx;            /**< number of used variable indices */
+   int              ncolidx;            /**< number of used column indices */
+   int              nrowidx;            /**< number of used row indices */
+   int              marked_nvaridx;     /**< number of used variable indices before solving started */
+   int              marked_ncolidx;     /**< number of used column indices before solving started */
+   int              marked_nrowidx;     /**< number of used row indices before solving started */
+   int              nlp;                /**< number of LPs solved (primal + dual) */
+   int              nprimallp;          /**< number of primal LPs solved */
+   int              nduallp;            /**< number of dual LPs solved */
+   int              nnodes;             /**< number of nodes processed (including active node) */
+   int              lastdispnode;       /**< last node for which an information line was displayed */
 };
 
 
@@ -50,6 +58,16 @@ RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
 extern
 RETCODE SCIPstatFree(                   /**< frees problem statistics data */
    STAT**           stat                /**< pointer to problem statistics data */
+   );
+
+extern
+void SCIPstatMark(                      /**< marks statistics to be able to reset them when solving process is freed */
+   STAT*            stat                /**< problem statistics data */
+   );
+
+extern
+void SCIPstatReset(                     /**< reset statistics to the data before solving started */
+   STAT*            stat                /**< problem statistics data */
    );
 
 #endif

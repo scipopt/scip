@@ -27,31 +27,31 @@
 
 #include "cons.h"
 #include "var.h"
+#include "disp.h"
 #include "solve.h"
 
 
 static
 RETCODE solveDualLP(                    /**< solves the LP with dual simplex algorithm */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   LP*              lp                  /**< LP data */
+   LP*              lp,                 /**< LP data */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(lp != NULL);
 
    if( !lp->solved )
    {
-      LPSOLSTAT lpsolstat;
-      
-      CHECK_OKAY( SCIPlpSolveDual(lp, set, memhdr, &lpsolstat) );
-      switch( lpsolstat )
+      CHECK_OKAY( SCIPlpSolveDual(lp, set, memhdr, stat) );
+      switch( SCIPlpGetSolstat(lp) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
          CHECK_OKAY( SCIPlpGetSol(lp, set, memhdr) );
-         break;
+         return SCIP_FEASIBLE;
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         todoMessage("LP infeasibility processing");
-         return SCIP_ERROR;
+         CHECK_OKAY( SCIPlpGetDualfarkas(lp, set, memhdr) );
+         return SCIP_INFEASIBLE;
       case SCIP_LPSOLSTAT_UNBOUNDED:
          todoMessage("LP unboundness processing");
          return SCIP_ERROR;
@@ -69,32 +69,55 @@ RETCODE solveDualLP(                    /**< solves the LP with dual simplex alg
          return SCIP_ERROR;
       }
    }
-
+   else
+   {
+      switch( SCIPlpGetSolstat(lp) )
+      {
+      case SCIP_LPSOLSTAT_OPTIMAL:
+         return SCIP_FEASIBLE;
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+         return SCIP_INFEASIBLE;
+      case SCIP_LPSOLSTAT_UNBOUNDED:
+         todoMessage("LP unboundness processing");
+         return SCIP_ERROR;
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+         errorMessage("LP solver reached iteration limit -- this should not happen!");
+         return SCIP_ERROR;
+      case SCIP_LPSOLSTAT_TIMELIMIT:
+         todoMessage("time limit exceeded processing");
+         return SCIP_ERROR;
+      case SCIP_LPSOLSTAT_ERROR:
+         errorMessage("Error in LP solver");
+         return SCIP_LPERROR;
+      default:
+         errorMessage("Unknown LP solution status");
+         return SCIP_ERROR;
+      }
+   }
    return SCIP_OKAY;
 }
 
 static
 RETCODE solvePrimalLP(                  /**< solves the LP with primal simplex algorithm */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   LP*              lp                  /**< LP data */
+   LP*              lp,                 /**< LP data */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(lp != NULL);
 
    if( !lp->solved )
    {
-      LPSOLSTAT lpsolstat;
-      
-      CHECK_OKAY( SCIPlpSolvePrimal(lp, set, memhdr, &lpsolstat) );
-      switch( lpsolstat )
+      CHECK_OKAY( SCIPlpSolvePrimal(lp, set, memhdr, stat) );
+      switch( SCIPlpGetSolstat(lp) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
          CHECK_OKAY( SCIPlpGetSol(lp, set, memhdr) );
-         break;
+         return SCIP_FEASIBLE;
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         todoMessage("LP infeasibility processing");
-         return SCIP_ERROR;
+         CHECK_OKAY( SCIPlpGetDualfarkas(lp, set, memhdr) );
+         return SCIP_INFEASIBLE;
       case SCIP_LPSOLSTAT_UNBOUNDED:
          todoMessage("LP unboundness processing");
          return SCIP_ERROR;
@@ -112,13 +135,36 @@ RETCODE solvePrimalLP(                  /**< solves the LP with primal simplex a
          return SCIP_ERROR;
       }
    }
-
-   return SCIP_OKAY;
+   else
+   {
+      switch( SCIPlpGetSolstat(lp) )
+      {
+      case SCIP_LPSOLSTAT_OPTIMAL:
+         return SCIP_FEASIBLE;
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+         return SCIP_INFEASIBLE;
+      case SCIP_LPSOLSTAT_UNBOUNDED:
+         todoMessage("LP unboundness processing");
+         return SCIP_ERROR;
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+         errorMessage("LP solver reached iteration limit -- this should not happen!");
+         return SCIP_ERROR;
+      case SCIP_LPSOLSTAT_TIMELIMIT:
+         todoMessage("time limit exceeded processing");
+         return SCIP_ERROR;
+      case SCIP_LPSOLSTAT_ERROR:
+         errorMessage("Error in LP solver");
+         return SCIP_LPERROR;
+      default:
+         errorMessage("Unknown LP solution status");
+         return SCIP_ERROR;
+      }
+   }
 }
 
 static
 RETCODE solveNodeLP(                    /**< solve a single node with price and cut */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -151,7 +197,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
     * -> dual simplex is applicable as first solver
     */
    debugMessage("dual solve\n");
-   CHECK_OKAY( solveDualLP(set, memhdr, lp) );
+   CHECK_OKAY( solveDualLP(set, memhdr, lp, stat) );
    assert(lp->solved);
 
    /* price-and-cut loop */
@@ -166,14 +212,14 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
       {
          assert(lp->solved);
 
-         debugMessage("pricing\n");
+         debugMessage("pricing:\n");
          CHECK_OKAY( SCIPpriceVars(price, set, memhdr, stat, prob, lp, tree) );
          mustprice = !lp->solved;
          mustsepar |= !lp->solved;
             
          /* solve LP with primal simplex */
          debugMessage("pricing: primal solve\n");
-         CHECK_OKAY( solvePrimalLP(set, memhdr, lp) );
+         CHECK_OKAY( solvePrimalLP(set, memhdr, lp, stat) );
          assert(lp->solved);
          
          /* reset bounds temporarily set by pricer to their original values */
@@ -184,7 +230,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
 
          /* solve LP with dual simplex */
          debugMessage("reset bounds: dual solve\n");
-         CHECK_OKAY( solveDualLP(set, memhdr, lp) );
+         CHECK_OKAY( solveDualLP(set, memhdr, lp, stat) );
          assert(lp->solved);
       }
 
@@ -214,28 +260,28 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
          
          /* solve LP with dual simplex */
          debugMessage("separation: dual solve\n");
-         CHECK_OKAY( solveDualLP(set, memhdr, lp) );
+         CHECK_OKAY( solveDualLP(set, memhdr, lp, stat) );
          assert(lp->solved);
       }
    }
 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
-   /* tree->pathnlpcols[tree->actnode->depth] = lp->ncols;  ???
-    * tree->pathnlprows[tree->actnode->depth] = lp->nrows;  ???
-    */
+   tree->actnode->lowerbound = SCIPlpGetObjval(lp);
+
    return SCIP_OKAY;
 }
 
 RETCODE SCIPsolveCIP(                   /**< main solving loop */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
-   SEPA*            sepa                /**< separation storage */
+   SEPA*            sepa,               /**< separation storage */
+   PRIMAL*          primal              /**< primal data */
    )
 {
    CONSHDLR** conshdlrs_sepa;
@@ -246,8 +292,6 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    Bool feasible;
    Bool resolved;
    int h;
-   int NODES = 0;
-   todoMessage("+++++++++++++++++++++++++++++++ REMOVE NODES");
 
    assert(set != NULL);
    assert(memhdr != NULL);
@@ -255,6 +299,9 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    assert(prob != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
+   assert(price != NULL);
+   assert(sepa != NULL);
+   assert(primal != NULL);
 
    /* sort constraint handlers by priorities */
    duplicateMemoryArray(conshdlrs_sepa, set->conshdlrs, set->nconshdlrs);
@@ -275,19 +322,22 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
 
       if( actnode != NULL )
       {
-         debugMessage("Processing node in depth %d\n", SCIPnodeGetDepth(actnode));
+         stat->nnodes++;
+
+         debugMessage("Processing node %d in depth %d\n", stat->nnodes, SCIPnodeGetDepth(actnode));
          
          /* presolve node */
          todoMessage("node presolving + domain propagation");
          
 #ifndef NDEBUG
          debugMessage("actual pseudosolution: ");
-         SCIPsolPrint(tree->actpseudosol, set, NULL);
+         debug( SCIPsolPrint(tree->actpseudosol, set, NULL) );
 #endif
 
          /* solve node */
          todoMessage("decide whether to solve the LP or not");
-         if( TRUE )
+#if 0
+         if( ... )
          {
             CHECK_OKAY( solveNodeLP(set, memhdr, stat, prob, tree, lp, price, sepa, conshdlrs_sepa) );
          }
@@ -295,6 +345,9 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
          {
             CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
          }
+#else
+         CHECK_OKAY( solveNodeLP(set, memhdr, stat, prob, tree, lp, price, sepa, conshdlrs_sepa) );
+#endif
 
          /* enforce constraints by branching, applying additional cutting planes, or introducing new constraints */
          assert(SCIPsepaGetNCuts(sepa) == 0);
@@ -339,21 +392,26 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
          }
          if( feasible )
          {
+            SOL* sol;
+
             /* found a feasible solution */
             assert(!resolved);
-            todoMessage("feasible solution found");
+            CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, set, stat, lp) );
+            CHECK_OKAY( SCIPprimalAddSol(primal, memhdr, set, stat, tree, lp, &sol) );
          }
 
          /* call primal heuristics */
          todoMessage("primal heuristics");
-         
+
+         /* display node information line */
+         CHECK_OKAY( SCIPdispPrintLine(set, stat, FALSE) );
+
          debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
             SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
          debugMessage("**********************************************************************\n");
       }
-      NODES++; /* ??? */
    }
-   while( actnode != NULL && NODES < 2 ); /* ??? */
+   while( actnode != NULL );
 
    debugMessage("Problem solving finished\n");
 

@@ -204,37 +204,6 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    );
 
 extern
-RETCODE SCIPnodeToDeadend(              /**< converts the active node into a deadend node */
-   NODE*            node,               /**< node to convert */
-   MEMHDR*          memhdr,             /**< block memory buffers */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
-   );
-
-extern
-RETCODE SCIPnodeToJunction(             /**< converts the active node into a junction node */
-   NODE*            node,               /**< node to convert */
-   MEMHDR*          memhdr,             /**< block memory */
-   TREE*            tree                /**< branch-and-bound tree */
-   );
-
-extern
-RETCODE SCIPnodeToFork(                 /**< converts the active node into a fork node */
-   NODE*            node,               /**< node to convert */
-   MEMHDR*          memhdr,             /**< block memory */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
-   );
-
-extern
-RETCODE SCIPnodeToSubroot(              /**< converts the active node into a subroot node */
-   NODE*            node,               /**< node to convert */
-   MEMHDR*          memhdr,             /**< block memory */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp                  /**< actual LP data */
-   );
-
-extern
 RETCODE SCIPnodeAddCons(                /**< adds local constraint to the node and captures it */
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -279,6 +248,7 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp,                 /**< actual LP data */
    PROB*            prob                /**< problem data */
    );
@@ -289,6 +259,15 @@ RETCODE SCIPtreeFree(                   /**< frees tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
+   );
+
+extern
+RETCODE SCIPtreeCutoff(                 /**< cuts off nodes with lower bound not better than given upper bound */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    );
 
 extern
@@ -341,6 +320,12 @@ NODE* SCIPtreeGetBestLeaf(              /**< gets the best leaf from the node qu
 
 extern
 NODE* SCIPtreeGetBestNode(              /**< gets the best node from the tree (child, sibling, or leaf) */
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+Real SCIPtreeGetLowerbound(             /**< gets the minimal lower bound of all nodes in the tree */
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set                 /**< global SCIP settings */
    );

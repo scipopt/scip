@@ -27,6 +27,14 @@
 #define __PROB_H__
 
 
+/**< objective sense: minimization or maximization */
+enum Objsense
+{
+   SCIP_OBJSENSE_MAXIMIZE = -1,         /**< maximization of objective function */
+   SCIP_OBJSENSE_MINIMIZE = +1          /**< minimization of objective function (the default) */
+};
+typedef enum Objsense OBJSENSE;
+
 typedef struct Prob PROB;               /**< main problem to solve */
 
 
@@ -42,8 +50,14 @@ typedef struct Prob PROB;               /**< main problem to solve */
 struct Prob
 {
    char*            name;               /**< problem name */
-   VAR**            vars;               /**< array with problem variables ordered binary, integer, implicit, continous */
+   VAR**            fixedvars;          /**< array with fixed and aggregated variables */
+   VAR**            vars;               /**< array with non-fixed variables ordered binary, integer, implicit, continous */
    CONSLIST*        conslist;           /**< list of constraints of the problem */
+   OBJSENSE         objsense;           /**< objective sense */
+   Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
+   Real             objlim;             /**< objective limit for non-fixed variables */
+   int              fixedvarssize;      /**< available slots in fixedvars array */
+   int              nfixedvars;         /**< number of fixed and aggregated variables in the problem */
    int              varssize;           /**< available slots in vars array */
    int              nvars;              /**< number of variables in the problem (number of used slots in vars array) */
    int              nbin;               /**< number of binary variables */
@@ -111,6 +125,24 @@ RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and 
    CONS*            cons                /**< constraint to add */
    );
 
+extern
+void SCIPprobSetObjsense(               /**< sets objective sense: minimization or maximization */
+   PROB*            prob,               /**< problem data */
+   OBJSENSE         objsense            /**< new objective sense */
+   );
+
+extern
+void SCIPprobSetObjlim(                 /**< sets limit on objective function, such that only solutions better than this
+                                           limit are accepted */
+   PROB*            prob,               /**< problem data */
+   Real             objlim              /**< objective limit */
+   );
+
+extern
+Real SCIPprobExternObjval(              /**< returns the external value of the given internal objective value */
+   PROB*            prob,               /**< problem data */
+   Real             objval              /**< internal objective value */
+   );
 
 
 /*

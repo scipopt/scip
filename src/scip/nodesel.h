@@ -66,6 +66,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 
 
+
 #include "scip.h"
 #include "retcode.h"
 #include "set.h"
@@ -74,7 +75,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 
 
 extern
-RETCODE SCIPnodepqInit(                 /**< initializes node priority queue */
+RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
    NODEPQ**         nodepq              /**< pointer to a node priority queue */
    );
 
@@ -116,6 +117,22 @@ int SCIPnodepqLen(                      /**< returns the number of nodes stored 
    );
 
 extern
+Real SCIPnodepqGetLowerbound(           /**< gets the minimal lower bound of all nodes in the queue */
+   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+RETCODE SCIPnodepqBound(                /**< free all nodes from the queue that are cut off by the given upper bound */
+   NODEPQ*          nodepq,             /**< pointer to a node priority queue */
+   MEMHDR*          memhdr,             /**< block memory buffer */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   );
+
+extern
 RETCODE SCIPnodeselCreate(              /**< creates a node selector */
    NODESEL**        nodesel,            /**< pointer to store node selector */
    const char*      name,               /**< name of node selector */
@@ -124,12 +141,13 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
    DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
    DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
    DECL_NODESELCOMP((*nodeselcomp)),    /**< node comparison method */
-   NODESELDATA*     nodeseldata         /**< node selector data */
+   NODESELDATA*     nodeseldata,        /**< node selector data */
+   Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    );
 
 extern
-RETCODE SCIPnodeselFree(                /**< frees memory of constraint handler */
-   NODESEL**        nodesel             /**< pointer to constraint handler data structure */
+RETCODE SCIPnodeselFree(                /**< frees memory of node selector */
+   NODESEL**        nodesel             /**< pointer to node selector data structure */
    );
 
 extern

@@ -107,9 +107,33 @@ typedef double Real;                    /**< type used for floating point values
  * Pricing
  */
 
-#define SCIP_DEFAULT_MAXPRICEVARS    16      /**< maximal number of variables priced in per pricing round */
-#define SCIP_DEFAULT_MAXSEPACUTS     16      /**< maximal number of cuts separated per separation round */
-#define SCIP_PRICE_SCALELOOSE         1.0E-4 /**< scaling for pricing score of loose variables */
+#define SCIP_DEFAULT_MAXPRICEVARS    16 /**< maximal number of variables priced in per pricing round */
+
+
+
+/*
+ * Cut Separation
+ */
+
+#define SCIP_DEFAULT_MAXSEPACUTS     16 /**< maximal number of cuts separated per separation round */
+
+
+
+/*
+ * Primal Solutions
+ */
+
+#define SCIP_DEFAULT_MAXSOL         256 /**< maximal number of solutions to store in the solution storage */
+
+
+
+/*
+ * Display
+ */
+
+#define SCIP_DEFAULT_DISPWIDTH      120 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPFREQ         1 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPHEADERFREQ  15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
 
@@ -118,7 +142,7 @@ typedef double Real;                    /**< type used for floating point values
  */
 
 #define SCIP_SAFEMEMORY                 /**< use memory leakage detection in debug mode */
-#define SCIP_BLOCKMEMORY                /**< use block memory */
+/*#define SCIP_BLOCKMEMORY*/                /**< use block memory */
 
 
 
@@ -126,8 +150,8 @@ typedef double Real;                    /**< type used for floating point values
  * Debugging
  */
 
-#define DEBUG 1
-
+/*#define DEBUG 1*/
+/*#define TODOMESSAGE 1*/
 
 
 #endif

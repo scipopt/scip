@@ -66,6 +66,7 @@ typedef struct Var VAR;                 /**< variable of the problem */
 #include "lp.h"
 #include "stat.h"
 #include "tree.h"
+#include "prob.h"
 
 
 /** domain of a variable */
@@ -263,6 +264,7 @@ RETCODE SCIPvarTransform(               /**< copies original variable into trans
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
    VAR**            transvar            /**< pointer to transformed variable */
    );
 

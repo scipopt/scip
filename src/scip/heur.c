@@ -16,50 +16,35 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   message.c
- * @brief  message output methods
+/**@file   heur.c
+ * @brief  methods and datastructures for primal heuristics
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdio.h>
 #include <assert.h>
 
-#include "message.h"
+#include "heur.h"
 
 
-void errorMessage_call(                 /**< prints an error message */
-   const char*      msg,                /**< message to print */
-   const char*      filename,           /**< name of the file, where the error occured */
-   int              line                /**< line of the file, where the error occured */
+/** primal heuristics data */
+struct Heur
+{
+   char*            name;               /**< name of primal heuristic */
+   char*            desc;               /**< description of primal heuristic */
+   char             dispchar;           /**< display character of primal heuristic */
+   unsigned int     initialized:1;      /**< is primal heuristic initialized? */
+};
+
+
+
+char SCIPheurGetDispchar(               /**< gets display character of primal heuristic */
+   HEUR*            heur                /**< primal heuristic */
    )
 {
-   fprintf(stderr, "[%s:%d] ERROR: %s\n", filename, line, msg);
+   if( heur == NULL )
+      return 'f';
+   else
+      return heur->dispchar;
 }
-
-void todoMessage_call(                  /**< prints a todo message */
-   const char*      msg,                /**< message to print */
-   const char*      filename,           /**< name of the file, where the error occured */
-   int              line                /**< line of the file, where the error occured */
-   )
-{
-   fprintf(stderr, "[%s:%d] TODO: %s\n", filename, line, msg);
-}
-
-void infoMessage(                       /**< prints a message depending on the verbosity level */
-   VERBLEVEL        verblevel,          /**< actual verbosity level */
-   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      msg                 /**< message to print */
-   )
-{
-   assert(verblevel > SCIP_VERBLEVEL_NONE);
-   assert(verblevel <= SCIP_VERBLEVEL_FULL);
-
-   if( msgverblevel <= verblevel )
-   {
-      printf(msg);
-      printf("\n");
-   }
-}
-

@@ -45,6 +45,7 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "scip.h"
 #include "cons.h"
 #include "nodesel.h"
+#include "disp.h"
 #include "lp.h"
 #include "message.h"
 
@@ -59,21 +60,26 @@ struct Set
    Real             feastol;            /**< LP feasibility tolerance */
    Real             memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
    int              memGrowInit;        /**< initial size of dynamically allocated arrays */
-   Real             bufGrowFac;         /**< memory growing factor for buffer arrays */
-   int              bufGrowInit;        /**< initial size of buffer arrays */
    Real             treeGrowFac;        /**< memory growing factor for tree array */
    int              treeGrowInit;       /**< initial size of tree array */
    Real             pathGrowFac;        /**< memory growing factor for path array */
    int              pathGrowInit;       /**< initial size of path array */
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
-   int              conshdlrssize;      /**< size of conshdlr array */
+   int              conshdlrssize;      /**< size of conshdlrs array */
    NODESEL**        nodesels;           /**< node selectors */
    int              nnodesels;          /**< number of node selectors */
-   int              nodeselssize;       /**< size of nodesel array */
+   int              nodeselssize;       /**< size of nodesels array */
    NODESEL*         nodesel;            /**< active node selector */
+   DISP**           disps;              /**< display columns */
+   int              ndisps;             /**< number of display columns */
+   int              dispssize;          /**< size of disps array */
+   int              dispwidth;          /**< maximal number of characters in a node information line */
+   int              dispfreq;           /**< frequency for displaying node information lines */
+   int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
    int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
+   int              maxsol;             /**< maximal number of solutions to store in the solution storage */
 };
 
 
@@ -108,6 +114,12 @@ RETCODE SCIPsetIncludeNodesel(          /**< inserts node selector in node selec
    );
 
 extern
+RETCODE SCIPsetIncludeDisp(             /**< inserts display column in display column list */
+   SET*             set,                /**< global SCIP settings */
+   DISP*            disp                /**< display column */
+   );
+
+extern
 RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback functions */
    const SET*       set                 /**< global SCIP settings */
    );
@@ -119,12 +131,6 @@ RETCODE SCIPsetExitCallbacks(           /**< calls exit methods of all user call
 
 extern
 int SCIPsetCalcMemGrowSize(             /**< calculate memory size for dynamically allocated arrays */
-   const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
-   );
-
-extern
-int SCIPsetCalcBufGrowSize(             /**< calculate memory size for buffer arrays */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    );
@@ -190,7 +196,7 @@ Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than e
    );
 
 extern
-Bool SCIPsetIsInfinity(                 /**< checks, if value is infinite */
+Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against infinity */
    );

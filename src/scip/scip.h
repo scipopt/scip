@@ -50,11 +50,12 @@
 /** SCIP operation stage */
 enum Stage
 {
-   SCIP_STAGE_UNINIT  = 0,              /**< SCIP datastructures are not initialized */
-   SCIP_STAGE_INIT    = 1,              /**< SCIP datastructures are initialized, no problem exists */
-   SCIP_STAGE_PROBLEM = 2,              /**< the problem is being created and modified */
-   SCIP_STAGE_SOLVING = 3,              /**< the problem is being solved */
-   SCIP_STAGE_SOLVED  = 4               /**< the problem was solved */
+   SCIP_STAGE_INIT      = 0,            /**< SCIP datastructures are initialized, no problem exists */
+   SCIP_STAGE_PROBLEM   = 1,            /**< the problem is being created and modified */
+   SCIP_STAGE_INITSOLVE = 2,            /**< the solving process data is being initialized */
+   SCIP_STAGE_SOLVING   = 3,            /**< the problem is being solved */
+   SCIP_STAGE_SOLVED    = 4,            /**< the problem was solved */
+   SCIP_STAGE_FREESOLVE = 5             /**< the solving process data is being freed */
 };
 typedef enum Stage STAGE;
 
@@ -73,6 +74,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "lp.h"
 #include "tree.h"
 #include "nodesel.h"
+#include "disp.h"
 
 
 #define CHECK_SCIP(x) { RETCODE _retcode_; \
@@ -140,6 +142,12 @@ RETCODE SCIPcreateProb(                 /**< creates empty problem and initializ
 extern
 RETCODE SCIPfreeProb(                   /**< frees problem and branch-and-bound data structures */
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+extern
+RETCODE SCIPsetObjsense(                /**< sets objective sense of problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   OBJSENSE         objsense            /**< new objective sense */
    );
 
 extern
@@ -272,11 +280,6 @@ RETCODE SCIPfindConsHdlr(               /**< finds the constraint handler of the
    );
 
 extern
-const char* SCIPgetConsHdlrName(        /**< gets name of constraint handler */
-   CONSHDLR*        conshdlr            /**< constraint handlert */
-   );
-
-extern
 RETCODE SCIPincludeNodesel(             /**< creates a node selector and includes it in SCIP */
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of node selector */
@@ -285,12 +288,24 @@ RETCODE SCIPincludeNodesel(             /**< creates a node selector and include
    DECL_NODESELEXIT((*nodeselexit)),    /**< deinitialise node selector */
    DECL_NODESELSLCT((*nodeselslct)),    /**< node selection method */
    DECL_NODESELCOMP((*nodeselcomp)),    /**< node comparison method */
-   NODESELDATA*     nodeseldata         /**< node selector data */
+   NODESELDATA*     nodeseldata,        /**< node selector data */
+   Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    );
 
 extern
-const char* SCIPgetNodeselName(         /**< gets name of node selector */
-   NODESEL*         nodesel             /**< node selector */
+RETCODE SCIPincludeDisp(                /**< creates a display column and includes it in SCIP */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of display column */
+   const char*      desc,               /**< description of display column */
+   const char*      header,             /**< head line of display column */
+   DECL_DISPINIT((*dispinit)),          /**< initialise display column */
+   DECL_DISPEXIT((*dispexit)),          /**< deinitialise display column */
+   DECL_DISPOUTP((*dispoutp)),          /**< output method */
+   DISPDATA*        dispdata,           /**< display column data */
+   int              width,              /**< width of display column (no. of chars used) */
+   int              priority,           /**< priority of display column */
+   int              position,           /**< relative position of display column */
+   Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
    );
 
 extern
@@ -393,6 +408,36 @@ RETCODE SCIPgetBestNode(                /**< gets the best node from the tree (c
    );
 
 extern
+RETCODE SCIPgetNodenum(                 /**< gets number of processed nodes, including the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             nodenum             /**< pointer to store the number of processed nodes */
+   );
+
+extern
+RETCODE SCIPgetNNodesLeft(              /**< gets number of nodes left in the tree (children + siblings + leaves) */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             nnodes              /**< pointer to store the number of processed nodes */
+   );
+
+extern
+RETCODE SCIPgetDualBound(               /**< gets actual dual bound */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            dualbound           /**< pointer to store the dual bound */
+   );
+
+extern
+RETCODE SCIPgetPrimalBound(             /**< gets actual primal bound */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            primalbound         /**< pointer to store the primal bound */
+   );
+
+extern
+RETCODE SCIPgetBestSol(                 /**< gets best feasible primal solution found so far */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol                 /**< pointer to store the solution, returns NULL if no solution available */
+   );
+
+extern
 VERBLEVEL SCIPverbLevel(                /**< gets verbosity level for message output */
    SCIP*            scip                /**< SCIP data structure */
    );
@@ -459,7 +504,7 @@ Bool SCIPisGE(                          /**< checks, if val1 is not (more than e
    );
 
 extern
-Bool SCIPisInfinity(                    /**< checks, if value is infinite */
+Bool SCIPisInfinity(                    /**< checks, if value is (positive) infinite */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against infinity */
    );

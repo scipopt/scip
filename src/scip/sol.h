@@ -17,7 +17,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.h
- * @brief  datastructures and methods for storing primal IP solutions
+ * @brief  datastructures and methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */
 
@@ -27,52 +27,81 @@
 #define __SOL_H__
 
 
-typedef struct Sol SOL;                 /**< primal IP solution */
+typedef struct Sol SOL;                 /**< primal CIP solution */
 
 
 #include "def.h"
 #include "retcode.h"
 #include "memory.h"
+#include "stat.h"
 #include "var.h"
+#include "heur.h"
 
 
-/** primal IP solution (variables with index < firstindex or index >= firstindex+nvals have solution value 0.0) */
+/** primal CIP solution (variables with index < firstindex or index >= firstindex+nvals have solution value 0.0) */
 struct Sol
 {
+   HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
    VAR**            vars;               /**< variables in the index range */
    Real*            vals;               /**< solution values for variables in the index range */
    Real             obj;                /**< objective value of solution */
    int              nvals;              /**< number of values in the index range of solution */
    int              valssize;           /**< size of vars and vals array */
    int              firstindex;         /**< first index of the index range */
+   int              numuses;            /**< number of times, this solution is referenced */
+   int              nodenum;            /**< node number, where this solution was found */
 };
 
 
 extern
-RETCODE SCIPsolCreate(                  /**< creates primal IP solution */
-   SOL**            sol,                /**< pointer to primal IP solution */
-   MEMHDR*          memhdr              /**< block memory */
+RETCODE SCIPsolCreate(                  /**< creates primal CIP solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   STAT*            stat,               /**< problem statistics data */
+   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's an LP solution) */
    );
 
 extern
-void SCIPsolFree(                       /**< frees primal IP solution */
-   SOL**            sol,                /**< pointer to primal IP solution */
+RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern
-void SCIPsolClear(                      /**< clears primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+void SCIPsolFree(                       /**< frees primal CIP solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern
-RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+void SCIPsolCapture(                    /**< increases usage counter of primal CIP solution */
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
+extern
+void SCIPsolRelease(                    /**< decreases usage counter of primal CIP solution, frees memory if necessary */
+   SOL**            sol,                /**< pointer to primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
+void SCIPsolClear(                      /**< clears primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
+RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to add to solution */
@@ -80,8 +109,8 @@ RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal IP
    );
 
 extern
-RETCODE SCIPsolIncVal(                  /**< increases value of variable in primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+RETCODE SCIPsolIncVal(                  /**< increases value of variable in primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to add to solution */
@@ -89,24 +118,27 @@ RETCODE SCIPsolIncVal(                  /**< increases value of variable in prim
    );
 
 extern
-RETCODE SCIPsolCopyLPSol(               /**< copys LP solution to primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
-   );
-
-extern
-Real SCIPsolGetVal(                     /**< returns value of variable in primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+Real SCIPsolGetVal(                     /**< returns value of variable in primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
    VAR*             var                 /**< variable to get value for */
    );
 
 extern
 void SCIPsolPrint(                      /**< outputs non-zero elements of solution to file stream */
-   SOL*             sol,                /**< primal IP solution */
+   SOL*             sol,                /**< primal CIP solution */
    const SET*       set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
+
+extern
+int SCIPsolGetNodenum(                  /**< gets node number, where this solution was found */
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
+extern
+HEUR* SCIPsolGetHeur(                   /**< gets heuristic, that found this solution (or NULL if it's an LP solution) */
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
 
 #endif

@@ -37,82 +37,18 @@
 #define CONSHDLR_CHCKPRIORITY         0
 
 
+#if 0
 /** constraint data for integrality constraint */
 struct ConsData
 {
    int              dummy;              /**< dummy to not have an empty struct */
 };
+#endif
 
 
 /*
  * Callback methods
  */
-
-DECL_CONSINIT(SCIPconsInitIntegral)
-{
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-
-   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "initialise integrality constraint handler");
-
-   return SCIP_OKAY;
-}
-
-DECL_CONSEXIT(SCIPconsExitIntegral)
-{
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-
-   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "exit integrality constraint handler");
-
-   return SCIP_OKAY;
-}
-
-DECL_CONSFREE(SCIPconsFreeIntegral)
-{
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(*consdata == NULL);
-
-   /* nothing to do here, because the integraliy constraint has no constraint data */
-
-   return SCIP_OKAY;
-}
-
-DECL_CONSTRAN(SCIPconsTranIntegral)
-{
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-   assert(SCIPstage(scip) == SCIP_STAGE_SOLVING);
-   assert(sourcedata == NULL);
-   assert(targetdata != NULL);
-
-   debugMessage("Tran method of integrality constraint\n");
-
-   *targetdata = NULL;
-   
-   return SCIP_OKAY;
-}
-
-DECL_CONSSEPA(SCIPconsSepaIntegral)
-{
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-   assert(conss == NULL);
-   assert(nconss == 0);
-
-   debugMessage("Sepa method of integrality constraint\n");
-
-   /* nothing to do here, because the integrality constraint handler doesn't separate anything */
-
-   return SCIP_DIDNOTRUN;
-}
 
 DECL_CONSENFO(SCIPconsEnfoIntegral)
 {
@@ -124,7 +60,7 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
    Real primsol;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(conss == NULL);
    assert(nconss == 0);
@@ -163,7 +99,7 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
 DECL_CONSCHCK(SCIPconsChckIntegral)
 {
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
    todoMessage("Chck method of integrality constraint");
@@ -171,16 +107,6 @@ DECL_CONSCHCK(SCIPconsChckIntegral)
    return SCIP_OKAY;
 }
 
-DECL_CONSPROP(SCIPconsPropIntegral)
-{
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPgetConsHdlrName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-
-   todoMessage("Prop method of integrality constraint");
-
-   return SCIP_OKAY;
-}
 
 
 
@@ -195,9 +121,7 @@ RETCODE SCIPincludeConsHdlrIntegral(      /**< creates the handler for integrali
 {
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHCKPRIORITY,
-                  SCIPconsInitIntegral, SCIPconsExitIntegral, SCIPconsFreeIntegral,
-                  SCIPconsTranIntegral, SCIPconsSepaIntegral, SCIPconsEnfoIntegral,
-                  SCIPconsChckIntegral, SCIPconsPropIntegral,
+                  NULL, NULL, NULL, NULL, NULL, SCIPconsEnfoIntegral, SCIPconsChckIntegral, NULL,
                   NULL) );
 
    return SCIP_OKAY;

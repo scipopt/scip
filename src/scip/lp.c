@@ -217,6 +217,7 @@ RETCODE ensureColSize(                  /**< ensures, that row array of column c
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->row, col->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->val, col->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->linked, col->size, newsize) );
       col->size = newsize;
    }
    assert(num <= col->size);
@@ -241,6 +242,7 @@ RETCODE ensureRowSize(                  /**< ensures, that column array of row c
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->col, row->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->val, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->linked, row->size, newsize) );
       row->size = newsize;
    }
    assert(num <= row->size);
@@ -253,6 +255,71 @@ RETCODE ensureRowSize(                  /**< ensures, that column array of row c
 /*
  * double linked coefficient matrix methods 
  */
+
+/* forward references, because these methods call each other cyclic */
+
+static
+RETCODE rowAddCoeffLinked(              /**< adds a previously non existing coefficient to an LP row */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             val,                /**< value of coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   );
+
+static
+void rowDelCoeffLinked(                 /**< deletes coefficient from row */
+   ROW*             row,                /**< row to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< coefficient to be deleted */
+   Bool             linkupdate          /**< is this an update of the link? */
+   );
+
+static
+RETCODE colAddCoeffLinked(              /**< adds a previously non existing coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val,                /**< value of coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   );
+
+static
+void colDelCoeffLinked(                 /**< deletes existing coefficient from column */
+   COL*             col,                /**< column to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< coefficient to be deleted */
+   Bool             linkupdate          /**< is this an update of the link? */
+   );
+
+static
+RETCODE rowChgCoeffLinked(              /**< changes or adds a coefficient to an LP row */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             val,                /**< value of coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   );
+
+static
+RETCODE rowIncCoeffLinked(              /**< increases value of an existing or nonexisting coefficient in an LP row */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             incval,             /**< value to add to the coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   );
+
 
 static
 RETCODE colLink(                        /**< insert column coefficients in corresponding rows */
@@ -269,16 +336,19 @@ RETCODE colLink(                        /**< insert column coefficients in corre
    assert(set != NULL);
    assert(lp != NULL);
 
-   if( !col->linked )
+   if( !col->alllinked )
    {
       debugMessage("linking column <%s>\n", col->var->name);
       for( i = 0; i < col->len; ++i )
       {
          assert(!SCIPsetIsZero(set, col->val[i]));
-         
-         CHECK_OKAY( SCIProwAddCoeff(col->row[i], memhdr, set, lp, col, col->val[i]) );
+         if( !col->linked[i] )
+         {
+            CHECK_OKAY( rowAddCoeffLinked(col->row[i], memhdr, set, lp, col, col->val[i], TRUE) );
+            col->linked[i] = TRUE;
+         }
       }
-      col->linked = TRUE;
+      col->alllinked = TRUE;
    }
 
    return SCIP_OKAY;
@@ -299,13 +369,14 @@ void colUnlink(                         /**< removes column coefficients from co
    assert(set != NULL);
    assert(lp != NULL);
 
-   if( col->linked )
+   debugMessage("unlinking column <%s>\n", col->var->name);
+   for( i = 0; i < col->len; ++i )
    {
-      debugMessage("unlinking column <%s>\n", col->var->name);
-      for( i = 0; i < col->len; ++i )
-         SCIProwDelCoeff(col->row[i], set, lp, col);
-      col->linked = FALSE;
+      if( col->linked[i] )
+         rowDelCoeffLinked(col->row[i], set, lp, col, TRUE);
+      col->linked[i] = FALSE;
    }
+   col->alllinked = FALSE;
 }
 
 static
@@ -323,16 +394,19 @@ RETCODE rowLink(                        /**< insert row coefficients in correspo
    assert(set != NULL);
    assert(lp != NULL);
 
-   if( !row->linked )
+   if( !row->alllinked )
    {
       debugMessage("linking row <%s>\n", row->name);
       for( i = 0; i < row->len; ++i )
       {
          assert(!SCIPsetIsZero(set, row->val[i]));
-         
-         CHECK_OKAY( SCIPcolAddCoeff(row->col[i], memhdr, set, lp, row, row->val[i]) );
+         if( !row->linked[i] )
+         {
+            CHECK_OKAY( colAddCoeffLinked(row->col[i], memhdr, set, lp, row, row->val[i], TRUE) );
+            row->linked[i] = TRUE;
+         }
       }
-      row->linked = TRUE;
+      row->alllinked = TRUE;
    }
 
    return SCIP_OKAY;
@@ -353,14 +427,21 @@ void rowUnlink(                         /**< removes row coefficients from corre
    assert(set != NULL);
    assert(lp != NULL);
 
-   if( row->linked )
+   debugMessage("unlinking row <%s>\n", row->name);
+   for( i = 0; i < row->len; ++i )
    {
-      debugMessage("unlinking row <%s>\n", row->name);
-      for( i = 0; i < row->len; ++i )
-         SCIPcolDelCoeff(row->col[i], set, lp, row);
-      row->linked = FALSE;
+      if( row->linked[i] )
+         colDelCoeffLinked(row->col[i], set, lp, row, TRUE);
+      row->linked[i] = FALSE;
    }
+   row->alllinked = FALSE;
 }
+
+
+
+/*
+ * Changing announcements
+ */
 
 static
 void coefChanged(                       /**< announces, that the given coefficient in the constraint matrix changed */
@@ -398,8 +479,10 @@ void coefChanged(                       /**< announces, that the given coefficie
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 }
+
    
 
 
@@ -496,11 +579,54 @@ void colDelSign(                        /**< update column sign after deletion o
 }
 
 static
+RETCODE colAddCoeffLinked(              /**< adds a previously non existing coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val,                /**< value of coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   assert(memhdr != NULL);
+   assert(col != NULL);
+   assert(row != NULL);
+   assert(!SCIPsetIsZero(set, val));
+   assert(colSearchCoeff(col, row) == -1);
+
+   debugMessage("adding coefficient %g * <%s> to column <%s>, linkupdate=%d\n", 
+      val, row->name, col->var->name, linkupdate);
+
+   if( col->len > 0 )
+      col->sorted &= (col->row[col->len-1]->index < row->index);
+
+   CHECK_OKAY( ensureColSize(memhdr, set, col, col->len+1) );
+   assert(col->row != NULL);
+   assert(col->val != NULL);
+   assert(col->linked != NULL);
+
+   col->row[col->len] = row;
+   col->val[col->len] = val;
+   col->linked[col->len] = linkupdate;
+   col->alllinked &= linkupdate;
+   col->len++;
+
+   colAddSign(col, set, val);
+
+   if( !linkupdate )
+      coefChanged(row, col, lp);
+   
+   return SCIP_OKAY;
+}
+
+static
 void colDelCoeffPos(                    /**< deletes coefficient at given position from column */
    COL*             col,                /**< column to be changed */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   int              pos                 /**< position in column vector to delete */
+   int              pos,                /**< position in column vector to delete */
+   Bool             linkupdate          /**< is this an update of the link? */
    )
 {
    ROW* row;
@@ -513,19 +639,158 @@ void colDelCoeffPos(                    /**< deletes coefficient at given positi
    row = col->row[pos];
    val = col->val[pos];
 
-   debugMessage("deleting coefficient %g * <%s> from column <%s>\n", val, row->name, col->var->name);
+   debugMessage("deleting coefficient %g * <%s> from column <%s>, linkupdate=%d\n", 
+      val, row->name, col->var->name, linkupdate);
+
+   /* update the corresponding row vector, if necessary */
+   if( !linkupdate && col->linked[pos] )
+   {
+      rowDelCoeffLinked(col->row[pos], set, lp, col, TRUE);
+   }
 
    if( pos < col->len-1 )
    {
       /* move last coefficient to position of deleted coefficient */
       col->row[pos] = col->row[col->len-1];
       col->val[pos] = col->val[col->len-1];
+      col->linked[pos] = col->linked[col->len-1];
       col->sorted = FALSE;
    }
    col->len--;
 
    colDelSign(col, set, val);
-   coefChanged(row, col, lp);
+   
+   if( !linkupdate )
+      coefChanged(row, col, lp);
+}
+
+static
+void colDelCoeffLinked(                 /**< deletes existing coefficient from column */
+   COL*             col,                /**< column to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< coefficient to be deleted */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   int pos;
+
+   assert(col != NULL);
+   assert(col->len > 0);
+   assert(row != NULL);
+
+   pos = colSearchCoeff(col, row);
+   assert(pos >= 0);
+   assert(col->row[pos] == row);
+
+   colDelCoeffPos(col, set, lp, pos, linkupdate);
+}
+
+static
+RETCODE colChgCoeffLinked(              /**< changes or adds a coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val,                /**< value of coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   int pos;
+   Bool isZero;
+
+   assert(memhdr != NULL);
+   assert(col != NULL);
+   assert(row != NULL);
+
+   debugMessage("changing coefficient <%s> of column <%s> to %g, linkupdate=%d\n", 
+      row->name, col->var->name, val, linkupdate);
+
+   pos = colSearchCoeff(col, row);
+   isZero = SCIPsetIsZero(set, val);
+
+   if( pos >= 0 )
+   {
+      if( !linkupdate && col->linked[pos] )
+      {
+         CHECK_OKAY( rowChgCoeffLinked(col->row[pos], memhdr, set, lp, col, val, TRUE) );
+      }
+
+      if( isZero )
+      {
+         /* delete existing coefficient */
+         colDelCoeffPos(col, set, lp, pos, linkupdate);
+      }
+      else if( !SCIPsetIsEQ(set, col->val[pos], val) )
+      {
+         /* change existing coefficient */
+         col->val[pos] = val;
+         if( !linkupdate )
+            coefChanged(row, col, lp);
+      }
+   }
+   else if( !isZero )
+   {
+      /* add non existing coefficient */
+      CHECK_OKAY( colAddCoeffLinked(col, memhdr, set, lp, row, val, linkupdate) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE colIncCoeffLinked(              /**< increases value of an existing or nonexisting coefficient in an LP column */
+   COL*             col,                /**< LP column */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             incval,             /**< value to add to the coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   int pos;
+
+   assert(memhdr != NULL);
+   assert(col != NULL);
+   assert(row != NULL);
+
+   debugMessage("increasing coefficient <%s> of column <%s> with %g, linkupdate=%d\n", 
+      row->name, col->var->name, incval, linkupdate);
+
+   if( SCIPsetIsZero(set, incval) )
+      return SCIP_OKAY;
+
+   pos = colSearchCoeff(col, row);
+
+   if( pos >= 0 )
+   {
+      if( !linkupdate && col->linked[pos] )
+      {
+         CHECK_OKAY( rowIncCoeffLinked(col->row[pos], memhdr, set, lp, col, incval, TRUE) );
+      }
+
+      if( SCIPsetIsZero(set, col->val[pos] + incval) )
+      {
+         /* delete existing coefficient */
+         colDelCoeffPos(col, set, lp, pos, linkupdate);
+      }
+      else
+      {
+         /* increase existing coefficient */
+         col->val[pos] += incval;
+         if( !linkupdate )
+            coefChanged(row, col, lp);
+      }
+   }
+   else
+   {
+      /* add non existing coefficient */
+      CHECK_OKAY( colAddCoeffLinked(col, memhdr, set, lp, row, incval, linkupdate) );
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -556,29 +821,36 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
 
    if( len > 0 )
    {
+      int i;
+
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*col)->row, row, len) );
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*col)->val, val, len) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*col)->linked, len) );
+      for( i = 0; i < len; ++i )
+         (*row)->linked[i] = FALSE;
    }
    else
    {
       (*col)->row = NULL;
       (*col)->val = NULL;
+      (*col)->linked = NULL;
    }
 
    (*col)->var = var;
-   (*col)->index = stat->numcolidx++;
+   (*col)->index = stat->ncolidx++;
    (*col)->size = len;
    (*col)->len = len;
    (*col)->lpipos = -1;
    (*col)->primsol = 0.0;
    (*col)->redcost = SCIP_INVALID;
+   (*col)->farkas = SCIP_INVALID;
    (*col)->numpos = 0;
    (*col)->numneg = 0;
    (*col)->sorted = TRUE;
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
-   (*col)->linked = FALSE;
+   (*col)->alllinked = (len == 0);
    (*col)->inlp = FALSE;
 
    /* check, if column is sorted
@@ -614,6 +886,7 @@ void SCIPcolFree(                       /**< frees an LP column */
 
    freeBlockMemoryArrayNull(memhdr, (*col)->row, (*col)->size);
    freeBlockMemoryArrayNull(memhdr, (*col)->val, (*col)->size);
+   freeBlockMemoryArrayNull(memhdr, (*col)->linked, (*col)->size);
    freeBlockMemory(memhdr, *col);
 }
 
@@ -637,29 +910,7 @@ RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coef
    Real             val                 /**< value of coefficient */
    )
 {
-   assert(memhdr != NULL);
-   assert(col != NULL);
-   assert(row != NULL);
-   assert(!SCIPsetIsZero(set, val));
-   assert(colSearchCoeff(col, row) == -1);
-
-   debugMessage("adding coefficient %g * <%s> to column <%s>\n", val, row->name, col->var->name);
-
-   if( col->len > 0 )
-      col->sorted &= (col->row[col->len-1]->index < row->index);
-
-   CHECK_OKAY( ensureColSize(memhdr, set, col, col->len+1) );
-   assert(col->row != NULL);
-   assert(col->val != NULL);
-
-   col->row[col->len] = row;
-   col->val[col->len] = val;
-   col->len++;
-
-   colAddSign(col, set, val);
-   coefChanged(row, col, lp);
-
-   return SCIP_OKAY;
+   return colAddCoeffLinked(col, memhdr, set, lp, row, val, FALSE);
 }
 
 void SCIPcolDelCoeff(                   /**< deletes existing coefficient from column */
@@ -669,17 +920,7 @@ void SCIPcolDelCoeff(                   /**< deletes existing coefficient from c
    ROW*             row                 /**< coefficient to be deleted */
    )
 {
-   int pos;
-
-   assert(col != NULL);
-   assert(col->len > 0);
-   assert(row != NULL);
-
-   pos = colSearchCoeff(col, row);
-   assert(pos >= 0);
-   assert(col->row[pos] == row);
-
-   colDelCoeffPos(col, set, lp, pos);
+   colDelCoeffLinked(col, set, lp, row, FALSE);
 }
 
 RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
@@ -691,37 +932,7 @@ RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an
    Real             val                 /**< value of coefficient */
    )
 {
-   int pos;
-   Bool isZero;
-
-   assert(memhdr != NULL);
-   assert(col != NULL);
-   assert(row != NULL);
-
-   pos = colSearchCoeff(col, row);
-   isZero = SCIPsetIsZero(set, val);
-
-   if( pos >= 0 )
-   {
-      if( isZero )
-      {
-         /* delete existing coefficient */
-         colDelCoeffPos(col, set, lp, pos);
-      }
-      else if( !SCIPsetIsEQ(set, col->val[pos], val) )
-      {
-         /* change existing coefficient */
-         col->val[pos] = val;
-         coefChanged(row, col, lp);
-      }
-   }
-   else if( !isZero )
-   {
-      /* add non existing coefficient */
-      CHECK_OKAY( SCIPcolAddCoeff(col, memhdr, set, lp, row, val) );
-   }
-
-   return SCIP_OKAY;
+   return colChgCoeffLinked(col, memhdr, set, lp, row, val, FALSE);
 }
 
 RETCODE SCIPcolIncCoeff(                /**< increases value of an existing or nonexisting coefficient in an LP column */
@@ -733,38 +944,7 @@ RETCODE SCIPcolIncCoeff(                /**< increases value of an existing or n
    Real             incval              /**< value to add to the coefficient */
    )
 {
-   int pos;
-
-   assert(memhdr != NULL);
-   assert(col != NULL);
-   assert(row != NULL);
-
-   if( SCIPsetIsZero(set, incval) )
-      return SCIP_OKAY;
-
-   pos = colSearchCoeff(col, row);
-
-   if( pos >= 0 )
-   {
-      if( SCIPsetIsZero(set, col->val[pos] + incval) )
-      {
-         /* delete existing coefficient */
-         colDelCoeffPos(col, set, lp, pos);
-      }
-      else
-      {
-         /* increase existing coefficient */
-         col->val[pos] += incval;
-         coefChanged(row, col, lp);
-      }
-   }
-   else
-   {
-      /* add non existing coefficient */
-      CHECK_OKAY( SCIPcolAddCoeff(col, memhdr, set, lp, row, incval) );
-   }
-
-   return SCIP_OKAY;
+   return colIncCoeffLinked(col, memhdr, set, lp, row, incval, FALSE);
 }
 
 RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a column were changed */
@@ -805,14 +985,16 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->objval = SCIP_INVALID;
-      
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+
       assert(lp->nchgcols > 0);
    }  
 
    return SCIP_OKAY;
 }
 
-void SCIPcolCalcRedcost(                /**< calculates the reduced costs of a column */
+static
+void colCalcRedcost(                    /**< calculates the reduced costs of a column */
    COL*             col                 /**< LP column */
    )
 {
@@ -839,7 +1021,7 @@ Real SCIPcolGetRedcost(                 /**< gets the reduced costs of a column 
    assert(col != NULL);
 
    if( col->redcost >= SCIP_INVALID )
-      SCIPcolCalcRedcost(col);
+      colCalcRedcost(col);
    assert(col->redcost < SCIP_INVALID);
 
    return col->redcost;
@@ -862,6 +1044,44 @@ Real SCIPcolGetFeasibility(             /**< gets the feasibility of a column in
       return redcost;
 }
 
+static
+void colCalcFarkas(                     /**< calculates the farkas value of a column */
+   COL*             col                 /**< LP column */
+   )
+{
+   ROW* row;
+   int r;
+
+   assert(col != NULL);
+   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(col->var->data.col == col);
+
+   col->farkas = 0.0;
+   for( r = 0; r < col->len; ++r )
+   {
+      row = col->row[r];
+      assert(row->dualfarkas < SCIP_INVALID);
+      col->farkas += col->val[r] * row->dualfarkas;
+   }
+   if( col->farkas > 0.0 )
+      col->farkas *= col->var->dom.ub;
+   else
+      col->farkas *= col->var->dom.lb;
+}
+
+Real SCIPcolGetFarkas(                  /**< gets the farkas value of a column in last LP (which must be infeasible) */
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   if( col->farkas >= SCIP_INVALID )
+      colCalcFarkas(col);
+   assert(col->farkas < SCIP_INVALID);
+   
+   return col->farkas;
+}
+
 Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member of actual LP */
    COL*             col                 /**< LP column */
    )
@@ -870,6 +1090,36 @@ Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member o
 
    return col->inlp;
 }
+
+void SCIPcolPrint(                      /**< output column to file stream */
+   COL*             col,                /**< LP column */
+   const SET*       set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int r;
+
+   assert(col != NULL);
+   assert(col->var != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   /* print bounds */
+   fprintf(file, "[%f,%f], ", col->var->dom.lb, col->var->dom.ub);
+
+   /* print coefficients */
+   if( col->len == 0 )
+      fprintf(file, "<empty>");
+   for( r = 0; r < col->len; ++r )
+   {
+      assert(col->row[r] != NULL);
+      assert(col->row[r]->name != NULL);
+      fprintf(file, "%+f%s ", col->val[r], col->row[r]->name);
+   }
+   fprintf(file, "\n");
+}
+
 
 
 
@@ -1029,11 +1279,52 @@ void rowDelNorms(                       /**< update row norms after deletion of 
 }
 
 static
+RETCODE rowAddCoeffLinked(              /**< adds a previously non existing coefficient to an LP row */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             val,                /**< value of coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   assert(row != NULL);
+   assert(memhdr != NULL);
+   assert(col != NULL);
+   assert(!SCIPsetIsZero(set, val));
+   assert(rowSearchCoeff(row, col) == -1);
+
+   debugMessage("adding coefficient %g * <%s> to row <%s>, linkupdate=%d\n", val, col->var->name, row->name, linkupdate);
+
+   if( row->len > 0 )
+      row->sorted &= (row->col[row->len-1]->index < col->index);
+
+   CHECK_OKAY( ensureRowSize(memhdr, set, row, row->len+1) );
+   assert(row->col != NULL);
+   assert(row->val != NULL);
+
+   row->col[row->len] = col;
+   row->val[row->len] = val;
+   row->linked[row->len] = linkupdate;
+   row->alllinked &= linkupdate;
+   row->len++;
+
+   rowAddNorms(row, set, col->index, val);
+
+   if( !linkupdate )
+      coefChanged(row, col, lp);
+
+   return SCIP_OKAY;
+}
+
+static
 void rowDelCoeffPos(                    /**< deletes coefficient at given position from row */
    ROW*             row,                /**< row to be changed */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   int              pos                 /**< position in row vector to delete */
+   int              pos,                /**< position in row vector to delete */
+   Bool             linkupdate          /**< is this an update of the link? */
    )
 {
    COL* col;
@@ -1046,19 +1337,162 @@ void rowDelCoeffPos(                    /**< deletes coefficient at given positi
    col = row->col[pos];
    val = row->val[pos];
 
-   debugMessage("deleting coefficient %g * <%s> from row <%s>\n", val, col->var->name, row->name);
+   debugMessage("deleting coefficient %g * <%s> from row <%s>, linkupdate=%d\n", 
+      val, col->var->name, row->name, linkupdate);
+
+   /* update the corresponding column vector, if necessary */
+   if( !linkupdate && row->linked[pos] )
+   {
+      colDelCoeffLinked(row->col[pos], set, lp, row, TRUE);
+   }
 
    if( pos < row->len-1 )
    {
       /* move last coefficient to position of deleted coefficient */
       row->col[pos] = row->col[row->len-1];
       row->val[pos] = row->val[row->len-1];
+      row->linked[pos] = row->linked[row->len-1];
       row->sorted = FALSE;
    }
    row->len--;
    
    rowDelNorms(row, set, col->index, val);
-   coefChanged(row, col, lp);
+
+   if( !linkupdate )
+      coefChanged(row, col, lp);
+}
+
+static
+void rowDelCoeffLinked(                 /**< deletes coefficient from row */
+   ROW*             row,                /**< row to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< coefficient to be deleted */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   int pos;
+
+   assert(row != NULL);
+   assert(row->len > 0);
+   assert(col != NULL);
+
+   pos = rowSearchCoeff(row, col);
+   assert(pos >= 0);
+   assert(row->col[pos] == col);
+
+   rowDelCoeffPos(row, set, lp, pos, linkupdate);
+}
+
+static
+RETCODE rowChgCoeffLinked(              /**< changes or adds a coefficient to an LP row */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             val,                /**< value of coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   int pos;
+   Bool isZero;
+
+   assert(memhdr != NULL);
+   assert(row != NULL);
+   assert(col != NULL);
+
+   debugMessage("changing coefficient <%s> of row <%s> to %g, linkupdate=%d\n", 
+      col->var->name, row->name, val, linkupdate);
+
+   pos = rowSearchCoeff(row, col);
+   isZero = SCIPsetIsZero(set, val);
+
+   if( pos >= 0 )
+   {
+      if( !linkupdate && row->linked[pos] )
+      {
+         CHECK_OKAY( colChgCoeffLinked(row->col[pos], memhdr, set, lp, row, val, TRUE) );
+      }
+
+      if( isZero )
+      {
+         /* delete existing coefficient */
+         rowDelCoeffPos(row, set, lp, pos, linkupdate);
+      }
+      else if( !SCIPsetIsEQ(set, row->val[pos], val) )
+      {
+         /* change existing coefficient */
+         row->sqrnorm -= SQR(row->val[pos]);
+         row->val[pos] = val;
+         row->sqrnorm += SQR(row->val[pos]);
+         if( !linkupdate )
+            coefChanged(row, col, lp);
+      }
+   }
+   else if( !isZero )
+   {
+      /* add non existing coefficient */
+      CHECK_OKAY( rowAddCoeffLinked(row, memhdr, set, lp, col, val, linkupdate) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE rowIncCoeffLinked(              /**< increases value of an existing or nonexisting coefficient in an LP row */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             incval,             /**< value to add to the coefficient */
+   Bool             linkupdate          /**< is this an update of the link? */
+   )
+{
+   int pos;
+
+   assert(memhdr != NULL);
+   assert(row != NULL);
+   assert(col != NULL);
+
+   debugMessage("increasing coefficient <%s> of row <%s> with %g, linkupdate=%d\n", 
+      col->var->name, row->name, incval, linkupdate);
+
+   if( SCIPsetIsZero(set, incval) )
+      return SCIP_OKAY;
+
+   pos = rowSearchCoeff(row, col);
+
+   if( pos >= 0 )
+   {
+      if( !linkupdate && row->linked[pos] )
+      {
+         CHECK_OKAY( colIncCoeffLinked(row->col[pos], memhdr, set, lp, row, incval, TRUE) );
+      }
+
+      if( SCIPsetIsZero(set, row->val[pos] + incval) )
+      {
+         /* delete existing coefficient */
+         rowDelCoeffPos(row, set, lp, pos, linkupdate);
+      }
+      else
+      {
+         /* change existing coefficient */
+         row->sqrnorm -= SQR(row->val[pos]);
+         row->val[pos] += incval;
+         row->sqrnorm += SQR(row->val[pos]);
+         if( !linkupdate )
+            coefChanged(row, col, lp);
+      }
+   }
+   else
+   {
+      /* add non existing coefficient */
+      CHECK_OKAY( rowAddCoeffLinked(row, memhdr, set, lp, col, incval, linkupdate) );
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -1087,13 +1521,19 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
 
    if( len > 0 )
    {
+      int i;
+
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->col, col, len) );
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->val, val, len) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*row)->linked, len) );
+      for( i = 0; i < len; ++i )
+         (*row)->linked[i] = FALSE;
    }
    else
    {
       (*row)->col = NULL;
       (*row)->val = NULL;
+      (*row)->linked = NULL;
    }
    
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->name, name, strlen(name)+1) );
@@ -1103,7 +1543,8 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    (*row)->maxval = 0.0;
    (*row)->dualsol = 0.0;
    (*row)->slack = SCIP_INVALID;
-   (*row)->index = stat->numrowidx++;
+   (*row)->dualfarkas = SCIP_INVALID;
+   (*row)->index = stat->nrowidx++;
    (*row)->size = len;
    (*row)->len = len;
    (*row)->numuses = 0;
@@ -1116,7 +1557,7 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    (*row)->lhschanged = FALSE;
    (*row)->rhschanged = FALSE;
    (*row)->coefchanged = FALSE;
-   (*row)->linked = FALSE;
+   (*row)->alllinked = (len == 0);
    (*row)->inlp = FALSE;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
@@ -1144,6 +1585,7 @@ void SCIProwFree(                       /**< frees an LP row */
    freeBlockMemoryArray(memhdr, (*row)->name, strlen((*row)->name)+1);
    freeBlockMemoryArrayNull(memhdr, (*row)->col, (*row)->size);
    freeBlockMemoryArrayNull(memhdr, (*row)->val, (*row)->size);
+   freeBlockMemoryArrayNull(memhdr, (*row)->linked, (*row)->size);
    freeBlockMemory(memhdr, *row);
 }
 
@@ -1187,29 +1629,7 @@ RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coef
    Real             val                 /**< value of coefficient */
    )
 {
-   assert(row != NULL);
-   assert(memhdr != NULL);
-   assert(col != NULL);
-   assert(!SCIPsetIsZero(set, val));
-   assert(rowSearchCoeff(row, col) == -1);
-
-   debugMessage("adding coefficient %g * <%s> to row <%s>\n", val, col->var->name, row->name);
-
-   if( row->len > 0 )
-      row->sorted &= (row->col[row->len-1]->index < col->index);
-
-   CHECK_OKAY( ensureRowSize(memhdr, set, row, row->len+1) );
-   assert(row->col != NULL);
-   assert(row->val != NULL);
-
-   row->col[row->len] = col;
-   row->val[row->len] = val;
-   row->len++;
-
-   rowAddNorms(row, set, col->index, val);
-   coefChanged(row, col, lp);
-
-   return SCIP_OKAY;
+   return rowAddCoeffLinked(row, memhdr, set, lp, col, val, FALSE);
 }
 
 void SCIProwDelCoeff(                   /**< deletes coefficient from row */
@@ -1219,17 +1639,7 @@ void SCIProwDelCoeff(                   /**< deletes coefficient from row */
    COL*             col                 /**< coefficient to be deleted */
    )
 {
-   int pos;
-
-   assert(row != NULL);
-   assert(row->len > 0);
-   assert(col != NULL);
-
-   pos = rowSearchCoeff(row, col);
-   assert(pos >= 0);
-   assert(row->col[pos] == col);
-
-   rowDelCoeffPos(row, set, lp, pos);
+   rowDelCoeffLinked(row, set, lp, col, FALSE);
 }
 
 RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an LP row */
@@ -1241,39 +1651,7 @@ RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an
    Real             val                 /**< value of coefficient */
    )
 {
-   int pos;
-   Bool isZero;
-
-   assert(memhdr != NULL);
-   assert(row != NULL);
-   assert(col != NULL);
-
-   pos = rowSearchCoeff(row, col);
-   isZero = SCIPsetIsZero(set, val);
-
-   if( pos >= 0 )
-   {
-      if( isZero )
-      {
-         /* delete existing coefficient */
-         rowDelCoeffPos(row, set, lp, pos);
-      }
-      else if( !SCIPsetIsEQ(set, row->val[pos], val) )
-      {
-         /* change existing coefficient */
-         row->sqrnorm -= SQR(row->val[pos]);
-         row->val[pos] = val;
-         row->sqrnorm += SQR(row->val[pos]);
-         coefChanged(row, col, lp);
-      }
-   }
-   else if( !isZero )
-   {
-      /* add non existing coefficient */
-      CHECK_OKAY( SCIProwAddCoeff(row, memhdr, set, lp, col, val) );
-   }
-
-   return SCIP_OKAY;
+   return rowChgCoeffLinked(row, memhdr, set, lp, col, val, FALSE);
 }
 
 RETCODE SCIProwIncCoeff(                /**< increases value of an existing or nonexisting coefficient in an LP row */
@@ -1285,40 +1663,7 @@ RETCODE SCIProwIncCoeff(                /**< increases value of an existing or n
    Real             incval              /**< value to add to the coefficient */
    )
 {
-   int pos;
-
-   assert(memhdr != NULL);
-   assert(row != NULL);
-   assert(col != NULL);
-
-   if( SCIPsetIsZero(set, incval) )
-      return SCIP_OKAY;
-
-   pos = rowSearchCoeff(row, col);
-
-   if( pos >= 0 )
-   {
-      if( SCIPsetIsZero(set, row->val[pos] + incval) )
-      {
-         /* delete existing coefficient */
-         rowDelCoeffPos(row, set, lp, pos);
-      }
-      else
-      {
-         /* change existing coefficient */
-         row->sqrnorm -= SQR(row->val[pos]);
-         row->val[pos] += incval;
-         row->sqrnorm += SQR(row->val[pos]);
-         coefChanged(row, col, lp);
-      }
-   }
-   else
-   {
-      /* add non existing coefficient */
-      CHECK_OKAY( SCIProwAddCoeff(row, memhdr, set, lp, col, incval) );
-   }
-
-   return SCIP_OKAY;
+   return rowIncCoeffLinked(row, memhdr, set, lp, col, incval, FALSE);
 }
 
 RETCODE SCIProwAddConst(                /**< add constant value to a row, i.e. subtract value from lhs and rhs */
@@ -1455,6 +1800,7 @@ RETCODE SCIProwSideChanged(             /**< notifies LP row, that its sides wer
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
       assert(lp->nchgrows > 0);
    }
@@ -1551,6 +1897,7 @@ RETCODE lpFlushDelCols(                 /**< applies all cached column removals 
          lp->lpicols[i]->lpipos = -1;
          lp->lpicols[i]->primsol = 0.0;
          lp->lpicols[i]->redcost = SCIP_INVALID;
+         lp->lpicols[i]->farkas = SCIP_INVALID;
       }
       lp->nlpicols = lp->lpifirstchgcol;
    }
@@ -1576,6 +1923,7 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    COL* col;
    const VAR* var;
    int c;
+   int pos;
    int nnonz;
    int naddcols;
    int naddcoefs;
@@ -1619,12 +1967,15 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    
    /* fill temporary memory with column data */
    nnonz = 0;
-   for( c = lp->nlpicols; c < lp->ncols; ++c )
+   for( pos = 0, c = lp->nlpicols; c < lp->ncols; ++pos, ++c )
    {
       col = lp->cols[c];
       assert(col != NULL);
       assert(col->inlp);
       assert(nnonz + col->len <= naddcoefs);
+
+      debugMessage("flushing added column:");
+      debug( SCIPcolPrint(col, set, NULL) );
 
       /* Because the column becomes a member of the LP solver, it now can take values
        * different from zero. That means, we have to include the column in the corresponding
@@ -1641,14 +1992,15 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
       col->lpipos = c;
       col->primsol = SCIP_INVALID;
       col->redcost = SCIP_INVALID;
+      col->farkas = SCIP_INVALID;
       col->lbchanged = FALSE;
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
-      obj[c] = var->obj;
-      lb[c] = var->dom.lb;
-      ub[c] = var->dom.ub;
-      beg[c] = nnonz;
-      name[c] = var->name;
+      obj[pos] = var->obj;
+      lb[pos] = var->dom.lb;
+      ub[pos] = var->dom.ub;
+      beg[pos] = nnonz;
+      name[pos] = var->name;
 
       for( i = 0; i < col->len; ++i )
       {
@@ -1713,6 +2065,7 @@ RETCODE lpFlushDelRows(                 /**< applies all cached row removals to 
          lp->lpirows[i]->lpipos = -1;
          lp->lpirows[i]->dualsol = 0.0;
          lp->lpirows[i]->slack = SCIP_INVALID;
+         lp->lpirows[i]->dualfarkas = SCIP_INVALID;
       }
       lp->nlpirows = lp->lpifirstchgrow;
    }
@@ -1736,6 +2089,7 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    char** name;
    ROW* row;
    int r;
+   int pos;
    int nnonz;
    int naddrows;
    int naddcoefs;
@@ -1777,12 +2131,15 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    
    /* fill temporary memory with row data */
    nnonz = 0;
-   for( r = lp->nlpirows; r < lp->nrows; ++r )
+   for( pos = 0, r = lp->nlpirows; r < lp->nrows; ++pos, ++r )
    {
       row = lp->rows[r];
       assert(row != NULL);
       assert(row->inlp);
       assert(nnonz + row->len <= naddcoefs);
+
+      debugMessage("flushing added row:");
+      debug( SCIProwPrint(row, set, NULL) );
 
       /* Because the row becomes a member of the LP solver, its dual variable now can take values
        * different from zero. That means, we have to include the row in the corresponding
@@ -1794,17 +2151,20 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
       row->lpipos = r;
       row->dualsol = SCIP_INVALID;
       row->slack = SCIP_INVALID;
+      row->dualfarkas = SCIP_INVALID;
       row->lhschanged = FALSE;
       row->rhschanged = FALSE;
       row->coefchanged = FALSE;
-      lhs[r] = row->lhs;
-      rhs[r] = row->rhs;
-      beg[r] = nnonz;
-      name[r] = row->name;
+      lhs[pos] = row->lhs;
+      rhs[pos] = row->rhs;
+      beg[pos] = nnonz;
+      name[pos] = row->name;
 
+      debugMessage("flushing added row (LPI): %+g <=", lhs[pos]);
       for( i = 0; i < row->len; ++i )
       {
          lpipos = row->col[i]->lpipos;
+         debug( printf(" %+gx%d(<%s>)", row->val[i], lpipos+1, row->col[i]->var->name) );
          if( lpipos >= 0 )
          {
             assert(lpipos < lp->ncols);
@@ -1813,6 +2173,7 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
             nnonz++;
          }
       }
+      debug( printf(" <= %+g\n", rhs[pos]) );
    }
 
    /* call LP interface */
@@ -2037,7 +2398,6 @@ RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
    (*lp)->chgrows = NULL;
    (*lp)->cols = NULL;
    (*lp)->rows = NULL;
-   (*lp)->objoffset = 0.0;
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
    (*lp)->lpirowssize = 0;
@@ -2056,6 +2416,7 @@ RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
    (*lp)->firstnewrow = 0;
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
+   (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->objval = 0.0;
 
    /* set default parameters in LP solver */
@@ -2110,6 +2471,7 @@ RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->objval = SCIP_INVALID;
+   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    col->inlp = TRUE;
 
    return SCIP_OKAY;
@@ -2134,6 +2496,7 @@ RETCODE SCIPlpAddRow(                   /**< adds a row to the LP and captures i
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->objval = SCIP_INVALID;
+   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    row->inlp = TRUE;
 
    return SCIP_OKAY;
@@ -2166,6 +2529,7 @@ RETCODE SCIPlpShrinkCols(               /**< removes all columns after the given
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    return SCIP_OKAY;
@@ -2197,6 +2561,7 @@ RETCODE SCIPlpShrinkRows(               /**< removes and releases all rows after
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    return SCIP_OKAY;
@@ -2306,6 +2671,24 @@ RETCODE SCIPlpSetFeastol(               /**< sets the feasibility tolerance of t
    assert(feastol >= 0.0);
 
    CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, feastol) );
+   if( lp->nrows > 0 )
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpSetUpperbound(            /**< sets the upper objective limit of the LP solver */
+   LP*              lp,                 /**< actual LP data */
+   Real             upperbound          /**< new upper objective limit */
+   )
+{
+   assert(lp != NULL);
+
+   debugMessage("setting LP upper objective limit to %g\n", upperbound);
+   CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_UOBJLIM, upperbound) );
 
    return SCIP_OKAY;
 }
@@ -2314,12 +2697,15 @@ RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simpl
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(lp != NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
+   assert(stat != NULL);
+
+   debugMessage("solving primal LP %d (LP %d)\n", stat->nprimallp+1, stat->nlp+1);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, set, memhdr) );
@@ -2329,35 +2715,50 @@ RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simpl
 
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
+   }
    else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+      lp->objval = set->infinity;
+   }
    else if( SCIPlpiIsPrimalUnbounded(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
+      lp->objval = -set->infinity;
+   }
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
+      lp->objval = -set->infinity;
+   }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->objval = -set->infinity;
+   }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
       errorMessage("Objective limit exceeded in primal simplex - this should not happen");
-      *lpsolstat = SCIP_LPSOLSTAT_ERROR;
-      return SCIP_LPERROR;
-   }
-   else if( SCIPlpiIsError(lp->lpi) )
-   {
-      errorMessage("Error in primal simplex");
-      *lpsolstat = SCIP_LPSOLSTAT_ERROR;
+      lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
+      lp->objval = -set->infinity;
       return SCIP_LPERROR;
    }
    else
    {
       errorMessage("Unknown return status of primal simplex");
-      *lpsolstat = SCIP_LPSOLSTAT_ERROR;
+      lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       return SCIP_LPERROR;
    }
 
    lp->solved = TRUE;
+
+   stat->nlp++;
+   stat->nprimallp++;
+
+   debugMessage("solving primal LP returned solstat=%d\n", lp->lpsolstat);
 
    return SCIP_OKAY;
 }
@@ -2366,12 +2767,15 @@ RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(lp != NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
+   assert(stat != NULL);
+
+   debugMessage("solving dual LP %d (LP %d)\n", stat->nduallp+1, stat->nlp+1);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, set, memhdr) );
@@ -2381,38 +2785,77 @@ RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex
 
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   else if( SCIPlpiIsObjlimExc(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
-   else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
-   else if( SCIPlpiIsPrimalUnbounded(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
-   else if( SCIPlpiIsIterlimExc(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
-   else if( SCIPlpiIsTimelimExc(lp->lpi) )
-      *lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
-   else if( SCIPlpiIsError(lp->lpi) )
    {
-      errorMessage("Error in dual simplex");
-      *lpsolstat = SCIP_LPSOLSTAT_ERROR;
-      return SCIP_LPERROR;
+      lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
+   }
+   else if( SCIPlpiIsObjlimExc(lp->lpi) )
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+      lp->objval = set->infinity;
+   }
+   else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+      lp->objval = set->infinity;
+   }
+   else if( SCIPlpiIsPrimalUnbounded(lp->lpi) )
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
+      lp->objval = -set->infinity;
+   }
+   else if( SCIPlpiIsIterlimExc(lp->lpi) )
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
+      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
+   }
+   else if( SCIPlpiIsTimelimExc(lp->lpi) )
+   {
+      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
    }
    else
    {
       errorMessage("Unknown return status of dual simplex");
-      *lpsolstat = SCIP_LPSOLSTAT_ERROR;
+      lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
+      lp->objval = -set->infinity;
       return SCIP_LPERROR;
    }
 
    lp->solved = TRUE;
 
+   stat->nlp++;
+   stat->nduallp++;
+
+   debugMessage("solving dual LP returned solstat=%d\n", lp->lpsolstat);
+
    return SCIP_OKAY;
 }
 
+LPSOLSTAT SCIPlpGetSolstat(             /**< gets solution status of last solve call */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->solved || lp->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
+
+   return lp->lpsolstat;
+}
+
+Real SCIPlpGetObjval(                   /**< gets objective value of last solution */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->solved);
+
+   return lp->objval;
+}
+
+
 RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
    LP*              lp,                 /**< actual LP data */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr              /**< block memory buffers */
    )
 {
@@ -2461,6 +2904,41 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
    freeBlockMemoryArray(memhdr, dualsol, rowsize);
    freeBlockMemoryArray(memhdr, slack, rowsize);
    freeBlockMemoryArray(memhdr, redcost, colsize);
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers for infeasibility proof in rows */
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   MEMHDR*          memhdr              /**< block memory buffers */
+   )
+{
+   Real* dualfarkas;
+   int rowsize;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(set != NULL);
+   assert(memhdr != NULL);
+
+   rowsize = SCIPsetCalcMemGrowSize(set, lp->nlpirows);
+
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, dualfarkas, rowsize) );
+
+   CHECK_OKAY( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
+
+   debugMessage("LP is infeasible:\n");
+
+   for( r = 0; r < lp->nlpirows; ++r )
+   {
+      debugMessage(" row <%s>: dualfarkas=%f\n", lp->lpirows[r]->name, dualfarkas[r]);
+      lp->lpirows[r]->dualfarkas = dualfarkas[r];
+   }
+
+   freeBlockMemoryArray(memhdr, dualfarkas, rowsize);
    
    return SCIP_OKAY;
 }

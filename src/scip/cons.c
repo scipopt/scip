@@ -281,7 +281,10 @@ RETCODE SCIPconshdlrInit(               /**< initializes constraint handler */
    }
 
    assert(conshdlr->nconss == 0);
-   CHECK_OKAY( conshdlr->consinit(conshdlr, scip) );
+   if( conshdlr->consinit != NULL )
+   {
+      CHECK_OKAY( conshdlr->consinit(conshdlr, scip) );
+   }
    conshdlr->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -303,7 +306,10 @@ RETCODE SCIPconshdlrExit(               /**< calls exit method of constraint han
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( (*conshdlr->consexit)(conshdlr, scip) );
+   if( conshdlr->consexit != NULL )
+   {
+      CHECK_OKAY( conshdlr->consexit(conshdlr, scip) );
+   }
    conshdlr->initialized = FALSE;
 
    return SCIP_OKAY;
@@ -317,8 +323,13 @@ RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constrain
    assert(conshdlr != NULL);
    assert(set != NULL);
 
-   debugMessage("separate constraints of handler <%s>\n", conshdlr->name);
-   return conshdlr->conssepa(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss);
+   if( conshdlr->conssepa != NULL )
+   {
+      debugMessage("separate constraints of handler <%s>\n", conshdlr->name);
+      return conshdlr->conssepa(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss);
+   }
+   else
+      return SCIP_DIDNOTRUN;
 }
 
 RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constraint handler */
@@ -329,8 +340,13 @@ RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constrain
    assert(conshdlr != NULL);
    assert(set != NULL);
 
-   debugMessage("enforcing constraints of handler <%s>\n", conshdlr->name);
-   return conshdlr->consenfo(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss);
+   if( conshdlr->consenfo != NULL )
+   {
+      debugMessage("enforcing constraints of handler <%s>\n", conshdlr->name);
+      return conshdlr->consenfo(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss);
+   }
+   else
+      return SCIP_FEASIBLE;
 }
 
 const char* SCIPconshdlrGetName(        /**< gets name of constraint handler */
@@ -418,7 +434,10 @@ RETCODE SCIPconsFree(                   /**< frees a constraint */
    assert(set != NULL);
 
    /* free constraint data */
-   CHECK_OKAY( (*cons)->conshdlr->consfree((*cons)->conshdlr, set->scip, &(*cons)->consdata) );
+   if( (*cons)->conshdlr->consfree != NULL )
+   {
+      CHECK_OKAY( (*cons)->conshdlr->consfree((*cons)->conshdlr, set->scip, &(*cons)->consdata) );
+   }
    freeBlockMemoryArray(memhdr, (*cons)->name, strlen((*cons)->name)+1);
    freeBlockMemory(memhdr, *cons);
 
@@ -499,7 +518,11 @@ RETCODE SCIPconsTransform(              /**< copies original constraint into tra
    assert(transcons != NULL);
 
    /* transform constraint data */
-   CHECK_OKAY( origcons->conshdlr->constran(origcons->conshdlr, set->scip, origcons->consdata, &consdata) );
+   consdata = NULL;
+   if( origcons->conshdlr->constran != NULL )
+   {
+      CHECK_OKAY( origcons->conshdlr->constran(origcons->conshdlr, set->scip, origcons->consdata, &consdata) );
+   }
 
    /* create new constraint with transformed data */
    CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, consdata, origcons->model) );

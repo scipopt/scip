@@ -287,6 +287,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          /* A loose variable is a pricing candidate, if it can contribute negatively to the objective function.
           * In addition, we have to add all variables, where zero violates the bounds.
           */
+         debugMessage("price loose variable <%s> in bounds [%g,%g]\n", var->name, var->dom.lb, var->dom.ub);
          if( SCIPsetIsNeg(set, var->dom.lb) )
          {
             if( SCIPsetIsNeg(set, var->dom.ub) )
@@ -295,7 +296,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             }
             else if( SCIPsetIsPos(set, var->obj) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, set, var, -SCIP_PRICE_SCALELOOSE * var->obj * var->dom.lb) );
+               CHECK_OKAY( SCIPpriceAddVar(price, set, var, -var->obj * var->dom.lb) );
             }
          }
          else if( SCIPsetIsPos(set, var->dom.ub) )
@@ -306,7 +307,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             }
             else if( SCIPsetIsNeg(set, var->obj) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, set, var, -SCIP_PRICE_SCALELOOSE * var->obj * var->dom.ub) );
+               CHECK_OKAY( SCIPpriceAddVar(price, set, var, -var->obj * var->dom.ub) );
             }
          }
          break;
@@ -319,12 +320,37 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          assert(!col->inlp || col->lpipos >= 0);
          assert(col->len >= 0);
 
+         debugMessage("price column variable <%s> in bounds [%g,%g], inlp=%d\n", 
+            var->name, var->dom.lb, var->dom.ub, col->inlp);
          if( !col->inlp )
          {
             Real feasibility;
 
-            /* column is not in LP -> calculate feasibility of reduced costs */
-            feasibility = SCIPcolGetFeasibility(col);
+            /* a column not in LP must have zero in its bounds */
+            assert(col->var->dom.lb <= 0.0 && 0.0 <= col->var->dom.ub);
+
+            if( lp->lpsolstat == SCIP_INFEASIBLE )
+            {
+               /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
+                * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
+                * inequality most feasible solution) x' defined by 
+                *    x'_i = ub_i, if y^T A_i > 0
+                *    x'_i = 0   , if y^T A_i = 0
+                *    x'_i = lb_i, if y^T A_i < 0.
+                * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
+                */
+               feasibility = -SCIPcolGetFarkas(col);
+               debugMessage("  <%s> farkas feasibility: %g\n", col->var->name, feasibility);
+            }
+            else
+            {
+               /* The dual LP is feasible, and we have a feasible dual solution. Pricing in this case means to
+                * add variables with negative feasibility, that is negative reduced costs for non-negative
+                * variables, and non-zero reduced costs for variables that can be negative.
+                */
+               feasibility = SCIPcolGetFeasibility(col);
+               debugMessage("  <%s> reduced cost feasibility: %g\n", col->var->name, feasibility);
+            }
 
             /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns */
             if( !SCIPsetIsFeasible(set, feasibility) )
@@ -341,7 +367,14 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    }
 
    /* call external pricer algorithms */
-   todoMessage("external pricing");
+   if( lp->lpsolstat == SCIP_INFEASIBLE )
+   {
+      todoMessage("external farkas pricing");
+   }
+   else
+   {
+      todoMessage("external reduced cost pricing");
+   }
 
    /* add the variables with violated bounds to LP */
    for( v = price->naddedbdviolvars; v < price->nbdviolvars; ++v )

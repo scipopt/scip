@@ -17,7 +17,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.c
- * @brief  datastructures and methods for storing primal IP solutions
+ * @brief  datastructures and methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */
 
@@ -36,7 +36,7 @@
 
 static
 RETCODE solEnsureValsMem(               /**< resizes vals array to be able to store the given index */
-   SOL*             sol,                /**< primal IP solution */
+   SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< variable to get storage for */
@@ -152,34 +152,135 @@ RETCODE solEnsureValsMem(               /**< resizes vals array to be able to st
 
 
 
-RETCODE SCIPsolCreate(                  /**< creates primal IP solution */
-   SOL**            sol,                /**< pointer to primal IP solution */
-   MEMHDR*          memhdr              /**< block memory */
+RETCODE SCIPsolCreate(                  /**< creates primal CIP solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   STAT*            stat,               /**< problem statistics data */
+   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's an LP solution) */
    )
 {
    assert(sol != NULL);
    assert(memhdr != NULL);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, *sol) );   
+   (*sol)->heur = heur;
    (*sol)->vars = NULL;
    (*sol)->vals = NULL;
    (*sol)->obj = 0.0;
    (*sol)->nvals = 0;
    (*sol)->valssize = 0;
    (*sol)->firstindex = -1;
+   (*sol)->numuses = 0;
+   (*sol)->nodenum = stat->nnodes;
+
+   debugMessage("created solution %p\n", *sol);
 
    return SCIP_OKAY;
 }
 
-void SCIPsolFree(                       /**< frees primal IP solution */
-   SOL**            sol,                /**< pointer to primal IP solution */
+RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(sol != NULL);
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+
+   debugMessage("creating solution from LP\n");
+
+   CHECK_OKAY( SCIPsolCreate(sol, memhdr, stat, NULL) );
+
+   if( lp->ncols > 0 )
+   {
+      VAR* var;
+      int firstindex;
+      int lastindex;
+      int index;
+      int pos;
+      int c;
+
+      /* find the non-zero variables in LP with smallest and largest index */
+      firstindex = INT_MAX;
+      lastindex = INT_MIN;
+      for( c = 0; c < lp->ncols; ++c )
+      {
+         assert(lp->cols[c] != NULL);
+         if( !SCIPsetIsZero(set, lp->cols[c]->primsol) )
+         {
+            var = lp->cols[c]->var;
+            assert(var != NULL);
+            assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+            assert(var->data.col == lp->cols[c]);
+            index = var->index;
+            
+            if( index < firstindex )
+               firstindex = index;
+            if( index > lastindex )
+               lastindex = index;
+         }
+      }
+
+      if( firstindex <= lastindex )
+      {
+         assert((*sol)->vars == NULL);
+         assert((*sol)->vals == NULL);
+         assert((*sol)->valssize == 0);
+         assert((*sol)->obj == 0.0);
+
+         /* get memory to store all variables of LP */
+         (*sol)->nvals = lastindex - firstindex + 1;
+         (*sol)->firstindex = firstindex;
+         (*sol)->valssize = SCIPsetCalcMemGrowSize(set, (*sol)->nvals);
+         ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*sol)->vars, (*sol)->valssize) );
+         ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*sol)->vals, (*sol)->valssize) );
+         for( pos = 0; pos < (*sol)->nvals; ++pos )
+         {
+            (*sol)->vars[pos] = NULL;
+            (*sol)->vals[pos] = 0.0;
+         }
+
+         /* store the variables of LP */
+         for( c = 0; c < lp->ncols; ++c )
+         {
+            assert(lp->cols[c] != NULL);
+            
+            if( !SCIPsetIsZero(set, lp->cols[c]->primsol) )
+            {
+               var = lp->cols[c]->var;
+               assert(var != NULL);
+               assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+               assert(var->data.col == lp->cols[c]);
+
+               pos = var->index - (*sol)->firstindex;
+               assert(0 <= pos && pos < (*sol)->nvals);
+
+               (*sol)->vars[pos] = var;
+               (*sol)->vals[pos] = var->data.col->primsol;
+               (*sol)->obj += var->obj * (*sol)->vals[pos];
+               SCIPvarCapture(var);
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+void SCIPsolFree(                       /**< frees primal CIP solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(sol != NULL);
    assert(*sol != NULL);
+   assert((*sol)->numuses == 0);
 
    SCIPsolClear(*sol, memhdr, set, lp);
 
@@ -188,11 +289,41 @@ void SCIPsolFree(                       /**< frees primal IP solution */
    freeBlockMemory(memhdr, *sol);
 }
 
-void SCIPsolClear(                      /**< clears primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+void SCIPsolCapture(                    /**< increases usage counter of primal CIP solution */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->numuses >= 0);
+
+   debugMessage("capture sol %p with numuses=%d\n", sol, sol->numuses);
+   sol->numuses++;
+}
+
+void SCIPsolRelease(                    /**< decreases usage counter of primal CIP solution, frees memory if necessary */
+   SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(sol != NULL);
+   assert(*sol != NULL);
+   assert((*sol)->numuses >= 1);
+
+   debugMessage("release sol %p with numuses=%d\n", *sol, (*sol)->numuses);
+   (*sol)->numuses--;
+   if( (*sol)->numuses == 0 )
+      SCIPsolFree(sol, memhdr, set, lp);
+
+   *sol = NULL;
+}
+
+void SCIPsolClear(                      /**< clears primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
    int v;
@@ -201,15 +332,18 @@ void SCIPsolClear(                      /**< clears primal IP solution */
 
    /* release variables in solution */
    for( v = 0; v < sol->nvals; ++v )
-      SCIPvarRelease(&sol->vars[v], memhdr, set, lp);
+   {
+      if( sol->vars[v] != NULL )
+         SCIPvarRelease(&sol->vars[v], memhdr, set, lp);
+   }
 
    sol->obj = 0.0;
    sol->nvals = 0;
    sol->firstindex = -1;
 }
 
-RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to add to solution */
@@ -221,21 +355,26 @@ RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal IP
    assert(sol != NULL);
    assert(var != NULL);
 
-   CHECK_OKAY( solEnsureValsMem(sol, memhdr, set, var) );
+   debugMessage("setting value of <%s> in solution %p to %g\n", var->name, sol, val);
 
-   pos = var->index - sol->firstindex;
-   assert(pos >= 0 && pos < sol->nvals);
-   assert(sol->vars[pos] == var);
-
-   sol->obj -= var->obj * sol->vals[pos];
-   sol->vals[pos] = val;
-   sol->obj += var->obj * val;
+   if( !SCIPsetIsEQ(set, val, SCIPsolGetVal(sol, var)) )
+   {
+      CHECK_OKAY( solEnsureValsMem(sol, memhdr, set, var) );
+      
+      pos = var->index - sol->firstindex;
+      assert(pos >= 0 && pos < sol->nvals);
+      assert(sol->vars[pos] == var);
+      
+      sol->obj -= var->obj * sol->vals[pos];
+      sol->vals[pos] = val;
+      sol->obj += var->obj * val;
+   }
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPsolIncVal(                  /**< increases value of variable in primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+RETCODE SCIPsolIncVal(                  /**< increases value of variable in primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to add to solution */
@@ -259,85 +398,8 @@ RETCODE SCIPsolIncVal(                  /**< increases value of variable in prim
    return SCIP_OKAY;
 }
 
-RETCODE SCIPsolCopyLPSol(               /**< copys LP solution to primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
-   )
-{
-   assert(sol != NULL);
-   assert(lp != NULL);
-   assert(lp->flushed);
-   assert(lp->solved);
-
-   SCIPsolClear(sol, memhdr, set, lp);
-
-   if( lp->ncols > 0 )
-   {
-      VAR* firstvar;
-      VAR* lastvar;
-      VAR* var;
-      int firstindex;
-      int lastindex;
-      int index;
-      int pos;
-      int c;
-
-      /* find the variables in LP with smallest and largest index */
-      firstindex = INT_MAX;
-      lastindex = INT_MIN;
-      for( c = 0; c < lp->ncols; ++c )
-      {
-         assert(lp->cols[c] != NULL);
-         var = lp->cols[c]->var;
-         assert(var != NULL);
-         assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(var->data.col == lp->cols[c]);
-         index = var->index;
-
-         if( index < firstindex )
-         {
-            firstindex = index;
-            firstvar = var;
-         }
-         if( index > lastindex )
-         {
-            lastindex = index;
-            lastvar = var;
-         }
-      }
-      assert(firstvar != NULL && firstvar->index == firstindex);
-      assert(lastvar != NULL && lastvar->index == lastindex);
-
-      /* get memory to store all variables of LP */
-      CHECK_OKAY( solEnsureValsMem(sol, memhdr, set, firstvar) );
-      CHECK_OKAY( solEnsureValsMem(sol, memhdr, set, lastvar) );
-      assert(sol->firstindex == firstindex);
-      assert(sol->firstindex + sol->nvals > lastindex);
-      assert(sol->obj == 0.0);
-
-      /* store the variables of LP */
-      for( c = 0; c < lp->ncols; ++c )
-      {
-         assert(lp->cols[c] != NULL);
-         var = lp->cols[c]->var;
-         assert(var != NULL);
-         assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(var->data.col == lp->cols[c]);
-         pos = var->index - firstindex;
-
-         sol->vars[pos] = var;
-         sol->vals[pos] = var->data.col->primsol;
-         sol->obj += var->obj * sol->vals[pos];
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-Real SCIPsolGetVal(                     /**< returns value of variable in primal IP solution */
-   SOL*             sol,                /**< primal IP solution */
+Real SCIPsolGetVal(                     /**< returns value of variable in primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
    VAR*             var                 /**< variable to get value for */
    )
 {
@@ -358,7 +420,7 @@ Real SCIPsolGetVal(                     /**< returns value of variable in primal
 }
 
 void SCIPsolPrint(                      /**< outputs non-zero elements of solution to file stream */
-   SOL*             sol,                /**< primal IP solution */
+   SOL*             sol,                /**< primal CIP solution */
    const SET*       set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
@@ -382,3 +444,20 @@ void SCIPsolPrint(                      /**< outputs non-zero elements of soluti
    fprintf(file, "\n");
 }
 
+int SCIPsolGetNodenum(                  /**< gets node number, where this solution was found */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->nodenum;
+}
+
+HEUR* SCIPsolGetHeur(                   /**< gets heuristic, that found this solution (or NULL if it's an LP solution) */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->heur;
+}

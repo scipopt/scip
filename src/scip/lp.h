@@ -53,12 +53,14 @@
 /** solution status after solving LP */
 enum LPSolStat
 {
-   SCIP_LPSOLSTAT_OPTIMAL    = 0,       /**< LP was solved to optimality */
-   SCIP_LPSOLSTAT_INFEASIBLE = 1,       /**< LP is primal infeasible */
-   SCIP_LPSOLSTAT_UNBOUNDED  = 2,       /**< LP is primal unbounded */
-   SCIP_LPSOLSTAT_ITERLIMIT  = 3,       /**< iteration limit was reached during optimization */
-   SCIP_LPSOLSTAT_TIMELIMIT  = 4,       /**< time limit was reached during optimization */
-   SCIP_LPSOLSTAT_ERROR      = 5        /**< an error occured during optimization */
+   SCIP_LPSOLSTAT_NOTSOLVED  = 0,       /**< LP was not solved, no solution exists */
+   SCIP_LPSOLSTAT_OPTIMAL    = 1,       /**< LP was solved to optimality */
+   SCIP_LPSOLSTAT_INFEASIBLE = 2,       /**< LP is primal infeasible */
+   SCIP_LPSOLSTAT_UNBOUNDED  = 3,       /**< LP is primal unbounded */
+   SCIP_LPSOLSTAT_OBJLIMIT   = 4,       /**< objective limit was reached during optimization */
+   SCIP_LPSOLSTAT_ITERLIMIT  = 5,       /**< iteration limit was reached during optimization */
+   SCIP_LPSOLSTAT_TIMELIMIT  = 6,       /**< time limit was reached during optimization */
+   SCIP_LPSOLSTAT_ERROR      = 7        /**< an error occured during optimization */
 };
 typedef enum LPSolStat LPSOLSTAT;
 
@@ -101,8 +103,10 @@ struct Col
    VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    ROW**            row;                /**< rows of column entries, that may have a nonzero dual solution value */
    Real*            val;                /**< coefficients of column entries */
+   Bool*            linked;             /**< is the row informed about this matrix entry? */
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
+   Real             farkas;             /**< value in dual farkas infeasibility proof */
    int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
@@ -113,7 +117,7 @@ struct Col
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
-   unsigned int     linked:1;           /**< TRUE iff column is inserted in corresponding row vectors */
+   unsigned int     alllinked:1;        /**< TRUE iff all column entries are inserted in corresponding row vectors */
    unsigned int     inlp:1;             /**< TRUE iff column is in actual LP */
 };
 
@@ -123,12 +127,14 @@ struct Row
    char*            name;               /**< name of the row */
    COL**            col;                /**< columns of row entries, that may have a nonzero primal solution value */
    Real*            val;                /**< coefficients of row entries */
+   Bool*            linked;             /**< is the column informed about this matrix entry? */
    Real             lhs;                /**< left hand side of row */
    Real             rhs;                /**< right hand side of row */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
    Real             maxval;             /**< maximal absolute value of row vector */
    Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
    Real             slack;              /**< slack value in LP, or SCIP_INVALID if not yet calculated */
+   Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
@@ -142,7 +148,7 @@ struct Row
    unsigned int     lhschanged:1;       /**< TRUE iff left hand side changed, and data of LP solver has to be updated */
    unsigned int     rhschanged:1;       /**< TRUE iff right hand side changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
-   unsigned int     linked:1;           /**< TRUE iff row is inserted in corresponding column vectors */
+   unsigned int     alllinked:1;        /**< TRUE iff all row entries are inserted in corresponding column vectors */
    unsigned int     inlp:1;             /**< TRUE iff row is in actual LP */
 };
 
@@ -156,7 +162,7 @@ struct Lp
    ROW**            chgrows;            /**< array of changed rows not yet applied to the LP solver */
    COL**            cols;               /**< array with actual LP columns in correct order */
    ROW**            rows;               /**< array with actual LP rows in correct order */
-   Real             objoffset;          /**< objective offset from bound shifting and fixing */
+   LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    Real             objval;             /**< objective value of LP, or SCIP_INVALID */
    int              lpicolssize;        /**< available slots in lpicols vector */
    int              nlpicols;           /**< number of columns in the LP solver */
@@ -262,11 +268,6 @@ Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member o
    );
 
 extern
-void SCIPcolCalcRedcost(                /**< calculates the reduced costs of a column */
-   COL*             col                 /**< LP column */
-   );
-
-extern
 Real SCIPcolGetRedcost(                 /**< gets the reduced costs of a column in last LP or after recalculation */
    COL*             col                 /**< LP column */
    );
@@ -274,6 +275,18 @@ Real SCIPcolGetRedcost(                 /**< gets the reduced costs of a column 
 extern
 Real SCIPcolGetFeasibility(             /**< gets the feasibility of a column in last LP or after recalculation */
    COL*             col                 /**< LP column */
+   );
+
+extern
+Real SCIPcolGetFarkas(                  /**< gets the farkas value of a column in last LP (which must be infeasible) */
+   COL*             col                 /**< LP column */
+   );
+
+extern
+void SCIPcolPrint(                      /**< output column to file stream */
+   COL*             col,                /**< LP column */
+   const SET*       set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 
@@ -520,11 +533,17 @@ RETCODE SCIPlpSetFeastol(               /**< sets the feasibility tolerance of t
    );
 
 extern
+RETCODE SCIPlpSetUpperbound(            /**< sets the upper objective limit of the LP solver */
+   LP*              lp,                 /**< actual LP data */
+   Real             upperbound          /**< new upper objective limit */
+   );
+
+extern
 RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simplex algorithm */
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   STAT*            stat                /**< problem statistics */
    );
 
 extern
@@ -532,13 +551,30 @@ RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   STAT*            stat                /**< problem statistics */
+   );
+
+extern
+LPSOLSTAT SCIPlpGetSolstat(             /**< gets solution status of last solve call */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
+Real SCIPlpGetObjval(                   /**< gets objective value of last solution */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern
 RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
    LP*              lp,                 /**< actual LP data */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   MEMHDR*          memhdr              /**< block memory buffers */
+   );
+
+extern
+RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers for infeasibility proof in rows */
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr              /**< block memory buffers */
    );
 

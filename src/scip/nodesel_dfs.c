@@ -49,7 +49,7 @@ struct NodeselData
 DECL_NODESELINIT(SCIPnodeselInitDfs)
 {
    assert(nodesel != NULL);
-   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "initialise depth first search node selector");
@@ -60,7 +60,7 @@ DECL_NODESELINIT(SCIPnodeselInitDfs)
 DECL_NODESELEXIT(SCIPnodeselExitDfs)
 {
    assert(nodesel != NULL);
-   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "exit depth first search node selector");
@@ -71,7 +71,7 @@ DECL_NODESELEXIT(SCIPnodeselExitDfs)
 DECL_NODESELSLCT(SCIPnodeselSlctDfs)
 {
    assert(nodesel != NULL);
-   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
 
@@ -84,7 +84,7 @@ DECL_NODESELCOMP(SCIPnodeselCompDfs)
    int depth2;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    depth1 = SCIPnodeGetDepth(node1);
@@ -123,7 +123,7 @@ RETCODE SCIPincludeNodeselDfs(          /**< creates the node selector for depth
 {
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
                   SCIPnodeselInitDfs, SCIPnodeselExitDfs, SCIPnodeselSlctDfs, SCIPnodeselCompDfs,
-                  NULL) );
+                  NULL, FALSE) );
 
    return SCIP_OKAY;
 }

@@ -41,17 +41,6 @@ struct Mem
 {
    MEMHDR*          probmem;            /**< memory blocks for original problem */
    MEMHDR*          solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
-#if 0
-   MEMHDR*          tempmem;            /**< memory blocks for short living objects */
-   void**           ptrbuf;             /**< buffer for storing temporary pointer arrays */
-   char*            charbuf;            /**< buffer for storing temporary char arrays */
-   int*             intbuf;             /**< buffer for storing temporary int arrays */
-   Real*            realbuf;            /**< buffer for storing temporary real arrays */
-   int              ptrbufsize;         /**< size of pointer array buffer */
-   int              charbufsize;        /**< size of char array buffer */
-   int              intbufsize;         /**< size of int array buffer */
-   int              realbufsize;        /**< size of real array buffer */
-#endif
 };
 
 
@@ -66,38 +55,5 @@ RETCODE SCIPmemFree(                    /**< frees block memory structures */
    MEM**            mem                 /**< pointer to block memory structure */
    );
 
-#if 0
-extern
-RETCODE SCIPmemGetPtrbuf(               /**< returns buffer for storing pointer array */
-   void***          ptrbuf,             /**< pointer to a pointer array */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   int              size                /**< minimal size of pointer buffer */
-   );
-
-extern
-RETCODE SCIPmemGetCharbuf(              /**< returns buffer for storing char array */
-   char**           charbuf,            /**< pointer to char array */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   int              size                /**< minimal size of char buffer */
-   );
-
-extern
-RETCODE SCIPmemGetIntbuf(               /**< returns buffer for storing int array */
-   int**            intbuf,             /**< pointer to int array */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   int              size                /**< minimal size of int buffer */
-   );
-
-extern
-RETCODE SCIPmemGetRealbuf(              /**< returns buffer for storing Real array */
-   Real**           realbuf,            /**< pointer to Real array */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   int              size                /**< minimal size of real buffer */
-   );
-#endif
 
 #endif

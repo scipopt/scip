@@ -17,7 +17,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi_cpx.c
- * @brief  LP interface for CPLEX
+ * @brief  LP interface for CPLEX 8.0
  * @author Tobias Achterberg
  */
 
@@ -51,9 +51,12 @@ static const int    intparam[NUMINTPARAM] = {
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND
 };
-#define NUMDBLPARAM  1
+#define NUMDBLPARAM  4
 static const double dblparam[NUMDBLPARAM] = {
-   CPX_PARAM_EPRHS
+   CPX_PARAM_EPRHS,
+   CPX_PARAM_OBJLLIM,
+   CPX_PARAM_OBJULIM,
+   CPX_PARAM_TILIM
 };
 
 /** CPLEX parameter settings */
@@ -64,26 +67,16 @@ struct CPXParam
 };
 typedef struct CPXParam CPXPARAM;
 
-/** LP algorithm type */
-enum OptAlgo
-{
-   INVALID       = 0,                   /**< problem is not optimized */
-   PRIMALSIMPLEX = 1,                   /**< primal simplex algorithm */
-   DUALSIMPLEX   = 2                    /**< dual simplex algorithm */
-};
-typedef enum OptAlgo OPTALGO;
-
 /** LP interface */
 struct LPi
 {
    CPXLPptr         cpxlp;              /**< CPLEX LP pointer */
-   OPTALGO          optalgo;            /**< last optimization algorithm */
-   int              retval;             /**< return value of last optimization call */
    int              solstat;            /**< solution status of last optimization call */
    CPXPARAM         cpxparam;           /**< actual parameter values for this LP */
    char*            larray;             /**< array with 'L' entries for changing lower bounds */
    char*            uarray;             /**< array with 'U' entries for changing upper bounds */
    char*            senarray;           /**< array for storing row senses */
+   Real*            rhsarray;           /**< array for storing rhs values */
    Real*            rngarray;           /**< array for storing range values */
    int              boundchgarraysize;  /**< size of larray and uarray */
    int              sidechgarraysize;   /**< size of senarray and rngarray */
@@ -153,6 +146,7 @@ RETCODE ensureSidechgarrayMem(          /**< resizes senarray and rngarray to ha
 
       newsize = MAX(2*lpi->sidechgarraysize, num);
       ALLOC_OKAY( reallocMemoryArray(lpi->senarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(lpi->rhsarray, newsize) );
       ALLOC_OKAY( reallocMemoryArray(lpi->rngarray, newsize) );
       lpi->sidechgarraysize = newsize;
    }
@@ -405,42 +399,7 @@ static
 void invalidateSolution(LPI* lpi)
 {
    assert(lpi != NULL);
-   lpi->optalgo = INVALID;
-   lpi->retval = NOTCALLED;
    lpi->solstat = -1;
-}
-
-static
-int isValidSolution(LPI* lpi)
-{
-   assert(lpi != NULL);
-   return( lpi->retval == 0
-      || lpi->retval == CPXERR_PRESLV_INForUNBD
-      || lpi->retval == CPXERR_PRESLV_INF
-      || lpi->retval == CPXERR_PRESLV_UNBD);
-}
-
-static
-int isInfeasibleSolution(LPI* lpi)
-{
-   assert(lpi != NULL);
-   return( lpi->retval == CPXERR_PRESLV_INForUNBD
-      || lpi->retval == CPXERR_PRESLV_INF );
-}
-
-static
-int isUnboundedSolution(LPI* lpi)
-{
-   assert(lpi != NULL);
-   return( lpi->retval == CPXERR_PRESLV_INForUNBD
-      || lpi->retval == CPXERR_PRESLV_UNBD);
-}
-
-static
-int isOptimalSolution(LPI* lpi)
-{
-   assert(lpi != NULL);
-   return( lpi->retval == 0 );
 }
 
 static
@@ -498,6 +457,7 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    (*lpi)->larray = NULL;
    (*lpi)->uarray = NULL;
    (*lpi)->senarray = NULL;
+   (*lpi)->rhsarray = NULL;
    (*lpi)->rngarray = NULL;
    (*lpi)->boundchgarraysize = 0;
    (*lpi)->sidechgarraysize = 0;
@@ -522,10 +482,11 @@ RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
    CHECK_ZERO( CPXfreeprob(cpxenv, &((*lpi)->cpxlp)) );
 
    /* free memory */
-   freeMemoryArray((*lpi)->larray);
-   freeMemoryArray((*lpi)->uarray);
-   freeMemoryArray((*lpi)->senarray);
-   freeMemoryArray((*lpi)->rngarray);
+   freeMemoryArrayNull((*lpi)->larray);
+   freeMemoryArrayNull((*lpi)->uarray);
+   freeMemoryArrayNull((*lpi)->senarray);
+   freeMemoryArrayNull((*lpi)->rhsarray);
+   freeMemoryArrayNull((*lpi)->rngarray);
    freeMemory(*lpi);
 
    /* free environment */
@@ -659,24 +620,36 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
       if( lhs[i] == rhs[i] )
       {
          lpi->senarray[i] = 'E';
+         lpi->rhsarray[i] = rhs[i];
          lpi->rngarray[i] = 0.0;
       }
       else if( lhs[i] <= -infinity )
       {
          lpi->senarray[i] = 'L';
+         lpi->rhsarray[i] = rhs[i];
          lpi->rngarray[i] = 0.0;
       }
       else
       {
-         /* CPLEX defines a ranged row to be within rhs and rhs+rng
-          * -> to keep SCIP's meaning of the rhs value, we have to use negative range values: rng := lhs - rng
+         /* CPLEX defines a ranged row to be within rhs and rhs+rng.
+          * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rng,
+          *    but there seems to be a bug in CPLEX's presolve with negative range values (the ranged row
+          *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000) 
+          *    would lead to the CPLEX row
+          *              -x -Rg = 100000 
+          *                  Rg = 0
+          *    instead of the correct presolving implication  Rg = -100000.
+          * -> Because of this bug, we have to use an additional rhsarray[] for the converted right hand sides and
+          *    use rhsarray[i] = lhs[i] and rngarray[i] = rhs[i] - lhs[i] for ranged rows to keep the range values
+          *    non-negative.
           */
          lpi->senarray[i] = 'R';
-         lpi->rngarray[i] = lhs[i] - rhs[i];
+         lpi->rhsarray[i] = lhs[i];
+         lpi->rngarray[i] = rhs[i] - lhs[i];
       }
    }
 
-   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, rhs, lpi->senarray, beg, ind, val, NULL, name) );
+   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL, name) );
    CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, nrow, ind, lpi->rngarray) );
 
    return SCIP_OKAY;
@@ -765,8 +738,8 @@ RETCODE SCIPlpiChgBounds(               /**< changes lower and upper bounds of c
 
    CHECK_OKAY( ensureBoundchgarrayMem(lpi, n) );
 
-   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->larray, (Real*)lb) );
-   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->uarray, (Real*)ub) );
+   CHECK_ZERO( CPXtightenbds(cpxenv, lpi->cpxlp, n, ind, lpi->larray, (Real*)lb) );
+   CHECK_ZERO( CPXtightenbds(cpxenv, lpi->cpxlp, n, ind, lpi->uarray, (Real*)ub) );
 
    return SCIP_OKAY;
 }
@@ -798,24 +771,36 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
       if( lhs[i] == rhs[i] )
       {
          lpi->senarray[i] = 'E';
+         lpi->rhsarray[i] = rhs[i];
          lpi->rngarray[i] = 0.0;
       }
       else if( lhs[i] <= -infinity )
       {
          lpi->senarray[i] = 'L';
+         lpi->rhsarray[i] = rhs[i];
          lpi->rngarray[i] = 0.0;
       }
       else
       {
-         /* CPLEX defines a ranged row to be within rhs and rhs+rng
-          * -> to keep SCIP's meaning of the rhs value, we have to use negative range values: rng := lhs - rng
+         /* CPLEX defines a ranged row to be within rhs and rhs+rng.
+          * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rng,
+          *    but there seems to be a bug in CPLEX's presolve with negative range values (the ranged row
+          *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000) 
+          *    would lead to the CPLEX row
+          *              -x -Rg = 100000 
+          *                  Rg = 0
+          *    instead of the correct presolving implication  Rg = -100000.
+          * -> Because of this bug, we have to use an additional rhsarray[] for the converted right hand sides and
+          *    use rhsarray[i] = lhs[i] and rngarray[i] = rhs[i] - lhs[i] for ranged rows to keep the range values
+          *    non-negative.
           */
          lpi->senarray[i] = 'R';
-         lpi->rngarray[i] = lhs[i] - rhs[i];
+         lpi->rhsarray[i] = lhs[i];
+         lpi->rngarray[i] = rhs[i] - lhs[i];
       }
    }
 
-   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, (Real*)rhs) );
+   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, lpi->rhsarray) );
    CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, n, ind, lpi->senarray) );
    CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, n, ind, lpi->rngarray) );
 
@@ -998,6 +983,20 @@ RETCODE SCIPlpiSetRealpar(              /**< sets floating point parameter of LP
    return SCIP_OKAY;
 }
 
+RETCODE SCIPlpiGetObjval(               /**< gets objective value of solution */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            objval              /**< stores the objective value */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXgetobjval(cpxenv, lpi->cpxlp, objval) );
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
    LPI*             lpi,                /**< LP interface structure */
    Real*            objval,             /**< stores the objective value */
@@ -1012,9 +1011,26 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
    CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, slack, redcost) );
    assert(dummy == lpi->solstat);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasibility */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            dualfarkas          /**< dual farkas row multipliers */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+   assert(dualfarkas != NULL);
+
+   CHECK_ZERO( CPXdualfarkas(cpxenv, lpi->cpxlp, dualfarkas, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1042,22 +1058,22 @@ RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the L
    LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int retval;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("calling CPLEX primal simplex\n");
 
    invalidateSolution(lpi);
 
    setParameterValues(&(lpi->cpxparam));
 
-   lpi->optalgo = PRIMALSIMPLEX;
-   lpi->retval = CPXprimopt( cpxenv, lpi->cpxlp );
-   switch( lpi->retval  )
+   retval = CPXprimopt( cpxenv, lpi->cpxlp );
+   switch( retval  )
    {
    case 0:
-   case CPXERR_PRESLV_INForUNBD:
-   case CPXERR_PRESLV_INF:
-   case CPXERR_PRESLV_UNBD:
       break;
    case CPXERR_NO_MEMORY:
       return SCIP_NOMEMORY;
@@ -1074,22 +1090,22 @@ RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP 
    LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int retval;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("calling CPLEX dual simplex\n");
 
    invalidateSolution(lpi);
 
    setParameterValues(&(lpi->cpxparam));
 
-   lpi->optalgo = DUALSIMPLEX;
-   lpi->retval = CPXdualopt( cpxenv, lpi->cpxlp );
-   switch( lpi->retval  )
+   retval = CPXdualopt( cpxenv, lpi->cpxlp );
+   switch( retval  )
    {
    case 0:
-   case CPXERR_PRESLV_INForUNBD:
-   case CPXERR_PRESLV_INF:
-   case CPXERR_PRESLV_UNBD:
       break;
    case CPXERR_NO_MEMORY:
       return SCIP_NOMEMORY;
@@ -1109,18 +1125,9 @@ Bool SCIPlpiIsPrimalUnbounded(          /**< returns TRUE iff LP is primal unbou
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
-   switch( lpi->optalgo )
-   {
-   case PRIMALSIMPLEX:
-      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_STAT_UNBOUNDED );
-   case DUALSIMPLEX:
-      /* primal unbounded means dual infeasible */
-      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_STAT_INFEASIBLE );
-   default:
-      errorMessage("LP not optimized");
-      return FALSE;
-   }
+   return (lpi->solstat == CPX_STAT_UNBOUNDED);
 }
 
 Bool SCIPlpiIsPrimalInfeasible(         /**< returns TRUE iff LP is primal infeasible */
@@ -1130,18 +1137,9 @@ Bool SCIPlpiIsPrimalInfeasible(         /**< returns TRUE iff LP is primal infea
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
-   switch( lpi->optalgo )
-   {
-   case PRIMALSIMPLEX:
-      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_STAT_INFEASIBLE );
-   case DUALSIMPLEX:
-      /* primal infeasible means dual unbounded */
-      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_STAT_UNBOUNDED );
-   default:
-      errorMessage("LP not optimized");
-      return FALSE;
-   }
+   return (lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD);
 }
 
 Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to optimality */
@@ -1151,25 +1149,9 @@ Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to o
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
-   return( isOptimalSolution(lpi) && lpi->solstat == CPX_STAT_OPTIMAL );
-}
-
-Bool SCIPlpiIsDualValid(                /**< returns TRUE iff actual LP solution is dual valid */
-   LPI*             lpi                 /**< LP interface structure */
-   )
-{
-   assert(cpxenv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->cpxlp != NULL);
-
-   return( isValidSolution(lpi)
-      && ( lpi->solstat == CPX_STAT_OPTIMAL
-	 || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM
-         || lpi->solstat == CPX_STAT_NUM_BEST
-         || lpi->solstat == CPX_STAT_ABORT_IT_LIM
-	 || lpi->solstat == CPX_STAT_ABORT_TIME_LIM
-	 || lpi->solstat == CPX_STAT_ABORT_USER ) );
+   return (lpi->solstat == CPX_STAT_OPTIMAL);
 }
 
 Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is stable */
@@ -1179,21 +1161,9 @@ Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
-   return( isValidSolution(lpi)
-      && lpi->solstat != CPX_STAT_NUM_BEST
-      && lpi->solstat != CPX_STAT_OPTIMAL_INFEAS );
-}
-
-Bool SCIPlpiIsError(                    /**< returns TRUE iff an error occured while solving the LP */
-   LPI*             lpi                 /**< LP interface structure */
-   )
-{
-   assert(cpxenv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->cpxlp != NULL);
-
-   return !isValidSolution(lpi);
+   return (lpi->solstat != CPX_STAT_NUM_BEST && lpi->solstat != CPX_STAT_OPTIMAL_INFEAS);
 }
 
 Bool SCIPlpiIsObjlimExc(                /**< returns TRUE iff the objective limit was reached */
@@ -1203,10 +1173,9 @@ Bool SCIPlpiIsObjlimExc(                /**< returns TRUE iff the objective limi
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
-   return( isUnboundedSolution(lpi)
-      || lpi->solstat == CPX_STAT_UNBOUNDED
-      || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM );
+   return (lpi->solstat == CPX_STAT_ABORT_OBJ_LIM);
 }
 
 Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limit was reached */
@@ -1216,8 +1185,9 @@ Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limi
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
-   return( lpi->solstat == CPX_STAT_ABORT_IT_LIM );
+   return (lpi->solstat == CPX_STAT_ABORT_IT_LIM);
 }
 
 Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was reached */
@@ -1227,8 +1197,9 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
 
-   return( lpi->solstat == CPX_STAT_ABORT_TIME_LIM );
+   return (lpi->solstat == CPX_STAT_ABORT_TIME_LIM);
 }
 
 
@@ -1363,3 +1334,4 @@ RETCODE SCIPlpiWriteLP(                 /**< writes LP to a file */
 
    return SCIP_OKAY;
 }
+

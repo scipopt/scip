@@ -37,18 +37,20 @@
 #include "lp.h"
 #include "price.h"
 #include "sepa.h"
+#include "primal.h"
 
 
 extern
 RETCODE SCIPsolveCIP(                   /**< main solving loop */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
-   SEPA*            sepa                /**< separation storage */
+   SEPA*            sepa,               /**< separation storage */
+   PRIMAL*          primal              /**< primal data */
    );
 
 

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.12 2003/01/29 16:10:24 bzfpfend Exp $
+# $Id: Makefile,v 1.13 2003/02/05 16:28:26 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -87,10 +87,12 @@ NAME		=	scip
 
 #-----------------------------------------------------------------------------
 
-LIBOBJ		=	bab.o \
-			cons.o \
+LIBOBJ		=	cons.o \
 			cons_integral.o \
 			cons_linear.o \
+			disp.o \
+			disp_default.o \
+			heur.o \
 			lp.o \
 			mem.o \
 			memory.o \
@@ -98,6 +100,7 @@ LIBOBJ		=	bab.o \
 			nodesel.o \
 			nodesel_dfs.o \
 			price.o \
+			primal.o \
 			prob.o \
 			retcode.o \
 			scip.o \
@@ -214,12 +217,12 @@ depend:
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
 		>$(DEPLIB)'
 ifeq ($(LPS),cpx)
-		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) \
+		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) $(LPISRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
 		>$(DEPLPS)'
 endif
 ifeq ($(LPS),spx)
-		$(SHELL) -ec '$(DCXX) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) \
+		$(SHELL) -ec '$(DCXX) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) $(LPISRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
 		>$(DEPLPS)'
 endif
