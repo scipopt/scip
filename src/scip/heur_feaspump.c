@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.2 2004/07/07 18:06:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.3 2004/07/08 10:11:28 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump heuristic by Fischetti, Glover and Lodi 
@@ -153,6 +153,7 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
 
    Longint nsolsfound;
    Longint ncalls;
+   Longint iter;
    Longint nlpiterations; 
    Longint maxnlpiterations;
    int depth;       
@@ -255,6 +256,8 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
 
       divedepth++;
       alpha *= 0.9;
+      if( alpha < 0.05 )
+         alpha = 0.0;
 
       /* round solution x* from diving LP: 
        *     x~_j = down(x*_j)    if x*_j is integer or binary variable and frac(x*_j) <= 0.5
@@ -323,8 +326,18 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
          break;
 
       /* update iteration count */
-      heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
+      iter = SCIPgetNLPIterations(scip);
+      heurdata->nlpiterations += iter - nlpiterations;
       nlpiterations = SCIPgetNLPIterations(scip);
+
+      /* if we stayed at the same LP solution, rapidly decrease alpha */
+      if( iter == nlpiterations )
+      {
+         /* if alpha == 0.0 was tried, abort */
+         if( alpha == 0.0 )
+            break;
+         alpha *= 0.5;
+      }
 
       /* get LP solution status and number of fractional variables, that should be integral */
       lpsolstat = SCIPgetLPSolstat(scip);
