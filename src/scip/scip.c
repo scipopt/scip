@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.253 2005/02/04 10:04:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.254 2005/02/04 10:24:06 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5801,7 +5801,7 @@ RETCODE SCIPaddVarVub(
 RETCODE SCIPaddVarImplic(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   Bool             i,                  /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
@@ -5820,10 +5820,10 @@ RETCODE SCIPaddVarImplic(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, i, implvar, impltype, implbound, &conflict) );
+   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, varfixing, implvar, impltype, implbound, &conflict) );
    if( conflict )
    {
-      CHECK_OKAY( SCIPfixVar(scip, var, i ? 0.0 : 1.0, infeasible, &fixed) );
+      CHECK_OKAY( SCIPfixVar(scip, var, varfixing == TRUE ? 0.0 : 1.0, infeasible, &fixed) );
       return SCIP_OKAY;
    }
 
@@ -5836,8 +5836,8 @@ RETCODE SCIPaddVarImplic(
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       CHECK_OKAY( SCIPvarAddImplic(implvar, scip->mem->solvemem, scip->set,
-            impltype == SCIP_BOUNDTYPE_UPPER, var, i ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-            i ? 0.0 : 1.0, &conflict) );
+            impltype == SCIP_BOUNDTYPE_UPPER, var, varfixing == TRUE ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+            varfixing == TRUE ? 0.0 : 1.0, &conflict) );
       if( conflict )
       {
          CHECK_OKAY( SCIPfixVar(scip, implvar, impltype == SCIP_BOUNDTYPE_UPPER ? 0.0 : 1.0, infeasible, &fixed) );

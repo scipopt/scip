@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.3 2005/02/03 17:50:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.4 2005/02/04 10:24:06 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -319,25 +319,25 @@ DECL_PRESOLEXEC(presolExecProbing)
          {
             /* insert implication: x_i == 0  =>  x_j == 0 */
             debugMessage("found implication <%s> == 0  =>  <%s> == 0\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            /*???????????????????*/
+            CHECK_OKAY( SCIPaddVarImplic(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0, &cutoff) );
          }
          else if( zerolbs[j] > 0.5 )
          {
             /* insert implication: x_i == 0  =>  x_j == 1 */
             debugMessage("found implication <%s> == 0  =>  <%s> == 1\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            /*???????????????????*/
+            CHECK_OKAY( SCIPaddVarImplic(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff) );
          }
          else if( oneubs[j] < 0.5 )
          {
             /* insert implication: x_i == 1  =>  x_j == 0 */
             debugMessage("found implication <%s> == 1  =>  <%s> == 0\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            /*???????????????????*/
+            CHECK_OKAY( SCIPaddVarImplic(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0, &cutoff) );
          }
          else if( onelbs[j] > 0.5 )
          {
             /* insert implication: x_i == 1  =>  x_j == 1 */
             debugMessage("found implication <%s> == 1  =>  <%s> == 1\n", SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
-            /*???????????????????*/
+            CHECK_OKAY( SCIPaddVarImplic(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff) );
          }
       }
    }

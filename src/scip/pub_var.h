@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.36 2005/02/02 19:34:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.37 2005/02/04 10:24:06 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -453,7 +453,7 @@ Real* SCIPvarGetVubConstants(
  */
 int SCIPvarGetNimpl(
    VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
 
 /** gets array with implication variables y of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
@@ -461,7 +461,7 @@ int SCIPvarGetNimpl(
  */
 VAR** SCIPvarGetImplvars(
    VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
 
 /** gets array with implication types of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x
@@ -470,7 +470,7 @@ VAR** SCIPvarGetImplvars(
  */
 BOUNDTYPE* SCIPvarGetImpltypes(
    VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
 
 /** gets array with implication bounds b of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
@@ -478,7 +478,7 @@ BOUNDTYPE* SCIPvarGetImpltypes(
  */
 Real* SCIPvarGetImplbounds(
    VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
    );
 
 #else
@@ -537,10 +537,10 @@ Real* SCIPvarGetImplbounds(
 #define SCIPvarGetVubVars(var)          ((var)->vubs != NULL ? (var)->vubs->vars : NULL)
 #define SCIPvarGetVubCoefs(var)         ((var)->vubs != NULL ? (var)->vubs->coefs : NULL)
 #define SCIPvarGetVubConstants(var)     ((var)->vubs != NULL ? (var)->vubs->constants : NULL)
-#define SCIPvarGetNimpl(var, i)         ((var)->implics != NULL ? (var)->implics->nimpls[i] : 0)
-#define SCIPvarGetImplvars(var, i)      ((var)->implics != NULL ? (var)->implics->implvars[i] : NULL)
-#define SCIPvarGetImpltypes(var, i)     ((var)->implics != NULL ? (var)->implics->impltypes[i] : NULL)
-#define SCIPvarGetImplbounds(var, i)    ((var)->implics != NULL ? (var)->implics->implbounds[i] : NULL)
+#define SCIPvarGetNimpl(var, fix)       ((var)->implics != NULL ? (var)->implics->nimpls[fix] : 0)
+#define SCIPvarGetImplvars(var, fix)    ((var)->implics != NULL ? (var)->implics->implvars[fix] : NULL)
+#define SCIPvarGetImpltypes(var, fix)   ((var)->implics != NULL ? (var)->implics->impltypes[fix] : NULL)
+#define SCIPvarGetImplbounds(var, fix)  ((var)->implics != NULL ? (var)->implics->implbounds[fix] : NULL)
 #endif
 
 /** gets best local bound of variable with respect to the objective function */
