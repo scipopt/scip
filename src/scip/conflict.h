@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.9 2004/01/15 12:09:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.10 2004/01/15 15:37:10 bzfpfets Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -192,7 +192,7 @@ RETCODE SCIPlpconflictFree(
 extern
 RETCODE SCIPlpconflictAnalyze(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created */
