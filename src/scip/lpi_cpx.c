@@ -510,10 +510,10 @@ void convertSides(
    int              nrows,              /**< number of rows */
    const Real*      lhs,                /**< left hand side vector */
    const Real*      rhs,                /**< right hand side vector */
+   int              indoffset,          /**< index of first row in LP */
    int*             rngcount            /**< pointer to store the number of range rows */
    )
 {
-   int oldnrows;
    int i;
 
    assert(lpi != NULL);
@@ -521,9 +521,6 @@ void convertSides(
    assert(lhs != NULL);
    assert(rhs != NULL);
    assert(rngcount != NULL);
-
-   /* get current number of rows */
-   oldnrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
 
    /* convert lhs/rhs into sen/rhs/rng */
    *rngcount = 0;
@@ -566,7 +563,7 @@ void convertSides(
          lpi->senarray[i] = 'R';
          lpi->rhsarray[i] = lhs[i];
          lpi->rngarray[*rngcount] = rhs[i] - lhs[i];
-         lpi->rngindarray[*rngcount] = i + oldnrows;
+         lpi->rngindarray[*rngcount] = i + indoffset;
          (*rngcount)++;
       }
    }
@@ -798,7 +795,7 @@ RETCODE SCIPlpiLoadColLP(
    CHECK_OKAY( ensureSidechgMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
-   convertSides(lpi, nrows, lhs, rhs, &rngcount);
+   convertSides(lpi, nrows, lhs, rhs, 0, &rngcount);
 
    /* calculate column lengths */
    ALLOC_OKAY( allocMemoryArray(&cnt, ncols) );
@@ -910,7 +907,7 @@ RETCODE SCIPlpiAddRows(
    CHECK_OKAY( ensureSidechgMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
-   convertSides(lpi, nrows, lhs, rhs, &rngcount);
+   convertSides(lpi, nrows, lhs, rhs, CPXgetnumrows(cpxenv, lpi->cpxlp), &rngcount);
 
    /* add rows to LP */
    CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
@@ -993,6 +990,7 @@ RETCODE SCIPlpiChgSides(
    )
 {
    int rngcount;
+   int i;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
@@ -1003,13 +1001,22 @@ RETCODE SCIPlpiChgSides(
    CHECK_OKAY( ensureSidechgMem(lpi, n) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
-   convertSides(lpi, n, lhs, rhs, &rngcount);
+   convertSides(lpi, n, lhs, rhs, 0, &rngcount);
 
    /* change row sides */
    CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, n, ind, lpi->senarray) );
    CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, lpi->rhsarray) );
    if( rngcount > 0 )
    {
+      /* adjust the range count indices to the correct row indices */
+      for( i = 0; i < rngcount; ++i )
+      {
+         assert(0 <= lpi->rngindarray[i] && lpi->rngindarray[i] < n);
+         assert(lpi->senarray[i] == 'R');
+         lpi->rngindarray[i] = ind[lpi->rngindarray[i]];
+      }
+
+      /* change the range values in CPLEX */
       CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
    }
 
