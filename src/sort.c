@@ -562,6 +562,7 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
 /** dynamic array for storing real values */
 struct RealArray
 {
+   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
    Real*            vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */
@@ -576,8 +577,10 @@ RETCODE SCIPrealarrayCreate(
    )
 {
    assert(realarray != NULL);
+   assert(memhdr != NULL);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, realarray) );
+   (*realarray)->memhdr = memhdr;
    (*realarray)->vals = NULL;
    (*realarray)->valssize = 0;
    (*realarray)->firstidx = -1;
@@ -597,7 +600,7 @@ RETCODE SCIPrealarrayCopy(
    assert(realarray != NULL);
    assert(sourcerealarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, realarray) );
+   CHECK_OKAY( SCIPrealarrayCreate(realarray, memhdr) );
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*realarray)->vals, sourcerealarray->vals, sourcerealarray->valssize) );
    (*realarray)->valssize = sourcerealarray->valssize;
    (*realarray)->firstidx = sourcerealarray->firstidx;
@@ -609,15 +612,14 @@ RETCODE SCIPrealarrayCopy(
 
 /** frees a dynamic array of real values */
 RETCODE SCIPrealarrayFree(
-   REALARRAY**      realarray,          /**< pointer to the real array */
-   MEMHDR*          memhdr              /**< block memory */
+   REALARRAY**      realarray           /**< pointer to the real array */
    )
 {
    assert(realarray != NULL);
    assert(*realarray != NULL);
 
-   freeBlockMemoryArrayNull(memhdr, &(*realarray)->vals, (*realarray)->valssize);
-   freeBlockMemory(memhdr, realarray);
+   freeBlockMemoryArrayNull((*realarray)->memhdr, &(*realarray)->vals, (*realarray)->valssize);
+   freeBlockMemory((*realarray)->memhdr, realarray);
 
    return SCIP_OKAY;
 }
@@ -625,7 +627,6 @@ RETCODE SCIPrealarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 RETCODE SCIPrealarrayExtend(
    REALARRAY*       realarray,          /**< dynamic real array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -661,7 +662,7 @@ RETCODE SCIPrealarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(realarray->memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -686,7 +687,7 @@ RETCODE SCIPrealarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(memhdr, &realarray->vals, realarray->valssize);
+      freeBlockMemoryArrayNull(realarray->memhdr, &realarray->vals, realarray->valssize);
       realarray->vals = newvals;
       realarray->valssize = newvalssize;
       realarray->firstidx = newfirstidx;
@@ -828,7 +829,6 @@ Real SCIPrealarrayGetVal(
 /** sets value of entry in dynamic array */
 RETCODE SCIPrealarraySetVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Real             val                 /**< value to set array index to */
@@ -843,7 +843,7 @@ RETCODE SCIPrealarraySetVal(
    if( !SCIPsetIsZero(set, val) )
    {
       /* extend array to be able to store the index */
-      CHECK_OKAY( SCIPrealarrayExtend(realarray, memhdr, set, idx, idx) );
+      CHECK_OKAY( SCIPrealarrayExtend(realarray, set, idx, idx) );
       assert(idx >= realarray->firstidx);
       assert(idx < realarray->firstidx + realarray->valssize);
       
@@ -896,19 +896,19 @@ RETCODE SCIPrealarraySetVal(
 /** increases value of entry in dynamic array */
 RETCODE SCIPrealarrayIncVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    Real             incval              /**< value to increase array index */
    )
 {
-   return SCIPrealarraySetVal(realarray, memhdr, set, idx, SCIPrealarrayGetVal(realarray, idx) + incval);
+   return SCIPrealarraySetVal(realarray, set, idx, SCIPrealarrayGetVal(realarray, idx) + incval);
 }
 
 
 /** dynamic array for storing int values */
 struct IntArray
 {
+   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
    int*             vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */
@@ -923,8 +923,10 @@ RETCODE SCIPintarrayCreate(
    )
 {
    assert(intarray != NULL);
+   assert(memhdr != NULL);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, intarray) );
+   (*intarray)->memhdr = memhdr;
    (*intarray)->vals = NULL;
    (*intarray)->valssize = 0;
    (*intarray)->firstidx = -1;
@@ -944,7 +946,7 @@ RETCODE SCIPintarrayCopy(
    assert(intarray != NULL);
    assert(sourceintarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, intarray) );
+   CHECK_OKAY( SCIPintarrayCreate(intarray, memhdr) );
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
    (*intarray)->valssize = sourceintarray->valssize;
    (*intarray)->firstidx = sourceintarray->firstidx;
@@ -956,15 +958,14 @@ RETCODE SCIPintarrayCopy(
 
 /** frees a dynamic array of int values */
 RETCODE SCIPintarrayFree(
-   INTARRAY**       intarray,           /**< pointer to the int array */
-   MEMHDR*          memhdr              /**< block memory */
+   INTARRAY**       intarray            /**< pointer to the int array */
    )
 {
    assert(intarray != NULL);
    assert(*intarray != NULL);
 
-   freeBlockMemoryArrayNull(memhdr, &(*intarray)->vals, (*intarray)->valssize);
-   freeBlockMemory(memhdr, intarray);
+   freeBlockMemoryArrayNull((*intarray)->memhdr, &(*intarray)->vals, (*intarray)->valssize);
+   freeBlockMemory((*intarray)->memhdr, intarray);
 
    return SCIP_OKAY;
 }
@@ -972,7 +973,6 @@ RETCODE SCIPintarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 RETCODE SCIPintarrayExtend(
    INTARRAY*        intarray,           /**< dynamic int array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -1008,7 +1008,7 @@ RETCODE SCIPintarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(intarray->memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1033,7 +1033,7 @@ RETCODE SCIPintarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(memhdr, &intarray->vals, intarray->valssize);
+      freeBlockMemoryArrayNull(intarray->memhdr, &intarray->vals, intarray->valssize);
       intarray->vals = newvals;
       intarray->valssize = newvalssize;
       intarray->firstidx = newfirstidx;
@@ -1175,7 +1175,6 @@ int SCIPintarrayGetVal(
 /** sets value of entry in dynamic array */
 RETCODE SCIPintarraySetVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    int              val                 /**< value to set array index to */
@@ -1190,7 +1189,7 @@ RETCODE SCIPintarraySetVal(
    if( !SCIPsetIsZero(set, val) )
    {
       /* extend array to be able to store the index */
-      CHECK_OKAY( SCIPintarrayExtend(intarray, memhdr, set, idx, idx) );
+      CHECK_OKAY( SCIPintarrayExtend(intarray, set, idx, idx) );
       assert(idx >= intarray->firstidx);
       assert(idx < intarray->firstidx + intarray->valssize);
       
@@ -1243,19 +1242,19 @@ RETCODE SCIPintarraySetVal(
 /** increases value of entry in dynamic array */
 RETCODE SCIPintarrayIncVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    int              incval              /**< value to increase array index */
    )
 {
-   return SCIPintarraySetVal(intarray, memhdr, set, idx, SCIPintarrayGetVal(intarray, idx) + incval);
+   return SCIPintarraySetVal(intarray, set, idx, SCIPintarrayGetVal(intarray, idx) + incval);
 }
 
 
 /** dynamic array for storing bool values */
 struct BoolArray
 {
+   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
    Bool*            vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */
@@ -1270,8 +1269,10 @@ RETCODE SCIPboolarrayCreate(
    )
 {
    assert(boolarray != NULL);
+   assert(memhdr != NULL);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, boolarray) );
+   (*boolarray)->memhdr = memhdr;
    (*boolarray)->vals = NULL;
    (*boolarray)->valssize = 0;
    (*boolarray)->firstidx = -1;
@@ -1291,7 +1292,7 @@ RETCODE SCIPboolarrayCopy(
    assert(boolarray != NULL);
    assert(sourceboolarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, boolarray) );
+   CHECK_OKAY( SCIPboolarrayCreate(boolarray, memhdr) );
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*boolarray)->vals, sourceboolarray->vals, sourceboolarray->valssize) );
    (*boolarray)->valssize = sourceboolarray->valssize;
    (*boolarray)->firstidx = sourceboolarray->firstidx;
@@ -1303,15 +1304,14 @@ RETCODE SCIPboolarrayCopy(
 
 /** frees a dynamic array of bool values */
 RETCODE SCIPboolarrayFree(
-   BOOLARRAY**      boolarray,          /**< pointer to the bool array */
-   MEMHDR*          memhdr              /**< block memory */
+   BOOLARRAY**      boolarray           /**< pointer to the bool array */
    )
 {
    assert(boolarray != NULL);
    assert(*boolarray != NULL);
 
-   freeBlockMemoryArrayNull(memhdr, &(*boolarray)->vals, (*boolarray)->valssize);
-   freeBlockMemory(memhdr, boolarray);
+   freeBlockMemoryArrayNull((*boolarray)->memhdr, &(*boolarray)->vals, (*boolarray)->valssize);
+   freeBlockMemory((*boolarray)->memhdr, boolarray);
 
    return SCIP_OKAY;
 }
@@ -1319,7 +1319,6 @@ RETCODE SCIPboolarrayFree(
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 RETCODE SCIPboolarrayExtend(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -1355,7 +1354,7 @@ RETCODE SCIPboolarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(boolarray->memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1380,7 +1379,7 @@ RETCODE SCIPboolarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(memhdr, &boolarray->vals, boolarray->valssize);
+      freeBlockMemoryArrayNull(boolarray->memhdr, &boolarray->vals, boolarray->valssize);
       boolarray->vals = newvals;
       boolarray->valssize = newvalssize;
       boolarray->firstidx = newfirstidx;
@@ -1522,7 +1521,6 @@ Bool SCIPboolarrayGetVal(
 /** sets value of entry in dynamic array */
 RETCODE SCIPboolarraySetVal(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Bool             val                 /**< value to set array index to */
@@ -1537,7 +1535,7 @@ RETCODE SCIPboolarraySetVal(
    if( !SCIPsetIsZero(set, val) )
    {
       /* extend array to be able to store the index */
-      CHECK_OKAY( SCIPboolarrayExtend(boolarray, memhdr, set, idx, idx) );
+      CHECK_OKAY( SCIPboolarrayExtend(boolarray, set, idx, idx) );
       assert(idx >= boolarray->firstidx);
       assert(idx < boolarray->firstidx + boolarray->valssize);
       

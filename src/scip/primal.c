@@ -160,10 +160,10 @@ RETCODE primalAddSol(
    assert(0 <= insertpos && insertpos < set->maxsol);
 
    debugMessage("insert primal solution at position %d:", insertpos);
-   debug( SCIPsolPrint(sol, memhdr, set, stat, prob, NULL) );
+   debug( SCIPsolPrint(sol, set, stat, prob, NULL) );
 
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
-   CHECK_OKAY( SCIPsolUnlink(sol, memhdr, set, prob) );
+   CHECK_OKAY( SCIPsolUnlink(sol, set, prob) );
 
    /* allocate memory for solution storage */
    CHECK_OKAY( ensureSolsSize(primal, set, set->maxsol) );

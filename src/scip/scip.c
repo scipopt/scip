@@ -2472,7 +2472,7 @@ Real SCIPgetRowSolActivity(
    {
       Real activity;
 
-      CHECK_ABORT( SCIProwGetSolActivity(row, scip->mem->solvemem, scip->set, scip->stat, sol, &activity) );
+      CHECK_ABORT( SCIProwGetSolActivity(row, scip->set, scip->stat, sol, &activity) );
       return activity;
    }
    else if( scip->tree->actnodehaslp )
@@ -2494,7 +2494,7 @@ Real SCIPgetRowSolFeasibility(
    {
       Real feasibility;
 
-      CHECK_ABORT( SCIProwGetSolFeasibility(row, scip->mem->solvemem, scip->set, scip->stat, sol, &feasibility) );
+      CHECK_ABORT( SCIProwGetSolFeasibility(row, scip->set, scip->stat, sol, &feasibility) );
       return feasibility;
    }
    else if( scip->tree->actnodehaslp )
@@ -2888,7 +2888,7 @@ RETCODE SCIPclearSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPclearSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolClear(sol, scip->mem->solvemem, scip->stat) );
+   CHECK_OKAY( SCIPsolClear(sol, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -2901,7 +2901,7 @@ RETCODE SCIPunlinkSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPunlinkSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolUnlink(sol, scip->mem->solvemem, scip->set, scip->transprob) );
+   CHECK_OKAY( SCIPsolUnlink(sol, scip->set, scip->transprob) );
 
    return SCIP_OKAY;
 }
@@ -2916,7 +2916,7 @@ RETCODE SCIPsetSolVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolSetVal(sol, scip->mem->solvemem, scip->set, scip->stat, var, val) );
+   CHECK_OKAY( SCIPsolSetVal(sol, scip->set, scip->stat, var, val) );
 
    return SCIP_OKAY;
 }
@@ -2931,7 +2931,7 @@ RETCODE SCIPincSolVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPincSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolIncVal(sol, scip->mem->solvemem, scip->set, scip->stat, var, incval) );
+   CHECK_OKAY( SCIPsolIncVal(sol, scip->set, scip->stat, var, incval) );
 
    return SCIP_OKAY;
 }
@@ -2949,7 +2949,7 @@ Real SCIPgetSolVal(
    {
       Real solval;
 
-      CHECK_ABORT( SCIPsolGetVal(sol, scip->mem->solvemem, scip->set, scip->stat, var, &solval) );
+      CHECK_ABORT( SCIPsolGetVal(sol, scip->set, scip->stat, var, &solval) );
       return solval;
    }
    else
@@ -3053,7 +3053,7 @@ RETCODE SCIPprintSol(
    fprintf(file, "objective value:                 %f\n",
       SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, SCIPsolGetObj(sol))));
    
-   CHECK_OKAY( SCIPsolPrint(sol, scip->mem->solvemem, scip->set, scip->stat, scip->origprob, file) );
+   CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, file) );
 
    return SCIP_OKAY;
 }
@@ -3072,7 +3072,7 @@ RETCODE SCIPprintTransSol(
 
    fprintf(file, "transformed objective value:     %f\n", SCIPsolGetObj(sol));
    
-   CHECK_OKAY( SCIPsolPrint(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, file) );
+   CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, file) );
    
    return SCIP_OKAY;
 }
@@ -4249,7 +4249,7 @@ RETCODE SCIPfreeRealarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPfreeRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPrealarrayFree(realarray, SCIPmemhdr(scip)) );
+   CHECK_OKAY( SCIPrealarrayFree(realarray) );
    
    return SCIP_OKAY;
 }
@@ -4264,7 +4264,7 @@ RETCODE SCIPextendRealarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPextendRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPrealarrayExtend(realarray, SCIPmemhdr(scip), scip->set, minidx, maxidx) );
+   CHECK_OKAY( SCIPrealarrayExtend(realarray, scip->set, minidx, maxidx) );
    
    return SCIP_OKAY;
 }
@@ -4306,7 +4306,7 @@ RETCODE SCIPsetRealarrayVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPrealarraySetVal(realarray, SCIPmemhdr(scip), scip->set, idx, val) );
+   CHECK_OKAY( SCIPrealarraySetVal(realarray, scip->set, idx, val) );
    
    return SCIP_OKAY;
 }
@@ -4321,7 +4321,7 @@ RETCODE SCIPincRealarrayVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPincRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPrealarrayIncVal(realarray, SCIPmemhdr(scip), scip->set, idx, incval) );
+   CHECK_OKAY( SCIPrealarrayIncVal(realarray, scip->set, idx, incval) );
    
    return SCIP_OKAY;
 }
@@ -4347,7 +4347,7 @@ RETCODE SCIPfreeIntarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPfreeIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPintarrayFree(intarray, SCIPmemhdr(scip)) );
+   CHECK_OKAY( SCIPintarrayFree(intarray) );
    
    return SCIP_OKAY;
 }
@@ -4362,7 +4362,7 @@ RETCODE SCIPextendIntarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPextendIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPintarrayExtend(intarray, SCIPmemhdr(scip), scip->set, minidx, maxidx) );
+   CHECK_OKAY( SCIPintarrayExtend(intarray, scip->set, minidx, maxidx) );
    
    return SCIP_OKAY;
 }
@@ -4404,7 +4404,7 @@ RETCODE SCIPsetIntarrayVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPintarraySetVal(intarray, SCIPmemhdr(scip), scip->set, idx, val) );
+   CHECK_OKAY( SCIPintarraySetVal(intarray, scip->set, idx, val) );
    
    return SCIP_OKAY;
 }
@@ -4419,7 +4419,7 @@ RETCODE SCIPincIntarrayVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPincIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPintarrayIncVal(intarray, SCIPmemhdr(scip), scip->set, idx, incval) );
+   CHECK_OKAY( SCIPintarrayIncVal(intarray, scip->set, idx, incval) );
    
    return SCIP_OKAY;
 }
@@ -4445,7 +4445,7 @@ RETCODE SCIPfreeBoolarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPfreeBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPboolarrayFree(boolarray, SCIPmemhdr(scip)) );
+   CHECK_OKAY( SCIPboolarrayFree(boolarray) );
    
    return SCIP_OKAY;
 }
@@ -4460,7 +4460,7 @@ RETCODE SCIPextendBoolarray(
 {
    CHECK_OKAY( checkStage(scip, "SCIPextendBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPboolarrayExtend(boolarray, SCIPmemhdr(scip), scip->set, minidx, maxidx) );
+   CHECK_OKAY( SCIPboolarrayExtend(boolarray, scip->set, minidx, maxidx) );
    
    return SCIP_OKAY;
 }
@@ -4502,7 +4502,7 @@ RETCODE SCIPsetBoolarrayVal(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   CHECK_OKAY( SCIPboolarraySetVal(boolarray, SCIPmemhdr(scip), scip->set, idx, val) );
+   CHECK_OKAY( SCIPboolarraySetVal(boolarray, scip->set, idx, val) );
    
    return SCIP_OKAY;
 }

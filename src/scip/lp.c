@@ -2461,7 +2461,6 @@ Real SCIProwGetPseudoFeasibility(
 /** returns the activity of a row for a given solution */
 RETCODE SCIProwGetSolActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    SOL*             sol,                /**< primal CIP solution */
@@ -2478,7 +2477,7 @@ RETCODE SCIProwGetSolActivity(
    for( i = 0; i < row->len; ++i )
    {
       assert(row->cols[i] != NULL);
-      CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, row->cols[i]->var, &solval) );
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, row->cols[i]->var, &solval) );
       *solactivity += row->vals[i] * solval;
    }
 
@@ -2488,7 +2487,6 @@ RETCODE SCIProwGetSolActivity(
 /** returns the feasibility of a row for the given solution */
 RETCODE SCIProwGetSolFeasibility(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    SOL*             sol,                /**< primal CIP solution */
@@ -2500,7 +2498,7 @@ RETCODE SCIProwGetSolFeasibility(
    assert(row != NULL);
    assert(solfeasibility != NULL);
 
-   CHECK_OKAY( SCIProwGetSolActivity(row, memhdr, set, stat, sol, &solactivity) );
+   CHECK_OKAY( SCIProwGetSolActivity(row, set, stat, sol, &solactivity) );
 
    *solfeasibility = MIN(row->rhs - solactivity, solactivity - row->lhs);
 

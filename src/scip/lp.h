@@ -595,7 +595,6 @@ Real SCIProwGetPseudoFeasibility(
 extern
 RETCODE SCIProwGetSolActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    SOL*             sol,                /**< primal CIP solution */
@@ -606,7 +605,6 @@ RETCODE SCIProwGetSolActivity(
 extern
 RETCODE SCIProwGetSolFeasibility(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    SOL*             sol,                /**< primal CIP solution */

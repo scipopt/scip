@@ -183,15 +183,13 @@ RETCODE SCIPrealarrayCopy(
 /** frees a dynamic array of real values */
 extern
 RETCODE SCIPrealarrayFree(
-   REALARRAY**      realarray,          /**< pointer to the real array */
-   MEMHDR*          memhdr              /**< block memory */
+   REALARRAY**      realarray           /**< pointer to the real array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
 RETCODE SCIPrealarrayExtend(
    REALARRAY*       realarray,          /**< dynamic real array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -214,7 +212,6 @@ Real SCIPrealarrayGetVal(
 extern
 RETCODE SCIPrealarraySetVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Real             val                 /**< value to set array index to */
@@ -224,7 +221,6 @@ RETCODE SCIPrealarraySetVal(
 extern
 RETCODE SCIPrealarrayIncVal(
    REALARRAY*       realarray,          /**< dynamic real array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    Real             incval              /**< value to increase array index */
@@ -248,15 +244,13 @@ RETCODE SCIPintarrayCopy(
 /** frees a dynamic array of int values */
 extern
 RETCODE SCIPintarrayFree(
-   INTARRAY**       intarray,           /**< pointer to the int array */
-   MEMHDR*          memhdr              /**< block memory */
+   INTARRAY**       intarray            /**< pointer to the int array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
 RETCODE SCIPintarrayExtend(
    INTARRAY*        intarray,           /**< dynamic int array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -279,7 +273,6 @@ int SCIPintarrayGetVal(
 extern
 RETCODE SCIPintarraySetVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    int              val                 /**< value to set array index to */
@@ -289,7 +282,6 @@ RETCODE SCIPintarraySetVal(
 extern
 RETCODE SCIPintarrayIncVal(
    INTARRAY*        intarray,           /**< dynamic int array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to increase value for */
    int              incval              /**< value to increase array index */
@@ -313,15 +305,13 @@ RETCODE SCIPboolarrayCopy(
 /** frees a dynamic array of bool values */
 extern
 RETCODE SCIPboolarrayFree(
-   BOOLARRAY**      boolarray,          /**< pointer to the bool array */
-   MEMHDR*          memhdr              /**< block memory */
+   BOOLARRAY**      boolarray           /**< pointer to the bool array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
 RETCODE SCIPboolarrayExtend(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -344,7 +334,6 @@ Bool SCIPboolarrayGetVal(
 extern
 RETCODE SCIPboolarraySetVal(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    Bool             val                 /**< value to set array index to */

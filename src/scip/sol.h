@@ -137,7 +137,6 @@ RETCODE SCIPsolLinkActSol(
 extern
 RETCODE SCIPsolClear(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    STAT*            stat                /**< problem statistics data */
    );
 
@@ -145,7 +144,6 @@ RETCODE SCIPsolClear(
 extern
 RETCODE SCIPsolUnlink(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    );
@@ -154,7 +152,6 @@ RETCODE SCIPsolUnlink(
 extern
 RETCODE SCIPsolSetVal(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var,                /**< variable to add to solution */
@@ -165,7 +162,6 @@ RETCODE SCIPsolSetVal(
 extern
 RETCODE SCIPsolIncVal(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var,                /**< variable to increase solution value for */
@@ -176,7 +172,6 @@ RETCODE SCIPsolIncVal(
 extern
 RETCODE SCIPsolGetVal(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var,                /**< variable to get value for */
@@ -217,7 +212,6 @@ HEUR* SCIPsolGetHeur(
 extern
 RETCODE SCIPsolPrint(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< problem data */

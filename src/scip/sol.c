@@ -182,10 +182,10 @@ RETCODE SCIPsolFree(
    assert(*sol != NULL);
    assert(((*sol)->solorigin == SCIP_SOLORIGIN_ZERO) ^ ((*sol)->valid != NULL));
 
-   CHECK_OKAY( SCIPrealarrayFree(&(*sol)->vals, memhdr) );
+   CHECK_OKAY( SCIPrealarrayFree(&(*sol)->vals) );
    if( (*sol)->solorigin != SCIP_SOLORIGIN_ZERO )
    {
-      CHECK_OKAY( SCIPboolarrayFree(&(*sol)->valid, memhdr) );
+      CHECK_OKAY( SCIPboolarrayFree(&(*sol)->valid) );
    }
    freeBlockMemory(memhdr, sol);
 
@@ -296,7 +296,6 @@ RETCODE SCIPsolLinkActSol(
 /** clears primal CIP solution */
 RETCODE SCIPsolClear(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    STAT*            stat                /**< problem statistics data */
    )
 {
@@ -307,7 +306,7 @@ RETCODE SCIPsolClear(
    sol->obj = 0.0;
    if( sol->solorigin != SCIP_SOLORIGIN_ZERO )
    {
-      CHECK_OKAY( SCIPboolarrayFree(&sol->valid, memhdr) );
+      CHECK_OKAY( SCIPboolarrayFree(&sol->valid) );
       sol->solorigin = SCIP_SOLORIGIN_ZERO;
    }
    sol->nodenum = stat->nnodes;
@@ -319,7 +318,6 @@ RETCODE SCIPsolClear(
 static
 RETCODE solUnlinkVar(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< problem variable */
    )
@@ -339,8 +337,8 @@ RETCODE solUnlinkVar(
       if( !SCIPboolarrayGetVal(sol->valid, var->index) )
       {
          assert(SCIPrealarrayGetVal(sol->vals, var->index) == 0.0);
-         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, memhdr, set, var->index, SCIPvarGetLPSol(var)) );
-         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, memhdr, set, var->index, TRUE) );
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, var->index, SCIPvarGetLPSol(var)) );
+         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, var->index, TRUE) );
       }
       return SCIP_OKAY;
 
@@ -349,8 +347,8 @@ RETCODE solUnlinkVar(
       if( !SCIPboolarrayGetVal(sol->valid, var->index) )
       {
          assert(SCIPrealarrayGetVal(sol->vals, var->index) == 0.0);
-         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, memhdr, set, var->index, SCIPvarGetPseudoSol(var)) );
-         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, memhdr, set, var->index, TRUE) );
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, var->index, SCIPvarGetPseudoSol(var)) );
+         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, var->index, TRUE) );
       }
       return SCIP_OKAY;
 
@@ -363,7 +361,6 @@ RETCODE solUnlinkVar(
 /** stores solution values of variables in solution's own array */
 RETCODE SCIPsolUnlink(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    )
@@ -380,10 +377,10 @@ RETCODE SCIPsolUnlink(
       for( v = 0; v < prob->nvars; ++v )
       {
          assert(prob->vars[v] != NULL);
-         CHECK_OKAY( solUnlinkVar(sol, memhdr, set, prob->vars[v]) );
+         CHECK_OKAY( solUnlinkVar(sol, set, prob->vars[v]) );
       }
       
-      CHECK_OKAY( SCIPboolarrayFree(&sol->valid, memhdr) );
+      CHECK_OKAY( SCIPboolarrayFree(&sol->valid) );
       sol->solorigin = SCIP_SOLORIGIN_ZERO;
    }
 
@@ -393,7 +390,6 @@ RETCODE SCIPsolUnlink(
 /** sets value of variable in primal CIP solution */
 RETCODE SCIPsolSetVal(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var,                /**< variable to add to solution */
@@ -413,14 +409,14 @@ RETCODE SCIPsolSetVal(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      return SCIPsolSetVal(sol, memhdr, set, stat, var->data.transvar, val);
+      return SCIPsolSetVal(sol, set, stat, var->data.transvar, val);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, var, &oldval) );
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var, &oldval) );
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, memhdr, set, var->index, val) );
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, var->index, val) );
          sol->obj += var->obj * (val - oldval);
          sol->nodenum = stat->nnodes;
       }
@@ -432,7 +428,7 @@ RETCODE SCIPsolSetVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      return SCIPsolSetVal(sol, memhdr, set, stat, var->data.aggregate.var,
+      return SCIPsolSetVal(sol, set, stat, var->data.aggregate.var,
          (val - var->data.aggregate.constant)/var->data.aggregate.scalar);
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -448,7 +444,6 @@ RETCODE SCIPsolSetVal(
 /** increases value of variable in primal CIP solution */
 RETCODE SCIPsolIncVal(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var,                /**< variable to increase solution value for */
@@ -469,12 +464,12 @@ RETCODE SCIPsolIncVal(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      return SCIPsolIncVal(sol, memhdr, set, stat, var->data.transvar, incval);
+      return SCIPsolIncVal(sol, set, stat, var->data.transvar, incval);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      CHECK_OKAY( solUnlinkVar(sol, memhdr, set, var) );
-      CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, memhdr, set, var->index, incval) );
+      CHECK_OKAY( solUnlinkVar(sol, set, var) );
+      CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, set, var->index, incval) );
       sol->obj += var->obj * incval;
       sol->nodenum = stat->nnodes;
       return SCIP_OKAY;
@@ -485,7 +480,7 @@ RETCODE SCIPsolIncVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      return SCIPsolIncVal(sol, memhdr, set, stat, var->data.aggregate.var,
+      return SCIPsolIncVal(sol, set, stat, var->data.aggregate.var,
          (incval - var->data.aggregate.constant)/var->data.aggregate.scalar);
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -501,7 +496,6 @@ RETCODE SCIPsolIncVal(
 /** returns value of variable in primal CIP solution */
 RETCODE SCIPsolGetVal(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var,                /**< variable to get value for */
@@ -523,12 +517,12 @@ RETCODE SCIPsolGetVal(
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, var->data.transvar, solval) );
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.transvar, solval) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      CHECK_OKAY( solUnlinkVar(sol, memhdr, set, var) );
+      CHECK_OKAY( solUnlinkVar(sol, set, var) );
       *solval = SCIPrealarrayGetVal(sol->vals, var->index);
       return SCIP_OKAY;
 
@@ -537,7 +531,7 @@ RETCODE SCIPsolGetVal(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, var->data.aggregate.var, solval) );
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.aggregate.var, solval) );
       *solval *= var->data.aggregate.scalar;
       *solval += var->data.aggregate.constant;
       return SCIP_OKAY;
@@ -546,7 +540,7 @@ RETCODE SCIPsolGetVal(
       *solval = var->data.multaggr.constant;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
-         CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, var->data.multaggr.vars[i], &val) );
+         CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.multaggr.vars[i], &val) );
          *solval += var->data.multaggr.scalars[i] * val;
       }
       return SCIP_OKAY;
@@ -617,7 +611,6 @@ HEUR* SCIPsolGetHeur(
 /** outputs non-zero elements of solution to file stream */
 RETCODE SCIPsolPrint(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< problem data */
@@ -636,7 +629,7 @@ RETCODE SCIPsolPrint(
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
-      CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, prob->vars[v], &solval) );
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, prob->vars[v], &solval) );
       if( !SCIPsetIsZero(set, solval) )
       {
          fprintf(file, "%-32s %f\n", prob->vars[v]->name, solval);
