@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.110 2005/01/31 12:20:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.111 2005/01/31 12:57:19 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2464,6 +2464,36 @@ RETCODE SCIPconshdlrPresolve(
          return SCIP_INVALIDRESULT;
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** locks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
+RETCODE SCIPconshdlrLockVars(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conshdlr->conslock != NULL);
+   assert(!conshdlr->needscons);
+
+   CHECK_OKAY( conshdlr->conslock(set->scip, conshdlr, NULL, +1, 0) );
+
+   return SCIP_OKAY;
+}
+
+/** unlocks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
+RETCODE SCIPconshdlrUnlockVars(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conshdlr->conslock != NULL);
+   assert(!conshdlr->needscons);
+
+   CHECK_OKAY( conshdlr->conslock(set->scip, conshdlr, NULL, -1, 0) );
 
    return SCIP_OKAY;
 }

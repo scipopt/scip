@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.82 2005/01/31 12:20:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.83 2005/01/31 12:57:19 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -247,6 +247,19 @@ RETCODE SCIPconshdlrPresolve(
    int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
    RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** locks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
+RETCODE SCIPconshdlrLockVars(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** unlocks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
+extern
+RETCODE SCIPconshdlrUnlockVars(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   SET*             set                 /**< global SCIP settings */
    );
 
 

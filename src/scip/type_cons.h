@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.23 2005/01/31 12:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.24 2005/01/31 12:57:19 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -486,7 +486,8 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
- *  - cons            : the constraint that should lock rounding of its variables
+ *  - cons            : the constraint that should lock rounding of its variables, or NULL if the constraint handler
+ *                      does not need constraints
  *  - nlockspos       : number of times, the roundings should be locked for the constraint (may be negative)
  *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation (may be negative)
  */

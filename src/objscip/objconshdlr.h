@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.28 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.29 2005/01/31 12:57:19 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -571,7 +571,8 @@ public:
    virtual RETCODE scip_lock(
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that should lock rounding of its variables */
+      CONS*         cons,               /**< the constraint that should lock rounding of its variables, or NULL if the
+                                         *   constraint handler does not need constraints */
       int           nlockspos,          /**< no. of times, the roundings should be locked for the constraint */
       int           nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
       ) = 0;

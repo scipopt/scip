@@ -44,6 +44,7 @@ fixed bugs:
 - included missing "objrelax.h" in includes of objscip.h
 - fixed bug that presolving time is not counted to solving time, if presolving is called explicitly with SCIPpresolve()
 - fixed bug where presolving fixings are counted even if the variable was already fixed
+- fixed bug that CONSLOCK method of constraint handlers that don't need constraints is not called
 
 known bugs:
 - after a resolve and further preprocessing, existing primal solutions may get corrupted due to aggregations or

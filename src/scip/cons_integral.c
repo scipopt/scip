@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.36 2005/01/21 09:16:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.37 2005/01/31 12:57:19 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -176,7 +176,11 @@ DECL_CONSCHECK(consCheckIntegral)
 
 
 /** variable rounding lock method of constraint handler */
-#define consLockIntegral NULL
+static
+DECL_CONSLOCK(consLockIntegral)
+{  /*lint --e{715}*/
+   return SCIP_OKAY;
+}
 
 
 /** constraint activation notification method of constraint handler */

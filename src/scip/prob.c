@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.62 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.63 2005/01/31 12:57:19 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -218,6 +218,20 @@ RETCODE SCIPprobFree(
       CHECK_OKAY( SCIPprobDelCons(*prob, blkmem, set, stat, (*prob)->conss[0]) );
    }
 
+   if( (*prob)->transformed )
+   {
+      int h;
+
+      /* unlock variables for all constraint handlers that don't need constraints */
+      for( h = 0; h < set->nconshdlrs; ++h )
+      {
+         if( !SCIPconshdlrNeedsCons(set->conshdlrs[h]) )
+         {
+            CHECK_OKAY( SCIPconshdlrUnlockVars(set->conshdlrs[h], set) );
+         }
+      }
+   }
+
    freeMemoryArray(&(*prob)->name);
 
    /* free constraint array */
@@ -267,6 +281,7 @@ RETCODE SCIPprobTransform(
    char transname[MAXSTRLEN];
    int v;
    int c;
+   int h;
 
    assert(set != NULL);
    assert(source != NULL);
@@ -300,6 +315,15 @@ RETCODE SCIPprobTransform(
       CHECK_OKAY( SCIPconsTransform(source->conss[c], blkmem, set, &targetcons) );
       CHECK_OKAY( SCIPprobAddCons(*target, set, stat, targetcons) );
       CHECK_OKAY( SCIPconsRelease(&targetcons, blkmem, set) );
+   }
+
+   /* lock variables for all constraint handlers that don't need constraints */
+   for( h = 0; h < set->nconshdlrs; ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(set->conshdlrs[h]) )
+      {
+         CHECK_OKAY( SCIPconshdlrLockVars(set->conshdlrs[h], set) );
+      }
    }
 
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
