@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.14 2004/03/09 18:03:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.15 2004/03/10 10:16:14 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -207,23 +207,25 @@ RETCODE dynProgKnapsack(
    int d;
    int j;
 
-   assert(items!=NULL);
-   assert(weights!=NULL);
-   assert(profits!=NULL);
-   assert(covervars!=NULL);
-   assert(ncovervars!=NULL);
-   assert(solval!=NULL);
+   assert(items != NULL);
+   assert(weights != NULL);
+   assert(profits != NULL);
+   assert(covervars != NULL);
+   assert(ncovervars != NULL);
+   assert(solval != NULL);
+   assert(capacity >= 0);
+   assert(nitems >= 0);
 
    CHECK_OKAY( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(capacity+1)) );
    
    /* fill dynamic programming table with optimal values */
-   for( d=0; d<=capacity; d++)
+   for( d = 0; d <= capacity; d++)
       optvalues[IDX(0,d)] = 0.0;
-   for( j=1; j<=nitems; j++ )
+   for( j = 1; j <= nitems; j++ )
    {
-      for( d=0; d<weights[j-1]; d++)
+      for( d = 0; d < weights[j-1] && d <= capacity; d++)
          optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
-      for( d=weights[j-1]; d<=capacity; d++ )
+      for( d = weights[j-1]; d <= capacity; d++ )
       {
          if( optvalues[IDX(j-1,d-weights[j-1])]+profits[j-1] > optvalues[IDX(j-1,d)] )
             optvalues[IDX(j,d)] = optvalues[IDX(j-1,d-weights[j-1])] + profits[j-1];
@@ -245,7 +247,7 @@ RETCODE dynProgKnapsack(
          covervars[*ncovervars] = items[j-1];
          (*ncovervars)++;
       }
-      assert(d>=0);
+      assert(d >= 0);
    }
  
    *solval = optvalues[IDX(nitems,capacity)];
@@ -286,8 +288,8 @@ RETCODE separateCovers(
    *separated = FALSE;
    
    /* solve the following knapsack problem with dynamic programming:
-    * max SUM (1-x_i^*)z_i
-    *     SUM w_i z_i >= SUM w_i - capacity -1
+    * max SUM (1 - x_i^*) z_i
+    *     SUM w_i z_i >= SUM w_i - capacity - 1
     */
    
    /* set up datastructures */
@@ -300,9 +302,9 @@ RETCODE separateCovers(
    nitems = 0;
    nfixedones = 0;
    solvalsum = 0.0;
-   capacity = -(int)(consdata->capacity+0.5)-1;
+   capacity = -(int)(consdata->capacity+0.5) - 1;
 
-   for( i=0; i < consdata->nvars; i++ )
+   for( i = 0; i < consdata->nvars; i++ )
    {
       Real solval;
       solval = SCIPgetVarSol(scip, consdata->vars[i]);
@@ -313,7 +315,7 @@ RETCODE separateCovers(
          items[nitems] = consdata->vars[i];
          weights[nitems] = (int)(consdata->weights[i]+0.5);
          profits[nitems] = 1.0 - solval;
-         printf("  weight = %d, profit = %g\n", weights[nitems], profits[nitems]);
+         printf("  weight = %d, profit = %g\n", weights[nitems], profits[nitems]); /* ??????????????????*/
          nitems++;
          capacity += (int)(consdata->weights[i]+0.5);
       }
@@ -324,38 +326,42 @@ RETCODE separateCovers(
          capacity += (int)(consdata->weights[i]+0.5);
       }
    }
-   printf("capacity = %d\n", capacity);
+   printf("capacity = %d\n", capacity); /* ??????????????????*/
 
-   /* solve separation knapsack with dynamic programming */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, nitems+nfixedones) );
-   CHECK_OKAY( dynProgKnapsack(scip, nitems, items, weights, profits, capacity, 
-                  covervars, &ncovervars, &transsol) ); 
-   printf("ncovervars = %d, transsol = %g\n", ncovervars, transsol); 
-   /* generate cutting plane */
-   infeasibility = transsol - nitems - nfixedones + 1.0 + solvalsum;
-   if( SCIPisFeasPositive(scip, infeasibility) ) 
+   if( capacity >= 0)
    {
-      ROW* row;
-      char name[MAXSTRLEN];
-      sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-      CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), ncovervars+nfixedones-1.0, 
-                     SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
-      for( i = 0; i < ncovervars; i++)
+      /* solve separation knapsack with dynamic programming */
+      CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, nitems+nfixedones) );
+      CHECK_OKAY( dynProgKnapsack(scip, nitems, items, weights, profits, capacity, 
+                     covervars, &ncovervars, &transsol) ); 
+      printf("ncovervars = %d, transsol = %g\n", ncovervars, transsol); /* ??????????????????*/ 
+      
+      /* generate cutting plane */
+      infeasibility = transsol - nitems - nfixedones + 1.0 + solvalsum;
+      if( SCIPisFeasPositive(scip, infeasibility) ) 
       {
-         CHECK_OKAY( SCIPaddVarToRow(scip, row, covervars[i], 1.0) );
+         ROW* row;
+         char name[MAXSTRLEN];
+         sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+         CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), ncovervars+nfixedones-1.0, 
+                        SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
+         for( i = 0; i < ncovervars; i++)
+         {
+            CHECK_OKAY( SCIPaddVarToRow(scip, row, covervars[i], 1.0) );
+         }
+         for( i = 0; i < nfixedones; i++)
+         {
+            CHECK_OKAY( SCIPaddVarToRow(scip, row, fixedones[i], 1.0) );
+         }
+         
+         CHECK_OKAY( SCIPprintRow(scip, row, NULL) );
+         CHECK_OKAY( SCIPaddCut(scip, row, infeasibility/(SCIProwGetNNonz(row)+1)) );
+         CHECK_OKAY( SCIPreleaseRow(scip, &row) );
       }
-      for( i = 0; i < nfixedones; i++)
-      {
-         CHECK_OKAY( SCIPaddVarToRow(scip, row, fixedones[i], 1.0) );
-      }
-
-      CHECK_OKAY( SCIPprintRow(scip, row, NULL) );
-      CHECK_OKAY( SCIPaddCut(scip, row, infeasibility/(SCIProwGetNNonz(row)+1)) );
-      CHECK_OKAY( SCIPreleaseRow(scip, &row) );
+   
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
    }
-
    /* free temporary data */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedones) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
