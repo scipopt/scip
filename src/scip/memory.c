@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.38 2005/02/16 17:46:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.39 2005/03/01 17:21:44 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -50,7 +50,6 @@
 
 #define MAX(x,y) ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
 #define MIN(x,y) ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
-
 
 
 
@@ -649,6 +648,9 @@ int linkChunk(
    assert(chunk != NULL);
    assert(chunk->store != NULL);
 
+   debugMessage("linking chunk %p to chunk block %p [elemsize:%d, %d chunks]\n", 
+      chunk, chkmem, chkmem->elemsize, chkmem->nchunks);
+
    /* binary search for the position to insert the chunk */
    left = -1;
    right = chkmem->nchunks;
@@ -720,6 +722,9 @@ void unlinkChunk(
    assert(0 <= chunk->arraypos && chunk->arraypos < chkmem->nchunks);
    assert(chkmem->chunks[chunk->arraypos] == chunk);
    
+   debugMessage("unlinking chunk %p from chunk block %p [elemsize:%d, %d chunks]\n", 
+      chunk, chkmem, chkmem->elemsize, chkmem->nchunks);
+
    /* remove the chunk from the chunks of the chunk block */
    for( i = chunk->arraypos; i < chkmem->nchunks-1; ++i )
    {
@@ -790,6 +795,8 @@ int createChunk(
 
    assert(chkmem != NULL);
 
+   debugMessage("creating new chunk in chunk block %p [elemsize: %d]\n", chkmem, chkmem->elemsize);
+
    /* calculate store size */
    if( chkmem->nchunks == 0 )
       storesize = chkmem->initchunksize;
@@ -851,6 +858,8 @@ void destroyChunk(
 {
    assert(chunk != NULL);
 
+   debugMessage("destroying chunk %p\n", chunk);
+
    /* free chunk header and store (allocated in one call) */
    freeMemory(&chunk);
 }
@@ -868,6 +877,8 @@ void freeChunk(
    assert(chunk->chkmem->chunks != NULL);
    assert(chunk->chkmem->firsteager != NULL);
    assert(chunk->eagerfreesize == chunk->storesize);
+
+   debugMessage("freeing chunk %p of chunk block %p [elemsize: %d]\n", chunk, chunk->chkmem, chunk->chkmem->elemsize);
 
    /* count the deleted eager free slots */
    chunk->chkmem->eagerfreesize -= chunk->eagerfreesize;
@@ -895,6 +906,8 @@ void* allocChunkElement(
    assert(chunk->eagerfree != NULL);
    assert(chunk->eagerfreesize > 0);
    assert(chunk->chkmem != NULL);
+
+   debugMessage("allocating chunk element in chunk %p [elemsize: %d]\n", chunk, chunk->chkmem->elemsize);
 
    /* unlink first element in the eager free list */
    ptr = chunk->eagerfree;
@@ -928,6 +941,8 @@ void freeChunkElement(
    assert(chunk != NULL);
    assert(chunk->chkmem != NULL);
    assert(isPtrInChunk(chunk, ptr));
+
+   debugMessage("freeing chunk element %p of chunk %p [elemsize: %d]\n", ptr, chunk, chunk->chkmem->elemsize);
 
    /* link chunk to the eager chunk list if necessary */
    if( chunk->eagerfree == NULL )
@@ -1078,6 +1093,8 @@ void garbagecollectChkmem(
 
    assert(chkmem != NULL);
 
+   debugMessage("garbage collection for chunk block %p [elemsize: %d]\n", chkmem, chkmem->elemsize);
+
    /* check, if the chunk block is completely unused */
    if( chkmem->lazyfreesize + chkmem->eagerfreesize == chkmem->storesize )
    {
@@ -1185,6 +1202,8 @@ CHKMEM* createChunkMemory_call(
    if( chkmem == NULL )
       fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for chunk block\n", filename, line);
 
+   debugMessage("created chunk memory %p [elemsize: %d]\n", chkmem, size);
+
    return chkmem;
 }
 
@@ -1195,6 +1214,8 @@ void clearChunkMemory_call(
    int              line                /**< line number in source file of the function call */
    )
 {
+   debugMessage("clearing chunk memory %p [elemsize: %d]\n", chkmem, chkmem->elemsize);
+
    if( chkmem != NULL )
       clearChkmem(chkmem);
    else
@@ -1209,6 +1230,8 @@ void destroyChunkMemory_call(
    )
 {
    assert(chkmem != NULL);
+
+   debugMessage("destroying chunk memory %p [elemsize: %d]\n", *chkmem, (*chkmem)->elemsize);
 
    if( *chkmem != NULL )
       destroyChkmem(chkmem);
@@ -1295,6 +1318,8 @@ void garbagecollectChunkMemory_call(
    CHKMEM*          chkmem              /**< chunk block */
    )
 {
+   debugMessage("garbage collection on chunk memory %p [elemsize: %d]\n", chkmem, chkmem->elemsize);
+
    garbagecollectChkmem(chkmem);
 }
 
@@ -1325,7 +1350,7 @@ struct BlkMem
  * debugging methods
  */
 
-#ifdef CHKMEM
+#ifdef CHECKMEM
 static
 void checkBlkmem(
    const BLKMEM*    blkmem              /**< block memory */
@@ -1596,6 +1621,7 @@ void freeBlockMemory_call(
             filename, line, *ptr, blkmem, (long long) size);
 	 return;
       }
+      assert(chkmem->elemsize == (int)size);
 
       /* free memory in chunk block */
       freeChkmemElement(chkmem, *ptr, filename, line);

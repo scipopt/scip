@@ -122,6 +122,7 @@ fixed bugs:
 - fixed bug in SCIPprintError() with file == NULL
 - fixed bug with globally deleting constraints, that have attached rows which are therefore not released in exitsol methods
 - fixed bugs in intobj separator
+- fixed bug in CPLEX LP interface with dual norms
 
 
 SCIP version 0.78

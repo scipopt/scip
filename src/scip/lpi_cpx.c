@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.85 2005/02/24 11:02:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.86 2005/03/01 17:21:43 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -267,7 +267,8 @@ RETCODE ensureRstatMem(
 static
 RETCODE getBase(
    LPI*             lpi,                /**< LP interface structure */
-   Real*            dnorm               /**< array for storing dual norms, or NULL */
+   Real*            dnorm,              /**< array for storing dual norms, or NULL */
+   Bool*            dnormsavailable     /**< pointer to store whether the dual norms were available, or NULL */
    )
 {
    int ncols;
@@ -288,7 +289,21 @@ RETCODE getBase(
    /* get unpacked basis information from CPLEX */
    if( dnorm != NULL )
    {
-      CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat, dnorm) );
+      int cpxresult;
+
+      assert(dnormsavailable != NULL);
+
+      cpxresult = CPXgetbasednorms(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat, dnorm);
+      if( cpxresult == CPXERR_NO_NORMS )
+      {
+         *dnormsavailable = FALSE;
+         CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
+      }
+      else
+      {
+         *dnormsavailable = TRUE;
+         CHECK_ZERO( cpxresult );
+      }
    }
    else
    {
@@ -415,7 +430,7 @@ void lpistateFree(
 
    freeBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols));
    freeBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrows));
-   freeBlockMemoryArrayNull(blkmem, &(*lpistate)->dnorm, (*lpistate)->ncols);
+   freeBlockMemoryArrayNull(blkmem, &(*lpistate)->dnorm, (*lpistate)->nrows);
    freeBlockMemory(blkmem, lpistate);
 }
 
@@ -2073,7 +2088,7 @@ RETCODE SCIPlpiStrongbranch(
       objsen = CPXgetobjsen(cpxenv, lpi->cpxlp);
 
       /* save current LP basis and bounds*/
-      CHECK_OKAY( getBase(lpi, NULL) );
+      CHECK_OKAY( getBase(lpi, NULL, NULL) );
       CHECK_ZERO( CPXgetlb(cpxenv, lpi->cpxlp, &oldlb, col, col) );
       CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, &oldub, col, col) );
 
@@ -2707,6 +2722,7 @@ RETCODE SCIPlpiGetState(
 {
    int ncols;
    int nrows;
+   int pricing;
 
    assert(blkmem != NULL);
    assert(cpxenv != NULL);
@@ -2732,15 +2748,23 @@ RETCODE SCIPlpiGetState(
    debugMessage("storing CPLEX LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
 
    /* get unpacked basis information from CPLEX */
-   if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
+   pricing = getIntParam(lpi, CPX_PARAM_DPRIIND);
+   if( pricing == CPX_DPRIIND_STEEP || pricing == CPX_DPRIIND_FULLSTEEP || pricing == CPX_DPRIIND_STEEPQSTART )
    {
-      ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*lpistate)->dnorm, ncols) );
-      CHECK_OKAY( getBase(lpi, (*lpistate)->dnorm) );
+      Bool dnormsavailable;
+
+      ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*lpistate)->dnorm, nrows) );
+      CHECK_OKAY( getBase(lpi, (*lpistate)->dnorm, &dnormsavailable) );
+      if( !dnormsavailable )
+      {
+         freeBlockMemoryArray(blkmem, &(*lpistate)->dnorm, nrows);
+         assert((*lpistate)->dnorm == NULL);
+      }
    }
    else
    {
       (*lpistate)->dnorm = NULL;
-      CHECK_OKAY( getBase(lpi, NULL) );
+      CHECK_OKAY( getBase(lpi, NULL, NULL) );
    }
 
    /* pack LPi state data */
@@ -2782,9 +2806,19 @@ RETCODE SCIPlpiSetState(
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
    /* load basis information into CPLEX */
-   if( lpistate->dnorm != NULL && getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
+   if( lpistate->dnorm != NULL )
    {
-      CHECK_OKAY( setBase(lpi, lpistate->dnorm) );
+      int pricing;
+
+      pricing = getIntParam(lpi, CPX_PARAM_DPRIIND);
+      if( pricing == CPX_DPRIIND_STEEP || pricing == CPX_DPRIIND_FULLSTEEP || pricing == CPX_DPRIIND_STEEPQSTART )
+      {
+         CHECK_OKAY( setBase(lpi, lpistate->dnorm) );
+      }
+      else
+      {
+         CHECK_OKAY( setBase(lpi, NULL) );
+      }
    }
    else
    {
