@@ -493,9 +493,9 @@ int cpxObjsen(OBJSEN objsen)
    switch( objsen )
    {
    case SCIP_OBJSEN_MAXIMIZE:
-      return CPX_MIN;
-   case SCIP_OBJSEN_MINIMIZE:
       return CPX_MAX;
+   case SCIP_OBJSEN_MINIMIZE:
+      return CPX_MIN;
    default:
       errorMessage("invalid objective sense");
       abort();

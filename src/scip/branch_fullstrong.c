@@ -118,8 +118,10 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          }
       }
 
-      score = SCIPgetBranchScore(scip, down - lowerbound, up - lowerbound) + 0.001;
+      score = SCIPgetBranchScore(scip, down - lowerbound, up - lowerbound) + 1.0;
       score *= SCIPvarGetBranchingPriority(lpcands[i]);
+      debugMessage("   -> var <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
+         SCIPvarGetName(lpcands[i]), lpcandssol[i], down, up, SCIPvarGetBranchingPriority(lpcands[i]), score);
 
       if( score > bestscore )
       {
