@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.12 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.13 2004/06/09 08:26:24 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -84,7 +84,7 @@ RETCODE SCIPsolveKnapsack(
 
 /** lifts given cardinality inequality sum(x_i) <= c */
 extern
-RETCODE SCIPliftCardinality(
+RETCODE SCIPliftKnapsackCardinality(
    SCIP*            scip,               /**< SCIP data structure */
    int*             liftcoefs,          /**< to store lifting coefficient of non-set elements */
    Real*            solvals,            /**< LP solution values of variables */
@@ -96,6 +96,18 @@ RETCODE SCIPliftCardinality(
    int              nnonsetvars,        /**< number of non-set elements */
    int              maxcardinality,     /**< maximal cardinality of selected subset in given set */ 
    Real*            liftlpval           /**< pointer to store LP solution value of lifted elements */  
+   );
+
+/** separates lifted cardinality inequalities for given knapsack problem */
+extern
+RETCODE SCIPseparateKnapsackCardinality(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint that originates the knapsack problem */
+   int              nvars,              /**< number of variables in the knapsack constraint */
+   VAR**            vars,               /**< item variables of the knapsack constraint */
+   Longint*         weights,            /**< item weights */
+   Longint          capacity,           /**< capacity of knapsack */
+   int*             ncuts               /**< pointer to add up the number of found cuts */
    );
 
 #endif
