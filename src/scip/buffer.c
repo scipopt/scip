@@ -153,7 +153,7 @@ void SCIPbufferRelease(
    *ptr = NULL;
    buffer->used[i] = FALSE;
 
-   while( !buffer->used[buffer->firstfree-1] )
+   while( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
       buffer->firstfree--;
 
    debugMessage("released buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
