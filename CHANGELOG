@@ -1,6 +1,15 @@
 current version
 ===============
 
+interface:
+- constraint handler callback methods CONSLOCK and CONSUNLOCK are replaced by a single method CONSLOCK with the
+  number of locks being positive or negative
+- methods SCIPvarLock(), SCIPvarLockDown(), SCIPvarLockUp(), SCIPvarLockBoth(), SCIPvarUnlock(), SCIPvarUnlockDown(),
+  SCIPvarUnlockUp(), and SCIPvarUnlockBoth() are replaced by SCIPaddVarLocks() which returns a RETCODE
+- methods SCIPvarLockDownCons(), SCIPvarLockUpCons(), SCIPvarUnlockDownCons(), and SCIPvarUnlockUpCons() are
+  replaced by SCIPlockVarCons() and SCIPunlockVarCons() which return a RETCODE
+- methods SCIPlockConsVars() and SCIPunlockConsVars() replaced with method SCIPaddConsLocks()
+
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distict cleanup settings between root node and other
   nodes
@@ -17,6 +26,9 @@ fixed bugs:
 - removed bug with applying reduced cost strengthening before pricing in all necessary variables
 - negated variables must also be reset in SCIPvarInitSolve()
 - removed bug with objective norm calculation and column variables not in the LP (pricing)
+- removed conflict analysis of infeasible diving LP if pricing is activated
+- removed bug in knapsack constraint handler with merging multiple items if more than two items of the same
+  variable appear in the constraint
 
 
 SCIP version 0.78

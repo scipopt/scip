@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.193 2005/01/13 16:20:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.194 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -557,7 +557,6 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
-   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -1678,6 +1677,43 @@ Longint SCIPgetVarStrongbranchNode(
    VAR*             var                 /**< variable to get last strong branching node for */
    );
 
+/** adds given values to lock numbers of variable for rounding */
+extern
+RETCODE SCIPaddVarLocks(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              nlocksdown,         /**< modification in number of rounding down locks */
+   int              nlocksup            /**< modification in number of rounding up locks */
+   );
+
+/** locks rounding of variable with respect to the lock status of the constraint and its negation;
+ *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
+ *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
+ *  added or removed
+ */
+extern
+RETCODE SCIPlockVarCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   CONS*            cons,               /**< constraint */
+   Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
+   Bool             lockup              /**< should the rounding be locked in upwards direction? */
+   );
+
+/** unlocks rounding of variable with respect to the lock status of the constraint and its negation;
+ *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
+ *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
+ *  added or removed
+ */
+extern
+RETCODE SCIPunlockVarCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   CONS*            cons,               /**< constraint */
+   Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
+   Bool             lockup              /**< should the rounding be locked in upwards direction? */
+   );
+
 /** changes variable's objective value */
 extern
 RETCODE SCIPchgVarObj(
@@ -2478,22 +2514,13 @@ RETCODE SCIPdisableConsPropagation(
    CONS*            cons                /**< constraint */
    );
 
-/** locks rounding of variables involved in the costraint */
+/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
 extern
-RETCODE SCIPlockConsVars(
+RETCODE SCIPaddConsLocks(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint */
    int              nlockspos,          /**< increase in number of rounding locks for constraint */
    int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   );
-
-/** unlocks rounding of variables involved in the costraint */
-extern
-RETCODE SCIPunlockConsVars(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
    );
 
 /** checks single constraint for feasibility of the given solution */

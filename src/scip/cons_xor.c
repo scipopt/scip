@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.18 2004/12/15 19:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.19 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -92,6 +92,34 @@ typedef enum Proprule PROPRULE;
  * Local methods
  */
 
+/** installs rounding locks for the given variable in the given xor constraint */
+static
+RETCODE lockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< xor constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding in both directions may violate the constraint */
+   CHECK_OKAY( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** removes rounding locks for the given variable in the given xor constraint */
+static
+RETCODE unlockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< xor constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding in both directions may violate the constraint */
+   CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+
+   return SCIP_OKAY;
+}
+
 /** creates constaint handler data */
 static
 RETCODE conshdlrdataCreate(
@@ -127,72 +155,6 @@ RETCODE conshdlrdataFree(
    SCIPfreeMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
-}
-
-/** locks rounding for variable in transformed xor constraint */
-static
-void lockRounding(
-   VAR*             var,                /**< problem variable */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   /* forbid rounding of variable */
-   SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg);
-}
-
-/** unlocks rounding for variable in transformed xor constraint */
-static
-void unlockRounding(
-   VAR*             var,                /**< problem variable */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   /* allow rounding of variable */
-   SCIPvarUnlock(var, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg);
-}
-
-/** locks rounding for all variables in transformed xor constraint */
-static
-void consdataLockAllRoundings(
-   CONSDATA*        consdata,           /**< xor constraint data */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   /* lock all variables */
-   for( i = 0; i < consdata->nvars; ++i )
-      lockRounding(consdata->vars[i], nlockspos, nlocksneg);
-
-   /* lock internal variable */
-   if( consdata->intvar != NULL )
-      lockRounding(consdata->intvar, nlockspos, nlocksneg);
-}
-
-/** unlocks rounding for all variables in transformed xor constraint */
-static
-void consdataUnlockAllRoundings(
-   CONSDATA*        consdata,           /**< xor constraint data */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   /* unlock all variables */
-   for( i = 0; i < consdata->nvars; ++i )
-      unlockRounding(consdata->vars[i], nunlockspos, nunlocksneg);
-
-   /* unlock internal variable */
-   if( consdata->intvar != NULL )
-      unlockRounding(consdata->intvar, nunlockspos, nunlocksneg);
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -399,12 +361,8 @@ RETCODE delCoefPos(
    assert(0 <= pos && pos < consdata->nvars);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsLocked(cons) )
-   {
-      assert(SCIPconsIsTransformed(cons));
-      unlockRounding(consdata->vars[pos], (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-   }
+   /* remove the rounding locks of the deleted variable */
+   CHECK_OKAY( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -516,7 +474,9 @@ RETCODE createRelaxation(
       CHECK_OKAY( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, SCIPfloor(scip, consdata->nvars/2.0), 0.0,
             SCIP_VARTYPE_INTEGER, SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
       CHECK_OKAY( SCIPaddVar(scip, consdata->intvar) );
-      lockRounding(consdata->intvar, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
+
+      /* install the rounding locks for the internal variable */
+      CHECK_OKAY( lockRounding(scip, cons, consdata->intvar) );
    }
 
    /* create LP row (resultant variable is also stored in vars array) */
@@ -1284,17 +1244,23 @@ DECL_CONSRESPROP(consRespropXor)
 static
 DECL_CONSLOCK(consLockXor)
 {  /*lint --e{715}*/
-   consdataLockAllRoundings(SCIPconsGetData(cons), nlockspos, nlocksneg);
+   CONSDATA* consdata;
+   int i;
 
-   return SCIP_OKAY;
-}
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
+   /* external variables */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   }
 
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockXor)
-{  /*lint --e{715}*/
-   consdataUnlockAllRoundings(SCIPconsGetData(cons), nunlockspos, nunlocksneg);
+   /* internal variable */
+   if( consdata->intvar != NULL )
+   {
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->intvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1380,8 +1346,7 @@ RETCODE SCIPincludeConshdlrXor(
          consInitpreXor, consExitpreXor, consInitsolXor, consExitsolXor,
          consDeleteXor, consTransXor, consInitlpXor,
          consSepaXor, consEnfolpXor, consEnfopsXor, consCheckXor, 
-         consPropXor, consPresolXor, consRespropXor,
-         consLockXor, consUnlockXor,
+         consPropXor, consPresolXor, consRespropXor, consLockXor,
          consActiveXor, consDeactiveXor, 
          consEnableXor, consDisableXor,
          consPrintXor,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.28 2004/10/26 18:24:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.29 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -109,6 +109,14 @@ RETCODE SCIPeventCreateVarAdded(
 /** creates an event for a fixing of a variable */
 extern
 RETCODE SCIPeventCreateVarFixed(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var                 /**< variable that was fixed */
+   );
+
+/** creates an event for a change in the number of locks of a variable */
+extern
+RETCODE SCIPeventCreateLocksChanged(
    EVENT**          event,              /**< pointer to store the event */
    MEMHDR*          memhdr,             /**< block memory */
    VAR*             var                 /**< variable that was fixed */

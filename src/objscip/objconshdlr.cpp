@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.18 2004/12/14 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.19 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -368,23 +368,6 @@ DECL_CONSLOCK(consLockObj)
 }
 
 
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockObj)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->objconshdlr != NULL);
-
-   /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_unlock(scip, conshdlr, cons, nunlockspos, nunlocksneg) );
-
-   return SCIP_OKAY;
-}
-
-
 /** constraint activation notification method of constraint handler */
 static
 DECL_CONSACTIVE(consActiveObj)
@@ -498,8 +481,7 @@ RETCODE SCIPincludeObjConshdlr(
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,
          consSepaObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
-         consPropObj, consPresolObj, consRespropObj,
-         consLockObj, consUnlockObj,
+         consPropObj, consPresolObj, consRespropObj, consLockObj,
          consActiveObj, consDeactiveObj, 
          consEnableObj, consDisableObj,
          consPrintObj,

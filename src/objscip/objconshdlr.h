@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.24 2004/12/14 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.25 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -521,51 +521,51 @@ public:
 
    /** variable rounding lock method of constraint handler
     *
-    *  This method is called, after a constraint is added to the transformed problem. It should lock the rounding
-    *  of all associated variables with calls to SCIPvarLock(), depending on the way, the variable is involved
-    *  in the constraint:
+    *  This method is called, after a constraint is added or removed from the transformed problem.
+    *  It should update the rounding locks of all associated variables with calls to SCIPaddVarLocks(),
+    *  depending on the way, the variable is involved in the constraint:
     *  - If the constraint may get violated by decreasing the value of a variable, it should call
-    *    SCIPvarLock(var, nlockspos, nlocksneg), saying that rounding down is potentially rendering the
+    *    SCIPaddVarLocks(var, nlockspos, nlocksneg), saying that rounding down is potentially rendering the
     *    (positive) constraint infeasible and rounding up is potentially rendering the negation of the constraint
     *    infeasible.
     *  - If the constraint may get violated by increasing the value of a variable, it should call
-    *    SCIPvarLock(var, nlocksneg, nlockspos), saying that rounding down is potentially rendering the
+    *    SCIPaddVarLocks(var, nlocksneg, nlockspos), saying that rounding down is potentially rendering the
     *    constraint's negation infeasible and rounding up is potentially rendering the constraint itself
     *    infeasible.
     *  - If the constraint may get violated by changing the variable in any direction, it should call
-    *    SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg).
+    *    SCIPaddVarLocks(var, nlockspos + nlocksneg, nlockspos + nlocksneg).
     *
     *  Consider the linear constraint "3x -5y +2z <= 7" as an example. The variable rounding lock method of the
-    *  linear constraint handler should call SCIPvarLock(x, nlocksneg, nlockspos), 
-    *  SCIPvarLock(y, nlockspos, nlocksneg) and SCIPvarLock(z, nlocksneg, nlockspos) to tell SCIP, that
+    *  linear constraint handler should call SCIPaddVarLocks(x, nlocksneg, nlockspos), 
+    *  SCIPaddVarLocks(y, nlockspos, nlocksneg) and SCIPaddVarLocks(z, nlocksneg, nlockspos) to tell SCIP, that
     *  rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
     *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation "3x -5y +2z > 7".
     *  A linear constraint "2 <= 3x -5y +2z <= 7" should call
-    *  SCIPvarLock(..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
-    *  direction of each variable can destroy both the feasibility of the constraint and it's negation
+    *  SCIPaddVarLocks(..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
+    *  directions of each variable can destroy both the feasibility of the constraint and it's negation
     *  "3x -5y +2z < 2  or  3x -5y +2z > 7".
     *
     *  If the constraint itself contains other constraints as sub constraints (e.g. the "or" constraint concatenation
     *  "c(x) or d(x)"), the rounding lock methods of these constraints should be called in a proper way.
     *  - If the constraint may get violated by the violation of the sub constraint c, it should call
-    *    SCIPlockConsVars(scip, c, nlockspos, nlocksneg), saying that infeasibility of c may lead to infeasibility of
+    *    SCIPaddConsLocks(scip, c, nlockspos, nlocksneg), saying that infeasibility of c may lead to infeasibility of
     *    the (positive) constraint, and infeasibility of c's negation (i.e. feasibility of c) may lead to infeasibility
     *    of the constraint's negation (i.e. feasibility of the constraint).
     *  - If the constraint may get violated by the feasibility of the sub constraint c, it should call
-    *    SCIPlockConsVars(scip, c, nlocksneg, nlockspos), saying that infeasibility of c may lead to infeasibility of
+    *    SCIPaddConsLocks(scip, c, nlocksneg, nlockspos), saying that infeasibility of c may lead to infeasibility of
     *    the constraint's negation (i.e. feasibility of the constraint), and infeasibility of c's negation (i.e. feasibility
     *    of c) may lead to infeasibility of the (positive) constraint.
     *  - If the constraint may get violated by any change in the feasibility of the sub constraint c, it should call
-    *    SCIPlockConsVars(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg).
+    *    SCIPaddConsLocks(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg).
     *
     *  Consider the or concatenation "c(x) or d(x)". The variable rounding lock method of the or constraint handler
-    *  should call SCIPlockConsVars(scip, c, nlockspos, nlocksneg) and SCIPlockConsVars(scip, d, nlockspos, nlocksneg)
+    *  should call SCIPaddConsLocks(scip, c, nlockspos, nlocksneg) and SCIPaddConsLocks(scip, d, nlockspos, nlocksneg)
     *  to tell SCIP, that infeasibility of c and d can lead to infeasibility of "c(x) or d(x)".
     *
     *  As a second example, consider the equivalence constraint "y <-> c(x)" with variable y and constraint c. The
     *  constraint demands, that y == 1 if and only if c(x) is satisfied. The variable lock method of the corresponding
-    *  constraint handler should call SCIPvarLock(y, nlockspos + nlocksneg, nlockspos + nlocksneg) and
-    *  SCIPlockConsVars(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
+    *  constraint handler should call SCIPaddVarLocks(y, nlockspos + nlocksneg, nlockspos + nlocksneg) and
+    *  SCIPaddConsLocks(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
     *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
     */
    virtual RETCODE scip_lock(
@@ -574,37 +574,6 @@ public:
       CONS*         cons,               /**< the constraint that should lock rounding of its variables */
       int           nlockspos,          /**< no. of times, the roundings should be locked for the constraint */
       int           nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
-      ) = 0;
-
-   /** variable rounding unlock method of constraint handler
-    *
-    *  This method is called, before a constraint is deleted from the transformed problem. It should unlock the rounding
-    *  of all associated variables with calls to SCIPvarUnlock(), depending on the way, the variable is involved
-    *  in the constraint:
-    *  - If the constraint may get violated by decreasing the value of a variable, it should call
-    *    SCIPvarUnlock(var, nunlockpos, nunlockneg).
-    *  - If the constraint may get violated by increasing the value of a variable, it should call
-    *    SCIPvarUnlock(var, nunlockneg, nunlockpos).
-    *  - If the constraint may get violated by changing the variable in any direction, it should call
-    *    SCIPvarUnlock(var, nunlockpos + nunlockneg, nunlockpos + nunlockneg).
-    *
-    *  If the constraint itself contains other constraints as sub constraints, the rounding lock methods of these
-    *  constraints should be called in a proper way.
-    *  - If the constraint may get violated by the violation of the sub constraint c, it should call
-    *    SCIPunlockConsVars(scip, c, nunlockspos, nunlocksneg).
-    *  - If the constraint may get violated by the feasibility of the sub constraint c, it should call
-    *    SCIPunlockConsVars(scip, c, nunlocksneg, nunlockspos).
-    *  - If the constraint may get violated by any change in the feasibility of the sub constraint c, it should call
-    *    SCIPunlockConsVars(scip, c, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg).
-    *
-    *  The unlocking method should exactly undo all lockings performed in the locking method of the constraint handler.
-    */
-   virtual RETCODE scip_unlock(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that should unlock rounding of its variables */
-      int           nlockspos,          /**< no. of times, the roundings should be unlocked for the constraint */
-      int           nlocksneg           /**< no. of times, the roundings should be unlocked for the constraint's negation */
       ) = 0;
 
    /** constraint activation notification method of constraint handler

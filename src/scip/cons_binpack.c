@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.20 2004/10/28 14:30:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.21 2005/01/17 12:45:04 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -317,17 +317,6 @@ DECL_CONSLOCK(consLockBinpack)
 }
 
 
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockBinpack)
-{  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-
 /** constraint activation notification method of constraint handler */
 #if 0
 static
@@ -493,8 +482,7 @@ RETCODE SCIPincludeConshdlrBinpack(
          consInitpreBinpack, consExitpreBinpack, consInitsolBinpack, consExitsolBinpack,
          consDeleteBinpack, consTransBinpack, consInitlpBinpack,
          consSepaBinpack, consEnfolpBinpack, consEnfopsBinpack, consCheckBinpack, 
-         consPropBinpack, consPresolBinpack, consRespropBinpack,
-         consLockBinpack, consUnlockBinpack,
+         consPropBinpack, consPresolBinpack, consRespropBinpack, consLockBinpack,
          consActiveBinpack, consDeactiveBinpack, 
          consEnableBinpack, consDisableBinpack,
          consPrintBinpack,

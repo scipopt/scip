@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.75 2004/11/29 12:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.76 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -61,7 +61,7 @@
 
 
 /*
- * Local methods
+ * Data structures
  */
 
 /** constraint handler data */
@@ -98,6 +98,13 @@ struct EventData
    CONSDATA*        consdata;           /**< knapsack constraint data to process the bound change for */
    Longint          weight;             /**< weight of variable */
 };
+
+
+
+
+/*
+ * Local methods
+ */
 
 /** creates event data */
 static
@@ -165,6 +172,34 @@ void sortItems(
       }
       consdata->sorted = TRUE;
    } 
+}
+
+/** installs rounding locks for the given variable in the given knapsack constraint */
+static
+RETCODE lockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding up may violate the constraint */
+   CHECK_OKAY( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** removes rounding locks for the given variable in the given knapsack constraint */
+static
+RETCODE unlockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding up may violate the constraint */
+   CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
+
+   return SCIP_OKAY;
 }
 
 /** catches bound change events for variables in knapsack */
@@ -1121,12 +1156,8 @@ RETCODE addCoef(
       consdata->weights[consdata->nvars] = weight;
       consdata->nvars++;
 
-      /* if necessary, update the rounding locks of variable */
-      if( SCIPconsIsLocked(cons) )
-      {
-         assert(SCIPconsIsTransformed(cons));
-         SCIPvarLock(var, (int)SCIPconsIsLockedNeg(cons), (int)SCIPconsIsLockedPos(cons));
-      }
+      /* install the rounding locks of variable */
+      CHECK_OKAY( lockRounding(scip, cons, var) );
 
       /* catch bound tighten events */
       if( SCIPconsIsTransformed(cons) )
@@ -1174,12 +1205,8 @@ RETCODE delCoefPos(
       CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[pos], -(Real)consdata->weights[pos]) );
    }
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsLocked(cons) )
-   {
-      assert(SCIPconsIsTransformed(cons));
-      SCIPvarUnlock(consdata->vars[pos], (int)SCIPconsIsLockedNeg(cons), (int)SCIPconsIsLockedPos(cons));
-   }
+   /* remove the rounding locks of variable */
+   CHECK_OKAY( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    /* drop bound tighten events */
    if( SCIPconsIsTransformed(cons) )
@@ -1248,6 +1275,7 @@ RETCODE mergeMultiples(
             /* variables v and w are equal: add weight of v to w, and delete v */
             consdataChgWeight(consdata, w, consdata->weights[v] + consdata->weights[w]);
             CHECK_OKAY( delCoefPos(scip, cons, v) );
+            break;
          }
          else if( consdata->vars[w] == negvar )
          {
@@ -1272,6 +1300,7 @@ RETCODE mergeMultiples(
                consdataChgWeight(consdata, v, consdata->weights[v] - consdata->weights[w]);
                CHECK_OKAY( delCoefPos(scip, cons, w) ); /* this may move v, but does no harm */
             }
+            break;
          }
       }
    }
@@ -1922,26 +1951,8 @@ DECL_CONSLOCK(consLockKnapsack)
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      SCIPvarLock(consdata->vars[i], nlocksneg, nlockspos);
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
    }
-
-   return SCIP_OKAY;
-}
-
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockKnapsack)
-{  /*lint --e{715}*/
-   CONSDATA* consdata;
-   int i;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   for( i = 0; i < consdata->nvars; i++)
-   {
-      SCIPvarUnlock(consdata->vars[i], nunlocksneg, nunlockspos);
-   }   
 
    return SCIP_OKAY;
 }
@@ -2175,8 +2186,7 @@ RETCODE SCIPincludeConshdlrKnapsack(
          consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
          consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
          consSepaKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
-         consPropKnapsack, consPresolKnapsack, consRespropKnapsack,
-         consLockKnapsack, consUnlockKnapsack,
+         consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
          consActiveKnapsack, consDeactiveKnapsack, 
          consEnableKnapsack, consDisableKnapsack,
          consPrintKnapsack,

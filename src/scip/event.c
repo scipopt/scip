@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.38 2004/11/02 17:21:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.39 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -254,6 +254,27 @@ RETCODE SCIPeventCreateVarFixed(
    return SCIP_OKAY;
 }
 
+/** creates an event for a change in the number of locks of a variable */
+RETCODE SCIPeventCreateLocksChanged(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var                 /**< variable that was fixed */
+   )
+{
+   assert(event != NULL);
+   assert(memhdr != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
+
+   /* create event data */
+   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_LOCKSCHANGED;
+   (*event)->data.eventvarfixed.var = var;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for a change in the objective value of a variable */
 RETCODE SCIPeventCreateObjChanged(
    EVENT**          event,              /**< pointer to store the event */
@@ -393,6 +414,10 @@ VAR* SCIPeventGetVar(
    case SCIP_EVENTTYPE_VARFIXED:
       assert(event->data.eventvarfixed.var != NULL);
       return event->data.eventvarfixed.var;
+
+   case SCIP_EVENTTYPE_LOCKSCHANGED:
+      assert(event->data.eventlockschg.var != NULL);
+      return event->data.eventlockschg.var;
 
    case SCIP_EVENTTYPE_OBJCHANGED:
       assert(event->data.eventobjchg.var != NULL);
@@ -599,6 +624,14 @@ RETCODE SCIPeventProcess(
 
    case SCIP_EVENTTYPE_VARFIXED:
       var = event->data.eventvarfixed.var;
+      assert(var != NULL);
+
+      /* process variable's event filter */
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, memhdr, set, event) );
+      break;
+
+   case SCIP_EVENTTYPE_LOCKSCHANGED:
+      var = event->data.eventlockschg.var;
       assert(var != NULL);
 
       /* process variable's event filter */
@@ -1170,6 +1203,7 @@ RETCODE SCIPeventqueueAdd(
 
       case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARFIXED:
+      case SCIP_EVENTTYPE_LOCKSCHANGED:
       case SCIP_EVENTTYPE_NODEFOCUSED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:
       case SCIP_EVENTTYPE_NODEINFEASIBLE:
@@ -1178,7 +1212,7 @@ RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_LPSOLVED:
       case SCIP_EVENTTYPE_POORSOLFOUND:
       case SCIP_EVENTTYPE_BESTSOLFOUND:
-         /* these events cannot be merged; just add them to the queue */
+         /* these events cannot (or need not) be merged; just add them to the queue */
          CHECK_OKAY( eventqueueAppend(eventqueue, set, event) );
          break;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.104 2004/12/10 12:54:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.105 2005/01/17 12:45:04 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1362,7 +1362,6 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
-   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -1408,7 +1407,6 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->conspresol = conspresol;
    (*conshdlr)->consresprop = consresprop;
    (*conshdlr)->conslock = conslock;
-   (*conshdlr)->consunlock = consunlock;
    (*conshdlr)->consactive = consactive;
    (*conshdlr)->consdeactive = consdeactive;
    (*conshdlr)->consenable = consenable;
@@ -4018,71 +4016,43 @@ RETCODE SCIPconsResolvePropagation(
    return SCIP_OKAY;
 }
 
-/** locks rounding of variables involved in the costraint */
-RETCODE SCIPconsLockVars(
+/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
+RETCODE SCIPconsAddLocks(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
    int              nlockspos,          /**< increase in number of rounding locks for constraint */
    int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
-   Bool lockpos;
-   Bool lockneg;
+   int oldnlockspos;
+   int oldnlocksneg;
+   int updlockpos;
+   int updlockneg;
 
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert(0 <= nlockspos && nlockspos <= 2);
-   assert(0 <= nlocksneg && nlocksneg <= 2);
-
-   /* check, if the constraint is currently unlocked and gets locked */
-   lockpos = (cons->nlockspos == 0 && nlockspos > 0);
-   lockneg = (cons->nlocksneg == 0 && nlocksneg > 0);
+   assert(cons->nlockspos >= 0);
+   assert(cons->nlocksneg >= 0);
+   assert(-2 <= nlockspos && nlockspos <= 2);
+   assert(-2 <= nlocksneg && nlocksneg <= 2);
 
    /* update the rounding locks */
+   oldnlockspos = cons->nlockspos;
+   oldnlocksneg = cons->nlocksneg;
    cons->nlockspos += nlockspos;
    cons->nlocksneg += nlocksneg;
-
-   /* lock the variables, if the constraint switched from unlocked to locked */
-   if( lockpos || lockneg )
-   {
-      CHECK_OKAY( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, (int)lockpos, (int)lockneg) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** unlocks rounding of variables involved in the costraint */
-RETCODE SCIPconsUnlockVars(
-   CONS*            cons,               /**< constraint */
-   SET*             set,                /**< global SCIP settings */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   Bool unlockpos;
-   Bool unlockneg;
-
-   assert(cons != NULL);
-   assert(cons->conshdlr != NULL);
-   assert(cons->conshdlr->consunlock != NULL);
-   assert(0 <= nunlockspos && nunlockspos <= 2);
-   assert(0 <= nunlocksneg && nunlocksneg <= 2);
-
-   /* check, if the constraint is currently locked and gets unlocked */
-   unlockpos = (cons->nlockspos > 0 && nunlockspos == cons->nlockspos);
-   unlockneg = (cons->nlocksneg > 0 && nunlocksneg == cons->nlocksneg);
-
-   /* update the rounding locks */
-   cons->nlockspos -= nunlockspos;
-   cons->nlocksneg -= nunlocksneg;
    assert(cons->nlockspos >= 0);
    assert(cons->nlocksneg >= 0);
 
-   /* unlock the variables, if the constraint switched from locked to unlocked */
-   if( unlockpos || unlockneg )
+   /* check, if the constraint switched from unlocked to locked, or from locked to unlocked */
+   updlockpos = (int)(cons->nlockspos > 0) - (int)(oldnlockspos > 0);
+   updlockneg = (int)(cons->nlocksneg > 0) - (int)(oldnlocksneg > 0);
+
+   /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked */
+   if( updlockpos != 0 || updlockneg != 0 )
    {
-      CHECK_OKAY( cons->conshdlr->consunlock(set->scip, cons->conshdlr, cons, (int)unlockpos, (int)unlockneg) );
+      CHECK_OKAY( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, updlockpos, updlockneg) );
    }
 
    return SCIP_OKAY;
@@ -4136,7 +4106,7 @@ RETCODE SCIPconsSetChecked(
       /* if constraint is a problem constraint, lock variable roundings */
       if( cons->addconssetchg == NULL && cons->addarraypos >= 0 )
       {
-         CHECK_OKAY( SCIPconsLockVars(cons, set, TRUE, FALSE) );
+         CHECK_OKAY( SCIPconsAddLocks(cons, set, +1, 0) );
       }
 
       /* if constraint is active, add it to the chckconss array of the constraint handler */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.129 2005/01/13 16:20:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.130 2005/01/17 12:45:07 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2341,10 +2341,32 @@ void SCIPvarPrint(
    fprintf(file, "\n");
 }
 
-/** increases lock numbers for rounding */
+/** issues a LOCKSCHANGED event on the given variable */
 static
-void varAddRoundLocks(
+RETCODE varEventLocksChanged(
+   VAR*             var,                /**< problem variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   EVENT* event;
+
+   assert(var != NULL);
+
+   /* issue LOCKSCHANGED event on variable */
+   CHECK_OKAY( SCIPeventCreateLocksChanged(&event, memhdr, var) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
+
+   return SCIP_OKAY;
+}
+
+/** modifies lock numbers for rounding */
+RETCODE SCIPvarAddLocks(
    VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    int              addnlocksdown,      /**< increase in number of rounding down locks */
    int              addnlocksup         /**< increase in number of rounding up locks */
    )
@@ -2355,6 +2377,9 @@ void varAddRoundLocks(
    assert(var->nlocksup >= 0);
    assert(var->nlocksdown >= 0);
 
+   if( addnlocksdown == 0 && addnlocksup == 0 )
+      return SCIP_OKAY;
+
    debugMessage("add rounding locks %d/%d to variable <%s> (locks=%d/%d)\n",
       addnlocksdown, addnlocksup, var->name, var->nlocksdown, var->nlocksup);
 
@@ -2362,7 +2387,9 @@ void varAddRoundLocks(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar != NULL )
-         varAddRoundLocks(var->data.transvar, addnlocksdown, addnlocksup);
+      {
+         CHECK_OKAY( SCIPvarAddLocks(var->data.transvar, memhdr, set, eventqueue, addnlocksdown, addnlocksup) );
+      }
       else
       {
          var->nlocksdown += addnlocksdown;
@@ -2375,22 +2402,33 @@ void varAddRoundLocks(
    case SCIP_VARSTATUS_FIXED:
       var->nlocksdown += addnlocksdown;
       var->nlocksup += addnlocksup;
+      CHECK_OKAY( varEventLocksChanged(var, memhdr, set, eventqueue) );
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         varAddRoundLocks(var->data.aggregate.var, addnlocksdown, addnlocksup);
+      {
+         CHECK_OKAY( SCIPvarAddLocks(var->data.aggregate.var, memhdr, set, eventqueue, addnlocksdown, addnlocksup) );
+      }
       else
-         varAddRoundLocks(var->data.aggregate.var, addnlocksup, addnlocksdown);
+      {
+         CHECK_OKAY( SCIPvarAddLocks(var->data.aggregate.var, memhdr, set, eventqueue, addnlocksup, addnlocksdown) );
+      }
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          if( var->data.multaggr.scalars[i] > 0.0 )
-            varAddRoundLocks(var->data.multaggr.vars[i], addnlocksdown, addnlocksup);
+         {
+            CHECK_OKAY( SCIPvarAddLocks(var->data.multaggr.vars[i], memhdr, set, eventqueue, 
+                  addnlocksdown, addnlocksup) );
+         }
          else
-            varAddRoundLocks(var->data.multaggr.vars[i], addnlocksup, addnlocksdown);
+         {
+            CHECK_OKAY( SCIPvarAddLocks(var->data.multaggr.vars[i], memhdr, set, eventqueue, 
+                  addnlocksup, addnlocksdown) );
+         }
       }
       break;
 
@@ -2398,194 +2436,18 @@ void varAddRoundLocks(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      varAddRoundLocks(var->negatedvar, addnlocksup, addnlocksdown);
+      CHECK_OKAY( SCIPvarAddLocks(var->negatedvar, memhdr, set, eventqueue, addnlocksup, addnlocksdown) );
       break;
 
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      return SCIP_INVALIDDATA;
    }
 
    assert(var->nlocksdown >= 0);
    assert(var->nlocksup >= 0);
-}
 
-/** increases lock number for rounding down by one; tells variable, that rounding its value down will make the
- *  solution infeasible
- */
-void SCIPvarLockDown(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   debugMessage("forbid rounding down of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, 1, 0);
-}
-
-/** increases lock number for rounding up by one; tells variable, that rounding its value up will make the
- *  solution infeasible
- */
-void SCIPvarLockUp(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   debugMessage("forbid rounding up of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, 0, 1);
-}
-
-/** increases lock number for rounding down and up by one; tells variable, that rounding value in either direction will
- *  make the solution infeasible
- */
-void SCIPvarLockBoth(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   debugMessage("forbid both roundings of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, 1, 1);
-}
-
-/** declares that rounding down the given variable would destroy the feasibility of the given constraint;
- *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-void SCIPvarLockDownCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-
-   varAddRoundLocks(var, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-}
-
-/** declares that rounding up the given variable would destroy the feasibility of the given constraint;
- *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-void SCIPvarLockUpCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-
-   varAddRoundLocks(var, (int)SCIPconsIsLockedNeg(cons), (int)SCIPconsIsLockedPos(cons));
-}
-
-/** declares that rounding the given variable in any direction would destroy the feasibility of the given constraint;
- *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-void SCIPvarLockBothCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   )
-{
-   int nlocks;
-
-   assert(cons != NULL);
-
-   nlocks = (int)SCIPconsIsLockedPos(cons) + (int)SCIPconsIsLockedNeg(cons);
-   varAddRoundLocks(var, nlocks, nlocks);
-}
-
-/** increases lock number for roundings of variable; tells variable, that rounding value in a direction set to
- *  a positive value will make the solution infeasible
- */
-void SCIPvarLock(
-   VAR*             var,                /**< problem variable */
-   int              nlocksdown,         /**< increase in number of rounding down locks */
-   int              nlocksup            /**< increase in number of rounding up locks */
-   )
-{
-   debugMessage("forbid rounding (%d/%d) of <%s> (locks=%d/%d)\n", 
-      nlocksdown, nlocksup, var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, nlocksdown, nlocksup);
-}
-
-/** decreases lock number for rounding down by one; cancels a prior SCIPvarLockDown() */
-void SCIPvarUnlockDown(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   debugMessage("allow rounding down of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, -1, 0);
-}
-
-/** decreases lock number for rounding up by one; cancels a prior SCIPvarLockUp() */
-void SCIPvarUnlockUp(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   debugMessage("allow rounding up of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, 0, -1);
-}
-
-/** decreases lock number for rounding down and up by one; cancels a prior SCIPvarLockBoth() */
-void SCIPvarUnlockBoth(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   debugMessage("allow both roundings of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, -1, -1);
-}
-
-/** declares that rounding down the given variable would no longer destroy the feasibility of the given constraint;
- *  unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-void SCIPvarUnlockDownCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-
-   varAddRoundLocks(var, -(int)SCIPconsIsLockedPos(cons), -(int)SCIPconsIsLockedNeg(cons));
-}
-
-/** declares that rounding up the given variable would no longer destroy the feasibility of the given constraint;
- *  unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-void SCIPvarUnlockUpCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-
-   varAddRoundLocks(var, -(int)SCIPconsIsLockedNeg(cons), -(int)SCIPconsIsLockedPos(cons));
-}
-
-/** declares that rounding the given variable in any direction would no longer destroy the feasibility of the given
- *  constraint; unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-void SCIPvarUnlockBothCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   )
-{
-   int nlocks;
-
-   assert(cons != NULL);
-
-   nlocks = (int)SCIPconsIsLockedPos(cons) + (int)SCIPconsIsLockedNeg(cons);
-   varAddRoundLocks(var, -nlocks, -nlocks);
-}
-
-/** decreases lock number for roundings of variable; cancels a prior call to SCIPvarLock() */
-void SCIPvarUnlock(
-   VAR*             var,                /**< problem variable */
-   int              nunlocksdown,       /**< decrease in number of rounding down locks */
-   int              nunlocksup          /**< decrease in number of rounding up locks */
-   )
-{
-   debugMessage("allow rounding (%d/%d) of <%s> (locks=%d/%d)\n", 
-      nunlocksdown, nunlocksup, var->name, var->nlocksdown, var->nlocksup);
-
-   varAddRoundLocks(var, -nunlocksdown, -nunlocksup);
+   return SCIP_OKAY;
 }
 
 /** gets number of locks for rounding down */
@@ -2918,6 +2780,7 @@ RETCODE SCIPvarFix(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -2962,7 +2825,7 @@ RETCODE SCIPvarFix(
          errorMessage("cannot fix an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
+      CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
                      fixedval, infeasible) );
       break;
 
@@ -3005,7 +2868,7 @@ RETCODE SCIPvarFix(
       }
 
       /* reset the objective value of the fixed variable, thus adjusting the problem's objective offset */
-      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
+      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, tree, lp, eventqueue, obj) );
 
       /* issue VARFIXED event */
       CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
@@ -3023,7 +2886,7 @@ RETCODE SCIPvarFix(
       /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
       assert(SCIPsetIsZero(set, var->obj));
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      CHECK_OKAY( SCIPvarFix(var->data.aggregate.var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
+      CHECK_OKAY( SCIPvarFix(var->data.aggregate.var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
                      (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible) );
       break;
 
@@ -3037,7 +2900,7 @@ RETCODE SCIPvarFix(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarFix(var->negatedvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
+      CHECK_OKAY( SCIPvarFix(var->negatedvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
                      var->data.negate.constant - fixedval, infeasible) );
       break;
 
@@ -3057,9 +2920,10 @@ RETCODE varUpdateAggregationBounds(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< variable y in aggregation x = a*y + c */
    Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
@@ -3126,11 +2990,12 @@ RETCODE varUpdateAggregationBounds(
       else if( SCIPsetIsEQ(set, varlb, varub) )
       {
          /* the aggregated variable is fixed -> fix both variables */
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, varlb, infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+               varlb, infeasible) );
          if( !(*infeasible) )
          {
-            CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
-                           (varlb-constant)/scalar, infeasible) );
+            CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+                  (varlb-constant)/scalar, infeasible) );
          }
          return SCIP_OKAY;
       }
@@ -3189,11 +3054,11 @@ RETCODE varUpdateAggregationBounds(
       else if( SCIPsetIsEQ(set, aggvarlb, aggvarub) )
       {
          /* the aggregation variable is fixed -> fix both variables */
-         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, aggvarlb, 
+         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, aggvarlb, 
                infeasible) );
          if( !(*infeasible) )
          {
-            CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
+            CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
                   aggvarlb * scalar + constant, infeasible) );
          }
          return SCIP_OKAY;
@@ -3233,6 +3098,7 @@ RETCODE SCIPvarAggregate(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -3274,7 +3140,7 @@ RETCODE SCIPvarAggregate(
 
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
-      return SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, constant, infeasible);
+      return SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, infeasible);
 
    assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
@@ -3293,14 +3159,14 @@ RETCODE SCIPvarAggregate(
          *infeasible = !SCIPsetIsZero(set, constant);
       else
       {
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
+         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
                constant/(1.0-scalar), infeasible) );
       }
       return SCIP_OKAY;
    }
 
    /* tighten the bounds of aggregated and aggregation variable */
-   CHECK_OKAY( varUpdateAggregationBounds(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
+   CHECK_OKAY( varUpdateAggregationBounds(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
          aggvar, scalar, constant, infeasible) );
    if( *infeasible )
       return SCIP_OKAY;
@@ -3339,7 +3205,7 @@ RETCODE SCIPvarAggregate(
    CHECK_OKAY( varAddParent(aggvar, memhdr, set, var) );
 
    /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
-   varAddRoundLocks(var, nlocksdown, nlocksup);
+   CHECK_OKAY( SCIPvarAddLocks(var, memhdr, set, eventqueue, nlocksdown, nlocksup) );
 
    /* move the variable bounds to the aggregation variable:
     *  - add all variable bounds again to the variable, thus adding it to the aggregated variable
@@ -3443,7 +3309,7 @@ RETCODE SCIPvarAggregate(
    /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
     * variable and the problem's objective offset
     */
-   CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
+   CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, tree, lp, eventqueue, obj) );
 
    /* issue VARFIXED event */
    CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
@@ -3456,12 +3322,12 @@ RETCODE SCIPvarAggregate(
       else if( implconflict[0] ) 
       {
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 1.0, infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 1.0, infeasible) );
       }
       else if( implconflict[1] ) 
       {
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 0.0, infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 0.0, infeasible) );
       }
    }
 
@@ -3476,6 +3342,7 @@ RETCODE SCIPvarMultiaggregate(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -3508,9 +3375,9 @@ RETCODE SCIPvarMultiaggregate(
 
    /* check, if we are in one of the simple cases */
    if( naggvars == 0 )
-      return SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, constant, infeasible);
+      return SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, infeasible);
    else if( naggvars == 1)
-      return SCIPvarAggregate(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
+      return SCIPvarAggregate(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
          aggvars[0], scalars[0], constant, infeasible);
 
    switch( SCIPvarGetStatus(var) )
@@ -3521,8 +3388,8 @@ RETCODE SCIPvarMultiaggregate(
          errorMessage("cannot multi-aggregate an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
-                     naggvars, aggvars, scalars, constant, infeasible) );
+      CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, memhdr, set, stat, prob, primal, tree, lp,
+            branchcand, eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -3547,7 +3414,7 @@ RETCODE SCIPvarMultiaggregate(
       var->data.multaggr.varssize = naggvars;
 
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
-      varAddRoundLocks(var, nlocksdown, nlocksup);
+      CHECK_OKAY( SCIPvarAddLocks(var, memhdr, set, eventqueue, nlocksdown, nlocksup) );
 
       /* free the variable bounds data structures */
       vboundsFree(&var->vlbs, memhdr);
@@ -3597,7 +3464,7 @@ RETCODE SCIPvarMultiaggregate(
       /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
        * variables and the problem's objective offset
        */
-      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
+      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, tree, lp, eventqueue, obj) );
 
       break;
 
@@ -3631,8 +3498,8 @@ RETCODE SCIPvarMultiaggregate(
          scalars[v] *= -1.0;
          
       /* perform the multi aggregation on the negation variable */
-      CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
-                     naggvars, aggvars, scalars, var->data.negate.constant - constant, infeasible) );
+      CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, memhdr, set, stat, prob, primal, tree, lp,
+            branchcand, eventqueue, naggvars, aggvars, scalars, var->data.negate.constant - constant, infeasible) );
 
       /* switch the signs of the aggregation scalars again, to reset them to their original values */
       for( v = 0; v < naggvars; ++v )
@@ -3856,6 +3723,7 @@ RETCODE SCIPvarAddObj(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             addobj              /**< additional objective value for variable */
@@ -3877,7 +3745,7 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, memhdr, set, stat, prob, primal, lp, eventqueue, addobj) );
+            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, memhdr, set, stat, prob, primal, tree, lp, eventqueue, addobj) );
          }
          else
          {
@@ -3896,24 +3764,24 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPprobAddObjoffset(prob, var->locdom.lb * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, NULL, lp) );
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(prob, var->data.aggregate.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, NULL, lp) );
-         CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, memhdr, set, stat, prob, primal, lp, eventqueue,
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, memhdr, set, stat, prob, primal, tree, lp, eventqueue,
                         var->data.aggregate.scalar * addobj) );
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(prob, var->data.multaggr.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, NULL, lp) );
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
-            CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], memhdr, set, stat, prob, primal, lp, 
+            CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], memhdr, set, stat, prob, primal, tree, lp, 
                            eventqueue, var->data.multaggr.scalars[i] * addobj) );
          }
          break;
@@ -3924,9 +3792,8 @@ RETCODE SCIPvarAddObj(
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
          SCIPprobAddObjoffset(prob, var->data.negate.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, NULL, lp) );
-         CHECK_OKAY( SCIPvarAddObj(var->negatedvar, memhdr, set, stat, prob, primal, lp, eventqueue,
-                        -addobj) );
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPvarAddObj(var->negatedvar, memhdr, set, stat, prob, primal, tree, lp, eventqueue, -addobj) );
          break;
 
       default:

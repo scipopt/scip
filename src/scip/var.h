@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.81 2004/11/24 17:46:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.82 2005/01/17 12:45:07 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -39,6 +39,7 @@
 #include "type_var.h"
 #include "type_prob.h"
 #include "type_primal.h"
+#include "type_tree.h"
 #include "type_branch.h"
 #include "type_cons.h"
 #include "pub_var.h"
@@ -281,6 +282,7 @@ RETCODE SCIPvarFix(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -297,6 +299,7 @@ RETCODE SCIPvarAggregate(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -315,6 +318,7 @@ RETCODE SCIPvarMultiaggregate(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -345,6 +349,17 @@ void SCIPvarSetProbindex(
    int              probindex           /**< new problem index of variable */
    );
 
+/** modifies lock numbers for rounding */
+extern
+RETCODE SCIPvarAddLocks(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   int              addnlocksdown,      /**< increase in number of rounding down locks */
+   int              addnlocksup         /**< increase in number of rounding up locks */
+   );
+
 /** changes type of variable; cannot be called, if var belongs to a problem */
 extern
 RETCODE SCIPvarChgType(
@@ -373,6 +388,7 @@ RETCODE SCIPvarAddObj(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             addobj              /**< additional objective value for variable */

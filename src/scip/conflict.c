@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.79 2005/01/13 16:20:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.80 2005/01/17 12:45:04 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2853,12 +2853,14 @@ RETCODE undoBdchgsDualfarkas(
             farkaslhs += dualfarkas[r] * (row->rhs - row->constant);
          }
       }
+#if 0
       else
       {
-         /*debugMessage(" -> ignoring %s row <%s> with dual farkas value %.10f (lhs=%g, rhs=%g)\n",
-           row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r], 
-           row->lhs - row->constant, row->rhs - row->constant);*/
+         debugMessage(" -> ignoring %s row <%s> with dual farkas value %.10f (lhs=%g, rhs=%g)\n",
+            row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r], 
+            row->lhs - row->constant, row->rhs - row->constant);
       }
+#endif
    }
 
    /* calculate the current farkas activity, always using the best bound w.r.t. the farkas coefficient */
@@ -2878,7 +2880,7 @@ RETCODE undoBdchgsDualfarkas(
       else if( farkascoefs[v] > 0.0 )
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
-            || !SCIPsetIsPositive(set, curvarubs[v]));
+            || !SCIPsetIsPositive(set, SCIPvarGetUbLP(var)));
          if( SCIPsetIsInfinity(set, curvarubs[v]) )
             goto TERMINATE;
          farkasact += farkascoefs[v] * curvarubs[v];
@@ -2886,7 +2888,7 @@ RETCODE undoBdchgsDualfarkas(
       else
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
-            || !SCIPsetIsNegative(set, curvarlbs[v]));
+            || !SCIPsetIsNegative(set, SCIPvarGetLbLP(var)));
          if( SCIPsetIsInfinity(set, -curvarlbs[v]) )
             goto TERMINATE;
          farkasact += farkascoefs[v] * curvarlbs[v];
@@ -3428,6 +3430,7 @@ RETCODE conflictAnalyzeLP(
       Real* bdchgnewubs;
       Real lpiinfinity;
       Bool resolve;
+      Bool allcolsinlp;
       int sidechgssize;
       int nsidechgs;
       int bdchgssize;
@@ -3438,6 +3441,9 @@ RETCODE conflictAnalyzeLP(
       int iter;
       int nloops;
       int r;
+
+      /* check if all columns are present in the LP */
+      allcolsinlp = SCIPprobAllColsInLP(prob, set, lp);
 
       /* get infinity value of LP solver */
       lpiinfinity = SCIPlpiInfinity(lpi);
@@ -3451,7 +3457,10 @@ RETCODE conflictAnalyzeLP(
       assert(ncols == 0 || cols != NULL);
 
       /* temporarily remove objective limit in LP solver */
-      CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lpiinfinity) );
+      if( allcolsinlp )
+      {
+         CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lpiinfinity) );
+      }
 
       /* get temporary memory for remembering side and bound changes on LPI rows and columns */
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &sidechginds, nrows) );
@@ -3488,7 +3497,7 @@ RETCODE conflictAnalyzeLP(
       }
 
       /* apply changes of local rows to the LP solver */
-      if( nsidechgs > 0 )
+      if( nsidechgs > 0 && allcolsinlp )
       {
          CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgnewlhss, sidechgnewrhss) );
       }
@@ -3704,22 +3713,33 @@ RETCODE conflictAnalyzeLP(
 
          /* apply bound changes to the LP solver */
          assert(nbdchgs >= lastnbdchgs);
-         if( nbdchgs > lastnbdchgs )
+         if( allcolsinlp )
          {
-            debugMessage(" -> applying %d bound changes to the LP solver (total: %d)\n", nbdchgs - lastnbdchgs, nbdchgs);
-            CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs - lastnbdchgs,
-                  &bdchginds[lastnbdchgs], &bdchgnewlbs[lastnbdchgs], &bdchgnewubs[lastnbdchgs]) );
-            lastnbdchgs = nbdchgs;
-         }
+            if( nbdchgs > lastnbdchgs )
+            {
+               debugMessage(" -> applying %d bound changes to the LP solver (total: %d)\n", nbdchgs - lastnbdchgs, nbdchgs);
+               CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs - lastnbdchgs,
+                     &bdchginds[lastnbdchgs], &bdchgnewlbs[lastnbdchgs], &bdchgnewubs[lastnbdchgs]) );
+            }
          
-         /* start LP timer */
-         SCIPclockStart(stat->conflictlptime, set);
+            /* start LP timer */
+            SCIPclockStart(stat->conflictlptime, set);
+            
+            /* resolve LP */
+            CHECK_OKAY( SCIPlpiSolveDual(lpi) );
+            
+            /* stop LP timer */
+            SCIPclockStop(stat->conflictlptime, set);
 
-         /* resolve LP */
-         CHECK_OKAY( SCIPlpiSolveDual(lpi) );
-
-         /* stop LP timer */
-         SCIPclockStop(stat->conflictlptime, set);
+            /* count number of LP iterations */
+            CHECK_OKAY( SCIPlpiGetIterations(lpi, &iter) );
+            (*iterations) += iter;
+            stat->nconflictlps++;
+            stat->nconflictlpiterations += iter;
+            debugMessage(" -> resolved LP in %d iterations (total: %lld) (valid: %d, infeasible:%d)\n",
+               iter, stat->nconflictlpiterations, valid, SCIPlpiIsPrimalInfeasible(lpi));
+         }
+         lastnbdchgs = nbdchgs;
 
          /* evaluate result */
          if( SCIPlpiIsOptimal(lpi) )
@@ -3729,14 +3749,6 @@ RETCODE conflictAnalyzeLP(
          }
          else
             valid = SCIPlpiIsPrimalInfeasible(lpi);
-
-         /* count number of LP iterations */
-         CHECK_OKAY( SCIPlpiGetIterations(lpi, &iter) );
-         (*iterations) += iter;
-         stat->nconflictlps++;
-         stat->nconflictlpiterations += iter;
-         debugMessage(" -> resolved LP in %d iterations (total: %lld) (valid: %d, infeasible:%d)\n",
-            iter, stat->nconflictlpiterations, valid, SCIPlpiIsPrimalInfeasible(lpi));
 
          if( valid )
          {
@@ -3760,24 +3772,28 @@ RETCODE conflictAnalyzeLP(
          debugMessage(" -> finished infeasible LP conflict analysis loop %d (iter: %d, nbdchgs: %d)\n",
             nloops, iter, nbdchgs - lastnbdchgs);
       }
-      while( resolve && nloops < set->conf_maxlploops );
+      while( resolve && nloops < set->conf_maxlploops && allcolsinlp );
       debugMessage("finished undoing bound changes after %d loops (valid=%d, nbdchgs: %d)\n",
          nloops, valid, nbdchgs);
 
-      /* reset variables to local bounds */
-      if( nbdchgs > 0 )
+      /* reset LP solver data */
+      if( allcolsinlp )
       {
-         CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs) );
-      }
+         /* reset variables to local bounds */
+         if( nbdchgs > 0 )
+         {
+            CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs) );
+         }
 
-      /* reset changes of local rows */
-      if( nsidechgs > 0 )
-      {
-         CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgoldlhss, sidechgoldrhss) );
+         /* reset changes of local rows */
+         if( nsidechgs > 0 )
+         {
+            CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgoldlhss, sidechgoldrhss) );
+         }
+         
+         /* reset objective limit in LP solver */
+         CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
       }
-
-      /* reset objective limit in LP solver */
-      CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
 
       /* analyze the conflict starting with remaining bound changes */
       if( valid )
@@ -3981,6 +3997,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(SCIPprobAllColsInLP(prob, set, lp));
    assert(col != NULL);
    assert((SCIPsetIsGE(set, col->strongbranchdown, lp->cutoffbound)
          && SCIPsetFeasCeil(set, col->primsol-1.0) >= col->lb - 0.5)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.67 2004/12/15 19:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.68 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -83,6 +83,34 @@ struct ConsData
  * Local methods
  */
 
+/** installs rounding locks for the given variable in the given logic or constraint */
+static
+RETCODE lockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< logic or constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding down may violate the constraint */
+   CHECK_OKAY( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** removes rounding locks for the given variable in the given logic or constraint */
+static
+RETCODE unlockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< logic or constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding down may violate the constraint */
+   CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** creates constaint handler data for logic or constraint handler */
 static
 RETCODE conshdlrdataCreate(
@@ -118,68 +146,6 @@ RETCODE conshdlrdataFree(
    SCIPfreeMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
-}
-
-/** locks rounding for variable in transformed logic or constraint */
-static
-void lockRounding(
-   VAR*             var,                /**< problem variable */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   /*debugMessage("locking coefficient <%s> in logic or constraint\n", SCIPvarGetName(var));*/
-
-   /* forbid rounding of variable */
-   SCIPvarLock(var, nlockspos, nlocksneg);
-}
-
-/** unlocks rounding for variable in transformed logic or constraint */
-static
-void unlockRounding(
-   VAR*             var,                /**< problem variable */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   /*debugMessage("unlocking coefficient <%s> in logic or constraint\n", SCIPvarGetName(var));*/
-
-   /* allow rounding of variable */
-   SCIPvarUnlock(var, nunlockspos, nunlocksneg);
-}
-
-/** locks rounding for all variables in transformed logic or constraint */
-static
-void consdataLockAllRoundings(
-   CONSDATA*        consdata,           /**< logic or constraint data */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   /* lock every single coefficient */
-   for( i = 0; i < consdata->nvars; ++i )
-      lockRounding(consdata->vars[i], nlockspos, nlocksneg);
-}
-
-/** unlocks rounding for all variables in transformed logic or constraint */
-static
-void consdataUnlockAllRoundings(
-   CONSDATA*        consdata,           /**< logic or constraint data */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   /* unlock every single coefficient */
-   for( i = 0; i < consdata->nvars; ++i )
-      unlockRounding(consdata->vars[i], nunlockspos, nunlocksneg);
 }
 
 /** creates a logic or constraint data object */
@@ -357,12 +323,8 @@ RETCODE delCoefPos(
    assert(0 <= pos && pos < consdata->nvars);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsLocked(cons) )
-   {
-      assert(SCIPconsIsTransformed(cons));
-      unlockRounding(consdata->vars[pos], (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-   }
+   /* remove the rounding locks of variable */
+   CHECK_OKAY( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -1386,17 +1348,17 @@ DECL_CONSRESPROP(consRespropLogicor)
 static
 DECL_CONSLOCK(consLockLogicor)
 {  /*lint --e{715}*/
-   consdataLockAllRoundings(SCIPconsGetData(cons), nlockspos, nlocksneg);
+   CONSDATA* consdata;
+   int i;
 
-   return SCIP_OKAY;
-}
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockLogicor)
-{  /*lint --e{715}*/
-   consdataUnlockAllRoundings(SCIPconsGetData(cons), nunlockspos, nunlocksneg);
+   /* lock every single coefficient */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1686,8 +1648,7 @@ RETCODE SCIPincludeConshdlrLogicor(
          consDeleteLogicor, consTransLogicor, 
          consInitlpLogicor, consSepaLogicor, 
          consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
-         consPropLogicor, consPresolLogicor, consRespropLogicor,
-         consLockLogicor, consUnlockLogicor,
+         consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
          consActiveLogicor, consDeactiveLogicor,
          consEnableLogicor, consDisableLogicor,
          consPrintLogicor,

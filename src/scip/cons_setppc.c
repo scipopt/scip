@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.71 2004/11/30 17:41:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.72 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -87,6 +87,76 @@ struct ConsData
 /*
  * Local methods
  */
+
+/** installs rounding locks for the given variable in the given setppc constraint */
+static
+RETCODE lockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< setppc constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   switch( consdata->setppctype )
+   {
+   case SCIP_SETPPCTYPE_PARTITIONING:
+      /* rounding in both directions may violate the constraint */
+      CHECK_OKAY( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
+      break;
+   case SCIP_SETPPCTYPE_PACKING:
+      /* rounding up may violate the constraint */
+      CHECK_OKAY( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
+      break;
+   case SCIP_SETPPCTYPE_COVERING:
+      /* rounding down may violate the constraint */
+      CHECK_OKAY( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
+      break;
+   default:
+      errorMessage("unknown setppc type\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes rounding locks for the given variable in the given setppc constraint */
+static
+RETCODE unlockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< setppc constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   switch( consdata->setppctype )
+   {
+   case SCIP_SETPPCTYPE_PARTITIONING:
+      /* rounding in both directions may violate the constraint */
+      CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+      break;
+   case SCIP_SETPPCTYPE_PACKING:
+      /* rounding up may violate the constraint */
+      CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
+      break;
+   case SCIP_SETPPCTYPE_COVERING:
+      /* rounding down may violate the constraint */
+      CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
+      break;
+   default:
+      errorMessage("unknown setppc type\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
 
 /** creates constaint handler data for set partitioning / packing / covering constraint handler */
 static
@@ -272,96 +342,6 @@ RETCODE consdataEnsureVarsSize(
    assert(num <= consdata->varssize);
 
    return SCIP_OKAY;
-}
-
-/** locks the rounding locks associated to the given variable in the setppc constraint */
-static
-void consdataLockRounding(
-   CONSDATA*        consdata,           /**< linear constraint data */
-   VAR*             var,                /**< variable of constraint entry */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   assert(consdata != NULL);
-
-   /* forbid rounding of variable */
-   switch( consdata->setppctype )
-   {
-   case SCIP_SETPPCTYPE_PARTITIONING:
-      SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg);
-      break;
-   case SCIP_SETPPCTYPE_PACKING:
-      SCIPvarLock(var, nlocksneg, nlockspos);
-      break;
-   case SCIP_SETPPCTYPE_COVERING:
-      SCIPvarLock(var, nlockspos, nlocksneg);
-      break;
-   default:
-      errorMessage("unknown setppc type\n");
-      abort();
-   }
-}
-
-/** unlocks the rounding locks associated to the given variable in the setppc constraint */
-static
-void consdataUnlockRounding(
-   CONSDATA*        consdata,           /**< linear constraint data */
-   VAR*             var,                /**< variable of constraint entry */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   assert(consdata != NULL);
-
-   /* allow rounding of variable */
-   switch( consdata->setppctype )
-   {
-   case SCIP_SETPPCTYPE_PARTITIONING:
-      SCIPvarUnlock(var, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg);
-      break;
-   case SCIP_SETPPCTYPE_PACKING:
-      SCIPvarUnlock(var, nunlocksneg, nunlockspos);
-      break;
-   case SCIP_SETPPCTYPE_COVERING:
-      SCIPvarUnlock(var, nunlockspos, nunlocksneg);
-      break;
-   default:
-      errorMessage("unknown setppc type\n");
-      abort();
-   }
-}
-
-/** locks the rounding locks of all variables in the setppc constraint */
-static
-void consdataLockAllRoundings(
-   CONSDATA*        consdata,           /**< linear constraint data */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   for( i = 0; i < consdata->nvars; ++i )
-      consdataLockRounding(consdata, consdata->vars[i], nlockspos, nlocksneg);
-}
-
-/** unlocks the rounding locks of all variables in the setppc constraint */
-static
-void consdataUnlockAllRoundings(
-   CONSDATA*        consdata,           /**< linear constraint data */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   for( i = 0; i < consdata->nvars; ++i )
-      consdataUnlockRounding(consdata, consdata->vars[i], nunlockspos, nunlocksneg);
 }
 
 /** creates a set partitioning / packing / covering constraint data object */
@@ -652,12 +632,8 @@ RETCODE addCoef(
 #endif
    }
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsLocked(cons) )
-   {
-      assert(transformed);
-      consdataLockRounding(consdata, var, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-   }
+   /* install the rounding locks for the new variable */
+   CHECK_OKAY( lockRounding(scip, cons, var) );
 
    /* add the new coefficient to the LP row */
    if( consdata->row != NULL )
@@ -687,12 +663,8 @@ RETCODE delCoefPos(
    assert(var != NULL);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsActive(cons) && SCIPconsIsGlobal(cons) )
-   {
-      assert(SCIPconsIsTransformed(cons));
-      consdataUnlockRounding(consdata, var, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-   }
+   /* remove the rounding locks for the deleted variable */
+   CHECK_OKAY( unlockRounding(scip, cons, var) );
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -2321,17 +2293,37 @@ DECL_CONSRESPROP(consRespropSetppc)
 static
 DECL_CONSLOCK(consLockSetppc)
 {  /*lint --e{715}*/
-   consdataLockAllRoundings(SCIPconsGetData(cons), nlockspos, nlocksneg);
+   CONSDATA* consdata;
+   int nlocksdown;
+   int nlocksup;
+   int i;
 
-   return SCIP_OKAY;
-}
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
+   switch( consdata->setppctype )
+   {
+   case SCIP_SETPPCTYPE_PARTITIONING:
+      nlocksdown = nlockspos + nlocksneg;
+      nlocksup = nlockspos + nlocksneg;
+      break;
+   case SCIP_SETPPCTYPE_PACKING:
+      nlocksdown = nlocksneg;
+      nlocksup = nlockspos;
+      break;
+   case SCIP_SETPPCTYPE_COVERING:
+      nlocksdown = nlockspos;
+      nlocksup = nlocksneg;
+      break;
+   default:
+      errorMessage("unknown setppc type\n");
+      return SCIP_INVALIDDATA;
+   }
 
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockSetppc)
-{  /*lint --e{715}*/
-   consdataUnlockAllRoundings(SCIPconsGetData(cons), nunlockspos, nunlocksneg);
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlocksdown, nlocksup) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2716,8 +2708,7 @@ RETCODE SCIPincludeConshdlrSetppc(
          consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
          consDeleteSetppc, consTransSetppc, 
          consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
-         consPropSetppc, consPresolSetppc, consRespropSetppc,
-         consLockSetppc, consUnlockSetppc,
+         consPropSetppc, consPresolSetppc, consRespropSetppc, consLockSetppc,
          consActiveSetppc, consDeactiveSetppc, 
          consEnableSetppc, consDisableSetppc,
          consPrintSetppc,

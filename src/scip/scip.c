@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.239 2005/01/13 16:20:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.240 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1181,7 +1181,6 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
-   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -1198,7 +1197,7 @@ RETCODE SCIPincludeConshdlr(
          name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, needscons, 
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
          consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
-         consresprop, conslock, consunlock, consactive, consdeactive, consenable, consdisable, consprint,
+         consresprop, conslock, consactive, consdeactive, consenable, consdisable, consprint,
          conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
    
@@ -4506,6 +4505,152 @@ Longint SCIPgetVarStrongbranchNode(
    return SCIPcolGetStrongbranchNode(SCIPvarGetCol(var));
 }
 
+/** adds given values to lock numbers of variable for rounding */
+RETCODE SCIPaddVarLocks(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              nlocksdown,         /**< modification in number of rounding down locks */
+   int              nlocksup            /**< modification in number of rounding up locks */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      CHECK_OKAY( SCIPvarAddLocks(var, scip->mem->solvemem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/   
+}
+
+/** locks rounding of variable with respect to the lock status of the constraint and its negation;
+ *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
+ *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
+ *  added or removed
+ */
+RETCODE SCIPlockVarCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   CONS*            cons,               /**< constraint */
+   Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
+   Bool             lockup              /**< should the rounding be locked in upwards direction? */
+   )
+{
+   int nlocksdown;
+   int nlocksup;
+
+   CHECK_OKAY( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE) );
+
+   nlocksdown = 0;
+   nlocksup = 0;
+   if( SCIPconsIsLockedPos(cons) )
+   {
+      if( lockdown )
+         nlocksdown++;
+      if( lockup )
+         nlocksup++;
+   }
+   if( SCIPconsIsLockedNeg(cons) )
+   {
+      if( lockdown )
+         nlocksup++;
+      if( lockup )
+         nlocksdown++;
+   }
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      CHECK_OKAY( SCIPvarAddLocks(var, scip->mem->solvemem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/   
+}
+
+/** unlocks rounding of variable with respect to the lock status of the constraint and its negation;
+ *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
+ *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
+ *  added or removed
+ */
+RETCODE SCIPunlockVarCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   CONS*            cons,               /**< constraint */
+   Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
+   Bool             lockup              /**< should the rounding be locked in upwards direction? */
+   )
+{
+   int nlocksdown;
+   int nlocksup;
+
+   CHECK_OKAY( checkStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE) );
+
+   nlocksdown = 0;
+   nlocksup = 0;
+   if( SCIPconsIsLockedPos(cons) )
+   {
+      if( lockdown )
+         nlocksdown++;
+      if( lockup )
+         nlocksup++;
+   }
+   if( SCIPconsIsLockedNeg(cons) )
+   {
+      if( lockdown )
+         nlocksup++;
+      if( lockup )
+         nlocksdown++;
+   }
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, -nlocksdown, -nlocksup) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      CHECK_OKAY( SCIPvarAddLocks(var, scip->mem->solvemem, scip->set, scip->eventqueue, -nlocksdown, -nlocksup) );
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/   
+}
+
 /** changes variable's objective value */
 RETCODE SCIPchgVarObj(
    SCIP*            scip,               /**< SCIP data structure */
@@ -4546,14 +4691,14 @@ RETCODE SCIPaddVarObj(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->primal, scip->lp,
-            scip->eventqueue, addobj) );
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->primal, 
+            scip->tree, scip->lp, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-            scip->eventqueue, addobj) );
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, 
+            scip->tree, scip->lp, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    default:
@@ -5080,8 +5225,8 @@ RETCODE SCIPinferBinvarCons(
       break;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+            scip->lp, scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -5325,8 +5470,8 @@ RETCODE SCIPinferBinvarProp(
       break;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+            scip->lp, scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -5648,8 +5793,8 @@ RETCODE SCIPfixVar(
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-            scip->branchcand, scip->eventqueue, fixedval, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+            scip->lp, scip->branchcand, scip->eventqueue, fixedval, infeasible) );
       *fixed = TRUE;
       return SCIP_OKAY;
       
@@ -5750,7 +5895,7 @@ RETCODE aggregateActiveIntVars(
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
+            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, 
             vary, (Real)(-b/a), (Real)(c/a), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
@@ -5760,7 +5905,7 @@ RETCODE aggregateActiveIntVars(
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
+            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, 
             varx, (Real)(-a/b), (Real)(c/b), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
@@ -5817,12 +5962,12 @@ RETCODE aggregateActiveIntVars(
    CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
          scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-         scip->primal, scip->lp, scip->branchcand, scip->eventqueue,
+         scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue,
          aggvar, (Real)(-b), (Real)xsol, infeasible) );
    if( !(*infeasible) )
    {
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
+            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, 
             aggvar, (Real)a, (Real)ysol, infeasible) );
    }
    *aggregated = TRUE;
@@ -5924,7 +6069,7 @@ RETCODE aggregateActiveVars(
 
       /* aggregate the variable */
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant, infeasible) );
+            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant, infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -6014,8 +6159,8 @@ RETCODE SCIPaggregateVars(
       assert(!SCIPsetIsZero(scip->set, scalary));
       
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
-      CHECK_OKAY( SCIPvarFix(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-            scip->branchcand, scip->eventqueue, rhs/scalary, infeasible) );
+      CHECK_OKAY( SCIPvarFix(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+            scip->lp, scip->branchcand, scip->eventqueue, rhs/scalary, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -6025,8 +6170,8 @@ RETCODE SCIPaggregateVars(
       assert(!SCIPsetIsZero(scip->set, scalarx));
       
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
-      CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-            scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+      CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree,
+            scip->lp, scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -6042,8 +6187,8 @@ RETCODE SCIPaggregateVars(
       else
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
-         CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-               scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+         CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, 
+               scip->tree, scip->lp, scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
          *aggregated = TRUE;
       }
       *redundant = TRUE;
@@ -6076,7 +6221,7 @@ RETCODE SCIPmultiaggregateVar(
    CHECK_OKAY( checkStage(scip, "SCIPmultiaggregateVar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, 
-         scip->lp, scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
+         scip->tree, scip->lp, scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -6888,32 +7033,17 @@ RETCODE SCIPdisableConsPropagation(
    return SCIP_OKAY;
 }
 
-/** locks rounding of variables involved in the costraint */
-RETCODE SCIPlockConsVars(
+/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
+RETCODE SCIPaddConsLocks(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint */
    int              nlockspos,          /**< increase in number of rounding locks for constraint */
    int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPlockConsVars", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConsLocks", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconsLockVars(cons, scip->set, nlockspos, nlocksneg) );
-
-   return SCIP_OKAY;
-}
-
-/** unlocks rounding of variables involved in the costraint */
-RETCODE SCIPunlockConsVars(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPunlockConsVars", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   CHECK_OKAY( SCIPconsUnlockVars(cons, scip->set, nunlockspos, nunlocksneg) );
+   CHECK_OKAY( SCIPconsAddLocks(cons, scip->set, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }
@@ -8148,10 +8278,13 @@ RETCODE SCIPsolveDiveLP(
    CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
          itlim, FALSE, FALSE, lperror) );
 
-   /* analyze an infeasible LP (not necessary in the root node) */
+   /* analyze an infeasible LP (not necessary in the root node)
+    * the infeasibility in diving is only proven, if all columns are in the LP (and no external pricers exist)
+    */
    if( !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
       && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
-         || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT) )
+         || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+      && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
    {
       CHECK_OKAY( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
             scip->tree, scip->lp, NULL) );

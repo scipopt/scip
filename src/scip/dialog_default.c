@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.37 2004/12/10 14:23:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.38 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1886,6 +1886,15 @@ RETCODE SCIPincludeDialogDefaultSet(
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
 
+   /* set misc */
+   if( !SCIPdialogHasEntry(setmenu, "misc") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+            "misc", "change parameters for miscellaneous stuff", TRUE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+   }
+
    /* set nodeselection */
    if( !SCIPdialogHasEntry(setmenu, "nodeselection") )
    {
@@ -2033,11 +2042,11 @@ RETCODE SCIPincludeDialogDefaultSet(
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
 
-   /* set misc */
-   if( !SCIPdialogHasEntry(setmenu, "misc") )
+   /* set vbc */
+   if( !SCIPdialogHasEntry(setmenu, "vbc") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-            "misc", "change parameters for miscellaneous stuff", TRUE, NULL) );
+            "vbc", "change parameters for VBC tool output", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }

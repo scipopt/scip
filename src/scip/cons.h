@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.78 2004/10/26 07:30:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.79 2005/01/17 12:45:04 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -90,7 +90,6 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
-   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -518,22 +517,13 @@ RETCODE SCIPconsResolvePropagation(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** locks rounding of variables involved in the costraint */
+/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
 extern
-RETCODE SCIPconsLockVars(
+RETCODE SCIPconsAddLocks(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
    int              nlockspos,          /**< increase in number of rounding locks for constraint */
    int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   );
-
-/** unlocks rounding of variables involved in the costraint */
-extern
-RETCODE SCIPconsUnlockVars(
-   CONS*            cons,               /**< constraint */
-   SET*             set,                /**< global SCIP settings */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
    );
 
 /** checks single constraint for feasibility of the given solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.9 2004/08/24 11:57:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.10 2005/01/17 12:45:04 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -447,27 +447,7 @@ DECL_CONSLOCK(consLockConjunction)
    /* lock sub constraints */
    for( c = 0; c < consdata->nconss; ++c )
    {
-      CHECK_OKAY( SCIPlockConsVars(scip, consdata->conss[c], nlockspos, nlocksneg) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockConjunction)
-{  /*lint --e{715}*/
-   CONSDATA* consdata;
-   int c;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   /* unlock sub constraints */
-   for( c = 0; c < consdata->nconss; ++c )
-   {
-      CHECK_OKAY( SCIPunlockConsVars(scip, consdata->conss[c], nunlockspos, nunlocksneg) );
+      CHECK_OKAY( SCIPaddConsLocks(scip, consdata->conss[c], nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -536,8 +516,7 @@ RETCODE SCIPincludeConshdlrConjunction(
          consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
          consDeleteConjunction, consTransConjunction, consInitlpConjunction,
          consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
-         consPropConjunction, consPresolConjunction, consRespropConjunction,
-         consLockConjunction, consUnlockConjunction,
+         consPropConjunction, consPresolConjunction, consRespropConjunction, consLockConjunction,
          consActiveConjunction, consDeactiveConjunction, 
          consEnableConjunction, consDisableConjunction,
          consPrintConjunction,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.9 2004/10/26 18:24:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.10 2005/01/17 12:45:07 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -47,6 +47,12 @@ struct EventVarFixed
    VAR*             var;                /**< variable that was fixed */
 };
 
+/** data for locks change events */
+struct EventLocksChg
+{
+   VAR*             var;                /**< variable for which the lock numbers were changed */
+};
+
 /** data for objective value change events */
 struct EventObjChg
 {
@@ -70,6 +76,7 @@ struct Event
    {
       EVENTVARADDED eventvaradded;      /**< data for variable addition events */
       EVENTVARFIXED eventvarfixed;      /**< data for variable fixing events */
+      EVENTLOCKSCHG eventlockschg;      /**< data for locks change events */
       EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */
       EVENTBDCHG    eventbdchg;         /**< data for bound change events */
       NODE*         node;               /**< data for node and LP events */

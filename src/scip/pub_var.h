@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.32 2004/12/10 12:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.33 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -43,120 +43,6 @@
 /*
  * methods for variables 
  */
-
-/** increases lock number for rounding down by one; tells variable, that rounding its value down will make the
- *  solution infeasible
- */
-extern
-void SCIPvarLockDown(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** increases lock number for rounding up by one; tells variable, that rounding its value up will make the
- *  solution infeasible
- */
-extern
-void SCIPvarLockUp(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** increases lock number for rounding down and up by one; tells variable, that rounding value in either direction will
- *  make the solution infeasible
- */
-extern
-void SCIPvarLockBoth(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** declares that rounding down the given variable would destroy the feasibility of the given constraint;
- *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-extern
-void SCIPvarLockDownCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   );
-
-/** declares that rounding up the given variable would destroy the feasibility of the given constraint;
- *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-extern
-void SCIPvarLockUpCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   );
-
-/** declares that rounding the given variable in any direction would destroy the feasibility of the given constraint;
- *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-extern
-void SCIPvarLockBothCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   );
-
-/** increases lock number for roundings of variable; tells variable, that rounding value in a direction set to
- *  a positive value will make the solution infeasible
- */
-extern
-void SCIPvarLock(
-   VAR*             var,                /**< problem variable */
-   int              nlocksdown,         /**< increase in number of rounding down locks */
-   int              nlocksup            /**< increase in number of rounding up locks */
-   );
-
-/** decreases lock number for rounding down by one; cancels a prior SCIPvarLockDown() */
-extern
-void SCIPvarUnlockDown(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** decreases lock number for rounding up by one; cancels a prior SCIPvarLockUp() */
-extern
-void SCIPvarUnlockUp(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** decreases lock number for rounding down and up by one; cancels a prior SCIPvarLockBoth() */
-extern
-void SCIPvarUnlockBoth(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** declares that rounding down the given variable would no longer destroy the feasibility of the given constraint;
- *  unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-extern
-void SCIPvarUnlockDownCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   );
-
-/** declares that rounding up the given variable would no longer destroy the feasibility of the given constraint;
- *  unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-extern
-void SCIPvarUnlockUpCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   );
-
-/** declares that rounding the given variable in any direction would no longer destroy the feasibility of the given
- *  constraint; unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
- */
-extern
-void SCIPvarUnlockBothCons(
-   VAR*             var,                /**< problem variable */
-   CONS*            cons                /**< constraint */
-   );
-
-/** decreases lock number for roundings of variable; cancels a prior call to SCIPvarLock() */
-extern
-void SCIPvarUnlock(
-   VAR*             var,                /**< problem variable */
-   int              nunlocksdown,       /**< decrease in number of rounding down locks */
-   int              nunlocksup          /**< decrease in number of rounding up locks */
-   );
 
 /** gets number of locks for rounding down */
 extern

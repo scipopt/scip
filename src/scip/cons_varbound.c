@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.18 2004/12/10 12:54:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.19 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -894,51 +894,28 @@ DECL_CONSLOCK(consLockVarbound)
 
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      SCIPvarLock(consdata->var, nlockspos, nlocksneg);
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->var, nlockspos, nlocksneg) );
       if( consdata->vbdcoef > 0.0 )
-         SCIPvarLock(consdata->vbdvar, nlockspos, nlocksneg);
+      {
+         CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vbdvar, nlockspos, nlocksneg) );
+      }
       else
-         SCIPvarLock(consdata->vbdvar, nlocksneg, nlockspos);
+      {
+         CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vbdvar, nlocksneg, nlockspos) );
+      }
    }
 
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIPvarLock(consdata->var, nlocksneg, nlockspos);
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->var, nlocksneg, nlockspos) );
       if( consdata->vbdcoef > 0.0 )
-         SCIPvarLock(consdata->vbdvar, nlocksneg, nlockspos);
+      {
+         CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vbdvar, nlocksneg, nlockspos) );
+      }
       else
-         SCIPvarLock(consdata->vbdvar, nlockspos, nlocksneg);
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockVarbound)
-{  /*lint --e{715}*/
-   CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if( !SCIPisInfinity(scip, -consdata->lhs) )
-   {
-      SCIPvarUnlock(consdata->var, nunlockspos, nunlocksneg);
-      if( consdata->vbdcoef > 0.0 )
-         SCIPvarUnlock(consdata->vbdvar, nunlockspos, nunlocksneg);
-      else
-         SCIPvarUnlock(consdata->vbdvar, nunlocksneg, nunlockspos);
-   }
-
-   if( !SCIPisInfinity(scip, consdata->rhs) )
-   {
-      SCIPvarUnlock(consdata->var, nunlocksneg, nunlockspos);
-      if( consdata->vbdcoef > 0.0 )
-         SCIPvarUnlock(consdata->vbdvar, nunlocksneg, nunlockspos);
-      else
-         SCIPvarUnlock(consdata->vbdvar, nunlockspos, nunlocksneg);
+      {
+         CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vbdvar, nlockspos, nlocksneg) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1098,8 +1075,7 @@ RETCODE SCIPincludeConshdlrVarbound(
          consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
          consDeleteVarbound, consTransVarbound, consInitlpVarbound,
          consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
-         consPropVarbound, consPresolVarbound, consRespropVarbound,
-         consLockVarbound, consUnlockVarbound,
+         consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
          consActiveVarbound, consDeactiveVarbound, 
          consEnableVarbound, consDisableVarbound,
          consPrintVarbound,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.58 2004/11/24 17:46:20 bzfwolte Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.59 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -702,7 +702,7 @@ RETCODE SCIPprobAddCons(
       /* if constraint is a check-constraint, lock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         CHECK_OKAY( SCIPconsLockVars(cons, set, 1, 0) );
+         CHECK_OKAY( SCIPconsAddLocks(cons, set, +1, 0) );
       }
    }
 
@@ -736,7 +736,7 @@ RETCODE SCIPprobDelCons(
       /* if constraint is a check-constraint, unlock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         CHECK_OKAY( SCIPconsUnlockVars(cons, set, 1, 0) );
+         CHECK_OKAY( SCIPconsAddLocks(cons, set, -1, 0) );
       }
 
       /* deactivate constraint, if it is currently active */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.28 2004/12/15 19:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.29 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -96,6 +96,34 @@ typedef enum Proprule PROPRULE;
 /*
  * Local methods
  */
+
+/** installs rounding locks for the given variable in the given or constraint */
+static
+RETCODE lockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< or constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding in both directions may violate the constraint */
+   CHECK_OKAY( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** removes rounding locks for the given variable in the given or constraint */
+static
+RETCODE unlockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< or constraint */
+   VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   /* rounding in both directions may violate the constraint */
+   CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+
+   return SCIP_OKAY;
+}
 
 /** creates constaint handler data */
 static
@@ -281,70 +309,6 @@ RETCODE consdataDropEvents(
    }
 
    return SCIP_OKAY;
-}
-
-/** locks rounding for variable in transformed or constraint */
-static
-void lockRounding(
-   VAR*             var,                /**< problem variable */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   /* forbid rounding of variable */
-   SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg);
-}
-
-/** unlocks rounding for variable in transformed or constraint */
-static
-void unlockRounding(
-   VAR*             var,                /**< problem variable */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   /* allow rounding of variable */
-   SCIPvarUnlock(var, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg);
-}
-
-/** locks rounding for all variables in transformed or constraint */
-static
-void consdataLockAllRoundings(
-   CONSDATA*        consdata,           /**< or constraint data */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   /* lock resultant variable */
-   lockRounding(consdata->resvar, nlockspos, nlocksneg);
-
-   /* lock all operand variables */
-   for( i = 0; i < consdata->nvars; ++i )
-      lockRounding(consdata->vars[i], nlockspos, nlocksneg);
-}
-
-/** unlocks rounding for all variables in transformed or constraint */
-static
-void consdataUnlockAllRoundings(
-   CONSDATA*        consdata,           /**< or constraint data */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   /* unlock resultant variable */
-   unlockRounding(consdata->resvar, nunlockspos, nunlocksneg);
-
-   /* unlock all operand variables */
-   for( i = 0; i < consdata->nvars; ++i )
-      unlockRounding(consdata->vars[i], nunlockspos, nunlocksneg);
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -550,12 +514,8 @@ RETCODE delCoefPos(
    assert(0 <= pos && pos < consdata->nvars);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsLocked(cons) )
-   {
-      assert(SCIPconsIsTransformed(cons));
-      unlockRounding(consdata->vars[pos], (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-   }
+   /* remove the rounding locks of the variable */
+   CHECK_OKAY( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -1549,17 +1509,20 @@ DECL_CONSRESPROP(consRespropOr)
 static
 DECL_CONSLOCK(consLockOr)
 {  /*lint --e{715}*/
-   consdataLockAllRoundings(SCIPconsGetData(cons), nlockspos, nlocksneg);
+   CONSDATA* consdata;
+   int i;
 
-   return SCIP_OKAY;
-}
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
+   /* lock resultant variable */
+   CHECK_OKAY( SCIPaddVarLocks(scip, consdata->resvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockOr)
-{  /*lint --e{715}*/
-   consdataUnlockAllRoundings(SCIPconsGetData(cons), nunlockspos, nunlocksneg);
+   /* lock all operand variables */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1648,8 +1611,7 @@ RETCODE SCIPincludeConshdlrOr(
          consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
          consDeleteOr, consTransOr, consInitlpOr,
          consSepaOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
-         consPropOr, consPresolOr, consRespropOr,
-         consLockOr, consUnlockOr,
+         consPropOr, consPresolOr, consRespropOr, consLockOr,
          consActiveOr, consDeactiveOr, 
          consEnableOr, consDisableOr,
          consPrintOr,

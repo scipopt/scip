@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.51 2005/01/13 16:20:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.52 2005/01/17 12:45:06 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -299,19 +299,19 @@ RETCODE primalSetUpperbound(
    /* set cut off value in LP solver */
    CHECK_OKAY( SCIPlpSetCutoffbound(lp, set, primal->cutoffbound) );
 
-   if( tree != NULL )
-   {
-      /* cut off leaves of the tree */
-      CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, stat, lp, primal->cutoffbound) );
+   /* cut off leaves of the tree */
+   CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, stat, lp, primal->cutoffbound) );
 
-      /* update upper bound in VBC output */
+   /* update upper bound in VBC output */
+   if( SCIPtreeGetCurrentDepth(tree) >= 0 )
+   {
       SCIPvbcUpperbound(stat->vbc, stat, primal->upperbound);
+   }
 
 #if 0
-      /* propagate global bounds on variables */
-      CHECK_OKAY( primalPropagateGlobalObj(primal, set, stat, prob, tree) );
+   /* propagate global bounds on variables */
+   CHECK_OKAY( primalPropagateGlobalObj(primal, set, stat, prob, tree) );
 #endif
-   }
 
    return SCIP_OKAY;
 }

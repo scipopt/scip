@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.139 2004/12/10 12:54:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.140 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -338,6 +338,64 @@ RETCODE conshdlrdataIncludeUpgrade(
  * local methods
  */
 
+/** installs rounding locks for the given variable associated to the given coefficient in the linear constraint */
+static
+RETCODE lockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!SCIPisZero(scip, val));
+
+   if( SCIPisPositive(scip, val) )
+   {
+      CHECK_OKAY( SCIPlockVarCons(scip, var, cons,
+            !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+   }
+   else
+   {
+      CHECK_OKAY( SCIPlockVarCons(scip, var, cons,
+            !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes rounding locks for the given variable associated to the given coefficient in the linear constraint */
+static
+RETCODE unlockRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!SCIPisZero(scip, val));
+
+   if( SCIPisPositive(scip, val) )
+   {
+      CHECK_OKAY( SCIPunlockVarCons(scip, var, cons,
+            !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+   }
+   else
+   {
+      CHECK_OKAY( SCIPunlockVarCons(scip, var, cons,
+            !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates event data for variable at given position, and catches events */
 static
 RETCODE consdataCatchEvent(
@@ -360,7 +418,8 @@ RETCODE consdataCatchEvent(
    consdata->eventdatas[pos]->consdata = consdata;
    consdata->eventdatas[pos]->varpos = pos;
 
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED,
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], 
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_LOCKSCHANGED,
          eventhdlr, consdata->eventdatas[pos], NULL) );
 
    return SCIP_OKAY;
@@ -383,7 +442,8 @@ RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->consdata == consdata);
    assert(consdata->eventdatas[pos]->varpos == pos);
    
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED,
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos],
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_LOCKSCHANGED,
          eventhdlr, consdata->eventdatas[pos], -1) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
@@ -431,142 +491,6 @@ RETCODE consdataDropAllEvents(
    }
 
    return SCIP_OKAY;
-}
-
-/** locks the rounding locks associated to the given coefficient in the linear constraint */
-static
-void consdataLockRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< linear constraint data */
-   VAR*             var,                /**< variable of constraint entry */
-   Real             val,                /**< coefficient of constraint entry */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   assert(consdata != NULL);
-   assert(!SCIPisZero(scip, val));
-
-   if( SCIPisPositive(scip, val) )
-   {
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarLock(var, nlockspos, nlocksneg);
-      if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarLock(var, nlocksneg, nlockspos);
-   }
-   else
-   {
-      if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarLock(var, nlockspos, nlocksneg);
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarLock(var, nlocksneg, nlockspos);
-   }
-}
-
-/** unlocks the rounding locks associated to the given coefficient in the linear constraint */
-static
-void consdataUnlockRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< linear constraint data */
-   VAR*             var,                /**< variable of constraint entry */
-   Real             val,                /**< coefficient of constraint entry */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   assert(consdata != NULL);
-   assert(!SCIPisZero(scip, val));
-
-   if( SCIPisPositive(scip, val) )
-   {
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarUnlock(var, nunlockspos, nunlocksneg);
-      if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarUnlock(var, nunlocksneg, nunlockspos);
-   }
-   else
-   {
-      if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarUnlock(var, nunlockspos, nunlocksneg);
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarUnlock(var, nunlocksneg, nunlockspos);
-   }
-}
-
-/** locks the rounding locks of all coefficients in the linear constraint */
-static
-void consdataLockAllRoundings(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< linear constraint data */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   Bool haslhs;
-   Bool hasrhs;
-   int i;
-
-   assert(consdata != NULL);
-
-   haslhs = !SCIPisInfinity(scip, -consdata->lhs);
-   hasrhs = !SCIPisInfinity(scip, consdata->rhs);
-   
-   /* lock rounding of every single variable */
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      if( SCIPisPositive(scip, consdata->vals[i]) )
-      {
-         if( haslhs )
-            SCIPvarLock(consdata->vars[i], nlockspos, nlocksneg);
-         if( hasrhs )
-            SCIPvarLock(consdata->vars[i], nlocksneg, nlockspos);
-      }
-      else
-      {
-         if( haslhs )
-            SCIPvarLock(consdata->vars[i], nlocksneg, nlockspos);
-         if( hasrhs )
-            SCIPvarLock(consdata->vars[i], nlockspos, nlocksneg);
-      }
-   }
-}
-
-/** unlocks the rounding locks of all coefficients in the linear constraint */
-static
-void consdataUnlockAllRoundings(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< linear constraint data */
-   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
-   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
-   )
-{
-   Bool haslhs;
-   Bool hasrhs;
-   int i;
-
-   assert(consdata != NULL);
-
-   haslhs = !SCIPisInfinity(scip, -consdata->lhs);
-   hasrhs = !SCIPisInfinity(scip, consdata->rhs);
-   
-   /* unlock rounding of every single variable */
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      if( SCIPisPositive(scip, consdata->vals[i]) )
-      {
-         if( haslhs )
-            SCIPvarUnlock(consdata->vars[i], nunlockspos, nunlocksneg);
-         if( hasrhs )
-            SCIPvarUnlock(consdata->vars[i], nunlocksneg, nunlockspos);
-      }
-      else
-      {
-         if( haslhs )
-            SCIPvarUnlock(consdata->vars[i], nunlocksneg, nunlockspos);
-         if( hasrhs )
-            SCIPvarUnlock(consdata->vars[i], nunlockspos, nunlocksneg);
-      }
-   }
 }
 
 /** creates a linear constraint data of the original problem */
@@ -1365,7 +1289,7 @@ RETCODE chgLhs(
          Real* vals;
          int v;
    
-         /* the left hand side switched from -infinity to a non-infinite value -> forbid rounding */
+         /* the left hand side switched from -infinity to a non-infinite value -> install rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
          
@@ -1375,9 +1299,13 @@ RETCODE chgLhs(
             assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarLockDownCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
             else
-               SCIPvarLockUpCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
          }
       }
       else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
@@ -1386,7 +1314,7 @@ RETCODE chgLhs(
          Real* vals;
          int v;
    
-         /* the left hand side switched from a non-infinte value to -infinity -> allow rounding */
+         /* the left hand side switched from a non-infinte value to -infinity -> remove rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
          
@@ -1396,9 +1324,13 @@ RETCODE chgLhs(
             assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarUnlockDownCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPunlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
             else
-               SCIPvarUnlockUpCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPunlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
          }
       }
    }
@@ -1452,7 +1384,7 @@ RETCODE chgRhs(
          Real* vals;
          int v;
    
-         /* the right hand side switched from infinity to a non-infinite value -> forbid rounding */
+         /* the right hand side switched from infinity to a non-infinite value -> install rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
          
@@ -1462,9 +1394,13 @@ RETCODE chgRhs(
             assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarLockUpCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
             else
-               SCIPvarLockDownCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
          }
       }
       else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
@@ -1473,7 +1409,7 @@ RETCODE chgRhs(
          Real* vals;
          int v;
    
-         /* the right hand side switched from a non-infinte value to infinity -> allow rounding */
+         /* the right hand side switched from a non-infinte value to infinity -> remove rounding locks */
          vars = consdata->vars;
          vals = consdata->vals;
          
@@ -1483,9 +1419,13 @@ RETCODE chgRhs(
             assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarUnlockUpCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPunlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
             else
-               SCIPvarUnlockDownCons(vars[v], cons);
+            {
+               CHECK_OKAY( SCIPunlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
          }
       }
    }
@@ -1563,12 +1503,8 @@ RETCODE addCoef(
       consdataUpdateAddCoef(scip, consdata, var, val);
    }
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsLocked(cons) )
-   {
-      assert(transformed);
-      consdataLockRounding(scip, consdata, var, val, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-   }
+   /* install rounding locks for new variable */
+   CHECK_OKAY( lockRounding(scip, cons, var, val) );
 
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
@@ -1620,12 +1556,8 @@ RETCODE delCoefPos(
    /* are we in the transformed problem? */
    transformed = SCIPconsIsTransformed(cons);
 
-   /* if necessary, update the rounding locks of variable */
-   if( SCIPconsIsLocked(cons) )
-   {
-      assert(transformed);
-      consdataUnlockRounding(scip, consdata, var, val, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-   }
+   /* remove rounding locks for deleted variable */
+   CHECK_OKAY( unlockRounding(scip, cons, var, val) );
 
    /* if we are in transformed problem, delete the event data of the variable */
    if( transformed )
@@ -1712,8 +1644,12 @@ RETCODE chgCoefPos(
    if( SCIPconsIsLocked(cons) && newval * val < 0.0 )
    {
       assert(SCIPconsIsTransformed(cons));
-      consdataUnlockRounding(scip, consdata, var, val, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
-      consdataLockRounding(scip, consdata, var, newval, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
+
+      /* remove rounding locks for variable with old coefficient */
+      CHECK_OKAY( unlockRounding(scip, cons, var, val) );
+
+      /* install rounding locks for variable with new coefficient */
+      CHECK_OKAY( lockRounding(scip, cons, var, newval) );
    }
 
    /* change the value */
@@ -3735,7 +3671,7 @@ RETCODE convertBinaryEquality(
    debugMessage("linear constraint <%s>: aggregate %g<%s> + %g<%s> == %g\n",
       SCIPconsGetName(cons), consdata->vals[0], SCIPvarGetName(consdata->vars[0]), 
       consdata->vals[1], SCIPvarGetName(consdata->vars[1]), consdata->rhs);
-   
+
    /* aggregate the equality */
    CHECK_OKAY( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], consdata->vals[0], consdata->vals[1],
          consdata->rhs, &infeasible, &redundant, &aggregated) );
@@ -4337,8 +4273,6 @@ RETCODE preprocessConstraintPairs(
    int              chkind,             /**< index of constraint to check against all prior indices upto startind */
    Real             maxaggrnormscale,   /**< maximal allowed relative gain in maximum norm for constraint aggregation */
    Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
-   int*             nfixedvars,         /**< pointer to count number of fixed variables */
-   int*             naggrvars,          /**< pointer to count number of aggregated variables */
    int*             ndelconss,          /**< pointer to count number of deleted constraints */
    int*             nupgdconss,         /**< pointer to count the number of upgraded constraints */
    int*             nchgsides,          /**< pointer to count number of changed left/right hand sides */
@@ -4380,8 +4314,6 @@ RETCODE preprocessConstraintPairs(
    assert(conss != NULL);
    assert(firstchange <= chkind);
    assert(cutoff != NULL);
-   assert(nfixedvars != NULL);
-   assert(naggrvars != NULL);
    assert(ndelconss != NULL);
    assert(nchgsides != NULL);
 
@@ -5018,7 +4950,7 @@ DECL_CONSPRESOL(consPresolLinear)
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
                CHECK_OKAY( preprocessConstraintPairs(scip, conss, firstchange, c, conshdlrdata->maxaggrnormscale,
-                     &cutoff, nfixedvars, naggrvars, ndelconss, nupgdconss, nchgsides, nchgcoefs) );
+                     &cutoff, ndelconss, nupgdconss, nchgsides, nchgcoefs) );
             }
          }
       }
@@ -5101,17 +5033,43 @@ DECL_CONSRESPROP(consRespropLinear)
 static
 DECL_CONSLOCK(consLockLinear)
 {  /*lint --e{715}*/
-   consdataLockAllRoundings(scip, SCIPconsGetData(cons), nlockspos, nlocksneg);
+   CONSDATA* consdata;
+   Bool haslhs;
+   Bool hasrhs;
+   int i;
 
-   return SCIP_OKAY;
-}
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockLinear)
-{  /*lint --e{715}*/
-   consdataUnlockAllRoundings(scip, SCIPconsGetData(cons), nunlockspos, nunlocksneg);
+   haslhs = !SCIPisInfinity(scip, -consdata->lhs);
+   hasrhs = !SCIPisInfinity(scip, consdata->rhs);
+   
+   /* update rounding locks of every single variable */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      if( SCIPisPositive(scip, consdata->vals[i]) )
+      {
+         if( haslhs )
+         {
+            CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+         }
+         if( hasrhs )
+         {
+            CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+         }
+      }
+      else
+      {
+         if( haslhs )
+         {
+            CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+         }
+         if( hasrhs )
+         {
+            CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -5152,6 +5110,7 @@ static
 DECL_EVENTEXEC(eventExecLinear)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
+   VAR* var;
    EVENTTYPE eventtype;
 
    assert(eventhdlr != NULL);
@@ -5165,17 +5124,16 @@ DECL_EVENTEXEC(eventExecLinear)
    assert(consdata != NULL);
 
    eventtype = SCIPeventGetType(event);
+   var = SCIPeventGetVar(event);
 
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 )
    {
-      VAR* var;
       Real oldbound;
       Real newbound;
       int varpos;
 
       varpos = eventdata->varpos;
       assert(0 <= varpos && varpos < consdata->nvars);
-      var = SCIPeventGetVar(event);
       oldbound = SCIPeventGetOldbound(event);
       newbound = SCIPeventGetNewbound(event);
       assert(var != NULL);
@@ -5193,10 +5151,23 @@ DECL_EVENTEXEC(eventExecLinear)
          consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
       }
       /*debug(printf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity));*/
+
+      consdata->propagated = FALSE;
+      consdata->boundstightened = FALSE;
    }
 
-   consdata->propagated = FALSE;
-   consdata->boundstightened = FALSE;
+   if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )
+   {
+      /* we want to remove the fixed variable */
+      consdata->propagated = FALSE;
+   }
+
+   if( (eventtype & SCIP_EVENTTYPE_LOCKSCHANGED) != 0 )
+   {
+      /* if there is only one lock left, we may multiaggregate the variable as slack of an equation */
+      if( SCIPvarGetNLocksDown(var) <= 1 && SCIPvarGetNLocksUp(var) <= 1 )
+         consdata->propagated = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -5295,8 +5266,7 @@ RETCODE SCIPincludeConshdlrLinear(
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
          consDeleteLinear, consTransLinear, 
          consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
-         consPropLinear, consPresolLinear, consRespropLinear,
-         consLockLinear, consUnlockLinear,
+         consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
          consActiveLinear, consDeactiveLinear, 
          consEnableLinear, consDisableLinear,
          consPrintLinear,

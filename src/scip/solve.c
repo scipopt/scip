@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.155 2005/01/13 16:20:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.156 2005/01/17 12:45:07 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -764,7 +764,7 @@ RETCODE priceAndCutLoop(
       mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
       /* if all the variables are already in the LP, we don't need to price */
-      mustprice = mustprice && (prob->ncolvars > SCIPlpGetNCols(lp) || set->nactivepricers > 0);
+      mustprice = mustprice && !SCIPprobAllColsInLP(prob, set, lp);
 
       /* pricing (has to be done completely to get a valid lower bound) */
       while( !(*cutoff) && !(*lperror) && mustprice )

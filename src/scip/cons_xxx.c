@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.23 2004/09/23 15:46:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.24 2005/01/17 12:45:05 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -338,17 +338,6 @@ DECL_CONSLOCK(consLockXxx)
 }
 
 
-/** variable rounding unlock method of constraint handler */
-static
-DECL_CONSUNLOCK(consUnlockXxx)
-{  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-
 /** constraint activation notification method of constraint handler */
 #if 0
 static
@@ -485,8 +474,7 @@ RETCODE SCIPincludeConshdlrXxx(
          consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
          consDeleteXxx, consTransXxx, consInitlpXxx,
          consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
-         consPropXxx, consPresolXxx, consRespropXxx,
-         consLockXxx, consUnlockXxx,
+         consPropXxx, consPresolXxx, consRespropXxx, consLockXxx,
          consActiveXxx, consDeactiveXxx, 
          consEnableXxx, consDisableXxx,
          consPrintXxx,
