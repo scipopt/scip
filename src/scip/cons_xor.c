@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.4 2004/08/24 14:24:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.5 2004/08/24 15:19:30 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -166,6 +166,10 @@ void consdataLockAllRoundings(
    /* lock all variables */
    for( i = 0; i < consdata->nvars; ++i )
       lockRounding(consdata->vars[i], nlockspos, nlocksneg);
+
+   /* lock internal variable */
+   if( consdata->intvar != NULL )
+      lockRounding(consdata->intvar, nlockspos, nlocksneg);
 }
 
 /** unlocks rounding for all variables in transformed xor constraint */
@@ -183,6 +187,10 @@ void consdataUnlockAllRoundings(
    /* unlock all variables */
    for( i = 0; i < consdata->nvars; ++i )
       unlockRounding(consdata->vars[i], nunlockspos, nunlocksneg);
+
+   /* unlock internal variable */
+   if( consdata->intvar != NULL )
+      unlockRounding(consdata->intvar, nunlockspos, nunlocksneg);
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -487,6 +495,7 @@ RETCODE createRelaxation(
       CHECK_OKAY( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, SCIPfloor(scip, consdata->nvars/2.0), 0.0,
             SCIP_VARTYPE_INTEGER, SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
       CHECK_OKAY( SCIPaddVar(scip, consdata->intvar) );
+      lockRounding(consdata->intvar, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
    }
 
    /* create LP row (resultant variable is also stored in vars array) */
