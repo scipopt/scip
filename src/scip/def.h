@@ -61,7 +61,8 @@ typedef double Real;                    /**< type used for floating point values
 #define SCIP_MAXNADDEDROWS 0x0000fffff  /**< maximal number of added rows per node; 20 bits available */
 
 
-enum Setting                            /**< possible settings for enabling/disabling algorithms and other features */
+/** possible settings for enabling/disabling algorithms and other features */
+enum Setting
 {
    SCIP_UNDEFINED = 0,                  /**< undefined setting */
    SCIP_DISABLED  = 1,                  /**< feature is disabled */

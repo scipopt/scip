@@ -26,6 +26,8 @@
 #include "tree.h"
 #include "scip.h"
 
+
+/** SCIP main data structure */
 struct Scip
 {
    TREE*            tree;               /**< branch and bound tree */

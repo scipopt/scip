@@ -56,14 +56,16 @@ static const double dblparam[NUMDBLPARAM] = {
    CPX_PARAM_EPRHS
 };
 
-struct CPXParam                         /**< CPLEX parameter settings */
+/** CPLEX parameter settings */
+struct CPXParam
 {
    int              intparval[NUMINTPARAM]; /**< integer parameter values */
    double           dblparval[NUMDBLPARAM]; /**< double parameter values */
 };
 typedef struct CPXParam CPXPARAM;
 
-enum OptAlgo                            /**< LP algorithm type */
+/** LP algorithm type */
+enum OptAlgo
 {
    INVALID       = 0,                   /**< problem is not optimized */
    PRIMALSIMPLEX = 1,                   /**< primal simplex algorithm */
@@ -71,7 +73,8 @@ enum OptAlgo                            /**< LP algorithm type */
 };
 typedef enum OptAlgo OPTALGO;
 
-struct LPi                              /**< LP interface */
+/** LP interface */
+struct LPi
 {
    CPXLPptr         cpxlp;              /**< CPLEX LP pointer */
    OPTALGO          optalgo;            /**< last optimization algorithm */
@@ -80,7 +83,8 @@ struct LPi                              /**< LP interface */
    CPXPARAM         cpxparam;           /**< actual parameter values for this LP */
 };
 
-struct LPState                          /**< LP state stores basis information */
+/** LP state stores basis information */
+struct LPState
 {
    int              numuses:24;         /**< number of times, this LP state is referenced */
    unsigned int     ncol:20;            /**< number of LP columns */
@@ -515,7 +519,7 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   const char**     name                /**< column names */
+   char**           name                /**< column names */
    )
 {
    assert(cpxenv != NULL);
@@ -524,8 +528,7 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXaddcols(cpxenv, lpi->cpxlp, ncol, nnonz, (Real*)obj,
-                  (int*)beg, (int*)ind, (Real*)val, (Real*)lb, (Real*)ub, (char**)name) );
+   CHECK_ZERO( CPXaddcols(cpxenv, lpi->cpxlp, ncol, nnonz, obj, beg, ind, val, lb, ub, name) );
 
    return SCIP_OKAY;
 }
@@ -580,7 +583,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   const char**     name                /**< row names */
+   char**           name                /**< row names */
    )
 {
    assert(cpxenv != NULL);
@@ -589,8 +592,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, (Real*)rhs, (char*)sen,
-                  (int*)beg, (int*)ind, (Real*)val, NULL, (char**)name) );
+   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, rhs, sen, beg, ind, val, NULL, name) );
 
    return SCIP_OKAY;
 }
@@ -1029,10 +1031,10 @@ Bool SCIPlpiIsPrimalUnbounded(          /**< returns TRUE iff LP is primal unbou
    switch( lpi->optalgo )
    {
    case PRIMALSIMPLEX:
-      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_UNBOUNDED );
+      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_STAT_UNBOUNDED );
    case DUALSIMPLEX:
       /* primal unbounded means dual infeasible */
-      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_INFEASIBLE );
+      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_STAT_INFEASIBLE );
    default:
       errorMessage("LP not optimized");
       return FALSE;
@@ -1050,10 +1052,10 @@ Bool SCIPlpiIsPrimalInfeasible(         /**< returns TRUE iff LP is primal infea
    switch( lpi->optalgo )
    {
    case PRIMALSIMPLEX:
-      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_INFEASIBLE );
+      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_STAT_INFEASIBLE );
    case DUALSIMPLEX:
       /* primal infeasible means dual unbounded */
-      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_UNBOUNDED );
+      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_STAT_UNBOUNDED );
    default:
       errorMessage("LP not optimized");
       return FALSE;
@@ -1068,7 +1070,7 @@ Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to o
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   return( isOptimalSolution(lpi) && lpi->solstat == CPX_OPTIMAL );
+   return( isOptimalSolution(lpi) && lpi->solstat == CPX_STAT_OPTIMAL );
 }
 
 Bool SCIPlpiIsDualValid(                /**< returns TRUE iff actual LP solution is dual valid */
@@ -1080,12 +1082,12 @@ Bool SCIPlpiIsDualValid(                /**< returns TRUE iff actual LP solution
    assert(lpi->cpxlp != NULL);
 
    return( isValidSolution(lpi)
-      && ( lpi->solstat == CPX_OPTIMAL
-	 || lpi->solstat == CPX_OBJ_LIM
-         || lpi->solstat == CPX_IT_LIM_FEAS
-	 || lpi->solstat == CPX_TIME_LIM_FEAS
-         || lpi->solstat == CPX_NUM_BEST_FEAS
-	 || lpi->solstat == CPX_ABORT_FEAS ) );
+      && ( lpi->solstat == CPX_STAT_OPTIMAL
+	 || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM
+         || lpi->solstat == CPX_STAT_NUM_BEST
+         || lpi->solstat == CPX_STAT_ABORT_IT_LIM
+	 || lpi->solstat == CPX_STAT_ABORT_TIME_LIM
+	 || lpi->solstat == CPX_STAT_ABORT_USER ) );
 }
 
 Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is stable */
@@ -1097,9 +1099,8 @@ Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is
    assert(lpi->cpxlp != NULL);
 
    return( isValidSolution(lpi)
-      && lpi->solstat != CPX_NUM_BEST_FEAS
-      && lpi->solstat != CPX_NUM_BEST_INFEAS
-      && lpi->solstat != CPX_OPTIMAL_INFEAS );
+      && lpi->solstat != CPX_STAT_NUM_BEST
+      && lpi->solstat != CPX_STAT_OPTIMAL_INFEAS );
 }
 
 Bool SCIPlpiIsError(                    /**< returns TRUE iff an error occured while solving the LP */
@@ -1122,8 +1123,8 @@ Bool SCIPlpiIsObjlimExc(                /**< returns TRUE iff the objective limi
    assert(lpi->cpxlp != NULL);
 
    return( isUnboundedSolution(lpi)
-      || lpi->solstat == CPX_UNBOUNDED
-      || lpi->solstat == CPX_OBJ_LIM );
+      || lpi->solstat == CPX_STAT_UNBOUNDED
+      || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM );
 }
 
 Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limit was reached */
@@ -1134,8 +1135,7 @@ Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limi
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   return( lpi->solstat == CPX_IT_LIM_FEAS
-      || lpi->solstat == CPX_IT_LIM_INFEAS );
+   return( lpi->solstat == CPX_STAT_ABORT_IT_LIM );
 }
 
 Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was reached */
@@ -1146,8 +1146,7 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   return( lpi->solstat == CPX_TIME_LIM_FEAS
-      || lpi->solstat == CPX_TIME_LIM_INFEAS );
+   return( lpi->solstat == CPX_STAT_ABORT_TIME_LIM );
 }
 
 

@@ -54,16 +54,17 @@ errorMessage_call(const char *msg, const char *filename, int line)
 
 #include <string.h>
 
-/* memory list for debugging purposes */
+typedef struct MemList MEMLIST;
+
+/** memory list for debugging purposes */
 struct MemList
 {
-   void   *ptr;
+   void    *ptr;
    size_t  size;
-   char   *filename;
+   char    *filename;
    int     line;
-   struct MemList *next;
+   MEMLIST *next;
 };
-typedef struct MemList MEMLIST;
 
 static MEMLIST *memlist = NULL;
 static long memused = 0;

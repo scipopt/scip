@@ -28,7 +28,8 @@
 #include "constraint.h"
 
 
-struct ConsHdlr                         /**< constraint handler */
+/** constraint handler */
+struct ConsHdlr
 {
    char*            name;               /**< name of constraint handler */
    DECL_CONSINIT((*consinit));          /**< initialise constraint handler */
@@ -38,14 +39,16 @@ struct ConsHdlr                         /**< constraint handler */
    DECL_CONSPROP((*consprop));          /**< propagate variable domains */
 };
 
-struct Cons                             /**< constraint data structure */
+/** constraint data structure */
+struct Cons
 {
    unsigned int     model:1;            /**< TRUE iff constraint is necessary for feasibility */
    CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
    CONSDATA*        consdata;           /**< data for this specific constraint */
 };
 
-struct ConsList                         /**< linked list of constraints */
+/** linked list of constraints */
+struct ConsList
 {
    CONS*            cons;               /**< pointer to constraint data structure */
    CONSLIST*        next;               /**< next list entry */

@@ -26,9 +26,6 @@
 #ifndef __TREE_H__
 #define __TREE_H__
 
-#include "lp.h"
-
-
 enum Nodetype
 {
    SCIP_NODETYPE_LEAF    = 0,           /**< unsolved leaf of the tree */
@@ -44,6 +41,10 @@ typedef struct Fork FORK;               /**< data for fork nodes */
 typedef struct Subroot SUBROOT;         /**< data for subroot nodes */
 typedef struct Node NODE;               /**< node data structure */
 typedef struct Tree TREE;               /**< branch and bound tree */
+
+
+
+#include "lp.h"
 
 
 
@@ -74,13 +75,17 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    NODE*            node,               /**< leaf node to activate */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp,                 /**< actual LP data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   NODE*            oldnode             /**< old active node */
    );
 
 extern
 RETCODE SCIPactnodeToFork(              /**< converts the active node into a fork node */
    NODE*            node,               /**< node to convert */
    MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    );
 
@@ -89,6 +94,7 @@ RETCODE SCIPactnodeToSubroot(           /**< converts the active node into a sub
    NODE*            node,               /**< node to convert */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    );
 
@@ -107,6 +113,7 @@ extern
 RETCODE SCIPtreeExtendPath(             /**< appends node to the path of active nodes and marks node active */
    TREE*            tree,               /**< branch-and-bound tree */
    MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    NODE*            node                /**< node to append */
    );
 

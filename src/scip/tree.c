@@ -31,12 +31,14 @@
 #include "tree.h"
 
 
-struct Leaf                             /**< unsolved leaf of the tree */
+/** unsolved leaf of the tree */
+struct Leaf
 {
    LPSTATE*         lpstate;            /**< pointer to LP state information */
 };
 
-struct Fork                             /**< solved fork, where rows were only added to the father */
+/** solved fork, where rows were only added to the father */
+struct Fork
 {
    COL**            addedCols;          /**< array with pointers to new columns added at this node into the LP */
    ROW**            addedRows;          /**< array with pointers to new rows added at this node into the LP */
@@ -45,7 +47,8 @@ struct Fork                             /**< solved fork, where rows were only a
    unsigned int     nchildren:16;       /**< number of children of this parent node */
 };
 
-struct Subroot                          /**< solved fork, where rows were added, deleted, or rearranged */
+/** solved fork, where rows were added, deleted, or rearranged */
+struct Subroot
 {
    COL**            cols;               /**< array with pointers to the columns in the same order as in the LP */
    ROW**            rows;               /**< array with pointers to the rows in the same order as in the LP */
@@ -54,7 +57,8 @@ struct Subroot                          /**< solved fork, where rows were added,
    unsigned int     nchildren:16;       /**< number of children of this parent node */
 };
 
-struct Node                             /**< node data structure */
+/** node data structure */
+struct Node
 {
    union
    {
@@ -71,7 +75,8 @@ struct Node                             /**< node data structure */
    unsigned int     active:1;           /**< is node in the path to the actual active node? */
 };
 
-struct Tree                             /**< branch and bound tree */
+/** branch and bound tree */
+struct Tree
 {
    NODE*            root;               /**< root node of the tree */
    PQUEUE*          leaves;             /**< leaves of the tree */
@@ -396,11 +401,13 @@ static
 RETCODE treeEnsurePathMem(              /**< resizes path array to be able to store at least num nodes */
    TREE*            tree,               /**< branch-and-bound tree */
    MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of node slots in path */
    )
 {
    assert(tree != NULL);
    assert(mem != NULL);
+   assert(set != NULL);
 
    if( num > tree->pathsize )
    {
@@ -424,7 +431,7 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
-   const NODE*      oldnode             /**< old active node */
+   NODE*            oldnode             /**< old active node */
    )
 {
    NODE* forknode;
@@ -441,7 +448,7 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
    assert(mem != NULL);
    assert(set != NULL);
    assert(lp != NULL);
-   assert(SCIPlpIsFlushed(lp));
+   assert(lp->flushed);
    assert(tree != NULL);
 
    /* if oldnode == NULL, then node has to be the parent of the root node (NULL) and LP is empty */
@@ -455,14 +462,14 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
    }
 
    assert(node != NULL && oldnode != NULL);
-   assert(node->nodetype == SCIP_NODETYPE_FORK || node->nodetype == SCIP_NODETYPE_SUBTREE);
+   assert(node->nodetype == SCIP_NODETYPE_FORK || node->nodetype == SCIP_NODETYPE_SUBROOT);
    assert(tree->pathlen == oldnode->depth+1);
 
    /* search the common fork node of the two nodes
     * detect the subroot of the new node, if existing
     * construct the new active path
     */
-   CHECK_OKAY( treeEnsurePathMem(tree, node->depth+1) );
+   CHECK_OKAY( treeEnsurePathMem(tree, mem, set, node->depth+1) );
    tree->pathlen = node->depth+1;
    forknode = node;
    subroot = NULL;
@@ -477,7 +484,7 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
       forknode = forknode->parent;
    }
    assert(forknode != NULL);
-   assert(0 <= forknode->depth && forknode->depth < tree->pathlen);
+   assert(forknode->depth < tree->pathlen);
    assert(forknode->depth <= oldnode->depth);
    forkdepth = forknode->depth;
 
@@ -510,12 +517,12 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
       /* same subtree */
       assert(forknode != NULL);
       assert(tree->path[forkdepth] == forknode);
-      assert(0 <= tree->pathlpncols[forkdepth] && tree->pathlpncols[forkdepth] <= SCIPlpGetNumCols(lp));
-      assert(0 <= tree->pathlpnrows[forkdepth] && tree->pathlpnrows[forkdepth] <= SCIPlpGetNumRows(lp));
+      assert(0 <= tree->pathnlpcols[forkdepth] && tree->pathnlpcols[forkdepth] <= lp->ncols);
+      assert(0 <= tree->pathnlprows[forkdepth] && tree->pathnlprows[forkdepth] <= lp->nrows);
 
       lpdepth = forkdepth;
-      correctcols = tree->pathlpncols[forkdepth];
-      correctrows = tree->pathlpnrows[forkdepth];
+      correctcols = tree->pathnlpcols[forkdepth];
+      correctrows = tree->pathnlprows[forkdepth];
    }
    else if( subroot != NULL )
    {
@@ -571,7 +578,7 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
    }
    /* now, lpdepth is the depth until the LP is already constructed */
    assert(lpdepth <= node->depth);
-   assert(lpdepth == -1 || (correctcols == tree->pathlpncols[lpdepth] && correctrows == tree->pathlpnrows[lpdepth]));
+   assert(lpdepth == -1 || (correctcols == tree->pathnlpcols[lpdepth] && correctrows == tree->pathnlprows[lpdepth]));
    assert(lpdepth >= 0 || (correctcols == 0 && correctrows == 0));
 
    /* add columns and rows of new path to LP
@@ -580,9 +587,12 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
    for( d = lpdepth+1; d <= node->depth; ++d )
    {
       COL** cols;
+      ROW** rows;
       int ncols;
+      int nrows;
       int col;
-      
+      int row;
+
       assert(d < tree->pathlen);
       assert(tree->path[d] != NULL);
       assert(tree->path[d]->nodetype == SCIP_NODETYPE_FORK);
@@ -593,6 +603,9 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
       cols = tree->path[d]->data.fork->addedCols;
       ncols = tree->path[d]->data.fork->naddedCols;
       col = 0;
+      rows = tree->path[d]->data.fork->addedRows;
+      nrows = tree->path[d]->data.fork->naddedRows;
+      row = 0;
 
       if( !colsshrinked )
       {
@@ -640,8 +653,8 @@ RETCODE switchPath(                     /**< performs LP changes on the path fro
          CHECK_OKAY( SCIPlpAddRow(lp, mem, set, rows[row]) );
       }
 
-      assert(tree->pathlpcols[d] == correctcols);
-      assert(tree->pathlprows[d] == correctrows);
+      assert(tree->pathnlpcols[d] == correctcols);
+      assert(tree->pathnlprows[d] == correctrows);
    }
 
    /* if there are additional columns or rows left, delete them */
@@ -681,7 +694,7 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
-   const NODE*      oldnode             /**< old active node */
+   NODE*            oldnode             /**< old active node */
    )
 {
    assert(node != NULL);
@@ -690,10 +703,11 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    assert(!node->active);
    assert(mem != NULL);
    assert(lp != NULL);
+   assert(lp->flushed);
    assert(tree != NULL);
 
    /* track the path from the old node to the new node's parent, and perform LP changes */
-   CHECK_OKAY( switchPath(node->parent, mem, set, lp, oldnode) );
+   CHECK_OKAY( switchPath(node->parent, mem, set, lp, tree, oldnode) );
 
    /* load LP state into solver */
    if( node->data.leaf->lpstate != NULL )
@@ -710,7 +724,10 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
       SCIPlpApplyDomchg(lp, mem, set, node->domchg);
 
    /* insert node in path */
-   CHECK_OKAY( SCIPtreeExtendPath(tree, mem, node) );
+   CHECK_OKAY( SCIPtreeExtendPath(tree, mem, set, node) );
+
+   /* flush changes to the LP */
+   CHECK_OKAY( SCIPlpFlush(lp, mem, set) );
 
    return SCIP_OKAY;
 }   
@@ -718,6 +735,7 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
 RETCODE SCIPactnodeToFork(              /**< converts the active node into a fork node */
    NODE*            node,               /**< node to convert */
    MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    )
@@ -751,7 +769,7 @@ RETCODE SCIPactnodeToFork(              /**< converts the active node into a for
    node->data.fork = fork;
 
    /* put node in the path of active forks and subroots */
-   CHECK_OKAY( SCIPtreeExtendPath(tree, mem, node) );
+   CHECK_OKAY( SCIPtreeExtendPath(tree, mem, set, node) );
 
    return SCIP_OKAY;
 }
@@ -776,17 +794,17 @@ RETCODE SCIPactnodeToSubroot(           /**< converts the active node into a sub
 
    ALLOC_OKAY( subroot = subrootCreate(mem) );
 
-   subroot->ncols = SCIPlpGetNumCols(lp);
-   subroot->nrows = SCIPlpGetNumRows(lp);
+   subroot->ncols = lp->ncols;
+   subroot->nrows = lp->nrows;
    subroot->nchildren = node->data.fork->nchildren;
-   ALLOC_OKAY( duplicateBlockMemoryArray(mem->treemem, subroot->cols, SCIPlpGetCols(lp), subroot->ncols) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(mem->treemem, subroot->rows, SCIPlpGetRows(lp), subroot->nrows) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(mem->treemem, subroot->cols, lp->cols, subroot->ncols) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(mem->treemem, subroot->rows, lp->rows, subroot->nrows) );
 
    node->nodetype = SCIP_NODETYPE_SUBROOT;
    node->data.subroot = subroot;
 
    /* put node in the path of active forks and subroots */
-   CHECK_OKAY( SCIPtreeExtendPath(tree, mem, node) );
+   CHECK_OKAY( SCIPtreeExtendPath(tree, mem, set, node) );
 
    return SCIP_OKAY;
 }
@@ -823,25 +841,27 @@ TREE* SCIPtreeCreate(                   /**< creates an initialized tree data st
 RETCODE SCIPtreeExtendPath(             /**< appends fork/subtree node to the path of active nodes and marks node active */
    TREE*            tree,               /**< branch-and-bound tree */
    MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    NODE*            node                /**< fork or subtree node to append */
    )
 {
    assert(tree != NULL);
    assert(mem != NULL);
+   assert(set != NULL);
    assert(node != NULL);
    assert(node->depth == tree->pathlen);
-   assert(node->nodetype == SCIP_NODETYPE_FORK || node->nodetype == SCIP_NODETYPE_SUBTREE);
+   assert(node->nodetype == SCIP_NODETYPE_FORK || node->nodetype == SCIP_NODETYPE_SUBROOT);
    assert(!node->active);
    assert(node->depth == 0 || tree->path != NULL);
-   assert(node->depth == 0 || tree->path[node->depth-1] == node->father);
+   assert(node->depth == 0 || tree->path[node->depth-1] == node->parent);
 
-   CHECK_OKAY( treeEnsurePathMem(tree, tree->pathlen+1) );
+   CHECK_OKAY( treeEnsurePathMem(tree, mem, set, tree->pathlen+1) );
    tree->path[tree->pathlen] = node;
    switch( node->nodetype )
    {
    case SCIP_NODETYPE_FORK:
       assert(node->data.fork != NULL);
-      if( node->pathlen == 0 )
+      if( tree->pathlen == 0 )
       {
          tree->pathnlpcols[0] = 0;
          tree->pathnlprows[0] = 0;
@@ -884,7 +904,7 @@ void SCIPtreeShrinkPath(                /**< cuts off path of active nodes after
 
    assert(tree != NULL);
    assert(node != NULL);
-   assert(0 <= node->depth && node->depth < tree->pathlen);
+   assert(node->depth < tree->pathlen);
    assert(node->active);
    assert(tree->path[node->depth] == node);
 

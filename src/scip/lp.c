@@ -31,19 +31,22 @@
 #include "lp.h"
 
 
-struct Hole                             /**< hole in a domain of an integer variable */
+/** hole in a domain of an integer variable */
+struct Hole
 {
    int              first;              /**< first value of hole */
    int              last;               /**< last value of hole */
 };
 
-struct Holelist                         /**< list of domain holes */
+/** list of domain holes */
+struct Holelist
 {
    HOLE             hole;               /**< this hole */
    HOLELIST*        next;               /**< next hole in list */
 };
 
-struct BoundChg                         /**< change in one bound of a variable */
+/** change in one bound of a variable */
+struct BoundChg
 {
    COL*             col;                /**< column to change the bounds for */
    Real             newbound;           /**< new value for bound */
@@ -51,14 +54,16 @@ struct BoundChg                         /**< change in one bound of a variable *
    BOUNDTYPE        boundtype;          /**< type of bound: lower or upper bound */
 };
 
-struct HoleChg                          /**< change in a hole list */
+/** change in a hole list */
+struct HoleChg
 {
    HOLELIST**       ptr;                /**< changed list pointer */
    HOLELIST*        newlist;            /**< new value of list pointer */
    HOLELIST*        oldlist;            /**< old value of list pointer */
 };
 
-struct DomChg                           /**< tracks changes of the variable's domains (fixed sized arrays) */
+/** tracks changes of the variable's domains (fixed sized arrays) */
+struct DomChg
 {
    BOUNDCHG*        boundchg;           /**< array with changes in bounds of variables */
    HOLECHG*         holechg;            /**< array with changes in hole lists */
@@ -66,20 +71,23 @@ struct DomChg                           /**< tracks changes of the variable's do
    int              nholechg;           /**< number of hole list changes */
 };
 
-struct DomChgDyn                        /**< tracks changes of the variable's domains (dynamically sized arrays) */
+/** tracks changes of the variable's domains (dynamically sized arrays) */
+struct DomChgDyn
 {
    DOMCHG           domchg;             /**< domain changes */
    int              boundchgsize;       /**< size of bound change array */
    int              holechgsize;        /**< size of hole change array */
 };
 
-struct ColList                          /**< list of columns */
+/** list of columns */
+struct ColList
 {
    COL*             col;                /**< pointer to this column */
    COLLIST*         next;               /**< pointer to next collist entry */
 };
 
-struct RowList                          /**< list of rows */
+/** list of rows */
+struct RowList
 {
    ROW*             row;                /**< pointer to this row */
    ROWLIST*         next;               /**< pointer to next rowlist entry */
@@ -614,8 +622,8 @@ RETCODE lpFlushAddrows(                 /**< applies all cached row additions to
       row = lp->addrows[r];
       rhs[r] = row->rhs;
       sen[r] = row->equality ? 'E' : 'L';
-      beg[c] = nnonz;
-      name[c] = row->name;
+      beg[r] = nnonz;
+      name[r] = row->name;
 
       for( i = 0; i < row->len; ++i )
       {
@@ -1404,6 +1412,38 @@ RETCODE SCIPlpAddRow(                   /**< adds a row to the LP */
    lp->naddrows++;
    lp->addrowscoefs += row->len;
    lp->flushed = FALSE;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpShrinkCols(               /**< removes all columns after given column number from LP */
+   LP*              lp,                 /**< LP data */
+   int              lastcol             /**< last column number to remain in the LP */
+   )
+{
+   assert(lp != NULL);
+   assert(lastcol < lp->ncols);
+
+   if( lastcol < lp->ncols-1 )
+   {
+      CHECK_OKAY( SCIPlpiShrinkCols(lp->lpi, lastcol) );
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpShrinkRows(               /**< removes all rows after given rowumn number from LP */
+   LP*              lp,                 /**< LP data */
+   int              lastrow             /**< last row number to remain in the LP */
+   )
+{
+   assert(lp != NULL);
+   assert(lastrow < lp->nrows);
+
+   if( lastrow < lp->nrows-1 )
+   {
+      CHECK_OKAY( SCIPlpiShrinkRows(lp->lpi, lastrow) );
+   }
 
    return SCIP_OKAY;
 }

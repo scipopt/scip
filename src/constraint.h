@@ -26,15 +26,19 @@
 #ifndef __CONSTRAINT_H__
 #define __CONSTRAINT_H__
 
-#include "scip.h"
-#include "retcode.h"
-#include "mem.h"
-#include "lp.h"
 
 typedef struct ConsHdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct Cons CONS;               /**< constraint data structure */
 typedef struct ConsList CONSLIST;       /**< list of constraints */
 typedef void CONSDATA;                  /**< constraint type specific data; default is void */
+
+
+#include "scip.h"
+#include "retcode.h"
+#include "mem.h"
+#include "lp.h"
+
+
 
 /** initialization method of constraint handler
  *  possible return values:

@@ -27,6 +27,7 @@
 #define __RETCODE_H__
 
 
+/** return codes for SCIP methods: negative return codes are errors */
 enum Retcode
 {
    SCIP_SUCCESS     =   2,              /**< normal termination with success */

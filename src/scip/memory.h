@@ -26,10 +26,13 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
+
+typedef struct memory_header MEMHDR;
+
+
 #include <stdlib.h>
 #include "def.h"
 
-typedef struct memory_header MEMHDR;
 
 #define errorMessage(msg)                  errorMessage_call( (msg), __FILE__, __LINE__ )
 #define allocMemory(ptr)                   ((ptr) = allocMemory_call( sizeof(*(ptr)), __FILE__, __LINE__ ))

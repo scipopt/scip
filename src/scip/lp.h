@@ -27,6 +27,7 @@
 #define __LP_H__
 
 
+/** variable type */
 enum VarType
 {
    SCIP_VARTYPE_BINARY    = 0,          /**< binary variable: $x \in \{0,1\}$ */
@@ -36,6 +37,7 @@ enum VarType
 };
 typedef enum VarType VARTYPE;
 
+/** type of bound: lower or upper bound */
 enum BoundType
 {
    SCIP_BOUNDTYPE_LOWER = 0,            /**< lower bound */
@@ -67,14 +69,16 @@ typedef struct Lp LP;                   /**< actual LP data */
 
 
 
-struct Dom                              /**< domain of a variable */
+/** domain of a variable */
+struct Dom
 {
    HOLELIST*        holelist;           /**< list of holes (only for the integer variables) */
    Real             lb;                 /**< lower bounds of variables */
    Real             ub;                 /**< upper bounds of variables */
 };
 
-struct Col                              /**< variable of the problem and corresponding LP column */
+/** variable of the problem and corresponding LP column */
+struct Col
 {
    char*            name;               /**< name of the column */
    ROW**            row;                /**< rows of column entries */
@@ -96,7 +100,8 @@ struct Col                              /**< variable of the problem and corresp
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed in node switch, and LP has to be updated */
 };
 
-struct Row                              /**< row of the LP */
+/** row of the LP */
+struct Row
 {
    char*            name;               /**< name of the row */
    COL**            col;                /**< columns of row entries */
@@ -118,7 +123,8 @@ struct Row                              /**< row of the LP */
    unsigned int     validminmaxidx:1;   /**< TRUE iff minimal and maximal column index is valid */
 };
 
-struct Lp                               /**< actual LP data */
+/** actual LP data */
+struct Lp
 {
    LPI*             lpi;                /**< LP solver interface */
    COL**            cols;               /**< array with actual LP columns in correct order */
@@ -343,6 +349,18 @@ RETCODE SCIPlpAddRow(                   /**< adds a row to the LP */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row                 /**< LP row */
+   );
+
+extern
+RETCODE SCIPlpShrinkCols(               /**< removes all columns after given column number from LP */
+   LP*              lp,                 /**< LP data */
+   int              lastcol             /**< last column number to remain in the LP */
+   );
+
+extern
+RETCODE SCIPlpShrinkRows(               /**< removes all rows after given rowumn number from LP */
+   LP*              lp,                 /**< LP data */
+   int              lastrow             /**< last row number to remain in the LP */
    );
 
 #endif

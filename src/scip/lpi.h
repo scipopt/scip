@@ -26,22 +26,20 @@
 #ifndef __LPI_H__
 #define __LPI_H__
 
-#include "def.h"
-#include "mem.h"
-#include "retcode.h"
 
 typedef struct LPi LPI;                 /**< solver dependent LP interface */
 typedef struct LPState LPSTATE;         /**< complete LP state (i.e. basis information, dual norms) */
 
-
-enum ObjSen                             /**< objective sense */
+/** objective sense */
+enum ObjSen
 {
    SCIP_OBJSEN_MAXIMIZE = -1,           /**< maximize objective function */
    SCIP_OBJSEN_MINIMIZE = +1            /**< minimize objective function */
 };
 typedef enum ObjSen OBJSEN;
 
-enum LPParam                            /**< LP solver parameters */
+/** LP solver parameters */
+enum LPParam
 {
    SCIP_LPPAR_FROMSCRATCH =  0,         /**< solver should start from scratch at next call */
    SCIP_LPPAR_FASTMIP     =  1,         /**< fast mip setting of LP solver */
@@ -57,13 +55,21 @@ enum LPParam                            /**< LP solver parameters */
 };
 typedef enum LPParam LPPARAM;
 
-enum Pricing                            /**< LP pricing strategy */
+/** LP pricing strategy */
+enum Pricing
 {
    SCIP_PRICING_FULL        = 0,        /**< full pricing */
    SCIP_PRICING_STEEP       = 1,        /**< steepest edge pricing */
    SCIP_PRICING_STEEPQSTART = 2         /**< steepest edge pricing without initial dual norms */
 };
 typedef enum Pricing PRICING;
+
+
+
+#include "def.h"
+#include "mem.h"
+#include "retcode.h"
+
 
 
 /*
@@ -127,7 +133,7 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   const char**     name                /**< column names */
+   char**           name                /**< column names */
    );
 
 extern 
@@ -154,7 +160,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   const char**     name                /**< row names */
+   char**           name                /**< row names */
    );
 
 extern 

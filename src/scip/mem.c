@@ -23,6 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <assert.h>
+
 #include "mem.h"
 
 
@@ -125,7 +127,7 @@ void** SCIPmemGetPtrbuf(                /**< returns buffer for storing pointer 
    )
 {
    CHECK_NULL( memEnsurePtrbufSize(mem, set, size) );
-   return mem->charptrbuf;
+   return mem->ptrbuf;
 }
 
 char* SCIPmemGetCharbuf(                /**< returns buffer for storing char array */

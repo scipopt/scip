@@ -26,6 +26,8 @@
 #ifndef __STAT_H__
 #define __STAT_H__
 
+
+/** problem and runtime specific statistics */
 struct Stat
 {
    int              numcolidx;          /**< number of used column indices */

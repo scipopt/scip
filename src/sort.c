@@ -44,6 +44,8 @@
 #define PQ_LEFTCHILD(p) (2*(p)+1)
 #define PQ_RIGHTCHILD(p) (2*(p)+2)
 
+
+/** priority queue data structure */
 struct PQueue
 {
    int              len;                /**< number of used element slots */

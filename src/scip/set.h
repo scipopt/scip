@@ -34,7 +34,8 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "sort.h"
 
 
-struct Set                              /**< global SCIP settings */
+/** global SCIP settings */
+struct Set
 {
    Real             epsZero;            /**< absolute values smaller than this are considered zero */
    Real             infinity;           /**< values larger than this are considered infinity */

@@ -26,10 +26,11 @@
 #ifndef __SCIP_H__
 #define __SCIP_H__
 
-#include "retcode.h"
-
 
 typedef struct Scip SCIP;
+
+
+#include "retcode.h"
 
 
 extern

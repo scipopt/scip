@@ -36,7 +36,8 @@ typedef struct Mem MEM;
 #include "set.h"
 
 
-struct Mem                              /**< various block memory buffers */
+/** various block memory buffers */
+struct Mem
 {
    MEMHDR*          treemem;            /**< ptr to memory blocks for the tree */
    MEMHDR*          statemem;           /**< ptr to memory blocks for LP states */
