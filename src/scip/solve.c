@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.172 2005/02/18 14:06:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.173 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -284,6 +284,10 @@ RETCODE redcostStrengthening(
    /* we cannot apply reduced cost fixing, if we want to solve exactly */
    /**@todo implement reduced cost fixing with interval arithmetics */
    if( set->misc_exactsolve )
+      return SCIP_OKAY;
+
+   /* we cannot apply reduced cost strengthening, if no simplex basis is available */
+   if( !SCIPlpIsSolBasic(lp) )
       return SCIP_OKAY;
 
    /* reduced cost strengthening can only be applied, if we have an upper bound on the LP value */

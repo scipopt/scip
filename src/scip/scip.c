@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.272 2005/02/18 14:06:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.273 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7615,6 +7615,16 @@ Bool SCIPallColsInLP(
    return SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp);
 }
 
+/** returns whether the current LP solution is basic, i.e. is defined by a valid simplex basis */
+Bool SCIPisLPSolBasic(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPisLPSolBasic", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsSolBasic(scip->lp);
+}
+
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
 RETCODE SCIPgetLPBasisInd(
    SCIP*            scip,               /**< SCIP data structure */
@@ -7622,6 +7632,12 @@ RETCODE SCIPgetLPBasisInd(
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBasisInd", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpIsSolBasic(scip->lp) )
+   {
+      errorMessage("current LP solution is not basic\n");
+      return SCIP_INVALIDCALL;
+   }
 
    CHECK_OKAY( SCIPlpGetBasisInd(scip->lp, basisind) );
 
@@ -7637,6 +7653,12 @@ RETCODE SCIPgetLPBInvRow(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBInvRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
+   if( !SCIPlpIsSolBasic(scip->lp) )
+   {
+      errorMessage("current LP solution is not basic\n");
+      return SCIP_INVALIDCALL;
+   }
+
    CHECK_OKAY( SCIPlpGetBInvRow(scip->lp, r, coef) );
 
    return SCIP_OKAY;
@@ -7651,6 +7673,12 @@ RETCODE SCIPgetLPBInvARow(
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBInvARow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpIsSolBasic(scip->lp) )
+   {
+      errorMessage("current LP solution is not basic\n");
+      return SCIP_INVALIDCALL;
+   }
 
    CHECK_OKAY( SCIPlpGetBInvARow(scip->lp, r, binvrow, coef) );
 
@@ -11270,6 +11298,16 @@ void printLPStatistics(
       scip->stat->nduallps > 0 ? (Real)scip->stat->nduallpiterations/(Real)scip->stat->nduallps : 0.0);
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
       fprintf(file, " %10.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
+   else
+      fprintf(file, "          -\n");
+
+   fprintf(file, "  barrier LP       : %10.2f %10d %10lld %10.2f",
+      SCIPclockGetTime(scip->stat->barrierlptime),
+      scip->stat->nbarrierlps, 
+      scip->stat->nbarrierlpiterations,
+      scip->stat->nbarrierlps > 0 ? (Real)scip->stat->nbarrierlpiterations/(Real)scip->stat->nbarrierlps : 0.0);
+   if( SCIPclockGetTime(scip->stat->barrierlptime) >= 0.01 )
+      fprintf(file, " %10.2f\n", (Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
    else
       fprintf(file, "          -\n");
 

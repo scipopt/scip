@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.179 2005/02/18 14:06:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.180 2005/02/22 19:13:07 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5904,6 +5904,7 @@ RETCODE SCIPlpCreate(
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
+   (*lp)->solisbasic = FALSE;
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
    (*lp)->divelpistate = NULL;
@@ -5916,7 +5917,7 @@ RETCODE SCIPlpCreate(
    (*lp)->lpipresolving = TRUE;
    (*lp)->lpilpinfo = FALSE;
    (*lp)->lpiitlim = INT_MAX;
-   (*lp)->lastwasprimal = FALSE;
+   (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
    /* set default parameters in LP solver */
    CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
@@ -6044,7 +6045,8 @@ RETCODE SCIPlpReset(
    lp->solved = TRUE;
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
-   lp->lastwasprimal = FALSE;
+   lp->solisbasic = FALSE;
+   lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
    return SCIP_OKAY;
 }
@@ -6293,6 +6295,7 @@ RETCODE SCIPlpGetBasisInd(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->solisbasic);
    assert(basisind != NULL);
 
    CHECK_OKAY( SCIPlpiGetBasisInd(lp->lpi, basisind) );
@@ -6310,6 +6313,7 @@ RETCODE SCIPlpGetBase(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->solisbasic);
 
    CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
 
@@ -6326,6 +6330,7 @@ RETCODE SCIPlpGetBInvRow(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->solisbasic);
    assert(0 <= r && r < lp->nrows);  /* the basis matrix is nrows x nrows */
    assert(coef != NULL);
 
@@ -6345,6 +6350,7 @@ RETCODE SCIPlpGetBInvARow(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->solisbasic);
    assert(0 <= r && r < lp->nrows);  /* the basis matrix is nrows x nrows */
    assert(coef != NULL);
 
@@ -8264,7 +8270,6 @@ RETCODE SCIPlpSetState(
 {
    assert(lp != NULL);
    assert(blkmem != NULL);
-   assert(lpistate != NULL);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( SCIPlpFlush(lp, blkmem, set) );
@@ -8274,6 +8279,7 @@ RETCODE SCIPlpSetState(
    CHECK_OKAY( SCIPlpiSetState(lp->lpi, blkmem, lpistate) );
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
+   lp->solisbasic = SCIPlpiHasStateBasis(lp->lpi, lpistate);
 
    return SCIP_OKAY;
 }
@@ -8323,6 +8329,28 @@ RETCODE SCIPlpSetCutoffbound(
    lp->cutoffbound = cutoffbound;
 
    return SCIP_OKAY;
+}
+
+/** returns the name of the given LP algorithm */
+static
+const char* lpalgoName(
+   LPALGO           lpalgo              /**< LP algorithm */
+)
+{
+   switch( lpalgo )
+   {
+   case SCIP_LPALGO_PRIMALSIMPLEX:
+      return "primal simplex";
+   case SCIP_LPALGO_DUALSIMPLEX:
+      return "dual simplex";
+   case SCIP_LPALGO_BARRIER:
+      return "barrier";
+   case SCIP_LPALGO_BARRIERCROSSOVER:
+      return "barrier/crossover";
+   default:
+      errorMessage("invalid LP algorithm\n");
+      abort();
+   }
 }
 
 /** calls LPI to perform primal simplex, measures time and counts iterations, gets basis feasibility status */
@@ -8378,7 +8406,8 @@ RETCODE lpPrimalSimplex(
    {
       CHECK_OKAY( retcode );
    }
-   lp->lastwasprimal = TRUE;
+   lp->lastlpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
+   lp->solisbasic = TRUE;
 
    /* stop timing */
    if( lp->diving )
@@ -8411,7 +8440,7 @@ RETCODE lpPrimalSimplex(
    }
    else if( keepsol && !(*lperror) )
    {
-      /* the basis didn't change: if the solution was valid before resolve, it is still valid */
+      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
       if( lp->validsollp == stat->lpcount-1 )
          lp->validsollp = stat->lpcount;
       if( lp->validfarkaslp == stat->lpcount-1 )
@@ -8476,7 +8505,8 @@ RETCODE lpDualSimplex(
    {
       CHECK_OKAY( retcode );
    }
-   lp->lastwasprimal = FALSE;
+   lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
+   lp->solisbasic = TRUE;
 
    /* stop timing */
    if( lp->diving )
@@ -8509,7 +8539,7 @@ RETCODE lpDualSimplex(
    }
    else if( keepsol && !(*lperror) )
    {
-      /* the basis didn't change: if the solution was valid before resolve, it is still valid */
+      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
       if( lp->validsollp == stat->lpcount-1 )
          lp->validsollp = stat->lpcount;
       if( lp->validfarkaslp == stat->lpcount-1 )
@@ -8521,13 +8551,113 @@ RETCODE lpDualSimplex(
    return SCIP_OKAY;
 }
 
-/** solves the LP with the primal or dual simplex algorithm */
+/** calls LPI to perform barrier, measures time and counts iterations, gets basis feasibility status */
 static
-RETCODE lpSimplex(
+RETCODE lpBarrier(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   Bool             useprimal,          /**< should the primal simplex be used? */
+   Bool             crossover,          /**< should crossover be performed? */
+   Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   )
+{
+   RETCODE retcode;
+   int iterations;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(lperror != NULL);
+
+   debugMessage("solving barrier LP %d (LP %d, %d cols, %d rows)\n", 
+      stat->nbarrierlps+1, stat->nlps+1, lp->ncols, lp->nrows);
+
+   *lperror = FALSE;
+
+#if 0 /*???????????????????????*/
+   if( stat->nnodes == 1 && !lp->diving  )
+   {
+      char fname[MAXSTRLEN];
+      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
+      CHECK_OKAY( SCIPlpWrite(lp, fname) );
+      printf("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
+         lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
+   }
+#endif
+
+   /* start timing */
+   if( lp->diving )
+      SCIPclockStart(stat->divinglptime, set);
+   else
+      SCIPclockStart(stat->barrierlptime, set);
+
+   /* call barrier algorithm */
+   retcode = SCIPlpiSolveBarrier(lp->lpi, crossover);
+   if( retcode == SCIP_LPERROR )
+   {
+      *lperror = TRUE;
+      debugMessage("(node %lld) barrier solving error in LP %d\n", stat->nnodes, stat->nlps);
+   }
+   else
+   {
+      CHECK_OKAY( retcode );
+   }
+   lp->lastlpalgo = (crossover ? SCIP_LPALGO_BARRIERCROSSOVER : SCIP_LPALGO_BARRIER);
+   lp->solisbasic = crossover;
+
+   /* stop timing */
+   if( lp->diving )
+      SCIPclockStop(stat->divinglptime, set);
+   else
+      SCIPclockStop(stat->barrierlptime, set);
+
+   /* count number of iterations */
+   stat->lpcount++;
+   CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
+   if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
+   {
+      stat->nlps++;
+      stat->nlpiterations += iterations;
+      if( !lp->lpifromscratch && stat->nlps > 1 )
+      {
+         stat->nresolvelps++;
+         stat->nresolvelpiterations += iterations;
+      }
+      if( lp->diving )
+      {
+         stat->ndivinglps++;
+         stat->ndivinglpiterations += iterations;
+      }
+      else
+      {
+         stat->nbarrierlps++;
+         stat->nbarrierlpiterations += iterations;
+      }
+   }
+   else if( keepsol && !(*lperror) )
+   {
+      /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+      if( lp->validsollp == stat->lpcount-1 )
+         lp->validsollp = stat->lpcount;
+      if( lp->validfarkaslp == stat->lpcount-1 )
+         lp->validfarkaslp = stat->lpcount;
+   }
+
+   debugMessage("solved barrier LP %d in %d iterations\n", stat->lpcount, iterations);
+
+   return SCIP_OKAY;
+}
+
+/** solves the LP with the given algorithm */
+static
+RETCODE lpAlgorithm(
+   LP*              lp,                 /**< current LP data */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
@@ -8536,20 +8666,36 @@ RETCODE lpSimplex(
    assert(lp->flushed);
    assert(lperror != NULL);
 
-   /* call appropriate simplex */
-   if( useprimal )
+   debugMessage("calling LP algorithm <%s>\n", lpalgoName(lpalgo));
+
+   /* call appropriate LP algorithm */
+   switch( lpalgo )
    {
+   case SCIP_LPALGO_PRIMALSIMPLEX:
       CHECK_OKAY( lpPrimalSimplex(lp, set, stat, keepsol, lperror) );
-   }
-   else
-   {
+      break;
+
+   case SCIP_LPALGO_DUALSIMPLEX:
       CHECK_OKAY( lpDualSimplex(lp, set, stat, keepsol, lperror) );
+      break;
+
+   case SCIP_LPALGO_BARRIER:
+      CHECK_OKAY( lpBarrier(lp, set, stat, FALSE, keepsol, lperror) );
+      break;
+
+   case SCIP_LPALGO_BARRIERCROSSOVER:
+      CHECK_OKAY( lpBarrier(lp, set, stat, TRUE, keepsol, lperror) );
+      break;
+
+   default:
+      errorMessage("invalid LP algorithm\n");
+      return SCIP_INVALIDDATA;
    }
 
    if( !(*lperror) )
    {
       /* check for primal and dual feasibility */
-      CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &lp->primalfeasible, &lp->dualfeasible) );
+      CHECK_OKAY( SCIPlpiGetSolFeasibility(lp->lpi, &lp->primalfeasible, &lp->dualfeasible) );
       
       debugMessage("LP feasibility: primalfeasible=%d, dualfeasible=%d\n", lp->primalfeasible, lp->dualfeasible);
    }
@@ -8557,20 +8703,24 @@ RETCODE lpSimplex(
    return SCIP_OKAY;
 }
 
-/** solves the LP with the simplex algorithm, and tries to resolve numerical problems */
+#define FEASTOLTIGHTFAC 0.001
+/** solves the LP with the given LP algorithm, and tries to resolve numerical problems */
 static
 RETCODE lpSolveStable(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
+   Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
-   Bool             useprimal,          /**< should the primal simplex be used? */
    Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    Bool success;
+   Bool success2;
+   Bool simplex;
 
    assert(lp != NULL);
    assert(lp->flushed);
@@ -8581,31 +8731,35 @@ RETCODE lpSolveStable(
 
    *lperror = FALSE;
 
+   /* check, whether we solve with a simplex algorithm */
+   simplex = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lpalgo == SCIP_LPALGO_DUALSIMPLEX);
+
    /* solve with given settings (usually fast but unprecise) */
    CHECK_OKAY( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
-   CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
-   CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set), &success) );
+   CHECK_OKAY( lpSetFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetFeastol(set) : SCIPsetFeastol(set), &success) );
+   CHECK_OKAY( lpSetDualFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetDualfeastol(set) : SCIPsetDualfeastol(set), 
+         &success) );
    CHECK_OKAY( lpSetFromscratch(lp, fromscratch, &success) );
    CHECK_OKAY( lpSetFastmip(lp, fastmip, &success) );
    CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
    CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
    CHECK_OKAY( lpSetLPInfo(lp, set->disp_lpinfo) );
-   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol, lperror) );
+   CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
 
    /* check for stability */
    if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
       return SCIP_OKAY;
 
    /* if FASTMIP is turned on, solve again without FASTMIP */
-   if( fastmip )
+   if( fastmip && simplex )
    {
       CHECK_OKAY( lpSetFastmip(lp, FALSE, &success) );
       if( success )
       {
          infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in LP %d -- solve again without FASTMIP with %s simplex\n", 
-            stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol, lperror) );
+            "(node %lld) numerical troubles in LP %d -- solve again without FASTMIP with %s\n", 
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
          
          /* check for stability */
          if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
@@ -8618,9 +8772,9 @@ RETCODE lpSolveStable(
    if( success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again with %s simplex %s scaling\n", 
-         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol, lperror) );
+         "(node %lld) numerical troubles in LP %d -- solve again with %s %s scaling\n", 
+         stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
+      CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
    
       /* check for stability */
       if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
@@ -8636,9 +8790,9 @@ RETCODE lpSolveStable(
    if( success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again with %s simplex %s presolving\n", 
-         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_presolving ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol, lperror) );
+         "(node %lld) numerical troubles in LP %d -- solve again with %s %s presolving\n", 
+         stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
+      CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
    
       /* check for stability */
       if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
@@ -8650,33 +8804,37 @@ RETCODE lpSolveStable(
    }
       
    /* solve again with a tighter feasibility tolerance */
-   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set), &success) );
-   if( success )
+   if( !tightfeastol )
    {
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
-         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol, lperror) );
+      CHECK_OKAY( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetFeastol(set), &success) );
+      CHECK_OKAY( lpSetDualFeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
+      if( success || success2 )
+      {
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) numerical troubles in LP %d -- solve again with %s with tighter feasibility tolerance\n", 
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
       
-      /* check for stability */
-      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
-         return SCIP_OKAY;
+         /* check for stability */
+         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+            return SCIP_OKAY;
 
-      /* reset feasibility tolerance */
-      CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
-      assert(success);
+         /* reset feasibility tolerance */
+         CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
+         CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set), &success) );
+      }
    }
 
    /* if not already done, solve again from scratch */
-   if( !fromscratch )
+   if( !fromscratch && simplex )
    {
       CHECK_OKAY( lpSetFromscratch(lp, TRUE, &success) );
       if( success )
       {
          infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
-            stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol, lperror) );
+            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s\n", 
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
          
          /* check for stability */
          if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
@@ -8685,67 +8843,75 @@ RETCODE lpSolveStable(
    }
 
    /* solve again, use other simplex this time */
-   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-      "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
-      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol, lperror) );
-
-   /* check for stability */
-   if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
-      return SCIP_OKAY;
-
-   /* solve again with opposite scaling and other simplex */
-   CHECK_OKAY( lpSetScaling(lp, !set->lp_scaling, &success) );
-   if( success )
+   if( simplex )
    {
+      lpalgo = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX ? SCIP_LPALGO_DUALSIMPLEX : SCIP_LPALGO_PRIMALSIMPLEX);
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
-         stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol, lperror) );
+         "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s\n", 
+         stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+      CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
+
+      /* check for stability */
+      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+         return SCIP_OKAY;
+
+      /* solve again with opposite scaling and other simplex */
+      CHECK_OKAY( lpSetScaling(lp, !set->lp_scaling, &success) );
+      if( success )
+      {
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s %s scaling\n", 
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
+         CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
+         
+         /* check for stability */
+         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+            return SCIP_OKAY;
+         
+         /* reset scaling */
+         CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
+         assert(success);
+      }
+
+      /* solve again with opposite presolving and other simplex */
+      CHECK_OKAY( lpSetPresolving(lp, !set->lp_presolving, &success) );
+      if( success )
+      {
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s %s presolving\n", 
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
+         CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
+         
+         /* check for stability */
+         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+            return SCIP_OKAY;
+         
+         /* reset presolving */
+         CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
+         assert(success);
+      }
       
-      /* check for stability */
-      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
-         return SCIP_OKAY;
-
-      /* reset scaling */
-      CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
-      assert(success);
-   }
-
-   /* solve again with opposite presolving and other simplex */
-   CHECK_OKAY( lpSetPresolving(lp, !set->lp_presolving, &success) );
-   if( success )
-   {
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s presolving\n", 
-         stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_presolving ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol, lperror) );
-      
-      /* check for stability */
-      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
-         return SCIP_OKAY;
-
-      /* reset presolving */
-      CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
-      assert(success);
-   }
-
-   /* solve again with tighter feasibility tolerance, use other simplex this time */
-   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set), &success) );
-   if( success )
-   {
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again from scratch with tighter feasibility tolerance with %s simplex\n", 
-         stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol, lperror) );
-
-      /* check for stability */
-      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
-         return SCIP_OKAY;
-
-      /* reset feasibility tolerance */
-      CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
-      assert(success);
+      /* solve again with tighter feasibility tolerance, use other simplex this time */
+      if( !tightfeastol )
+      {
+         CHECK_OKAY( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetFeastol(set), &success) );
+         CHECK_OKAY( lpSetDualFeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
+         if( success || success2 )
+         {
+            infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s with tighter feasibility tolerance\n", 
+               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            CHECK_OKAY( lpAlgorithm(lp, set, stat, lpalgo, keepsol, lperror) );
+         
+            /* check for stability */
+            if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+               return SCIP_OKAY;
+         
+            /* reset feasibility tolerance */
+            CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
+            CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set), &success) );
+         }
+      }
    }
 
    /* nothing worked -- store the instable LP to a file and exit with an LPERROR */
@@ -8756,15 +8922,16 @@ RETCODE lpSolveStable(
    return SCIP_OKAY;
 }
 
-/** solves the LP with the primal or dual simplex algorithm and evaluates return status */
+/** solves the LP with the given algorithm and evaluates return status */
 static
 RETCODE lpSolve(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
+   Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
-   Bool             useprimal,          /**< should the primal simplex be used? */
    Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
@@ -8782,12 +8949,12 @@ RETCODE lpSolve(
 
  SOLVEAGAIN:
    /* call simplex */
-   CHECK_OKAY( lpSolveStable(lp, set, stat, fastmip, fromscratch, useprimal, keepsol, lperror) );
+   CHECK_OKAY( lpSolveStable(lp, set, stat, lpalgo, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
    /* check, if an error occured */
    if( *lperror )
    {
-      debugMessage("unresolved error while solving %s LP\n", lp->lastwasprimal ? "primal" : "dual");
+      debugMessage("unresolved error while solving LP with %s\n", lpalgoName(lp->lastlpalgo));
       return SCIP_OKAY;
    }
 
@@ -8809,7 +8976,7 @@ RETCODE lpSolve(
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
 #if 0 /* SOPLEX may return with objective limit reached in any case, because it doesn't distinct btw. primal and dual */
-      if( lp->lastwasprimal )
+      if( lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX )
       {
          errorMessage("objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
          lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
@@ -8840,27 +9007,36 @@ RETCODE lpSolve(
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
    }
-   else if( !solvedagain )
+   else if( !solvedagain && lpalgo == SCIP_LPALGO_PRIMALSIMPLEX )
    {
-      useprimal = !useprimal;
+      lpalgo = SCIP_LPALGO_DUALSIMPLEX;
       solvedagain = TRUE;
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s simplex\n", 
-         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
+         "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
+         stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+      goto SOLVEAGAIN;
+   }
+   else if( !solvedagain && lpalgo == SCIP_LPALGO_DUALSIMPLEX )
+   {
+      lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
+      solvedagain = TRUE;
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
+         stat->nnodes, stat->nlps, lpalgoName(lpalgo));
       goto SOLVEAGAIN;
    }
    else
    {
-      errorMessage("(node %lld) error or unknown return status of %s simplex in LP %d (internal status: %d)\n", 
-         stat->nnodes, lp->lastwasprimal ? "primal" : "dual", stat->nlps, SCIPlpiGetInternalStatus(lp->lpi));
+      errorMessage("(node %lld) error or unknown return status of %s in LP %d (internal status: %d)\n", 
+         stat->nnodes, lpalgoName(lp->lastlpalgo), stat->nlps, SCIPlpiGetInternalStatus(lp->lpi));
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       return SCIP_LPERROR;
    }
 
    lp->solved = TRUE;
 
-   debugMessage("solving %s LP returned solstat=%d (internal status: %d, pfeas=%d, dfeas=%d)\n",
-      lp->lastwasprimal ? "primal" : "dual", lp->lpsolstat, SCIPlpiGetInternalStatus(lp->lpi),
+   debugMessage("solving LP with %s returned solstat=%d (internal status: %d, pfeas=%d, dfeas=%d)\n",
+      lpalgoName(lp->lastlpalgo), lp->lpsolstat, SCIPlpiGetInternalStatus(lp->lpi),
       SCIPlpiIsPrimalFeasible(lp->lpi), SCIPlpiIsDualFeasible(lp->lpi));
 
    return SCIP_OKAY;
@@ -8874,28 +9050,56 @@ RETCODE lpFlushAndSolve(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
+   Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
+   char algo;
+
    assert(lp != NULL);
+   assert(set != NULL);
    assert(lperror != NULL);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( SCIPlpFlush(lp, blkmem, set) );
    fastmip = fastmip && !lp->flushaddedcols && !lp->flushdeletedcols; /* turn off FASTMIP if columns were changed */
    
-   /* select simplex method */
-   if( lp->dualfeasible || !lp->primalfeasible )
+   /* select LP algorithm to apply */
+   algo = lp->solisbasic ? set->lp_resolvealgorithm : set->lp_initalgorithm;
+   switch( algo )
    {
-      debugMessage("solving dual LP\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, fastmip, fromscratch, FALSE, keepsol, lperror) );
-   }
-   else
-   {
-      debugMessage("solving primal LP\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, fastmip, fromscratch, TRUE, keepsol, lperror) );
+   case 's':
+      /* select simplex method */
+      if( lp->dualfeasible || !lp->primalfeasible )
+      {
+         debugMessage("solving dual LP\n");
+         CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_DUALSIMPLEX, fastmip, tightfeastol, fromscratch, keepsol,
+               lperror) );
+      }
+      else
+      {
+         debugMessage("solving primal LP\n");
+         CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_PRIMALSIMPLEX, fastmip, tightfeastol, fromscratch, keepsol, 
+               lperror) );
+      }
+      break;
+
+   case 'b':
+      debugMessage("solving barrier LP\n");
+      CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_BARRIER, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+      break;
+
+   case 'c':
+      debugMessage("solving barrier LP with crossover\n");
+      CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_BARRIERCROSSOVER, fastmip, tightfeastol, fromscratch, keepsol,
+            lperror) );
+      break;
+
+   default:
+      errorMessage("invalid parameter setting <%c> for LP algorithm\n", algo);
+      return SCIP_PARAMETERWRONGVAL;
    }
 
    return SCIP_OKAY;
@@ -8935,17 +9139,19 @@ RETCODE SCIPlpSolveAndEval(
       Bool primalfeasible;
       Bool dualfeasible;
       Bool fastmip;
+      Bool tightfeastol;
       Bool fromscratch;
       int oldnlps;
 
       /* set initial LP solver settings */
       fastmip = set->lp_fastmip && lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1;
+      tightfeastol = FALSE;
       fromscratch = FALSE;
 
    SOLVEAGAIN:
       /* solve the LP */
       oldnlps = stat->nlps;
-      CHECK_OKAY( lpFlushAndSolve(lp, blkmem, set, stat, fastmip, fromscratch, keepsol, lperror) );
+      CHECK_OKAY( lpFlushAndSolve(lp, blkmem, set, stat, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
       debugMessage("lpFlushAndSolve() returned solstat %d (error=%d)\n", SCIPlpGetSolstat(lp), *lperror);
 
       /* check for error */
@@ -8984,7 +9190,9 @@ RETCODE SCIPlpSolveAndEval(
          }
          if( !primalfeasible || !dualfeasible )
          {
-            if( fastmip )
+            Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+
+            if( fastmip && simplex )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
                infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -8993,7 +9201,18 @@ RETCODE SCIPlpSolveAndEval(
                fastmip = FALSE;
                goto SOLVEAGAIN;
             }
-            else if( !fromscratch )
+            else if( !tightfeastol )
+            {
+               /* solution is infeasible (this can happen due to numerical problems): solve again with tighter feasibility
+                * tolerance
+                */
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again with tighter feasibility tolerance\n",
+                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
+               tightfeastol = TRUE;
+               goto SOLVEAGAIN;
+            }
+            else if( !fromscratch && simplex )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -9849,22 +10068,30 @@ RETCODE SCIPlpGetSol(
 
    debugMessage("getting new LP solution %d\n", stat->lpcount);
 
-   /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualsol, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &activity, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &redcost, lp->nlpicols) );
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, lp->nlpicols) );
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rstat, lp->nlpirows) );
-   
-   CHECK_OKAY( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
-   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
-
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
    nlpicols = lp->nlpicols;
    nlpirows = lp->nlpirows;
    lpcount = stat->lpcount;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualsol, nlpirows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &activity, nlpirows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &redcost, nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
+   
+   CHECK_OKAY( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
+   if( lp->solisbasic )
+   {
+      CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
+   }
+   else
+   {
+      clearMemoryArray(cstat, nlpicols);
+      clearMemoryArray(rstat, nlpirows);
+   }
 
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )
@@ -9883,16 +10110,18 @@ RETCODE SCIPlpGetSol(
             && SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub);
       if( dualfeasible != NULL )
       {
-         if( SCIPsetIsGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
+         if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
-         if( SCIPsetIsLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
+         if( SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
       }
-      debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%d/%d, dfeas=%d\n",
+      debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%d/%d(%d), dfeas=%d(%d)\n",
          SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
          SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
-         SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
-         !SCIPsetIsFeasNegative(set, lpicols[c]->redcost));
+         SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub), 
+         primalfeasible != NULL ? *primalfeasible : TRUE,
+         !SCIPsetIsFeasNegative(set, lpicols[c]->redcost),
+         dualfeasible != NULL ? *dualfeasible : TRUE);
    }
 
    /* copy dual solution and activities into rows */
@@ -9913,12 +10142,14 @@ RETCODE SCIPlpGetSol(
          if( SCIPsetIsInfinity(set, lpirows[r]->rhs) )
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
       }
-      debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f, pfeas=%d/%d, dfeas=%d/%d\n", 
+      debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f, pfeas=%d/%d(%d), dfeas=%d/%d(%d)\n", 
          lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity,
          SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
          SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
+         primalfeasible != NULL ? *primalfeasible : TRUE,
          SCIPsetIsInfinity(set, -lpirows[r]->lhs) ? !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol) : TRUE,
-         SCIPsetIsInfinity(set, lpirows[r]->rhs) ? !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol) : TRUE);
+         SCIPsetIsInfinity(set, lpirows[r]->rhs) ? !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol) : TRUE,
+         dualfeasible != NULL ? *dualfeasible : TRUE);
    }
 
    /* free temporary memory */
@@ -10328,7 +10559,7 @@ RETCODE lpRemoveObsoleteCols(
    assert(set != NULL);
    assert(stat != NULL);
 
-   if( lp->nremoveablecols == 0 || set->lp_colagelimit == -1 )
+   if( lp->nremoveablecols == 0 || set->lp_colagelimit == -1 || !lp->solisbasic )
       return SCIP_OKAY;
 
    ncols = lp->ncols;
@@ -10352,6 +10583,7 @@ RETCODE lpRemoveObsoleteCols(
          && (BASESTAT)cols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
+         assert(cols[c]->primsol == 0.0);
          coldstat[c] = 1;
          ndelcols++;
          cols[c]->obsoletenode = stat->nnodes;
@@ -10400,7 +10632,7 @@ RETCODE lpRemoveObsoleteRows(
    assert(set != NULL);
    assert(stat != NULL);
 
-   if( lp->nremoveablerows == 0 || set->lp_rowagelimit == -1 )
+   if( lp->nremoveablerows == 0 || set->lp_rowagelimit == -1 || !lp->solisbasic )
       return SCIP_OKAY;
 
    nrows = lp->nrows;
@@ -10527,7 +10759,7 @@ RETCODE lpCleanupCols(
    assert(lp->validsollp == stat->lpcount);
    assert(0 <= firstcol && firstcol < lp->ncols);
 
-   if( lp->nremoveablecols == 0 )
+   if( lp->nremoveablecols == 0 || !lp->solisbasic )
       return SCIP_OKAY;
 
    ncols = lp->ncols;
@@ -10596,7 +10828,7 @@ RETCODE lpCleanupRows(
    assert(lp->validsollp == stat->lpcount);
    assert(0 <= firstrow && firstrow < lp->nrows);
 
-   if( lp->nremoveablerows == 0 )
+   if( lp->nremoveablerows == 0 || !lp->solisbasic  )
       return SCIP_OKAY;
 
    nrows = lp->nrows;
@@ -11072,6 +11304,7 @@ RETCODE SCIPlpWrite(
 #undef SCIPlpGetNNewrows
 #undef SCIPlpGetObjNorm
 #undef SCIPlpGetLPI
+#undef SCIPlpIsSolBasic
 #undef SCIPlpDiving
 #undef SCIPlpDivingObjChanged
 #undef SCIPlpMarkDivingObjChanged
@@ -11132,8 +11365,8 @@ Real SCIPcolGetPrimsol(
       return 0.0;
 }
 
-/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
- *  returns SCIP_BASESTAT_ZERO for columns not in the current LP
+/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_ZERO for columns not in the current LP
  */
 BASESTAT SCIPcolGetBasisStatus(
    COL*             col                 /**< LP column */
@@ -11382,8 +11615,8 @@ Real SCIProwGetDualsol(
       return 0.0;
 }
 
-/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
- *  returns SCIP_BASESTAT_BASIC for rows not in the current LP
+/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current LP
  */
 BASESTAT SCIProwGetBasisStatus(
    ROW*             row                 /**< LP row */
@@ -11590,6 +11823,16 @@ LPI* SCIPlpGetLPI(
    assert(lp != NULL);
 
    return lp->lpi;
+}
+
+/** returns whether the current LP solution is a basic solution */
+Bool SCIPlpIsSolBasic(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->solisbasic;
 }
 
 /** returns whether the LP is in diving mode */

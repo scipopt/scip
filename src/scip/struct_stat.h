@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.31 2005/02/14 13:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.32 2005/02/22 19:13:09 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -37,10 +37,11 @@
 /** problem and runtime specific statistics */
 struct Stat
 {
-   Longint          nlpiterations;      /**< total number of simplex iterations (primal + dual) */
-   Longint          nresolvelpiterations; /**< number of simplex iterations (primal + dual) with advanced start basis */
+   Longint          nlpiterations;      /**< total number of LP iterations */
+   Longint          nresolvelpiterations; /**< number of LP iterations with advanced start basis */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
+   Longint          nbarrierlpiterations;/**< number of iterations in barrier algorithm */
    Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    Longint          ndivinglpiterations;/**< number of iterations in diving */
@@ -72,7 +73,8 @@ struct Stat
    CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    CLOCK*           primallptime;       /**< primal LP solution time */
    CLOCK*           duallptime;         /**< dual LP solution time */
-   CLOCK*           divinglptime;       /**< diving LP solution time (primal + dual) */
+   CLOCK*           barrierlptime;      /**< barrier LP solution time */
+   CLOCK*           divinglptime;       /**< diving LP solution time */
    CLOCK*           strongbranchtime;   /**< strong branching time */
    CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
@@ -94,11 +96,11 @@ struct Stat
    int              marked_ncolidx;     /**< number of used column indices before solving started */
    int              marked_nrowidx;     /**< number of used row indices before solving started */
    int              lpcount;            /**< internal counter, where all simplex calls are counted */
-   int              nlps;               /**< total number of LPs solved (primal + dual) with at least 1 iteration */
-   int              nresolvelps;        /**< number of LPs solved (primal + dual) with advanced start basis and at least
-                                         *   1 iteration */
+   int              nlps;               /**< total number of LPs solved with at least 1 iteration */
+   int              nresolvelps;        /**< number of LPs solved with advanced start basis and at least 1 iteration */
    int              nprimallps;         /**< number of primal LPs solved */
    int              nduallps;           /**< number of dual LPs solved */
+   int              nbarrierlps;        /**< number of barrier LPs solved */
    int              nnodelps;           /**< number of LPs solved for node relaxations */
    int              ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    int              ndivinglps;         /**< number of LPs solved during diving */

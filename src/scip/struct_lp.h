@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.32 2005/02/18 14:06:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.33 2005/02/22 19:13:09 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -228,14 +228,16 @@ struct Lp
    int              validfarkaslp;      /**< LP number for which the currently stored farkas row multipliers are valid */
    int              lpiitlim;           /**< current iteration limit setting in LPI */
    LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
+   LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
    Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */
    Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
    Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */
    Bool             flushaddedrows;     /**< have LPI-rows been added in the last lpFlush() call? */
    Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    Bool             solved;             /**< is current LP solved? */
-   Bool             primalfeasible;     /**< is current LP basis primal feasible? */
-   Bool             dualfeasible;       /**< is current LP basis dual feasible? */
+   Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   Bool             solisbasic;         /**< is current LP solution a basic solution? */
    Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
    Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
    Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
@@ -248,7 +250,6 @@ struct Lp
    Bool             lpihasfastmip;      /**< does the LPI support the FASTMIP parameter? */
    Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
-   Bool             lastwasprimal;      /**< was the last simplex call a call to the primal simplex? */
 };
 
 

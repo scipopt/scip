@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.27 2005/02/14 13:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.28 2005/02/22 19:13:06 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -209,6 +209,10 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
+   if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* don't dive two times at the same node */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.22 2005/02/18 14:06:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.23 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -91,8 +91,8 @@ Real SCIPcolGetPrimsol(
    COL*             col                 /**< LP column */
    );
 
-/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
- *  returns SCIP_BASESTAT_ZERO for columns not in the current LP
+/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current LP
  */
 extern
 BASESTAT SCIPcolGetBasisStatus(
@@ -326,8 +326,8 @@ Real SCIProwGetDualsol(
    ROW*             row                 /**< LP row */
    );
 
-/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL;
- *  returns SCIP_BASESTAT_BASIC for rows not in the current LP
+/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_ZERO for columns not in the current LP
  */
 extern
 BASESTAT SCIProwGetBasisStatus(

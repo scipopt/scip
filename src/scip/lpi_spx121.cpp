@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.25 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.26 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   lpi_spx121.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -1612,8 +1612,8 @@ RETCODE SCIPlpiStrongbranch(
 /**@name Solution Information Methods */
 /**@{ */
 
-/** gets information about primal and dual feasibility of the LP basis */
-RETCODE SCIPlpiGetBasisFeasibility(
+/** gets information about primal and dual feasibility of the current LP solution */
+RETCODE SCIPlpiGetSolFeasibility(
    LPI*             lpi,                /**< LP interface structure */
    Bool*            primalfeasible,     /**< stores primal feasibility status */
    Bool*            dualfeasible        /**< stores dual feasibility status */
@@ -1621,7 +1621,7 @@ RETCODE SCIPlpiGetBasisFeasibility(
 {
    SPxBasis::SPxStatus basestatus;
 
-   debugMessage("calling SCIPlpiGetBasisFeasibility()\n");
+   debugMessage("calling SCIPlpiGetSolFeasibility()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);

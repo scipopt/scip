@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.13 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.14 2005/02/22 19:13:07 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1512,14 +1512,14 @@ RETCODE SCIPlpiStrongbranch(
 /**@name Solution Information Methods */
 /**@{ */
 
-/** gets information about primal and dual feasibility of the LP basis */
-RETCODE SCIPlpiGetBasisFeasibility(
+/** gets information about primal and dual feasibility of the current LP solution */
+RETCODE SCIPlpiGetSolFeasibility(
    LPI*             lpi,                /**< LP interface structure */
    Bool*            primalfeasible,     /**< stores primal feasibility status */
    Bool*            dualfeasible        /**< stores dual feasibility status */
    )
 {
-   debugMessage("calling SCIPlpiGetBasisFeasibility()\n");
+   debugMessage("calling SCIPlpiGetSolFeasibility()\n");
 
    assert(lpi != 0);
    assert(lpi->clp != 0);

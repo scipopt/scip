@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.136 2005/02/16 17:46:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.137 2005/02/22 19:13:09 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -130,7 +130,6 @@ void forkCaptureLPIState(
 {
    assert(fork != NULL);
    assert(fork->nlpistateref >= 0);
-   assert(fork->lpistate != NULL);
    assert(nuses > 0);
 
    fork->nlpistateref += nuses;
@@ -147,7 +146,6 @@ RETCODE forkReleaseLPIState(
 {
    assert(fork != NULL);
    assert(fork->nlpistateref > 0);
-   assert(fork->lpistate != NULL);
    assert(blkmem != NULL);
    assert(lp != NULL);
 
@@ -171,7 +169,6 @@ void subrootCaptureLPIState(
 {
    assert(subroot != NULL);
    assert(subroot->nlpistateref >= 0);
-   assert(subroot->lpistate != NULL || subroot->nrows == 0 || subroot->ncols == 0);
    assert(nuses > 0);
 
    subroot->nlpistateref += nuses;
@@ -189,7 +186,6 @@ RETCODE subrootReleaseLPIState(
 {
    assert(subroot != NULL);
    assert(subroot->nlpistateref > 0);
-   assert(subroot->lpistate != NULL || subroot->nrows == 0 || subroot->ncols == 0);
    assert(blkmem != NULL);
    assert(lp != NULL);
 

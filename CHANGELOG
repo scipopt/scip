@@ -40,6 +40,8 @@ interface:
   the full problem information can be distributed to different files read by different readers
 - methods SCIPgetVarStrongbranch() and SCIPgetVarStrongbranchLast() now have two additional parameters that can
   be used to check, whether the returned values are correct dual bounds
+- new method SCIPisLPSolBasic() to check, whether the current LP solution is basic (i.e. due to a simplex algorithm
+  or barrier with crossover)
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -66,6 +68,7 @@ parameters:
 - changed default priority of Gomory cut separator to -1000 (will now be called after constraint handlers!)
 - changed default priority of strong CG cut separator to -2000
 - changed default priority of cmir cut separator to -3000
+- new parameters lp/initalgorithm and lp/resolvealgorithm for switching between simplex and barrier algorithm
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
@@ -77,6 +80,7 @@ features:
 - it is now possible to create subnodes in probing and use backtracking to undo probing changes
 - it is now possible to interrupt and continue presolving
 - bounds of variables are included in the feasibility checks for solutions
+- support for barrier algorithm
 
 fixed bugs:
 - fixed bug in MPS file reader

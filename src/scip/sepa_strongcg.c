@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.9 2005/02/14 13:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.10 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -272,6 +272,10 @@ DECL_SEPAEXEC(sepaExecStrongcg)
 
    /* only call separator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if the LP solution is basic */
+   if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* get variables data */

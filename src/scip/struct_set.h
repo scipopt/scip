@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.44 2005/02/14 13:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.45 2005/02/22 19:13:09 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -150,6 +150,10 @@ struct Set
    /* LP settings */
    int              lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lp_solvedepth;      /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
+   char             lp_initalgorithm;   /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
+                                         *   barrier with 'c'rossover) */
+   char             lp_resolvealgorithm;/**< LP algorithm for resolving LP relaxations if a starting basis exists
+                                         *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
    int              lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the LP
                                          *   (-1: don't delete columns due to aging) */
    int              lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 

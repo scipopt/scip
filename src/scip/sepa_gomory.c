@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.44 2005/02/14 13:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.45 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -274,6 +274,10 @@ DECL_SEPAEXEC(sepaExecGomory)
 
    /* only call separator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if the LP solution is basic */
+   if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* get variables data */

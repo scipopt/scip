@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.82 2005/02/18 14:06:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.83 2005/02/22 19:13:07 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -70,13 +70,22 @@ static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND
 };
-#define NUMDBLPARAM  5
+#define NUMDBLPARAM  6
 static const int dblparam[NUMDBLPARAM] = {
    CPX_PARAM_EPRHS,
    CPX_PARAM_EPOPT,
+   CPX_PARAM_BAREPCOMP,
    CPX_PARAM_OBJLLIM,
    CPX_PARAM_OBJULIM,
    CPX_PARAM_TILIM
+};
+static const double dblparammin[NUMDBLPARAM] = {
+   +1e-09, /*CPX_PARAM_EPRHS*/
+   +1e-09, /*CPX_PARAM_EPOPT*/
+   +1e-12, /*CPX_PARAM_BAREPCOMP*/
+   -1e+99, /*CPX_PARAM_OBJLLIM*/
+   -1e+99, /*CPX_PARAM_OBJULIM*/
+   -1e+99  /*CPX_PARAM_TILIM*/
 };
 
 /** CPLEX parameter settings */
@@ -108,6 +117,7 @@ struct LPi
    int              valsize;            /**< size of valarray and indarray */
    int              cstatsize;          /**< size of cstat array */
    int              rstatsize;          /**< size of rstat array */
+   Bool             solisbasic;         /**< is current LP solution a basic solution? */
 };
 
 /** LPi state stores basis information */
@@ -448,7 +458,7 @@ void checkParameterValues(void)
    for( i = 0; i < NUMINTPARAM; ++i )
       assert(curparam.intparval[i] == par.intparval[i]);
    for( i = 0; i < NUMDBLPARAM; ++i )
-      assert(curparam.dblparval[i] == par.dblparval[i]);
+      assert(MAX(curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]);
 #endif
 }
 
@@ -477,8 +487,8 @@ RETCODE setParameterValues(const CPXPARAM* cpxparam)
       if( curparam.dblparval[i] != cpxparam->dblparval[i] )
       {
          debugMessage("setting CPLEX dbl parameter %d from %g to %g\n", 
-            dblparam[i], curparam.dblparval[i], cpxparam->dblparval[i]);
-         curparam.dblparval[i] = cpxparam->dblparval[i];
+            dblparam[i], curparam.dblparval[i], MAX(cpxparam->dblparval[i], dblparammin[i]));
+         curparam.dblparval[i] = MAX(cpxparam->dblparval[i], dblparammin[i]);
          CHECK_ZERO( CPXsetdblparam(cpxenv, dblparam[i], curparam.dblparval[i]) );
       }
    }
@@ -915,6 +925,7 @@ RETCODE SCIPlpiCreate(
    (*lpi)->valsize = 0;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
+   (*lpi)->solisbasic = TRUE;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
    CHECK_ZERO( restat );
    invalidateSolution(*lpi);
@@ -1816,6 +1827,7 @@ RETCODE SCIPlpiSolvePrimal(
       return SCIP_LPERROR;
    }
 
+   lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d\n", lpi->solstat, primalfeasible, dualfeasible);
@@ -1893,6 +1905,7 @@ RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
+   lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d\n", lpi->solstat, primalfeasible, dualfeasible);
@@ -1969,6 +1982,7 @@ RETCODE SCIPlpiSolveBarrier(
       return SCIP_LPERROR;
    }
 
+   lpi->solisbasic = crossover;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
@@ -2151,8 +2165,8 @@ RETCODE SCIPlpiStrongbranch(
 /**@name Solution Information Methods */
 /**@{ */
 
-/** gets information about primal and dual feasibility of the LP basis */
-RETCODE SCIPlpiGetBasisFeasibility(
+/** gets information about primal and dual feasibility of the current LP solution */
+RETCODE SCIPlpiGetSolFeasibility(
    LPI*             lpi,                /**< LP interface structure */
    Bool*            primalfeasible,     /**< stores primal feasibility status */
    Bool*            dualfeasible        /**< stores dual feasibility status */
@@ -2166,7 +2180,7 @@ RETCODE SCIPlpiGetBasisFeasibility(
    assert(primalfeasible != NULL);
    assert(dualfeasible != NULL);
 
-   debugMessage("getting basis feasibility\n");
+   debugMessage("getting solution feasibility\n");
 
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &pfeas, &dfeas) );
    *primalfeasible = (Bool)pfeas;
@@ -2545,7 +2559,8 @@ RETCODE SCIPlpiGetIterations(
    assert(lpi->solstat >= 0);
    assert(iterations != NULL);
 
-   *iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
+   *iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp)
+      + CPXgetbaritcnt(cpxenv, lpi->cpxlp);
 
    return SCIP_OKAY;
 }
@@ -2695,6 +2710,13 @@ RETCODE SCIPlpiGetState(
    assert(lpi->cpxlp != NULL);
    assert(lpistate != NULL);
 
+   /* if there is no basis information available (e.g. after barrier without crossover), no state can be saved */
+   if( !lpi->solisbasic )
+   {
+      *lpistate = NULL;
+      return SCIP_OKAY;
+   }
+
    ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
    nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
    assert(ncols >= 0);
@@ -2736,9 +2758,12 @@ RETCODE SCIPlpiSetState(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-   assert(lpistate != NULL);
-   assert(lpistate->ncols == CPXgetnumcols(cpxenv, lpi->cpxlp));
-   assert(lpistate->nrows == CPXgetnumrows(cpxenv, lpi->cpxlp));
+   assert(lpistate == NULL || lpistate->ncols == CPXgetnumcols(cpxenv, lpi->cpxlp));
+   assert(lpistate == NULL || lpistate->nrows == CPXgetnumrows(cpxenv, lpi->cpxlp));
+
+   /* if there was no basis information available, the LPI state was not stored */
+   if( lpistate == NULL )
+      return SCIP_OKAY;
 
    debugMessage("loading LPI state %p (%d cols, %d rows) into CPLEX\n", lpistate, lpistate->ncols, lpistate->nrows);
 
@@ -2773,10 +2798,23 @@ RETCODE SCIPlpiFreeState(
    )
 {
    assert(lpi != NULL);
+   assert(lpistate != NULL);
 
-   lpistateFree(lpistate, blkmem);
+   if( *lpistate != NULL )
+   {
+      lpistateFree(lpistate, blkmem);
+   }
 
    return SCIP_OKAY;
+}
+
+/** checks, whether the given LP state contains simplex basis information */
+Bool SCIPlpiHasStateBasis(
+   LPI*             lpi,                /**< LP interface structure */
+   LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   )
+{
+   return (lpistate != NULL);
 }
 
 /** reads LP state (like basis information from a file */
@@ -3012,6 +3050,7 @@ RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
+      setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval*1e-03);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);

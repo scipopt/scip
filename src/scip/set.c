@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.141 2005/02/16 17:46:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.142 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -112,6 +112,10 @@
 
 #define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
+#define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
+                                                 *   barrier with 'c'rossover) */
+#define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
+                                                 *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from LP
                                                  *   (-1: don't delete columns due to aging) */
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from LP
@@ -500,6 +504,16 @@ RETCODE SCIPsetCreate(
          "lp/solvedepth",
          "maximal depth for solving LP at the nodes (-1: no depth limit)",
          &(*set)->lp_solvedepth, SCIP_DEFAULT_LP_SOLVEDEPTH, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+         "lp/initalgorithm",
+         "LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)",
+         &(*set)->lp_initalgorithm, SCIP_DEFAULT_LP_INITALGORITHM, "sbc",
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+         "lp/resolvealgorithm",
+         "LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)",
+         &(*set)->lp_resolvealgorithm, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "sbc",
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",

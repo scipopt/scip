@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.25 2005/02/18 14:06:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.26 2005/02/22 19:13:06 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -287,8 +287,14 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       int i;
       int c;
 
-      /* get buffer for storing the unreliable candidates */
+      /* get maximal number of candidates to initialize with strong branching; if the current solutions is not basic,
+       * we cannot apply the simplex algorithm and therefore don't initialize any candidates
+       */
       maxninitcands = MIN(nlpcands, branchruledata->initcand);
+      if( !SCIPisLPSolBasic(scip) )
+         maxninitcands = 0;
+
+      /* get buffer for storing the unreliable candidates */
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcands, maxninitcands+1) ); /* allocate one additional slot for convenience */
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcandscores, maxninitcands+1) );
       ninitcands = 0;

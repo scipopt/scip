@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lp.h,v 1.6 2005/01/21 09:17:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lp.h,v 1.7 2005/02/22 19:13:09 bzfpfend Exp $"
 
 /**@file   type_lp.h
  * @brief  type definitions for LP management
@@ -56,6 +56,16 @@ enum SideType
    SCIP_SIDETYPE_RIGHT = 1              /**< right hand side */
 };
 typedef enum SideType SIDETYPE;
+
+/** type of LP algorithm */
+enum LPAlgo
+{
+   SCIP_LPALGO_PRIMALSIMPLEX    = 0,    /**< primal simplex */
+   SCIP_LPALGO_DUALSIMPLEX      = 1,    /**< dual simplex */
+   SCIP_LPALGO_BARRIER          = 2,    /**< barrier algorithm */
+   SCIP_LPALGO_BARRIERCROSSOVER = 3     /**< barrier algorithm with crossover */
+};
+typedef enum LPAlgo LPALGO;
 
 typedef struct Col COL;                 /**< column of an LP */
 typedef struct Row ROW;                 /**< row of an LP */

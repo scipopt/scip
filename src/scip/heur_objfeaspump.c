@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.6 2005/02/14 13:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.7 2005/02/22 19:13:07 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -165,6 +165,10 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
+   if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* don't dive two times at the same node */

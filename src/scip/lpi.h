@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.50 2005/02/18 14:06:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.51 2005/02/22 19:13:07 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -401,9 +401,9 @@ RETCODE SCIPlpiStrongbranch(
 /**@name Solution Information Methods */
 /**@{ */
 
-/** gets information about primal and dual feasibility of the LP basis */
-extern 
-RETCODE SCIPlpiGetBasisFeasibility(
+/** gets information about primal and dual feasibility of the current LP solution */
+extern
+RETCODE SCIPlpiGetSolFeasibility(
    LPI*             lpi,                /**< LP interface structure */
    Bool*            primalfeasible,     /**< stores primal feasibility status */
    Bool*            dualfeasible        /**< stores dual feasibility status */
@@ -638,6 +638,13 @@ RETCODE SCIPlpiFreeState(
    LPI*             lpi,                /**< LP interface structure */
    BLKMEM*          blkmem,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   );
+
+/** checks, whether the given LP state contains simplex basis information */
+extern
+Bool SCIPlpiHasStateBasis(
+   LPI*             lpi,                /**< LP interface structure */
+   LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
 /** reads LP state (like basis information from a file */

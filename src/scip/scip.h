@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.214 2005/02/18 14:06:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.215 2005/02/22 19:13:08 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2711,6 +2711,12 @@ int SCIPgetNLPRows(
  */
 extern
 Bool SCIPallColsInLP(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns whether the current LP solution is basic, i.e. is defined by a valid simplex basis */
+extern
+Bool SCIPisLPSolBasic(
    SCIP*            scip                /**< SCIP data structure */
    );
 
