@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.91 2004/05/05 13:27:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.92 2004/05/07 11:56:19 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -915,6 +915,36 @@ RETCODE vboundsAdd(
    (*vbounds)->coefs[(*vbounds)->len] = coef;
    (*vbounds)->constants[(*vbounds)->len] = constant;
    (*vbounds)->len++;
+
+   return SCIP_OKAY;
+}
+
+/** replaces bounding variables in variable bounds by their active problem variable counterparts */
+static
+RETCODE vboundsUseActiveVars(
+   VBOUNDS*         vbounds             /**< variable bounds data structure */
+   )
+{
+   int i;
+
+   if( vbounds == NULL )
+      return SCIP_OKAY;
+
+   for( i = 0; i < vbounds->len; ++i )
+   {
+      /* transform linear sum  b*z + d  into  b'*z' + d'  with active problem variable z' */
+      CHECK_OKAY( SCIPvarGetProbvarSum(&vbounds->vars[i], &vbounds->coefs[i], &vbounds->constants[i]) );
+      
+      /* if the bounding variable was reduced to a constant, remove the entry from the vbounds */
+      if( vbounds->vars[i] == NULL )
+      {
+         vbounds->vars[i] = vbounds->vars[vbounds->len-1];
+         vbounds->coefs[i] = vbounds->coefs[vbounds->len-1];
+         vbounds->constants[i] = vbounds->constants[vbounds->len-1];
+         vbounds->len--;
+         i--;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -4311,6 +4341,19 @@ RETCODE SCIPvarAddVub(
       errorMessage("unknown variable status\n");
       abort();
    }
+
+   return SCIP_OKAY;
+}
+
+/** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
+RETCODE SCIPvarUseActiveVbds(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   CHECK_OKAY( vboundsUseActiveVars(var->vlbs) );
+   CHECK_OKAY( vboundsUseActiveVars(var->vubs) );
 
    return SCIP_OKAY;
 }

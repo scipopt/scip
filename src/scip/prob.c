@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.47 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.48 2004/05/07 11:56:19 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -888,6 +888,28 @@ void SCIPprobCheckObjIntegral(
 
    /* objective value is integral, if the variable loop scanned all variables */
    prob->objisintegral = (v == prob->nvars);
+}
+
+/** informs problem, that the presolving process was finished, and updates all internal data structures */
+RETCODE SCIPprobExitPresolve(
+   PROB*            prob,               /**< problem data */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   int v;
+
+   assert(prob != NULL);
+
+   /* check, wheter objective value is always integral */
+   SCIPprobCheckObjIntegral(prob, set);
+
+   /* replace variables in variable bounds with active problem variables */
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      CHECK_OKAY( SCIPvarUseActiveVbds(prob->vars[v]) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** initializes problem for branch and bound process */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.34 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.35 2004/05/07 11:56:19 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -208,6 +208,13 @@ void SCIPprobSetObjIntegral(
  */
 extern
 void SCIPprobCheckObjIntegral(
+   PROB*            prob,               /**< problem data */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs problem, that the presolving process was finished, and updates all internal data structures */
+extern
+RETCODE SCIPprobExitPresolve(
    PROB*            prob,               /**< problem data */
    SET*             set                 /**< global SCIP settings */
    );

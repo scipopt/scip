@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.61 2004/05/03 11:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.62 2004/05/07 11:56:19 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -265,6 +265,8 @@ RETCODE getBase(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
 
+   debugMessage("getBase()\n");
+
    ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
    nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
 
@@ -294,6 +296,8 @@ RETCODE setBase(
 {
    assert(cpxenv != NULL);
    assert(lpi != NULL);
+
+   debugMessage("setBase()\n");
 
    /* load basis information into CPLEX */
    if( dnorm != NULL )
@@ -418,6 +422,8 @@ RETCODE getParameterValues(CPXPARAM* cpxparam)
    assert(cpxenv != NULL);
    assert(cpxparam != NULL);
 
+   debugMessage("getParameterValues()\n");
+
    for( i = 0; i < NUMINTPARAM; ++i )
    {
       CHECK_ZERO( CPXgetintparam(cpxenv, intparam[i], &(cpxparam->intparval[i])) );
@@ -453,6 +459,8 @@ RETCODE setParameterValues(const CPXPARAM* cpxparam)
    assert(cpxenv != NULL);
    assert(cpxparam != NULL);
    
+   debugMessage("setParameterValues()\n");
+
    for( i = 0; i < NUMINTPARAM; ++i )
    {
       if( curparam.intparval[i] != cpxparam->intparval[i] )
@@ -755,6 +763,8 @@ RETCODE SCIPlpiCreate(
    assert(lpi != NULL);
    assert(numlp >= 0);
 
+   debugMessage("SCIPlpiCreate()\n");
+
    /* create environment */
    if( cpxenv == NULL )
    {
@@ -805,6 +815,8 @@ RETCODE SCIPlpiFree(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(*lpi != NULL);
+
+   debugMessage("SCIPlpiFree()\n");
 
    /* free LP */
    CHECK_ZERO( CPXfreeprob(cpxenv, &((*lpi)->cpxlp)) );
@@ -1351,6 +1363,8 @@ RETCODE SCIPlpiGetNRows(
    assert(lpi != NULL);
    assert(nrows != NULL);
 
+   debugMessage("getting number of rows\n");
+
    *nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
 
    return SCIP_OKAY;
@@ -1366,6 +1380,8 @@ RETCODE SCIPlpiGetNCols(
    assert(lpi != NULL);
    assert(ncols != NULL);
 
+   debugMessage("getting number of columns\n");
+
    *ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
 
    return SCIP_OKAY;
@@ -1380,6 +1396,8 @@ RETCODE SCIPlpiGetNNonz(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(nnonz != NULL);
+
+   debugMessage("getting number of non-zeros\n");
 
    *nnonz = CPXgetnumnz(cpxenv, lpi->cpxlp);
 
@@ -1406,6 +1424,8 @@ RETCODE SCIPlpiGetCols(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(cpxenv, lpi->cpxlp));
+
+   debugMessage("getting columns %d to %d\n", firstcol, lastcol);
 
    if( lb != NULL )
    {
@@ -1462,6 +1482,8 @@ RETCODE SCIPlpiGetRows(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(cpxenv, lpi->cpxlp));
+
+   debugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
    if( lhs != NULL )
    {
@@ -1522,6 +1544,8 @@ RETCODE SCIPlpiGetObj(
    assert(firstcol <= lastcol);
    assert(vals != NULL);
    
+   debugMessage("getting objective values %d to %d\n", firstcol, lastcol);
+
    CHECK_ZERO( CPXgetobj(cpxenv, lpi->cpxlp, vals, firstcol, lastcol) );
 
    return SCIP_OKAY;
@@ -1538,6 +1562,8 @@ RETCODE SCIPlpiGetCoef(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("getting coefficient of row %d col %d\n", row, col);
 
    CHECK_ZERO( CPXgetcoef(cpxenv, lpi->cpxlp, row, col, val) );
 
@@ -1574,6 +1600,7 @@ RETCODE SCIPlpiSolvePrimal(
 
    CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
 
+   debugMessage("calling CPXprimopt()\n");
    retval = CPXprimopt(cpxenv, lpi->cpxlp);
    switch( retval  )
    {
@@ -1645,6 +1672,7 @@ RETCODE SCIPlpiSolveDual(
 
    CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
 
+   debugMessage("calling CPXdualopt()\n");
    retval = CPXdualopt(cpxenv, lpi->cpxlp);
    switch( retval  )
    {
@@ -1716,6 +1744,7 @@ RETCODE SCIPlpiSolveBarrier(
 
    setParameterValues(&(lpi->cpxparam));
 
+   debugMessage("calling CPXhybaropt()\n");
    retval = CPXhybbaropt(cpxenv, lpi->cpxlp, 0);
    switch( retval  )
    {
@@ -1910,6 +1939,8 @@ RETCODE SCIPlpiGetBasisFeasibility(
    assert(primalfeasible != NULL);
    assert(dualfeasible != NULL);
 
+   debugMessage("getting basis feasibility\n");
+
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &pfeas, &dfeas) );
    *primalfeasible = (Bool)pfeas;
    *dualfeasible = (Bool)dfeas;
@@ -1928,6 +1959,8 @@ Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
+
+   debugMessage("checking for primal unboundness\n");
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
@@ -1950,6 +1983,8 @@ Bool SCIPlpiIsPrimalInfeasible(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
+   debugMessage("checking for primal infeasibility\n");
+
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
 
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
@@ -1971,6 +2006,8 @@ Bool SCIPlpiIsDualUnbounded(
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
+   debugMessage("checking for dual unboundness\n");
+
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
    return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible));
@@ -1987,6 +2024,8 @@ Bool SCIPlpiIsDualInfeasible(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
+
+   debugMessage("checking for dual infeasibility\n");
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
@@ -2015,6 +2054,8 @@ Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
+
+   debugMessage("checking for stability\n");
 
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
@@ -2094,6 +2135,8 @@ RETCODE SCIPlpiGetObjval(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("getting solution's objective value\n");
+
    CHECK_ZERO( CPXgetobjval(cpxenv, lpi->cpxlp, objval) );
 
    return SCIP_OKAY;
@@ -2115,6 +2158,8 @@ RETCODE SCIPlpiGetSol(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
+
+   debugMessage("getting solution\n");
 
    CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, NULL, redcost) );
    assert(dummy == lpi->solstat);
@@ -2240,6 +2285,8 @@ RETCODE SCIPlpiGetBasisInd(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("getting basis information\n");
+
    CHECK_ZERO( CPXgetbhead(cpxenv, lpi->cpxlp, bind, NULL) );
 
    return SCIP_OKAY;
@@ -2256,6 +2303,7 @@ RETCODE SCIPlpiGetBInvRow(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("getting binv-row %d\n", r);
    CHECK_ZERO( CPXbinvrow(cpxenv, lpi->cpxlp, r, coef) );
 
    return SCIP_OKAY;
@@ -2272,6 +2320,8 @@ RETCODE SCIPlpiGetBInvARow(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("getting binva-row %d\n", r);
 
    CHECK_ZERO( CPXbinvarow(cpxenv, lpi->cpxlp, r, val) );
 
@@ -2400,6 +2450,8 @@ RETCODE SCIPlpiReadState(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("reading LP state from file <%s>\n", fname);
+
    CHECK_ZERO( CPXreadcopybase(cpxenv, lpi->cpxlp, fname) );
 
    return SCIP_OKAY;
@@ -2414,6 +2466,8 @@ RETCODE SCIPlpiWriteState(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("writing LP state to file <%s>\n", fname);
 
    CHECK_ZERO( CPXmbasewrite(cpxenv, lpi->cpxlp, fname) );
 
@@ -2443,6 +2497,8 @@ RETCODE SCIPlpiGetIntpar(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(ival != NULL);
+
+   debugMessage("getting int parameter %d\n", type);
 
    switch( type )
    {
@@ -2500,6 +2556,8 @@ RETCODE SCIPlpiSetIntpar(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("setting int parameter %d to %d\n", type, ival);
 
    switch( type )
    {
@@ -2568,6 +2626,8 @@ RETCODE SCIPlpiGetRealpar(
    assert(lpi->cpxlp != NULL);
    assert(dval != NULL);
 
+   debugMessage("getting real parameter %d\n", type);
+
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
@@ -2602,6 +2662,8 @@ RETCODE SCIPlpiSetRealpar(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("setting real parameter %d to %g\n", type, dval);
 
    switch( type )
    {
@@ -2678,6 +2740,8 @@ RETCODE SCIPlpiReadLP(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
+   debugMessage("reading LP from file <%s>\n", fname);
+
    CHECK_ZERO( CPXreadcopyprob(cpxenv, lpi->cpxlp, fname, NULL) );
 
    return SCIP_OKAY;
@@ -2692,6 +2756,8 @@ RETCODE SCIPlpiWriteLP(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+
+   debugMessage("writing LP to file <%s>\n", fname);
 
    CHECK_ZERO( CPXwriteprob(cpxenv, lpi->cpxlp, fname, NULL) );
 

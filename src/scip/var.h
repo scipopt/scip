@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.65 2004/05/03 13:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.66 2004/05/07 11:56:19 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -574,6 +574,12 @@ RETCODE SCIPvarAddVub(
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
    Real             vubconstant         /**< constant d    in x <= b*z + d */
+   );
+
+/** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
+extern
+RETCODE SCIPvarUseActiveVbds(
+   VAR*             var                 /**< problem variable */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

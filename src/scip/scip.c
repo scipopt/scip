@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.166 2004/05/05 14:05:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.167 2004/05/07 11:56:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3096,9 +3096,11 @@ RETCODE presolve(
    *unbounded = (result == SCIP_UNBOUNDED);
    *infeasible = (result == SCIP_CUTOFF);
 
-   /* check, whether the objective value is always integral */
-   SCIPprobCheckObjIntegral(scip->transprob, scip->set);
-   
+   /* replace variables in variable bounds with active problem variables, and 
+    * check, whether the objective value is always integral
+    */
+   CHECK_OKAY( SCIPprobExitPresolve(scip->transprob, scip->set) );
+
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
    
