@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.25 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.26 2005/02/07 18:12:02 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -192,7 +192,9 @@ struct Conshdlr
    int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
+   Bool             delaypresol;        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
+   Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    Bool             initialized;        /**< is constraint handler initialized? */
    Bool             delayupdates;       /**< must the updates of the constraint arrays be delayed until processUpdates()? */
 };

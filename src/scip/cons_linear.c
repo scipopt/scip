@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.148 2005/02/07 14:08:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.149 2005/02/07 18:11:59 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -52,14 +52,16 @@
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
-#define CONSHDLR_SEPAPRIORITY   +100000
-#define CONSHDLR_ENFOPRIORITY  -1000000
-#define CONSHDLR_CHECKPRIORITY -1000000
-#define CONSHDLR_SEPAFREQ             5
-#define CONSHDLR_PROPFREQ             5
-#define CONSHDLR_EAGERFREQ          100
-#define CONSHDLR_MAXPREROUNDS        -1
-#define CONSHDLR_NEEDSCONS         TRUE
+#define CONSHDLR_SEPAPRIORITY   +100000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY  -1000000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY -1000000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAFREQ             5 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_PROPFREQ             5 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
+#define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define DEFAULT_TIGHTENBOUNDSFREQ     1 /**< multiplier on propagation frequency, how often the bounds are tightened */
 #define DEFAULT_MAXAGGRNORMSCALE    5.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation */
@@ -5292,7 +5294,8 @@ RETCODE SCIPincludeConshdlrLinear(
    /* include constraint handler in SCIP */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          consFreeLinear, consInitLinear, consExitLinear, 
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
          consDeleteLinear, consTransLinear, 

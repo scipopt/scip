@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_presol.h,v 1.5 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_presol.h,v 1.6 2005/02/07 18:12:01 bzfpfend Exp $"
 
 /**@file   pub_presol.h
  * @brief  public methods for presolvers
@@ -65,6 +65,12 @@ const char* SCIPpresolGetDesc(
 /** gets priority of presolver */
 extern
 int SCIPpresolGetPriority(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** was presolver delayed at the last call? */
+extern
+Bool SCIPpresolWasDelayed(
    PRESOL*          presol              /**< presolver */
    );
 

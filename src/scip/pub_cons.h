@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.15 2005/01/21 09:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.16 2005/02/07 18:12:01 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -291,6 +291,12 @@ Bool SCIPconshdlrNeedsCons(
 /** does the constraint handler perform presolving? */
 extern
 Bool SCIPconshdlrDoesPresolve(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** was presolving method delayed at the last call? */
+extern
+Bool SCIPconshdlrWasPresolveDelayed(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

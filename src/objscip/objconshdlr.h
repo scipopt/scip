@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.29 2005/01/31 12:57:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.30 2005/02/07 18:12:00 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -69,6 +69,9 @@ public:
    /** maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    const Bool scip_maxprerounds_;
 
+   /** should presolving method be delayed, if other presolvers found reductions? */
+   const Bool scip_delaypresol_;
+
    /** should the constraint handler be skipped, if no constraints are available? */
    const Bool scip_needscons_;
 
@@ -84,6 +87,7 @@ public:
       int           eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
       int           maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+      Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
       Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
       )
       : scip_name_(name),
@@ -95,6 +99,7 @@ public:
         scip_propfreq_(propfreq),
         scip_eagerfreq_(eagerfreq),
         scip_maxprerounds_(maxprerounds),
+        scip_delaypresol_(delaypresol),
         scip_needscons_(needscons)
    {
    }
@@ -439,6 +444,7 @@ public:
     *  - SCIP_SUCCESS    : the presolver found a reduction
     *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
     *  - SCIP_DIDNOTRUN  : the presolver was skipped
+    *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
     */
    virtual RETCODE scip_presol(
       SCIP*         scip,               /**< SCIP data structure */

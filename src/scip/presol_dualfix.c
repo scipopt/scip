@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.18 2005/02/03 12:19:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.19 2005/02/07 18:12:00 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -31,8 +31,10 @@
 
 #define PRESOL_NAME            "dualfix"
 #define PRESOL_DESC            "roundable variables dual fixing"
-#define PRESOL_PRIORITY        +100000
-#define PRESOL_MAXROUNDS       -1
+#define PRESOL_PRIORITY         +100000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+
 
 
 
@@ -151,7 +153,7 @@ RETCODE SCIPincludePresolDualfix(
    presoldata = NULL;
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
          presolFreeDualfix, presolInitDualfix, presolExitDualfix, 
          presolInitpreDualfix, presolExitpreDualfix, presolExecDualfix,
          presoldata) );

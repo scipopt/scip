@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.206 2005/02/07 14:08:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.207 2005/02/07 18:12:01 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -534,12 +534,13 @@ RETCODE SCIPincludeConshdlr(
    const char*      desc,               /**< description of constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              chckpriority,       /**< priority of the constraint handler for checking feasibility */
    int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -637,6 +638,7 @@ RETCODE SCIPincludePresol(
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.84 2005/02/07 14:08:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.85 2005/02/07 18:11:59 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -35,14 +35,16 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "knapsack"
 #define CONSHDLR_DESC          "knapsack constraint of the form  a^T x <= b, x binary"
-#define CONSHDLR_SEPAPRIORITY   +600000
-#define CONSHDLR_ENFOPRIORITY   +600000
-#define CONSHDLR_CHECKPRIORITY  -850000
-#define CONSHDLR_SEPAFREQ             1
-#define CONSHDLR_PROPFREQ             1
-#define CONSHDLR_EAGERFREQ          100
-#define CONSHDLR_MAXPREROUNDS        -1
-#define CONSHDLR_NEEDSCONS         TRUE
+#define CONSHDLR_SEPAPRIORITY   +600000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY   +600000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY  -600000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
+#define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define EVENTHDLR_NAME         "knapsack"
 #define EVENTHDLR_DESC         "bound change event handler for knapsack constraints"
@@ -2198,7 +2200,8 @@ RETCODE SCIPincludeConshdlrKnapsack(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          consFreeKnapsack, consInitKnapsack, consExitKnapsack, 
          consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
          consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,

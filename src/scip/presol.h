@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.22 2005/02/07 14:08:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.23 2005/02/07 18:12:00 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -48,6 +48,7 @@ RETCODE SCIPpresolCreate(
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -99,6 +100,7 @@ extern
 RETCODE SCIPpresolExec(
    PRESOL*          presol,             /**< presolver */
    SET*             set,                /**< global SCIP settings */
+   Bool             execdelayed,        /**< execute presolver even if it is marked to be delayed */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.5 2005/02/04 12:51:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.6 2005/02/07 18:12:00 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -30,8 +30,9 @@
 
 #define PRESOL_NAME            "probing"
 #define PRESOL_DESC            "probing presolver on binary variables"
-#define PRESOL_PRIORITY        -100000
-#define PRESOL_MAXROUNDS       -1
+#define PRESOL_PRIORITY         -100000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_DELAY               TRUE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
 
@@ -53,6 +54,7 @@
 struct PresolData
 {
    int              proprounds;         /**< maximal number of propagation rounds in probing subproblems */
+   Bool             called;             /**< was probing applied at least once? */
 };
 
 
@@ -166,7 +168,18 @@ DECL_PRESOLFREE(presolFreeProbing)
 
 
 /** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreProbing NULL
+static
+DECL_PRESOLINITPRE(presolInitpreProbing)
+{  /*lint --e{715}*/
+   PRESOLDATA* presoldata;
+
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   presoldata->called = FALSE;
+
+   return SCIP_OKAY;
+}
 
 
 /** presolving deinitialization method of presolver (called after presolving has been finished) */
@@ -195,6 +208,15 @@ DECL_PRESOLEXEC(presolExecProbing)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* get presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   /* if no domains, sides, or coefficients changed since the last call, we don't need to probe */
+   if( presoldata->called && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0
+      && nnewchgcoefs == 0 && nnewchgsides == 0 )
+      return SCIP_OKAY;
+
    /* get variable data */
    CHECK_OKAY( SCIPgetVarsData(scip, &probvars, &nvars, &nbinvars, NULL, NULL, NULL) );
    if( nbinvars == 0 )
@@ -204,10 +226,6 @@ DECL_PRESOLEXEC(presolExecProbing)
 
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
-
-   /* get presolver data */
-   presoldata = SCIPpresolGetData(presol);
-   assert(presoldata != NULL);
 
    /* copy the vars array, because SCIPfixVar() renders the vars of SCIPgetVarsData() array invalid */
    CHECK_OKAY( SCIPduplicateBufferArray(scip, &vars, probvars, nvars) );
@@ -377,7 +395,7 @@ RETCODE SCIPincludePresolProbing(
    CHECK_OKAY( SCIPallocMemory(scip, &presoldata) );
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
          presolFreeProbing, presolInitProbing, presolExitProbing, 
          presolInitpreProbing, presolExitpreProbing, presolExecProbing,
          presoldata) );

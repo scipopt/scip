@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.24 2005/01/31 12:57:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.25 2005/02/07 18:12:02 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -384,6 +384,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_SUCCESS    : the presolver found a reduction
  *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
+ *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  */
 #define DECL_CONSPRESOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nrounds, \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.18 2005/01/21 09:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.19 2005/02/07 18:12:01 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -31,8 +31,9 @@
 
 #define PRESOL_NAME            "trivial"
 #define PRESOL_DESC            "trivial presolver: round fractional bounds on integers, fix variables with equal bounds"
-#define PRESOL_PRIORITY        +9000000
-#define PRESOL_MAXROUNDS       -1
+#define PRESOL_PRIORITY        +9000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
 
@@ -195,7 +196,7 @@ RETCODE SCIPincludePresolTrivial(
    presoldata = NULL;
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
          presolFreeTrivial, presolInitTrivial, presolExitTrivial, 
          presolInitpreTrivial, presolExitpreTrivial, presolExecTrivial,
          presoldata) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.49 2005/02/07 14:08:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.50 2005/02/07 18:11:58 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -31,14 +31,16 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "and"
 #define CONSHDLR_DESC          "constraint handler for and constraints: r = and(x1, ..., xn)"
-#define CONSHDLR_SEPAPRIORITY   +850000
-#define CONSHDLR_ENFOPRIORITY   -850000
-#define CONSHDLR_CHECKPRIORITY  -850000
-#define CONSHDLR_SEPAFREQ             1
-#define CONSHDLR_PROPFREQ             1
-#define CONSHDLR_EAGERFREQ          100
-#define CONSHDLR_MAXPREROUNDS        -1
-#define CONSHDLR_NEEDSCONS         TRUE
+#define CONSHDLR_SEPAPRIORITY   +850000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY   -850000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY  -850000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
+#define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define EVENTHDLR_NAME         "and"
 #define EVENTHDLR_DESC         "bound change event handler for and constraints"
@@ -1568,7 +1570,8 @@ RETCODE SCIPincludeConshdlrAnd(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          consFreeAnd, consInitAnd, consExitAnd, 
          consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
          consDeleteAnd, consTransAnd, consInitlpAnd,

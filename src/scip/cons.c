@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.112 2005/02/07 14:08:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.113 2005/02/07 18:11:58 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1332,12 +1332,13 @@ RETCODE SCIPconshdlrCreate(
    const char*      desc,               /**< description of constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int              checkpriority,      /**< priority of the constraint handler for checking infeasibility */
+   int              checkpriority,      /**< priority of the constraint handler for checking feasibility */
    int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1476,6 +1477,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nchgcoefs = 0;
    (*conshdlr)->nchgsides = 0;
    (*conshdlr)->needscons = needscons;
+   (*conshdlr)->presolwasdelayed = FALSE;
    (*conshdlr)->initialized = FALSE;
    (*conshdlr)->delayupdates = FALSE;
 
@@ -1499,6 +1501,11 @@ RETCODE SCIPconshdlrCreate(
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, 
          "maximal number of presolving rounds the constraint handler participates in (-1: no limit)",
          &(*conshdlr)->maxprerounds, maxprerounds, -1, INT_MAX, NULL, NULL) );
+
+   sprintf(paramname, "constraints/%s/delaypresol", name);
+   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+         "should presolving method be delayed, if other presolvers found reductions?",
+         &(*conshdlr)->delaypresol, delaypresol, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -2355,6 +2362,7 @@ RETCODE SCIPconshdlrPresolve(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
+   Bool             execdelayed,        /**< execute presolving method even if it is marked to be delayed */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
@@ -2389,7 +2397,7 @@ RETCODE SCIPconshdlrPresolve(
 
    if( conshdlr->conspresol != NULL
       && (!conshdlr->needscons || conshdlr->nconss > 0)
-      && (conshdlr->maxprerounds == -1 || nrounds < conshdlr->maxprerounds) )
+      && (conshdlr->maxprerounds == -1 || nrounds < conshdlr->maxprerounds || conshdlr->presolwasdelayed) )
    {
       int nnewfixedvars;
       int nnewaggrvars;
@@ -2402,12 +2410,6 @@ RETCODE SCIPconshdlrPresolve(
       int nnewchgsides;
 
       debugMessage("presolving %d constraints of handler <%s>\n", conshdlr->nconss, conshdlr->name);
-
-      /* because during constraint processing, constraints of this handler may be activated, deactivated,
-       * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
-       * external method; to avoid this, these changes will be buffered and processed after the method call
-       */
-      conshdlrDelayUpdates(conshdlr);
 
       /* calculate the number of changes since last call */
       nnewfixedvars = *nfixedvars - conshdlr->lastnfixedvars;
@@ -2431,44 +2433,60 @@ RETCODE SCIPconshdlrPresolve(
       conshdlr->lastnchgcoefs = *nchgcoefs;
       conshdlr->lastnchgsides = *nchgsides;
 
-      /* start timing */
-      SCIPclockStart(conshdlr->presoltime, set);
-
-      /* call external method */
-      CHECK_OKAY( conshdlr->conspresol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, nrounds,
-                     nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-                     nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
-                     nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-                     ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
-
-      /* stop timing */
-      SCIPclockStop(conshdlr->presoltime, set);
-
-      /* count the new changes */
-      conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
-      conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
-      conshdlr->nchgvartypes += *nchgvartypes - conshdlr->lastnchgvartypes;
-      conshdlr->nchgbds += *nchgbds - conshdlr->lastnchgbds;
-      conshdlr->naddholes += *naddholes - conshdlr->lastnaddholes;
-      conshdlr->ndelconss += *ndelconss - conshdlr->lastndelconss;
-      conshdlr->nupgdconss += *nupgdconss - conshdlr->lastnupgdconss;
-      conshdlr->nchgcoefs += *nchgcoefs - conshdlr->lastnchgcoefs;
-      conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
-
-      /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
-
-      /* check result code of callback method */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_SUCCESS
-         && *result != SCIP_DIDNOTFIND
-         && *result != SCIP_DIDNOTRUN )
+      /* check, if presolving method should be delayed */
+      if( !conshdlr->delaypresol || execdelayed )
       {
-         errorMessage("presolving method of constraint handler <%s> returned invalid result <%d>\n", 
-            conshdlr->name, *result);
-         return SCIP_INVALIDRESULT;
+         /* because during constraint processing, constraints of this handler may be activated, deactivated,
+          * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+          * external method; to avoid this, these changes will be buffered and processed after the method call
+          */
+         conshdlrDelayUpdates(conshdlr);
+
+         /* start timing */
+         SCIPclockStart(conshdlr->presoltime, set);
+         
+         /* call external method */
+         CHECK_OKAY( conshdlr->conspresol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, nrounds,
+               nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+               nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+               nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+               ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+         
+         /* stop timing */
+         SCIPclockStop(conshdlr->presoltime, set);
+
+         /* count the new changes */
+         conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
+         conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
+         conshdlr->nchgvartypes += *nchgvartypes - conshdlr->lastnchgvartypes;
+         conshdlr->nchgbds += *nchgbds - conshdlr->lastnchgbds;
+         conshdlr->naddholes += *naddholes - conshdlr->lastnaddholes;
+         conshdlr->ndelconss += *ndelconss - conshdlr->lastndelconss;
+         conshdlr->nupgdconss += *nupgdconss - conshdlr->lastnupgdconss;
+         conshdlr->nchgcoefs += *nchgcoefs - conshdlr->lastnchgcoefs;
+         conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
+
+         /* perform the cached constraint updates */
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
+
+         /* check result code of callback method */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_UNBOUNDED
+            && *result != SCIP_SUCCESS
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED )
+         {
+            errorMessage("presolving method of constraint handler <%s> returned invalid result <%d>\n", 
+               conshdlr->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
       }
+      else
+         *result = SCIP_DELAYED;
+
+      /* remember whether presolving method was delayed */
+      conshdlr->presolwasdelayed = (*result == SCIP_DELAYED);
    }
 
    return SCIP_OKAY;
@@ -2903,6 +2921,16 @@ Bool SCIPconshdlrDoesPresolve(
    assert(conshdlr != NULL);
 
    return (conshdlr->conspresol != NULL);
+}
+
+/** was presolving method delayed at the last call? */
+Bool SCIPconshdlrWasPresolveDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->presolwasdelayed;
 }
 
 /** is constraint handler initialized? */

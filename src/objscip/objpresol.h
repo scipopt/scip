@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.11 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.12 2005/02/07 18:12:00 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -52,17 +52,22 @@ public:
    /** default maximal number of presolving rounds the presolver participates in (-1: no limit) */
    const int scip_maxrounds_;
 
+   /** should presolver be delayed, if other presolvers found reductions? */
+   const Bool scip_delay_;
+
    /** default constructor */
    ObjPresol(
       const char*   name,               /**< name of presolver */
       const char*   desc,               /**< description of presolver */
       int           priority,           /**< priority of the presolver */
-      int           maxrounds           /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+      int           maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+      Bool          delay               /**< should presolver be delayed, if other presolvers found reductions? */
       )
       : scip_name_(name),
         scip_desc_(desc),
         scip_priority_(priority),
-        scip_maxrounds_(maxrounds)
+        scip_maxrounds_(maxrounds),
+        scip_delay_(delay)
    {
    }
 
@@ -149,6 +154,7 @@ public:
     *  - SCIP_SUCCESS    : the presolver found a reduction
     *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
     *  - SCIP_DIDNOTRUN  : the presolver was skipped
+    *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
     */
    virtual RETCODE scip_exec(
       SCIP*         scip,               /**< SCIP data structure */

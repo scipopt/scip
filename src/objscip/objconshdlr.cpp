@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.21 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.22 2005/02/07 18:12:00 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -476,7 +476,7 @@ RETCODE SCIPincludeObjConshdlr(
    CHECK_OKAY( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 
          objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
          objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
-         objconshdlr->scip_maxprerounds_, objconshdlr->scip_needscons_,
+         objconshdlr->scip_maxprerounds_, objconshdlr->scip_delaypresol_, objconshdlr->scip_needscons_,
          consFreeObj, consInitObj, consExitObj, 
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,

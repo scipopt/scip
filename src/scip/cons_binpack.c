@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.23 2005/01/21 09:16:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.24 2005/02/07 18:11:58 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -34,14 +34,16 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "binpack"
 #define CONSHDLR_DESC          "bin packing constraints of the form  a^T x <= b*y, x, y binary"
-#define CONSHDLR_SEPAPRIORITY   +000000
-#define CONSHDLR_ENFOPRIORITY   +000000
-#define CONSHDLR_CHECKPRIORITY  +000000
-#define CONSHDLR_SEPAFREQ            -1
-#define CONSHDLR_PROPFREQ            -1
-#define CONSHDLR_EAGERFREQ          100
-#define CONSHDLR_MAXPREROUNDS        -1
-#define CONSHDLR_NEEDSCONS         TRUE
+#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
+#define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define LINCONSUPGD_PRIORITY    +000000
 
@@ -477,7 +479,8 @@ RETCODE SCIPincludeConshdlrBinpack(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          consFreeBinpack, consInitBinpack, consExitBinpack, 
          consInitpreBinpack, consExitpreBinpack, consInitsolBinpack, consExitsolBinpack,
          consDeleteBinpack, consTransBinpack, consInitlpBinpack,

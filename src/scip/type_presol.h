@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.7 2005/01/21 09:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.8 2005/02/07 18:12:02 bzfpfend Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers
@@ -126,6 +126,7 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
  *  - SCIP_SUCCESS    : the presolver found a reduction
  *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
+ *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  */
 #define DECL_PRESOLEXEC(x) RETCODE x (SCIP* scip, PRESOL* presol, int nrounds,              \
    int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \

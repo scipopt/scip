@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.258 2005/02/07 14:08:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.259 2005/02/07 18:12:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1182,12 +1182,13 @@ RETCODE SCIPincludeConshdlr(
    const char*      desc,               /**< description of constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
+   int              chckpriority,       /**< priority of the constraint handler for checking feasibility */
    int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1220,8 +1221,8 @@ RETCODE SCIPincludeConshdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
-         name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, needscons, 
-         consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
+         name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, delaypresol,
+         needscons, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
          consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
          consresprop, conslock, consactive, consdeactive, consenable, consdisable, consprint,
          conshdlrdata) );
@@ -1346,6 +1347,7 @@ RETCODE SCIPincludePresol(
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -1359,7 +1361,7 @@ RETCODE SCIPincludePresol(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority, maxrounds,
+   CHECK_OKAY( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority, maxrounds, delay,
          presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata) );
    CHECK_OKAY( SCIPsetIncludePresol(scip->set, presol) );
    
@@ -3505,6 +3507,172 @@ RETCODE exitPresolve(
    return SCIP_OKAY;
 }
 
+/** returns whether the presolving should be aborted */
+static
+Bool isPresolveFinished(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             abortfac,           /**< presolving is finished, if changed portion is smaller than this factor */
+   int              maxnrounds,         /**< maximal number of presolving rounds to perform */
+   int              lastnfixedvars,     /**< number of fixed variables in last presolving round */
+   int              lastnaggrvars,      /**< number of aggregated variables in last presolving round */
+   int              lastnchgvartypes,   /**< number of changed variable types in last presolving round */
+   int              lastnchgbds,        /**< number of changed bounds in last presolving round */
+   int              lastnaddholes,      /**< number of added holes in last presolving round */
+   int              lastndelconss,      /**< number of deleted constraints in last presolving round */
+   int              lastnupgdconss,     /**< number of upgraded constraints in last presolving round */
+   int              lastnchgcoefs,      /**< number of changed coefficients in last presolving round */
+   int              lastnchgsides,      /**< number of changed sides in last presolving round */
+   Bool             unbounded,          /**< has presolving detected unboundness? */
+   Bool             infeasible          /**< has presolving detected infeasibility? */
+   )
+{
+   Bool finished;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->transprob != NULL);
+
+   finished = TRUE;
+
+   /* don't abort, if enough changes were applied to the variables */
+   finished = finished
+      && (scip->transprob->nvars == 0
+         || (scip->stat->npresolfixedvars - lastnfixedvars
+            + scip->stat->npresolaggrvars - lastnaggrvars
+            + scip->stat->npresolchgvartypes - lastnchgvartypes
+            + scip->stat->npresolchgbds - lastnchgbds
+            + scip->stat->npresoladdholes - lastnaddholes <= abortfac * scip->transprob->nvars));
+
+   /* don't abort, if enough changes were applied to the constraints */
+   finished = finished
+      && (scip->transprob->nconss == 0
+         || (scip->stat->npresoldelconss - lastndelconss
+            + scip->stat->npresolupgdconss - lastnupgdconss
+            + scip->stat->npresolchgsides - lastnchgsides
+            <= abortfac * scip->transprob->nconss));
+
+   /* don't abort, if enough changes were applied to the coefficients (assume a 20% density of non-zero elements) */
+   finished = finished
+      && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
+         || (scip->stat->npresolchgcoefs - lastnchgcoefs
+            <= abortfac * 0.2 * scip->transprob->nvars * scip->transprob->nconss));
+
+   /* abort if problem is infeasible or unbounded */
+   finished = finished || unbounded || infeasible;
+
+   /* abort if maximal number of presolving rounds is reached */
+   finished = finished || (scip->stat->npresolrounds >= maxnrounds);
+
+   return finished;
+}
+
+/** applies one round of presolving */
+static
+RETCODE presolveRound(
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool             onlydelayed,        /**< should only delayed presolvers be called? */
+   Bool*            delayed,            /**< pointer to store whether a presolver was delayed */
+   Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
+   )
+{
+   RESULT result;
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(delayed != NULL);
+   assert(unbounded != NULL);
+   assert(infeasible != NULL);
+
+   *delayed = FALSE;
+
+   /* call included presolvers with nonnegative priority */
+   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
+   {
+      if( SCIPpresolGetPriority(scip->set->presols[i]) < 0 )
+         continue;
+
+      if( onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds, 
+            &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+            &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+            &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
+      *delayed = *delayed || (result == SCIP_DELAYED);
+   }
+
+   /* call presolve methods of constraint handlers */
+   for( i = 0; i < scip->set->nconshdlrs && !(*unbounded) && !(*infeasible); ++i )
+   {
+      if( onlydelayed && !SCIPconshdlrWasPresolveDelayed(scip->set->conshdlrs[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat, 
+            scip->transprob, onlydelayed, scip->stat->npresolrounds,
+            &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+            &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+            &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+      }
+      *delayed = *delayed || (result == SCIP_DELAYED);
+   }
+
+   /* call included presolvers with negative priority */
+   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
+   {
+      if( SCIPpresolGetPriority(scip->set->presols[i]) >= 0 )
+         continue;
+
+      if( onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds, 
+            &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+            &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+            &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
+      *delayed = *delayed || (result == SCIP_DELAYED);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** loops through the included presolvers and constraint's presolve methods, until changes are too few */
 static
 RETCODE presolve(
@@ -3513,7 +3681,7 @@ RETCODE presolve(
    Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
-   RESULT result;
+   Bool delayed;
    Bool finished;
    Bool stopped;
    Real abortfac;
@@ -3527,7 +3695,6 @@ RETCODE presolve(
    int lastnupgdconss;
    int lastnchgcoefs;
    int lastnchgsides;
-   int i;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -3564,8 +3731,6 @@ RETCODE presolve(
 
    abortfac = scip->set->presol_abortfac;
 
-   result = SCIP_DIDNOTRUN;
-
    infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
    finished = (scip->stat->npresolrounds >= maxnrounds);
@@ -3584,104 +3749,31 @@ RETCODE presolve(
       lastnchgcoefs = scip->stat->npresolchgcoefs;
       lastnchgsides = scip->stat->npresolchgsides;
 
-      /* sort presolvers by priority */
-      SCIPsetSortPresols(scip->set);
-
-      /* call included presolvers with nonnegative priority */
-      for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
-      {
-         if( SCIPpresolGetPriority(scip->set->presols[i]) < 0 )
-            continue;
-
-         CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, scip->stat->npresolrounds, 
-               &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
-               &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
-               &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
-         if( result == SCIP_CUTOFF )
-         {
-            *infeasible = TRUE;
-            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
-         }
-         else if( result == SCIP_UNBOUNDED )
-         {
-            *unbounded = TRUE;
-            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
-         }
-      }
-
-      /* call presolve methods of constraint handlers */
-      for( i = 0; i < scip->set->nconshdlrs && !(*unbounded) && !(*infeasible); ++i )
-      {
-         CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat, 
-               scip->transprob, scip->stat->npresolrounds,
-               &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
-               &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
-               &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
-         if( result == SCIP_CUTOFF )
-         {
-            *infeasible = TRUE;
-            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-         }
-         else if( result == SCIP_UNBOUNDED )
-         {
-            *unbounded = TRUE;
-            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "constraint handler <%s> detected unboundness (or infeasibility)\n",
-               SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-         }
-      }
-
-      /* call included presolvers with negative priority */
-      for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
-      {
-         if( SCIPpresolGetPriority(scip->set->presols[i]) >= 0 )
-            continue;
-
-         CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, scip->stat->npresolrounds, 
-               &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
-               &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
-               &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
-         *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
-         *infeasible = *infeasible || (result == SCIP_CUTOFF);
-      }
-
       /* increase round number */
       scip->stat->npresolrounds++;
 
+      /* sort presolvers by priority */
+      SCIPsetSortPresols(scip->set);
+
+      /* perform the presolving round by calling the presolvers and constraint handlers */
+      CHECK_OKAY( presolveRound(scip, FALSE, &delayed, unbounded, infeasible) );
+
       /* check, if we should abort presolving due to not enough changes in the last round */
-      finished = TRUE;
+      finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
+         lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
+         *unbounded, *infeasible);
 
-      /* don't abort, if enough changes were applied to the variables */
-      finished = finished
-         && (scip->transprob->nvars == 0
-            || (scip->stat->npresolfixedvars - lastnfixedvars
-               + scip->stat->npresolaggrvars - lastnaggrvars
-               + scip->stat->npresolchgvartypes - lastnchgvartypes
-               + scip->stat->npresolchgbds - lastnchgbds
-               + scip->stat->npresoladdholes - lastnaddholes <= abortfac * scip->transprob->nvars));
+      /* if the presolving will be terminated, call the delayed presolvers */
+      while( finished && delayed )
+      {
+         /* call the delayed presolvers and constraint handlers */
+         CHECK_OKAY( presolveRound(scip, TRUE, &delayed, unbounded, infeasible) );
 
-      /* don't abort, if enough changes were applied to the constraints */
-      finished = finished
-         && (scip->transprob->nconss == 0
-            || (scip->stat->npresoldelconss - lastndelconss
-               + scip->stat->npresolupgdconss - lastnupgdconss
-               + scip->stat->npresolchgsides - lastnchgsides
-               <= abortfac * scip->transprob->nconss));
-
-      /* don't abort, if enough changes were applied to the coefficients (assume a 20% density of non-zero elements) */
-      finished = finished
-         && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
-            || (scip->stat->npresolchgcoefs - lastnchgcoefs
-               <= abortfac * 0.2 * scip->transprob->nvars * scip->transprob->nconss));
-
-      /* abort if problem is infeasible or unbounded */
-      finished = finished || *unbounded || *infeasible;
-
-      /* abort if maximal number of presolving rounds is reached */
-      finished = finished || (scip->stat->npresolrounds >= maxnrounds);
+         /* check again, if we should abort presolving due to not enough changes in the last round */
+         finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
+            lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
+            *unbounded, *infeasible);
+      }
 
       if( !finished )
       {

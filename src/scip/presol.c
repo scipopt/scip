@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.25 2005/02/07 14:08:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.26 2005/02/07 18:12:00 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -72,6 +72,7 @@ RETCODE SCIPpresolCreate(
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -91,7 +92,6 @@ RETCODE SCIPpresolCreate(
    ALLOC_OKAY( allocMemory(presol) );
    ALLOC_OKAY( duplicateMemoryArray(&(*presol)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray(&(*presol)->desc, desc, strlen(desc)+1) );
-   (*presol)->priority = priority;
    (*presol)->presolfree = presolfree;
    (*presol)->presolinit = presolinit;
    (*presol)->presolexit = presolexit;
@@ -100,6 +100,7 @@ RETCODE SCIPpresolCreate(
    (*presol)->presolexec = presolexec;
    (*presol)->presoldata = presoldata;
    CHECK_OKAY( SCIPclockCreate(&(*presol)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   (*presol)->wasdelayed = FALSE;
    (*presol)->initialized = FALSE;
 
    /* add parameters */
@@ -108,10 +109,16 @@ RETCODE SCIPpresolCreate(
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*presol)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdPresolPriority, (PARAMDATA*)(*presol)) ); /*lint !e740*/
+
    sprintf(paramname, "presolving/%s/maxrounds", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname,
          "maximal number of presolving rounds the presolver participates in (-1: no limit)",
          &(*presol)->maxrounds, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
+
+   sprintf(paramname, "presolving/%s/delay", name);
+   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+         "should presolver be delayed, if other presolvers found reductions?",
+         &(*presol)->delay, delay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -290,6 +297,7 @@ RETCODE SCIPpresolExitpre(
 RETCODE SCIPpresolExec(
    PRESOL*          presol,             /**< presolver */
    SET*             set,                /**< global SCIP settings */
+   Bool             execdelayed,        /**< execute presolver even if it is marked to be delayed */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
@@ -330,10 +338,8 @@ RETCODE SCIPpresolExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check number of presolving rounds */
-   if( presol->maxrounds >= 0 && nrounds >= presol->maxrounds )
+   if( presol->maxrounds >= 0 && nrounds >= presol->maxrounds && !presol->wasdelayed )
       return SCIP_OKAY;
-
-   debugMessage("calling presolver <%s>\n", presol->name);
 
    /* calculate the number of changes since last call */
    nnewfixedvars = *nfixedvars - presol->lastnfixedvars;
@@ -366,40 +372,55 @@ RETCODE SCIPpresolExec(
    presol->lastnchgcoefs = *nchgcoefs;
    presol->lastnchgsides = *nchgsides;
 
-   /* start timing */
-   SCIPclockStart(presol->clock, set);
-
-   /* call external method */
-   CHECK_OKAY( presol->presolexec(set->scip, presol, nrounds,
-                  nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-                  nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
-                  nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-                  ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
-
-   /* stop timing */
-   SCIPclockStop(presol->clock, set);
-
-   /* count the new changes */
-   presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
-   presol->naggrvars += *naggrvars - presol->lastnaggrvars;
-   presol->nchgvartypes += *nchgvartypes - presol->lastnchgvartypes;
-   presol->nchgbds += *nchgbds - presol->lastnchgbds;
-   presol->naddholes += *naddholes - presol->lastnaddholes;
-   presol->ndelconss += *ndelconss - presol->lastndelconss;
-   presol->nupgdconss += *nupgdconss - presol->lastnupgdconss;
-   presol->nchgcoefs += *nchgcoefs - presol->lastnchgcoefs;
-   presol->nchgsides += *nchgsides - presol->lastnchgsides;
-
-   /* check result code of callback method */
-   if( *result != SCIP_CUTOFF
-      && *result != SCIP_UNBOUNDED
-      && *result != SCIP_SUCCESS
-      && *result != SCIP_DIDNOTFIND
-      && *result != SCIP_DIDNOTRUN )
+   /* check, if presolver should be delayed */
+   if( !presol->delay || execdelayed )
    {
-      errorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
-      return SCIP_INVALIDRESULT;
+      debugMessage("calling presolver <%s>\n", presol->name);
+
+      /* start timing */
+      SCIPclockStart(presol->clock, set);
+
+      /* call external method */
+      CHECK_OKAY( presol->presolexec(set->scip, presol, nrounds,
+            nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+            nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+            nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+            ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+      /* stop timing */
+      SCIPclockStop(presol->clock, set);
+
+      /* count the new changes */
+      presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
+      presol->naggrvars += *naggrvars - presol->lastnaggrvars;
+      presol->nchgvartypes += *nchgvartypes - presol->lastnchgvartypes;
+      presol->nchgbds += *nchgbds - presol->lastnchgbds;
+      presol->naddholes += *naddholes - presol->lastnaddholes;
+      presol->ndelconss += *ndelconss - presol->lastndelconss;
+      presol->nupgdconss += *nupgdconss - presol->lastnupgdconss;
+      presol->nchgcoefs += *nchgcoefs - presol->lastnchgcoefs;
+      presol->nchgsides += *nchgsides - presol->lastnchgsides;
+
+      /* check result code of callback method */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_SUCCESS
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN
+         && *result != SCIP_DELAYED )
+      {
+         errorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
    }
+   else
+   {
+      debugMessage("presolver <%s> was delayed\n", presol->name);
+      *result = SCIP_DELAYED;
+   }
+
+   /* remember whether presolver was delayed */
+   presol->wasdelayed = (*result == SCIP_DELAYED);
 
    return SCIP_OKAY;
 }
@@ -467,6 +488,16 @@ void SCIPpresolSetPriority(
    
    presol->priority = priority;
    set->presolssorted = FALSE;
+}
+
+/** was presolver delayed at the last call? */
+Bool SCIPpresolWasDelayed(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->wasdelayed;
 }
 
 /** is presolver initialized? */
