@@ -1,0 +1,9 @@
+#--- $Id: make.seq.sunos.sparc.sun.dbg,v 1.1 2002/10/23 14:31:42 bzfpfend Exp $
+CC		=	cc
+CXX		=	CC
+#CPPFLAGS	+=	-DWITH_READLINE
+CFLAGS		=	-g +w
+CXXFLAGS	=	-g +w
+AR		=	CC
+ARFLAGS		=	$(CPPFLAGS) $(CXXFLAGS) -xar -o
+#LDFLAGS		+=	-lreadline -lncurses -static

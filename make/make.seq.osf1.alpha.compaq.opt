@@ -1,0 +1,9 @@
+#--- $Id: make.seq.osf1.alpha.compaq.opt,v 1.1 2002/10/23 14:31:42 bzfpfend Exp $
+CC		=	cc
+CXX		=	cxx
+CPPFLAGS        +=      -DNDEBUG
+CFLAGS		=	-O4 -fast
+CXXFLAGS	=	-std strict_ansi -O4 -fast -noexceptions -nortti
+LDFLAGS		+=	-non_shared -om
+ARFLAGS		=	crs
+
