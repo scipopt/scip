@@ -365,6 +365,12 @@ void coefChanged(
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
+
+   row->pseudoactivity = SCIP_INVALID;
+   row->minactivity = SCIP_INVALID;
+   row->maxactivity = SCIP_INVALID;
+   row->validpsactivitybdchg = -1;
+   row->validactivitybdsbdchg = -1;
 }
 
    
@@ -723,10 +729,6 @@ RETCODE rowAddCoeff(
       row->nunlinked++;
    row->len++;
 
-   row->pseudoactivity = SCIP_INVALID;
-   row->validpsactivity = FALSE;
-   CHECK_OKAY( SCIProwInvalidateActivityBounds(row) );
-
    rowAddNorms(row, set, col->index, val);
 
    coefChanged(row, col, lp);
@@ -783,10 +785,6 @@ RETCODE rowDelCoeffPos(
    }
    row->len--;
    
-   row->pseudoactivity = SCIP_INVALID;
-   row->validpsactivity = FALSE;
-   CHECK_OKAY( SCIProwInvalidateActivityBounds(row) );
-
    rowDelNorms(row, set, col->index, val);
 
    coefChanged(row, col, lp);
@@ -834,10 +832,6 @@ RETCODE rowChgCoeffPos(
       row->vals[pos] = val;
       rowAddNorms(row, set, -1, row->vals[pos]);
       coefChanged(row, row->cols[pos], lp);
-
-      row->pseudoactivity = SCIP_INVALID;
-      row->validpsactivity = FALSE;
-      CHECK_OKAY( SCIProwInvalidateActivityBounds(row) );
    }
 
    return SCIP_OKAY;
@@ -889,191 +883,6 @@ RETCODE rowSideChanged(
    }
 
    return SCIP_OKAY;
-}
-
-/** updates rows pseudo activity after the best bound of column changed */
-static
-void rowUpdatePseudoActivity(
-   ROW*             row,                /**< row data */
-   int              pos,                /**< position of column in row, that was changed */
-   Real             oldbestbound,       /**< old best (w.r.t. objective function) bound of column */
-   Real             newbestbound        /**< new best (w.r.t. objective function) bound of column */
-   )
-{
-   assert(row != NULL);
-   assert(pos >= 0 && pos < row->len);
-   assert(row->cols[pos] != NULL);
-   assert(row->cols[pos]->var != NULL);
-   assert(row->cols[pos]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(row->cols[pos]->var->data.col == row->cols[pos]);
-
-   if( row->validpsactivity )
-   {
-      assert(row->pseudoactivity < SCIP_INVALID);
-      row->pseudoactivity += (newbestbound - oldbestbound) * row->vals[pos];
-   }
-}
-
-/** updates rows pseudo activity after the constant was changed */
-static
-void rowUpdatePseudoActivityConstant(
-   ROW*             row,                /**< row data */
-   Real             oldconstant,        /**< old constant of row */
-   Real             newconstant         /**< new constant of row */
-   )
-{
-   assert(row != NULL);
-
-   if( row->validpsactivity )
-   {
-      assert(row->pseudoactivity < SCIP_INVALID);
-      row->pseudoactivity += newconstant - oldconstant;
-   }
-}
-
-/** updates rows activity bounds after the lower bound of column changed */
-static
-void rowUpdateActivityBoundsLb(
-   ROW*             row,                /**< row data */
-   const SET*       set,                /**< global SCIP settings */
-   int              pos,                /**< position of column in row, that was changed */
-   Real             oldlb,              /**< old lower bound of column */
-   Real             newlb               /**< new lower bound of column */
-   )
-{
-   assert(row != NULL);
-   assert(pos >= 0 && pos < row->len);
-   assert(row->cols[pos] != NULL);
-   assert(row->cols[pos]->var != NULL);
-   assert(row->cols[pos]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(row->cols[pos]->var->data.col == row->cols[pos]);
-
-   if( row->validactivitybds )
-   {
-      Real val;
-
-      assert(row->minactivity < SCIP_INVALID);
-      assert(row->maxactivity < SCIP_INVALID);
-      assert(row->minactivityinf >= 0);
-      assert(row->maxactivityinf >= 0);
-      assert(!SCIPsetIsInfinity(set, oldlb));
-      assert(!SCIPsetIsInfinity(set, newlb));
-
-      val = row->vals[pos];
-      if( val > 0.0 )
-      {
-         if( SCIPsetIsInfinity(set, -oldlb) )
-         {
-            assert(row->minactivityinf >= 1);
-            row->minactivityinf--;
-         }
-         else
-            row->minactivity -= val * oldlb;
-
-         if( SCIPsetIsInfinity(set, -newlb) )
-            row->minactivityinf++;
-         else
-            row->minactivity += val * newlb;
-      }
-      else
-      {
-         if( SCIPsetIsInfinity(set, -oldlb) )
-         {
-            assert(row->maxactivityinf >= 1);
-            row->maxactivityinf--;
-         }
-         else
-            row->maxactivity -= val * oldlb;
-
-         if( SCIPsetIsInfinity(set, -newlb) )
-            row->maxactivityinf++;
-         else
-            row->maxactivity += val * newlb;
-      }
-   }
-}
-
-/** updates rows activity bounds after the upper bound of column changed */
-static
-void rowUpdateActivityBoundsUb(
-   ROW*             row,                /**< row data */
-   const SET*       set,                /**< global SCIP settings */
-   int              pos,                /**< position of column in row, that was changed */
-   Real             oldub,              /**< old upper bound of column */
-   Real             newub               /**< new upper bound of column */
-   )
-{
-   assert(row != NULL);
-   assert(pos >= 0 && pos < row->len);
-   assert(row->cols[pos] != NULL);
-   assert(row->cols[pos]->var != NULL);
-   assert(row->cols[pos]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(row->cols[pos]->var->data.col == row->cols[pos]);
-
-   if( row->validactivitybds )
-   {
-      Real val;
-
-      assert(row->minactivity < SCIP_INVALID);
-      assert(row->maxactivity < SCIP_INVALID);
-      assert(row->minactivityinf >= 0);
-      assert(row->maxactivityinf >= 0);
-      assert(!SCIPsetIsInfinity(set, -oldub));
-      assert(!SCIPsetIsInfinity(set, -newub));
-
-      val = row->vals[pos];
-      if( val > 0.0 )
-      {
-         if( SCIPsetIsInfinity(set, oldub) )
-         {
-            assert(row->maxactivityinf >= 1);
-            row->maxactivityinf--;
-         }
-         else
-            row->maxactivity -= val * oldub;
-
-         if( SCIPsetIsInfinity(set, newub) )
-            row->maxactivityinf++;
-         else
-            row->maxactivity += val * newub;
-      }
-      else
-      {
-         if( SCIPsetIsInfinity(set, oldub) )
-         {
-            assert(row->minactivityinf >= 1);
-            row->minactivityinf--;
-         }
-         else
-            row->minactivity -= val * oldub;
-
-         if( SCIPsetIsInfinity(set, newub) )
-            row->minactivityinf++;
-         else
-            row->minactivity += val * newub;
-      }
-   }
-}
-
-/** updates rows activity bounds after the constant was changed */
-static
-void rowUpdateActivityBoundsConstant(
-   ROW*             row,                /**< row data */
-   Real             oldconstant,        /**< old constant of row */
-   Real             newconstant         /**< new constant of row */
-   )
-{
-   assert(row != NULL);
-
-   if( row->validactivitybds )
-   {
-      assert(row->minactivity < SCIP_INVALID);
-      assert(row->maxactivity < SCIP_INVALID);
-      assert(row->minactivityinf >= 0);
-      assert(row->maxactivityinf >= 0);
-      row->minactivity += newconstant - oldconstant;
-      row->maxactivity += newconstant - oldconstant;
-   }
 }
 
 
@@ -1587,79 +1396,6 @@ RETCODE SCIPcolBoundChanged(
       assert(lp->nchgcols > 0);
    }  
 
-   /* update pseudo activity of rows */
-   if( col->var->obj >= 0.0 && boundtype == SCIP_BOUNDTYPE_LOWER )
-   {
-      ROW** row;
-      int* linkpos;
-
-      row = col->rows;
-      linkpos = col->linkpos;
-      for( r = 0; r < col->len; ++r )
-      {
-         assert(row[r] != NULL);
-         if( linkpos[r] >= 0 )
-         {
-            assert(row[r]->cols[linkpos[r]] == col);
-            rowUpdatePseudoActivity(row[r], linkpos[r], oldbound, newbound);
-         }
-      }
-   }
-   else if( col->var->obj < 0.0 && boundtype == SCIP_BOUNDTYPE_UPPER )
-   {
-      ROW** row;
-      int* linkpos;
-
-      row = col->rows;
-      linkpos = col->linkpos;
-      for( r = 0; r < col->len; ++r )
-      {
-         assert(row[r] != NULL);
-         if( linkpos[r] >= 0 )
-         {
-            assert(row[r]->cols[linkpos[r]] == col);
-            rowUpdatePseudoActivity(row[r], linkpos[r], oldbound, newbound);
-         }
-      }
-   }
-
-   /* update activity bounds of rows */
-   if( boundtype == SCIP_BOUNDTYPE_LOWER )
-   {
-      ROW** row;
-      int* linkpos;
-
-      row = col->rows;
-      linkpos = col->linkpos;
-      for( r = 0; r < col->len; ++r )
-      {
-         assert(row[r] != NULL);
-         if( linkpos[r] >= 0 )
-         {
-            assert(row[r]->cols[linkpos[r]] == col);
-            rowUpdateActivityBoundsLb(row[r], set, linkpos[r], oldbound, newbound);
-         }
-      }
-   }
-   else
-   {
-      ROW** row;
-      int* linkpos;
-
-      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      row = col->rows;
-      linkpos = col->linkpos;
-      for( r = 0; r < col->len; ++r )
-      {
-         assert(row[r] != NULL);
-         if( linkpos[r] >= 0 )
-         {
-            assert(row[r]->cols[linkpos[r]] == col);
-            rowUpdateActivityBoundsUb(row[r], set, linkpos[r], oldbound, newbound);
-         }
-      }
-   }
-
    return SCIP_OKAY;
 }
 
@@ -2008,8 +1744,6 @@ RETCODE SCIProwCreate(
    (*row)->pseudoactivity = SCIP_INVALID;
    (*row)->minactivity = SCIP_INVALID;
    (*row)->maxactivity = SCIP_INVALID;
-   (*row)->minactivityinf = -1;
-   (*row)->maxactivityinf = -1;
    (*row)->index = stat->nrowidx++;
    (*row)->size = len;
    (*row)->len = len;
@@ -2021,11 +1755,11 @@ RETCODE SCIProwCreate(
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
    (*row)->validactivitylp = -1;
+   (*row)->validpsactivitybdchg = -1;
+   (*row)->validactivitybdsbdchg = -1;
    (*row)->age = 0;
    (*row)->obsoletenode = -1;
    (*row)->sorted = FALSE;
-   (*row)->validpsactivity = FALSE;
-   (*row)->validactivitybds = FALSE;
    (*row)->validminmaxidx = FALSE;
    (*row)->lhschanged = FALSE;
    (*row)->rhschanged = FALSE;
@@ -2418,6 +2152,7 @@ RETCODE SCIProwIncCoeff(
 RETCODE SCIProwAddConst(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Real             constant            /**< constant value to add to the row */
    )
@@ -2425,16 +2160,24 @@ RETCODE SCIProwAddConst(
    assert(row != NULL);
    assert(row->lhs <= row->rhs);
    assert(!SCIPsetIsInfinity(set, ABS(constant)));
+   assert(stat != NULL);
 
    if( !SCIPsetIsZero(set, constant) )
    {
-      Real oldconstant;
-
-      oldconstant = row->constant;
       row->constant += constant;
 
-      rowUpdatePseudoActivityConstant(row, oldconstant, row->constant);
-      rowUpdateActivityBoundsConstant(row, oldconstant, row->constant);
+      if( row->validpsactivitybdchg == stat->nboundchanges )
+      {
+         assert(row->pseudoactivity < SCIP_INVALID);
+         row->pseudoactivity += constant;
+      }
+      if( row->validactivitybdsbdchg == stat->nboundchanges )
+      {
+         assert(row->minactivity < SCIP_INVALID);
+         assert(row->maxactivity < SCIP_INVALID);
+         row->minactivity += constant;
+         row->maxactivity += constant;
+      }
 
       if( !SCIPsetIsInfinity(set, -row->lhs) )
       {
@@ -2496,7 +2239,7 @@ void rowCalcLPActivity(
    }
 }
 
-/** returns the activity of a row in the last LP or after recalculation */
+/** returns the activity of a row in the actual LP solution */
 Real SCIProwGetLPActivity(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
@@ -2513,7 +2256,7 @@ Real SCIProwGetLPActivity(
    return row->activity;
 }
 
-/** returns the feasibility of a row in the last solution or after recalc */
+/** returns the feasibility of a row in the actual LP solution */
 Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
@@ -2530,143 +2273,56 @@ Real SCIProwGetLPFeasibility(
 
 /** calculates the actual pseudo activity of a row */
 static
-RETCODE rowCalcPseudoActivity(
-   ROW*             row,                /**< row data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+void rowCalcPseudoActivity(
+   ROW*             row                 /**< row data */
    )
 {
    int i;
 
    assert(row != NULL);
-   assert(!row->validpsactivity);
-   assert(row->pseudoactivity >= SCIP_INVALID);
 
-   /* link row to the columns, such that a column bound change affects the now valid pseudo activity */
-   CHECK_OKAY( rowLink(row, memhdr, set, lp) );
-   
-   /* calculate activity bounds */
-   row->validpsactivity = TRUE;
    row->pseudoactivity = row->constant;
    for( i = 0; i < row->len; ++i )
    {
       assert(row->cols[i] != NULL);
       assert(row->cols[i]->var != NULL);
-      rowUpdatePseudoActivity(row, i, 0.0, SCIPvarGetPseudoSol(row->cols[i]->var));
-   }
+      assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
 
-   return SCIP_OKAY;
+      row->pseudoactivity += SCIPvarGetBestBound(row->cols[i]->var) * row->vals[i];
+   }
 }
 
-/** returns the pseudo activity of a row */
-RETCODE SCIProwGetPseudoActivity(
+/** returns the pseudo activity of a row in the actual pseudo solution */
+Real SCIProwGetPseudoActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real*            pseudoactivity      /**< pointer to store the pseudo activity */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(row != NULL);
-   assert(pseudoactivity != NULL);
+   assert(row->validpsactivitybdchg <= stat->nboundchanges);
 
    /* check, if activity bounds has to be calculated */
-   if( !row->validpsactivity )
-   {
-      assert(row->pseudoactivity >= SCIP_INVALID);
-      CHECK_OKAY( rowCalcPseudoActivity(row, memhdr, set, lp) );
-   }
-#ifdef DEBUG
-   else
-   {
-      Real oldpseudoactivity;
-
-      /* test, if updating of pseudo activity was correct */
-      oldpseudoactivity = row->pseudoactivity;
-      row->validpsactivity = FALSE;
-      row->pseudoactivity = SCIP_INVALID;
-      CHECK_OKAY( rowCalcPseudoActivity(row, memhdr, set, lp) );
-      assert(SCIPsetIsSumEQ(set, row->pseudoactivity, oldpseudoactivity));
-      row->pseudoactivity = oldpseudoactivity;
-   }
-#endif
-
-   assert(row->validpsactivity);
+   if( row->validpsactivitybdchg != stat->nboundchanges )
+      rowCalcPseudoActivity(row);
    assert(row->pseudoactivity < SCIP_INVALID);
+   row->validpsactivitybdchg = stat->nboundchanges;
 
-   *pseudoactivity = row->pseudoactivity;
-
-   return SCIP_OKAY;
+   return row->pseudoactivity;
 }
 
-/** returns the feasibility of a row in the actual pseudo solution */
-RETCODE SCIProwGetPseudoFeasibility(
+/** returns the pseudo feasibility of a row in the actual pseudo solution */
+Real SCIProwGetPseudoFeasibility(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real*            pseudofeasibility   /**< pointer to store the pseudo feasibility */
+   STAT*            stat                /**< problem statistics */
    )
 {
    Real pseudoactivity;
 
    assert(row != NULL);
-   assert(pseudofeasibility != NULL);
 
-   CHECK_OKAY( SCIProwGetPseudoActivity(row, memhdr, set, lp, &pseudoactivity) );
+   pseudoactivity = SCIProwGetPseudoActivity(row, stat);
 
-   *pseudofeasibility = MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
-
-   return SCIP_OKAY;
-}
-
-/** returns the activity of a row in the last LP or after recalculation */
-RETCODE SCIProwGetActivity(
-   ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   Real*            activity            /**< pointer to store the activity */
-   )
-{
-   assert(tree != NULL);
-   assert(activity != NULL);
-
-   if( tree->actnodehaslp )
-      *activity = SCIProwGetLPActivity(row, stat);
-   else
-   {
-      CHECK_OKAY( SCIProwGetPseudoActivity(row, memhdr, set, lp, activity) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** returns the feasibility of a row in the last solution or after recalc */
-RETCODE SCIProwGetFeasibility(
-   ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   Real*            feasibility         /**< pointer to store the feasibility */
-   )
-{
-   assert(tree != NULL);
-   assert(feasibility != NULL);
-
-   if( tree->actnodehaslp )
-      *feasibility = SCIProwGetLPFeasibility(row, stat);
-   else
-   {
-      CHECK_OKAY( SCIProwGetPseudoFeasibility(row, memhdr, set, lp, feasibility) );
-   }
-
-   return SCIP_OKAY;
+   return MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
 }
 
 /** returns the activity of a row for a given solution */
@@ -2720,220 +2376,99 @@ RETCODE SCIProwGetSolFeasibility(
 
 /** calculates minimal and maximal activity of row w.r.t. the column's bounds */
 static
-RETCODE rowCalcActivityBounds(
+void rowCalcActivityBounds(
    ROW*             row,                /**< row data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
+   VAR* var;
+   Real val;
+   Bool mininfinite;
+   Bool maxinfinite;
    int i;
    
    assert(row != NULL);
    assert(!SCIPsetIsInfinity(set, ABS(row->constant)));
    
-   /* link row to the columns, such that a column bound change affects the now valid activity bounds */
-   CHECK_OKAY( rowLink(row, memhdr, set, lp) );
-   
    /* calculate activity bounds */
-   row->validactivitybds = TRUE;
+   mininfinite = FALSE;
+   maxinfinite = FALSE;
    row->minactivity = row->constant;
    row->maxactivity = row->constant;
-   row->minactivityinf = 0;
-   row->maxactivityinf = 0;
-   for( i = 0; i < row->len; ++i )
+   for( i = 0; i < row->len && (!mininfinite || !maxinfinite); ++i )
    {
       assert(row->cols[i] != NULL);
-      assert(row->cols[i]->var != NULL);
-      rowUpdateActivityBoundsLb(row, set, i, 0.0, row->cols[i]->var->dom.lb);
-      rowUpdateActivityBoundsUb(row, set, i, 0.0, row->cols[i]->var->dom.ub);      
+      var = row->cols[i]->var;
+      assert(var != NULL);
+      val = row->vals[i];
+      if( val >= 0.0 )
+      {
+         mininfinite |= SCIPsetIsInfinity(set, -var->dom.lb);
+         maxinfinite |= SCIPsetIsInfinity(set, var->dom.ub);
+         if( !mininfinite )
+            row->minactivity += val * row->cols[i]->var->dom.lb;
+         if( !maxinfinite )
+            row->maxactivity += val * row->cols[i]->var->dom.ub;
+      }
+      else
+      {
+         mininfinite |= SCIPsetIsInfinity(set, var->dom.ub);
+         maxinfinite |= SCIPsetIsInfinity(set, -var->dom.lb);
+         if( !mininfinite )
+            row->minactivity += val * row->cols[i]->var->dom.ub;
+         if( !maxinfinite )
+            row->maxactivity += val * row->cols[i]->var->dom.lb;
+      }
    }
 
-   return SCIP_OKAY;
+   if( mininfinite )
+      row->minactivity = -set->infinity;
+   if( maxinfinite )
+      row->maxactivity = set->infinity;
 }
 
-/** returns the minimal and maximal activity of a row w.r.t. the column's bounds */
-RETCODE SCIProwGetActivityBounds(
+/** returns the minimal activity of a row w.r.t. the column's bounds */
+Real SCIProwGetMinActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
-   Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
+   STAT*            stat                /**< problem statistics data */
    )
 {
    assert(row != NULL);
+   assert(stat != NULL);
+   assert(row->validactivitybdsbdchg <= stat->nboundchanges);
 
    /* check, if activity bounds has to be calculated */
-   if( !row->validactivitybds )
-   {
-      assert(row->minactivity >= SCIP_INVALID);
-      assert(row->maxactivity >= SCIP_INVALID);
-      assert(row->minactivityinf == -1);
-      assert(row->maxactivityinf == -1);      
-      CHECK_OKAY( rowCalcActivityBounds(row, memhdr, set, lp) );
-   }
-#ifdef DEBUG
-   else
-   {
-      Real oldminactivity;
-      Real oldmaxactivity;
-      int oldminactivityinf;
-      int oldmaxactivityinf;
-
-      /* test, if updating of activity bounds was correct */
-      oldminactivity = row->minactivity;
-      oldmaxactivity = row->maxactivity;
-      oldminactivityinf = row->minactivityinf;
-      oldmaxactivityinf = row->maxactivityinf;
-      CHECK_OKAY( rowCalcActivityBounds(row, memhdr, set, lp) );
-      assert(SCIPsetIsSumEQ(set, row->minactivity, oldminactivity));
-      assert(SCIPsetIsSumEQ(set, row->maxactivity, oldmaxactivity));
-      assert(row->minactivityinf == oldminactivityinf);
-      assert(row->maxactivityinf == oldmaxactivityinf);
-      row->minactivity = oldminactivity;
-      row->maxactivity = oldmaxactivity;
-   }
-#endif
-
-   assert(row->validactivitybds);
+   if( row->validactivitybdsbdchg != stat->nboundchanges )
+      rowCalcActivityBounds(row, set);
    assert(row->minactivity < SCIP_INVALID);
    assert(row->maxactivity < SCIP_INVALID);
+   row->validactivitybdsbdchg = stat->nboundchanges;
 
-   if( minactivity != NULL )
-   {
-      if( row->minactivityinf > 0 )
-         *minactivity = -set->infinity;
-      else
-         *minactivity = row->minactivity;
-   }
-   if( maxactivity != NULL )
-   {
-      if( row->maxactivityinf > 0 )
-         *maxactivity = set->infinity;
-      else
-         *maxactivity = row->maxactivity;
-   }
-
-   return SCIP_OKAY;
+   return row->minactivity;
 }
    
-/** gets activity bounds for row after setting variable to zero */
-RETCODE SCIProwGetActivityResiduals(
+/** returns the maximal activity of a row w.r.t. the column's bounds */
+Real SCIProwGetMaxActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   VAR*             var,                /**< variable to calculate activity residual for */
-   Real             val,                /**< coefficient value of variable in linear constraint */
-   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
-   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
+   STAT*            stat                /**< problem statistics data */
    )
 {
-   Real lb;
-   Real ub;
-
    assert(row != NULL);
-   assert(var != NULL);
-   assert(minresactivity != NULL);
-   assert(maxresactivity != NULL);
+   assert(stat != NULL);
+   assert(row->validactivitybdsbdchg <= stat->nboundchanges);
 
-   if( !row->validactivitybds )
-      rowCalcActivityBounds(row, memhdr, set, lp);
+   /* check, if activity bounds has to be calculated */
+   if( row->validactivitybdsbdchg != stat->nboundchanges )
+      rowCalcActivityBounds(row, set);
    assert(row->minactivity < SCIP_INVALID);
    assert(row->maxactivity < SCIP_INVALID);
-   
-   lb = SCIPvarGetLb(var);
-   ub = SCIPvarGetUb(var);
-   assert(!SCIPsetIsInfinity(set, lb));
-   assert(!SCIPsetIsInfinity(set, -ub));
-   
-   if( val > 0.0 )
-   {
-      if( SCIPsetIsInfinity(set, -lb) )
-      {
-         assert(row->minactivityinf >= 1);
-         if( row->minactivityinf >= 2 )
-            *minresactivity = -set->infinity;
-         else
-            *minresactivity = row->minactivity;
-      }
-      else
-      {
-         if( row->minactivityinf >= 1 )
-            *minresactivity = -set->infinity;
-         else
-            *minresactivity = row->minactivity - val * lb;
-      }
-      if( SCIPsetIsInfinity(set, ub) )
-      {
-         assert(row->maxactivityinf >= 1);
-         if( row->maxactivityinf >= 2 )
-            *maxresactivity = +set->infinity;
-         else
-            *maxresactivity = row->maxactivity;
-      }
-      else
-      {
-         if( row->maxactivityinf >= 1 )
-            *maxresactivity = +set->infinity;
-         else
-            *maxresactivity = row->maxactivity - val * ub;
-      }
-   }
-   else
-   {
-      if( SCIPsetIsInfinity(set, ub) )
-      {
-         assert(row->minactivityinf >= 1);
-         if( row->minactivityinf >= 2 )
-            *minresactivity = -set->infinity;
-         else
-            *minresactivity = row->minactivity;
-      }
-      else
-      {
-         if( row->minactivityinf >= 1 )
-            *minresactivity = -set->infinity;
-         else
-            *minresactivity = row->minactivity - val * ub;
-      }
-      if( SCIPsetIsInfinity(set, -lb) )
-      {
-         assert(row->maxactivityinf >= 1);
-         if( row->maxactivityinf >= 2 )
-            *maxresactivity = +set->infinity;
-         else
-            *maxresactivity = row->maxactivity;
-      }
-      else
-      {
-         if( row->maxactivityinf >= 1 )
-            *maxresactivity = +set->infinity;
-         else
-            *maxresactivity = row->maxactivity - val * lb;
-      }
-   }
+   row->validactivitybdsbdchg = stat->nboundchanges;
 
-   return SCIP_OKAY;
+   return row->maxactivity;
 }
-
-/** invalidates activity bounds, such that they are recalculated in next get */
-RETCODE SCIProwInvalidateActivityBounds(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   row->validactivitybds = FALSE;
-   row->minactivity = SCIP_INVALID;
-   row->maxactivity = SCIP_INVALID;
-   row->minactivityinf = -1;
-   row->maxactivityinf = -1;
-
-   return SCIP_OKAY;
-}
-
+   
 /** gets maximal absolute value of row vector coefficients */
 Real SCIProwGetMaxval(
    ROW*             row,                /**< LP row */

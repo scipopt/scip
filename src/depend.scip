@@ -4,6 +4,12 @@ $(OBJDIR)/branch.o: src/branch.c src/branch.h src/scip.h src/def.h src/retcode.h
   src/stat.h src/lpi.h src/sol.h src/heur.h src/prob.h src/tree.h \
   src/nodesel.h src/disp.h src/buffer.h src/price.h src/sepa.h \
   src/cutpool.h src/primal.h
+$(OBJDIR)/branch_fullstrong.o: src/branch_fullstrong.c src/branch_fullstrong.h \
+  src/scip.h src/def.h src/retcode.h src/result.h src/memory.h \
+  src/message.h src/reader.h src/cons.h src/mem.h src/set.h src/sort.h \
+  src/event.h src/var.h src/lp.h src/stat.h src/lpi.h src/sol.h \
+  src/heur.h src/prob.h src/tree.h src/nodesel.h src/branch.h src/disp.h \
+  src/buffer.h src/price.h src/sepa.h src/cutpool.h src/primal.h
 $(OBJDIR)/branch_mostinf.o: src/branch_mostinf.c src/branch_mostinf.h src/scip.h \
   src/def.h src/retcode.h src/result.h src/memory.h src/message.h \
   src/reader.h src/cons.h src/mem.h src/set.h src/sort.h src/event.h \

@@ -142,12 +142,8 @@ struct Row
    Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
    Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
-   Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID,
-                                         *   ignoring the coefficients contributing with infinite value */
-   Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID,
-                                         *   ignoring the coefficients contributing with infinite value */
-   int              minactivityinf;     /**< number of coefficients contributing with infinite value to minactivity */
-   int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
+   Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
+   Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
@@ -159,11 +155,11 @@ struct Row
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int              validactivitylp;    /**< lp number for which activity value is valid */
+   Longint          validpsactivitybdchg; /**< bound change number for which pseudo activity value is valid */
+   Longint          validactivitybdsbdchg;/**< bound change number for which activity bound values are valid */
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
    Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
-   unsigned int     validpsactivity:1;  /**< is the pseudo activity valid? */
-   unsigned int     validactivitybds:1; /**< are the activity bounds minactivity/maxactivity valid? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
    unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
    unsigned int     rhschanged:1;       /**< was right hand side changed, and has data of LP solver to be updated? */
@@ -171,7 +167,7 @@ struct Row
    unsigned int     local:1;            /**< is row only valid locally? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int     removeable:1;       /**< TRUE iff row is removeable from the LP (due to aging or cleanup) */
-   unsigned int     nlocks:22;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
 };
 
 /** actual LP data */
@@ -507,6 +503,7 @@ extern
 RETCODE SCIProwAddConst(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Real             constant            /**< constant value to add to the row */
    );
@@ -529,62 +526,32 @@ RETCODE SCIProwChgRhs(
    Real             rhs                 /**< new right hand side */
    );
 
-/** returns the activity of a row in the last LP or after recalculation */
+/** returns the activity of a row in the actual LP solution */
 extern
 Real SCIProwGetLPActivity(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );
 
-/** returns the feasibility of a row in the last solution or after recalc */
+/** returns the feasibility of a row in the actual LP solution */
 extern
 Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );
 
-/** returns the pseudo activity of a row */
+/** returns the pseudo activity of a row in the actual pseudo solution */
 extern
-RETCODE SCIProwGetPseudoActivity(
+Real SCIProwGetPseudoActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real*            pseudoactivity      /**< pointer to store the pseudo activity */
+   STAT*            stat                /**< problem statistics */
    );
 
-/** returns the feasibility of a row in the actual pseudo solution */
+/** returns the pseudo feasibility of a row in the actual pseudo solution */
 extern
-RETCODE SCIProwGetPseudoFeasibility(
+Real SCIProwGetPseudoFeasibility(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real*            pseudofeasibility   /**< pointer to store the pseudo feasibility */
-   );
-
-/** returns the activity of a row in the last LP or after recalculation */
-extern
-RETCODE SCIProwGetActivity(
-   ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   Real*            activity            /**< pointer to store the activity */
-   );
-
-/** returns the feasibility of a row in the last solution or after recalc */
-extern
-RETCODE SCIProwGetFeasibility(
-   ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   Real*            feasibility         /**< pointer to store the feasibility */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** returns the activity of a row for a given solution */
@@ -609,34 +576,20 @@ RETCODE SCIProwGetSolFeasibility(
    Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
    );
 
-/** returns the minimal and maximal activity of a row w.r.t. the column's bounds */
+/** returns the minimal activity of a row w.r.t. the column's bounds */
 extern
-RETCODE SCIProwGetActivityBounds(
+Real SCIProwGetMinActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
-   Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
+   STAT*            stat                /**< problem statistics data */
    );
 
-/** gets activity bounds for row after setting variable to zero */
+/** returns the maximal activity of a row w.r.t. the column's bounds */
 extern
-RETCODE SCIProwGetActivityResiduals(
+Real SCIProwGetMaxActivity(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   VAR*             var,                /**< variable to calculate activity residual for */
-   Real             val,                /**< coefficient value of variable in linear constraint */
-   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
-   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
-   );
-
-/** invalidates activity bounds, such that they are recalculated in next get */
-extern
-RETCODE SCIProwInvalidateActivityBounds(
-   ROW*             row                 /**< LP row */
+   STAT*            stat                /**< problem statistics data */
    );
 
 /** gets maximal absolute value of row vector coefficients */

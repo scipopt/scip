@@ -1573,19 +1573,6 @@ RETCODE varProcessChgLb(
    oldbound = var->dom.lb;
    var->dom.lb = newbound;
 
-#if 0
-   /* inform LP and tree about bound change */
-   if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
-   {
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN )
-      {
-         CHECK_OKAY( SCIPcolBoundChanged(var->data.col, memhdr, set, lp, SCIP_BOUNDTYPE_LOWER, oldbound, newbound) );
-      }
-      CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_LOWER, oldbound, newbound) );
-      CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
-   }
-#endif
-
    /* issue bound change event */
    CHECK_OKAY( varEventLbChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldbound, newbound) );
 
@@ -1663,19 +1650,6 @@ RETCODE varProcessChgUb(
    /* change the bound */
    oldbound = var->dom.ub;
    var->dom.ub = newbound;
-
-#if 0
-   /* inform LP and tree about bound change */
-   if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
-   {
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN )
-      {
-         CHECK_OKAY( SCIPcolBoundChanged(var->data.col, memhdr, set, lp, SCIP_BOUNDTYPE_UPPER, oldbound, newbound) );
-      }
-      CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_UPPER, oldbound, newbound) );
-      CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
-   }
-#endif
 
    /* issue bound change event */
    CHECK_OKAY( varEventUbChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldbound, newbound) );
@@ -2244,13 +2218,13 @@ RETCODE SCIPvarAddToRow(
    case SCIP_VARSTATUS_FIXED:
       assert(var->dom.lb == var->dom.ub);
       assert(!SCIPsetIsInfinity(set, ABS(var->dom.lb)));
-      CHECK_OKAY( SCIProwAddConst(row, set, lp, val * var->dom.lb) );
+      CHECK_OKAY( SCIProwAddConst(row, set, stat, lp, val * var->dom.lb) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
       CHECK_OKAY( SCIPvarAddToRow(var->data.aggregate.var, memhdr, set, lp, stat, row, var->data.aggregate.scalar * val) );
-      CHECK_OKAY( SCIProwAddConst(row, set, lp, var->data.aggregate.constant * val) );
+      CHECK_OKAY( SCIProwAddConst(row, set, stat, lp, var->data.aggregate.constant * val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -2262,7 +2236,7 @@ RETCODE SCIPvarAddToRow(
          CHECK_OKAY( SCIPvarAddToRow(var->data.multaggr.vars[i], memhdr, set, lp, stat, row, 
                         var->data.multaggr.scalars[i] * val) );
       }
-      CHECK_OKAY( SCIProwAddConst(row, set, lp, var->data.multaggr.constant * val) );
+      CHECK_OKAY( SCIProwAddConst(row, set, stat, lp, var->data.multaggr.constant * val) );
       return SCIP_OKAY;
 
    default:

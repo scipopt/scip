@@ -472,6 +472,7 @@ RETCODE separate(
             }
             else
             {
+               /* constraint was feasible -> increase age */
                CHECK_OKAY( SCIPincConsAge(scip, cons) );
             }
          }

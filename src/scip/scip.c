@@ -2024,8 +2024,6 @@ RETCODE SCIPcreateRow(
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
-   assert(row != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
@@ -2053,8 +2051,6 @@ RETCODE SCIPreleaseRow(
    ROW**            row                 /**< pointer to LP row */
    )
 {
-   assert(row != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPreleaseRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIProwRelease(row, scip->mem->solvemem, scip->set, scip->lp) );
@@ -2068,8 +2064,6 @@ RETCODE SCIPforbidRowRounding(
    ROW*             row                 /**< LP row */
    )
 {
-   assert(row != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPforbidRowRounding", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    SCIProwForbidRounding(row, scip->set);
@@ -2083,8 +2077,6 @@ RETCODE SCIPallowRowRounding(
    ROW*             row                 /**< LP row */
    )
 {
-   assert(row != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPallowRowRounding", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    SCIProwAllowRounding(row, scip->set);
@@ -2099,8 +2091,6 @@ RETCODE SCIPchgRowLhs(
    Real             lhs                 /**< new left hand side */
    )
 {
-   assert(row != NULL);
-
    errorMessage("sides of row must not be changed (not implemented yet)");
    abort();
 #if 0
@@ -2118,8 +2108,6 @@ RETCODE SCIPchgRowRhs(
    Real             rhs                 /**< new right hand side */
    )
 {
-   assert(row != NULL);
-
    errorMessage("sides of row must not be changed (not implemented yet)");
    abort();
 #if 0
@@ -2138,9 +2126,6 @@ RETCODE SCIPaddVarToRow(
    Real             val                 /**< value of coefficient */
    )
 {
-   assert(row != NULL);
-   assert(var != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPaddVarToRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPvarAddToRow(var, scip->mem->solvemem, scip->set, scip->lp, scip->stat, row, val) );
@@ -2148,56 +2133,26 @@ RETCODE SCIPaddVarToRow(
    return SCIP_OKAY;
 }
 
-/** returns the minimal and maximal activity of a row w.r.t. the column's bounds */
-RETCODE SCIPgetRowActivityBounds(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row,                /**< LP row */
-   Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
-   Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
-   )
-{
-   assert(row != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPgetRowActivityBounds", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-   
-   CHECK_OKAY( SCIProwGetActivityBounds(row, scip->mem->solvemem, scip->set, scip->lp, minactivity, maxactivity) );
-
-   return SCIP_OKAY;
-}
-
-/** gets activity bounds for row after setting variable to zero */
-RETCODE SCIPgetRowActivityResiduals(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row,                /**< LP row */
-   VAR*             var,                /**< variable to calculate activity residual for */
-   Real             val,                /**< coefficient value of variable in linear constraint */
-   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
-   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
-   )
-{
-   assert(row != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPgetRowActivityResiduals", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-   
-   CHECK_OKAY( SCIProwGetActivityResiduals(row, scip->mem->solvemem, scip->set, scip->lp, var, val, 
-                  minresactivity, maxresactivity) );
-
-   return SCIP_OKAY;
-}
-
-/** invalidates activity bounds, such that they are recalculated in next get */
-RETCODE SCIPinvalidateRowActivityBounds(
+/** returns the minimal activity of a row w.r.t. the column's bounds */
+Real SCIPgetRowMinActivity(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */
    )
 {
-   assert(row != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPinvalidateRowActivityBounds", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetRowMinActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
    
-   CHECK_OKAY( SCIProwInvalidateActivityBounds(row) );
+   return SCIProwGetMinActivity(row, scip->set, scip->stat);
+}
 
-   return SCIP_OKAY;
+/** returns the maximal activity of a row w.r.t. the column's bounds */
+Real SCIPgetRowMaxActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetRowMaxActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   return SCIProwGetMaxActivity(row, scip->set, scip->stat);
 }
 
 /** returns the activity of a row in the last LP solution */
@@ -2206,8 +2161,6 @@ Real SCIPgetRowLPActivity(
    ROW*             row                 /**< LP row */
    )
 {
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowLPActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
    
    return SCIProwGetLPActivity(row, scip->stat);
@@ -2219,8 +2172,6 @@ Real SCIPgetRowLPFeasibility(
    ROW*             row                 /**< LP row */
    )
 {
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowLPFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
    
    return SCIProwGetLPFeasibility(row, scip->stat);
@@ -2232,15 +2183,9 @@ Real SCIPgetRowPseudoActivity(
    ROW*             row                 /**< LP row */
    )
 {
-   Real pseudoactivity;
-
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_ABORT( SCIProwGetPseudoActivity(row, scip->mem->solvemem, scip->set, scip->lp, &pseudoactivity) );
-   
-   return pseudoactivity;
+   return SCIProwGetPseudoActivity(row, scip->stat);
 }
 
 /** returns the feasibility of a row for the actual pseudo solution */
@@ -2249,15 +2194,9 @@ Real SCIPgetRowPseudoFeasibility(
    ROW*             row                 /**< LP row */
    )
 {
-   Real pseudofeasibility;
-
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_ABORT( SCIProwGetPseudoFeasibility(row, scip->mem->solvemem, scip->set, scip->lp, &pseudofeasibility) );
-   
-   return pseudofeasibility;
+   return SCIProwGetPseudoFeasibility(row, scip->stat);
 }
 
 /** returns the activity of a row in the last LP or pseudo solution */
@@ -2266,15 +2205,12 @@ Real SCIPgetRowActivity(
    ROW*             row                 /**< LP row */
    )
 {
-   Real activity;
-
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-   
-   CHECK_ABORT( SCIProwGetActivity(row, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, &activity) );
 
-   return activity;
+   if( scip->tree->actnodehaslp )
+      return SCIProwGetLPActivity(row, scip->stat);
+   else
+      return SCIProwGetPseudoActivity(row, scip->stat);
 }
 
 /** returns the feasibility of a row in the last LP or pseudo solution */
@@ -2283,16 +2219,12 @@ Real SCIPgetRowFeasibility(
    ROW*             row                 /**< LP row */
    )
 {
-   Real feasibility;
-
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_ABORT( SCIProwGetFeasibility(row, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
-                   &feasibility) );
-   
-   return feasibility;
+   if( scip->tree->actnodehaslp )
+      return SCIProwGetLPFeasibility(row, scip->stat);
+   else
+      return SCIProwGetPseudoFeasibility(row, scip->stat);
 }
 
 /** returns the activity of a row for the given primal solution */
@@ -2302,22 +2234,19 @@ Real SCIPgetRowSolActivity(
    SOL*             sol                 /**< primal CIP solution */
    )
 {
-   Real activity;
-
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    if( sol != NULL )
    {
-      CHECK_ABORT( SCIProwGetSolActivity(row, scip->mem->solvemem, scip->set, scip->stat, sol, &activity) );
-   }
-   else
-   {
-      CHECK_ABORT( SCIProwGetActivity(row, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, &activity) );
-   }
+      Real activity;
 
-   return activity;
+      CHECK_ABORT( SCIProwGetSolActivity(row, scip->mem->solvemem, scip->set, scip->stat, sol, &activity) );
+      return activity;
+   }
+   else if( scip->tree->actnodehaslp )
+      return SCIProwGetLPActivity(row, scip->stat);
+   else
+      return SCIProwGetPseudoActivity(row, scip->stat);
 }
 
 /** returns the feasibility of a row for the given primal solution */
@@ -2327,23 +2256,19 @@ Real SCIPgetRowSolFeasibility(
    SOL*             sol                 /**< primal CIP solution */
    )
 {
-   Real feasibility;
-
-   assert(row != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetRowSolFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    if( sol != NULL )
    {
-      CHECK_ABORT( SCIProwGetSolFeasibility(row, scip->mem->solvemem, scip->set, scip->stat, sol, &feasibility) );
-   }
-   else
-   {
-      CHECK_ABORT( SCIProwGetFeasibility(row, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
-                      &feasibility) );
-   }
+      Real feasibility;
 
-   return feasibility;
+      CHECK_ABORT( SCIProwGetSolFeasibility(row, scip->mem->solvemem, scip->set, scip->stat, sol, &feasibility) );
+      return feasibility;
+   }
+   else if( scip->tree->actnodehaslp )
+      return SCIProwGetLPFeasibility(row, scip->stat);
+   else
+      return SCIProwGetPseudoFeasibility(row, scip->stat);
 }
 
 /** output row to file stream */

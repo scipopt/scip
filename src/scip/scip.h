@@ -866,29 +866,16 @@ RETCODE SCIPaddVarToRow(
    Real             val                 /**< value of coefficient */
    );
 
-/** returns the minimal and maximal activity of a row w.r.t. the column's bounds */
+/** returns the minimal activity of a row w.r.t. the column's bounds */
 extern
-RETCODE SCIPgetRowActivityBounds(
+Real SCIPgetRowMinActivity(
    SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row,                /**< LP row */
-   Real*            minactivity,        /**< pointer to store the minimal activity, or NULL */
-   Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
+   ROW*             row                 /**< LP row */
    );
 
-/** gets activity bounds for row after setting variable to zero */
+/** returns the maximal activity of a row w.r.t. the column's bounds */
 extern
-RETCODE SCIPgetRowActivityResiduals(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row,                /**< LP row */
-   VAR*             var,                /**< variable to calculate activity residual for */
-   Real             val,                /**< coefficient value of variable in linear constraint */
-   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
-   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
-   );
-
-/** invalidates activity bounds, such that they are recalculated in next get */
-extern
-RETCODE SCIPinvalidateRowActivityBounds(
+Real SCIPgetRowMaxActivity(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */
    );
