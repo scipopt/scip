@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.37 2004/10/26 18:24:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.38 2004/11/02 17:21:48 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1000,7 +1000,6 @@ RETCODE SCIPeventfilterProcess(
    int i;
 
    assert(eventfilter != NULL);
-   assert(eventfilter->len == 0 || eventfilter->eventmask != 0x00000000);
    assert(set != NULL);
    assert(event != NULL);
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: check_cplex.sh,v 1.5 2004/10/22 13:02:48 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.6 2004/11/02 17:21:47 bzfpfend Exp $
 CPLEXBIN=cplex
 TSTNAME=$1
 BINNAME=$CPLEXBIN.$2
@@ -28,7 +28,7 @@ do
 	echo set timelimit $TIMELIMIT           >> $TMPFILE
 	echo set clocktype 1                    >> $TMPFILE
 	echo set mip interval 10000             >> $TMPFILE
-	echo set mip tolerances absmipgap 1e-10 >> $TMPFILE
+	echo set mip tolerances absmipgap 1e-9  >> $TMPFILE
 	echo set mip tolerances mipgap 0.0      >> $TMPFILE
 	echo set mip limits nodes $NODELIMIT    >> $TMPFILE
 	echo set mip limits treememory $MEMLIMIT >> $TMPFILE

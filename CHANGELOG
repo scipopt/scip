@@ -68,3 +68,4 @@ fixed bugs:
 - removed bug in conflict analysis that appears if the conflict is only active at the current depth level
 - missing SCIPlpiIsPrimalFeasible() and SCIPlpiIsDualFeasible() implemented in lpi_spx.cpp and lpi_spx121.cpp
 - removed preprocessing of linear constraint pairs with modifiable constraints
+- removed wrong assert "assert(eventfilter->len == 0 || eventfilter->eventmask != 0x00000000)" from event.c
