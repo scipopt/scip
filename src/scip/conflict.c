@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.56 2004/08/31 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.57 2004/09/02 12:07:21 bzfpfets Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -710,14 +710,6 @@ RETCODE conflictAnalyze(
 
    *success = FALSE;
 
-   /* check, if there is something to analyze */
-   if( SCIPpqueueNElems(conflict->binbdchgqueue) + SCIPpqueueNElems(conflict->nonbinbdchgqueue)
-      + conflict->nconflictvars == 0 )
-   {
-      errorMessage("no conflict bound changes to analyze\n");
-      return SCIP_INVALIDDATA;
-   }
-
    /* if the conflict set is only valid at the current node and not higher in the tree, no useful conflict clause
     * can be found
     */
@@ -874,7 +866,8 @@ RETCODE conflictAnalyze(
    }
 
    /* if a valid conflict set was found (where at least one resolution was applied), call the conflict handlers */
-   if( bdchginfo == NULL && validdepth < tree->actnode->depth && (!mustresolve || nresolutions >= 1) )
+   if( bdchginfo == NULL && validdepth < tree->actnode->depth
+       && (!mustresolve || nresolutions >= 1 || conflict->nconflictvars == 0) )
    {
       NODE* node;
       VAR* var;
