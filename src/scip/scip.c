@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.172 2004/06/02 07:39:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.173 2004/06/02 11:05:42 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9551,7 +9551,7 @@ Real SCIPceil(
    return SCIPsetCeil(scip->set, val);
 }
 
-/** returns fractional part of value, i.e. ceil(x) - x */
+/** returns fractional part of value, i.e. x - floor(x) */
 Real SCIPfrac(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to return fractional part for */

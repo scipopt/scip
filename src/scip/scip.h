@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.137 2004/06/02 07:39:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.138 2004/06/02 11:05:42 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3893,7 +3893,7 @@ Real SCIPceil(
    Real             val                 /**< value to be compared against zero */
    );
 
-/** returns fractional part of value, i.e. ceil(x) - x */
+/** returns fractional part of value, i.e. x - floor(x) */
 extern
 Real SCIPfrac(
    SCIP*            scip,               /**< SCIP data structure */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.64 2004/04/29 15:20:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.65 2004/06/02 11:05:43 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -888,7 +888,7 @@ Real SCIPsetCeil(
    Real             val                 /**< value to be compared against zero */
    );
 
-/** returns fractional part of value, i.e. ceil(x) - x */
+/** returns fractional part of value, i.e. x - floor(x) */
 extern
 Real SCIPsetFrac(
    SET*             set,                /**< global SCIP settings */
