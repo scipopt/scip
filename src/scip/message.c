@@ -46,16 +46,6 @@ void warningMessage(
    fprintf(stderr, "Warning: %s\n", msg);
 }
 
-/** prints a todo message */
-void todoMessage_call(
-   const char*      msg,                /**< message to print */
-   const char*      filename,           /**< name of the file, where the error occured */
-   int              line                /**< line of the file, where the error occured */
-   )
-{
-   fprintf(stderr, "[%s:%d] TODO: %s\n", filename, line, msg);
-}
-
 /** prints a message depending on the verbosity level */
 void infoMessage(
    VERBLEVEL        verblevel,          /**< actual verbosity level */

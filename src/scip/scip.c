@@ -1169,6 +1169,8 @@ RETCODE SCIPincludeNodesel(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
+   int              stdpriority,        /**< priority of the node selector in standard mode */
+   int              memsavepriority,    /**< priority of the node selector in memory saving mode */
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -1182,7 +1184,7 @@ RETCODE SCIPincludeNodesel(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeselCreate(&nodesel, name, desc,
+   CHECK_OKAY( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
                   nodeselfree, nodeselinit, nodeselexit, nodeselselect, nodeselcomp, nodeseldata, lowestboundfirst) );
    CHECK_OKAY( SCIPsetIncludeNodesel(scip->set, nodesel) );
    
@@ -1222,6 +1224,34 @@ int SCIPgetNNodesels(
    return scip->set->nnodesels;
 }
 
+/** sets the priority of a node selector in standard mode */
+RETCODE SCIPsetNodeselStdPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODESEL*         nodesel,            /**< node selector */
+   int              priority            /**< new standard priority of the node selector */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetNodeselStdPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPnodeselSetStdPriority(nodesel, scip->set, scip->stat, priority);
+
+   return SCIP_OKAY;
+}
+
+/** sets the priority of a node selector in memory saving mode */
+RETCODE SCIPsetNodeselMemsavePriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODESEL*         nodesel,            /**< node selector */
+   int              priority            /**< new memory saving priority of the node selector */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetNodeselMemsavePriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPnodeselSetMemsavePriority(nodesel, scip->set, scip->stat, priority);
+
+   return SCIP_OKAY;
+}
+
 /** returns the currently used node selector */
 NODESEL* SCIPgetActNodesel(
    SCIP*            scip                /**< SCIP data structure */
@@ -1229,35 +1259,7 @@ NODESEL* SCIPgetActNodesel(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNodesel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return scip->set->nodesel;
-}
-
-/** use the given node selector as standard node selector */
-RETCODE SCIPsetStdNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   NODESEL*         nodesel             /**< node selector */
-   )
-{
-   assert(nodesel != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPsetStdNodesel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   scip->set->stdnodesel = nodesel;
-
-   return SCIP_OKAY;
-}
-
-/** use the given node selector as memory saving node selector */
-RETCODE SCIPsetMemSaveNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   NODESEL*         nodesel             /**< node selector */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPsetMemSaveNodesel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   scip->set->memsavenodesel = nodesel;
-
-   return SCIP_OKAY;
+   return SCIPsetGetActNodesel(scip->set, scip->stat);
 }
 
 /** creates a branching rule and includes it in SCIP */
@@ -1413,12 +1415,13 @@ RETCODE SCIPcreateDialog(
    DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    const char*      name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*      desc,               /**< description of dialog used if description output method is NULL */
+   Bool             issubmenu,          /**< is the dialog a submenu? */
    DIALOGDATA*      dialogdata          /**< user defined dialog data */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateDialog", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPdialogCreate(dialog, dialogexec, dialogdesc, name, desc, dialogdata) );
+   CHECK_OKAY( SCIPdialogCreate(dialog, dialogexec, dialogdesc, name, desc, issubmenu, dialogdata) );
 
    return SCIP_OKAY;
 }
@@ -2460,6 +2463,13 @@ RETCODE SCIPpresolve(
    if( scip->stage == SCIP_STAGE_PRESOLVED )
       return SCIP_OKAY;
 
+   /* check, if a node selector exists */
+   if( SCIPsetGetActNodesel(scip->set, scip->stat) == NULL )
+   {
+      errorMessage("no node selector available");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   
    /* inform original problem, that solving starts now */
    SCIPprobSolvingStarts(scip->origprob);
 
@@ -2479,7 +2489,7 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
-   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set) );
+   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, SCIPsetGetActNodesel(scip->set, scip->stat)) );
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->branchcand,
@@ -2566,7 +2576,7 @@ RETCODE SCIPsolve(
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    /* check, if a node selector exists */
-   if( scip->set->nodesel == NULL )
+   if( SCIPsetGetActNodesel(scip->set, scip->stat) == NULL )
    {
       errorMessage("no node selector available");
       return SCIP_PLUGINNOTFOUND;
@@ -3476,20 +3486,20 @@ RETCODE SCIPfixVar(
    }
 }
 
-/** Tries to aggregate an equality $a*x + b*y == c$ consisting of two integral active problem variables $x$ and $y$.
- *  An integer aggregation (i.e. integral coefficients $a'$ and $b'$, such that $a'*x + b'*y == c'$) is searched.
- *  This can lead to the detection of infeasibility (e.g. if $c'$ is fractional), or to a rejection of the
+/** Tries to aggregate an equality a*x + b*y == c consisting of two integral active problem variables x and y.
+ *  An integer aggregation (i.e. integral coefficients a' and b', such that a'*x + b'*y == c') is searched.
+ *  This can lead to the detection of infeasibility (e.g. if c' is fractional), or to a rejection of the
  *  aggregation (denoted by aggregated == FALSE), if the resulting integer coefficients are too large and thus
  *  numerically instable.
  */
 static
 RETCODE aggregateActiveIntVars(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             varx,               /**< integral variable $x$ in equality $a*x + b*y == c$ */
-   VAR*             vary,               /**< integral variable $y$ in equality $a*x + b*y == c$ */
-   Real             scalarx,            /**< multiplier $a$ in equality $a*x + b*y == c$ */
-   Real             scalary,            /**< multiplier $b$ in equality $a*x + b*y == c$ */
-   Real             rhs,                /**< right hand side $c$ in equality $a*x + b*y == c$ */
+   VAR*             varx,               /**< integral variable x in equality a*x + b*y == c */
+   VAR*             vary,               /**< integral variable y in equality a*x + b*y == c */
+   Real             scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   Real             scalary,            /**< multiplier b in equality a*x + b*y == c */
+   Real             rhs,                /**< right hand side c in equality a*x + b*y == c */
    Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
@@ -3643,21 +3653,21 @@ RETCODE aggregateActiveIntVars(
 }
 
 /** performs second step of SCIPaggregateVars(): 
- *  the variable to be aggregated is chosen among active problem variables $x'$ and $y'$, prefering a less strict variable
+ *  the variable to be aggregated is chosen among active problem variables x' and y', prefering a less strict variable
  *  type as aggregation variable (i.e. continuous variables are prefered over implicit integers, implicit integers
  *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
- *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
- *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
+ *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
  *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
  */
 static
 RETCODE aggregateActiveVars(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             varx,               /**< variable $x$ in equality $a*x + b*y == c$ */
-   VAR*             vary,               /**< variable $y$ in equality $a*x + b*y == c$ */
-   Real             scalarx,            /**< multiplier $a$ in equality $a*x + b*y == c$ */
-   Real             scalary,            /**< multiplier $b$ in equality $a*x + b*y == c$ */
-   Real             rhs,                /**< right hand side $c$ in equality $a*x + b*y == c$ */
+   VAR*             varx,               /**< variable x in equality a*x + b*y == c */
+   VAR*             vary,               /**< variable y in equality a*x + b*y == c */
+   Real             scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   Real             scalary,            /**< multiplier b in equality a*x + b*y == c */
+   Real             rhs,                /**< right hand side c in equality a*x + b*y == c */
    Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
@@ -3744,17 +3754,17 @@ RETCODE aggregateActiveVars(
    return SCIP_OKAY;
 }
 
-/** From a given equality $a*x + b*y == c$, aggregates one of the variables and removes it from the set of
+/** From a given equality a*x + b*y == c, aggregates one of the variables and removes it from the set of
  *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData().
  *  In the first step, the equality is transformed into an equality with active problem variables
- *  $a'*x' + b'*y' == c'$. If $x' == y'$, this leads to the detection of redundancy if $a' == -b'$ and $c' == 0$,
- *  of infeasibility, if $a' == -b'$ and $c' != 0$, or to a variable fixing $x' == c'/(a'+b')$ (and possible
+ *  a'*x' + b'*y' == c'. If x' == y', this leads to the detection of redundancy if a' == -b' and c' == 0,
+ *  of infeasibility, if a' == -b' and c' != 0, or to a variable fixing x' == c'/(a'+b') (and possible
  *  infeasibility) otherwise.
- *  In the second step, the variable to be aggregated is chosen among $x'$ and $y'$, prefering a less strict variable
+ *  In the second step, the variable to be aggregated is chosen among x' and y', prefering a less strict variable
  *  type as aggregation variable (i.e. continuous variables are prefered over implicit integers, implicit integers
  *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
- *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
- *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
+ *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
  *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
  *
  *  The output flags have the following meaning:
@@ -3764,11 +3774,11 @@ RETCODE aggregateActiveVars(
  */
 RETCODE SCIPaggregateVars(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             varx,               /**< variable $x$ in equality $a*x + b*y == c$ */
-   VAR*             vary,               /**< variable $y$ in equality $a*x + b*y == c$ */
-   Real             scalarx,            /**< multiplier $a$ in equality $a*x + b*y == c$ */
-   Real             scalary,            /**< multiplier $b$ in equality $a*x + b*y == c$ */
-   Real             rhs,                /**< right hand side $c$ in equality $a*x + b*y == c$ */
+   VAR*             varx,               /**< variable x in equality a*x + b*y == c */
+   VAR*             vary,               /**< variable y in equality a*x + b*y == c */
+   Real             scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   Real             scalary,            /**< multiplier b in equality a*x + b*y == c */
+   Real             rhs,                /**< right hand side c in equality a*x + b*y == c */
    Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    Bool*            redundant,          /**< pointer to store whether the equality is (now) redundant */
    Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
@@ -3868,11 +3878,11 @@ RETCODE SCIPaggregateVars(
  */
 RETCODE SCIPmultiaggregateVar(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable $x$ to aggregate */
-   int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   VAR*             var,                /**< variable x to aggregate */
+   int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
@@ -4572,7 +4582,7 @@ RETCODE SCIPchgVarObjDive(
       return SCIP_INVALIDCALL;
    }
 
-   todoMessage("implement SCIPchgVarObjDive()");
+   /**@todo implement SCIPchgVarObjDive() */
    errorMessage("not implemented yet");
    abort();  /*lint --e{527} --e{715}*/
 }
@@ -6718,7 +6728,7 @@ void printPricerStatistics(
       scip->stat->nlppricings,
       scip->stat->nlppricingvars);
 
-   todoMessage("pricer statistics");
+   /**@todo pricer statistics */
 }
 
 static

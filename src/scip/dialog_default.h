@@ -74,11 +74,11 @@ DECL_DIALOGEXEC(SCIPdialogExecSetRead);
 extern
 DECL_DIALOGEXEC(SCIPdialogExecSetWrite);
 
-/** dialog execution method for the set <parameter> command */
+/** dialog execution method for the set parameter command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecSetParam);
 
-/** dialog description method for the set <parameter> command */
+/** dialog description method for the set parameter command */
 extern
 DECL_DIALOGDESC(SCIPdialogDescSetParam);
 
@@ -88,15 +88,15 @@ extern
 DECL_DIALOGEXEC(SCIPdialogExecDebugMemory);
 #endif
 
-/** includes the default dialog menus in SCIP */
+/** includes or updates the default dialog menus in SCIP */
 extern
 RETCODE SCIPincludeDialogDefault(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** includes a dialog in the "set" menu for each available parameter setting */
+/** includes or updates the "set" menu for each available parameter setting */
 extern
-RETCODE SCIPincludeDialogParams(
+RETCODE SCIPincludeDialogDefaultSet(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -116,7 +116,7 @@ void SCIPstatResetDisplay(
 extern
 void SCIPstatUpdateMemsaveMode(
    STAT*            stat,               /**< problem statistics data */
-   const SET*       set                 /**< global SCIP settings */
+   SET*             set                 /**< global SCIP settings */
    );
 
 #endif

@@ -685,7 +685,7 @@ int SCIPbranchruleGetPriority(
    return branchrule->priority;
 }
 
-/** gets priority of branching rule */
+/** sets priority of branching rule */
 void SCIPbranchruleSetPriority(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SET*             set,                /**< global SCIP settings */

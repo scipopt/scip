@@ -1662,9 +1662,9 @@ RETCODE varUpdateAggregationBounds(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
-   Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   VAR*             aggvar,             /**< variable y in aggregation x = a*y + c */
+   Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
+   Real             constant,           /**< constant shift c in aggregation x = a*y + c */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
@@ -1751,7 +1751,7 @@ RETCODE varUpdateAggregationBounds(
          }
 
          /* update the hole list of the aggregation variable */
-         todoMessage("update hole list of aggregation variable");
+         /**@todo update hole list of aggregation variable */
       }
 
       /* update the bounds of the aggregation variable y in x = a*y + c  ->  y = (x-c)/a */
@@ -1819,7 +1819,7 @@ RETCODE varUpdateAggregationBounds(
          }
 
          /* update the hole list of the aggregation variable */
-         todoMessage("update hole list of aggregation variable");
+         /**@todo update hole list of aggregation variable */
       }
    }
    while( aggvarbdschanged );
@@ -1841,9 +1841,9 @@ RETCODE SCIPvarAggregate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             aggvar,             /**< loose variable $y$ in aggregation $x = a*y + c$ */
-   Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
+   Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
+   Real             constant,           /**< constant shift c in aggregation x = a*y + c */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
@@ -1931,10 +1931,10 @@ RETCODE SCIPvarMultiaggregate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
@@ -2111,7 +2111,7 @@ RETCODE SCIPvarNegate(
       (*negvar)->glbdom.ub = (*negvar)->data.negate.constant - var->glbdom.lb;
       (*negvar)->actdom.lb = (*negvar)->data.negate.constant - var->actdom.ub;
       (*negvar)->actdom.ub = (*negvar)->data.negate.constant - var->actdom.lb;
-      todoMessage("create holes in the negated variable corresponding to the holes of the negation variable");
+      /**@todo create holes in the negated variable corresponding to the holes of the negation variable */
 
       /* create event filter, if the negated variable belongs to the transformed problem */
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
@@ -2579,7 +2579,7 @@ RETCODE SCIPvarChgLbGlobal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("change the sides of the corresponding linear constraint");
+      /**@todo change the sides of the corresponding linear constraint */
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
 
@@ -2667,7 +2667,7 @@ RETCODE SCIPvarChgUbGlobal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("change the sides of the corresponding linear constraint");
+      /**@todo change the sides of the corresponding linear constraint */
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
 
@@ -3101,7 +3101,7 @@ RETCODE SCIPvarChgLbLocal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("change the sides of the corresponding linear constraint");
+      /**@todo change the sides of the corresponding linear constraint */
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
 
@@ -3211,7 +3211,7 @@ RETCODE SCIPvarChgUbLocal(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("change the sides of the corresponding linear constraint");
+      /**@todo change the sides of the corresponding linear constraint */
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
 
@@ -3365,7 +3365,7 @@ RETCODE SCIPvarChgLbDive(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("change the sides of the corresponding linear constraint");
+      /**@todo change the sides of the corresponding linear constraint */
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
       
@@ -3442,7 +3442,7 @@ RETCODE SCIPvarChgUbDive(
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("change the sides of the corresponding linear constraint");
+      /**@todo change the sides of the corresponding linear constraint */
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
       
@@ -3477,7 +3477,7 @@ RETCODE SCIPvarAddHoleGlobal(
    CHECK_OKAY( domAddHole(&var->glbdom, memhdr, set, left, right) );
    CHECK_OKAY( domAddHole(&var->actdom, memhdr, set, left, right) );
 
-   todoMessage("add hole in parent and child variables (just like with bound changes)");
+   /**@todo add hole in parent and child variables (just like with bound changes) */
 
    return SCIP_OKAY;
 }
@@ -3497,7 +3497,7 @@ RETCODE SCIPvarAddHoleLocal(
 
    CHECK_OKAY( domAddHole(&var->actdom, memhdr, set, left, right) );
 
-   todoMessage("add hole in parent and child variables (just like with bound changes)");
+   /**@todo add hole in parent and child variables (just like with bound changes) */
 
    return SCIP_OKAY;
 }
@@ -3762,9 +3762,9 @@ RETCODE SCIPvarGetProbvarBound(
  *  the value of the sum will be stored in "constant"
  */
 RETCODE SCIPvarGetProbvarSum(
-   VAR**            var,                /**< pointer to problem variable $x$ in sum $a*x + c$ */
-   Real*            scalar,             /**< pointer to scalar $a$ in sum $a*x + c$ */
-   Real*            constant            /**< pointer to constant $c$ in sum $a*x + c$ */
+   VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   Real*            constant            /**< pointer to constant c in sum a*x + c */
    )
 {
    assert(var != NULL);
@@ -3945,7 +3945,7 @@ COL* SCIPvarGetCol(
    return var->data.col;
 }
 
-/** gets aggregation variable $y$ of an aggregated variable $x = a*y + c$ */
+/** gets aggregation variable y of an aggregated variable x = a*y + c */
 VAR* SCIPvarGetAggrVar(
    VAR*             var                 /**< problem variable */
    )
@@ -3956,7 +3956,7 @@ VAR* SCIPvarGetAggrVar(
    return var->data.aggregate.var;
 }
 
-/** gets aggregation scalar $a$ of an aggregated variable $x = a*y + c$ */
+/** gets aggregation scalar a of an aggregated variable x = a*y + c */
 Real SCIPvarGetAggrScalar(
    VAR*             var                 /**< problem variable */
    )
@@ -3967,7 +3967,7 @@ Real SCIPvarGetAggrScalar(
    return var->data.aggregate.scalar;
 }
 
-/** gets aggregation constant $c$ of an aggregated variable $x = a*y + c$ */
+/** gets aggregation constant c of an aggregated variable x = a*y + c */
 Real SCIPvarGetAggrConstant(
    VAR*             var                 /**< problem variable */
    )
@@ -3978,7 +3978,7 @@ Real SCIPvarGetAggrConstant(
    return var->data.aggregate.constant;
 }
 
-/** gets number $n$ of aggregation variables of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets number n of aggregation variables of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 int SCIPvarGetMultaggrNVars(
    VAR*             var                 /**< problem variable */
    )
@@ -3989,7 +3989,7 @@ int SCIPvarGetMultaggrNVars(
    return var->data.multaggr.nvars;
 }
 
-/** gets vector of aggregation variables $y$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets vector of aggregation variables y of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 VAR** SCIPvarGetMultaggrVars(
    VAR*             var                 /**< problem variable */
    )
@@ -4000,7 +4000,7 @@ VAR** SCIPvarGetMultaggrVars(
    return var->data.multaggr.vars;
 }
 
-/** gets vector of aggregation scalars $a$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets vector of aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 Real* SCIPvarGetMultaggrScalars(
    VAR*             var                 /**< problem variable */
    )
@@ -4011,7 +4011,7 @@ Real* SCIPvarGetMultaggrScalars(
    return var->data.multaggr.scalars;
 }
 
-/** gets aggregation constant $c$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 Real SCIPvarGetMultaggrConstant(
    VAR*             var                 /**< problem variable */
    )
@@ -4190,7 +4190,7 @@ Real SCIPvarGetLbDive(
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("get the sides of the corresponding linear constraint");
+      /**@todo get the sides of the corresponding linear constraint */
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
       abort();
       
@@ -4248,7 +4248,7 @@ Real SCIPvarGetUbDive(
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
-      todoMessage("get the sides of the corresponding linear constraint");
+      /**@todo get the sides of the corresponding linear constraint */
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
       abort();
       

@@ -359,7 +359,7 @@ RETCODE SCIPsepastoreApplyCuts(
    assert(tree != NULL);
    assert(lp != NULL);
 
-   todoMessage("avoid applying redundant cuts");
+   /**@todo avoid applying redundant cuts */
    debugMessage("applying %d bound changes and %d cuts\n", sepastore->nbdchgs, sepastore->ncuts);
 
    /* apply cuts stored as bound changes */

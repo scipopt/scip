@@ -1186,7 +1186,7 @@ DECL_CONSSEPA(consSepaLogicor)
    }
 
    /* step 2: combine logic or constraints to get more cuts */
-   todoMessage("further cuts of logic or constraints");
+   /**@todo further cuts of logic or constraints */
 
    /* step 3: if no cuts were found and we are in the root node, separate remaining constraints */
    if( SCIPgetActDepth(scip) == 0 )
@@ -1238,7 +1238,7 @@ RETCODE branchLP(
    int i;
    int j;
 
-   todoMessage("use a better logicor branching on LP solution");
+   /**@todo use a better logicor branching on LP solution */
 
    assert(conshdlr != NULL);
    assert(result != NULL);
@@ -1403,7 +1403,7 @@ RETCODE branchPseudo(
    int i;
    int j;
 
-   todoMessage("use a better logic or branching on pseudo solution");
+   /**@todo use a better logic or branching on pseudo solution */
 
    assert(conshdlr != NULL);
    assert(result != NULL);

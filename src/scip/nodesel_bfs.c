@@ -28,8 +28,10 @@
 #include "nodesel_bfs.h"
 
 
-#define NODESEL_NAME "bfs"
-#define NODESEL_DESC "best first search"
+#define NODESEL_NAME             "bfs"
+#define NODESEL_DESC             "best first search"
+#define NODESEL_STDPRIORITY      100000
+#define NODESEL_MEMSAVEPRIORITY       0
 
 
 /*
@@ -196,7 +198,7 @@ RETCODE SCIPincludeNodeselBfs(
    nodeseldata->minplungedepth = MINPLUNGEDEPTH;
 
    /* include node selector */
-   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
+   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
                   nodeselFreeBfs, NULL, NULL, nodeselSelectBfs, nodeselCompBfs,
                   nodeseldata, TRUE) );
 

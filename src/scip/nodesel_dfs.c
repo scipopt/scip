@@ -28,8 +28,10 @@
 #include "nodesel_dfs.h"
 
 
-#define NODESEL_NAME "dfs"
-#define NODESEL_DESC "depth first search"
+#define NODESEL_NAME             "dfs"
+#define NODESEL_DESC             "depth first search"
+#define NODESEL_STDPRIORITY           0
+#define NODESEL_MEMSAVEPRIORITY  100000
 
 
 
@@ -96,7 +98,7 @@ RETCODE SCIPincludeNodeselDfs(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
+   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
                   NULL, NULL, NULL, nodeselSelectDfs, nodeselCompDfs,
                   NULL, FALSE) );
 

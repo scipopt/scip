@@ -147,6 +147,7 @@ RETCODE SCIPdialogCreate(
    DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    const char*      name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*      desc,               /**< description of dialog used if description output method is NULL */
+   Bool             issubmenu,          /**< is the dialog a submenu? */
    DIALOGDATA*      dialogdata          /**< user defined dialog data */
    );
 
@@ -234,6 +235,18 @@ void SCIPdialogGetPath(
 /** gets the command name of the dialog */
 extern
 const char* SCIPdialogGetName(
+   DIALOG*          dialog              /**< dialog */
+   );
+
+/** gets the description of the dialog */
+extern
+const char* SCIPdialogGetDesc(
+   DIALOG*          dialog              /**< dialog */
+   );
+
+/** returns whether the dialog is a sub menu */
+extern
+Bool SCIPdialogIsSubmenu(
    DIALOG*          dialog              /**< dialog */
    );
 

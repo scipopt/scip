@@ -442,7 +442,7 @@ Bool mpsinputReadLine(
        * 
        * Initially comment marks '$' ar only allowed in the beginning
        * of the 2nd and 3rd name field. We test all fields but the first.
-       * This makes no difference, since if the $ is at the start of a value
+       * This makes no difference, since if the '$' is at the start of a value
        * field, the line will be errornous anyway.
        */
       do

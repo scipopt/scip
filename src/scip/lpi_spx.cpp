@@ -1257,7 +1257,6 @@ RETCODE SCIPlpiStrongbranch(
 
    spx->getBasis(rowstat, colstat);    
    spx->setTerminationIter(itlim);
-   spx->setType(SoPlex::LEAVE);        
 
    if( iter != NULL )
       *iter = 0;

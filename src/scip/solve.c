@@ -41,7 +41,7 @@ Bool SCIPsolveIsStopped(
    return (SCIPinterrupted()
       || (set->nodelimit >= 0 && stat->nnodes >= set->nodelimit)
       || SCIPclockGetTime(stat->solvingtime) >= set->timelimit
-      || (set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit)
+      || (SCIPgetMemUsed(set->scip) >= set->memlimit*1024.0*1024.0)
       || (SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit))
       || (set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED &&
          SCIPgetNSolsFound(set->scip) >= set->sollimit));
@@ -63,7 +63,7 @@ void SCIPsolvePrintStopReason(
       fprintf(file, "node limit reached");
    else if( SCIPclockGetTime(stat->solvingtime) >= set->timelimit )
       fprintf(file, "time limit reached");
-   else if( set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit )
+   else if( SCIPgetMemUsed(set->scip) >= set->memlimit*1024.0*1024.0 )
       fprintf(file, "memory limit reached");
    else if( SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit) )
       fprintf(file, "gap limit reached");
@@ -623,7 +623,7 @@ RETCODE enforceConstraints(
    assert(!(*infeasible));
    assert(!(*solveagain));
 
-   todoMessage("avoid checking the same pseudosolution twice");
+   /**@todo avoid checking the same pseudosolution twice */
 
    /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
     * introducing new constraints, or tighten the domains
@@ -915,7 +915,7 @@ RETCODE SCIPsolveCIP(
    assert(eventfilter != NULL);
    assert(eventqueue != NULL);
 
-   todoMessage("every variable, where zero is not the best bound (w.r.t. objective function) has to be in the problem");
+   /**@todo every variable, where zero is not the best bound (w.r.t. objective function) has to be in the problem */
 
    /* sort constraint handlers by priorities */
    ALLOC_OKAY( duplicateMemoryArray(&conshdlrs_sepa, set->conshdlrs, set->nconshdlrs) );
@@ -930,26 +930,14 @@ RETCODE SCIPsolveCIP(
       /* update the memory saving flag, switch algorithms respectively */
       SCIPstatUpdateMemsaveMode(stat, set);
 
-      /* check, if we have to switch the node selector due to memory usage */
-      nodesel = stat->memsavemode ? set->memsavenodesel : set->stdnodesel;
-      assert(nodesel != NULL);
-      if( nodesel != set->nodesel )
-      {
-         set->nodesel = nodesel;
-         CHECK_OKAY( SCIPtreeResortLeaves(tree, set) );
+      /* get the current node selector */
+      nodesel = SCIPsetGetActNodesel(set, stat);
 
-         if( stat->nnodes > 0 )
-         {
-            char s[MAXSTRLEN];
-            
-            /* activate new node selector and reorder the leaves in the priority queue of the tree */
-            sprintf(s, "(node %lld) switching to node selector <%s>", stat->nnodes, SCIPnodeselGetName(nodesel));
-            infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
-         }
-      }
+      /* inform tree about the current node selector */
+      CHECK_OKAY( SCIPtreeSetNodesel(tree, set, stat, nodesel) );
 
       /* select next node to process */
-      CHECK_OKAY( SCIPnodeselSelect(set->nodesel, set, &actnode) );
+      CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &actnode) );
       assert(set->buffer->firstfree == 0);
 
       if( actnode != NULL )

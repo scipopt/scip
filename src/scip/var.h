@@ -34,8 +34,8 @@ enum Varstatus
    SCIP_VARSTATUS_LOOSE      = 1,       /**< variable is a loose variable of the transformed problem */
    SCIP_VARSTATUS_COLUMN     = 2,       /**< variable is a column of the transformed problem */
    SCIP_VARSTATUS_FIXED      = 3,       /**< variable is fixed to specific value in the transformed problem */
-   SCIP_VARSTATUS_AGGREGATED = 4,       /**< variable is aggregated to $x = a*y + c$ in the transformed problem */
-   SCIP_VARSTATUS_MULTAGGR   = 5,       /**< variable is aggregated to $x = a_1*y_1 + ... + a_k*y_k + c$ */
+   SCIP_VARSTATUS_AGGREGATED = 4,       /**< variable is aggregated to x = a*y + c in the transformed problem */
+   SCIP_VARSTATUS_MULTAGGR   = 5,       /**< variable is aggregated to x = a_1*y_1 + ... + a_k*y_k + c */
    SCIP_VARSTATUS_NEGATED    = 6        /**< variable is the negation of an original or transformed variable */
 };
 typedef enum Varstatus VARSTATUS;
@@ -43,10 +43,10 @@ typedef enum Varstatus VARSTATUS;
 /** variable type */
 enum Vartype
 {
-   SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: $x \in \{0,1\}$ */
-   SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: $x \in \{lb, \ldots, \ub\}$ */
+   SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: x in {0,1} */
+   SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: x in {lb, ..., ub} */
    SCIP_VARTYPE_IMPLINT    = 2,         /**< implicit integer variable: continuous variable, that is always integral */
-   SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: $x \in [lb,ub] */
+   SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: x in [lb,ub] */
 };
 typedef enum Vartype VARTYPE;
 
@@ -90,8 +90,8 @@ typedef struct Var VAR;                 /**< variable of the problem */
 /** hole in a domain */
 struct Hole
 {
-   Real             left;               /**< left bound of open interval defining the hole $(left,right)$ */
-   Real             right;              /**< right bound of open interval defining the hole $(left,right)$ */
+   Real             left;               /**< left bound of open interval defining the hole (left,right) */
+   Real             right;              /**< right bound of open interval defining the hole (left,right) */
 };
 
 /** list of domain holes */
@@ -168,28 +168,28 @@ struct Dom
    Real             ub;                 /**< upper bounds of variables */
 };
 
-/** aggregation information: $x = a*y + c$ */
+/** aggregation information: x = a*y + c */
 struct Aggregate
 {
-   VAR*             var;                /**< variable $y$ in aggregation */
-   Real             scalar;             /**< multiplier $a$ in aggregation */
-   Real             constant;           /**< constant shift $c$ in aggregation */
+   VAR*             var;                /**< variable y in aggregation */
+   Real             scalar;             /**< multiplier a in aggregation */
+   Real             constant;           /**< constant shift c in aggregation */
 };
 
-/** multiple aggregation information: $x = a_1*y_1 + ... + a_k*y_k + c$ */
+/** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
 struct Multaggr
 {
-   VAR**            vars;               /**< variables $y$ in multiple aggregation */
-   Real*            scalars;            /**< multipliers $a$ in multiple aggregation */
-   Real             constant;           /**< constant shift $c$ in multiple aggregation */
+   VAR**            vars;               /**< variables y in multiple aggregation */
+   Real*            scalars;            /**< multipliers a in multiple aggregation */
+   Real             constant;           /**< constant shift c in multiple aggregation */
    int              nvars;              /**< number of variables in aggregation */
    int              varssize;           /**< size of vars and scalars arrays */
 };
 
-/** negation information: $x' = c - x$ */
+/** negation information: x' = c - x */
 struct Negate
 {
-   Real             constant;           /**< constant shift $c$ in negation */
+   Real             constant;           /**< constant shift c in negation */
 };
 
 /** variable of the problem */
@@ -580,9 +580,9 @@ RETCODE SCIPvarAggregate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             aggvar,             /**< loose variable $y$ in aggregation $x = a*y + c$ */
-   Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
+   Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
+   Real             constant,           /**< constant shift c in aggregation x = a*y + c */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
@@ -598,10 +598,10 @@ RETCODE SCIPvarMultiaggregate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
@@ -825,9 +825,9 @@ RETCODE SCIPvarGetProbvarBound(
  */
 extern
 RETCODE SCIPvarGetProbvarSum(
-   VAR**            var,                /**< pointer to problem variable $x$ in sum $a*x + c$ */
-   Real*            scalar,             /**< pointer to scalar $a$ in sum $a*x + c$ */
-   Real*            constant            /**< pointer to constant $c$ in sum $a*x + c$ */
+   VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   Real*            constant            /**< pointer to constant c in sum a*x + c */
    );
 
 #ifndef NDEBUG
@@ -902,43 +902,43 @@ COL* SCIPvarGetCol(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets aggregation variable $y$ of an aggregated variable $x = a*y + c$ */
+/** gets aggregation variable y of an aggregated variable x = a*y + c */
 extern
 VAR* SCIPvarGetAggrVar(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets aggregation scalar $a$ of an aggregated variable $x = a*y + c$ */
+/** gets aggregation scalar a of an aggregated variable x = a*y + c */
 extern
 Real SCIPvarGetAggrScalar(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets aggregation constant $c$ of an aggregated variable $x = a*y + c$ */
+/** gets aggregation constant c of an aggregated variable x = a*y + c */
 extern
 Real SCIPvarGetAggrConstant(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets number $n$ of aggregation variables of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets number n of aggregation variables of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 extern
 int SCIPvarGetMultaggrNVars(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets vector of aggregation variables $y$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets vector of aggregation variables y of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 extern
 VAR** SCIPvarGetMultaggrVars(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets vector of aggregation scalars $a$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets vector of aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 extern
 Real* SCIPvarGetMultaggrScalars(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets aggregation constant $c$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+/** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 extern
 Real SCIPvarGetMultaggrConstant(
    VAR*             var                 /**< problem variable */

@@ -222,7 +222,7 @@ int SCIPbranchruleGetPriority(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 
-/** gets priority of branching rule */
+/** sets priority of branching rule */
 extern
 void SCIPbranchruleSetPriority(
    BRANCHRULE*      branchrule,         /**< branching rule */

@@ -48,9 +48,9 @@
  *  The ordering is done through a pointer comparison function.
  *  The array is organized as follows. The root element (that is the "best" element $r$ with $r <= x$ for all $x$)
  *  is stored in position 0. The children of an element at position $p$ are stored at positions $q_1 = 2*p+1$ and
- *  $q_2 = 2*p+2$. That means, the parent of the element at position $q$ is at position $p = \lfloor (q-1)/2 \rfloor$.
+ *  $q_2 = 2*p+2$. That means, the parent of the element at position $q$ is at position $p = (q-1)/2$.
  *  At any time, the condition holds that $p <= q$ for each parent $p$ and its children $q$.
- *  Insertion and removal of single elements needs time $\mathcal{O}(\log n)$.
+ *  Insertion and removal of single elements needs time $O(log n)$.
  */
 struct PQueue
 {

@@ -100,7 +100,8 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 extern
 RETCODE SCIPnodepqCreate(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    );
 
 /** frees node priority queue, but not the data nodes themselves */
@@ -117,6 +118,20 @@ RETCODE SCIPnodepqFree(
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
+   );
+
+/** returns the node selector associated with the given node priority queue */
+extern
+NODESEL* SCIPnodepqGetNodesel(
+   NODEPQ*          nodepq              /**< node priority queue */
+   );
+
+/** sets the node selector used for sorting the nodes in the queue, and resorts the queue if necessary */
+extern
+RETCODE SCIPnodepqSetNodesel(
+   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   const SET*       set,                /**< global SCIP settings */
+   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    );
 
 /** inserts node into node priority queue */
@@ -184,13 +199,6 @@ RETCODE SCIPnodepqBound(
    Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    );
 
-/** resorts the priority queue (necessary for changes in node selector) */
-extern
-RETCODE SCIPnodepqResort(
-   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
 
 
 
@@ -202,8 +210,12 @@ RETCODE SCIPnodepqResort(
 extern
 RETCODE SCIPnodeselCreate(
    NODESEL**        nodesel,            /**< pointer to store node selector */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
+   int              stdpriority,        /**< priority of the node selector in standard mode */
+   int              memsavepriority,    /**< priority of the node selector in memory saving mode */
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -261,6 +273,36 @@ const char* SCIPnodeselGetName(
 extern
 const char* SCIPnodeselGetDesc(
    NODESEL*         nodesel             /**< node selector */
+   );
+
+/** gets priority of node selector in standard mode */
+extern
+int SCIPnodeselGetStdPriority(
+   NODESEL*         nodesel             /**< node selector */
+   );
+
+/** sets priority of node selector in standard mode */
+extern
+void SCIPnodeselSetStdPriority(
+   NODESEL*         nodesel,            /**< node selector */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   int              priority            /**< new priority of the node selector */
+   );
+
+/** gets priority of node selector in memory saving mode */
+extern
+int SCIPnodeselGetMemsavePriority(
+   NODESEL*         nodesel             /**< node selector */
+   );
+
+/** sets priority of node selector in memory saving mode */
+extern
+void SCIPnodeselSetMemsavePriority(
+   NODESEL*         nodesel,            /**< node selector */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   int              priority            /**< new priority of the node selector */
    );
 
 /** gets user data of node selector */

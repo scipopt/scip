@@ -1255,7 +1255,7 @@ DECL_CONSSEPA(consSepaSetppc)
    }
 
    /* step 2: combine set partitioning / packing / covering constraints to get more cuts */
-   todoMessage("further cuts of set partitioning / packing / covering constraints");
+   /**@todo further cuts of set partitioning / packing / covering constraints */
 
    /* step 3: if no cuts were found and we are in the root node, separate remaining constraints */
    if( SCIPgetActDepth(scip) == 0 )
@@ -1301,7 +1301,7 @@ RETCODE branchLP(
    int i;
    int j;
 
-   todoMessage("use a better set partitioning / packing / covering branching on LP solution (use SOS branching)");
+   /**@todo use a better set partitioning / packing / covering branching on LP solution (use SOS branching) */
 
    assert(conshdlr != NULL);
    assert(result != NULL);
@@ -1443,7 +1443,7 @@ RETCODE branchPseudo(
    int i;
    int j;
 
-   todoMessage("use a better set partitioning / packing / covering branching on pseudo solution (use SOS branching)");
+   /**@todo use a better set partitioning / packing / covering branching on pseudo solution (use SOS branching) */
 
    assert(conshdlr != NULL);
    assert(result != NULL);

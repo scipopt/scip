@@ -311,7 +311,8 @@ extern
 RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    );
 
 /** frees tree data structure */
@@ -323,11 +324,19 @@ RETCODE SCIPtreeFree(
    LP*              lp                  /**< actual LP data */
    );
 
-/** resorts the leave priority queue (necessary for changes in node selector) */
+/** returns the node selector associated with the given node priority queue */
 extern
-RETCODE SCIPtreeResortLeaves(
+NODESEL* SCIPtreeGetNodesel(
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+/** sets the node selector used for sorting the nodes in the priority queue, and resorts the queue if necessary */
+extern
+RETCODE SCIPtreeSetNodesel(
    TREE*            tree,               /**< branch-and-bound tree */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    );
 
 /** cuts off nodes with lower bound not better than given upper bound */

@@ -66,14 +66,6 @@ memory/pathgrowfac = 2
 # [type: int, range: [0,2147483647], default: 256]
 memory/pathgrowinit = 256
 
-# standard node selection method
-# [type: string, default: ""]
-nodeselection/stdnodeselector = ""
-
-# memory saving mode node selection method
-# [type: string, default: ""]
-nodeselection/memsavenodeselector = ""
-
 # branching score factor to weigh downward and upward gain prediction
 # [type: real, range: [0,1], default: 0.167]
 branching/branchscorefac = 0.167
@@ -130,9 +122,9 @@ limits/nodelimit = -1
 # [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
 limits/timelimit = 1e+20
 
-# maximal memory usage (-1: no limit); reported memory usage is lower than real memory usage!
-# [type: longint, range: [-1,9223372036854775807], default: -1]
-limits/memlimit = -1
+# maximal memory usage in MB; reported memory usage is lower than real memory usage!
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+limits/memlimit = 1e+20
 
 # solving stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value
 # [type: real, range: [0,1.79769313486232e+308], default: 0]

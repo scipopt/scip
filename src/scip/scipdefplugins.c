@@ -88,7 +88,6 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeDialogDefault(scip) );
-   CHECK_OKAY( SCIPincludeDialogParams(scip) );
 
    return SCIP_OKAY;
 }

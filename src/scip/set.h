@@ -43,6 +43,7 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include <math.h>
 
 #include "def.h"
+#include "stat.h"
 #include "misc.h"
 #include "scip.h"
 #include "paramset.h"
@@ -95,9 +96,7 @@ struct Set
    NODESEL**        nodesels;           /**< node selectors */
    int              nnodesels;          /**< number of node selectors */
    int              nodeselssize;       /**< size of nodesels array */
-   NODESEL*         nodesel;            /**< active node selector */
-   NODESEL*         stdnodesel;         /**< standard node selector, used if used memory is clearly below limit */
-   NODESEL*         memsavenodesel;     /**< node selector used to save memory */
+   NODESEL*         actnodesel;         /**< currently used node selector, or NULL if invalid */
    BRANCHRULE**     branchrules;        /**< branching rules */
    int              nbranchrules;       /**< number of branching rules */
    int              branchrulessize;    /**< size of branchrules array */
@@ -140,7 +139,7 @@ struct Set
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
    Real             timelimit;          /**< maximal time in seconds to run */
-   Longint          memlimit;           /**< maximal memory usage (-1: no limit) */
+   Real             memlimit;           /**< maximal memory usage in MB */
    Real             gaplimit;           /**< solving stops, if the given gap is reached */
    int              sollimit;           /**< solving stops, if the given number of solutions were found (-1: no limit) */
    Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
@@ -499,6 +498,13 @@ extern
 NODESEL* SCIPsetFindNodesel(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of event handler */
+   );
+
+/** returns node selector with highest priority in the current mode */
+extern
+NODESEL* SCIPsetGetActNodesel(
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** inserts branching rule in branching rule list */

@@ -112,12 +112,6 @@ RETCODE runSCIP(
    printf("=============\n\n");
    CHECK_OKAY( SCIPsolve(scip) );
 
-#if 0
-   printf("\ntransformed primal solution:\n");
-   printf("============================\n\n");
-   CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
-#endif
-
 #if 1
    printf("\nprimal solution:\n");
    printf("================\n\n");
@@ -165,16 +159,18 @@ main(
 {
    RETCODE retcode;
 
-   todoMessage("implement remaining events");
-   todoMessage("avoid addition of identical rows");
-   todoMessage("avoid addition of identical constraints");
-   todoMessage("pricing for pseudo solutions");
-   todoMessage("integrality check on objective function, abort if gap is below 1.0");
-   todoMessage("implement reduced cost fixing");
-   todoMessage("statistics: count domain reductions and constraint additions of constraint handlers");
-   todoMessage("it's a bit ugly, that user call backs may be called before the nodequeue was processed");
-   todoMessage("unboundness detection in presolving -> convert problem into feasibility problem to decide unboundness/infeasibility");
-   todoMessage("variable event PSSOLCHANGED, update pseudo activities in constraints to speed up checking of pseudo solutions");
+   /**@todo implement remaining events */
+   /**@todo avoid addition of identical rows */
+   /**@todo avoid addition of identical constraints */
+   /**@todo pricing for pseudo solutions */
+   /**@todo integrality check on objective function, abort if gap is below 1.0 */
+   /**@todo statistics: count domain reductions and constraint additions of constraint handlers */
+   /**@todo it's a bit ugly, that user call backs may be called before the nodequeue was processed */
+   /**@todo unboundness detection in presolving -> convert problem into feasibility problem to decide
+    *       unboundness/infeasibility */
+   /**@todo variable event PSSOLCHANGED, update pseudo activities in constraints to speed up checking of pseudo solutions */
+   /**@todo branching rule acting as a filter by temporary changing the branching priority of variables and returning 
+    *       SCIP_DIDNOTFIND to let the next branching rule select the branching variable */
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

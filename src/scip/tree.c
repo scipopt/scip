@@ -1905,7 +1905,7 @@ RETCODE SCIPnodeActivate(
       {
          if( tree->actnodehaslp )
          {
-            todoMessage("decide: old active node becomes fork or subroot");
+            /**@todo decide: old active node becomes fork or subroot */
             if( tree->actnode->depth > 0 && tree->actnode->depth % 25 == 0 ) /* ????????????? */
             {
                /* convert old active node into a subroot node */
@@ -2013,7 +2013,8 @@ RETCODE SCIPnodeActivate(
 RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    )
 {
    assert(tree != NULL);
@@ -2023,7 +2024,7 @@ RETCODE SCIPtreeCreate(
 
    (*tree)->root = NULL;
 
-   CHECK_OKAY( SCIPnodepqCreate(&(*tree)->leaves, set) );
+   CHECK_OKAY( SCIPnodepqCreate(&(*tree)->leaves, set, nodesel) );
 
    (*tree)->path = NULL;
    (*tree)->actnode = NULL;
@@ -2086,13 +2087,41 @@ RETCODE SCIPtreeFree(
    return SCIP_OKAY;
 }
 
-/** resorts the leave priority queue (necessary for changes in node selector) */
-RETCODE SCIPtreeResortLeaves(
-   TREE*            tree,               /**< branch-and-bound tree */
-   const SET*       set                 /**< global SCIP settings */
+/** returns the node selector associated with the given node priority queue */
+NODESEL* SCIPtreeGetNodesel(
+   TREE*            tree                /**< branch-and-bound tree */
    )
 {
-   CHECK_OKAY( SCIPnodepqResort(&tree->leaves, set) );
+   assert(tree != NULL);
+
+   return SCIPnodepqGetNodesel(tree->leaves);
+}
+
+/** sets the node selector used for sorting the nodes in the priority queue, and resorts the queue if necessary */
+RETCODE SCIPtreeSetNodesel(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
+   )
+{
+   assert(tree != NULL);
+   assert(stat != NULL);
+
+   if( SCIPnodepqGetNodesel(tree->leaves) != nodesel )
+   {
+      /* change the node selector used in the priority queue and resort the queue */
+      CHECK_OKAY( SCIPnodepqSetNodesel(&tree->leaves, set, nodesel) );
+
+      /* issue message */
+      if( stat->nnodes > 0 )
+      {
+         char s[MAXSTRLEN];
+         
+         sprintf(s, "(node %lld) switching to node selector <%s>", stat->nnodes, SCIPnodeselGetName(nodesel));
+         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2422,9 +2451,8 @@ NODE* SCIPtreeGetBestChild(
    int i;
 
    assert(tree != NULL);
-   assert(set != NULL);
 
-   nodesel = set->nodesel;
+   nodesel = SCIPnodepqGetNodesel(tree->leaves);
    assert(nodesel != NULL);
 
    bestnode = NULL;
@@ -2450,9 +2478,8 @@ NODE* SCIPtreeGetBestSibling(
    int i;
 
    assert(tree != NULL);
-   assert(set != NULL);
 
-   nodesel = set->nodesel;
+   nodesel = SCIPnodepqGetNodesel(tree->leaves);
    assert(nodesel != NULL);
 
    bestnode = NULL;
@@ -2490,9 +2517,8 @@ NODE* SCIPtreeGetBestNode(
    NODE* bestnode;
 
    assert(tree != NULL);
-   assert(set != NULL);
 
-   nodesel = set->nodesel;
+   nodesel = SCIPnodepqGetNodesel(tree->leaves);
    assert(nodesel != NULL);
 
    /* get the best child, sibling, and leaf */

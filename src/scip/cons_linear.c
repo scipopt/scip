@@ -2562,7 +2562,7 @@ DECL_CONSSEPA(consSepaLinear)
    }
 
    /* step 2: combine linear constraints to get more cuts */
-   todoMessage("further cuts of linear constraints");
+   /**@todo further cuts of linear constraints */
 
    /* step 3: if no cuts were found and we are in the root node, check remaining linear constraints for feasibility */
    if( SCIPgetActDepth(scip) == 0 )

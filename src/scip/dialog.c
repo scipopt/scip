@@ -43,6 +43,7 @@ struct Dialog
    DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
    char*            name;               /**< name of dialog: command name appearing in parent's dialog menu */
    char*            desc;               /**< description of dialog used if description output method is NULL */
+   Bool             issubmenu;          /**< is the dialog a submenu? */
    DIALOG*          parent;             /**< parent dialog of dialog */
    DIALOG**         subdialogs;         /**< sub dialogs of dialog */
    int              nsubdialogs;        /**< number of sub dialogs */
@@ -398,6 +399,7 @@ RETCODE SCIPdialogCreate(
    DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    const char*      name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*      desc,               /**< description of dialog used if description output method is NULL */
+   Bool             issubmenu,          /**< is the dialog a submenu? */
    DIALOGDATA*      dialogdata          /**< user defined dialog data */
    )
 {
@@ -416,6 +418,7 @@ RETCODE SCIPdialogCreate(
    else
       (*dialog)->desc = NULL;
 
+   (*dialog)->issubmenu = issubmenu;
    (*dialog)->parent = NULL;
    (*dialog)->subdialogs = NULL;
    (*dialog)->nsubdialogs = 0;
@@ -620,10 +623,22 @@ RETCODE SCIPdialogDisplayMenu(
 
    assert(dialog != NULL);
 
+   /* display the dialog's sub menus */
+   for( i = 0; i < dialog->nsubdialogs; ++i )
+   {
+      if( SCIPdialogIsSubmenu(dialog->subdialogs[i]) )
+      {
+         CHECK_OKAY( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
+      }
+   }
+
    /* display the dialog's menu options */
    for( i = 0; i < dialog->nsubdialogs; ++i )
    {
-      CHECK_OKAY( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
+      if( !SCIPdialogIsSubmenu(dialog->subdialogs[i]) )
+      {
+         CHECK_OKAY( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
+      }
    }
 
    if( dialog->nsubdialogs == 0 )
@@ -638,11 +653,17 @@ RETCODE SCIPdialogDisplayMenuEntry(
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
+   char name[MAXSTRLEN];
+
    assert(dialog != NULL);
 
    /* display the dialog's name */
-   printf("  %-20s  ", dialog->name);
-   if( strlen(dialog->name) > 20 )
+   if( dialog->issubmenu )
+      sprintf(name, "<%s>", dialog->name);
+   else
+      sprintf(name, "%s", dialog->name);
+   printf("  %-20s  ", name);
+   if( strlen(name) > 20 )
    {
       /* break the line, and start the description in the next line */
       printf("\n                   -->  ");
@@ -721,6 +742,26 @@ const char* SCIPdialogGetName(
    assert(dialog != NULL);
 
    return dialog->name;
+}
+
+/** gets the description of the dialog */
+const char* SCIPdialogGetDesc(
+   DIALOG*          dialog              /**< dialog */
+   )
+{
+   assert(dialog != NULL);
+
+   return dialog->desc;
+}
+
+/** returns whether the dialog is a sub menu */
+Bool SCIPdialogIsSubmenu(
+   DIALOG*          dialog              /**< dialog */
+   )
+{
+   assert(dialog != NULL);
+
+   return dialog->issubmenu;
 }
 
 /** gets the parent dialog of the given dialog */

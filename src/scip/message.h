@@ -41,12 +41,6 @@ typedef enum VerbLevel VERBLEVEL;
 #define errorMessage(msg)               errorMessage_call((msg), __FILE__, __LINE__)
 #define failureMessage                  printf("failure: "); printf
 
-#ifdef TODOMESSAGE
-#define todoMessage(msg)                todoMessage_call((msg), __FILE__, __LINE__)
-#else
-#define todoMessage(msg)                /**/
-#endif
-
 #ifdef DEBUG
 #define debug(x)                        x
 #define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
@@ -68,14 +62,6 @@ void errorMessage_call(
 extern
 void warningMessage(
    const char*      msg                 /**< message to print */
-   );
-
-/** prints a todo message */
-extern
-void todoMessage_call(
-   const char*      msg,                /**< message to print */
-   const char*      filename,           /**< name of the file, where the error occured */
-   int              line                /**< line of the file, where the error occured */
    );
 
 /** prints a message depending on the verbosity level */

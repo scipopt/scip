@@ -28,8 +28,10 @@
 #include "nodesel_restartdfs.h"
 
 
-#define NODESEL_NAME "restartdfs"
-#define NODESEL_DESC "depth first search with periodical selection of the best node"
+#define NODESEL_NAME             "restartdfs"
+#define NODESEL_DESC             "depth first search with periodical selection of the best node"
+#define NODESEL_STDPRIORITY       50000
+#define NODESEL_MEMSAVEPRIORITY   50000
 
 
 
@@ -147,7 +149,7 @@ RETCODE SCIPincludeNodeselRestartdfs(
    nodeseldata->selectbestfreq = SELECTBESTFREQ;
 
    /* include node selector */
-   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
+   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
                   nodeselFreeRestartdfs, NULL, NULL, nodeselSelectRestartdfs, nodeselCompRestartdfs,
                   nodeseldata, FALSE) );
 

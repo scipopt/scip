@@ -212,7 +212,7 @@ DECL_HEUREXEC(SCIPheurExecDiving) /*lint --e{715}*/
    {
       divedepth++;
 
-      todoMessage("use a better variable selection/rounding criteria in diving (e.g. history depending)");
+      /**@todo use a better variable selection/rounding criteria in diving (e.g. history depending) */
 
       /* choose variable fixing:
        * - prefer variables that may not be rounded without destroying LP feasibility:

@@ -308,7 +308,7 @@ RETCODE priceProbVars(
    abortpricevars = (int)(set->abortpricevarsfac * maxpricevars);
    assert(abortpricevars >= maxpricevars);
    
-   todoMessage("test pricing: is abortpricevars a good idea? -> like strong branching, lookahead, ...");
+   /**@todo test pricing: is abortpricevars a good idea? -> like strong branching, lookahead, ... */
 
    stat->nlppricings++;
 
@@ -497,11 +497,11 @@ RETCODE SCIPpriceVars(
    /* call external pricer algorithms */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      todoMessage("external farkas pricing");
+      /**@todo external farkas pricing */
    }
    else
    {
-      todoMessage("external reduced cost pricing");
+      /**@todo external reduced cost pricing */
    }
 
    debugMessage("adding %d variables (%d bound violated and %d priced vars) to %d LP columns\n",

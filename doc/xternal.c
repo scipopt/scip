@@ -24,7 +24,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
- * @version  0.60
+ * @version  0.61
  * @author   Tobias Achterberg
  * @author   Thorsten Koch
  * @author   Alexander Martin
@@ -44,7 +44,7 @@
  *
  * Here we explain how your code should look like, so it is easy for us to include it into the SCIP distribution.
  *
- * - Indentation is 3 spaces. No <tabs> anywhere in the code.
+ * - Indentation is 3 spaces. No tabs anywhere in the code.
  * - Allways only one declaration in a line.
  * - Braces are on a new line and not indented.
  * - Spaces around all operators.

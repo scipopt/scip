@@ -264,7 +264,7 @@ void rowBSort(
 
    assert(row != NULL);
 
-   todoMessage("do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?)");
+   /**@todo do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?) */
    cols = row->cols;
    vals = row->vals;
    probindex = row->cols_probindex;
@@ -362,7 +362,7 @@ void colBSort(
 
    assert(col != NULL);
 
-   todoMessage("do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?)");
+   /**@todo do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?) */
    rows = col->rows;
    vals = col->vals;
    linkpos = col->linkpos;
@@ -4346,7 +4346,7 @@ RETCODE SCIPlpSumRows(
    assert(sumlhs != NULL);
    assert(sumrhs != NULL);
 
-   todoMessage("test, if a column based summation is faster");
+   /**@todo test, if a column based summation is faster */
 
    CHECK_OKAY( SCIPrealarrayClear(sumcoef) );
    CHECK_OKAY( SCIPrealarrayExtend(sumcoef, set, 0, nvars-1) );
@@ -4755,7 +4755,7 @@ RETCODE SCIPlpCalcMIR(
    assert(mirrhs != NULL);
    assert(success != NULL);
 
-   todoMessage("test, if a column based summation is faster");
+   /**@todo test, if a column based summation is faster */
 
    *success = FALSE;
 
@@ -5331,7 +5331,7 @@ RETCODE SCIPlpSolveAndEval(
          return SCIP_ERROR;
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
-         todoMessage("time limit exceeded processing");
+         /**@todo time limit exceeded processing */
          return SCIP_ERROR;
 
       case SCIP_LPSOLSTAT_ERROR:
