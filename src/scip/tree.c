@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.112 2004/09/23 15:46:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.113 2004/09/28 09:20:59 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2240,7 +2240,7 @@ RETCODE nodeToLeaf(
    assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
    assert(stat != NULL);
    assert(lpfork == NULL || lpfork->depth < (*node)->depth);
-   assert(lpfork == NULL || lpfork->active);
+   assert(lpfork == NULL || lpfork->active || SCIPsetIsGE(set, (*node)->lowerbound, cutoffbound));
    assert(lpfork == NULL
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);

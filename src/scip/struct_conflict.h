@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.10 2004/09/23 15:46:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.11 2004/09/28 09:20:59 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -78,6 +78,7 @@ struct Conflict
    int*             conflictvardepths;  /**< depth at which the conflict variables were fixed */
    int              conflictvarssize;   /**< size of conflictvars array */
    int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
+   int              ntmpconflictvars;   /**< number of additional variables added temporarily to conflict set */
    int              count;              /**< conflict set counter to label conflict variables with */
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.111 2004/09/23 15:46:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.112 2004/09/28 09:20:59 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -150,8 +150,10 @@
 #define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_MINMAXCONFVARS      30 /**< minimal absolute maximum of variables involved in a conflict clause */
 #define SCIP_DEFAULT_MAXCONFLPLOOPS     100 /**< maximal number of LP resolving loops during conflict analysis */
-#define SCIP_DEFAULT_CONFFUIPLEVELS       1 /**< number of depth levels up to which first UIP's are used in conflict
+#define SCIP_DEFAULT_CONFFUIPLEVELS      -1 /**< number of depth levels up to which first UIP's are used in conflict
                                              *   analysis (-1: use All-FirstUIP rule) */
+#define SCIP_DEFAULT_CONFINTERCLAUSES     1 /**< maximal number of intermediate conflict clauses generated in conflict
+                                             *   graph (-1: use every intermediate clause) */
 #define SCIP_DEFAULT_REPROPCONFLICT    TRUE /**< should earlier nodes be repropagated in order to replace branching
                                              *   decisions by deductions */
 
@@ -252,11 +254,8 @@ RETCODE SCIPsetCreate(
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
-   Real machineeps = SCIPcalcMachineEpsilon();
-
    assert(set != NULL);
    assert(scip != NULL);
-   assert(machineeps < SCIP_MAXEPSILON);
 
    ALLOC_OKAY( allocMemory(set) );
 
@@ -347,32 +346,32 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
-         &(*set)->epsilon, SCIP_DEFAULT_EPSILON, machineeps, SCIP_MAXEPSILON,
+         &(*set)->epsilon, SCIP_DEFAULT_EPSILON, SCIP_MINEPSILON, SCIP_MAXEPSILON,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/sumepsilon",
          "absolute values of sums smaller than this are considered zero",
-         &(*set)->sumepsilon, SCIP_DEFAULT_SUMEPSILON, machineeps*1e+03, SCIP_MAXEPSILON,
+         &(*set)->sumepsilon, SCIP_DEFAULT_SUMEPSILON, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/feastol",
          "LP feasibility tolerance for constraints",
-         &(*set)->feastol, SCIP_DEFAULT_FEASTOL, machineeps*1e+03, SCIP_MAXEPSILON,
+         &(*set)->feastol, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/dualfeastol",
          "LP feasibility tolerance for reduced costs",
-         &(*set)->dualfeastol, SCIP_DEFAULT_DUALFEASTOL, machineeps*1e+03, SCIP_MAXEPSILON,
+         &(*set)->dualfeastol, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdDualfeastol, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/boundstreps",
          "minimal improve for strengthening bounds",
-         &(*set)->boundstreps, SCIP_DEFAULT_BOUNDSTREPS, machineeps*1e+03, SCIP_INVALID/10.0,
+         &(*set)->boundstreps, SCIP_DEFAULT_BOUNDSTREPS, SCIP_MINEPSILON*1e+03, SCIP_INVALID/10.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/pseudocosteps",
          "minimal variable distance value to use for branching pseudo cost updates",
-         &(*set)->pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, machineeps*1e+03, 1.0,
+         &(*set)->pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, SCIP_MINEPSILON*1e+03, 1.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/pseudocostdelta",
@@ -558,6 +557,11 @@ RETCODE SCIPsetCreate(
          "conflict/conffuiplevels",
          "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
          &(*set)->conffuiplevels, SCIP_DEFAULT_CONFFUIPLEVELS, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "conflict/confinterclauses",
+         "maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)",
+         &(*set)->confinterclauses, SCIP_DEFAULT_CONFINTERCLAUSES, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
          "conflict/repropconflict",

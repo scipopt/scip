@@ -23,27 +23,27 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
+# [type: real, range: [1e-20,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [1e-17,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [1e-17,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
+# [type: real, range: [1e-17,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
+# [type: real, range: [1e-17,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # minimal variable distance value to use for branching pseudo cost updates
-# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
+# [type: real, range: [1e-17,1], default: 0.1]
 numerics/pseudocosteps = 0.1
 
 # minimal objective distance value to use for branching pseudo cost updates
@@ -189,6 +189,14 @@ conflict/minmaxconfvars = 30
 # maximal number of LP resolving loops during conflict analysis
 # [type: int, range: [1,2147483647], default: 100]
 conflict/maxconflploops = 100
+
+# number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)
+# [type: int, range: [-1,2147483647], default: -1]
+conflict/conffuiplevels = -1
+
+# maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)
+# [type: int, range: [-1,2147483647], default: 1]
+conflict/confinterclauses = 1
 
 # should earlier nodes be repropagated in order to replace branching decisions by deductions
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -671,8 +679,8 @@ branching/relpscost/initcand = 100
 branching/relpscost/inititer = 0
 
 # maximal number of bound tightenings before the node is reevaluated (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-branching/relpscost/maxbdchgs = -1
+# [type: int, range: [-1,2147483647], default: 5]
+branching/relpscost/maxbdchgs = 5
 
 # priority of heuristic <coefdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1001000]
@@ -753,6 +761,22 @@ heuristics/feaspump/depthfac = 0.5
 # maximal diving depth factor if no feasible solution was found yet
 # [type: real, range: [0,1.79769313486232e+308], default: 2]
 heuristics/feaspump/depthfacnosol = 2
+
+# priority of heuristic <fixandinfer>
+# [type: int, range: [-2147483648,2147483647], default: -500000]
+heuristics/fixandinfer/priority = -500000
+
+# frequency for calling primal heuristic <fixandinfer> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 5]
+heuristics/fixandinfer/freq = 5
+
+# frequency offset for calling primal heuristic <fixandinfer>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/fixandinfer/freqofs = 0
+
+# maximal depth level to call primal heuristic <fixandinfer> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/fixandinfer/maxdepth = -1
 
 # priority of heuristic <fracdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1002000]
@@ -989,6 +1013,14 @@ heuristics/simplerounding/freqofs = 0
 # maximal depth level to call primal heuristic <simplerounding> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/simplerounding/maxdepth = -1
+
+# priority of propagator <pseudoobj>
+# [type: int, range: [-2147483648,2147483647], default: 0]
+propagation/pseudoobj/priority = 0
+
+# frequency for calling propagator <pseudoobj> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+propagation/pseudoobj/freq = 1
 
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -1000]

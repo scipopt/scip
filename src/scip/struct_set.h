@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.29 2004/09/23 15:46:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.30 2004/09/28 09:20:59 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -140,6 +140,8 @@ struct Set
    int              maxconflploops;     /**< maximal number of LP resolving loops during conflict analysis */
    int              conffuiplevels;     /**< number of depth levels up to which first UIP's are used in conflict
                                          *   analysis (-1: use All-FirstUIP rule) */
+   int              confinterclauses;   /**< maximal number of intermediate conflict clauses generated in conflict
+                                         *   graph (-1: use every intermediate clause) */
    int              colagelimit;        /**< maximum age a column can reach before it is deleted from the LP */
    int              rowagelimit;        /**< maximum age a row can reach before it is deleted from the LP */
    int              cutagelimit;        /**< maximum age a cut can reach before it is deleted from the global cut pool */

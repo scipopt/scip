@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.30 2004/08/25 14:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.31 2004/09/28 09:20:59 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -301,11 +301,11 @@ duplicateMemory_call(const void* source, size_t size)
  */
 
 #define BLOCKHASH_SIZE     1013	/* should be prime */
+#define CHUNKLENGTH_MIN    1024 /* minimal size of a chunk (in bytes) */
 #define CHUNKLENGTH_MAX 1048576	/* maximal size of a chunk (in bytes) */
 #define STORESIZE_MAX      8192	/* maximal number of elements in one chunk */
 #define ALIGNMENT       (sizeof(FREELIST))
-#define GARBAGE_SIZE        256	/* size of lazy free list to start
-				   garbage collection */
+#define GARBAGE_SIZE        256	/* size of lazy free list to start garbage collection */
 
 typedef struct free_list FREELIST;
 typedef struct chunk_header CHKHDR;
@@ -742,8 +742,9 @@ createChunk(BLKHDR * blk)
    else
       storeSize = 2 * blk->lastChunkSize;
    assert(storeSize > 0);
-   storeSize = MIN(storeSize, STORESIZE_MAX);
+   storeSize = MAX(storeSize, CHUNKLENGTH_MIN / blk->elemSize);
    storeSize = MIN(storeSize, CHUNKLENGTH_MAX / blk->elemSize);
+   storeSize = MIN(storeSize, STORESIZE_MAX);
    storeSize = MAX(storeSize, 1);
    blk->lastChunkSize = storeSize;
 
@@ -1408,8 +1409,13 @@ blockMemoryDiagnostic(MEMHDR *mem)
    BLKHDR*   blk;
    int       numBlocks = 0;
    int       numUnusedBlocks = 0;
-   int       numGarbageCalls = 0;
-   int       numGarbageFrees = 0;
+   int       totalNumChunks = 0;
+   int       totalNumEagerChunks = 0;
+   int       totalNumElems = 0;
+   int       totalNumEagerElems = 0;
+   int       totalNumLazyElems = 0;
+   int       totalNumGarbageCalls = 0;
+   int       totalNumGarbageFrees = 0;
    long long allocedMem = 0;
    long long freeMem = 0;
    int       i;
@@ -1457,27 +1463,29 @@ blockMemoryDiagnostic(MEMHDR *mem)
 
 	    printf("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
 	       (long long)(blk->elemSize), numChunks, numEagerChunks, numElems,
-	       numEagerElems, blk->lazyFreeSize, blk->numGarbageCalls,
-	       blk->numGarbageFrees,
-	       100.0 * (double) (numEagerElems +
-		  blk->lazyFreeSize) / (double) (numElems), blk->filename,
-	       blk->line);
+	       numEagerElems, blk->lazyFreeSize, blk->numGarbageCalls, blk->numGarbageFrees,
+	       100.0 * (double) (numEagerElems + blk->lazyFreeSize) / (double) (numElems), blk->filename, blk->line);
 	 }
 	 else
 	 {
 	    printf("%7lld <unused>                          %5d %4d        %s:%d\n",
-	       (long long)(blk->elemSize), blk->numGarbageCalls,
-	       blk->numGarbageFrees, blk->filename, blk->line);
+	       (long long)(blk->elemSize), blk->numGarbageCalls, blk->numGarbageFrees, blk->filename, blk->line);
 	    numUnusedBlocks++;
 	 }
-	 numGarbageCalls += blk->numGarbageCalls;
-	 numGarbageFrees += blk->numGarbageFrees;
+         totalNumChunks += numChunks;
+         totalNumEagerChunks += numEagerChunks;
+         totalNumElems += numElems;
+         totalNumEagerElems += numEagerElems;
+         totalNumLazyElems += blk->lazyFreeSize;
+         totalNumGarbageCalls += blk->numGarbageCalls;
+         totalNumGarbageFrees += blk->numGarbageFrees;
 	 blk = blk->next;
       }
    }
-
-   printf("Garbage collector called %d times (freed %d chunks).\n",
-      numGarbageCalls, numGarbageFrees);
+   printf("  Total %4d %4d %7d %7d %7d %5d %4d %5.1f%%\n",
+      totalNumChunks, totalNumEagerChunks, totalNumElems, totalNumEagerElems, totalNumLazyElems, 
+      totalNumGarbageCalls, totalNumGarbageFrees,
+      totalNumElems > 0 ? 100.0 * (double) (totalNumEagerElems + totalNumLazyElems) / (double) (totalNumElems) : 0.0);
    printf("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
       numBlocks + numUnusedBlocks, numUnusedBlocks, allocedMem, freeMem);
    if( allocedMem > 0 )

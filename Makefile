@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.83 2004/09/23 15:46:25 bzfpfend Exp $
+# $Id: Makefile,v 1.84 2004/09/28 09:20:58 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -129,7 +129,7 @@ LPILIBNAME	=	lpi$(LPS)
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLIB		=	cplex.$(OSTYPE).$(ARCH)
-LPILIBOBJ	=	lpi_cpx.o bitencode.o
+LPILIBOBJ	=	lpi_cpx.o bitencode.o memory.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
@@ -137,7 +137,7 @@ ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLIB		=	soplex.$(OSTYPE).$(ARCH)
-LPILIBOBJ	=	lpi_spx.o bitencode.o
+LPILIBOBJ	=	lpi_spx.o bitencode.o memory.o
 LPILIBSRC	=	src/lpi_spx.cpp src/bitencode.c
 endif
 
@@ -145,7 +145,7 @@ ifeq ($(LPS),spxdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLIB		=	soplexdbg.$(OSTYPE).$(ARCH)
-LPILIBOBJ	=	lpi_spxdbg.o bitencode.o
+LPILIBOBJ	=	lpi_spxdbg.o bitencode.o memory.o
 LPILIBSRC	=	src/lpi_spxdbg.cpp src/bitencode.c
 endif
 
@@ -153,7 +153,7 @@ ifeq ($(LPS),spx121)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
 LPSLIB		=	soplex121.$(OSTYPE).$(ARCH)
-LPILIBOBJ	=	lpi_spx121.o bitencode.o
+LPILIBOBJ	=	lpi_spx121.o bitencode.o memory.o
 LPILIBSRC	=	src/lpi_spx121.cpp src/bitencode.c
 endif
 

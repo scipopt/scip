@@ -1,3 +1,4 @@
 $(OBJDIR)/lpi_cpx.o: src/lpi_cpx.c lib/cpxinc/cplex.h src/bitencode.h src/lpi.h \
   src/def.h src/type_retcode.h src/memory.h src/type_lpi.h src/message.h
 $(OBJDIR)/bitencode.o: src/bitencode.c src/def.h src/type_retcode.h src/bitencode.h
+$(OBJDIR)/memory.o: src/memory.c src/memory.h
