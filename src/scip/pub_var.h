@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.9 2004/03/31 13:41:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.10 2004/04/06 16:05:44 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -34,6 +34,7 @@
 
 #ifdef NDEBUG
 #include "struct_var.h"
+#include "history.h"
 #endif
 
 
@@ -442,6 +443,24 @@ int SCIPvarGetBranchPriority(
    VAR*             var                 /**< problem variable */
    );
 
+/** returns the number of times, a bound of the variable was changed due to branching */
+extern
+Longint SCIPvarGetNBranchings(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns the number of inferences this variable triggered */
+extern
+Longint SCIPvarGetNInferences(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns the average number of inferences found after branching on the variable */
+extern
+Real SCIPvarGetAvgInferences(
+   VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -490,6 +509,9 @@ int SCIPvarGetBranchPriority(
 #define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
+#define SCIPvarGetNBranchings(var)      (SCIPhistoryGetNBranchings(var->history))
+#define SCIPvarGetNInferences(var)      (SCIPhistoryGetNInferences(var->history))
+#define SCIPvarGetAvgInferences(var)    (SCIPhistoryGetAvgInferences(var->history))
 
 #endif
 

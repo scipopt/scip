@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.77 2004/04/06 15:53:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.78 2004/04/06 16:05:44 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5214,19 +5214,44 @@ void SCIPvarIncNInferences(
    SCIPhistoryIncNInferences(stat->glbhistory);
 }
 
-/** returns the average number of inferences found after branching on the variable */
-Real SCIPvarGetAvgInferences(
-   VAR*             var,                /**< problem variable */
-   STAT*            stat                /**< problem statistics */
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** returns the number of times, a bound of the variable was changed due to branching */
+Longint SCIPvarGetNBranchings(
+   VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
-   assert(stat != NULL);
 
-   return SCIPhistoryGetNBranchings(var->history) > 0
-      ? SCIPhistoryGetAvgInferences(var->history)
-      : SCIPhistoryGetAvgInferences(stat->glbhistory);
+   return SCIPhistoryGetNBranchings(var->history);
 }
+
+/** returns the number of inferences this variable triggered */
+Longint SCIPvarGetNInferences(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return SCIPhistoryGetNInferences(var->history);
+}
+
+/** returns the average number of inferences found after branching on the variable */
+Real SCIPvarGetAvgInferences(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return  SCIPhistoryGetAvgInferences(var->history);
+}
+
+#endif
 
 
 

@@ -12,10 +12,11 @@ $(OBJDIR)/objbranchrule.o: src/objbranchrule.cpp src/objbranchrule.h src/scip.h 
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objconshdlr.o: src/objconshdlr.cpp src/objconshdlr.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -30,10 +31,11 @@ $(OBJDIR)/objconshdlr.o: src/objconshdlr.cpp src/objconshdlr.h src/scip.h src/de
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objheur.o: src/objheur.cpp src/objheur.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -48,10 +50,11 @@ $(OBJDIR)/objheur.o: src/objheur.cpp src/objheur.h src/scip.h src/def.h \
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objnodesel.o: src/objnodesel.cpp src/objnodesel.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -66,10 +69,11 @@ $(OBJDIR)/objnodesel.o: src/objnodesel.cpp src/objnodesel.h src/scip.h src/def.h
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objpresol.o: src/objpresol.cpp src/objpresol.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -84,10 +88,11 @@ $(OBJDIR)/objpresol.o: src/objpresol.cpp src/objpresol.h src/scip.h src/def.h \
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objpricer.o: src/objpricer.cpp src/objpricer.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -102,10 +107,11 @@ $(OBJDIR)/objpricer.o: src/objpricer.cpp src/objpricer.h src/scip.h src/def.h \
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objprobdata.o: src/objprobdata.cpp src/objprobdata.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -120,10 +126,11 @@ $(OBJDIR)/objprobdata.o: src/objprobdata.cpp src/objprobdata.h src/scip.h src/de
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objreader.o: src/objreader.cpp src/objreader.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -138,10 +145,11 @@ $(OBJDIR)/objreader.o: src/objreader.cpp src/objreader.h src/scip.h src/def.h \
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
 $(OBJDIR)/objsepa.o: src/objsepa.cpp src/objsepa.h src/scip.h src/def.h \
   src/type_retcode.h src/message.h src/memory.h src/type_result.h \
   src/type_clock.h src/type_misc.h src/type_paramset.h src/type_scip.h \
@@ -156,7 +164,8 @@ $(OBJDIR)/objsepa.o: src/objsepa.cpp src/objsepa.h src/scip.h src/def.h \
   src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
   src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_sepa.h \
   src/pub_sol.h src/struct_sol.h src/pub_tree.h src/struct_tree.h \
-  src/pub_var.h src/struct_var.h src/type_history.h src/struct_scip.h \
-  src/type_interrupt.h src/type_mem.h src/type_primal.h \
-  src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h
+  src/pub_var.h src/struct_var.h src/type_history.h src/history.h \
+  src/struct_history.h src/struct_scip.h src/type_interrupt.h \
+  src/type_mem.h src/type_primal.h src/type_pricestore.h \
+  src/type_sepastore.h src/set.h src/buffer.h src/type_buffer.h \
+  src/struct_set.h
