@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.h,v 1.6 2005/01/18 09:26:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.h,v 1.7 2005/01/21 09:16:54 bzfpfend Exp $"
 
 /**@file   heur_rounding.h
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities

@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.15 2005/01/18 14:34:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.16 2005/01/21 09:16:48 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues

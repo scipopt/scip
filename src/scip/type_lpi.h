@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.9 2005/01/18 09:26:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.10 2005/01/21 09:17:11 bzfpfend Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -56,7 +56,7 @@ typedef enum LPParam LPPARAM;
 /** LP pricing strategy */
 enum Pricing
 {
-   SCIP_PRICING_AUTO        = 0,        /**< the LP solver should use its prefered strategy */
+   SCIP_PRICING_AUTO        = 0,        /**< the LP solver should use its preferred strategy */
    SCIP_PRICING_FULL        = 1,        /**< full pricing */
    SCIP_PRICING_STEEP       = 2,        /**< steepest edge pricing */
    SCIP_PRICING_STEEPQSTART = 3         /**< steepest edge pricing without initial dual norms */

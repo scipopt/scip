@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.55 2005/01/18 14:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.56 2005/01/21 09:17:01 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations

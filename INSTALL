@@ -8,7 +8,7 @@
 *                  2002-2005 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
-*  SCIP is distributed under the terms of the SCIP Academic Licence.        *
+*  SCIP is distributed under the terms of the SCIP Academic License.        *
 *                                                                           *
 *  You should have received a copy of the SCIP Academic License             *
 *  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -47,7 +47,7 @@ using the gnu compiler in debug mode, you would have the following names:
 
 Here is what you have to do to get SCIP running:
 
-1. Create necessary softlinks in lib/ directory:
+1. Create necessary soft-links in lib/ directory:
    (a) to use CPLEX (Version >= 8.0)
        - ln -s <path to directory of cplex.h> lib/cpxinc
          (e.g. "ln -s /cplex90/include/ilcplex lib/cpxinc")

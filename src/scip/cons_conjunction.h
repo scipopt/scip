@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.h,v 1.2 2005/01/18 09:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.h,v 1.3 2005/01/21 09:16:49 bzfpfend Exp $"
 
 /**@file   cons_conjunction.h
  * @brief  constraint handler for conjunction constraints

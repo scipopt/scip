@@ -11,7 +11,7 @@ interface:
 - methods SCIPlockConsVars() and SCIPunlockConsVars() replaced with method SCIPaddConsLocks()
 
 parameters:
-- new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distict cleanup settings between root node and other
+- new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
   nodes
 
 features:
@@ -137,7 +137,7 @@ fixed bugs:
 - missing SCIPlpiIsPrimalFeasible() and SCIPlpiIsDualFeasible() implemented in lpi_spx.cpp and lpi_spx121.cpp
 - removed preprocessing of linear constraint pairs with modifiable constraints
 - removed wrong assert "assert(eventfilter->len == 0 || eventfilter->eventmask != 0x00000000)" from event.c
-- removed wrong assert in conflict analysis (appeared on analysing diving LP conflicts with both bounds of a non-binary
+- removed wrong assert in conflict analysis (appeared on analyzing diving LP conflicts with both bounds of a non-binary
   variable changed)
 
 
@@ -160,7 +160,7 @@ plugins:
 - new method SCIPgetFeasibilityLinear() in linear constraint handler
 
 parameters:
-- new parameter separating/efficacynorm to choose between euclidean, maximum, sum, and discrete norm
+- new parameter separating/efficacynorm to choose between Euclidean, maximum, sum, and discrete norm
   in efficacy calculation
 - changed default frequency offset of pscostdiving (heuristics/pscostdiving/freqofs) to 2,
   and frequency offset of fracdiving (heuristics/feaspump/freqofs) to 0 in order to not call pscostdiving
@@ -180,7 +180,7 @@ fixed bugs:
   old focus node's LP fork)
 - bug reconvergence clauses in conflict analysis if bounds on non-binary variables were the reason for the fixing of
   the uip to create a reconvergence clause for
-- wrong subcalls in SCIPvarGet...CurrentRun() for aggregated variables
+- wrong sub calls in SCIPvarGet...CurrentRun() for aggregated variables
 - variables' conflict set counter was not reset when the problem was resolved again
 
 known bugs (still not fixed):

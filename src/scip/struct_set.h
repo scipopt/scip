@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.40 2005/01/18 09:26:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.41 2005/01/21 09:17:09 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -107,7 +107,7 @@ struct Set
 
    /* branching settings */
    Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction */
-   Bool             branch_preferbinary;/**< should branching on binary variables be prefered? */
+   Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
 
    /* conflict analysis settings */
    Real             conf_maxvarsfac;    /**< maximal fraction of binary variables involved in a conflict clause */

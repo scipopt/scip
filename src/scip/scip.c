@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.243 2005/01/18 14:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.244 2005/01/21 09:17:05 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5647,7 +5647,7 @@ RETCODE SCIPaddVarBranchFactor(
    return SCIP_OKAY;
 }
 
-/** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
+/** sets the branch priority of the variable; variables with higher branch priority are always preferred to variables
  *  with lower priority in selection of branching variable
  */
 RETCODE SCIPchgVarBranchPriority(
@@ -5997,7 +5997,7 @@ RETCODE aggregateActiveIntVars(
 
 /** performs second step of SCIPaggregateVars(): 
  *  the variable to be aggregated is chosen among active problem variables x' and y', prefering a less strict variable
- *  type as aggregation variable (i.e. continuous variables are prefered over implicit integers, implicit integers
+ *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
  *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
  *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
  *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
@@ -6104,7 +6104,7 @@ RETCODE aggregateActiveVars(
  *  of infeasibility, if a' == -b' and c' != 0, or to a variable fixing x' == c'/(a'+b') (and possible
  *  infeasibility) otherwise.
  *  In the second step, the variable to be aggregated is chosen among x' and y', prefering a less strict variable
- *  type as aggregation variable (i.e. continuous variables are prefered over implicit integers, implicit integers
+ *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
  *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
  *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
  *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by

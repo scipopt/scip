@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.142 2005/01/18 14:34:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.143 2005/01/21 09:16:50 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4388,7 +4388,7 @@ RETCODE preprocessConstraintPairs(
        * - if at least one constraint is an equality, count the weighted number of common variables W_c
        *   and the weighted number of variable in the difference sets W_0 = w(V_0 \ V_1), W_1 = w(V_1 \ V_0),
        *   where the weight of each variable depends on its type, such that aggregations in order to remove the
-       *   number of continuous and integer variables are prefered:
+       *   number of continuous and integer variables are preferred:
        *   - if W_c > W_1, try to aggregate  consdata0 := a * consdata0 + b * consdata1  in order to decrease the 
        *     variable weight in consdata0, where a = +/- val1[v] and b = -/+ val0[v] for common v which leads to
        *     the smallest weight; for numerical stability, we will only accept integral a and b; the sign of a has

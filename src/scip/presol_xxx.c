@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.11 2005/01/18 09:26:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.12 2005/01/21 09:17:00 bzfpfend Exp $"
 
 /**@file   presol_xxx.c
  * @brief  xxx presolver

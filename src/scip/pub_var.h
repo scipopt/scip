@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.34 2005/01/18 09:26:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.35 2005/01/21 09:17:04 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -374,7 +374,7 @@ Real SCIPvarGetBranchFactor(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets the branch priority of the variable; variables with higher priority should always be prefered to variables
+/** gets the branch priority of the variable; variables with higher priority should always be preferred to variables
  *  with lower priority
  */
 extern

@@ -2,7 +2,7 @@
 # [type: real, range: [0,1], default: 0.167]
 branching/scorefac = 0.167
 
-# should branching on binary variables be prefered?
+# should branching on binary variables be preferred?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 branching/preferbinary = FALSE
 

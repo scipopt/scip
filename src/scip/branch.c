@@ -7,13 +7,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.57 2005/01/18 09:26:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.58 2005/01/21 09:16:46 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage

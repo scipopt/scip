@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.132 2005/01/18 14:34:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.133 2005/01/21 09:17:13 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5513,7 +5513,7 @@ void varProcessChgBranchPriority(
    }
 }
 
-/** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
+/** sets the branch priority of the variable; variables with higher branch priority are always preferred to variables
  *  with lower priority in selection of branching variable
  */
 void SCIPvarChgBranchPriority(
@@ -5627,7 +5627,7 @@ void varProcessChgBranchDirection(
    }
 }
 
-/** sets the branch direction of the variable; variables with higher branch direction are always prefered to variables
+/** sets the branch direction of the variable; variables with higher branch direction are always preferred to variables
  *  with lower direction in selection of branching variable
  */
 void SCIPvarChgBranchDirection(
@@ -8260,7 +8260,7 @@ Real SCIPvarGetBranchFactor(
    return var->branchfactor;
 }
 
-/** gets the branch priority of the variable; variables with higher priority should always be prefered to variables
+/** gets the branch priority of the variable; variables with higher priority should always be preferred to variables
  *  with lower priority
  */
 int SCIPvarGetBranchPriority(

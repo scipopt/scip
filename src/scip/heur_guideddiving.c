@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.4 2005/01/18 09:26:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.5 2005/01/21 09:16:53 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions

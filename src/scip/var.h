@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+/*  SCIP is distributed under the terms of the SCIP Academic License.        */
 /*                                                                           */
 /*  You should have received a copy of the SCIP Academic License             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.84 2005/01/18 14:34:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.85 2005/01/21 09:17:13 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -589,7 +589,7 @@ void SCIPvarChgBranchFactor(
    Real             branchfactor        /**< factor to weigh variable's branching score with */
    );
 
-/** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
+/** sets the branch priority of the variable; variables with higher branch priority are always preferred to variables
  *  with lower priority in selection of branching variable
  */
 extern
@@ -598,7 +598,7 @@ void SCIPvarChgBranchPriority(
    int              branchpriority      /**< branching priority of the variable */
    );
 
-/** sets the branch direction of the variable; variables with higher branch direction are always prefered to variables
+/** sets the branch direction of the variable; variables with higher branch direction are always preferred to variables
  *  with lower direction in selection of branching variable
  */
 extern
