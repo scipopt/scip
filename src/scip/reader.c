@@ -144,9 +144,9 @@ Bool readerIsApplicable(
 {
    assert(reader != NULL);
    assert(reader->extension != NULL);
-   assert(extension != NULL);
 
-   return (strcasecmp(reader->extension, extension) == 0);
+   return (extension != NULL && strcasecmp(reader->extension, extension) == 0)
+      || (extension == NULL && *(reader->extension) == '\0');
 }
 
 /** reads problem data from file with given reader or returns SCIP_DIDNOTRUN */

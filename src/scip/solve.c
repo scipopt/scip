@@ -862,15 +862,29 @@ RETCODE SCIPsolveCIP(
             oldnsolsfound = primal->nsolsfound;
             if( tree->actnodehaslp )
             {
+               /* start clock for LP solutions */
+               SCIPclockStart(stat->lpsoltime, set);
+
+               /* add solution to storage */
                CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, stat, lp, NULL) );
                CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
                tree->nlpsolsfound += primal->nsolsfound - oldnsolsfound;
+
+               /* stop clock for LP solutions */
+               SCIPclockStop(stat->lpsoltime, set);
             }
             else
             {
+               /* start clock for pseudo solutions */
+               SCIPclockStart(stat->pseudosoltime, set);
+
+               /* add solution to storage */
                CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, set, stat, tree, NULL) );
                CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
                tree->npssolsfound += primal->nsolsfound - oldnsolsfound;
+
+               /* stop clock for pseudo solutions */
+               SCIPclockStop(stat->pseudosoltime, set);
             }
          }
       }

@@ -48,6 +48,8 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lppricingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIPstatReset(*stat);
 
@@ -68,6 +70,8 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->duallptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->lppricingtime);
+   SCIPclockFree(&(*stat)->lpsoltime);
+   SCIPclockFree(&(*stat)->pseudosoltime);
 
    freeMemory(stat);
 
@@ -130,6 +134,8 @@ void SCIPstatReset(
    SCIPclockReset(stat->duallptime);
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->lppricingtime);
+   SCIPclockReset(stat->lpsoltime);
+   SCIPclockReset(stat->pseudosoltime);
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;

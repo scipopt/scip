@@ -67,6 +67,8 @@ struct Stat
    CLOCK*           duallptime;         /**< dual LP solution time */
    CLOCK*           strongbranchtime;   /**< strong branching time */
    CLOCK*           lppricingtime;      /**< LP pricing time */
+   CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
+   CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
 };
 
 

@@ -1876,7 +1876,7 @@ RETCODE presolve(
 
    abortfac = scip->set->presolabortfac;
 
-   aborted = FALSE;
+   aborted = SCIPsolveIsStopped(scip->set, scip->stat);
    *result = SCIP_DIDNOTRUN;
 
    while( nrounds < maxnrounds && !aborted && *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED )
@@ -1918,6 +1918,8 @@ RETCODE presolve(
       /* assume a 20% density of non-zero elements */
       aborted &= (scip->transprob->nvars * scip->transprob->nconss == 0
          || (Real)(nchgcoefs - lastnchgcoefs)/(Real)(scip->transprob->nvars * scip->transprob->nconss) < 0.2*abortfac);
+      /* abort if time limit reached or user interrupted */
+      aborted |= SCIPsolveIsStopped(scip->set, scip->stat);
 
       /* increase round number */
       nrounds++;
@@ -4957,8 +4959,12 @@ void printHeuristicStatistics(
    assert(file != NULL);
 
    fprintf(file, "Primal Heuristics  :         Time        Calls        Found\n");
-   fprintf(file, "  LP solutions     :            -            - %12d\n", scip->tree->nlpsolsfound);
-   fprintf(file, "  pseudo solutions :            -            - %12d\n", scip->tree->npssolsfound);
+   fprintf(file, "  LP solutions     : %12.2f            - %12d\n",
+      SCIPclockGetTime(scip->stat->lpsoltime),
+      scip->tree->nlpsolsfound);
+   fprintf(file, "  pseudo solutions : %12.2f            - %12d\n",
+      SCIPclockGetTime(scip->stat->pseudosoltime),
+      scip->tree->npssolsfound);
 
    for( i = 0; i < scip->set->nheurs; ++i )
       fprintf(file, "  %-17.17s: %12.2f %12d %12d\n",
