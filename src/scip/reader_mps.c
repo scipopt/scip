@@ -698,15 +698,15 @@ RETCODE readRows(
          {
          case 'G' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
-                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, dynamicrows) );
             break;
          case 'E' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0, 
-                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, dynamicrows) );
             break;
          case 'L' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+                           !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, dynamicrows) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);

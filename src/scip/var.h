@@ -765,6 +765,12 @@ VARSTATUS SCIPvarGetStatus(
    VAR*             var                 /**< problem variable */
    );
 
+/** returns whether the variable belongs to the original problem */
+extern
+Bool SCIPvarIsOriginal(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether the variable belongs to the transformed problem */
 extern
 Bool SCIPvarIsTransformed(
@@ -881,6 +887,8 @@ int SCIPvarGetInferNum(
 
 #define SCIPvarGetName(var)             (var)->name
 #define SCIPvarGetStatus(var)           (VARSTATUS)((var)->varstatus)
+#define SCIPvarIsOriginal(var)          ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
+      || ((var)->varstatus == SCIP_VARSTATUS_NEGATED && (var)->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL))
 #define SCIPvarIsTransformed(var)       ((var)->varstatus != SCIP_VARSTATUS_ORIGINAL \
       && ((var)->varstatus != SCIP_VARSTATUS_NEGATED || (var)->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL))
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)

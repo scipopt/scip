@@ -65,9 +65,10 @@
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
 
 
-/** linear constraint */
-struct LinCons
+/** constraint data for linear constraints */
+struct ConsData
 {
+   ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    VAR**            vars;               /**< variables of constraint entries */
    Real*            vals;               /**< coefficients of constraint entries */
    EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
@@ -82,33 +83,23 @@ struct LinCons
    int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
    int              varssize;           /**< size of the vars- and vals-arrays */
    int              nvars;              /**< number of nonzeros in constraint */
-   unsigned int     local:1;            /**< is linear constraint only valid locally? */
-   unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
-   unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
-   unsigned int     transformed:1;      /**< does the linear constraint data belongs to the transformed problem? */
    unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds valid? */
    unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
    unsigned int     redchecked:1;       /**< is constraint already checked for redundancy with other constraints? */
    unsigned int     sorted:1;           /**< are the constraint's variables sorted? */
 };
 
-/** constraint data for linear constraints */
-struct ConsData
-{
-   LINCONS*         lincons;            /**< linear constraint */
-   ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
-};
-
 /** event data for bound change event */
 struct EventData
 {
-   LINCONS*         lincons;            /**< linear constraint to process the bound change for */
+   CONSDATA*        consdata;           /**< linear constraint data to process the bound change for */
    int              varpos;             /**< position of variable in vars array */
 };
 
 /** constraint handler data */
 struct ConsHdlrData
 {
+   EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    LINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
    int              linconsupgradessize;/**< size of linconsupgrade array */
    int              nlinconsupgrades;   /**< number of linear constraint upgrade methods */
@@ -155,31 +146,32 @@ RETCODE conshdlrdataEnsureLinconsupgradesSize(
 
 /** ensures, that vars and vals arrays can store at least num entries */
 static
-RETCODE linconsEnsureVarsSize(
+RETCODE consdataEnsureVarsSize(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint */
-   int              num                 /**< minimum number of entries to store */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   int              num,                /**< minimum number of entries to store */
+   Bool             transformed         /**< is constraint from transformed problem? */
    )
 {
-   assert(lincons != NULL);
-   assert(lincons->nvars <= lincons->varssize);
+   assert(consdata != NULL);
+   assert(consdata->nvars <= consdata->varssize);
    
-   if( num > lincons->varssize )
+   if( num > consdata->varssize )
    {
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, num);
-      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vars, lincons->varssize, newsize) );
-      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vals, lincons->varssize, newsize) );
-      if( lincons->transformed )
+      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
+      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->vals, consdata->varssize, newsize) );
+      if( transformed )
       {
-         CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->eventdatas, lincons->varssize, newsize) );
+         CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize, newsize) );
       }
       else
-         assert(lincons->eventdatas == NULL);
-      lincons->varssize = newsize;
+         assert(consdata->eventdatas == NULL);
+      consdata->varssize = newsize;
    }
-   assert(num <= lincons->varssize);
+   assert(num <= consdata->varssize);
 
    return SCIP_OKAY;
 }
@@ -240,6 +232,14 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nlinconsupgrades = 0;
    (*conshdlrdata)->tightenboundsfreq = TIGHTENBOUNDSFREQ;
 
+   /* get event handler for updating linear constraint activity bounds */
+   (*conshdlrdata)->eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   if( (*conshdlrdata)->eventhdlr == NULL )
+   {
+      errorMessage("event handler for linear constraints not found");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -295,291 +295,245 @@ RETCODE conshdlrdataIncludeUpgrade(
 
 
 /*
- * lincons local methods
+ * local methods
  */
-
-/* gets linear constraint data from constraint object */
-static
-LINCONS* consGetLincons(
-   CONS*            cons                /**< linear constraint */
-   )
-{
-   CONSDATA* consdata;
-
-   assert(cons != NULL);
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->lincons != NULL);
-
-   return consdata->lincons;
-}
 
 /** creates event data for variable at given position, and catches events */
 static
-RETCODE linconsCatchEvent(
+RETCODE consdataCatchEvent(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              pos                 /**< array position of variable to catch bound change events for */
    )
 {
-   assert(lincons != NULL);
+   assert(consdata != NULL);
    assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < lincons->nvars);
-   assert(lincons->vars != NULL);
-   assert(lincons->vars[pos] != NULL);
-   assert(lincons->eventdatas != NULL);
-   assert(lincons->eventdatas[pos] == NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+   assert(consdata->vars != NULL);
+   assert(consdata->vars[pos] != NULL);
+   assert(consdata->eventdatas != NULL);
+   assert(consdata->eventdatas[pos] == NULL);
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &lincons->eventdatas[pos]) );
-   lincons->eventdatas[pos]->lincons = lincons;
-   lincons->eventdatas[pos]->varpos = pos;
+   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata->eventdatas[pos]) );
+   consdata->eventdatas[pos]->consdata = consdata;
+   consdata->eventdatas[pos]->varpos = pos;
 
-   CHECK_OKAY( SCIPcatchVarEvent(scip, lincons->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, 
-                  lincons->eventdatas[pos]) );
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, 
+                  consdata->eventdatas[pos]) );
 
    return SCIP_OKAY;
 }
 
 /** deletes event data for variable at given position, and drops events */
 static
-RETCODE linconsDropEvent(
+RETCODE consdataDropEvent(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              pos                 /**< array position of variable to catch bound change events for */
    )
 {
-   assert(lincons != NULL);
+   assert(consdata != NULL);
    assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < lincons->nvars);
-   assert(lincons->vars[pos] != NULL);
-   assert(lincons->eventdatas[pos] != NULL);
-   assert(lincons->eventdatas[pos]->lincons == lincons);
-   assert(lincons->eventdatas[pos]->varpos == pos);
+   assert(0 <= pos && pos < consdata->nvars);
+   assert(consdata->vars[pos] != NULL);
+   assert(consdata->eventdatas[pos] != NULL);
+   assert(consdata->eventdatas[pos]->consdata == consdata);
+   assert(consdata->eventdatas[pos]->varpos == pos);
    
-   CHECK_OKAY( SCIPdropVarEvent(scip, lincons->vars[pos], eventhdlr, lincons->eventdatas[pos]) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], eventhdlr, consdata->eventdatas[pos]) );
 
-   SCIPfreeBlockMemory(scip, &lincons->eventdatas[pos]);
+   SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
+
+   return SCIP_OKAY;
+}
+
+/** catches bound change events for all variables in transformed linear constraint */
+static
+RETCODE consdataCatchAllEvents(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+
+   /* catch event for every single variable */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      CHECK_OKAY( consdataCatchEvent(scip, consdata, eventhdlr, i) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drops bound change events for all variables in transformed linear constraint */
+static
+RETCODE consdataDropAllEvents(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+
+   /* drop event of every single variable */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, i) );
+   }
 
    return SCIP_OKAY;
 }
 
 /** locks the rounding locks associated to the given coefficient in the linear constraint */
 static
-void linconsForbidRounding(
+void consdataForbidRounding(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable of constraint entry */
    Real             val                 /**< coefficient of constraint entry */
    )
 {
-   assert(lincons != NULL);
+   assert(consdata != NULL);
    assert(!SCIPisZero(scip, val));
 
-   if( !lincons->local )
+   if( SCIPisPositive(scip, val) )
    {
-      if( SCIPisPositive(scip, val) )
-      {
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarForbidRoundDown(var);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarForbidRoundUp(var);
-      }
-      else
-      {
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarForbidRoundDown(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarForbidRoundUp(var);
-      }
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         SCIPvarForbidRoundDown(var);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         SCIPvarForbidRoundUp(var);
+   }
+   else
+   {
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         SCIPvarForbidRoundDown(var);
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         SCIPvarForbidRoundUp(var);
    }
 }
 
 /** unlocks the rounding locks associated to the given coefficient in the linear constraint */
 static
-void linconsAllowRounding(
+void consdataAllowRounding(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable of constraint entry */
    Real             val                 /**< coefficient of constraint entry */
    )
 {
-   assert(lincons != NULL);
+   assert(consdata != NULL);
    assert(!SCIPisZero(scip, val));
 
-   if( !lincons->local )
+   if( SCIPisPositive(scip, val) )
    {
-      if( SCIPisPositive(scip, val) )
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         SCIPvarAllowRoundDown(var);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         SCIPvarAllowRoundUp(var);
+   }
+   else
+   {
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         SCIPvarAllowRoundDown(var);
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         SCIPvarAllowRoundUp(var);
+   }
+}
+
+/** locks the rounding locks of all coefficients in the linear constraint */
+static
+void consdataForbidAllRoundings(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   Bool haslhs;
+   Bool hasrhs;
+   int i;
+
+   assert(consdata != NULL);
+
+   haslhs = !SCIPisInfinity(scip, -consdata->lhs);
+   hasrhs = !SCIPisInfinity(scip, consdata->rhs);
+   
+   /* lock rounding of every single variable */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      if( SCIPisPositive(scip, consdata->vals[i]) )
       {
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarAllowRoundDown(var);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarAllowRoundUp(var);
+         if( haslhs )
+            SCIPvarForbidRoundDown(consdata->vars[i]);
+         if( hasrhs )
+            SCIPvarForbidRoundUp(consdata->vars[i]);
       }
       else
       {
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarAllowRoundDown(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarAllowRoundUp(var);
+         if( haslhs )
+            SCIPvarForbidRoundUp(consdata->vars[i]);
+         if( hasrhs )
+            SCIPvarForbidRoundDown(consdata->vars[i]);
       }
    }
 }
 
-/** catches bound change events and locks rounding for variable at given position in transformed linear constraint */
+/** unlocks the rounding locks of all coefficients in the linear constraint */
 static
-RETCODE linconsLockCoef(
+void consdataAllowAllRoundings(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   EVENTHDLR*       eventhdlr,          /**< event handler for bound change events, or NULL */
-   int              pos                 /**< position of variable in linear constraint */
+   CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   assert(scip != NULL);
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-   assert(0 <= pos && pos < lincons->nvars);
-
-   /*debugMessage("locking coefficient %g<%s> in linear constraint\n", val, SCIPvarGetName(var));*/
-
-   if( eventhdlr == NULL )
-   {
-      /* get event handler for updating linear constraint activity bounds */
-      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-      if( eventhdlr == NULL )
-      {
-         errorMessage("event handler for linear constraints not found");
-         return SCIP_PLUGINNOTFOUND;
-      }
-   }
-
-   /* catch bound change events on variable */
-   assert(SCIPvarIsTransformed(lincons->vars[pos]));
-   CHECK_OKAY( linconsCatchEvent(scip, lincons, eventhdlr, pos) );
-   
-   /* forbid rounding of variable */
-   linconsForbidRounding(scip, lincons, lincons->vars[pos], lincons->vals[pos]);
-
-   return SCIP_OKAY;
-}
-
-/** drops bound change events and unlocks rounding for variable at given position in transformed linear constraint */
-static
-RETCODE linconsUnlockCoef(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   EVENTHDLR*       eventhdlr,          /**< event handler for bound change events, or NULL */
-   int              pos                 /**< position of variable in linear constraint */
-   )
-{
-   assert(scip != NULL);
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-   assert(0 <= pos && pos < lincons->nvars);
-
-   /*debugMessage("unlocking coefficient %g<%s> in linear constraint\n", val, SCIPvarGetName(var));*/
-
-   if( eventhdlr == NULL )
-   {
-      /* get event handler for updating linear constraint activity bounds */
-      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-      if( eventhdlr == NULL )
-      {
-         errorMessage("event handler for linear constraints not found");
-         return SCIP_PLUGINNOTFOUND;
-      }
-   }
-   
-   /* drop bound change events on variable */
-   assert(SCIPvarIsTransformed(lincons->vars[pos]));
-   CHECK_OKAY( linconsDropEvent(scip, lincons, eventhdlr, pos) );
-
-   /* allow rounding of variable */
-   linconsAllowRounding(scip, lincons, lincons->vars[pos], lincons->vals[pos]);
-
-   return SCIP_OKAY;
-}
-
-/** catches bound change events and locks rounding for all variables in transformed linear constraint */
-static
-RETCODE linconsLockAllCoefs(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
-   )
-{
-   EVENTHDLR* eventhdlr;
+   Bool haslhs;
+   Bool hasrhs;
    int i;
 
-   assert(scip != NULL);
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
-   /* get event handler for updating linear constraint activity bounds */
-   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-   if( eventhdlr == NULL )
+   haslhs = !SCIPisInfinity(scip, -consdata->lhs);
+   hasrhs = !SCIPisInfinity(scip, consdata->rhs);
+   
+   /* unlock rounding of every single variable */
+   for( i = 0; i < consdata->nvars; ++i )
    {
-      errorMessage("event handler for linear constraints not found");
-      return SCIP_PLUGINNOTFOUND;
+      if( SCIPisPositive(scip, consdata->vals[i]) )
+      {
+         if( haslhs )
+            SCIPvarAllowRoundDown(consdata->vars[i]);
+         if( hasrhs )
+            SCIPvarAllowRoundUp(consdata->vars[i]);
+      }
+      else
+      {
+         if( haslhs )
+            SCIPvarAllowRoundUp(consdata->vars[i]);
+         if( hasrhs )
+            SCIPvarAllowRoundDown(consdata->vars[i]);
+      }
    }
-
-   /* lock every single coefficient */
-   for( i = 0; i < lincons->nvars; ++i )
-   {
-      CHECK_OKAY( linconsLockCoef(scip, lincons, eventhdlr, i) );
-   }
-
-   return SCIP_OKAY;
 }
 
-/** drops bound change events and unlocks rounding for all variables in transformed linear constraint */
+/** creates a linear constraint data of the original problem */
 static
-RETCODE linconsUnlockAllCoefs(
+RETCODE consdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
-   )
-{
-   EVENTHDLR* eventhdlr;
-   int i;
-
-   assert(scip != NULL);
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-
-   /* get event handler for updating linear constraint activity bounds */
-   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-   if( eventhdlr == NULL )
-   {
-      errorMessage("event handler for linear constraints not found");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* unlock every single coefficient */
-   for( i = 0; i < lincons->nvars; ++i )
-   {
-      CHECK_OKAY( linconsUnlockCoef(scip, lincons, eventhdlr, i) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** creates a linear constraint object of the original problem */
-static
-RETCODE linconsCreate(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS**        lincons,            /**< pointer to linear constraint object */
+   CONSDATA**       consdata,           /**< pointer to linear constraint data */
    int              nvars,              /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
-   Real             rhs,                /**< right hand side of row */
-   Bool             modifiable,         /**< is data modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Real             rhs                 /**< right hand side of row */
    )
 {
    int i;
 
-   assert(lincons != NULL);
+   assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
@@ -592,544 +546,413 @@ RETCODE linconsCreate(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, lincons) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, consdata) );
 
    if( nvars > 0 )
    {
-      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vars, vars, nvars) );
-      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vals, vals, nvars) );
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, vals, nvars) );
    }
    else
    {
-      (*lincons)->vars = NULL;
-      (*lincons)->vals = NULL;
+      (*consdata)->vars = NULL;
+      (*consdata)->vals = NULL;
    }
-   (*lincons)->eventdatas = NULL;
+   (*consdata)->eventdatas = NULL;
 
-   (*lincons)->lhs = lhs;
-   (*lincons)->rhs = rhs;
-   (*lincons)->pseudoactivity = SCIP_INVALID;
-   (*lincons)->minactivity = SCIP_INVALID;
-   (*lincons)->maxactivity = SCIP_INVALID;
-   (*lincons)->minactivityinf = -1;
-   (*lincons)->maxactivityinf = -1;
-   (*lincons)->varssize = nvars;
-   (*lincons)->nvars = nvars;
-   (*lincons)->local = FALSE;
-   (*lincons)->modifiable = modifiable;
-   (*lincons)->removeable = removeable;
-   (*lincons)->transformed = FALSE;
-   (*lincons)->validactivities = FALSE;
-   (*lincons)->propagated = FALSE;
-   (*lincons)->redchecked = FALSE;
-   (*lincons)->sorted = (nvars <= 1);
+   (*consdata)->row = NULL;
+   (*consdata)->lhs = lhs;
+   (*consdata)->rhs = rhs;
+   (*consdata)->pseudoactivity = SCIP_INVALID;
+   (*consdata)->minactivity = SCIP_INVALID;
+   (*consdata)->maxactivity = SCIP_INVALID;
+   (*consdata)->minactivityinf = -1;
+   (*consdata)->maxactivityinf = -1;
+   (*consdata)->varssize = nvars;
+   (*consdata)->nvars = nvars;
+   (*consdata)->validactivities = FALSE;
+   (*consdata)->propagated = FALSE;
+   (*consdata)->redchecked = FALSE;
+   (*consdata)->sorted = (nvars <= 1);
    
    return SCIP_OKAY;
 }
 
-/** creates a linear constraint object of the transformed problem */
+/** creates a linear constraint data of the transformed problem */
 static
-RETCODE linconsCreateTransformed(
+RETCODE consdataCreateTransformed(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS**        lincons,            /**< pointer to linear constraint object */
+   CONSDATA**       consdata,           /**< pointer to linear constraint data */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              nvars,              /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
-   Real             rhs,                /**< right hand side of row */
-   Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   Real             rhs                 /**< right hand side of row */
    )
 {
    int i;
 
-   assert(lincons != NULL);
+   assert(consdata != NULL);
 
    /* create linear constraint data */
-   CHECK_OKAY( linconsCreate(scip, lincons, nvars, vars, vals, lhs, rhs, modifiable, removeable) );
-   (*lincons)->local = local;
-   (*lincons)->transformed = TRUE;
+   CHECK_OKAY( consdataCreate(scip, consdata, nvars, vars, vals, lhs, rhs) );
 
    /* allocate the additional needed eventdatas array */
-   assert((*lincons)->eventdatas == NULL);
-   CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*lincons)->eventdatas, (*lincons)->varssize) );
+   assert((*consdata)->eventdatas == NULL);
+   CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize) );
 
    /* initialize the eventdatas array, transform the variables */
-   for( i = 0; i < (*lincons)->nvars; ++i )
+   for( i = 0; i < (*consdata)->nvars; ++i )
    {
-      (*lincons)->eventdatas[i] = NULL;
-      if( !SCIPvarIsTransformed((*lincons)->vars[i]) )
+      (*consdata)->eventdatas[i] = NULL;
+      if( !SCIPvarIsTransformed((*consdata)->vars[i]) )
       {
-         CHECK_OKAY( SCIPgetTransformedVar(scip, (*lincons)->vars[i], &(*lincons)->vars[i]) );
-         assert((*lincons)->vars[i] != NULL);
+         CHECK_OKAY( SCIPgetTransformedVar(scip, (*consdata)->vars[i], &(*consdata)->vars[i]) );
+         assert((*consdata)->vars[i] != NULL);
       }
-      assert(SCIPvarIsTransformed((*lincons)->vars[i]));
+      assert(SCIPvarIsTransformed((*consdata)->vars[i]));
    }
 
-   /* catch bound change events and lock the rounding of variables */
-   CHECK_OKAY( linconsLockAllCoefs(scip, *lincons) );
+   /* catch bound change events of variables */
+   CHECK_OKAY( consdataCatchAllEvents(scip, *consdata, eventhdlr) );
 
    return SCIP_OKAY;
 }
 
-/** frees a linear constraint object */
+/** frees a linear constraint data */
 static
-RETCODE linconsFree(
+RETCODE consdataFree(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS**        lincons             /**< pointer to linear constraint object */
+   CONSDATA**       consdata,           /**< pointer to linear constraint data */
+   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
-   assert(lincons != NULL);
-   assert(*lincons != NULL);
-   assert((*lincons)->varssize >= 0);
+   assert(consdata != NULL);
+   assert(*consdata != NULL);
+   assert((*consdata)->varssize >= 0);
 
-   if( (*lincons)->transformed )
+   /* release the row */
+   if( (*consdata)->row != NULL )
    {
-      /* drop bound change events and unlock the rounding of variables */
-      CHECK_OKAY( linconsUnlockAllCoefs(scip, *lincons) );
+      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* free event datas */
+   if( (*consdata)->eventdatas != NULL )
+   {
+      /* drop bound change events of variables */
+      CHECK_OKAY( consdataDropAllEvents(scip, *consdata, eventhdlr) );
 
       /* free additional eventdatas array */
-      SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->eventdatas, (*lincons)->varssize);
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize);
    }
-   assert((*lincons)->eventdatas == NULL);
+   assert((*consdata)->eventdatas == NULL);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vars, (*lincons)->varssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vals, (*lincons)->varssize);
-   SCIPfreeBlockMemory(scip, lincons);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vals, (*consdata)->varssize);
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
+}
+
+/** prints linear constraint to file stream */
+static
+void consdataPrint(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int v;
+
+   assert(consdata != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   /* print left hand side for ranged rows */
+   if( !SCIPisInfinity(scip, -consdata->lhs)
+      && !SCIPisInfinity(scip, consdata->rhs)
+      && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      fprintf(file, "%+g <= ", consdata->lhs);
+
+   /* print coefficients */
+   if( consdata->nvars == 0 )
+      fprintf(file, "0 ");
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      assert(consdata->vars[v] != NULL);
+      fprintf(file, "%+g%s ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
+   }
+
+   /* print right hand side */
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      fprintf(file, "= %+g\n", consdata->rhs);
+   else if( !SCIPisInfinity(scip, consdata->rhs) )
+      fprintf(file, "<= %+g\n", consdata->rhs);
+   else if( !SCIPisInfinity(scip, -consdata->lhs) )
+      fprintf(file, ">= %+g\n", consdata->lhs);
+   else
+      fprintf(file, " [free]\n");
 }
 
 /** updates minimum and maximum activity for a change in lower bound */
 static
-void linconsUpdateChgLb(
+void consdataUpdateChgLb(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable that has been changed */
    Real             oldlb,              /**< old lower bound of variable */
    Real             newlb,              /**< new lower bound of variable */
    Real             val                 /**< coefficient of constraint entry */
    )
 {
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
-   if( lincons->validactivities )
+   if( consdata->validactivities )
    {
-      assert(lincons->pseudoactivity < SCIP_INVALID);
-      assert(lincons->minactivity < SCIP_INVALID);
-      assert(lincons->maxactivity < SCIP_INVALID);
-      assert(lincons->minactivityinf >= 0);
-      assert(lincons->maxactivityinf >= 0);
+      assert(consdata->pseudoactivity < SCIP_INVALID);
+      assert(consdata->minactivity < SCIP_INVALID);
+      assert(consdata->maxactivity < SCIP_INVALID);
+      assert(consdata->minactivityinf >= 0);
+      assert(consdata->maxactivityinf >= 0);
       assert(!SCIPisInfinity(scip, oldlb));
       assert(!SCIPisInfinity(scip, newlb));
 
       if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
-         lincons->pseudoactivity += val * (newlb - oldlb);
+         consdata->pseudoactivity += val * (newlb - oldlb);
 
       if( val > 0.0 )
       {
          if( SCIPisInfinity(scip, -oldlb) )
          {
-            assert(lincons->minactivityinf >= 1);
-            lincons->minactivityinf--;
+            assert(consdata->minactivityinf >= 1);
+            consdata->minactivityinf--;
          }
          else
-            lincons->minactivity -= val * oldlb;
+            consdata->minactivity -= val * oldlb;
 
          if( SCIPisInfinity(scip, -newlb) )
-            lincons->minactivityinf++;
+            consdata->minactivityinf++;
          else
-            lincons->minactivity += val * newlb;
+            consdata->minactivity += val * newlb;
       }
       else
       {
          if( SCIPisInfinity(scip, -oldlb) )
          {
-            assert(lincons->maxactivityinf >= 1);
-            lincons->maxactivityinf--;
+            assert(consdata->maxactivityinf >= 1);
+            consdata->maxactivityinf--;
          }
          else
-            lincons->maxactivity -= val * oldlb;
+            consdata->maxactivity -= val * oldlb;
 
          if( SCIPisInfinity(scip, -newlb) )
-            lincons->maxactivityinf++;
+            consdata->maxactivityinf++;
          else
-            lincons->maxactivity += val * newlb;
+            consdata->maxactivity += val * newlb;
       }
    }
 }
 
 /** updates minimum and maximum activity for a change in upper bound */
 static
-void linconsUpdateChgUb(
+void consdataUpdateChgUb(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable that has been changed */
    Real             oldub,              /**< old upper bound of variable */
    Real             newub,              /**< new upper bound of variable */
    Real             val                 /**< coefficient of constraint entry */
    )
 {
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
-   if( lincons->validactivities )
+   if( consdata->validactivities )
    {
-      assert(lincons->pseudoactivity < SCIP_INVALID);
-      assert(lincons->minactivity < SCIP_INVALID);
-      assert(lincons->maxactivity < SCIP_INVALID);
+      assert(consdata->pseudoactivity < SCIP_INVALID);
+      assert(consdata->minactivity < SCIP_INVALID);
+      assert(consdata->maxactivity < SCIP_INVALID);
       assert(!SCIPisInfinity(scip, -oldub));
       assert(!SCIPisInfinity(scip, -newub));
 
       if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
-         lincons->pseudoactivity += val * (newub - oldub);
+         consdata->pseudoactivity += val * (newub - oldub);
 
       if( val > 0.0 )
       {
          if( SCIPisInfinity(scip, oldub) )
          {
-            assert(lincons->maxactivityinf >= 1);
-            lincons->maxactivityinf--;
+            assert(consdata->maxactivityinf >= 1);
+            consdata->maxactivityinf--;
          }
          else
-            lincons->maxactivity -= val * oldub;
+            consdata->maxactivity -= val * oldub;
 
          if( SCIPisInfinity(scip, newub) )
-            lincons->maxactivityinf++;
+            consdata->maxactivityinf++;
          else
-            lincons->maxactivity += val * newub;
+            consdata->maxactivity += val * newub;
       }
       else
       {
          if( SCIPisInfinity(scip, oldub) )
          {
-            assert(lincons->minactivityinf >= 1);
-            lincons->minactivityinf--;
+            assert(consdata->minactivityinf >= 1);
+            consdata->minactivityinf--;
          }
          else
-            lincons->minactivity -= val * oldub;
+            consdata->minactivity -= val * oldub;
 
          if( SCIPisInfinity(scip, newub) )
-            lincons->minactivityinf++;
+            consdata->minactivityinf++;
          else
-            lincons->minactivity += val * newub;
+            consdata->minactivity += val * newub;
       }
    }
 }
 
 /** updates minimum and maximum activity for coefficient addition */
 static
-void linconsUpdateAddCoef(
+void consdataUpdateAddCoef(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable of constraint entry */
    Real             val                 /**< coefficient of constraint entry */
    )
 {
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
-   if( lincons->validactivities )
+   if( consdata->validactivities )
    {
-      assert(lincons->pseudoactivity < SCIP_INVALID);
-      assert(lincons->minactivity < SCIP_INVALID);
-      assert(lincons->maxactivity < SCIP_INVALID);
+      assert(consdata->pseudoactivity < SCIP_INVALID);
+      assert(consdata->minactivity < SCIP_INVALID);
+      assert(consdata->maxactivity < SCIP_INVALID);
 
-      linconsUpdateChgLb(scip, lincons, var, 0.0, SCIPvarGetLbLocal(var), val);
-      linconsUpdateChgUb(scip, lincons, var, 0.0, SCIPvarGetUbLocal(var), val);
+      consdataUpdateChgLb(scip, consdata, var, 0.0, SCIPvarGetLbLocal(var), val);
+      consdataUpdateChgUb(scip, consdata, var, 0.0, SCIPvarGetUbLocal(var), val);
    }
 }
 
 /** updates minimum and maximum activity for coefficient deletion */
 static
-void linconsUpdateDelCoef(
+void consdataUpdateDelCoef(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable of constraint entry */
    Real             val                 /**< coefficient of constraint entry */
    )
 {
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
-   if( lincons->validactivities )
+   if( consdata->validactivities )
    {
-      assert(lincons->pseudoactivity < SCIP_INVALID);
-      assert(lincons->minactivity < SCIP_INVALID);
-      assert(lincons->maxactivity < SCIP_INVALID);
+      assert(consdata->pseudoactivity < SCIP_INVALID);
+      assert(consdata->minactivity < SCIP_INVALID);
+      assert(consdata->maxactivity < SCIP_INVALID);
 
-      linconsUpdateChgLb(scip, lincons, var, SCIPvarGetLbLocal(var), 0.0, val);
-      linconsUpdateChgUb(scip, lincons, var, SCIPvarGetUbLocal(var), 0.0, val);
+      consdataUpdateChgLb(scip, consdata, var, SCIPvarGetLbLocal(var), 0.0, val);
+      consdataUpdateChgUb(scip, consdata, var, SCIPvarGetUbLocal(var), 0.0, val);
    }
-}
-
-/** adds coefficient in linear constraint object */
-static
-RETCODE linconsAddCoef(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   VAR*             var,                /**< variable of constraint entry */
-   Real             val                 /**< coefficient of constraint entry */
-   )
-{
-   assert(lincons != NULL);
-   assert(scip != NULL);
-   assert(var != NULL);
-   assert(!SCIPisZero(scip, val));
-
-   if( lincons->transformed && !SCIPvarIsTransformed(var) )
-   {
-      CHECK_OKAY( SCIPgetTransformedVar(scip, var, &var) );
-      assert(var != NULL);
-   }
-
-   assert(lincons->transformed ^ !SCIPvarIsTransformed(var));
-
-   CHECK_OKAY( linconsEnsureVarsSize(scip, lincons, lincons->nvars+1) );
-   lincons->vars[lincons->nvars] = var;
-   lincons->vals[lincons->nvars] = val;
-   lincons->nvars++;
-
-   if( lincons->transformed )
-   {
-      /* initialize eventdatas array */
-      lincons->eventdatas[lincons->nvars-1] = NULL;
-
-      /* catch bound change events and lock the rounding of variable */
-      CHECK_OKAY( linconsLockCoef(scip, lincons, NULL, lincons->nvars-1) );
-
-      /* update minimum and maximum activities */
-      linconsUpdateAddCoef(scip, lincons, var, val);
-   }
-
-   lincons->propagated = FALSE;
-   lincons->redchecked = FALSE;
-   if( lincons->nvars == 1 )
-      lincons->sorted = TRUE;
-   else
-      lincons->sorted &= (SCIPvarCmp(lincons->vars[lincons->nvars-2], lincons->vars[lincons->nvars-1]) == -1);
-
-   return SCIP_OKAY;
-}
-
-/** deletes coefficient at given position from linear constraint object */
-static
-RETCODE linconsDelCoefPos(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   int              pos                 /**< position of coefficient to delete */
-   )
-{
-   VAR* var;
-   Real val;
-
-   assert(lincons != NULL);
-   assert(0 <= pos && pos < lincons->nvars);
-
-   var = lincons->vars[pos];
-   val = lincons->vals[pos];
-   assert(var != NULL);
-   assert(lincons->transformed ^ (!SCIPvarIsTransformed(lincons->vars[pos])));
-
-   if( lincons->transformed )
-   {
-      /* update minimum and maximum activities */
-      linconsUpdateDelCoef(scip, lincons, var, val);
-
-      /* drop bound change events and unlock the rounding of variable */
-      CHECK_OKAY( linconsUnlockCoef(scip, lincons, NULL, pos) );
-      assert(lincons->eventdatas[pos] == NULL);
-   }
-
-   /* move the last variable to the free slot */
-   lincons->vars[pos] = lincons->vars[lincons->nvars-1];
-   lincons->vals[pos] = lincons->vals[lincons->nvars-1];
-   if( lincons->transformed && pos != lincons->nvars-1 )
-   {
-      lincons->eventdatas[pos] = lincons->eventdatas[lincons->nvars-1];
-      assert(lincons->eventdatas[pos] != NULL);
-      lincons->eventdatas[pos]->varpos = pos;
-      lincons->sorted = FALSE;
-   }
-   lincons->nvars--;
-
-   lincons->propagated = FALSE;
-   lincons->redchecked = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** changes coefficient value at given position of linear constraint object */
-static
-RETCODE linconsChgCoefPos(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   int              pos,                /**< position of coefficient to delete */
-   Real             newval              /**< new value of coefficient */
-   )
-{
-   VAR* var;
-   Real val;
-
-   assert(lincons != NULL);
-   assert(0 <= pos && pos < lincons->nvars);
-   assert(!SCIPisZero(scip, newval));
-
-   var = lincons->vars[pos];
-   val = lincons->vals[pos];
-   assert(var != NULL);
-   assert(lincons->transformed ^ (!SCIPvarIsTransformed(lincons->vars[pos])));
-
-   if( lincons->transformed )
-   {
-      /* update minimum and maximum activities */
-      linconsUpdateDelCoef(scip, lincons, var, val);
-      linconsUpdateAddCoef(scip, lincons, var, newval);
-
-      /* update rounding locks */
-      if( newval * lincons->vals[pos] < 0.0 )
-      {
-         linconsAllowRounding(scip, lincons, var, val);
-         linconsForbidRounding(scip, lincons, var, newval);
-      }
-   }
-
-   /* change the value */
-   lincons->vals[pos] = newval;
-
-   lincons->propagated = FALSE;
-   lincons->redchecked = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** creates an LP row from a linear constraint object */
-static
-RETCODE linconsToRow(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   const char*      name,               /**< name of the constraint */
-   ROW**            row                 /**< pointer to an LP row data object */
-   )
-{
-   int v;
-
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-   assert(row != NULL);
-
-   CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, lincons->lhs, lincons->rhs,
-                  lincons->local, lincons->modifiable, lincons->removeable) );
-   
-   for( v = 0; v < lincons->nvars; ++v )
-   {
-      CHECK_OKAY( SCIPaddVarToRow(scip, *row, lincons->vars[v], lincons->vals[v]) );
-   }
-
-   return SCIP_OKAY;
 }
 
 /** calculates pseudo activity, and minimum and maximum activity for constraint */
 static
-void linconsCalcActivities(
+void consdataCalcActivities(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
+   CONSDATA*        consdata            /**< linear constraint data */
    )
 {
    int i;
    
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-   assert(!lincons->validactivities);
-   assert(lincons->pseudoactivity >= SCIP_INVALID);
-   assert(lincons->minactivity >= SCIP_INVALID);
-   assert(lincons->maxactivity >= SCIP_INVALID);
+   assert(consdata != NULL);
+   assert(!consdata->validactivities);
+   assert(consdata->pseudoactivity >= SCIP_INVALID);
+   assert(consdata->minactivity >= SCIP_INVALID);
+   assert(consdata->maxactivity >= SCIP_INVALID);
    
-   lincons->validactivities = TRUE;
-   lincons->pseudoactivity = 0.0;
-   lincons->minactivity = 0.0;
-   lincons->maxactivity = 0.0;
-   lincons->minactivityinf = 0;
-   lincons->maxactivityinf = 0;
+   consdata->validactivities = TRUE;
+   consdata->pseudoactivity = 0.0;
+   consdata->minactivity = 0.0;
+   consdata->maxactivity = 0.0;
+   consdata->minactivityinf = 0;
+   consdata->maxactivityinf = 0;
 
-   for( i = 0; i < lincons->nvars; ++ i )
-      linconsUpdateAddCoef(scip, lincons, lincons->vars[i], lincons->vals[i]);
+   for( i = 0; i < consdata->nvars; ++ i )
+      consdataUpdateAddCoef(scip, consdata, consdata->vars[i], consdata->vals[i]);
 }
 
 /** gets activity bounds for constraint */
 static
-Real linconsGetPseudoActivity(
+Real consdataGetPseudoActivity(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint */
+   CONSDATA*        consdata            /**< linear constraint */
    )
 {
-   assert(lincons != NULL);
+   assert(consdata != NULL);
 
-   if( !lincons->validactivities )
-      linconsCalcActivities(scip, lincons);
-   assert(lincons->pseudoactivity < SCIP_INVALID);
-   assert(lincons->minactivity < SCIP_INVALID);
-   assert(lincons->maxactivity < SCIP_INVALID);
+   if( !consdata->validactivities )
+      consdataCalcActivities(scip, consdata);
+   assert(consdata->pseudoactivity < SCIP_INVALID);
+   assert(consdata->minactivity < SCIP_INVALID);
+   assert(consdata->maxactivity < SCIP_INVALID);
 
-   debugMessage("pseudo activity of linear constraint: %g\n", lincons->pseudoactivity);
+   debugMessage("pseudo activity of linear constraint: %g\n", consdata->pseudoactivity);
 
-   return lincons->pseudoactivity;
+   return consdata->pseudoactivity;
 }
 
 /** calculates the feasibility of the linear constraint for given solution */
 static
-Real linconsGetPseudoFeasibility(
+Real consdataGetPseudoFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
+   CONSDATA*        consdata            /**< linear constraint data */
    )
 {
    Real activity;
 
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
-   activity = linconsGetPseudoActivity(scip, lincons);
+   activity = consdataGetPseudoActivity(scip, consdata);
 
-   return MIN(lincons->rhs - activity, activity - lincons->lhs);
+   return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
 
 /** gets activity bounds for constraint */
 static
-void linconsGetActivityBounds(
+void consdataGetActivityBounds(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint */
+   CONSDATA*        consdata,           /**< linear constraint */
    Real*            minactivity,        /**< pointer to store the minimal activity */
    Real*            maxactivity         /**< pointer to store the maximal activity */
    )
 {
-   assert(lincons != NULL);
-   assert(scip != NULL);
+   assert(consdata != NULL);
    assert(minactivity != NULL);
    assert(maxactivity != NULL);
 
-   if( !lincons->validactivities )
-      linconsCalcActivities(scip, lincons);
-   assert(lincons->pseudoactivity < SCIP_INVALID);
-   assert(lincons->minactivity < SCIP_INVALID);
-   assert(lincons->maxactivity < SCIP_INVALID);
+   if( !consdata->validactivities )
+      consdataCalcActivities(scip, consdata);
+   assert(consdata->pseudoactivity < SCIP_INVALID);
+   assert(consdata->minactivity < SCIP_INVALID);
+   assert(consdata->maxactivity < SCIP_INVALID);
 
-   if( lincons->minactivityinf > 0 )
+   if( consdata->minactivityinf > 0 )
       *minactivity = -SCIPinfinity(scip);
    else
-      *minactivity = lincons->minactivity;
-   if( lincons->maxactivityinf > 0 )
+      *minactivity = consdata->minactivity;
+   if( consdata->maxactivityinf > 0 )
       *maxactivity = SCIPinfinity(scip);
    else
-      *maxactivity = lincons->maxactivity;
+      *maxactivity = consdata->maxactivity;
 }
 
 /** gets activity bounds for constraint after setting variable to zero */
 static
-RETCODE linconsGetActivityResiduals(
+RETCODE consdataGetActivityResiduals(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint */
+   CONSDATA*        consdata,           /**< linear constraint */
    VAR*             var,                /**< variable to calculate activity residual for */
    Real             val,                /**< coefficient value of variable in linear constraint */
    Real*            minresactivity,     /**< pointer to store the minimal residual activity */
@@ -1139,20 +962,19 @@ RETCODE linconsGetActivityResiduals(
    Real lb;
    Real ub;
    
-   assert(lincons != NULL);
-   assert(scip != NULL);
+   assert(consdata != NULL);
    assert(var != NULL);
    assert(minresactivity != NULL);
    assert(maxresactivity != NULL);
 
    /* get activity bounds of linear constraint */
-   if( !lincons->validactivities )
-      linconsCalcActivities(scip, lincons);
-   assert(lincons->pseudoactivity < SCIP_INVALID);
-   assert(lincons->minactivity < SCIP_INVALID);
-   assert(lincons->maxactivity < SCIP_INVALID);
-   assert(lincons->minactivityinf >= 0);
-   assert(lincons->maxactivityinf >= 0);
+   if( !consdata->validactivities )
+      consdataCalcActivities(scip, consdata);
+   assert(consdata->pseudoactivity < SCIP_INVALID);
+   assert(consdata->minactivity < SCIP_INVALID);
+   assert(consdata->maxactivity < SCIP_INVALID);
+   assert(consdata->minactivityinf >= 0);
+   assert(consdata->maxactivityinf >= 0);
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -1163,66 +985,66 @@ RETCODE linconsGetActivityResiduals(
    {
       if( SCIPisInfinity(scip, -lb) )
       {
-         assert(lincons->minactivityinf >= 1);
-         if( lincons->minactivityinf >= 2 )
+         assert(consdata->minactivityinf >= 1);
+         if( consdata->minactivityinf >= 2 )
             *minresactivity = -SCIPinfinity(scip);
          else
-            *minresactivity = lincons->minactivity;
+            *minresactivity = consdata->minactivity;
       }
       else
       {
-         if( lincons->minactivityinf >= 1 )
+         if( consdata->minactivityinf >= 1 )
             *minresactivity = -SCIPinfinity(scip);
          else
-            *minresactivity = lincons->minactivity - val * lb;
+            *minresactivity = consdata->minactivity - val * lb;
       }
       if( SCIPisInfinity(scip, ub) )
       {
-         assert(lincons->maxactivityinf >= 1);
-         if( lincons->maxactivityinf >= 2 )
+         assert(consdata->maxactivityinf >= 1);
+         if( consdata->maxactivityinf >= 2 )
             *maxresactivity = +SCIPinfinity(scip);
          else
-            *maxresactivity = lincons->maxactivity;
+            *maxresactivity = consdata->maxactivity;
       }
       else
       {
-         if( lincons->maxactivityinf >= 1 )
+         if( consdata->maxactivityinf >= 1 )
             *maxresactivity = +SCIPinfinity(scip);
          else
-            *maxresactivity = lincons->maxactivity - val * ub;
+            *maxresactivity = consdata->maxactivity - val * ub;
       }
    }
    else
    {
       if( SCIPisInfinity(scip, ub) )
       {
-         assert(lincons->minactivityinf >= 1);
-         if( lincons->minactivityinf >= 2 )
+         assert(consdata->minactivityinf >= 1);
+         if( consdata->minactivityinf >= 2 )
             *minresactivity = -SCIPinfinity(scip);
          else
-            *minresactivity = lincons->minactivity;
+            *minresactivity = consdata->minactivity;
       }
       else
       {
-         if( lincons->minactivityinf >= 1 )
+         if( consdata->minactivityinf >= 1 )
             *minresactivity = -SCIPinfinity(scip);
          else
-            *minresactivity = lincons->minactivity - val * ub;
+            *minresactivity = consdata->minactivity - val * ub;
       }
       if( SCIPisInfinity(scip, -lb) )
       {
-         assert(lincons->maxactivityinf >= 1);
-         if( lincons->maxactivityinf >= 2 )
+         assert(consdata->maxactivityinf >= 1);
+         if( consdata->maxactivityinf >= 2 )
             *maxresactivity = +SCIPinfinity(scip);
          else
-            *maxresactivity = lincons->maxactivity;
+            *maxresactivity = consdata->maxactivity;
       }
       else
       {
-         if( lincons->maxactivityinf >= 1 )
+         if( consdata->maxactivityinf >= 1 )
             *maxresactivity = +SCIPinfinity(scip);
          else
-            *maxresactivity = lincons->maxactivity - val * lb;
+            *maxresactivity = consdata->maxactivity - val * lb;
       }
    }
 
@@ -1231,40 +1053,39 @@ RETCODE linconsGetActivityResiduals(
 
 /** invalidates pseudo activity and activity bounds, such that they are recalculated in next get */
 static
-void linconsInvalidateActivities(
-   LINCONS*         lincons             /**< linear constraint */
+void consdataInvalidateActivities(
+   CONSDATA*        consdata            /**< linear constraint */
    )
 {
-   assert(lincons != NULL);
+   assert(consdata != NULL);
 
-   lincons->validactivities = FALSE;
-   lincons->pseudoactivity = SCIP_INVALID;
-   lincons->minactivity = SCIP_INVALID;
-   lincons->maxactivity = SCIP_INVALID;
-   lincons->minactivityinf = -1;
-   lincons->maxactivityinf = -1;
+   consdata->validactivities = FALSE;
+   consdata->pseudoactivity = SCIP_INVALID;
+   consdata->minactivity = SCIP_INVALID;
+   consdata->maxactivity = SCIP_INVALID;
+   consdata->minactivityinf = -1;
+   consdata->maxactivityinf = -1;
 }
 
 /** calculates the activity of the linear constraint for given solution */
 static
-Real linconsGetActivity(
+Real consdataGetActivity(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    SOL*             sol                 /**< solution to get activity for, NULL to actual solution */
    )
 {
    Real activity;
    Real infinity;
 
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
    if( sol == NULL && !SCIPhasActnodeLP(scip) )
    {
       /* for performance reasons, the pseudo activity is updated with each bound change, so we don't have to
        * recalculate it
        */
-      activity = linconsGetPseudoActivity(scip, lincons);
+      activity = consdataGetPseudoActivity(scip, consdata);
    }
    else
    {
@@ -1272,10 +1093,10 @@ Real linconsGetActivity(
       int v;
 
       activity = 0.0;
-      for( v = 0; v < lincons->nvars; ++v )
+      for( v = 0; v < consdata->nvars; ++v )
       {
-         solval = SCIPgetSolVal(scip, sol, lincons->vars[v]);
-         activity += lincons->vals[v] * solval;
+         solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+         activity += consdata->vals[v] * solval;
       }
 
       debugMessage("activity of linear constraint: %g\n", activity);
@@ -1290,27 +1111,26 @@ Real linconsGetActivity(
 
 /** calculates the feasibility of the linear constraint for given solution */
 static
-Real linconsGetFeasibility(
+Real consdataGetFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONSDATA*        consdata,           /**< linear constraint data */
    SOL*             sol                 /**< solution to get feasibility for, NULL to actual solution */
    )
 {
    Real activity;
 
-   assert(lincons != NULL);
-   assert(lincons->transformed);
+   assert(consdata != NULL);
 
-   activity = linconsGetActivity(scip, lincons, sol);
+   activity = consdataGetActivity(scip, consdata, sol);
 
-   return MIN(lincons->rhs - activity, activity - lincons->lhs);
+   return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
 
 /** tightens bounds of a single variable due to activity bounds */
 static
-RETCODE linconsTightenVarBounds(
+RETCODE consdataTightenVarBounds(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< constraint data */
+   CONSDATA*        consdata,           /**< constraint data */
    VAR*             var,                /**< variable to tighten bounds for */
    Real             val,                /**< coefficient value of variable in linear constraint */
    int*             nchgbds,            /**< pointer to count the total number of tightened bounds */
@@ -1326,16 +1146,15 @@ RETCODE linconsTightenVarBounds(
    Real lhs;
    Real rhs;
 
-   assert(lincons != NULL);
-   assert(!lincons->modifiable);
+   assert(consdata != NULL);
    assert(var != NULL);
    assert(!SCIPisZero(scip, val));
    assert(nchgbds != NULL);
    assert(result != NULL);
 
-   lhs = lincons->lhs;
-   rhs = lincons->rhs;
-   CHECK_OKAY( linconsGetActivityResiduals(scip, lincons, var, val, &minresactivity, &maxresactivity) );
+   lhs = consdata->lhs;
+   rhs = consdata->rhs;
+   CHECK_OKAY( consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity) );
    assert(!SCIPisInfinity(scip, lhs));
    assert(!SCIPisInfinity(scip, -rhs));
    assert(!SCIPisInfinity(scip, minresactivity));
@@ -1445,85 +1264,133 @@ RETCODE linconsTightenVarBounds(
    return SCIP_OKAY;
 }
 
-/** tightens variable's bounds due to activity bounds */
+/** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
 static
-RETCODE linconsTightenBounds(
+DECL_SORTINDCOMP(consdataCmpVar)
+{
+   CONSDATA* consdata = (CONSDATA*)dataptr;
+
+   assert(consdata != NULL);
+   assert(0 <= ind1 && ind1 < consdata->nvars);
+   assert(0 <= ind2 && ind2 < consdata->nvars);
+   
+   return SCIPvarCmp(consdata->vars[ind1], consdata->vars[ind2]);
+}
+
+/** sorts linear constraint's variables */
+static
+RETCODE consdataSort(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   int*             nchgbds,            /**< pointer to count the total number of tightened bounds */
-   RESULT*          result              /**< pointer to store the result of the bound tightening */
+   CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   VAR** vars;
-   Real* vals;
-   int nvars;
+   assert(consdata != NULL);
 
-   assert(lincons != NULL);
-   assert(nchgbds != NULL);
-   assert(result != NULL);
-   assert(*result != SCIP_CUTOFF);
-
-   /* we cannot tighten variables' bounds, if the constraint may be not complete */
-   if( lincons->modifiable )
-      return SCIP_OKAY;
-
-   nvars = lincons->nvars;
-   if( nvars > 0 )
+   if( consdata->nvars == 0 )
+      consdata->sorted = TRUE;
+   else if( !consdata->sorted )
    {
-      int lastnchgbds;
-      int lastsuccess;
+      VAR* varv;
+      EVENTDATA* eventdatav;
+      Real valv;
+      int* perm;
       int v;
-   
-      vars = lincons->vars;
-      vals = lincons->vals;
-      assert(vars != NULL);
-      assert(vals != NULL);
-      lastsuccess = 0;
-      v = 0;
-      do
+      int i;
+      int nexti;
+
+      /* get temporary memory to store the sorted permutation */
+      CHECK_OKAY( SCIPcaptureBufferArray(scip, &perm, consdata->nvars) );
+
+      /* call bubble sort */
+      SCIPbsort((void*)consdata, consdata->nvars, consdataCmpVar, perm);
+
+      /* permute the variables in the linear constraint according to the resulting permutation */
+      for( v = 0; v < consdata->nvars; ++v )
       {
-         assert(0 <= v && v < nvars);
-         lastnchgbds = *nchgbds;
-         CHECK_OKAY( linconsTightenVarBounds(scip, lincons, vars[v], vals[v], nchgbds, result) );
-         if( *nchgbds > lastnchgbds )
-            lastsuccess = v;
-         v++;
-         if( v == nvars )
-            v = 0;
+         if( perm[v] != v )
+         {
+            varv = consdata->vars[v];
+            valv = consdata->vals[v];
+            eventdatav = consdata->eventdatas[v];
+            i = v;
+            do
+            {
+               assert(0 <= perm[i] && perm[i] < consdata->nvars);
+               assert(perm[i] != i);
+               consdata->vars[i] = consdata->vars[perm[i]];
+               consdata->vals[i] = consdata->vals[perm[i]];
+               consdata->eventdatas[i] = consdata->eventdatas[perm[i]];
+               consdata->eventdatas[i]->varpos = i;
+               nexti = perm[i];
+               perm[i] = i;
+               i = nexti;
+            }
+            while( perm[i] != v );
+            consdata->vars[i] = varv;
+            consdata->vals[i] = valv;
+            consdata->eventdatas[i] = eventdatav;
+            consdata->eventdatas[i]->varpos = i;
+            perm[i] = i;
+         }
       }
-      while( v != lastsuccess && *result != SCIP_CUTOFF );
+      consdata->sorted = TRUE;
+
+#ifdef DEBUG
+      /* check sorting */
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         assert(v == consdata->nvars-1 || SCIPvarCmp(consdata->vars[v], consdata->vars[v+1]) <= 0);
+         assert(perm[v] == v);
+         assert(consdata->eventdatas[v]->varpos == v);
+      }
+#endif
+
+      /* free temporary memory */
+      CHECK_OKAY( SCIPreleaseBufferArray(scip, &perm) );
    }
+   assert(consdata->sorted);
 
    return SCIP_OKAY;
 }
 
+
+
+
+/*
+ * local linear constraint handler methods
+ */
+
 /** sets left hand side of linear constraint */
 static
-void linconsChgLhs(
+RETCODE chgLhs(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint */
+   CONS*            cons,               /**< linear constraint */
    Real             lhs                 /**< new left hand side */
    )
 {
-   assert(lincons != NULL);
-   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
-   assert(!SCIPisInfinity(scip, lincons->lhs));
+   CONSDATA* consdata;
+
    assert(!SCIPisInfinity(scip, lhs));
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars == 0 || (consdata->vars != NULL && consdata->vals != NULL));
+   assert(!SCIPisInfinity(scip, consdata->lhs));
+
    /* if necessary, update the rounding locks of variables */
-   if( lincons->transformed && !lincons->local )
+   if( SCIPconsIsTransformed(cons) && SCIPconsIsGlobal(cons) )
    {
-      if( SCIPisInfinity(scip, -lincons->lhs) && !SCIPisInfinity(scip, -lhs) )
+      if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
       {
          VAR** vars;
          Real* vals;
          int v;
    
          /* the left hand side switched from -infinity to a non-infinite value -> forbid rounding */
-         vars = lincons->vars;
-         vals = lincons->vals;
+         vars = consdata->vars;
+         vals = consdata->vals;
          
-         for( v = 0; v < lincons->nvars; ++v )
+         for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
             
@@ -1536,17 +1403,17 @@ void linconsChgLhs(
             }
          }
       }
-      else if( !SCIPisInfinity(scip, -lincons->lhs) && SCIPisInfinity(scip, -lhs) )
+      else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
       {
          VAR** vars;
          Real* vals;
          int v;
    
          /* the left hand side switched from a non-infinte value to -infinity -> allow rounding */
-         vars = lincons->vars;
-         vals = lincons->vals;
+         vars = consdata->vars;
+         vals = consdata->vals;
          
-         for( v = 0; v < lincons->nvars; ++v )
+         for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
             
@@ -1562,38 +1429,50 @@ void linconsChgLhs(
    }
 
    /* set new left hand side */
-   lincons->lhs = lhs;
-   lincons->propagated = FALSE;
-   lincons->redchecked = FALSE;
+   consdata->lhs = lhs;
+   consdata->propagated = FALSE;
+   consdata->redchecked = FALSE;
+
+   /* update the lhs of the LP row */
+   if( consdata->row != NULL )
+   {
+      CHECK_OKAY( SCIPchgRowLhs(scip, consdata->row, lhs) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** sets right hand side of linear constraint */
 static
-void linconsChgRhs(
+RETCODE chgRhs(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint */
+   CONS*            cons,               /**< linear constraint */
    Real             rhs                 /**< new right hand side */
    )
 {
-   assert(lincons != NULL);
-   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
-   assert(!SCIPisInfinity(scip, -lincons->rhs));
+   CONSDATA* consdata;
+
    assert(!SCIPisInfinity(scip, -rhs));
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars == 0 || (consdata->vars != NULL && consdata->vals != NULL));
+   assert(!SCIPisInfinity(scip, -consdata->rhs));
+
    /* if necessary, update the rounding locks of variables */
-   if( lincons->transformed && !lincons->local )
+   if( SCIPconsIsTransformed(cons) && SCIPconsIsGlobal(cons) )
    {
-      if( SCIPisInfinity(scip, lincons->rhs) && !SCIPisInfinity(scip, rhs) )
+      if( SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, rhs) )
       {
          VAR** vars;
          Real* vals;
          int v;
    
          /* the right hand side switched from infinity to a non-infinite value -> forbid rounding */
-         vars = lincons->vars;
-         vals = lincons->vals;
+         vars = consdata->vars;
+         vals = consdata->vals;
          
-         for( v = 0; v < lincons->nvars; ++v )
+         for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
             
@@ -1606,17 +1485,17 @@ void linconsChgRhs(
             }
          }
       }
-      else if( !SCIPisInfinity(scip, lincons->rhs) && SCIPisInfinity(scip, rhs) )
+      else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
       {
          VAR** vars;
          Real* vals;
          int v;
    
          /* the right hand side switched from a non-infinte value to infinity -> allow rounding */
-         vars = lincons->vars;
-         vals = lincons->vals;
+         vars = consdata->vars;
+         vals = consdata->vals;
          
-         for( v = 0; v < lincons->nvars; ++v )
+         for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
             
@@ -1632,147 +1511,663 @@ void linconsChgRhs(
    }
 
    /* set new right hand side */
-   lincons->rhs = rhs;
-   lincons->propagated = FALSE;
-   lincons->redchecked = FALSE;
-}
+   consdata->rhs = rhs;
+   consdata->propagated = FALSE;
+   consdata->redchecked = FALSE;
 
-/** prints linear constraint to file stream */
-static
-void linconsPrint(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   int v;
-
-   assert(lincons != NULL);
-
-   if( file == NULL )
-      file = stdout;
-
-   /* print left hand side for ranged rows */
-   if( !SCIPisInfinity(scip, -lincons->lhs)
-      && !SCIPisInfinity(scip, lincons->rhs)
-      && !SCIPisEQ(scip, lincons->lhs, lincons->rhs) )
-      fprintf(file, "%+g <= ", lincons->lhs);
-
-   /* print coefficients */
-   if( lincons->nvars == 0 )
-      fprintf(file, "0 ");
-   for( v = 0; v < lincons->nvars; ++v )
+   /* update the rhs of the LP row */
+   if( consdata->row != NULL )
    {
-      assert(lincons->vars[v] != NULL);
-      fprintf(file, "%+g%s ", lincons->vals[v], SCIPvarGetName(lincons->vars[v]));
+      CHECK_OKAY( SCIPchgRowRhs(scip, consdata->row, rhs) );
    }
-
-   /* print right hand side */
-   if( SCIPisEQ(scip, lincons->lhs, lincons->rhs) )
-      fprintf(file, "= %+g\n", lincons->rhs);
-   else if( !SCIPisInfinity(scip, lincons->rhs) )
-      fprintf(file, "<= %+g\n", lincons->rhs);
-   else if( !SCIPisInfinity(scip, -lincons->lhs) )
-      fprintf(file, ">= %+g\n", lincons->lhs);
-   else
-      fprintf(file, " [free]\n");
-}
-
-/** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
-static
-DECL_SORTINDCOMP(linconsCmpVar)
-{
-   LINCONS* lincons = (LINCONS*)dataptr;
-
-   assert(lincons != NULL);
-   assert(0 <= ind1 && ind1 < lincons->nvars);
-   assert(0 <= ind2 && ind2 < lincons->nvars);
-   
-   return SCIPvarCmp(lincons->vars[ind1], lincons->vars[ind2]);
-}
-
-/** sorts linear constraint's variables */
-static
-RETCODE linconsSort(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
-   )
-{
-   assert(lincons != NULL);
-
-   if( lincons->nvars == 0 )
-      lincons->sorted = TRUE;
-   else if( !lincons->sorted )
-   {
-      VAR* varv;
-      EVENTDATA* eventdatav;
-      Real valv;
-      int* perm;
-      int v;
-      int i;
-      int nexti;
-
-      /* get temporary memory to store the sorted permutation */
-      CHECK_OKAY( SCIPcaptureBufferArray(scip, &perm, lincons->nvars) );
-
-      /* call bubble sort */
-      SCIPbsort((void*)lincons, lincons->nvars, linconsCmpVar, perm);
-
-      /* permute the variables in the linear constraint according to the resulting permutation */
-      for( v = 0; v < lincons->nvars; ++v )
-      {
-         if( perm[v] != v )
-         {
-            varv = lincons->vars[v];
-            valv = lincons->vals[v];
-            eventdatav = lincons->eventdatas[v];
-            i = v;
-            do
-            {
-               assert(0 <= perm[i] && perm[i] < lincons->nvars);
-               assert(perm[i] != i);
-               lincons->vars[i] = lincons->vars[perm[i]];
-               lincons->vals[i] = lincons->vals[perm[i]];
-               lincons->eventdatas[i] = lincons->eventdatas[perm[i]];
-               lincons->eventdatas[i]->varpos = i;
-               nexti = perm[i];
-               perm[i] = i;
-               i = nexti;
-            }
-            while( perm[i] != v );
-            lincons->vars[i] = varv;
-            lincons->vals[i] = valv;
-            lincons->eventdatas[i] = eventdatav;
-            lincons->eventdatas[i]->varpos = i;
-            perm[i] = i;
-         }
-      }
-      lincons->sorted = TRUE;
-
-#ifdef DEBUG
-      /* check sorting */
-      for( v = 0; v < lincons->nvars; ++v )
-      {
-         assert(v == lincons->nvars-1 || SCIPvarCmp(lincons->vars[v], lincons->vars[v+1]) <= 0);
-         assert(perm[v] == v);
-         assert(lincons->eventdatas[v]->varpos == v);
-      }
-#endif
-
-      /* free temporary memory */
-      CHECK_OKAY( SCIPreleaseBufferArray(scip, &perm) );
-   }
-   assert(lincons->sorted);
 
    return SCIP_OKAY;
 }
 
+/** adds coefficient in linear constraint */
+static
+RETCODE addCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   CONSDATA* consdata;
+   Bool transformed;
 
+   assert(var != NULL);
+   assert(!SCIPisZero(scip, val));
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-/*
- * local linear constraint handler methods
+   /* are we in the transformed problem? */
+   transformed = SCIPconsIsTransformed(cons);
+
+   /* always use transformed variables in transformed constraints */
+   if( transformed && !SCIPvarIsTransformed(var) )
+   {
+      CHECK_OKAY( SCIPgetTransformedVar(scip, var, &var) );
+   }
+   assert(var != NULL);
+   assert(transformed == SCIPvarIsTransformed(var));
+
+   CHECK_OKAY( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1, transformed) );
+   consdata->vars[consdata->nvars] = var;
+   consdata->vals[consdata->nvars] = val;
+   consdata->nvars++;
+
+   /* if we are in transformed problem, the variable needs an additional event data */
+   if( transformed )
+   {
+      CONSHDLR* conshdlr;
+      CONSHDLRDATA* conshdlrdata;
+
+      /* get event handler */
+      conshdlr = SCIPconsGetHdlr(cons);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
+      /* initialize eventdatas array */
+      consdata->eventdatas[consdata->nvars-1] = NULL;
+
+      /* catch bound change events of variable */
+      CHECK_OKAY( consdataCatchEvent(scip, consdata, conshdlrdata->eventhdlr, consdata->nvars-1) );
+
+      /* update minimum and maximum activities */
+      consdataUpdateAddCoef(scip, consdata, var, val);
+
+      /* if necessary, update the rounding locks of variable */
+      if( SCIPconsIsGlobal(cons) )
+         consdataForbidRounding(scip, consdata, var, val);
+   }
+
+   consdata->propagated = FALSE;
+   consdata->redchecked = FALSE;
+   if( consdata->nvars == 1 )
+      consdata->sorted = TRUE;
+   else
+      consdata->sorted &= (SCIPvarCmp(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) == -1);
+
+   /* add the new coefficient to the LP row */
+   if( consdata->row != NULL )
+   {
+      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, var, val) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deletes coefficient at given position from linear constraint data */
+static
+RETCODE delCoefPos(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int              pos                 /**< position of coefficient to delete */
+   )
+{
+   CONSDATA* consdata;
+   VAR* var;
+   Real val;
+   Bool transformed;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   var = consdata->vars[pos];
+   val = consdata->vals[pos];
+   assert(var != NULL);
+
+   /* are we in the transformed problem? */
+   transformed = SCIPconsIsTransformed(cons);
+
+   /* if we are in transformed problem, delete the event data of the variable */
+   if( transformed )
+   {
+      CONSHDLR* conshdlr;
+      CONSHDLRDATA* conshdlrdata;
+
+      /* if necessary, update the rounding locks of variable */
+      if( SCIPconsIsGlobal(cons) )
+         consdataAllowRounding(scip, consdata, var, val);
+
+      /* get event handler */
+      conshdlr = SCIPconsGetHdlr(cons);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
+      /* update minimum and maximum activities */
+      consdataUpdateDelCoef(scip, consdata, var, val);
+
+      /* drop bound change events of variable */
+      CHECK_OKAY( consdataDropEvent(scip, consdata, conshdlrdata->eventhdlr, pos) );
+      assert(consdata->eventdatas[pos] == NULL);
+   }
+
+   /* move the last variable to the free slot */
+   consdata->vars[pos] = consdata->vars[consdata->nvars-1];
+   consdata->vals[pos] = consdata->vals[consdata->nvars-1];
+   if( pos != consdata->nvars-1 )
+   {
+      if( transformed )
+      {
+         consdata->eventdatas[pos] = consdata->eventdatas[consdata->nvars-1];
+         assert(consdata->eventdatas[pos] != NULL);
+         consdata->eventdatas[pos]->varpos = pos;
+      }
+      consdata->sorted = FALSE;
+   }
+   consdata->nvars--;
+
+   consdata->propagated = FALSE;
+   consdata->redchecked = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** changes coefficient value at given position of linear constraint data */
+static
+RETCODE chgCoefPos(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int              pos,                /**< position of coefficient to delete */
+   Real             newval              /**< new value of coefficient */
+   )
+{
+   CONSDATA* consdata;
+   VAR* var;
+   Real val;
+   Bool updaterounding;
+
+   assert(!SCIPisZero(scip, newval));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   var = consdata->vars[pos];
+   val = consdata->vals[pos];
+   assert(var != NULL);
+   assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
+
+   if( SCIPconsIsTransformed(cons) )
+   {
+      /* update minimum and maximum activities */
+      consdataUpdateDelCoef(scip, consdata, var, val);
+      consdataUpdateAddCoef(scip, consdata, var, newval);
+
+      /* if necessary, update the rounding locks of the variable */
+      if( SCIPconsIsGlobal(cons) && newval * val < 0.0 )
+      {
+         consdataAllowRounding(scip, consdata, var, val);
+         consdataForbidRounding(scip, consdata, var, newval);
+      }
+   }
+
+   /* change the value */
+   consdata->vals[pos] = newval;
+
+   consdata->propagated = FALSE;
+   consdata->redchecked = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** scales a linear constraint with a constant scalar */
+static
+RETCODE scale(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint to scale */
+   Real             scalar              /**< value to scale constraint with */
+   )
+{
+   CONSDATA* consdata;
+   Real newval;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   /* scale the coefficients */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      Real oldval;
+      
+      oldval = consdata->vals[i];
+      consdata->vals[i] *= scalar;
+      if( SCIPisIntegral(scip, consdata->vals[i]) )
+         consdata->vals[i] = SCIPfloor(scip, consdata->vals[i]);
+      if( SCIPisZero(scip, consdata->vals[i]) )
+      {
+         char s[MAXSTRLEN];
+         sprintf(s, "coefficient of variable <%s> in linear constraint scaled to zero", SCIPvarGetName(consdata->vars[i]));
+         warningMessage(s);
+         consdata->vals[i] = oldval;
+         CHECK_OKAY( delCoefPos(scip, cons, i) );
+         --i;
+      }
+   }
+
+   /* scale the sides */
+   if( scalar < 0.0 )
+   {
+      Real lhs;
+      lhs = consdata->lhs;
+      consdata->lhs = -consdata->rhs;
+      consdata->rhs = -lhs;
+   }
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      consdata->lhs *= ABS(scalar);
+      if( SCIPisIntegral(scip, consdata->lhs) )
+         consdata->lhs = SCIPfloor(scip, consdata->lhs);
+   }
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      consdata->rhs *= ABS(scalar);
+      if( SCIPisIntegral(scip, consdata->rhs) )
+         consdata->rhs = SCIPfloor(scip, consdata->rhs);
+   }
+
+   consdata->validactivities = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** normalizes a linear constraint with the following rules:
+ *  - multiplication with +1 or -1:
+ *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
+ *      if the actual rule doesn't determine the sign):
+ *        1. the right hand side must not be negative
+ *        2. the right hand side must not be infinite
+ *        3. the absolute value of the right hand side must be greater than that of the left hand side
+ *        4. the number of positive coefficients must not be smaller than the number of negative coefficients
+ *        5. multiply with +1
+ *  - rationals to integrals
+ *      Try to identify a rational representation of the fractional coefficients, and multiply all coefficients
+ *      by the smallest common multiple of all denominators to get integral coefficients.
+ *      Forbid large denominators due to numerical stability.
+ *  - division by greatest common divisor
+ *      If all coefficients are integral, divide them by the greatest common divisor.
  */
+static
+RETCODE normalize(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< linear constraint to normalize */
+   )
+{
+   CONSDATA* consdata;
+   VAR** vars;
+   Real* vals;
+   Longint scm;
+   Longint nominator;
+   Longint denominator;
+   Longint gcd;
+   Longint maxmult;
+   Real epsilon;
+   Real feastol;
+   Bool success;
+   int nvars;
+   int mult;
+   int nposcoeffs;
+   int nnegcoeffs;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   vars = consdata->vars;
+   vals = consdata->vals;
+   nvars = consdata->nvars;
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+
+   /* calculate the maximal multiplier for common divisor calculation:
+    *   |p/q - val| < epsilon  and  q < feastol/epsilon  =>  |p - q*val| < feastol
+    * which means, a value of feastol/epsilon should be used as maximal multiplier
+    */
+   epsilon = SCIPepsilon(scip);
+   feastol = SCIPfeastol(scip);
+   maxmult = (Longint)(feastol/epsilon + feastol);
+
+   /*
+    * multiplication with +1 or -1
+    */
+   mult = 0;
+   
+   if( mult == 0 )
+   {
+      /* 1. the right hand side must not be negative */
+      if( SCIPisPositive(scip, consdata->lhs) )
+         mult = +1;
+      else if( SCIPisNegative(scip, consdata->rhs) )
+         mult = -1;
+   }
+
+   if( mult == 0 )
+   {
+      /* 2. the right hand side must not be infinite */
+      if( SCIPisInfinity(scip, -consdata->lhs) )
+         mult = +1;
+      else if( SCIPisInfinity(scip, consdata->rhs) )
+         mult = -1;
+   }
+
+   if( mult == 0 )
+   {
+      /* 3. the absolute value of the right hand side must be greater than that of the left hand side */
+      if( SCIPisGT(scip, ABS(consdata->rhs), ABS(consdata->lhs)) )
+         mult = +1;
+      else if( SCIPisLT(scip, ABS(consdata->rhs), ABS(consdata->lhs)) )
+         mult = -1;
+   }
+   
+   if( mult == 0 )
+   {
+      /* 4. the number of positive coefficients must not be smaller than the number of negative coefficients */
+      nposcoeffs = 0;
+      nnegcoeffs = 0;
+      for( i = 0; i < nvars; ++i )
+      {
+         if( vals[i] > 0.0 )
+            nposcoeffs++;
+         else
+            nnegcoeffs++;
+      }
+      if( nposcoeffs > nnegcoeffs )
+         mult = +1;
+      else if( nposcoeffs < nnegcoeffs )
+         mult = -1;
+   }
+
+   if( mult == 0 )
+   {
+      /* 5. multiply with +1 */
+      mult = +1;
+   }
+
+   assert(mult == +1 || mult == -1);
+   if( mult == -1 )
+   {
+      /* scale the constraint with -1 */
+      debugMessage("multiply linear constraint with -1.0\n");
+      debug(consdataPrint(scip, consdata, NULL));
+      CHECK_OKAY( scale(scip, cons, -1.0) );
+   }
+
+   /*
+    * rationals to integrals
+    */
+   success = TRUE;
+   scm = 1;
+   for( i = 0; i < nvars && success && scm <= maxmult; ++i )
+   {
+      if( !SCIPisIntegral(scip, vals[i]) )
+      {
+         success = SCIPrealToRational(vals[i], epsilon, maxmult, &nominator, &denominator);
+         if( success )
+            scm = SCIPcalcSmaComMul(scm, denominator);
+      }
+   }
+   assert(scm >= 1);
+   success &= (scm <= maxmult);
+   if( success && scm != 1 )
+   {
+      /* scale the constraint with the smallest common multiple of all denominators */
+      debugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
+      debug(consdataPrint(scip, consdata, NULL));
+      CHECK_OKAY( scale(scip, cons, (Real)scm) );
+   }
+
+   /*
+    * division by greatest common divisor
+    */
+   if( success && nvars >= 1 )
+   {
+      /* all coefficients are integral: divide them by their greatest common divisor */
+      assert(SCIPisIntegral(scip, vals[0]));
+      gcd = (Longint)(ABS(vals[0]) + feastol);
+      assert(gcd >= 1);
+      for( i = 1; i < nvars && gcd > 1; ++i )
+      {
+         assert(SCIPisIntegral(scip, vals[i]));
+         gcd = SCIPcalcGreComDiv(gcd, (Longint)(ABS(vals[i]) + feastol));
+      }
+
+      if( gcd > 1 )
+      {
+         /* divide the constaint by the greatest common divisor of the coefficients */
+         debugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
+         debug(consdataPrint(scip, consdata, NULL));
+         CHECK_OKAY( scale(scip, cons, 1.0/(Real)gcd) );
+      }
+   }
+   
+   debugMessage("normalized constraint:\n");
+   debug(consdataPrint(scip, consdata, NULL));
+
+   return SCIP_OKAY;
+}
+
+/** replaces multiple occurrences of a variable by a single coefficient */
+static
+RETCODE mergeMultiples(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< linear constraint */
+   )
+{
+   CONSDATA* consdata;
+   VAR* var;
+   Real valsum;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* sort the constraint */
+   CHECK_OKAY( consdataSort(scip, consdata) );
+   
+   /* go backwards through the constraint looking for multiple occurrences of the same variable;
+    * backward direction is necessary, since consdataDelCoefPos() modifies the given position and
+    * the subsequent ones
+    */
+   for( v = consdata->nvars-1; v >= 1; --v )
+   {
+      var = consdata->vars[v];
+      if( consdata->vars[v-1] == var )
+      {
+         valsum = consdata->vals[v];
+         do
+         {
+            CHECK_OKAY( delCoefPos(scip, cons, v) );
+            --v;
+            valsum += consdata->vals[v];
+         }
+         while( v >= 1 && consdata->vars[v-1] == var );
+
+         /* modify the last existing occurrence of the variable */
+         assert(consdata->vars[v] == var);
+         if( SCIPisZero(scip, valsum) )
+         {
+            CHECK_OKAY( delCoefPos(scip, cons, v) );
+         }
+         else
+         {
+            CHECK_OKAY( chgCoefPos(scip, cons, v, valsum) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** replaces all fixed and aggregated variables by their non-fixed counterparts */
+static
+RETCODE applyFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   Bool*            conschanged         /**< pointer to store TRUE, if changes were made to the constraint */
+   )
+{
+   CONSDATA* consdata;
+   VAR* var;
+   Real val;
+   Real fixedval;
+   Real aggrconst;
+   Bool cleanup;
+   int v;
+
+   assert(conschanged != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   cleanup = FALSE;
+   v = 0;
+   while( v < consdata->nvars )
+   {
+      var = consdata->vars[v];
+      val = consdata->vals[v];
+      assert(SCIPvarIsTransformed(var));
+
+      switch( SCIPvarGetStatus(var) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         errorMessage("original variable in transformed linear constraint");
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_MULTAGGR:
+         ++v;
+         break;
+
+      case SCIP_VARSTATUS_FIXED:
+         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
+         fixedval = SCIPvarGetLbGlobal(var);
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            CHECK_OKAY( chgLhs(scip, cons, consdata->lhs - val * fixedval) );
+         }
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            CHECK_OKAY( chgRhs(scip, cons, consdata->rhs - val * fixedval) );
+         }
+         CHECK_OKAY( delCoefPos(scip, cons, v) );
+         *conschanged = TRUE;
+         break;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         CHECK_OKAY( addCoef(scip, cons, SCIPvarGetAggrVar(var), val * SCIPvarGetAggrScalar(var)) );
+         aggrconst = SCIPvarGetAggrConstant(var);
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            CHECK_OKAY( chgLhs(scip, cons, consdata->lhs - val * aggrconst) );
+         }
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            CHECK_OKAY( chgRhs(scip, cons, consdata->rhs - val * aggrconst) );
+         }
+         CHECK_OKAY( delCoefPos(scip, cons, v) );
+         *conschanged = TRUE;
+         cleanup = TRUE;
+         break;
+
+      case SCIP_VARSTATUS_NEGATED:
+         CHECK_OKAY( addCoef(scip, cons, SCIPvarGetNegationVar(var), -val) );
+         aggrconst = SCIPvarGetNegationConstant(var);
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            CHECK_OKAY( chgLhs(scip, cons, consdata->lhs - val * aggrconst) );
+         }
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            CHECK_OKAY( chgRhs(scip, cons, consdata->rhs - val * aggrconst) );
+         }
+         CHECK_OKAY( delCoefPos(scip, cons, v) );
+         *conschanged = TRUE;
+         cleanup = TRUE;
+         break;
+
+      default:
+         errorMessage("unknown variable status");
+         abort();
+      }
+   }
+
+   debugMessage("after fixings: ");
+   debug(consdataPrint(scip, consdata, NULL));
+
+   /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
+    * to clean up the constraint
+    */
+   CHECK_OKAY( mergeMultiples(scip, cons) );
+
+   debugMessage("after merging: ");
+   debug(consdataPrint(scip, consdata, NULL));
+
+   return SCIP_OKAY;
+}
+
+/** tightens bounds of variables in constraint due to activity bounds */
+static
+RETCODE tightenBounds(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int*             nchgbds,            /**< pointer to count the total number of tightened bounds */
+   RESULT*          result              /**< pointer to store the result of the bound tightening */
+   )
+{
+   CONSDATA* consdata;
+   VAR** vars;
+   Real* vals;
+   int nvars;
+
+   assert(nchgbds != NULL);
+   assert(result != NULL);
+   assert(*result != SCIP_CUTOFF);
+
+   /* we cannot tighten variables' bounds, if the constraint may be not complete */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+   if( nvars > 0 )
+   {
+      int lastnchgbds;
+      int lastsuccess;
+      int v;
+   
+      vars = consdata->vars;
+      vals = consdata->vals;
+      assert(vars != NULL);
+      assert(vals != NULL);
+      lastsuccess = 0;
+      v = 0;
+      do
+      {
+         assert(0 <= v && v < nvars);
+         lastnchgbds = *nchgbds;
+         CHECK_OKAY( consdataTightenVarBounds(scip, consdata, vars[v], vals[v], nchgbds, result) );
+         if( *nchgbds > lastnchgbds )
+            lastsuccess = v;
+         v++;
+         if( v == nvars )
+            v = 0;
+      }
+      while( v != lastsuccess && *result != SCIP_CUTOFF );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** checks linear constraint for feasibility of given solution or actual pseudo solution */
 static
@@ -1786,36 +2181,33 @@ RETCODE check(
    )
 {
    CONSDATA* consdata;
-   ROW* row;
    Real feasibility;
 
-   assert(cons != NULL);
    assert(violated != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
-   debug(linconsPrint(scip, consdata->lincons, NULL));
+   debug(consdataPrint(scip, consdata, NULL));
 
    *violated = FALSE;
 
-   row = consdata->row;
-   if( row != NULL )
+   if( consdata->row != NULL )
    {
-      if( !checklprows && SCIProwIsInLP(row) )
+      if( !checklprows && SCIProwIsInLP(consdata->row) )
          return SCIP_OKAY;
       else if( sol == NULL && !SCIPhasActnodeLP(scip) )
-         feasibility = linconsGetPseudoFeasibility(scip, consdata->lincons);
+         feasibility = consdataGetPseudoFeasibility(scip, consdata);
       else
-         feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
    }
    else
-      feasibility = linconsGetFeasibility(scip, consdata->lincons, sol);
+      feasibility = consdataGetFeasibility(scip, consdata, sol);
    
-   debugMessage("  lincons feasibility = %g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowisinlp=%d, sol=%p, hasactnodelp=%d)\n",
-      feasibility, consdata->lincons->lhs, consdata->lincons->rhs, 
-      row, checklprows, row == NULL ? -1 : SCIProwIsInLP(row), sol, SCIPhasActnodeLP(scip));
+   debugMessage("  consdata feasibility=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hasactnodelp=%d)\n",
+      feasibility, consdata->lhs, consdata->rhs, consdata->row, checklprows,
+      consdata->row == NULL ? -1 : SCIProwIsInLP(consdata->row), sol, SCIPhasActnodeLP(scip));
 
    if( SCIPisFeasible(scip, feasibility) )
    {
@@ -1834,6 +2226,31 @@ RETCODE check(
    return SCIP_OKAY;
 }
 
+/** creates an LP row in a linear constraint data */
+static
+RETCODE createRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< linear constraint */
+   )
+{
+   CONSDATA* consdata;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   CHECK_OKAY( SCIPcreateRow(scip, &consdata->row, SCIPconsGetName(cons), 0, NULL, NULL, consdata->lhs, consdata->rhs,
+                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+   
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[v], consdata->vals[v]) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds linear constraint as cut to the LP */
 static
 RETCODE addCut(
@@ -1843,21 +2260,21 @@ RETCODE addCut(
    )
 {
    CONSDATA* consdata;
-   ROW* row;
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
    if( consdata->row == NULL )
    {
-      /* convert lincons object into LP row */
-      CHECK_OKAY( linconsToRow(scip, consdata->lincons, SCIPconsGetName(cons), &consdata->row) );
+      /* convert consdata object into LP row */
+      CHECK_OKAY( createRow(scip, cons) );
    }
-   row = consdata->row;
-   assert(row != NULL);
+   assert(consdata->row != NULL);
+   assert(!SCIProwIsInLP(consdata->row));
    
    /* insert LP row as cut */
-   CHECK_OKAY( SCIPaddCut(scip, row, violation/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 
+                  violation/SCIProwGetNorm(consdata->row)/(SCIProwGetNNonz(consdata->row)+1)) );
 
    return SCIP_OKAY;
 }
@@ -1918,259 +2335,18 @@ DECL_CONSFREE(consFreeLinear)
 static
 DECL_CONSDELETE(consDeleteLinear)
 {
+   CONSHDLRDATA* conshdlrdata;
+   
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(*consdata != NULL);
 
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+   
    /* free linear constraint */
-   CHECK_OKAY( linconsFree(scip, &(*consdata)->lincons) );
-
-   /* release the row */
-   if( (*consdata)->row != NULL )
-   {
-      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
-   }
-
-   /* free constraint data object */
-   SCIPfreeBlockMemory(scip, consdata);
-
-   return SCIP_OKAY;
-}
-
-/** scales a linear constraint with a constant scalar */
-static
-RETCODE linconsScale(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint to scale */
-   Real             scalar              /**< value to scale constraint with */
-   )
-{
-   Real newval;
-   int i;
-
-   assert(lincons != NULL);
-
-   /* scale the coefficients */
-   for( i = 0; i < lincons->nvars; ++i )
-   {
-      Real oldval;
-      
-      oldval = lincons->vals[i];
-      lincons->vals[i] *= scalar;
-      if( SCIPisIntegral(scip, lincons->vals[i]) )
-         lincons->vals[i] = SCIPfloor(scip, lincons->vals[i]);
-      if( SCIPisZero(scip, lincons->vals[i]) )
-      {
-         char s[MAXSTRLEN];
-         sprintf(s, "coefficient of variable <%s> in linear constraint scaled to zero", SCIPvarGetName(lincons->vars[i]));
-         warningMessage(s);
-         lincons->vals[i] = oldval;
-         CHECK_OKAY( linconsDelCoefPos(scip, lincons, i) );
-         --i;
-      }
-   }
-
-   /* scale the sides */
-   if( scalar < 0.0 )
-   {
-      Real lhs;
-      lhs = lincons->lhs;
-      lincons->lhs = -lincons->rhs;
-      lincons->rhs = -lhs;
-   }
-   if( !SCIPisInfinity(scip, -lincons->lhs) )
-   {
-      lincons->lhs *= ABS(scalar);
-      if( SCIPisIntegral(scip, lincons->lhs) )
-         lincons->lhs = SCIPfloor(scip, lincons->lhs);
-   }
-   if( !SCIPisInfinity(scip, lincons->rhs) )
-   {
-      lincons->rhs *= ABS(scalar);
-      if( SCIPisIntegral(scip, lincons->rhs) )
-         lincons->rhs = SCIPfloor(scip, lincons->rhs);
-   }
-
-   lincons->validactivities = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** normalizes a linear constraint with the following rules:
- *  - multiplication with +1 or -1:
- *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
- *      if the actual rule doesn't determine the sign):
- *        1. the right hand side must not be negative
- *        2. the right hand side must not be infinite
- *        3. the absolute value of the right hand side must be greater than that of the left hand side
- *        4. the number of positive coefficients must not be smaller than the number of negative coefficients
- *        5. multiply with +1
- *  - rationals to integrals
- *      Try to identify a rational representation of the fractional coefficients, and multiply all coefficients
- *      by the smallest common multiple of all denominators to get integral coefficients.
- *      Forbid large denominators due to numerical stability.
- *  - division by greatest common divisor
- *      If all coefficients are integral, divide them by the greatest common divisor.
- */
-static
-RETCODE linconsNormalize(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint to normalize */
-   )
-{
-   VAR** vars;
-   Real* vals;
-   Longint scm;
-   Longint nominator;
-   Longint denominator;
-   Longint gcd;
-   Longint maxmult;
-   Real epsilon;
-   Real feastol;
-   Bool success;
-   int nvars;
-   int mult;
-   int nposcoeffs;
-   int nnegcoeffs;
-   int i;
-
-   assert(lincons != NULL);
-
-   /* coefficients of modifiable constraint must not be changed */
-   if( lincons->modifiable )
-      return SCIP_OKAY;
-
-   vars = lincons->vars;
-   vals = lincons->vals;
-   nvars = lincons->nvars;
-   assert(nvars == 0 || vars != NULL);
-   assert(nvars == 0 || vals != NULL);
-
-   /* calculate the maximal multiplier for common divisor calculation:
-    *   |p/q - val| < epsilon  and  q < feastol/epsilon  =>  |p - q*val| < feastol
-    * which means, a value of feastol/epsilon should be used as maximal multiplier
-    */
-   epsilon = SCIPepsilon(scip);
-   feastol = SCIPfeastol(scip);
-   maxmult = (Longint)(feastol/epsilon + feastol);
-
-   /*
-    * multiplication with +1 or -1
-    */
-   mult = 0;
-   
-   if( mult == 0 )
-   {
-      /* 1. the right hand side must not be negative */
-      if( SCIPisPositive(scip, lincons->lhs) )
-         mult = +1;
-      else if( SCIPisNegative(scip, lincons->rhs) )
-         mult = -1;
-   }
-
-   if( mult == 0 )
-   {
-      /* 2. the right hand side must not be infinite */
-      if( SCIPisInfinity(scip, -lincons->lhs) )
-         mult = +1;
-      else if( SCIPisInfinity(scip, lincons->rhs) )
-         mult = -1;
-   }
-
-   if( mult == 0 )
-   {
-      /* 3. the absolute value of the right hand side must be greater than that of the left hand side */
-      if( SCIPisGT(scip, ABS(lincons->rhs), ABS(lincons->lhs)) )
-         mult = +1;
-      else if( SCIPisLT(scip, ABS(lincons->rhs), ABS(lincons->lhs)) )
-         mult = -1;
-   }
-   
-   if( mult == 0 )
-   {
-      /* 4. the number of positive coefficients must not be smaller than the number of negative coefficients */
-      nposcoeffs = 0;
-      nnegcoeffs = 0;
-      for( i = 0; i < nvars; ++i )
-      {
-         if( vals[i] > 0.0 )
-            nposcoeffs++;
-         else
-            nnegcoeffs++;
-      }
-      if( nposcoeffs > nnegcoeffs )
-         mult = +1;
-      else if( nposcoeffs < nnegcoeffs )
-         mult = -1;
-   }
-
-   if( mult == 0 )
-   {
-      /* 5. multiply with +1 */
-      mult = +1;
-   }
-
-   assert(mult == +1 || mult == -1);
-   if( mult == -1 )
-   {
-      /* scale the constraint with -1 */
-      debugMessage("multiply linear constraint with -1.0\n");
-      debug(linconsPrint(scip, lincons, NULL));
-      CHECK_OKAY( linconsScale(scip, lincons, -1.0) );
-   }
-
-   /*
-    * rationals to integrals
-    */
-   success = TRUE;
-   scm = 1;
-   for( i = 0; i < nvars && success && scm <= maxmult; ++i )
-   {
-      if( !SCIPisIntegral(scip, vals[i]) )
-      {
-         success = SCIPrealToRational(vals[i], epsilon, maxmult, &nominator, &denominator);
-         if( success )
-            scm = SCIPcalcSmaComMul(scm, denominator);
-      }
-   }
-   assert(scm >= 1);
-   success &= (scm <= maxmult);
-   if( success && scm != 1 )
-   {
-      /* scale the constraint with the smallest common multiple of all denominators */
-      debugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
-      debug(linconsPrint(scip, lincons, NULL));
-      CHECK_OKAY( linconsScale(scip, lincons, (Real)scm) );
-   }
-
-   /*
-    * division by greatest common divisor
-    */
-   if( success && nvars >= 1 )
-   {
-      /* all coefficients are integral: divide them by their greatest common divisor */
-      assert(SCIPisIntegral(scip, vals[0]));
-      gcd = (Longint)(ABS(vals[0]) + feastol);
-      assert(gcd >= 1);
-      for( i = 1; i < nvars && gcd > 1; ++i )
-      {
-         assert(SCIPisIntegral(scip, vals[i]));
-         gcd = SCIPcalcGreComDiv(gcd, (Longint)(ABS(vals[i]) + feastol));
-      }
-
-      if( gcd > 1 )
-      {
-         /* divide the constaint by the greatest common divisor of the coefficients */
-         debugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
-         debug(linconsPrint(scip, lincons, NULL));
-         CHECK_OKAY( linconsScale(scip, lincons, 1.0/(Real)gcd) );
-      }
-   }
-   
-   debugMessage("normalized constraint:\n");
-   debug(linconsPrint(scip, lincons, NULL));
+   CHECK_OKAY( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -2178,46 +2354,43 @@ RETCODE linconsNormalize(
 static
 DECL_CONSTRANS(consTransLinear)
 {
+   CONSHDLRDATA* conshdlrdata;
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
-   LINCONS* lincons;
    CONS* upgdcons;
 
    /*debugMessage("Trans method of linear constraints\n");*/
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(SCIPstage(scip) == SCIP_STAGE_INITSOLVE);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
-   assert(sourcedata->lincons != NULL);
    assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
-   /* create constraint data for target constraint */
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &targetdata) );
-   targetdata->row = NULL;
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
 
-   /* create linear constraint object */
-   lincons = sourcedata->lincons;
-   assert(SCIPconsIsLocal(sourcecons) == lincons->local);
-   assert(SCIPconsIsModifiable(sourcecons) == lincons->modifiable);
-   assert(SCIPconsIsRemoveable(sourcecons) == lincons->removeable);
-   CHECK_OKAY( linconsCreateTransformed(scip, &targetdata->lincons,
-                  lincons->nvars, lincons->vars, lincons->vals, lincons->lhs, lincons->rhs,
-                  lincons->local, lincons->modifiable, lincons->removeable) );
-
-   /* normalize constraint */
-   CHECK_OKAY( linconsNormalize(scip, targetdata->lincons) );
+   /* create linear constraint data for target constraint */
+   CHECK_OKAY( consdataCreateTransformed(scip, &targetdata, conshdlrdata->eventhdlr,
+                  sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
                   SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
                   SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+                  SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+
+   /* normalize constraint, if it is unmodifiable */
+   if( !SCIPconsIsModifiable(*targetcons) )
+   {
+      CHECK_OKAY( normalize(scip, *targetcons) );
+   }
 
    /* try to upgrade target linear constraint into more specific constraint */
    CHECK_OKAY( SCIPupgradeConsLinear(scip, *targetcons, &upgdcons) );
@@ -2232,10 +2405,13 @@ DECL_CONSTRANS(consTransLinear)
    return SCIP_OKAY;
 }
 
+/** LP initialization method of constraint handler */
 static
 DECL_CONSINITLP(consInitlpLinear)
 {
    int c;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -2248,6 +2424,7 @@ DECL_CONSINITLP(consInitlpLinear)
    return SCIP_OKAY;
 }
 
+/** separation method of constraint handler */
 static
 DECL_CONSSEPA(consSepaLinear)
 {
@@ -2256,7 +2433,6 @@ DECL_CONSSEPA(consSepaLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
 
    /*debugMessage("Sepa method of linear constraints\n");*/
@@ -2286,6 +2462,7 @@ DECL_CONSSEPA(consSepaLinear)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpLinear)
 {
@@ -2293,7 +2470,6 @@ DECL_CONSENFOLP(consEnfolpLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
 
    /*debugMessage("Enfolp method of linear constraints\n");*/
@@ -2321,6 +2497,7 @@ DECL_CONSENFOLP(consEnfolpLinear)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsLinear)
 {
@@ -2329,7 +2506,6 @@ DECL_CONSENFOPS(consEnfopsLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
 
    /*debugMessage("Enfops method of linear constraints\n");*/
@@ -2356,6 +2532,7 @@ DECL_CONSENFOPS(consEnfopsLinear)
    return SCIP_OKAY;
 }
 
+/** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckLinear)
 {
@@ -2384,12 +2561,13 @@ DECL_CONSCHECK(consCheckLinear)
    return SCIP_OKAY;
 }
 
+/** domain propagation method of constraint handler */
 static
 DECL_CONSPROP(consPropLinear)
 {
    CONSHDLRDATA* conshdlrdata;
    CONS* cons;
-   LINCONS* lincons;
+   CONSDATA* consdata;
    Real minactivity;
    Real maxactivity;
    Bool redundant;
@@ -2401,7 +2579,6 @@ DECL_CONSPROP(consPropLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
 
    /*debugMessage("Prop method of linear constraints\n");*/
@@ -2421,18 +2598,19 @@ DECL_CONSPROP(consPropLinear)
    for( c = 0; c < nusefulconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
-      lincons = consGetLincons(cons);
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
 
-      if( lincons->propagated )
+      if( consdata->propagated )
          continue;
 
       /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
-      if( !lincons->modifiable )
+      if( !SCIPconsIsModifiable(cons) )
       {
          /* tighten the variable's bounds */
          if( tightenbounds )
          {
-            CHECK_OKAY( linconsTightenBounds(scip, lincons, &nchgbds, result) );
+            CHECK_OKAY( tightenBounds(scip, cons, &nchgbds, result) );
 #ifndef NDEBUG
             {
                Real newminactivity;
@@ -2440,9 +2618,9 @@ DECL_CONSPROP(consPropLinear)
                Real recalcminactivity;
                Real recalcmaxactivity;
                
-               linconsGetActivityBounds(scip, lincons, &newminactivity, &newmaxactivity);
-               linconsInvalidateActivities(lincons);
-               linconsGetActivityBounds(scip, lincons, &recalcminactivity, &recalcmaxactivity);
+               consdataGetActivityBounds(scip, consdata, &newminactivity, &newmaxactivity);
+               consdataInvalidateActivities(consdata);
+               consdataGetActivityBounds(scip, consdata, &recalcminactivity, &recalcmaxactivity);
 
                assert(SCIPisSumRelEQ(scip, newminactivity, recalcminactivity));
                assert(SCIPisSumRelEQ(scip, newmaxactivity, recalcmaxactivity));
@@ -2451,25 +2629,25 @@ DECL_CONSPROP(consPropLinear)
          }
          
          /* check constraint for infeasibility and redundancy */
-         linconsGetActivityBounds(scip, lincons, &minactivity, &maxactivity);
+         consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
          
-         if( SCIPisGT(scip, minactivity, lincons->rhs) || SCIPisLT(scip, maxactivity, lincons->lhs) )
+         if( SCIPisGT(scip, minactivity, consdata->rhs) || SCIPisLT(scip, maxactivity, consdata->lhs) )
          {
             debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, lincons->lhs, lincons->rhs);
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *result = SCIP_CUTOFF;
          }
-         else if( SCIPisGE(scip, minactivity, lincons->lhs) && SCIPisLE(scip, maxactivity, lincons->rhs) )
+         else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
          {
             debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, lincons->lhs, lincons->rhs);
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             CHECK_OKAY( SCIPincConsAge(scip, cons) );
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
       }
 
-      lincons->propagated = TRUE;
+      consdata->propagated = TRUE;
    }
    debugMessage("linear constraint propagator tightened %d bounds\n", nchgbds);
 
@@ -2483,181 +2661,46 @@ DECL_CONSPROP(consPropLinear)
  * Presolving
  */
 
-/** replaces multiple occurrences of a variable by a single coefficient */
-static
-RETCODE linconsMergeMultiples(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
-   )
-{
-   VAR* var;
-   Real valsum;
-   int v;
-
-   /* sort the constraint */
-   CHECK_OKAY( linconsSort(scip, lincons) );
-   
-   /* go backwards through the constraint looking for multiple occurrences of the same variable;
-    * backward direction is necessary, since linconsDelCoefPos() modifies the given position and
-    * the subsequent ones
-    */
-   for( v = lincons->nvars-1; v >= 1; --v )
-   {
-      var = lincons->vars[v];
-      if( lincons->vars[v-1] == var )
-      {
-         valsum = lincons->vals[v];
-         do
-         {
-            CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
-            --v;
-            valsum += lincons->vals[v];
-         }
-         while( v >= 1 && lincons->vars[v-1] == var );
-
-         /* modify the last existing occurrence of the variable */
-         assert(lincons->vars[v] == var);
-         if( SCIPisZero(scip, valsum) )
-         {
-            CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
-         }
-         else
-         {
-            CHECK_OKAY( linconsChgCoefPos(scip, lincons, v, valsum) );
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** replaces all fixed and aggregated variables by their non-fixed counterparts */
-static
-RETCODE linconsApplyFixings(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   Bool*            conschanged         /**< pointer to store TRUE, if changes were made to the constraint */
-   )
-{
-   VAR* var;
-   Real val;
-   Real fixedval;
-   Real aggrconst;
-   Bool cleanup;
-   int v;
-
-   assert(lincons != NULL);
-   assert(conschanged != NULL);
-
-   cleanup = FALSE;
-   v = 0;
-   while( v < lincons->nvars )
-   {
-      var = lincons->vars[v];
-      val = lincons->vals[v];
-      switch( SCIPvarGetStatus(var) )
-      {
-      case SCIP_VARSTATUS_ORIGINAL:
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_COLUMN:
-      case SCIP_VARSTATUS_MULTAGGR:
-         ++v;
-         break;
-
-      case SCIP_VARSTATUS_FIXED:
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
-         fixedval = SCIPvarGetLbGlobal(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            linconsChgLhs(scip, lincons, lincons->lhs - val * fixedval);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            linconsChgRhs(scip, lincons, lincons->rhs - val * fixedval);
-         CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
-         *conschanged = TRUE;
-         break;
-
-      case SCIP_VARSTATUS_AGGREGATED:
-         CHECK_OKAY( linconsAddCoef(scip, lincons, SCIPvarGetAggrVar(var), val * SCIPvarGetAggrScalar(var)) );
-         aggrconst = SCIPvarGetAggrConstant(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            linconsChgLhs(scip, lincons, lincons->lhs - val * aggrconst);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            linconsChgRhs(scip, lincons, lincons->rhs - val * aggrconst);
-         CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
-         *conschanged = TRUE;
-         cleanup = TRUE;
-         break;
-
-      case SCIP_VARSTATUS_NEGATED:
-         CHECK_OKAY( linconsAddCoef(scip, lincons, SCIPvarGetNegationVar(var), -val) );
-         aggrconst = SCIPvarGetNegationConstant(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            linconsChgLhs(scip, lincons, lincons->lhs - val * aggrconst);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            linconsChgRhs(scip, lincons, lincons->rhs - val * aggrconst);
-         CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
-         *conschanged = TRUE;
-         cleanup = TRUE;
-         break;
-
-      default:
-         errorMessage("unknown variable status");
-         abort();
-      }
-   }
-
-   debugMessage("after fixings: ");
-   debug(linconsPrint(scip, lincons, NULL));
-
-   /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
-    * to clean up the constraint
-    */
-   CHECK_OKAY( linconsMergeMultiples(scip, lincons) );
-
-   debugMessage("after merging: ");
-   debug(linconsPrint(scip, lincons, NULL));
-
-   return SCIP_OKAY;
-}
-
 /* tightens left and right hand side of constraint due to integrality */
 static
-RETCODE linconsPresolTightenSides(
+RETCODE tightenSides(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
    int*             nchgsides,          /**< pointer to count number of side changes */
    Bool*            conschanged         /**< pointer to store TRUE, if changes were made to the constraint */
    )
 {
-   LINCONS* lincons;
+   CONSDATA* consdata;
    Bool integral;
    int i;
 
    assert(nchgsides != NULL);
    assert(conschanged != NULL);
 
-   lincons = consGetLincons(cons);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   if( !SCIPisIntegral(scip, lincons->lhs) || !SCIPisIntegral(scip, lincons->rhs) )
+   if( !SCIPisIntegral(scip, consdata->lhs) || !SCIPisIntegral(scip, consdata->rhs) )
    {
       integral = TRUE;
-      for( i = 0; i < lincons->nvars && integral; ++i )
+      for( i = 0; i < consdata->nvars && integral; ++i )
       {
-         integral &= SCIPisIntegral(scip, lincons->vals[i]);
-         integral &= (SCIPvarGetType(lincons->vars[i]) != SCIP_VARTYPE_CONTINOUS);
+         integral &= SCIPisIntegral(scip, consdata->vals[i]);
+         integral &= (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINOUS);
       }
       if( integral )
       {
          debugMessage("linear constraint <%s>: make sides integral: sides=[%g,%g]\n",
-            SCIPconsGetName(cons), lincons->lhs, lincons->rhs);
-         if( !SCIPisInfinity(scip, -lincons->lhs) && !SCIPisIntegral(scip, lincons->lhs) )
+            SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+         if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
          {
-            linconsChgLhs(scip, lincons, SCIPceil(scip, lincons->lhs));
+            CHECK_OKAY( chgLhs(scip, cons, SCIPceil(scip, consdata->lhs)) );
             (*nchgsides)++;
             *conschanged = TRUE;
          }
-         if( !SCIPisInfinity(scip, lincons->rhs) && !SCIPisIntegral(scip, lincons->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisIntegral(scip, consdata->rhs) )
          {
-            linconsChgRhs(scip, lincons, SCIPfloor(scip, lincons->rhs));
+            CHECK_OKAY( chgRhs(scip, cons, SCIPfloor(scip, consdata->rhs)) );
             (*nchgsides)++;
             *conschanged = TRUE;
          }
@@ -2669,7 +2712,7 @@ RETCODE linconsPresolTightenSides(
 
 /* converts special equalities */
 static
-RETCODE linconsConvertEquality(
+RETCODE convertEquality(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
    int*             nfixedvars,         /**< pointer to count number of fixed variables */
@@ -2681,7 +2724,6 @@ RETCODE linconsConvertEquality(
    )
 {
    CONSDATA* consdata;
-   LINCONS* lincons;
    Bool infeasible;
 
    assert(nfixedvars != NULL);
@@ -2690,34 +2732,35 @@ RETCODE linconsConvertEquality(
    assert(conschanged != NULL);
    assert(consdeleted != NULL);
 
-   lincons = consGetLincons(cons);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   if( SCIPisEQ(scip, lincons->lhs, lincons->rhs) )
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
    {
-      if( lincons->nvars == 1 )
+      if( consdata->nvars == 1 )
       {
          VAR* var;
          Real val;
          Real fixval;
 
          /* only one variable: adjust bounds and delete constraint */
-         var = lincons->vars[0];
-         val = lincons->vals[0];
+         var = consdata->vars[0];
+         val = consdata->vals[0];
          assert(!SCIPisZero(scip, val));
-         fixval = lincons->rhs/val;
+         fixval = consdata->rhs/val;
 
          /* check, if fixing would lead to an infeasibility */
          if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPisIntegral(scip, fixval)) )
          {
             debugMessage("linear equality <%s> is integer infeasible: %+g<%s> == %g\n",
-               SCIPconsGetName(cons), val, SCIPvarGetName(var), lincons->rhs);
+               SCIPconsGetName(cons), val, SCIPvarGetName(var), consdata->rhs);
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
          if( SCIPisLT(scip, fixval, SCIPvarGetLbGlobal(var)) || SCIPisGT(scip, fixval, SCIPvarGetUbGlobal(var)) )
          {
             debugMessage("linear equality <%s> is bound infeasible: %+g<%s> == %g, bounds=[%g,%g]\n",
-               SCIPconsGetName(cons), val, SCIPvarGetName(var), lincons->rhs, 
+               SCIPconsGetName(cons), val, SCIPvarGetName(var), consdata->rhs, 
                SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
@@ -2744,7 +2787,7 @@ RETCODE linconsConvertEquality(
          *consdeleted = TRUE;
          return SCIP_OKAY;
       }
-      else if( lincons->nvars == 2 )
+      else if( consdata->nvars == 2 )
       {
          VAR** vars;
          Real* vals;
@@ -2754,8 +2797,8 @@ RETCODE linconsConvertEquality(
 
          /* two variables: aggregation may be possible */
          agg = -1;
-         vars = lincons->vars;
-         vals = lincons->vals;
+         vars = consdata->vars;
+         vals = consdata->vals;
          assert(!SCIPisZero(scip, vals[0]));
          assert(!SCIPisZero(scip, vals[1]));
 
@@ -2779,7 +2822,7 @@ RETCODE linconsConvertEquality(
          {
             assert(agg == 0 || agg == 1);
             scalar = -vals[1-agg]/vals[agg];
-            constant = lincons->rhs/vals[agg];
+            constant = consdata->rhs/vals[agg];
             if( SCIPvarGetType(vars[0]) != SCIP_VARTYPE_CONTINOUS
                && SCIPvarGetType(vars[1]) != SCIP_VARTYPE_CONTINOUS
                && SCIPisIntegral(scip, scalar) && !SCIPisIntegral(scip, constant) )
@@ -2829,17 +2872,17 @@ RETCODE linconsConvertEquality(
              */
             a = (Longint)(SCIPfloor(scip, vals[0]));
             b = (Longint)(SCIPfloor(scip, vals[1]));
-            c = (Longint)(SCIPfloor(scip, lincons->rhs));
+            c = (Longint)(SCIPfloor(scip, consdata->rhs));
             assert(a != 0 && b != 0);
             gcd = SCIPcalcGreComDiv(ABS(a), ABS(b));
             a /= gcd;
             b /= gcd;
             c /= gcd;
-            if( !SCIPisIntegral(scip, lincons->rhs/gcd) )
+            if( !SCIPisIntegral(scip, consdata->rhs/gcd) )
             {
                debugMessage("linear equality <%s> is integer infeasible: %+g<%s> %+g<%s> == %g\n",
                   SCIPconsGetName(cons), vals[0], SCIPvarGetName(vars[0]), vals[1], SCIPvarGetName(vars[1]),
-                  lincons->rhs);
+                  consdata->rhs);
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
@@ -2928,13 +2971,13 @@ RETCODE linconsConvertEquality(
          int v;
 
          /* more than two variables: look for a slack variable s to convert a*x + s == b into lhs <= a*x <= rhs */
-         vars = lincons->vars;
-         vals = lincons->vals;
+         vars = consdata->vars;
+         vals = consdata->vals;
          bestslackpos = -1;
          bestslacktype = SCIP_VARTYPE_BINARY;
          bestslackdomrng = 0.0;
          integral = TRUE;
-         for( v = 0; v < lincons->nvars; ++v )
+         for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars != NULL);
             assert(vals != NULL);
@@ -2970,10 +3013,10 @@ RETCODE linconsConvertEquality(
             }
          }
 
-         if( integral && !SCIPisIntegral(scip, lincons->rhs) )
+         if( integral && !SCIPisIntegral(scip, consdata->rhs) )
          {
             debugMessage("linear equality <%s> is integer infeasible:", SCIPconsGetName(cons));
-            debug(linconsPrint(scip, lincons, NULL));
+            debug(consdataPrint(scip, consdata, NULL));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
@@ -3003,7 +3046,7 @@ RETCODE linconsConvertEquality(
             slackvar = vars[bestslackpos];
             slackcoef = vals[bestslackpos];
             assert(!SCIPisZero(scip, slackcoef));
-            aggrconst = lincons->rhs/slackcoef;
+            aggrconst = consdata->rhs/slackcoef;
             slackvarlb = SCIPvarGetLbGlobal(slackvar);
             slackvarub = SCIPvarGetUbGlobal(slackvar);
             if( slackcoef > 0.0 )
@@ -3011,44 +3054,44 @@ RETCODE linconsConvertEquality(
                if( SCIPisInfinity(scip, -slackvarlb) )
                   newrhs = SCIPinfinity(scip);
                else
-                  newrhs = lincons->rhs - slackcoef * slackvarlb;
+                  newrhs = consdata->rhs - slackcoef * slackvarlb;
                if( SCIPisInfinity(scip, slackvarub) )
                   newlhs = -SCIPinfinity(scip);
                else
-                  newlhs = lincons->lhs - slackcoef * slackvarub;
+                  newlhs = consdata->lhs - slackcoef * slackvarub;
             }
             else
             {
                if( SCIPisInfinity(scip, -slackvarlb) )
                   newlhs = -SCIPinfinity(scip);
                else
-                  newlhs = lincons->rhs - slackcoef * slackvarlb;
+                  newlhs = consdata->rhs - slackcoef * slackvarlb;
                if( SCIPisInfinity(scip, slackvarub) )
                   newrhs = SCIPinfinity(scip);
                else
-                  newrhs = lincons->lhs - slackcoef * slackvarub;
+                  newrhs = consdata->lhs - slackcoef * slackvarub;
             }
             assert(SCIPisLE(scip, newlhs, newrhs));
-            linconsChgLhs(scip, lincons, newlhs);
-            linconsChgRhs(scip, lincons, newrhs);
-            CHECK_OKAY( linconsDelCoefPos(scip, lincons, bestslackpos) );
+            CHECK_OKAY( chgLhs(scip, cons, newlhs) );
+            CHECK_OKAY( chgRhs(scip, cons, newrhs) );
+            CHECK_OKAY( delCoefPos(scip, cons, bestslackpos) );
 
             /* allocate temporary memory */
-            CHECK_OKAY( SCIPcaptureBufferArray(scip, &scalars, lincons->nvars) );
+            CHECK_OKAY( SCIPcaptureBufferArray(scip, &scalars, consdata->nvars) );
 
             /* set up the multi-aggregation */
             debugMessage("linear constraint <%s>: multi-aggregate <%s> ==",
                SCIPconsGetName(cons), SCIPvarGetName(slackvar));
-            for( v = 0; v < lincons->nvars; ++v )
+            for( v = 0; v < consdata->nvars; ++v )
             {
-               scalars[v] = -lincons->vals[v]/slackcoef;
-               debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(lincons->vars[v])));
+               scalars[v] = -consdata->vals[v]/slackcoef;
+               debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(consdata->vars[v])));
             }
             debug(printf(" %+g, bounds of <%s>: [%g,%g]\n", 
                          aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub));
 
             /* perform the multi-aggregation */
-            CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, lincons->nvars, lincons->vars, scalars, aggrconst,
+            CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, consdata->vars, scalars, aggrconst,
                            &infeasible) );
 
             /* free temporary memory */
@@ -3075,14 +3118,15 @@ RETCODE linconsConvertEquality(
 
 /** converts all variables with fixed domain into FIXED variables */
 static
-RETCODE linconsFixVariables(
+RETCODE fixVariables(
    SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
+   CONS*            cons,               /**< linear constraint */
    int*             nfixedvars,         /**< pointer to count the total number of fixed variables */
    RESULT*          result,             /**< pointer to store the result of the variable fixing */
    Bool*            conschanged         /**< pointer to store TRUE, if changes were made to the constraint */
    )
 {
+   CONSDATA* consdata;
    VAR* var;
    VARSTATUS varstatus;
    Real lb;
@@ -3092,16 +3136,18 @@ RETCODE linconsFixVariables(
    int v;
 
    assert(scip != NULL);
-   assert(lincons != NULL);
    assert(nfixedvars != NULL);
    assert(result != NULL);
    assert(*result != SCIP_CUTOFF);
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
    fixed = FALSE;
-   for( v = 0; v < lincons->nvars; ++v )
+   for( v = 0; v < consdata->nvars; ++v )
    {
-      assert(lincons->vars != NULL);
-      var = lincons->vars[v];
+      assert(consdata->vars != NULL);
+      var = consdata->vars[v];
       varstatus = SCIPvarGetStatus(var);
 
       if( varstatus != SCIP_VARSTATUS_FIXED )
@@ -3127,7 +3173,7 @@ RETCODE linconsFixVariables(
 
    if( fixed )
    {
-      CHECK_OKAY( linconsApplyFixings(scip, lincons, conschanged) );
+      CHECK_OKAY( applyFixings(scip, cons, conschanged) );
       assert(*conschanged);
    }
    
@@ -3140,7 +3186,7 @@ RETCODE linconsFixVariables(
  * for numerical stability, we will only accept integral a and b
  */
 static 
-RETCODE linconsAggregateEqualities(
+RETCODE aggregateEqualities(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons0,              /**< constraint to modify */
    CONS*            cons1,              /**< constraint to use for aggregation of cons0 */
@@ -3154,8 +3200,8 @@ RETCODE linconsAggregateEqualities(
    Bool*            aggregated          /**< pointer to store whether an aggregation was made */
    )
 {
-   LINCONS* lincons0;
-   LINCONS* lincons1;
+   CONSDATA* consdata0;
+   CONSDATA* consdata1;
    VAR* var;
    Real a;
    Real b;
@@ -3181,39 +3227,41 @@ RETCODE linconsAggregateEqualities(
    assert(SCIPconsIsActive(cons0));
    assert(SCIPconsIsActive(cons1));
 
-   lincons0 = consGetLincons(cons0);
-   assert(lincons0->nvars >= 1);
-   assert(SCIPisEQ(scip, lincons0->lhs, lincons0->rhs));
+   consdata0 = SCIPconsGetData(cons0);
+   assert(consdata0 != NULL);
+   assert(consdata0->nvars >= 1);
+   assert(SCIPisEQ(scip, consdata0->lhs, consdata0->rhs));
    
-   lincons1 = consGetLincons(cons1);
-   assert(lincons1->nvars >= 1);
-   assert(SCIPisEQ(scip, lincons1->lhs, lincons1->rhs));
+   consdata1 = SCIPconsGetData(cons1);
+   assert(consdata1 != NULL);
+   assert(consdata1->nvars >= 1);
+   assert(SCIPisEQ(scip, consdata1->lhs, consdata1->rhs));
 
    *aggregated = FALSE;
 
    /* search for the best common variable such that
-    *  val1[var] * lincons0 - val0[var] * lincons1
+    *  val1[var] * consdata0 - val0[var] * consdata1
     * has least number of variables */
-   bestnvars = lincons0->nvars;
+   bestnvars = consdata0->nvars;
    bestv = -1;
    bestscalarsum = 0.0;
    for( v = 0; v < nvarscommon; ++v )
    {
-      assert(lincons0->vars[commonidx0[v]] == lincons1->vars[commonidx1[v]]);
-      var = lincons0->vars[commonidx0[v]];
-      a = lincons1->vals[commonidx1[v]];
-      b = -lincons0->vals[commonidx0[v]];
+      assert(consdata0->vars[commonidx0[v]] == consdata1->vars[commonidx1[v]]);
+      var = consdata0->vars[commonidx0[v]];
+      a = consdata1->vals[commonidx1[v]];
+      b = -consdata0->vals[commonidx0[v]];
 
       /* only try aggregation, if coefficients are integral (numerical stability) */
       if( SCIPisIntegral(scip, a) && SCIPisIntegral(scip, b) )
       {
-         /* count the number of variables in the potential new constraint  a * lincons0 + b * lincons1 */
-         actnvars = lincons0->nvars + lincons1->nvars - 2*nvarscommon;
+         /* count the number of variables in the potential new constraint  a * consdata0 + b * consdata1 */
+         actnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
          actscalarsum = ABS(a) + ABS(b);
          betterscalarsum = (actscalarsum < bestscalarsum);
          for( i = 0; i < nvarscommon && (actnvars < bestnvars || (actnvars == bestnvars && betterscalarsum)); ++i )
          {
-            aggrcoef = a * lincons0->vals[commonidx0[i]] + b * lincons1->vals[commonidx1[i]];
+            aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
             if( !SCIPisZero(scip, aggrcoef) )
                actnvars++;
          }
@@ -3235,17 +3283,17 @@ RETCODE linconsAggregateEqualities(
       int newnvars;
 
       /* better aggregation was found: create new constraint and delete old one */
-      a = lincons1->vals[commonidx1[bestv]];
-      b = -lincons0->vals[commonidx0[bestv]];
+      a = consdata1->vals[commonidx1[bestv]];
+      b = -consdata0->vals[commonidx0[bestv]];
       assert(!SCIPisZero(scip, a));
       assert(!SCIPisZero(scip, b));
       debugMessage("aggregate equalities <%s> := %g*<%s> + %g*<%s>  ->  oldnvars=%d, newnvars=%d\n",
          SCIPconsGetName(cons0), a, SCIPconsGetName(cons0), b, SCIPconsGetName(cons1),
-         lincons0->nvars, bestnvars);
+         consdata0->nvars, bestnvars);
       debugMessage("<%s>: ", SCIPconsGetName(cons0));
-      debug(linconsPrint(scip, lincons0, NULL));
+      debug(consdataPrint(scip, consdata0, NULL));
       debugMessage("<%s>: ", SCIPconsGetName(cons1));
-      debug(linconsPrint(scip, lincons1, NULL));
+      debug(consdataPrint(scip, consdata1, NULL));
 
       /* get temporary memory for creating the new linear constraint */
       CHECK_OKAY( SCIPcaptureBufferArray(scip, &newvars, bestnvars) );
@@ -3255,41 +3303,41 @@ RETCODE linconsAggregateEqualities(
       newnvars = 0;
       for( i = 0; i < nvarscommon; ++i )
       {
-         assert(0 <= commonidx0[i] && commonidx0[i] < lincons0->nvars);
-         assert(0 <= commonidx1[i] && commonidx1[i] < lincons1->nvars);
+         assert(0 <= commonidx0[i] && commonidx0[i] < consdata0->nvars);
+         assert(0 <= commonidx1[i] && commonidx1[i] < consdata1->nvars);
 
-         aggrcoef = a * lincons0->vals[commonidx0[i]] + b * lincons1->vals[commonidx1[i]];
+         aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
          if( !SCIPisZero(scip, aggrcoef) )
          {
             assert(newnvars < bestnvars);
-            newvars[newnvars] = lincons0->vars[commonidx0[i]];
+            newvars[newnvars] = consdata0->vars[commonidx0[i]];
             newvals[newnvars] = aggrcoef;
             newnvars++;
          }
       }
 
       /* calculate the coefficients appearing in cons0 but not in cons1 */
-      for( i = 0; i < lincons0->nvars - nvarscommon; ++i )
+      for( i = 0; i < consdata0->nvars - nvarscommon; ++i )
       {
-         assert(0 <= diffidx0minus1[i] && diffidx0minus1[i] < lincons0->nvars);
+         assert(0 <= diffidx0minus1[i] && diffidx0minus1[i] < consdata0->nvars);
 
-         aggrcoef = a * lincons0->vals[diffidx0minus1[i]];
+         aggrcoef = a * consdata0->vals[diffidx0minus1[i]];
          assert(!SCIPisZero(scip, aggrcoef));
          assert(newnvars < bestnvars);
-         newvars[newnvars] = lincons0->vars[diffidx0minus1[i]];
+         newvars[newnvars] = consdata0->vars[diffidx0minus1[i]];
          newvals[newnvars] = aggrcoef;
          newnvars++;
       }
 
       /* calculate the coefficients appearing in cons1 but not in cons0 */
-      for( i = 0; i < lincons1->nvars - nvarscommon; ++i )
+      for( i = 0; i < consdata1->nvars - nvarscommon; ++i )
       {
-         assert(0 <= diffidx1minus0[i] && diffidx1minus0[i] < lincons1->nvars);
+         assert(0 <= diffidx1minus0[i] && diffidx1minus0[i] < consdata1->nvars);
 
-         aggrcoef = b * lincons1->vals[diffidx1minus0[i]];
+         aggrcoef = b * consdata1->vals[diffidx1minus0[i]];
          assert(!SCIPisZero(scip, aggrcoef));
          assert(newnvars < bestnvars);
-         newvars[newnvars] = lincons1->vars[diffidx1minus0[i]];
+         newvars[newnvars] = consdata1->vars[diffidx1minus0[i]];
          newvals[newnvars] = aggrcoef;
          newnvars++;
       }
@@ -3298,16 +3346,16 @@ RETCODE linconsAggregateEqualities(
       todoMessage("don't aggregate equalities, if max{|coef|} is increased too much");
 
       /* calculate the new right hand side of the equality */
-      newrhs = a * lincons0->rhs + b * lincons1->rhs;
+      newrhs = a * consdata0->rhs + b * consdata1->rhs;
 
       /* create the new linear constraint */
       CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newrhs, newrhs,
                      SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
                      SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
-                     SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
+                     SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
 
       /* update the statistics: we changed all coefficients of the old cons0 */
-      (*nchgcoefs) += lincons0->nvars;
+      (*nchgcoefs) += consdata0->nvars;
       *result = SCIP_SUCCESS;
       *aggregated = TRUE;
 
@@ -3332,7 +3380,7 @@ RETCODE linconsAggregateEqualities(
  *  and removes or changes constraint accordingly
  */
 static
-RETCODE linconsRemoveRedundancy(
+RETCODE removeRedundancy(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< constraint set */
    int              firstredcheck,      /**< first constraint that changed since last redundancy check */
@@ -3347,8 +3395,8 @@ RETCODE linconsRemoveRedundancy(
 {
    CONS* cons0;
    CONS* cons1;
-   LINCONS* lincons0;
-   LINCONS* lincons1;
+   CONSDATA* consdata0;
+   CONSDATA* consdata1;
    VAR* var;
    int* commonidx0;
    int* commonidx1;
@@ -3383,22 +3431,23 @@ RETCODE linconsRemoveRedundancy(
    cons0 = conss[chkind];
    assert(SCIPconsIsActive(cons0));
 
-   lincons0 = consGetLincons(cons0);
-   assert(lincons0->nvars >= 1);
-   cons0isequality = SCIPisEQ(scip, lincons0->lhs, lincons0->rhs);
+   consdata0 = SCIPconsGetData(cons0);
+   assert(consdata0 != NULL);
+   assert(consdata0->nvars >= 1);
+   cons0isequality = SCIPisEQ(scip, consdata0->lhs, consdata0->rhs);
 
    /* sort the constraint */
-   CHECK_OKAY( linconsSort(scip, lincons0) );
+   CHECK_OKAY( consdataSort(scip, consdata0) );
 
    /* get temporary memory for indices of common variables */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx0, lincons0->nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx1, lincons0->nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx0minus1, lincons0->nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, lincons0->nvars) );
-   diffidx1minus0size = lincons0->nvars;
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx0, consdata0->nvars) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx1, consdata0->nvars) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx0minus1, consdata0->nvars) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, consdata0->nvars) );
+   diffidx1minus0size = consdata0->nvars;
 
    /* check constraint against all prior constraints */
-   for( c = (lincons0->redchecked ? firstredcheck : 0); c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0);
+   for( c = (consdata0->redchecked ? firstredcheck : 0); c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0);
         ++c )
    {
       cons1 = conss[c];
@@ -3408,66 +3457,67 @@ RETCODE linconsRemoveRedundancy(
       if( !SCIPconsIsActive(cons1) )
          continue;
 
-      lincons1 = consGetLincons(cons1);
+      consdata1 = SCIPconsGetData(cons1);
+      assert(consdata1 != NULL);
 
       /* if both constraints didn't change since last redundancy check, we can ignore the pair */
-      if( lincons0->redchecked && lincons1->redchecked )
+      if( consdata0->redchecked && consdata1->redchecked )
          continue;
 
-      assert(lincons1->nvars >= 1);
+      assert(consdata1->nvars >= 1);
 
       /* sort the constraint */
-      CHECK_OKAY( linconsSort(scip, lincons1) );
+      CHECK_OKAY( consdataSort(scip, consdata1) );
 
-      cons1isequality = SCIPisEQ(scip, lincons1->lhs, lincons1->rhs);
+      cons1isequality = SCIPisEQ(scip, consdata1->lhs, consdata1->rhs);
       
       /* make sure, we have enough memory for the index set of V_1 \ V_0 */
-      if( lincons1->nvars > diffidx1minus0size )
+      if( consdata1->nvars > diffidx1minus0size )
       {
          CHECK_OKAY( SCIPreleaseBufferArray(scip, &diffidx1minus0) );
-         CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, lincons1->nvars) );
-         diffidx1minus0size = lincons1->nvars;
+         CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, consdata1->nvars) );
+         diffidx1minus0size = consdata1->nvars;
       }
 
       todoMessage("normalize constraints (at a different place, but it is important here)");
       /* because both constraints are normalized, a <=-row and a >=-row cannot be redundant */
-      if( SCIPisInfinity(scip, -lincons0->lhs) != SCIPisInfinity(scip, -lincons1->lhs)
-         && SCIPisInfinity(scip, lincons0->rhs) != SCIPisInfinity(scip, lincons1->rhs) )
+      if( SCIPisInfinity(scip, -consdata0->lhs) != SCIPisInfinity(scip, -consdata1->lhs)
+         && SCIPisInfinity(scip, consdata0->rhs) != SCIPisInfinity(scip, consdata1->rhs) )
          continue;
 
-      /* check lincons0 against lincons1:
+      /* check consdata0 against consdata1:
        * - if lhs0 >= lhs1 and for each variable v and each solution value x_v val0[v]*x_v <= val1[v]*x_v,
-       *   lincons0 dominates lincons1 w.r.t. left hand side
+       *   consdata0 dominates consdata1 w.r.t. left hand side
        * - if rhs0 <= rhs1 and for each variable v and each solution value x_v val0[v]*x_v >= val1[v]*x_v,
-       *   lincons0 dominates lincons1 w.r.t. right hand side
+       *   consdata0 dominates consdata1 w.r.t. right hand side
        * - if both constraints are equalities, count the number of common variables N_c and the number of variable in
        *   the difference sets N_0 = |V_0 \ V_1|, N_1 = |V_1 \ V_0|
-       *   - if N_c > N_1, try to aggregate  lincons0 := a * lincons0 + b * lincons1  in order to decrease the number of
-       *     variables in lincons0, where a = val1[v] and b = -val0[v] for common v which removes most variables;
+       *   - if N_c > N_1, try to aggregate  consdata0 := a * consdata0 + b * consdata1  in order to decrease the number of
+       *     variables in consdata0, where a = val1[v] and b = -val0[v] for common v which removes most variables;
        *     for numerical stability, we will only accept integral a and b
-       *   - if N_c > N_0, try to aggregate  lincons1 := a * lincons1 + b * lincons0  in order to decrease the number of
-       *     variables in lincons1, where a = val0[v] and b = -val1[v] for common v which removes most variables;
+       *   - if N_c > N_0, try to aggregate  consdata1 := a * consdata1 + b * consdata0  in order to decrease the number of
+       *     variables in consdata1, where a = val0[v] and b = -val1[v] for common v which removes most variables;
        *     for numerical stability, we will only accept integral a and b
        */
 
-      /* check lincons0 against lincons1 for redundancy */
-      cons0dominateslhs = SCIPisGE(scip, lincons0->lhs, lincons1->lhs);
-      cons1dominateslhs = SCIPisGE(scip, lincons1->lhs, lincons0->lhs);
-      cons0dominatesrhs = SCIPisLE(scip, lincons0->rhs, lincons1->rhs);
-      cons1dominatesrhs = SCIPisLE(scip, lincons1->rhs, lincons0->rhs);
+      /* check consdata0 against consdata1 for redundancy */
+      cons0dominateslhs = SCIPisGE(scip, consdata0->lhs, consdata1->lhs);
+      cons1dominateslhs = SCIPisGE(scip, consdata1->lhs, consdata0->lhs);
+      cons0dominatesrhs = SCIPisLE(scip, consdata0->rhs, consdata1->rhs);
+      cons1dominatesrhs = SCIPisLE(scip, consdata1->rhs, consdata0->rhs);
       nvarscommon = 0;
       nvars0minus1 = 0;
       nvars1minus0 = 0;
       v0 = 0;
       v1 = 0;
-      while( (v0 < lincons0->nvars || v1 < lincons1->nvars)
+      while( (v0 < consdata0->nvars || v1 < consdata1->nvars)
          && (cons0dominateslhs || cons1dominateslhs || cons0dominatesrhs || cons1dominatesrhs
             || (cons0isequality && cons1isequality)) )
       {
          /* test, if variable appears in only one or in both constraints */
-         if( v0 < lincons0->nvars && v1 < lincons1->nvars )
-            varcmp = SCIPvarCmp(lincons0->vars[v0], lincons1->vars[v1]);
-         else if( v0 < lincons0->nvars )
+         if( v0 < consdata0->nvars && v1 < consdata1->nvars )
+            varcmp = SCIPvarCmp(consdata0->vars[v0], consdata1->vars[v1]);
+         else if( v0 < consdata0->nvars )
             varcmp = -1;
          else
             varcmp = +1;
@@ -3475,9 +3525,9 @@ RETCODE linconsRemoveRedundancy(
          switch( varcmp )
          {
          case -1:
-            /* variable doesn't appear in lincons1 */
-            var = lincons0->vars[v0];
-            val0 = lincons0->vals[v0];
+            /* variable doesn't appear in consdata1 */
+            var = consdata0->vars[v0];
+            val0 = consdata0->vals[v0];
             val1 = 0.0;
             diffidx0minus1[nvars0minus1] = v0;
             nvars0minus1++;
@@ -3485,10 +3535,10 @@ RETCODE linconsRemoveRedundancy(
             break;
 
          case +1:
-            /* variable doesn't appear in lincons0 */
-            var = lincons1->vars[v1];
+            /* variable doesn't appear in consdata0 */
+            var = consdata1->vars[v1];
             val0 = 0.0;
-            val1 = lincons1->vals[v1];
+            val1 = consdata1->vals[v1];
             diffidx1minus0[nvars1minus0] = v1;
             nvars1minus0++;
             v1++;
@@ -3496,10 +3546,10 @@ RETCODE linconsRemoveRedundancy(
 
          case 0:
             /* variable appears in both constraints */
-            assert(lincons0->vars[v0] == lincons1->vars[v1]);
-            var = lincons0->vars[v0];
-            val0 = lincons0->vals[v0];
-            val1 = lincons1->vals[v1];
+            assert(consdata0->vars[v0] == consdata1->vars[v1]);
+            var = consdata0->vars[v0];
+            val0 = consdata0->vals[v0];
+            val1 = consdata1->vals[v1];
             commonidx0[nvarscommon] = v0;
             commonidx1[nvarscommon] = v1;
             nvarscommon++;
@@ -3543,92 +3593,92 @@ RETCODE linconsRemoveRedundancy(
       }
 
       /* check for domination */
-      if( cons1dominateslhs && !SCIPisInfinity(scip, -lincons0->lhs) )
+      if( cons1dominateslhs && !SCIPisInfinity(scip, -consdata0->lhs) )
       {
-         /* left hand side is dominated by lincons1: delete left hand side of lincons0 */
+         /* left hand side is dominated by consdata1: delete left hand side of consdata0 */
          debugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         debug(linconsPrint(scip, lincons0, NULL));
-         debug(linconsPrint(scip, lincons1, NULL));
+         debug(consdataPrint(scip, consdata0, NULL));
+         debug(consdataPrint(scip, consdata1, NULL));
          /* check for infeasibility */
-         if( SCIPisGT(scip, lincons1->lhs, lincons0->rhs) )
+         if( SCIPisGT(scip, consdata1->lhs, consdata0->rhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
             *result = SCIP_CUTOFF;
             continue;
          }
-         linconsChgLhs(scip, lincons0, -SCIPinfinity(scip));
+         CHECK_OKAY( chgLhs(scip, cons0, -SCIPinfinity(scip)) );
          (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
-      else if( cons0dominateslhs && !SCIPisInfinity(scip, -lincons1->lhs) )
+      else if( cons0dominateslhs && !SCIPisInfinity(scip, -consdata1->lhs) )
       {
-         /* left hand side is dominated by lincons0: delete left hand side of lincons1 */
+         /* left hand side is dominated by consdata0: delete left hand side of consdata1 */
          debugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         debug(linconsPrint(scip, lincons1, NULL));
-         debug(linconsPrint(scip, lincons0, NULL));
+         debug(consdataPrint(scip, consdata1, NULL));
+         debug(consdataPrint(scip, consdata0, NULL));
          /* check for infeasibility */
-         if( SCIPisGT(scip, lincons0->lhs, lincons1->rhs) )
+         if( SCIPisGT(scip, consdata0->lhs, consdata1->rhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
             *result = SCIP_CUTOFF;
             continue;
          }
-         linconsChgLhs(scip, lincons1, -SCIPinfinity(scip));
+         CHECK_OKAY( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
          (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
-      if( cons1dominatesrhs && !SCIPisInfinity(scip, lincons0->rhs) )
+      if( cons1dominatesrhs && !SCIPisInfinity(scip, consdata0->rhs) )
       {
-         /* right hand side is dominated by lincons1: delete right hand side of lincons0 */
+         /* right hand side is dominated by consdata1: delete right hand side of consdata0 */
          debugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         debug(linconsPrint(scip, lincons0, NULL));
-         debug(linconsPrint(scip, lincons1, NULL));
+         debug(consdataPrint(scip, consdata0, NULL));
+         debug(consdataPrint(scip, consdata1, NULL));
          /* check for infeasibility */
-         if( SCIPisLT(scip, lincons1->rhs, lincons0->lhs) )
+         if( SCIPisLT(scip, consdata1->rhs, consdata0->lhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
             *result = SCIP_CUTOFF;
             continue;
          }
-         linconsChgRhs(scip, lincons0, SCIPinfinity(scip));
+         CHECK_OKAY( chgRhs(scip, cons0, SCIPinfinity(scip)) );
          (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
-      else if( cons0dominatesrhs && !SCIPisInfinity(scip, lincons1->rhs) )
+      else if( cons0dominatesrhs && !SCIPisInfinity(scip, consdata1->rhs) )
       {
-         /* right hand side is dominated by lincons0: delete right hand side of lincons1 */
+         /* right hand side is dominated by consdata0: delete right hand side of consdata1 */
          debugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         debug(linconsPrint(scip, lincons1, NULL));
-         debug(linconsPrint(scip, lincons0, NULL));
+         debug(consdataPrint(scip, consdata1, NULL));
+         debug(consdataPrint(scip, consdata0, NULL));
          /* check for infeasibility */
-         if( SCIPisLT(scip, lincons0->rhs, lincons1->lhs) )
+         if( SCIPisLT(scip, consdata0->rhs, consdata1->lhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
             *result = SCIP_CUTOFF;
             continue;
          }
-         linconsChgRhs(scip, lincons1, SCIPinfinity(scip));
+         CHECK_OKAY( chgRhs(scip, cons1, SCIPinfinity(scip)) );
          (*nchgsides)++;
          *result = SCIP_SUCCESS;
       }
 
       /* check for now redundant constraints */
-      if( SCIPisInfinity(scip, -lincons0->lhs) && SCIPisInfinity(scip, lincons0->rhs) )
+      if( SCIPisInfinity(scip, -consdata0->lhs) && SCIPisInfinity(scip, consdata0->rhs) )
       {
-         /* lincons0 became redundant */
+         /* consdata0 became redundant */
          debugMessage("linear constraint <%s> is redundant\n", SCIPconsGetName(cons0));
          CHECK_OKAY( SCIPdelCons(scip, cons0) );
          (*ndelconss)++;
          *result = SCIP_SUCCESS;
          continue;
       }
-      if( SCIPisInfinity(scip, -lincons1->lhs) && SCIPisInfinity(scip, lincons1->rhs) )
+      if( SCIPisInfinity(scip, -consdata1->lhs) && SCIPisInfinity(scip, consdata1->rhs) )
       {
-         /* lincons1 became redundant */
+         /* consdata1 became redundant */
          debugMessage("linear constraint <%s> is redundant\n", SCIPconsGetName(cons1));
          CHECK_OKAY( SCIPdelCons(scip, cons1) );
          (*ndelconss)++;
@@ -3637,26 +3687,26 @@ RETCODE linconsRemoveRedundancy(
       }
 
       /* check, if we want to aggregate equalities:
-       *   lincons0 := a * lincons0 + b * lincons1  or  lincons1 := a * lincons1 + b * lincons0
+       *   consdata0 := a * consdata0 + b * consdata1  or  consdata1 := a * consdata1 + b * consdata0
        */
       if( cons0isequality && cons1isequality )
       {
          Bool aggregated;
 
-         assert(lincons0->nvars == nvarscommon + nvars0minus1);
-         assert(lincons1->nvars == nvarscommon + nvars1minus0);
+         assert(consdata0->nvars == nvarscommon + nvars0minus1);
+         assert(consdata1->nvars == nvarscommon + nvars1minus0);
 
          aggregated = FALSE;
          if( nvarscommon > nvars1minus0 )
          {
-            /* N_c > N_1: try to aggregate  lincons0 := a * lincons0 + b * lincons1 */
-            CHECK_OKAY( linconsAggregateEqualities(scip, cons0, cons1, nvarscommon, commonidx0, commonidx1,
+            /* N_c > N_1: try to aggregate  consdata0 := a * consdata0 + b * consdata1 */
+            CHECK_OKAY( aggregateEqualities(scip, cons0, cons1, nvarscommon, commonidx0, commonidx1,
                            diffidx0minus1, diffidx1minus0, nchgcoefs, result, &aggregated) );
          }
          if( !aggregated && nvarscommon > nvars0minus1 )
          {
-            /* N_c > N_0: try to aggregate  lincons1 := a * lincons1 + b * lincons0 */
-            CHECK_OKAY( linconsAggregateEqualities(scip, cons1, cons0, nvarscommon, commonidx1, commonidx0,
+            /* N_c > N_0: try to aggregate  consdata1 := a * consdata1 + b * consdata0 */
+            CHECK_OKAY( aggregateEqualities(scip, cons1, cons0, nvarscommon, commonidx1, commonidx0,
                            diffidx1minus0, diffidx0minus1, nchgcoefs, result, &aggregated) );
          }
       }
@@ -3671,12 +3721,13 @@ RETCODE linconsRemoveRedundancy(
    return SCIP_OKAY;
 }
 
+/** presolving method of constraint handler */
 static
 DECL_CONSPRESOL(consPresolLinear)
 {
    CONS* cons;
    CONS* upgdcons;
-   LINCONS* lincons;
+   CONSDATA* consdata;
    Real minactivity;
    Real maxactivity;
    Bool redundant;
@@ -3703,17 +3754,18 @@ DECL_CONSPRESOL(consPresolLinear)
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
-      lincons = consGetLincons(cons);
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
 
       /* remember the first constraint that must be checked for redundancy */
-      if( firstredcheck == -1 && !lincons->redchecked )
+      if( firstredcheck == -1 && !consdata->redchecked )
          firstredcheck = c;
 
-      if( lincons->propagated )
+      if( consdata->propagated )
          continue;
 
       debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
-      debug(linconsPrint(scip, lincons, NULL));
+      debug(consdataPrint(scip, consdata, NULL));
 
       consdeleted = FALSE;
       conschanged = FALSE;
@@ -3721,26 +3773,26 @@ DECL_CONSPRESOL(consPresolLinear)
       /* incorporate fixings and aggregations in constraint */
       if( nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
       {
-         CHECK_OKAY( linconsApplyFixings(scip, lincons, &conschanged) );
+         CHECK_OKAY( applyFixings(scip, cons, &conschanged) );
       }
 
       /* we can only presolve linear constraints, that are not modifiable */
-      if( !lincons->modifiable )
+      if( !SCIPconsIsModifiable(cons) )
       {
          /* check, if constraint is empty */
-         if( lincons->nvars == 0 )
+         if( consdata->nvars == 0 )
          {
-            if( SCIPisPositive(scip, lincons->lhs) || SCIPisNegative(scip, lincons->rhs) )
+            if( SCIPisPositive(scip, consdata->lhs) || SCIPisNegative(scip, consdata->rhs) )
             {
                debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
-                  SCIPconsGetName(cons), lincons->lhs, lincons->rhs);
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
                *result = SCIP_CUTOFF;
                continue;
             }
             else
             {
                debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
-                  SCIPconsGetName(cons), lincons->lhs, lincons->rhs);
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*ndelconss)++;
                *result = SCIP_SUCCESS;
@@ -3749,65 +3801,65 @@ DECL_CONSPRESOL(consPresolLinear)
          }
 
          /* tighten left and right hand side due to integrality */
-         CHECK_OKAY( linconsPresolTightenSides(scip, cons, nchgsides, &conschanged) );
+         CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
 
          /* check bounds */
-         if( SCIPisGT(scip, lincons->lhs, lincons->rhs) )
+         if( SCIPisGT(scip, consdata->lhs, consdata->rhs) )
          {
             debugMessage("linear constraint <%s> is infeasible: sides=[%g,%g]\n",
-               SCIPconsGetName(cons), lincons->lhs, lincons->rhs);
+               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
             *result = SCIP_CUTOFF;
             continue;
          }
 
          /* convert special equalities */
-         CHECK_OKAY( linconsConvertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
+         CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
                         &conschanged, &consdeleted) );
          if( *result == SCIP_CUTOFF || consdeleted )
             continue;
 
          /* tighten variable's bounds */
-         CHECK_OKAY( linconsTightenBounds(scip, lincons, nchgbds, result) );
+         CHECK_OKAY( tightenBounds(scip, cons, nchgbds, result) );
          if( *result == SCIP_CUTOFF )
             continue;
 
          /* check for fixed variables */
-         CHECK_OKAY( linconsFixVariables(scip, lincons, nfixedvars, result, &conschanged) );
+         CHECK_OKAY( fixVariables(scip, cons, nfixedvars, result, &conschanged) );
          if( *result == SCIP_CUTOFF )
             continue;
 
          /* check constraint for infeasibility and redundancy */
-         linconsGetActivityBounds(scip, lincons, &minactivity, &maxactivity);
-         if( SCIPisGT(scip, minactivity, lincons->rhs) || SCIPisLT(scip, maxactivity, lincons->lhs) )
+         consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
+         if( SCIPisGT(scip, minactivity, consdata->rhs) || SCIPisLT(scip, maxactivity, consdata->lhs) )
          {
             debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, lincons->lhs, lincons->rhs);
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             *result = SCIP_CUTOFF;
             continue;
          }
-         else if( SCIPisGE(scip, minactivity, lincons->lhs) && SCIPisLE(scip, maxactivity, lincons->rhs) )
+         else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
          {
             debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, lincons->lhs, lincons->rhs);
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             CHECK_OKAY( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
             *result = SCIP_SUCCESS;
             continue;
          }
-         else if( SCIPisGE(scip, minactivity, lincons->lhs) && !SCIPisInfinity(scip, -lincons->lhs) )
+         else if( SCIPisGE(scip, minactivity, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) )
          {
             debugMessage("linear constraint <%s> left hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, lincons->lhs, lincons->rhs);
-            linconsChgLhs(scip, lincons, -SCIPinfinity(scip));
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            CHECK_OKAY( chgLhs(scip, cons, -SCIPinfinity(scip)) );
             (*nchgsides)++;
             *result = SCIP_SUCCESS;
             conschanged = TRUE;
          }
-         else if( SCIPisLE(scip, maxactivity, lincons->rhs) && !SCIPisInfinity(scip, lincons->rhs) )
+         else if( SCIPisLE(scip, maxactivity, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) )
          {
             debugMessage("linear constraint <%s> right hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, lincons->lhs, lincons->rhs);
-            linconsChgRhs(scip, lincons, SCIPinfinity(scip));
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+            CHECK_OKAY( chgRhs(scip, cons, SCIPinfinity(scip)) );
             (*nchgsides)++;
             *result = SCIP_SUCCESS;
             conschanged = TRUE;
@@ -3829,7 +3881,7 @@ DECL_CONSPRESOL(consPresolLinear)
          }
       }
 
-      lincons->propagated = TRUE;
+      consdata->propagated = TRUE;
    }
 
    /* redundancy checking */
@@ -3839,14 +3891,15 @@ DECL_CONSPRESOL(consPresolLinear)
       {
          if( SCIPconsIsActive(conss[c]) )
          {
-            CHECK_OKAY( linconsRemoveRedundancy(scip, conss, firstredcheck, c,
+            CHECK_OKAY( removeRedundancy(scip, conss, firstredcheck, c,
                            nfixedvars, naggrvars, ndelconss, nchgsides, nchgcoefs, result) );
          }
       }
       for( c = firstredcheck; c < nconss; ++c )
       {
-         lincons = consGetLincons(conss[c]);
-         lincons->redchecked = TRUE;
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+         consdata->redchecked = TRUE;
       }
    }
 
@@ -3857,6 +3910,37 @@ DECL_CONSPRESOL(consPresolLinear)
    return SCIP_OKAY;
 }
 
+/** constraint activation notification method of constraint handler */
+static
+DECL_CONSACTIVE(consActiveLinear)
+{
+   assert(SCIPconsIsTransformed(cons));
+
+   /* forbid rounding of variables in a globally valid constraint */
+   if( SCIPconsIsGlobal(cons) )
+   {
+      consdataForbidAllRoundings(scip, SCIPconsGetData(cons));
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint deactivation notification method of constraint handler */
+static
+DECL_CONSDEACTIVE(consDeactiveLinear)
+{
+   assert(SCIPconsIsTransformed(cons));
+
+   /* allow rounding of variables in a globally valid constraint */
+   if( SCIPconsIsGlobal(cons) )
+   {
+      consdataAllowAllRoundings(scip, SCIPconsGetData(cons));
+   }
+
+   return SCIP_OKAY;
+}
+
+
 
 
 /*
@@ -3866,7 +3950,7 @@ DECL_CONSPRESOL(consPresolLinear)
 static
 DECL_EVENTEXEC(eventExecLinear)
 {
-   LINCONS* lincons;
+   CONSDATA* consdata;
    VAR* var;
    Real oldbound;
    Real newbound;
@@ -3881,33 +3965,33 @@ DECL_EVENTEXEC(eventExecLinear)
 
    /*debugMessage("Exec method of bound change event handler for linear constraints\n");*/
 
-   lincons = eventdata->lincons;
+   consdata = eventdata->consdata;
    varpos = eventdata->varpos;
-   assert(lincons != NULL);
-   assert(0 <= varpos && varpos < lincons->nvars);
+   assert(consdata != NULL);
+   assert(0 <= varpos && varpos < consdata->nvars);
 
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
    oldbound = SCIPeventGetOldbound(event);
    newbound = SCIPeventGetNewbound(event);
    assert(var != NULL);
-   assert(lincons->vars[varpos] == var);
+   assert(consdata->vars[varpos] == var);
 
    /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
-     eventtype, SCIPvarGetName(linconsdata->vars[varpos]), oldbound, newbound, linconsdata->minactivity, 
-     linconsdata->maxactivity);*/
+     eventtype, SCIPvarGetName(consdatadata->vars[varpos]), oldbound, newbound, consdatadata->minactivity, 
+     consdatadata->maxactivity);*/
 
    if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-      linconsUpdateChgLb(scip, lincons, var, oldbound, newbound, lincons->vals[varpos]);
+      consdataUpdateChgLb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
    else
    {
       assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-      linconsUpdateChgUb(scip, lincons, var, oldbound, newbound, lincons->vals[varpos]);
+      consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
    }
 
-   lincons->propagated = FALSE;
+   consdata->propagated = FALSE;
 
-   /*debug(printf(" -> [%g,%g]\n", linconsdata->minactivity, linconsdata->maxactivity));*/
+   /*debug(printf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity));*/
 
    return SCIP_OKAY;
 }
@@ -3942,7 +4026,7 @@ RETCODE SCIPincludeConsHdlrLinear(
                   consDeleteLinear, consTransLinear, 
                   consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
                   consPropLinear, consPresolLinear, NULL,
-                  NULL, NULL, NULL, NULL,
+                  consActiveLinear, consDeactiveLinear, NULL, NULL,
                   conshdlrdata) );
 
    /* add linear constraint handler parameters */
@@ -4002,7 +4086,6 @@ RETCODE SCIPcreateConsLinear(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -4021,30 +4104,28 @@ RETCODE SCIPcreateConsLinear(
    }
 
    /* create the constraint specific data */
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
-
    if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
    {
-      if( local )
-      {
-         errorMessage("problem constraint cannot be local");
-         return SCIP_INVALIDDATA;
-      }
-
       /* create constraint in original problem */
-      CHECK_OKAY( linconsCreate(scip, &consdata->lincons, nvars, vars, vals, lhs, rhs, modifiable, removeable) );
+      CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
    }
    else
    {
+      CONSHDLRDATA* conshdlrdata;
+
+      /* get event handler */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
       /* create constraint in transformed problem */
-      CHECK_OKAY( linconsCreateTransformed(scip, &consdata->lincons, nvars, vars, vals, lhs, rhs, 
-                     local, modifiable, removeable) );
+      CHECK_OKAY( consdataCreateTransformed(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, vals, lhs, rhs) );
    }
-   consdata->row = NULL;
-   
+   assert(consdata != NULL);
+
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+                  modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -4057,10 +4138,6 @@ RETCODE SCIPaddCoefConsLinear(
    Real             val                 /**< coefficient of constraint entry */
    )
 {
-   CONSDATA* consdata;
-
-   assert(cons != NULL);
-   assert(scip != NULL);
    assert(var != NULL);
 
    /*debugMessage("adding coefficient %g * <%s> to linear constraint <%s>\n", val, var->name, SCIPconsGetName(cons));*/
@@ -4071,14 +4148,7 @@ RETCODE SCIPaddCoefConsLinear(
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   CHECK_OKAY( linconsAddCoef(scip, consdata->lincons, var, val) );
-   if( consdata->row != NULL )
-   {
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, var, val) );
-   }
+   CHECK_OKAY( addCoef(scip, cons, var, val) );
 
    return SCIP_OKAY;
 }
@@ -4092,8 +4162,6 @@ RETCODE SCIPgetLhsConsLinear(
 {
    CONSDATA* consdata;
 
-   assert(cons != NULL);
-   assert(scip != NULL);
    assert(lhs != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -4104,9 +4172,8 @@ RETCODE SCIPgetLhsConsLinear(
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->lincons != NULL);
 
-   *lhs = consdata->lincons->lhs;
+   *lhs = consdata->lhs;
 
    return SCIP_OKAY;
 }
@@ -4120,8 +4187,6 @@ RETCODE SCIPgetRhsConsLinear(
 {
    CONSDATA* consdata;
 
-   assert(cons != NULL);
-   assert(scip != NULL);
    assert(rhs != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -4132,9 +4197,8 @@ RETCODE SCIPgetRhsConsLinear(
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->lincons != NULL);
 
-   *rhs = consdata->lincons->rhs;
+   *rhs = consdata->rhs;
 
    return SCIP_OKAY;
 }
@@ -4146,25 +4210,13 @@ RETCODE SCIPchgLhsConsLinear(
    Real             lhs                 /**< new left hand side */
    )
 {
-   CONSDATA* consdata;
-
-   assert(cons != NULL);
-   assert(scip != NULL);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear");
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   linconsChgLhs(scip, consdata->lincons, lhs);
-   if( consdata->row != NULL )
-   {
-      CHECK_OKAY( SCIPchgRowLhs(scip, consdata->row, lhs) );
-   }
+   CHECK_OKAY( chgLhs(scip, cons, lhs) );
 
    return SCIP_OKAY;
 }
@@ -4176,25 +4228,13 @@ RETCODE SCIPchgRhsConsLinear(
    Real             rhs                 /**< new right hand side */
    )
 {
-   CONSDATA* consdata;
-
-   assert(cons != NULL);
-   assert(scip != NULL);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear");
       return SCIP_INVALIDDATA;
    }
    
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   linconsChgRhs(scip, consdata->lincons, rhs);
-   if( consdata->row != NULL )
-   {
-      CHECK_OKAY( SCIPchgRowRhs(scip, consdata->row, rhs) );
-   }
+   CHECK_OKAY( chgRhs(scip, cons, rhs) );
 
    return SCIP_OKAY;
 }
@@ -4209,7 +4249,6 @@ RETCODE SCIPupgradeConsLinear(
    CONSHDLR* conshdlr;
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
-   LINCONS* lincons;
    VAR* var;
    Real val;
    Real lb;
@@ -4234,11 +4273,13 @@ RETCODE SCIPupgradeConsLinear(
    int ncoeffsnfrac;
    int i;
 
-   assert(scip != NULL);
-   assert(cons != NULL);
    assert(upgdcons != NULL);
 
    *upgdcons = NULL;
+
+   /* we cannot upgrade a modifiable linear constraint, since we don't know what additional coefficients to expect */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
 
    conshdlr = SCIPconsGetHdlr(cons);
    if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
@@ -4258,16 +4299,6 @@ RETCODE SCIPupgradeConsLinear(
       errorMessage("cannot upgrade linear constraint that is already stored as LP row");
       return SCIP_INVALIDDATA;
    }
-
-   lincons = consdata->lincons;
-   assert(lincons != NULL);
-   assert(lincons->local == SCIPconsIsLocal(cons));
-   assert(lincons->modifiable == SCIPconsIsModifiable(cons));
-   assert(lincons->removeable == SCIPconsIsRemoveable(cons));
-
-   /* we cannot upgrade a modifiable linear constraint, since we don't know what additional coefficients to expect */
-   if( lincons->modifiable )
-      return SCIP_OKAY;
 
 
    /* 
@@ -4291,10 +4322,10 @@ RETCODE SCIPupgradeConsLinear(
    integral = TRUE;
    poscoeffsum = 0.0;
    negcoeffsum = 0.0;
-   for( i = 0; i < lincons->nvars; ++i )
+   for( i = 0; i < consdata->nvars; ++i )
    {
-      var = lincons->vars[i];
-      val = lincons->vals[i];
+      var = consdata->vars[i];
+      val = consdata->vals[i];
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
       assert(!SCIPisZero(scip, val));
@@ -4376,8 +4407,8 @@ RETCODE SCIPupgradeConsLinear(
    /* try all upgrading methods in priority order */
    for( i = 0; i < conshdlrdata->nlinconsupgrades && *upgdcons == NULL; ++i )
    {
-      CHECK_OKAY( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, cons, lincons->nvars, 
-                     lincons->vars, lincons->vals, lincons->lhs, lincons->rhs, 
+      CHECK_OKAY( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, cons, consdata->nvars, 
+                     consdata->vars, consdata->vals, consdata->lhs, consdata->rhs, 
                      nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
                      ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
                      poscoeffsum, negcoeffsum, integral,

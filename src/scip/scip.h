@@ -1159,7 +1159,6 @@ RETCODE SCIPcreateCons(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
@@ -1204,6 +1203,17 @@ extern
 RETCODE SCIPresetConsAge(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint */
+   );
+
+/** checks single constraint for feasibility of the given solution */
+extern
+RETCODE SCIPcheckCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to check */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /**@} */
@@ -2850,6 +2860,9 @@ void SCIPprintReal(
 #define SCIPduplicateBlockMemoryArray(scip, ptr, source, num) \
                                                 ( (duplicateBlockMemoryArray(SCIPmemhdr(scip), (ptr), (source), (num)) \
                                                   == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPensureBlockMemoryArray(scip,ptr,arraysizeptr,minsize) \
+                                                ( (SCIPensureBlockMemoryArray_call((scip), (void**)(ptr), sizeof(**(ptr)), \
+                                                   (arraysizeptr), (minsize))) )
 #define SCIPfreeBlockMemory(scip,ptr)           freeBlockMemory(SCIPmemhdr(scip), (ptr))
 #define SCIPfreeBlockMemoryNull(scip,ptr)       freeBlockMemoryNull(SCIPmemhdr(scip), (ptr))
 #define SCIPfreeBlockMemoryArray(scip,ptr,num)  freeBlockMemoryArray(SCIPmemhdr(scip), (ptr), (num))
@@ -2881,6 +2894,18 @@ extern
 int SCIPcalcMemGrowSize(
    SCIP*            scip,               /**< SCIP data structure */
    int              num                 /**< minimum number of entries to store */
+   );
+
+/** extends a dynamically allocated block memory array to be able to store at least the given number of elements;
+ *  use SCIPensureBlockMemoryArray() define to call this method!
+ */
+extern
+RETCODE SCIPensureBlockMemoryArray_call(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           arrayptr,           /**< pointer to dynamically sized array */
+   size_t           elemsize,           /**< size in bytes of each element in array */
+   int*             arraysize,          /**< pointer to actual array size */
+   int              minsize             /**< required minimal array size */
    );
 
 /** gets a memory buffer with at least the given size */

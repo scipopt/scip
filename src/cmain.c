@@ -30,14 +30,15 @@
 #include "reader_cnf.h"
 #include "reader_mps.h"
 #include "disp_default.h"
+#include "cons_and.h"
+#include "cons_binpack.h"
+#include "cons_eqknapsack.h"
 #include "cons_integral.h"
+#include "cons_invarknapsack.h"
+#include "cons_knapsack.h"
 #include "cons_linear.h"
 #include "cons_logicor.h"
 #include "cons_setppc.h"
-#include "cons_knapsack.h"
-#include "cons_eqknapsack.h"
-#include "cons_invarknapsack.h"
-#include "cons_binpack.h"
 #include "cons_varlb.h"
 #include "cons_varub.h"
 #include "presol_dualfix.h"
@@ -77,6 +78,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeReaderCNF(scip) );
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrAnd(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLogicOr(scip) );
@@ -138,10 +140,58 @@ RETCODE runSCIP(
       return SCIP_OKAY;
    }
 
+#if 1 /*?????????????????????*/
    printf("\nread problem <%s>\n", argv[1]);
    printf("============\n\n");
    CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
+#else
+   {
+      VAR** vars;
+      CONS* andcons;
+      CONS* cons;
+      char varname[255];
+      int v;
 
+      CHECK_OKAY( SCIPcreateProb(scip, "testprob", NULL, NULL, NULL) );
+      
+      CHECK_OKAY( SCIPallocMemoryArray(scip, &vars, 3) );
+      for( v = 0; v < 3; ++v )
+      {
+         sprintf(varname, "x%d", v);
+         CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 10.0, -1.0, SCIP_VARTYPE_INTEGER, FALSE) );
+         CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
+      }
+
+      CHECK_OKAY( SCIPcreateConsAnd(scip, &andcons, "andcons", 0, NULL, TRUE, TRUE, FALSE, FALSE) );
+
+      /* +3x0 -11x1 +4x2 <= 0 */
+      CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "lincons1", 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
+                     FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +3.0) );
+      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], -11.0) );
+      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +4.0) );
+      CHECK_OKAY( SCIPaddConsAnd(scip, andcons, cons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+
+      /* +2x0 +3x1 +1x2 <= 7 */
+      CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "lincons2", 0, NULL, NULL, -SCIPinfinity(scip), 7.0,
+                     FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +2.0) );
+      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], +3.0) );
+      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +1.0) );
+      CHECK_OKAY( SCIPaddConsAnd(scip, andcons, cons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+
+      CHECK_OKAY( SCIPaddCons(scip, andcons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &andcons) );
+
+      for( v = 0; v < 3; ++v )
+      {
+         CHECK_OKAY( SCIPreleaseVar(scip, &vars[v]) );
+      }
+      SCIPfreeMemoryArray(scip, &vars);
+   }
+#endif
 
 
    /*******************

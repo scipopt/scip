@@ -3543,6 +3543,18 @@ VARSTATUS SCIPvarGetStatus(
    return (VARSTATUS)(var->varstatus);
 }
 
+/** returns whether the variable belongs to the original problem */
+Bool SCIPvarIsOriginal(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
+
+   return (var->varstatus == SCIP_VARSTATUS_ORIGINAL
+      || (var->varstatus == SCIP_VARSTATUS_NEGATED && var->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL));
+}
+
 /** returns whether the variable belongs to the transformed problem */
 Bool SCIPvarIsTransformed(
    VAR*             var                 /**< problem variable */

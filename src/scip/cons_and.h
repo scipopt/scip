@@ -15,44 +15,45 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_knapsack.h
- * @brief  constraint handler for knapsack constraints
+/**@file   cons_and.h
+ * @brief  constraint handler for and constraints
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_KNAPSACK_H__
-#define __CONS_KNAPSACK_H__
+#ifndef __CONS_AND_H__
+#define __CONS_AND_H__
 
 
 #include "scip.h"
 
 
-/** creates the handler for knapsack constraints and includes it in SCIP */
+/** creates the handler for and constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrKnapsack(
+RETCODE SCIPincludeConsHdlrAnd(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a knapsack constraint */
+/** creates and captures a and constraint */
 extern
-RETCODE SCIPcreateConsKnapsack(
+RETCODE SCIPcreateConsAnd(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
-   Real             rhs,                /**< right hand side of constraint */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   int              nandconss,          /**< number of initial constraints in concatenation */
+   CONS**           andconss,           /**< initial constraint in concatenation */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   Bool             modifiable          /**< is constraint modifiable (subject to column generation)? */
+   );
+
+/** adds constraint to the concatenation of an and constraint */
+extern
+RETCODE SCIPaddConsAnd(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< and constraint */
+   CONS*            andcons             /**< additional constraint in concatenation */
    );
 
 #endif

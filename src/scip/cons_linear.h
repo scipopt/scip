@@ -26,7 +26,6 @@
 #define __CONS_LINEAR_H__
 
 
-typedef struct LinCons LINCONS;         /**< linear constraint */
 typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update method */
 
 
@@ -109,7 +108,6 @@ RETCODE SCIPcreateConsLinear(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );

@@ -771,6 +771,13 @@ RETCODE SCIPnodeAddCons(
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
 
+   /* if node is the root, mark constraint to be globally valid */
+   if( node->depth == 0 )
+   {
+      assert(node == tree->root);
+      cons->global = TRUE;
+   }
+
    /* activate constraint, if node is active */
    if( node->active && !cons->active && !cons->updateactivate )
    {

@@ -63,8 +63,9 @@ struct ConsHdlrData
 };
 
 /** logic or constraint data */
-struct LogicOrCons
+struct ConsData
 {
+   ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    VAR**            vars;               /**< variables of the constraint */
    int              varssize;           /**< size of vars array */
    int              nvars;              /**< number of variables in the constraint */
@@ -72,19 +73,7 @@ struct LogicOrCons
    int              watchedvar2;        /**< position of the second watched variable */
    int              watchedfeasvar;     /**< position of the feasible watched variable (a variable fixed to one) */
    int              watchedsolvar;      /**< position of the variable making the last solution feasible */
-   unsigned int     local:1;            /**< is constraint only valid locally? */
-   unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
-   unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
-   unsigned int     transformed:1;      /**< does the constraint data belongs to the transformed problem? */
    unsigned int     changed:1;          /**< was constraint changed since last preprocess/propagate call? */
-};
-typedef struct LogicOrCons LOGICORCONS; /**< logicor constraint data */
-
-/** constraint data for set partitioning constraints */
-struct ConsData
-{
-   LOGICORCONS*     logicorcons;        /**< logic or constraint data */
-   ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
 };
 
 
@@ -199,254 +188,183 @@ RETCODE conshdlrdataDecVaruses(
 
 /** catches events for variable at given position */
 static
-RETCODE logicorconsCatchEvent(
+RETCODE consdataCatchEvent(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< set logic or constraint object */
+   CONSDATA*        consdata,           /**< logic or constraint data */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              pos                 /**< array position of variable to catch bound change events for */
    )
 {
-   assert(logicorcons != NULL);
+   assert(consdata != NULL);
+   assert(consdata->vars != NULL);
    assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < logicorcons->nvars);
-   assert(logicorcons->vars != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
 
    /* catch bound tighten events on variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, logicorcons->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, 
-                  eventhdlr, (EVENTDATA*)logicorcons) );
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, 
+                  eventhdlr, (EVENTDATA*)consdata) );
    
    return SCIP_OKAY;
 }
 
 /** drops events for variable at given position */
 static
-RETCODE logicorconsDropEvent(
+RETCODE consdataDropEvent(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< set logic or constraint object */
+   CONSDATA*        consdata,           /**< logic or constraint data */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              pos                 /**< array position of variable to catch bound change events for */
    )
 {
-   assert(logicorcons != NULL);
+   assert(consdata != NULL);
+   assert(consdata->vars != NULL);
    assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < logicorcons->nvars);
-   assert(logicorcons->vars != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
 
    /* drop events on variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, logicorcons->vars[pos], eventhdlr, (EVENTDATA*)logicorcons) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], eventhdlr, (EVENTDATA*)consdata) );
 
    return SCIP_OKAY;
 }
 
 /** locks rounding for variable at given position in transformed logic or constraint */
 static
-RETCODE logicorconsLockCoef(
+RETCODE consdataForbidRounding(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< logic or constraint object */
+   CONSDATA*        consdata,           /**< logic or constraint data */
    int              pos                 /**< position of variable in set partitioning constraint */
    )
 {
-   assert(scip != NULL);
-   assert(logicorcons != NULL);
-   assert(logicorcons->transformed);
-   assert(0 <= pos && pos < logicorcons->nvars);
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
 
    /*debugMessage("locking coefficient <%s> in logic or constraint\n", SCIPvarGetName(var));*/
 
    /* forbid rounding of variable */
-   if( !logicorcons->local )
-      SCIPvarForbidRoundDown(logicorcons->vars[pos]);
+   SCIPvarForbidRoundDown(consdata->vars[pos]);
 
    return SCIP_OKAY;
 }
 
 /** unlocks rounding for variable at given position in transformed logic or constraint */
 static
-RETCODE logicorconsUnlockCoef(
+RETCODE consdataAllowRounding(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< logic or constraint object */
+   CONSDATA*        consdata,           /**< logic or constraint data */
    int              pos                 /**< position of variable in set partitioning constraint */
    )
 {
-   assert(scip != NULL);
-   assert(logicorcons != NULL);
-   assert(logicorcons->transformed);
-   assert(0 <= pos && pos < logicorcons->nvars);
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
 
    /*debugMessage("unlocking coefficient <%s> in logic or constraint\n", SCIPvarGetName(var));*/
 
    /* allow rounding of variable */
-   if( !logicorcons->local )
-      SCIPvarAllowRoundDown(logicorcons->vars[pos]);
+   SCIPvarAllowRoundDown(consdata->vars[pos]);
 
    return SCIP_OKAY;
 }
 
 /** locks rounding for all variables in transformed logic or constraint */
 static
-RETCODE logicorconsLockAllCoefs(
+RETCODE consdataForbidAllRoundings(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons         /**< logic or constraint object */
+   CONSDATA*        consdata            /**< logic or constraint data */
    )
 {
    int i;
 
-   assert(scip != NULL);
-   assert(logicorcons != NULL);
-   assert(logicorcons->transformed);
+   assert(consdata != NULL);
 
    /* lock every single coefficient */
-   for( i = 0; i < logicorcons->nvars; ++i )
+   for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( logicorconsLockCoef(scip, logicorcons, i) );
+      CHECK_OKAY( consdataForbidRounding(scip, consdata, i) );
    }
 
    return SCIP_OKAY;
 }
 
-/** drops bound change events and unlocks rounding for all variables in transformed logic or constraint */
+/** unlocks rounding for all variables in transformed logic or constraint */
 static
-RETCODE logicorconsUnlockAllCoefs(
+RETCODE consdataAllowAllRoundings(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons         /**< logic or constraint object */
+   CONSDATA*        consdata            /**< logic or constraint data */
    )
 {
    int i;
 
-   assert(scip != NULL);
-   assert(logicorcons != NULL);
-   assert(logicorcons->transformed);
+   assert(consdata != NULL);
 
    /* unlock every single coefficient */
-   for( i = 0; i < logicorcons->nvars; ++i )
+   for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( logicorconsUnlockCoef(scip, logicorcons, i) );
+      CHECK_OKAY( consdataAllowRounding(scip, consdata, i) );
    }
-
-   return SCIP_OKAY;
-}
-
-/** deletes coefficient at given position from logic or constraint object */
-static
-RETCODE logicorconsDelCoefPos(
-   SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< logic or constraint object */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos                 /**< position of coefficient to delete */
-   )
-{
-   assert(logicorcons != NULL);
-   assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < logicorcons->nvars);
-   assert(logicorcons->transformed ^ (!SCIPvarIsTransformed(logicorcons->vars[pos])));
-
-   if( logicorcons->transformed )
-   {
-      /* if the position is watched, drop bound tighten events and stop watching the position */
-      if( pos == logicorcons->watchedvar1 )
-      {
-         assert(pos != logicorcons->watchedvar2);
-         CHECK_OKAY( logicorconsDropEvent(scip, logicorcons, eventhdlr, pos) );
-         logicorcons->watchedvar1 = -1;
-      }
-      if( pos == logicorcons->watchedvar2 )
-      {
-         assert(pos != logicorcons->watchedvar1);
-         CHECK_OKAY( logicorconsDropEvent(scip, logicorcons, eventhdlr, pos) );
-         logicorcons->watchedvar2 = -1;
-      }
-      if( pos == logicorcons->watchedfeasvar )
-         logicorcons->watchedfeasvar = -1;
-      if( pos == logicorcons->watchedsolvar )
-         logicorcons->watchedsolvar = -1;
-      
-      /* unlock the rounding of variable */
-      CHECK_OKAY( logicorconsUnlockCoef(scip, logicorcons, pos) );
-   }
-   assert(pos != logicorcons->watchedvar1);
-   assert(pos != logicorcons->watchedvar2);
-   assert(pos != logicorcons->watchedfeasvar);
-   assert(pos != logicorcons->watchedsolvar);
-
-   /* move the last variable to the free slot */
-   logicorcons->vars[pos] = logicorcons->vars[logicorcons->nvars-1];
-   logicorcons->nvars--;
-
-   logicorcons->changed = TRUE;
 
    return SCIP_OKAY;
 }
 
 /** creates a logic or constraint data object */
 static
-RETCODE logicorconsCreate(
+RETCODE consdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS**    logicorcons,        /**< pointer to store the logic or constraint */
+   CONSDATA**       consdata,           /**< pointer to store the logic or constraint data */
    int              nvars,              /**< number of variables in the constraint */
-   VAR**            vars,               /**< variables of the constraint */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   VAR**            vars                /**< variables of the constraint */
    )
 {
-   assert(logicorcons != NULL);
+   assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, logicorcons) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, consdata) );
+
+   (*consdata)->row = NULL;
    if( nvars > 0 )
    {
       VAR* var;
       int v;
 
-      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*logicorcons)->vars, vars, nvars) );
-      (*logicorcons)->varssize = nvars;
-      (*logicorcons)->nvars = nvars;
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+      (*consdata)->varssize = nvars;
+      (*consdata)->nvars = nvars;
    }
    else
    {
-      (*logicorcons)->vars = NULL;
-      (*logicorcons)->varssize = 0;
-      (*logicorcons)->nvars = 0;
+      (*consdata)->vars = NULL;
+      (*consdata)->varssize = 0;
+      (*consdata)->nvars = 0;
    }
-   (*logicorcons)->watchedvar1 = -1;
-   (*logicorcons)->watchedvar2 = -1;
-   (*logicorcons)->watchedfeasvar = -1;
-   (*logicorcons)->watchedsolvar = -1;
-   (*logicorcons)->local = FALSE;
-   (*logicorcons)->modifiable = modifiable;
-   (*logicorcons)->removeable = removeable;
-   (*logicorcons)->transformed = FALSE;
-   (*logicorcons)->changed = TRUE;
+   (*consdata)->watchedvar1 = -1;
+   (*consdata)->watchedvar2 = -1;
+   (*consdata)->watchedfeasvar = -1;
+   (*consdata)->watchedsolvar = -1;
+   (*consdata)->changed = TRUE;
 
    return SCIP_OKAY;
 }   
 
 /** creates a transformed logic or constraint data object */
 static
-RETCODE logicorconsCreateTransformed(
+RETCODE consdataCreateTransformed(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS**    logicorcons,        /**< pointer to store the logic or constraint */
+   CONSDATA**       consdata,           /**< pointer to store the logic or constraint data */
    int              nvars,              /**< number of variables in the constraint */
-   VAR**            vars,               /**< variables of the constraint */
-   Bool             local,              /**< is constraint only locally valid? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   VAR**            vars                /**< variables of the constraint */
    )
 {
-   EVENTHDLR* eventhdlr;
    VAR* var;
    int i;
 
-   assert(logicorcons != NULL);
+   assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   CHECK_OKAY( logicorconsCreate(scip, logicorcons, nvars, vars, modifiable, removeable) );
-   (*logicorcons)->local = local;
-   (*logicorcons)->transformed = TRUE;
+   CHECK_OKAY( consdataCreate(scip, consdata, nvars, vars) );
 
    /* transform the variables */
-   for( i = 0; i < (*logicorcons)->nvars; ++i )
+   for( i = 0; i < (*consdata)->nvars; ++i )
    {
-      var = (*logicorcons)->vars[i];
+      var = (*consdata)->vars[i];
       assert(var != NULL);
       assert(SCIPisLE(scip, 0.0, SCIPvarGetLbLocal(var)));
       assert(SCIPisLE(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
@@ -459,112 +377,183 @@ RETCODE logicorconsCreateTransformed(
       {
          CHECK_OKAY( SCIPgetTransformedVar(scip, var, &var) );
          assert(var != NULL);
-         (*logicorcons)->vars[i] = var;
+         (*consdata)->vars[i] = var;
       }
       assert(SCIPvarIsTransformed(var));
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    }
-
-   /* catch bound change events and lock the rounding of variables */
-   CHECK_OKAY( logicorconsLockAllCoefs(scip, *logicorcons) );
 
    return SCIP_OKAY;
 }
 
 /** frees a logic or constraint data */
 static
-RETCODE logicorconsFree(
+RETCODE consdataFree(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS**    logicorcons,        /**< pointer to store the logic or constraint */
+   CONSDATA**       consdata,           /**< pointer to store the logic or constraint */
    EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
-   assert(logicorcons != NULL);
-   assert(*logicorcons != NULL);
+   assert(consdata != NULL);
+   assert(*consdata != NULL);
    assert(eventhdlr != NULL);
 
-   if( (*logicorcons)->transformed )
+   /* release the row */
+   if( (*consdata)->row != NULL )
    {
-      /* if variables are watched, drop bound tighten events */
-      if( (*logicorcons)->watchedvar1 != -1 )
-      {
-         assert(0 <= (*logicorcons)->watchedvar1 && (*logicorcons)->watchedvar1 < (*logicorcons)->nvars);
-         CHECK_OKAY( logicorconsDropEvent(scip, *logicorcons, eventhdlr, (*logicorcons)->watchedvar1) );
-      }
-      if( (*logicorcons)->watchedvar2 != -1 )
-      {
-         assert(0 <= (*logicorcons)->watchedvar2 && (*logicorcons)->watchedvar2 < (*logicorcons)->nvars);
-         CHECK_OKAY( logicorconsDropEvent(scip, *logicorcons, eventhdlr, (*logicorcons)->watchedvar2) );
-      }
-
-      /* unlock the rounding of variables */
-      CHECK_OKAY( logicorconsUnlockAllCoefs(scip, *logicorcons) );
+      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(*logicorcons)->vars, (*logicorcons)->varssize);
-   SCIPfreeBlockMemory(scip, logicorcons);
-
-   return SCIP_OKAY;
-}
-
-/** creates an LP row from a logic or constraint data object */
-static
-RETCODE logicorconsToRow(
-   SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< logic or constraint data */
-   const char*      name,               /**< name of the constraint */
-   ROW**            row                 /**< pointer to an LP row data object */
-   )
-{
-   int v;
-
-   assert(logicorcons != NULL);
-   assert(row != NULL);
-
-   CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, 1.0, SCIPinfinity(scip),
-                  logicorcons->local, logicorcons->modifiable, logicorcons->removeable) );
-   
-   for( v = 0; v < logicorcons->nvars; ++v )
+   /* drop bound tighten events for watched variables */
+   if( (*consdata)->watchedvar1 != -1 )
    {
-      CHECK_OKAY( SCIPaddVarToRow(scip, *row, logicorcons->vars[v], 1.0) );
+      assert(0 <= (*consdata)->watchedvar1 && (*consdata)->watchedvar1 < (*consdata)->nvars);
+      assert(SCIPvarIsTransformed((*consdata)->vars[(*consdata)->watchedvar1]));
+      CHECK_OKAY( consdataDropEvent(scip, *consdata, eventhdlr, (*consdata)->watchedvar1) );
    }
+   if( (*consdata)->watchedvar2 != -1 )
+   {
+      assert(0 <= (*consdata)->watchedvar2 && (*consdata)->watchedvar2 < (*consdata)->nvars);
+      assert(SCIPvarIsTransformed((*consdata)->vars[(*consdata)->watchedvar2]));
+      CHECK_OKAY( consdataDropEvent(scip, *consdata, eventhdlr, (*consdata)->watchedvar2) );
+   }
+
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
 }
 
 /** prints logic or constraint to file stream */
 static
-void logicorconsPrint(
+void consdataPrint(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< logic or constraint object */
+   CONSDATA*        consdata,           /**< logic or constraint data */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
    int v;
 
-   assert(logicorcons != NULL);
+   assert(consdata != NULL);
 
    if( file == NULL )
       file = stdout;
 
-
    /* print coefficients */
-   fprintf(file, "or(");
-   for( v = 0; v < logicorcons->nvars; ++v )
+   fprintf(file, "logicor(");
+   for( v = 0; v < consdata->nvars; ++v )
    {
-      assert(logicorcons->vars[v] != NULL);
+      assert(consdata->vars[v] != NULL);
       if( v > 0 )
          fprintf(file, ", ");
-      fprintf(file, "%s", SCIPvarGetName(logicorcons->vars[v]));
+      fprintf(file, "%s", SCIPvarGetName(consdata->vars[v]));
    }
    fprintf(file, ")\n");
+}
+
+/** deletes coefficient at given position from logic or constraint data */
+static
+RETCODE delCoefPos(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< logic or constraint */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int              pos                 /**< position of coefficient to delete */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(eventhdlr != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+   assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
+
+   if( SCIPconsIsTransformed(cons) )
+   {
+      /* if the position is watched, drop bound tighten events and stop watching the position */
+      if( pos == consdata->watchedvar1 )
+      {
+         assert(pos != consdata->watchedvar2);
+         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, pos) );
+         consdata->watchedvar1 = -1;
+      }
+      if( pos == consdata->watchedvar2 )
+      {
+         assert(pos != consdata->watchedvar1);
+         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, pos) );
+         consdata->watchedvar2 = -1;
+      }
+      if( pos == consdata->watchedfeasvar )
+         consdata->watchedfeasvar = -1;
+      if( pos == consdata->watchedsolvar )
+         consdata->watchedsolvar = -1;
+      
+      /* unlock the rounding of variable */
+      CHECK_OKAY( consdataAllowRounding(scip, consdata, pos) );
+   }
+   assert(pos != consdata->watchedvar1);
+   assert(pos != consdata->watchedvar2);
+   assert(pos != consdata->watchedfeasvar);
+   assert(pos != consdata->watchedsolvar);
+
+   /* move the last variable to the free slot */
+   consdata->vars[pos] = consdata->vars[consdata->nvars-1];
+   consdata->nvars--;
+
+   consdata->changed = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** deletes all zero-fixed variables, checks for variables fixed to one */
+static
+RETCODE applyFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< logic or constraint */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   Bool*            redundant           /**< returns whether a variable fixed to one exists in the constraint */
+   )
+{
+   CONSDATA* consdata;
+   VAR* var;
+   int v;
+
+   assert(eventhdlr != NULL);
+   assert(redundant != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->vars != NULL);
+
+   *redundant = FALSE;
+   v = 0;
+   while( v < consdata->nvars )
+   {
+      var = consdata->vars[v];
+      if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 1.0) )
+      {
+         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+         *redundant = TRUE;
+         return SCIP_OKAY;
+      }
+      else if( SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 0.0) )
+      {
+         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
+      }
+      else
+         ++v;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** analyzes conflicting assignment on given constraint, and adds conflict clause to problem */
 static
 RETCODE analyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons         /**< logic or constraint to be analyzed */
+   CONSDATA*        consdata            /**< logic or constraint to be analyzed */
    )
 {
    CONS* cons;
@@ -575,13 +564,13 @@ RETCODE analyzeConflict(
    int maxsize;
    int v;
 
-   assert(logicorcons != NULL);
+   assert(consdata != NULL);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-   for( v = 0; v < logicorcons->nvars; ++v )
+   for( v = 0; v < consdata->nvars; ++v )
    {
-      CHECK_OKAY( SCIPaddConflictVar(scip, logicorcons->vars[v]) );
+      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
    }
 
    /* analyze the conflict */
@@ -595,7 +584,7 @@ RETCODE analyzeConflict(
    {
       sprintf(consname, "cf%d", SCIPgetNConss(scip));
       CHECK_OKAY( SCIPcreateConsLogicOr(scip, &cons, consname, nconflictvars, conflictvars, 
-                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
    }
@@ -616,7 +605,6 @@ RETCODE processWatchedVars(
    )
 {
    CONSDATA* consdata;
-   LOGICORCONS* logicorcons;
    VAR** vars;
    Real lb;
    Real ub;
@@ -635,36 +623,34 @@ RETCODE processWatchedVars(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   logicorcons = consdata->logicorcons;
-   assert(logicorcons != NULL);
-   assert(logicorcons->watchedvar1 == -1 || logicorcons->watchedvar1 != logicorcons->watchedvar2);
+   assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    *addcut = FALSE;
    *mustcheck = FALSE;
 
    /* don't process the constraint, if the watched variables were not changed since last processing */
-   if( !logicorcons->changed )
+   if( !consdata->changed )
    {
-      assert(0 <= logicorcons->watchedvar1 && logicorcons->watchedvar1 < logicorcons->nvars);
-      assert(0 <= logicorcons->watchedvar2 && logicorcons->watchedvar2 < logicorcons->nvars);
-      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(logicorcons->vars[logicorcons->watchedvar1]), 0.0));
-      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(logicorcons->vars[logicorcons->watchedvar1]), 1.0));
-      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(logicorcons->vars[logicorcons->watchedvar2]), 0.0));
-      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(logicorcons->vars[logicorcons->watchedvar2]), 1.0));
+      assert(0 <= consdata->watchedvar1 && consdata->watchedvar1 < consdata->nvars);
+      assert(0 <= consdata->watchedvar2 && consdata->watchedvar2 < consdata->nvars);
+      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[consdata->watchedvar1]), 0.0));
+      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[consdata->watchedvar1]), 1.0));
+      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[consdata->watchedvar2]), 0.0));
+      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[consdata->watchedvar2]), 1.0));
       *mustcheck = TRUE;
       return SCIP_OKAY;
    }
 
-   vars = logicorcons->vars;
-   nvars = logicorcons->nvars;
+   vars = consdata->vars;
+   nvars = consdata->nvars;
    assert(nvars == 0 || vars != NULL);
-   watchedvar1 = logicorcons->watchedvar1;
-   watchedvar2 = logicorcons->watchedvar2;
+   watchedvar1 = consdata->watchedvar1;
+   watchedvar2 = consdata->watchedvar2;
 
    /* check, if the old watched variables are still valid */
-   if( logicorcons->watchedfeasvar >= 0 )
+   if( consdata->watchedfeasvar >= 0 )
    {
-      lb = SCIPvarGetLbLocal(vars[logicorcons->watchedfeasvar]);
+      lb = SCIPvarGetLbLocal(vars[consdata->watchedfeasvar]);
       if( SCIPisEQ(scip, lb, 1.0) )
       {
          /* the watched feasible variable is fixed to one, making the constraint redundant;
@@ -687,7 +673,7 @@ RETCODE processWatchedVars(
              * remember the variable and disable the constraint
              */
             debugMessage("disabling constraint <%s> (watchedvar1 fixed to 1.0)\n", SCIPconsGetName(cons));
-            logicorcons->watchedfeasvar = watchedvar1;
+            consdata->watchedfeasvar = watchedvar1;
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
             return SCIP_OKAY;
          }
@@ -711,7 +697,7 @@ RETCODE processWatchedVars(
              * remember the variable and disable the constraint
              */
             debugMessage("disabling constraint <%s> (watchedvar2 fixed to 1.0)\n", SCIPconsGetName(cons));
-            logicorcons->watchedfeasvar = watchedvar2;
+            consdata->watchedfeasvar = watchedvar2;
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
             return SCIP_OKAY;
          }
@@ -735,7 +721,7 @@ RETCODE processWatchedVars(
       assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar2]), 0.0));
       assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar2]), 1.0));
       *mustcheck = TRUE;
-      logicorcons->changed = FALSE;
+      consdata->changed = FALSE;
       return SCIP_OKAY;
    }
 
@@ -764,7 +750,7 @@ RETCODE processWatchedVars(
              * remember the variable and disable the constraint
              */
             debugMessage("disabling constraint <%s> (found variable fixed to 1.0)\n", SCIPconsGetName(cons));
-            logicorcons->watchedfeasvar = v;
+            consdata->watchedfeasvar = v;
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
             return SCIP_OKAY;
          }
@@ -788,12 +774,12 @@ RETCODE processWatchedVars(
        */
       assert(watchedvar2 == -1);
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-      if( logicorcons->modifiable )
+      if( SCIPconsIsModifiable(cons) )
          *addcut = TRUE;
       else
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-         CHECK_OKAY( analyzeConflict(scip, logicorcons) );
+         CHECK_OKAY( analyzeConflict(scip, consdata) );
 
          /* mark the node to be cut off */
          *cutoff = TRUE;
@@ -808,7 +794,7 @@ RETCODE processWatchedVars(
       assert(0 <= watchedvar1 && watchedvar1 < nvars);
       assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar1]), 0.0));
       assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar1]), 1.0));
-      if( logicorcons->modifiable )
+      if( SCIPconsIsModifiable(cons) )
          *mustcheck = TRUE;
       else
       {
@@ -834,31 +820,31 @@ RETCODE processWatchedVars(
       *mustcheck = TRUE;
 
       /* drop events on old watched variables */
-      if( logicorcons->watchedvar1 != -1
-         && logicorcons->watchedvar1 != watchedvar1 && logicorcons->watchedvar1 != watchedvar2 )
+      if( consdata->watchedvar1 != -1
+         && consdata->watchedvar1 != watchedvar1 && consdata->watchedvar1 != watchedvar2 )
       {
-         CHECK_OKAY( logicorconsDropEvent(scip, logicorcons, eventhdlr, logicorcons->watchedvar1) );
+         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, consdata->watchedvar1) );
       }
-      if( logicorcons->watchedvar2 != -1
-         && logicorcons->watchedvar2 != watchedvar1 && logicorcons->watchedvar2 != watchedvar2 )
+      if( consdata->watchedvar2 != -1
+         && consdata->watchedvar2 != watchedvar1 && consdata->watchedvar2 != watchedvar2 )
       {
-         CHECK_OKAY( logicorconsDropEvent(scip, logicorcons, eventhdlr, logicorcons->watchedvar2) );
+         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, consdata->watchedvar2) );
       }
 
       /* catch events on new watched variables */
-      if( watchedvar1 != logicorcons->watchedvar1 && watchedvar1 != logicorcons->watchedvar2 )
+      if( watchedvar1 != consdata->watchedvar1 && watchedvar1 != consdata->watchedvar2 )
       {
-         CHECK_OKAY( logicorconsCatchEvent(scip, logicorcons, eventhdlr, watchedvar1) );
+         CHECK_OKAY( consdataCatchEvent(scip, consdata, eventhdlr, watchedvar1) );
       }
-      if( watchedvar2 != logicorcons->watchedvar1 && watchedvar2 != logicorcons->watchedvar2 )
+      if( watchedvar2 != consdata->watchedvar1 && watchedvar2 != consdata->watchedvar2 )
       {
-         CHECK_OKAY( logicorconsCatchEvent(scip, logicorcons, eventhdlr, watchedvar2) );
+         CHECK_OKAY( consdataCatchEvent(scip, consdata, eventhdlr, watchedvar2) );
       }
 
       /* remember the two watched variables for next time */
-      logicorcons->watchedvar1 = watchedvar1;
-      logicorcons->watchedvar2 = watchedvar2;
-      logicorcons->changed = FALSE;
+      consdata->watchedvar1 = watchedvar1;
+      consdata->watchedvar2 = watchedvar2;
+      consdata->changed = FALSE;
    }
 
    return SCIP_OKAY;
@@ -868,7 +854,7 @@ RETCODE processWatchedVars(
 static
 Bool check(
    SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< logic or constraint to be checked */
+   CONSDATA*        consdata,           /**< logic or constraint to be checked */
    SOL*             sol                 /**< primal CIP solution */
    )
 {
@@ -878,14 +864,14 @@ Bool check(
    int nvars;
    int v;
    
-   vars = logicorcons->vars;
-   nvars = logicorcons->nvars;
+   vars = consdata->vars;
+   nvars = consdata->nvars;
 
    /* check the watched solution variable, if it already makes the constraint feasible */
-   if( logicorcons->watchedsolvar != -1 )
+   if( consdata->watchedsolvar != -1 )
    {
-      assert(logicorcons->watchedsolvar < nvars);
-      solval = SCIPgetSolVal(scip, sol, vars[logicorcons->watchedsolvar]);
+      assert(consdata->watchedsolvar < nvars);
+      solval = SCIPgetSolVal(scip, sol, vars[consdata->watchedsolvar]);
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
       if( SCIPisFeasEQ(scip, solval, 1.0) )
          return TRUE;
@@ -906,10 +892,35 @@ Bool check(
    if( SCIPisGE(scip, solval, 1.0) )
    {
       assert(0 < v && v <= nvars);
-      logicorcons->watchedsolvar = v-1;
+      consdata->watchedsolvar = v-1;
    }
 
    return SCIPisFeasGE(scip, sum, 1.0);
+}
+
+/** creates an LP row in a logic or constraint data object */
+static
+RETCODE createRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< logic or constraint */
+   )
+{
+   CONSDATA* consdata;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   CHECK_OKAY( SCIPcreateRow(scip, &consdata->row, SCIPconsGetName(cons), 0, NULL, NULL, 1.0, SCIPinfinity(scip),
+                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+   
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[v], 1.0) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** adds logic or constraint as cut to the LP */
@@ -929,7 +940,7 @@ RETCODE addCut(
    if( consdata->row == NULL )
    {
       /* convert logic or constraint data into LP row */
-      CHECK_OKAY( logicorconsToRow(scip, consdata->logicorcons, SCIPconsGetName(cons), &consdata->row) );
+      CHECK_OKAY( createRow(scip, cons) );
    }
    assert(consdata->row != NULL);
    assert(!SCIProwIsInLP(consdata->row));
@@ -952,7 +963,6 @@ RETCODE separate(
    )
 {
    CONSDATA* consdata;
-   LOGICORCONS* logicorcons;
    Bool addcut;
    Bool mustcheck;
 
@@ -965,9 +975,7 @@ RETCODE separate(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   logicorcons = consdata->logicorcons;
-   assert(logicorcons != NULL);
-   assert(logicorcons->nvars == 0 || logicorcons->vars != NULL);
+   assert(consdata->nvars == 0 || consdata->vars != NULL);
 
    /* skip constraints already in the LP */
    if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
@@ -990,7 +998,7 @@ RETCODE separate(
          addcut = !SCIPisFeasible(scip, feasibility);
       }
       else
-         addcut = !check(scip, logicorcons, NULL);
+         addcut = !check(scip, consdata, NULL);
 
       if( !addcut )
       {
@@ -1040,16 +1048,13 @@ RETCODE enforcePseudo(
    if( mustcheck )
    {
       CONSDATA* consdata;
-      LOGICORCONS* logicorcons;
 
       assert(!addcut);
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      logicorcons = consdata->logicorcons;
-      assert(logicorcons != NULL);
 
-      if( check(scip, logicorcons, NULL) )
+      if( check(scip, consdata, NULL) )
       {
          /* constraint was feasible -> increase age */
          CHECK_OKAY( SCIPincConsAge(scip, cons) );
@@ -1109,18 +1114,13 @@ DECL_CONSDELETE(consDeleteLogicOr)
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
+   /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
 
    /* free LP row and logic or constraint */
-   if( (*consdata)->row != NULL )
-   {
-      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
-   }
-   CHECK_OKAY( logicorconsFree(scip, &(*consdata)->logicorcons, conshdlrdata->eventhdlr) );
-
-   /* free constraint data object */
-   SCIPfreeBlockMemory(scip, consdata);
+   CHECK_OKAY( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -1130,7 +1130,6 @@ DECL_CONSTRANS(consTransLogicOr)
 {
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
-   LOGICORCONS* logicorcons;
 
    /*debugMessage("Trans method of logic or constraints\n");*/
 
@@ -1143,25 +1142,15 @@ DECL_CONSTRANS(consTransLogicOr)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
    assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
-   assert(sourcedata->logicorcons != NULL);
 
    /* create constraint data for target constraint */
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &targetdata) );
-
-   logicorcons = sourcedata->logicorcons;
-   assert(SCIPconsIsLocal(sourcecons) == logicorcons->local);
-   assert(SCIPconsIsModifiable(sourcecons) == logicorcons->modifiable);
-   assert(SCIPconsIsRemoveable(sourcecons) == logicorcons->removeable);
-
-   CHECK_OKAY( logicorconsCreateTransformed(scip, &targetdata->logicorcons, logicorcons->nvars, logicorcons->vars,
-                  logicorcons->local, logicorcons->modifiable, logicorcons->removeable) );
-   targetdata->row = NULL;
+   CHECK_OKAY( consdataCreateTransformed(scip, &targetdata, sourcedata->nvars, sourcedata->vars) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
                   SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
                   SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+                  SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1186,7 +1175,6 @@ static
 DECL_CONSSEPA(consSepaLogicOr)
 {
    CONSHDLRDATA* conshdlrdata;
-   CONSDATA* consdata;
    Bool cutoff;
    Bool separated;
    Bool reduceddom;
@@ -1375,7 +1363,7 @@ RETCODE branchLP(
             sprintf(name, "LOB%lld", SCIPgetNodenum(scip));
 
             CHECK_OKAY( SCIPcreateConsLogicOr(scip, &newcons, name, nselcands, branchcands,
-                           FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
+                           FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
             CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
          }
@@ -1661,9 +1649,8 @@ DECL_CONSENFOPS(consEnfopsLogicOr)
 static
 DECL_CONSCHECK(consCheckLogicOr)
 {
-   CONSDATA* consdata;
    CONS* cons;
-   LOGICORCONS* logicorcons;
+   CONSDATA* consdata;
    VAR** vars;
    Real solval;
    int nvars;
@@ -1684,11 +1671,9 @@ DECL_CONSCHECK(consCheckLogicOr)
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      logicorcons = consdata->logicorcons;
-      assert(logicorcons != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         if( !check(scip, logicorcons, sol) )
+         if( !check(scip, consdata, sol) )
          {
             /* constraint is violated */
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
@@ -1761,53 +1746,12 @@ DECL_CONSPROP(consPropLogicOr)
  * Presolving
  */
 
-/** deletes all zero-fixed variables, checks for variables fixed to one */
-static
-RETCODE logicorconsApplyFixings(
-   SCIP*            scip,               /**< SCIP data structure */
-   LOGICORCONS*     logicorcons,        /**< logic or constraint object */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   Bool*            redundant           /**< returns whether a variable fixed to one exists in the constraint */
-   )
-{
-   VAR* var;
-   int v;
-
-   assert(logicorcons != NULL);
-   assert(logicorcons->vars != NULL);
-   assert(eventhdlr != NULL);
-   assert(redundant != NULL);
-
-   *redundant = FALSE;
-   v = 0;
-   while( v < logicorcons->nvars )
-   {
-      var = logicorcons->vars[v];
-      if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 1.0) )
-      {
-         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-         *redundant = TRUE;
-         return SCIP_OKAY;
-      }
-      else if( SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 0.0) )
-      {
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-         CHECK_OKAY( logicorconsDelCoefPos(scip, logicorcons, eventhdlr, v) );
-      }
-      else
-         ++v;
-   }
-
-   return SCIP_OKAY;
-}
-
 static
 DECL_CONSPRESOL(consPresolLogicOr)
 {
    CONSHDLRDATA* conshdlrdata;
    CONS* cons;
    CONSDATA* consdata;
-   LOGICORCONS* logicorcons;
    Bool infeasible;
    Bool redundant;
    int c;
@@ -1829,13 +1773,11 @@ DECL_CONSPRESOL(consPresolLogicOr)
       assert(cons != NULL);
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      logicorcons = consdata->logicorcons;
-      assert(logicorcons != NULL);
 
       debugMessage("presolving logic or constraint <%s>\n", SCIPconsGetName(cons));
 
       /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
-      CHECK_OKAY( logicorconsApplyFixings(scip, logicorcons, conshdlrdata->eventhdlr, &redundant) );
+      CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
       if( redundant )
       {
@@ -1845,27 +1787,27 @@ DECL_CONSPRESOL(consPresolLogicOr)
          *result = SCIP_SUCCESS;
          continue;
       }
-      else if( !logicorcons->modifiable )
+      else if( !SCIPconsIsModifiable(cons) )
       {
          /* if unmodifiable constraint has no variables, it is infeasible,
           * if unmodifiable constraint has only one variable, this one can be fixed and the constraint deleted
           */
-         if( logicorcons->nvars == 0 )
+         if( consdata->nvars == 0 )
          {
             debugMessage("logic or constraint <%s> is infeasible\n", SCIPconsGetName(cons));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
-         else if( logicorcons->nvars == 1 )
+         else if( consdata->nvars == 1 )
          {
             debugMessage("logic or constraint <%s> has only one variable not fixed to 0.0\n",
                SCIPconsGetName(cons));
             
-            assert(logicorcons->vars != NULL);
-            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(logicorcons->vars[0]), 0.0));
-            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(logicorcons->vars[0]), 1.0));
+            assert(consdata->vars != NULL);
+            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
+            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             
-            CHECK_OKAY( SCIPfixVar(scip, logicorcons->vars[0], 1.0, &infeasible) );
+            CHECK_OKAY( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible) );
             assert(!infeasible);
             CHECK_OKAY( SCIPdelCons(scip, cons) );
             (*nfixedvars)++;
@@ -1890,7 +1832,6 @@ static
 DECL_CONSRESCVAR(consRescvarLogicOr)
 {
    CONSDATA* consdata;
-   LOGICORCONS* logicorcons;
    Bool infervarfound;
    int v;
 
@@ -1901,8 +1842,6 @@ DECL_CONSRESCVAR(consRescvarLogicOr)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   logicorcons = consdata->logicorcons;
-   assert(logicorcons != NULL);
 
    debugMessage("conflict resolving method of logic or constraint handler\n");
 
@@ -1912,12 +1851,12 @@ DECL_CONSRESCVAR(consRescvarLogicOr)
    assert(SCIPvarGetLbLocal(infervar) > 0.5); /* the inference variable must be assigned to one */
 
    infervarfound = FALSE;
-   for( v = 0; v < logicorcons->nvars; ++v )
+   for( v = 0; v < consdata->nvars; ++v )
    {
-      if( logicorcons->vars[v] != infervar )
+      if( consdata->vars[v] != infervar )
       {
-         assert(SCIPvarGetUbLocal(logicorcons->vars[v]) < 0.5); /* the reason variable must be assigned to zero */
-         CHECK_OKAY( SCIPaddConflictVar(scip, logicorcons->vars[v]) );
+         assert(SCIPvarGetUbLocal(consdata->vars[v]) < 0.5); /* the reason variable must be assigned to zero */
+         CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
       }
       else
       {
@@ -1934,7 +1873,7 @@ DECL_CONSRESCVAR(consRescvarLogicOr)
 
 
 /*
- * variable usage counting
+ * variable usage counting and rounding locks
  */
 
 static
@@ -1942,7 +1881,6 @@ DECL_CONSENABLE(consActiveLogicOr)
 {
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
-   LOGICORCONS* logicorcons;
    int v;
 
    assert(conshdlr != NULL);
@@ -1954,17 +1892,21 @@ DECL_CONSENABLE(consActiveLogicOr)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   logicorcons = consdata->logicorcons;
-   assert(logicorcons != NULL);
 
    debugMessage("activation information method of logic or constraint handler\n");
 
    /* increase the number of uses for each variable in the constraint */
-   for( v = 0; v < logicorcons->nvars; ++v )
+   for( v = 0; v < consdata->nvars; ++v )
    {
-      CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, logicorcons->vars[v]) );
+      CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, consdata->vars[v]) );
    }
    
+   /* forbid rounding of variables in a globally valid constraint */
+   if( SCIPconsIsGlobal(cons) )
+   {
+      consdataForbidAllRoundings(scip, consdata);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1973,7 +1915,6 @@ DECL_CONSDISABLE(consDeactiveLogicOr)
 {
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
-   LOGICORCONS* logicorcons;
    int v;
 
    assert(conshdlr != NULL);
@@ -1985,15 +1926,19 @@ DECL_CONSDISABLE(consDeactiveLogicOr)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   logicorcons = consdata->logicorcons;
-   assert(logicorcons != NULL);
 
    debugMessage("deactivation information method of logic or constraint handler\n");
 
    /* decrease the number of uses for each variable in the constraint */
-   for( v = 0; v < logicorcons->nvars; ++v )
+   for( v = 0; v < consdata->nvars; ++v )
    {
-      CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, logicorcons->vars[v]) );
+      CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, consdata->vars[v]) );
+   }
+
+   /* allow rounding of variables in a globally valid constraint */
+   if( SCIPconsIsGlobal(cons) )
+   {
+      consdataAllowAllRoundings(scip, consdata);
    }
 
    return SCIP_OKAY;
@@ -2021,7 +1966,6 @@ RETCODE createNormalizedLogicOr(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is set partitioning constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
@@ -2050,7 +1994,7 @@ RETCODE createNormalizedLogicOr(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsLogicOr(scip, cons, name, nvars, transvars,
-                  initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+                  initial, separate, enforce, check, propagate, modifiable, removeable) );
 
    /* release temporary memory */
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &transvars) );
@@ -2090,7 +2034,7 @@ DECL_LINCONSUPGD(linconsUpgdLogicOr)
       CHECK_OKAY( createNormalizedLogicOr(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+                     SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -2106,7 +2050,7 @@ DECL_LINCONSUPGD(linconsUpgdLogicOr)
 static
 DECL_EVENTEXEC(eventExecLogicOr)
 {
-   LOGICORCONS* logicorcons;
+   CONSDATA* consdata;
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
@@ -2115,10 +2059,10 @@ DECL_EVENTEXEC(eventExecLogicOr)
 
    debugMessage("Exec method of bound tighten event handler for logic or constraints\n");
 
-   logicorcons = (LOGICORCONS*)eventdata;
-   assert(logicorcons != NULL);
+   consdata = (CONSDATA*)eventdata;
+   assert(consdata != NULL);
 
-   logicorcons->changed = TRUE;
+   consdata->changed = TRUE;
 
    return SCIP_OKAY;
 }
@@ -2191,7 +2135,6 @@ RETCODE SCIPcreateConsLogicOr(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is set partitioning constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
@@ -2210,29 +2153,20 @@ RETCODE SCIPcreateConsLogicOr(
    }
 
    /* create the constraint specific data */
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
    if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
    {
-      if( local )
-      {
-         errorMessage("problem constraint cannot be local");
-         return SCIP_INVALIDDATA;
-      }
-
       /* create constraint in original problem */
-      CHECK_OKAY( logicorconsCreate(scip, &consdata->logicorcons, nvars, vars, modifiable, removeable) );
+      CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars) );
    }
    else
    {
       /* create constraint in transformed problem */
-      CHECK_OKAY( logicorconsCreateTransformed(scip, &consdata->logicorcons, nvars, vars,
-                     local, modifiable, removeable) );
+      CHECK_OKAY( consdataCreateTransformed(scip, &consdata, nvars, vars) );
    }
-   consdata->row = NULL;
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+                  modifiable, removeable) );
 
    return SCIP_OKAY;
 }

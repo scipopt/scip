@@ -631,6 +631,9 @@ RETCODE SCIPprobAddCons(
    /* undelete constraint, if it was globally deleted in the past */
    cons->deleted = FALSE;
 
+   /* mark constraint to be globally valid */
+   cons->global = TRUE;
+
    /* capture constraint */
    SCIPconsCapture(cons);
 
@@ -682,8 +685,8 @@ RETCODE SCIPprobDelCons(
    /* mark the constraint to be no longer in the problem */
    cons->addarraypos = -1;
 
-   /* free constraint data, such that constraint exists only as a zombie constraint from now on */
-   CHECK_OKAY( SCIPconsFreeData(cons, memhdr, set) );
+   /* mark constraint to be no longer globally valid */
+   cons->global = FALSE;
 
    /* release constraint */
    CHECK_OKAY( SCIPconsRelease(&cons, memhdr, set) );

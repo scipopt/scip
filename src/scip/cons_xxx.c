@@ -416,7 +416,6 @@ RETCODE SCIPcreateConsXxx(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -429,7 +428,7 @@ RETCODE SCIPcreateConsXxx(
    errorMessage("method of xxx constraint handler not implemented yet");
    abort();
 
-   /* find the linear constraint handler */
+   /* find the xxx constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
@@ -443,7 +442,7 @@ RETCODE SCIPcreateConsXxx(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+                  modifiable, removeable) );
 
    return SCIP_OKAY;
 }

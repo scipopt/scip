@@ -2883,7 +2883,6 @@ RETCODE SCIPcreateCons(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -2898,14 +2897,14 @@ RETCODE SCIPcreateCons(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, 
-                     initial, separate, enforce, check, propagate, local, modifiable, removeable, TRUE) );
+                     initial, separate, enforce, check, propagate, modifiable, removeable, TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata,
-                     initial, separate, enforce, check, propagate, local, modifiable, removeable, FALSE) );
+                     initial, separate, enforce, check, propagate, modifiable, removeable, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -3005,6 +3004,23 @@ RETCODE SCIPresetConsAge(
    CHECK_OKAY( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsResetAge(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** checks single constraint for feasibility of the given solution */
+RETCODE SCIPcheckCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to check */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, result) );
 
    return SCIP_OKAY;
 }
@@ -6448,6 +6464,34 @@ int SCIPcalcMemGrowSize(
    assert(scip != NULL);
 
    return SCIPsetCalcMemGrowSize(scip->set, num);
+}
+
+/** extends a dynamically allocated block memory array to be able to store at least the given number of elements;
+ *  use SCIPensureBlockMemoryArray() define to call this method!
+ */
+RETCODE SCIPensureBlockMemoryArray_call(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           arrayptr,           /**< pointer to dynamically sized array */
+   size_t           elemsize,           /**< size in bytes of each element in array */
+   int*             arraysize,          /**< pointer to actual array size */
+   int              minsize             /**< required minimal array size */
+   )
+{
+   assert(scip != NULL);
+   assert(arrayptr != NULL);
+   assert(elemsize > 0);
+   assert(arraysize != NULL);
+
+   if( minsize > *arraysize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(scip->set, minsize);
+      ALLOC_OKAY( reallocBlockMemorySize(SCIPmemhdr(scip), arrayptr, *arraysize * elemsize, newsize * elemsize) );
+      *arraysize = newsize;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** gets a memory buffer with at least the given size */

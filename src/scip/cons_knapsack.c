@@ -334,7 +334,7 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                      SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
@@ -398,7 +398,6 @@ RETCODE SCIPcreateConsKnapsack(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -409,7 +408,7 @@ RETCODE SCIPcreateConsKnapsack(
    errorMessage("method of knapsack constraint handler not implemented yet");
    abort();
 
-   /* find the linear constraint handler */
+   /* find the knapsack constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
@@ -423,7 +422,7 @@ RETCODE SCIPcreateConsKnapsack(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+                  modifiable, removeable) );
 
    return SCIP_OKAY;
 }

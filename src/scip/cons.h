@@ -343,7 +343,8 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  the corresponding bound change event was not yet processed.
  *
  *  This method is always called after a constraint of the constraint handler was activated. The constraint
- *  handler may use this call to update his own (statistical) data.
+ *  handler may use this call to update his own (statistical) data and to lock rounding of variables in globally
+ *  valid constraints.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -358,7 +359,8 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  the corresponding bound change event was not yet processed.
  *
  *  This method is always called before a constraint of the constraint handler is deactivated. The constraint
- *  handler may use this call to update his own (statistical) data.
+ *  handler may use this call to update his own (statistical) data and to unlock rounding of variables in globally
+ *  valid constraints.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -431,10 +433,10 @@ struct Cons
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
    unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
    unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
-   unsigned int     local:1;            /**< TRUE iff constraint is only valid locally */
    unsigned int     modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
    unsigned int     removeable:1;       /**< TRUE iff constraint should be removed from the LP due to aging or cleanup */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
+   unsigned int     global:1;           /**< TRUE iff constraint belongs to a problem or the root node */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
    unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
    unsigned int     obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
@@ -909,13 +911,14 @@ RETCODE SCIPconsCreate(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
    );
 
-/** frees constraint data of a constraint, leaving the constraint itself as a zombie constraint */
+/** frees constraint data of a constraint, leaving the constraint itself as a zombie constraint; marks the constraint
+ *  as deleted
+ */
 extern
 RETCODE SCIPconsFreeData(
    CONS*            cons,               /**< constraint to free */
@@ -1105,7 +1108,13 @@ Bool SCIPconsIsPropagated(
    CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint is only locally valid */
+/** returns TRUE iff constraint is globally valid */
+extern
+Bool SCIPconsIsGlobal(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint is only locally valid or not added to any (sub)problem */
 extern
 Bool SCIPconsIsLocal(
    CONS*            cons                /**< constraint */
@@ -1123,9 +1132,15 @@ Bool SCIPconsIsRemoveable(
    CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint is belonging to original problem */
+/** returns TRUE iff constraint is belonging to original space */
 extern
 Bool SCIPconsIsOriginal(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint is belonging to transformed space */
+extern
+Bool SCIPconsIsTransformed(
    CONS*            cons                /**< constraint */
    );
 
@@ -1145,10 +1160,12 @@ Bool SCIPconsIsOriginal(
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
-#define SCIPconsIsLocal(cons)           (cons)->local
+#define SCIPconsIsGlobal(cons)          (cons)->global
+#define SCIPconsIsLocal(cons)           !(cons)->global
 #define SCIPconsIsModifiable(cons)      (cons)->modifiable
 #define SCIPconsIsRemoveable(cons)      (cons)->removeable
 #define SCIPconsIsOriginal(cons)        (cons)->original
+#define SCIPconsIsTransformed(cons)     !(cons)->original
 
 #endif
 

@@ -354,7 +354,7 @@ DECL_LINCONSUPGD(linconsUpgdVarlb)
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsVarlb(scip, upgdcons, SCIPconsGetName(cons), nvars, var, switchvar, val,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                      SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
@@ -417,7 +417,6 @@ RETCODE SCIPcreateConsVarlb(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -428,7 +427,7 @@ RETCODE SCIPcreateConsVarlb(
    errorMessage("method of varlb constraint handler not implemented yet");
    abort();
 
-   /* find the linear constraint handler */
+   /* find the varlb constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
@@ -442,7 +441,7 @@ RETCODE SCIPcreateConsVarlb(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+                  modifiable, removeable) );
 
    return SCIP_OKAY;
 }

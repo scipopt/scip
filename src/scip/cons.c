@@ -2726,7 +2726,6 @@ RETCODE SCIPconsCreate(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
@@ -2735,7 +2734,6 @@ RETCODE SCIPconsCreate(
    assert(cons != NULL);
    assert(memhdr != NULL);
    assert(conshdlr != NULL);
-   assert(!original || !local);
 
    /* create constraint data */
    ALLOC_OKAY( allocBlockMemory(memhdr, cons) );
@@ -2756,10 +2754,10 @@ RETCODE SCIPconsCreate(
    (*cons)->enforce = enforce;
    (*cons)->check = check;
    (*cons)->propagate = propagate;
-   (*cons)->local = local;
    (*cons)->modifiable = modifiable;
    (*cons)->removeable = removeable;
    (*cons)->original = original;
+   (*cons)->global = FALSE;
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
@@ -2777,7 +2775,9 @@ RETCODE SCIPconsCreate(
    return SCIP_OKAY;
 }
 
-/** frees constraint data of a constraint, leaving the constraint itself as a zombie constraint */
+/** frees constraint data of a constraint, leaving the constraint itself as a zombie constraint; marks the constraint
+ *  as deleted
+ */
 RETCODE SCIPconsFreeData(
    CONS*            cons,               /**< constraint to free */
    MEMHDR*          memhdr,             /**< block memory buffer */
@@ -2801,6 +2801,7 @@ RETCODE SCIPconsFreeData(
       }
       assert(cons->consdata == NULL);
    }
+   cons->deleted = TRUE;
 
    return SCIP_OKAY;
 }
@@ -2926,7 +2927,7 @@ RETCODE SCIPconsTransform(
    assert(memhdr != NULL);
    assert(origcons != NULL);
    assert(origcons->conshdlr != NULL);
-   assert(!origcons->local);
+   assert(origcons->original);
 
    if( origcons->conshdlr->constrans != NULL )
    {
@@ -2938,7 +2939,7 @@ RETCODE SCIPconsTransform(
       /* create new constraint with empty constraint data */
       CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL, origcons->initial,
                      origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
-                     origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
+                     origcons->modifiable, origcons->removeable, FALSE) );
    }
    assert(*transcons != NULL);
 
@@ -3305,14 +3306,24 @@ Bool SCIPconsIsPropagated(
    return cons->propagate;
 }
 
-/** returns TRUE iff constraint is only locally valid */
+/** returns TRUE iff constraint is globally valid */
+Bool SCIPconsIsGlobal(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->global;
+}
+
+/** returns TRUE iff constraint is only locally valid or not added to any (sub)problem */
 Bool SCIPconsIsLocal(
    CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
-   return cons->local;
+   return !cons->global;
 }
 
 /** returns TRUE iff constraint is modifiable (subject to column generation) */
@@ -3335,7 +3346,7 @@ Bool SCIPconsIsRemoveable(
    return cons->removeable;
 }
 
-/** returns TRUE iff constraint is belonging to original problem */
+/** returns TRUE iff constraint is belonging to original space */
 Bool SCIPconsIsOriginal(
    CONS*            cons                /**< constraint */
    )
@@ -3343,6 +3354,16 @@ Bool SCIPconsIsOriginal(
    assert(cons != NULL);
 
    return cons->original;
+}
+
+/** returns TRUE iff constraint is belonging to transformed space */
+Bool SCIPconsIsTransformed(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return !cons->original;
 }
 
 #endif
