@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.12 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.13 2004/11/17 12:46:02 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -124,8 +124,8 @@ RETCODE branch(
          c = c % npseudocands;
          assert(pseudocands[c] != NULL);
 
-         /* we can only apply strong branching on COLUMN variables */
-         if( SCIPvarGetStatus(pseudocands[c]) != SCIP_VARSTATUS_COLUMN )
+         /* we can only apply strong branching on COLUMN variables that are in the current LP */
+         if( !SCIPvarIsInLP(pseudocands[c]) )
             continue;
 
          solval = SCIPvarGetLPSol(pseudocands[c]);
