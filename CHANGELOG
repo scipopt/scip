@@ -54,7 +54,7 @@ current SCIP version
 ====================
 
 installation:
-- the file names in the archive file are now preceeded with a directory "scip<version>/"
+- the file names in the archive file are now preceeded with a directory "scip-<version>/"
 - the compiler is now also represented in the LP solver library names
   (e.g. you have to rename the softlink "libcplex.linux.x86.a" to "libcplex.linux.x86.gnu.a")
 
