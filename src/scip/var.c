@@ -2065,6 +2065,19 @@ Real SCIPvarGetBestBound(
       return var->dom.ub;
 }
 
+/** gets type (lower or upper) of best bound of variable with respect to the objective function */
+BOUNDTYPE SCIPvarGetBestBoundType(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return SCIP_BOUNDTYPE_LOWER;
+   else
+      return SCIP_BOUNDTYPE_UPPER;
+}
+
 /** gets primal LP solution value of variable */
 Real SCIPvarGetLPSol(
    VAR*             var                 /**< problem variable */

@@ -413,6 +413,8 @@ RETCODE pseudoBranch(
    
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* get pseudo branching candidates (the non-fixed binary/integer/implicit integer variables) */
    CHECK_OKAY( SCIPbranchcandGetPseudoCands(branchcand, set, prob, &pseudocands, &npseudocands) );
 
@@ -424,12 +426,8 @@ RETCODE pseudoBranch(
        */
       if( prob->ncont == 0 && !set->usepricing )
          *result = SCIP_CUTOFF;
-      else
-         *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
-
-   *result = SCIP_DIDNOTRUN;
 
    /* call external pseudo branching methods */
    todoMessage("external pseudo branching");
@@ -644,7 +642,7 @@ RETCODE enforceConstraints(
           *  -> we have no other possibility than solving the LP
           */
          assert(tree->nchildren == 0);
-         assert(prob->ncont > 0);
+         assert(prob->ncont > 0 || set->usepricing);
          assert(!tree->actnodehaslp);
                
          /* solve the LP in the next loop */

@@ -102,6 +102,9 @@ struct Col
    ROW**            rows;               /**< rows of column entries, that may have a nonzero dual solution value */
    Real*            vals;               /**< coefficients of column entries */
    int*             linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
+   Real             obj;                /**< current objective value of column in LP */
+   Real             lb;                 /**< current lower bound of column in LP */
+   Real             ub;                 /**< current upper bound of column in LP */
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    Real             farkas;             /**< value in dual farkas infeasibility proof */
@@ -120,6 +123,7 @@ struct Col
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    Longint          obsoletenode;       /**< last node where this column was removed due to aging */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
+   unsigned int     objchanged:1;       /**< TRUE iff objective value changed, and data of LP solver has to be updated */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
@@ -281,15 +285,31 @@ RETCODE SCIPcolIncCoeff(
    Real             incval              /**< value to add to the coefficient */
    );
 
-/** notifies LP, that the bounds of a column were changed */
+/** changes objective value of column */
 extern
-RETCODE SCIPcolBoundChanged(
-   COL*             col,                /**< LP column that changed */
+RETCODE SCIPcolChgObj(
+   COL*             col,                /**< LP column to change */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   Real             oldbound,           /**< old bound value */
-   Real             newbound            /**< new bound value */
+   Real             newobj              /**< new objective value */
+   );
+
+/** changes lower bound of column */
+extern
+RETCODE SCIPcolChgLb(
+   COL*             col,                /**< LP column to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newlb               /**< new lower bound value */
+   );
+
+/** changes upper bound of column */
+extern
+RETCODE SCIPcolChgUb(
+   COL*             col,                /**< LP column to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newub               /**< new upper bound value */
    );
 
 /** gets variable this column represents */
@@ -307,6 +327,12 @@ int SCIPcolGetLPPos(
 /** returns TRUE iff column is member of actual LP */
 extern
 Bool SCIPcolIsInLP(
+   COL*             col                 /**< LP column */
+   );
+
+/** gets best bound of column with respect to the objective function */
+extern
+Real SCIPcolGetBestBound(
    COL*             col                 /**< LP column */
    );
 

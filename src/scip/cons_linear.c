@@ -619,7 +619,7 @@ void linconsUpdateChgLb(
       assert(!SCIPisInfinity(scip, oldlb));
       assert(!SCIPisInfinity(scip, newlb));
 
-      if( SCIPvarGetObj(var) > 0.0 )
+      if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
          lincons->pseudoactivity += val * (newlb - oldlb);
 
       if( val > 0.0 )
@@ -677,7 +677,7 @@ void linconsUpdateChgUb(
       assert(!SCIPisInfinity(scip, -oldub));
       assert(!SCIPisInfinity(scip, -newub));
 
-      if( SCIPvarGetObj(var) < 0.0 )
+      if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
          lincons->pseudoactivity += val * (newub - oldub);
 
       if( val > 0.0 )
@@ -777,6 +777,8 @@ Real linconsGetPseudoActivity(
    assert(lincons->pseudoactivity < SCIP_INVALID);
    assert(lincons->minactivity < SCIP_INVALID);
    assert(lincons->maxactivity < SCIP_INVALID);
+
+   debugMessage("pseudo activity of linear constraint <%s>: %g\n", lincons->name, lincons->pseudoactivity);
 
    return lincons->pseudoactivity;
 }
@@ -979,6 +981,8 @@ Real linconsGetActivity(
          solval = SCIPgetSolVal(scip, sol, lincons->vars[v]);
          activity += lincons->vals[v] * solval;
       }
+
+      debugMessage("activity of linear constraint <%s>: %g\n", lincons->name, activity);
    }
 
    return activity;
@@ -1381,9 +1385,11 @@ RETCODE check(
    assert(cons != NULL);
    assert(violated != NULL);
 
-   /*debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));*/
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
+   debug(linconsPrint(consdata->lincons, NULL));
 
    *violated = FALSE;
 
@@ -1400,7 +1406,10 @@ RETCODE check(
    else
       feasibility = linconsGetFeasibility(scip, consdata->lincons, sol);
    
-   /*debugMessage("  lincons feasibility = %g\n", feasibility);*/
+   debugMessage("  lincons feasibility = %g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowisinlp=%d, sol=%p, hasactnodelp=%d)\n",
+      feasibility, consdata->lincons->lhs, consdata->lincons->rhs, 
+      row, checklprows, row == NULL ? -1 : SCIProwIsInLP(row), sol, SCIPhasActnodeLP(scip));
+
    if( SCIPisFeasible(scip, feasibility) )
    {
       *violated = FALSE;

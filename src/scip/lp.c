@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lp.c
- * @brief  LP management and variable's domains datastructures and methods
+ * @brief  LP management datastructures and methods
  * @author Tobias Achterberg
  */
 
@@ -1094,6 +1094,9 @@ RETCODE SCIPcolCreate(
    }
 
    (*col)->var = var;
+   (*col)->obj = var->obj;
+   (*col)->lb = var->dom.lb;
+   (*col)->ub = var->dom.ub;
    (*col)->index = stat->ncolidx++;
    (*col)->size = len;
    (*col)->len = len;
@@ -1112,6 +1115,7 @@ RETCODE SCIPcolCreate(
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
    (*col)->sorted = TRUE;
+   (*col)->objchanged = FALSE;
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
@@ -1344,28 +1348,70 @@ RETCODE SCIPcolIncCoeff(
    return SCIP_OKAY;
 }
 
-/** notifies LP, that the bounds of a column were changed */
-RETCODE SCIPcolBoundChanged(
-   COL*             col,                /**< LP column that changed */
+/** changes objective value of column */
+RETCODE SCIPcolChgObj(
+   COL*             col,                /**< LP column to change */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   Real             oldbound,           /**< old bound value */
-   Real             newbound            /**< new bound value */
+   Real             newobj              /**< new objective value */
    )
 {
-   int r;
-
    assert(col != NULL);
    assert(col->var != NULL);
    assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(col->var->data.col == col);
    assert(lp != NULL);
    
-   if( col->lpipos >= 0 )
+   debugMessage("changing objective value of <%s> from %g to %g\n", col->var->name, col->obj, newobj);
+
+   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->obj, newobj) )
    {
       /* insert column in the chgcols list (if not already there) */
-      if( !col->lbchanged && !col->ubchanged )
+      if( !col->objchanged && !col->lbchanged && !col->ubchanged )
+      {
+         CHECK_OKAY( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
+         lp->chgcols[lp->nchgcols] = col;
+         lp->nchgcols++;
+      }
+      
+      /* mark objective value change in the column */
+      col->objchanged = TRUE;
+      
+      /* invalidate LP solution */
+      lp->flushed = FALSE;
+      lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
+      lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+
+      assert(lp->nchgcols > 0);
+   }  
+
+   col->obj = newobj;
+
+   return SCIP_OKAY;
+}
+
+/** changes lower bound of column */
+RETCODE SCIPcolChgLb(
+   COL*             col,                /**< LP column to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newlb               /**< new lower bound value */
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(col->var->data.col == col);
+   assert(lp != NULL);
+   
+   debugMessage("changing lower bound of <%s> from %g to %g\n", col->var->name, col->lb, newlb);
+
+   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
+   {
+      /* insert column in the chgcols list (if not already there) */
+      if( !col->objchanged && !col->lbchanged && !col->ubchanged )
       {
          CHECK_OKAY( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
          lp->chgcols[lp->nchgcols] = col;
@@ -1373,19 +1419,9 @@ RETCODE SCIPcolBoundChanged(
       }
       
       /* mark bound change in the column */
-      switch( boundtype )
-      {
-      case SCIP_BOUNDTYPE_LOWER:
-         col->lbchanged = TRUE;
-         break;
-      case SCIP_BOUNDTYPE_UPPER:
-         col->ubchanged = TRUE;
-         break;
-      default:
-         errorMessage("Unknown bound type");
-         return SCIP_INVALIDDATA;
-      }
+      col->lbchanged = TRUE;
       
+      /* invalidate LP solution */
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
@@ -1395,7 +1431,66 @@ RETCODE SCIPcolBoundChanged(
       assert(lp->nchgcols > 0);
    }  
 
+   col->lb = newlb;
+
    return SCIP_OKAY;
+}
+
+/** changes upper bound of column */
+RETCODE SCIPcolChgUb(
+   COL*             col,                /**< LP column to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newub               /**< new upper bound value */
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(col->var->data.col == col);
+   assert(lp != NULL);
+   
+   debugMessage("changing upper bound of <%s> from %g to %g\n", col->var->name, col->ub, newub);
+
+   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
+   {
+      /* insert column in the chgcols list (if not already there) */
+      if( !col->objchanged && !col->lbchanged && !col->ubchanged )
+      {
+         CHECK_OKAY( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
+         lp->chgcols[lp->nchgcols] = col;
+         lp->nchgcols++;
+      }
+      
+      /* mark bound change in the column */
+      col->ubchanged = TRUE;
+      
+      /* invalidate LP solution */
+      lp->flushed = FALSE;
+      lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
+      lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+
+      assert(lp->nchgcols > 0);
+   }  
+
+   col->ub = newub;
+
+   return SCIP_OKAY;
+}
+
+/** gets best bound of column with respect to the objective function */
+Real SCIPcolGetBestBound(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   if( col->obj >= 0.0 )
+      return col->lb;
+   else
+      return col->ub;
 }
 
 /** gets the primal LP solution of a column */
@@ -1424,7 +1519,7 @@ void colCalcRedcost(
    assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(col->var->data.col == col);
 
-   col->redcost = col->var->obj;
+   col->redcost = col->obj;
    for( r = 0; r < col->len; ++r )
    {
       row = col->rows[r];
@@ -1459,11 +1554,10 @@ Real SCIPcolGetFeasibility(
    Real redcost;
 
    assert(col != NULL);
-   assert(col->var != NULL);
 
    redcost = SCIPcolGetRedcost(col, stat);
 
-   if( col->var->dom.lb < 0 )
+   if( col->lb < 0.0 )
       return -ABS(redcost);
    else
       return redcost;
@@ -1490,9 +1584,9 @@ void colCalcFarkas(
       col->farkas += col->vals[r] * row->dualfarkas;
    }
    if( col->farkas > 0.0 )
-      col->farkas *= col->var->dom.ub;
+      col->farkas *= col->ub;
    else
-      col->farkas *= col->var->dom.lb;
+      col->farkas *= col->lb;
 }
 
 /** gets the farkas value of a column in last LP (which must be infeasible) */
@@ -1525,6 +1619,7 @@ RETCODE SCIPcolGetStrongbranch(
 {
    assert(col != NULL);
    assert(col->var != NULL);
+   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(col->var->data.col == col);
    assert(col->primsol < SCIP_INVALID);
    assert(col->lpipos >= 0);
@@ -1633,7 +1728,7 @@ void SCIPcolPrint(
       file = stdout;
 
    /* print bounds */
-   fprintf(file, "[%f,%f], ", col->var->dom.lb, col->var->dom.ub);
+   fprintf(file, "[%f,%f], ", col->lb, col->ub);
 
    /* print coefficients */
    if( col->len == 0 )
@@ -2287,7 +2382,7 @@ void rowCalcPseudoActivity(
       assert(row->cols[i]->var != NULL);
       assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
 
-      row->pseudoactivity += SCIPvarGetBestBound(row->cols[i]->var) * row->vals[i];
+      row->pseudoactivity += SCIPcolGetBestBound(row->cols[i]) * row->vals[i];
    }
 }
 
@@ -2380,7 +2475,7 @@ void rowCalcActivityBounds(
    const SET*       set                 /**< global SCIP settings */
    )
 {
-   VAR* var;
+   COL* col;
    Real val;
    Bool mininfinite;
    Bool maxinfinite;
@@ -2396,27 +2491,26 @@ void rowCalcActivityBounds(
    row->maxactivity = row->constant;
    for( i = 0; i < row->len && (!mininfinite || !maxinfinite); ++i )
    {
-      assert(row->cols[i] != NULL);
-      var = row->cols[i]->var;
-      assert(var != NULL);
+      col = row->cols[i];
+      assert(col != NULL);
       val = row->vals[i];
       if( val >= 0.0 )
       {
-         mininfinite |= SCIPsetIsInfinity(set, -var->dom.lb);
-         maxinfinite |= SCIPsetIsInfinity(set, var->dom.ub);
+         mininfinite |= SCIPsetIsInfinity(set, -col->lb);
+         maxinfinite |= SCIPsetIsInfinity(set, col->ub);
          if( !mininfinite )
-            row->minactivity += val * row->cols[i]->var->dom.lb;
+            row->minactivity += val * col->lb;
          if( !maxinfinite )
-            row->maxactivity += val * row->cols[i]->var->dom.ub;
+            row->maxactivity += val * col->ub;
       }
       else
       {
-         mininfinite |= SCIPsetIsInfinity(set, var->dom.ub);
-         maxinfinite |= SCIPsetIsInfinity(set, -var->dom.lb);
+         mininfinite |= SCIPsetIsInfinity(set, col->ub);
+         maxinfinite |= SCIPsetIsInfinity(set, -col->lb);
          if( !mininfinite )
-            row->minactivity += val * row->cols[i]->var->dom.ub;
+            row->minactivity += val * col->ub;
          if( !maxinfinite )
-            row->maxactivity += val * row->cols[i]->var->dom.lb;
+            row->maxactivity += val * col->lb;
       }
    }
 
@@ -2763,7 +2857,6 @@ RETCODE lpFlushAddCols(
    Real* val;
    char** name;
    COL* col;
-   const VAR* var;
    Real infinity;
    int c;
    int pos;
@@ -2826,11 +2919,6 @@ RETCODE lpFlushAddCols(
        */
       CHECK_OKAY( colLink(col, memhdr, set, lp) );
 
-      var = col->var;
-      assert(var != NULL);
-      assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
-      assert(var->data.col == col);
-
       lp->lpicols[c] = col;
       col->lpipos = c;
       col->primsol = SCIP_INVALID;
@@ -2841,20 +2929,21 @@ RETCODE lpFlushAddCols(
       col->validredcostlp = -1;
       col->validfarkaslp = -1;
       col->strongitlim = -1;
+      col->objchanged = FALSE;
       col->lbchanged = FALSE;
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
-      obj[pos] = var->obj;
-      if( SCIPsetIsInfinity(set, -var->dom.lb) )
+      obj[pos] = col->obj;
+      if( SCIPsetIsInfinity(set, -col->lb) )
          lb[pos] = -infinity;
       else
-         lb[pos] = var->dom.lb;
-      if( SCIPsetIsInfinity(set, var->dom.ub) )
+         lb[pos] = col->lb;
+      if( SCIPsetIsInfinity(set, col->ub) )
          ub[pos] = infinity;
       else
-         ub[pos] = var->dom.ub;
+         ub[pos] = col->ub;
       beg[pos] = nnonz;
-      name[pos] = var->name;
+      name[pos] = col->var->name;
 
       for( i = 0; i < col->len; ++i )
       {
@@ -3074,13 +3163,15 @@ RETCODE lpFlushChgCols(
    )
 {
    COL* col;
-   const VAR* var;
-   int* ind;
+   int* objind;
+   int* bdind;
+   Real* obj;
    Real* lb;
    Real* ub;
    Real infinity;
+   int nobjchg;
+   int nbdchg;
    int i;
-   int nchg;
 
    assert(lp != NULL);
    assert(memhdr != NULL);
@@ -3092,48 +3183,64 @@ RETCODE lpFlushChgCols(
    infinity = SCIPlpiInfinity(lp->lpi);
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, lp->ncols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &objind, lp->ncols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &obj, lp->ncols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &bdind, lp->ncols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lb, lp->ncols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ub, lp->ncols) );
 
-   /* collect all cached bound changes */
-   nchg = 0;
+   /* collect all cached bound and objective changes */
+   nobjchg = 0;
+   nbdchg = 0;
    for( i = 0; i < lp->nchgcols; ++i )
    {
       col = lp->chgcols[i];
       assert(col != NULL);
-
-      var = col->var;
-      assert(var != NULL);
-      assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
-      assert(var->data.col == col);
+      assert(col->var != NULL);
+      assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(col->var->data.col == col);
 
       if( col->lpipos >= 0 )
       {
+         if( col->objchanged )
+         {
+            assert(nobjchg < lp->ncols);
+            objind[nobjchg] = col->lpipos;
+            obj[nobjchg] = col->obj;
+            nobjchg++;
+            col->objchanged = FALSE;
+         }
          if( col->lbchanged || col->ubchanged )
          {
-            assert(nchg < lp->ncols);
-            ind[nchg] = col->lpipos;
-            if( SCIPsetIsInfinity(set, -var->dom.lb) )
-               lb[nchg] = -infinity;
+            assert(nbdchg < lp->ncols);
+            bdind[nbdchg] = col->lpipos;
+            if( SCIPsetIsInfinity(set, -col->lb) )
+               lb[nbdchg] = -infinity;
             else
-               lb[nchg] = var->dom.lb;
-            if( SCIPsetIsInfinity(set, var->dom.ub) )
-               ub[nchg] = infinity;
+               lb[nbdchg] = col->lb;
+            if( SCIPsetIsInfinity(set, col->ub) )
+               ub[nbdchg] = infinity;
             else
-               ub[nchg] = var->dom.ub;
-            nchg++;
+               ub[nbdchg] = col->ub;
+            nbdchg++;
             col->lbchanged = FALSE;
             col->ubchanged = FALSE;
          }
       }
    }
 
-   /* change sides in LP */
-   if( nchg > 0 )
+   /* change objective values in LP */
+   if( nobjchg > 0 )
    {
-      debugMessage("flushing bound changes: change %d bounds of %d columns\n", nchg, lp->nchgcols);
-      CHECK_OKAY( SCIPlpiChgBounds(lp->lpi, nchg, ind, lb, ub) );
+      debugMessage("flushing bound changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
+      CHECK_OKAY( SCIPlpiChgObj(lp->lpi, nobjchg, objind, obj) );
+   }
+
+   /* change bounds in LP */
+   if( nbdchg > 0 )
+   {
+      debugMessage("flushing bound changes: change %d bounds of %d changed columns\n", nbdchg, lp->nchgcols);
+      CHECK_OKAY( SCIPlpiChgBounds(lp->lpi, nbdchg, bdind, lb, ub) );
    }
 
    lp->nchgcols = 0;
@@ -3141,7 +3248,9 @@ RETCODE lpFlushChgCols(
    /* free temporary memory */
    SCIPsetReleaseBufferArray(set, &ub);
    SCIPsetReleaseBufferArray(set, &lb);
-   SCIPsetReleaseBufferArray(set, &ind);
+   SCIPsetReleaseBufferArray(set, &bdind);
+   SCIPsetReleaseBufferArray(set, &obj);
+   SCIPsetReleaseBufferArray(set, &objind);
 
    return SCIP_OKAY;
 }
@@ -3232,8 +3341,9 @@ RETCODE lpFlush(
    assert(lp != NULL);
    assert(memhdr != NULL);
    
-   debugMessage("flushing LP changes: old (%d cols, %d rows), chgcol=%d, chgrow=%d, new (%d cols, %d rows)\n",
-      lp->nlpicols, lp->nlpirows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows);
+   debugMessage("flushing LP changes: old (%d cols, %d rows), chgcol=%d, chgrow=%d, new (%d cols, %d rows), flushed=%d\n",
+      lp->nlpicols, lp->nlpirows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows, lp->flushed);
+
    if( lp->flushed )
    {
       assert(lp->nlpicols == lp->ncols);
@@ -3909,7 +4019,7 @@ RETCODE SCIPlpGetUnboundedSol(
    {
       assert(lp->lpicols[c] != NULL);
       assert(lp->lpicols[c]->var != NULL);
-      rayobjval += ray[c] * lp->lpicols[c]->var->obj;
+      rayobjval += ray[c] * lp->lpicols[c]->obj;
    }
    assert(SCIPsetIsNegative(set, rayobjval));
 
@@ -4108,7 +4218,6 @@ RETCODE lpDelColset(
       assert(lp->flushed == TRUE);
       lp->lpifirstchgcol = lp->nlpicols;
       lp->solved = FALSE;
-      lp->dualfeasible = FALSE;
       lp->primalfeasible = FALSE;
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -4177,7 +4286,6 @@ RETCODE lpDelRowset(
       lp->lpifirstchgrow = lp->nlpirows;
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
-      lp->primalfeasible = FALSE;
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -4227,13 +4335,13 @@ RETCODE lpRemoveObsoleteCols(
       if( cols[c]->removeable
          && cols[c]->obsoletenode != stat->nnodes /* don't remove a column a second time from same node (avoid cycling) */
          && cols[c]->age > set->colagelimit
-         && SCIPsetIsZero(set, SCIPvarGetBestBound(cols[c]->var)) ) /* bestbd != 0 -> column would be priced in next time */
+         && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
          ndelcols++;
          cols[c]->obsoletenode = stat->nnodes;
          debugMessage("removing obsolete col <%s>: primsol=%f, bounds=[%g,%g]\n", 
-            cols[c]->var->name, cols[c]->primsol, cols[c]->var->dom.lb, cols[c]->var->dom.ub);
+            cols[c]->var->name, cols[c]->primsol, cols[c]->lb, cols[c]->ub);
       }
    }
 
@@ -4408,7 +4516,7 @@ RETCODE lpCleanupCols(
       assert(cols[c]->lpipos == c);
       if( lpicols[c]->removeable
          && SCIPsetIsZero(set, lpicols[c]->primsol)
-         && SCIPsetIsZero(set, SCIPvarGetBestBound(cols[c]->var)) ) /* bestbd != 0 -> column would be priced in next time */
+         && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
          ndelcols++;
@@ -4502,6 +4610,9 @@ RETCODE SCIPlpCleanupNew(
    assert(lp->solved);
    assert(set != NULL);
 
+   debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d)\n",
+      lp->firstnewcol, lp->ncols, set->cleanupcols, lp->firstnewrow, lp->nrows, set->cleanuprows);
+
    if( set->cleanupcols && set->usepricing && lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, memhdr, set, lp->firstnewcol) );
@@ -4524,6 +4635,8 @@ RETCODE SCIPlpCleanupAll(
    assert(lp != NULL);
    assert(lp->solved);
    assert(set != NULL);
+
+   debugMessage("removing all unused columns and rows\n");
 
    if( /*set->cleanupcols &&*/ set->usepricing && 0 < lp->ncols )
    {

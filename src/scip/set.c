@@ -58,7 +58,7 @@
 
 /* LP Solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ         4 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ         1/*4*/ /**< frequency for solving LP at the nodes */
 #define SCIP_DEFAULT_LPSOLVEDEPTH  INT_MAX /**< maximal depth for solving LPs */
 #define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a column can reach before it is deleted from the LP */
 #define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a row can reach before it is deleted from the LP */

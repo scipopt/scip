@@ -554,8 +554,11 @@ RETCODE SCIPeventProcess(
       {
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
+            CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, event->data.eventbdchg.newbound) );
+#if 0
             CHECK_OKAY( SCIPcolBoundChanged(var->data.col, set, lp, SCIP_BOUNDTYPE_LOWER,
                            event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
+#endif
          }
          CHECK_OKAY( SCIPtreeBoundChanged(tree, set, var, SCIP_BOUNDTYPE_LOWER,
                         event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
@@ -577,8 +580,11 @@ RETCODE SCIPeventProcess(
       {
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
+            CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, event->data.eventbdchg.newbound) );
+#if 0
             CHECK_OKAY( SCIPcolBoundChanged(var->data.col, set, lp, SCIP_BOUNDTYPE_UPPER,
                            event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
+#endif
          }
          CHECK_OKAY( SCIPtreeBoundChanged(tree, set, var, SCIP_BOUNDTYPE_UPPER,
                         event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
