@@ -1,5 +1,21 @@
 #!/bin/sh
-# $Id: check_cplex.sh,v 1.6 2004/11/02 17:21:47 bzfpfend Exp $
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#*                                                                           *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2005 Tobias Achterberg                              *
+#*                                                                           *
+#*                  2002-2005 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the SCIP Academic Licence.        *
+#*                                                                           *
+#*  You should have received a copy of the SCIP Academic License             *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*                                                                           *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# $Id: check_cplex.sh,v 1.7 2005/01/18 09:26:40 bzfpfend Exp $
 CPLEXBIN=cplex
 TSTNAME=$1
 BINNAME=$CPLEXBIN.$2

@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2004 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2004 Konrad-Zuse-Zentrum                            */
+/*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.20 2004/07/13 15:03:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.21 2005/01/18 09:26:53 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader

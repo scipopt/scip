@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2004 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2004 Konrad-Zuse-Zentrum                            */
+/*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_event.h,v 1.3 2004/04/29 15:20:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_event.h,v 1.4 2005/01/18 09:26:52 bzfpfend Exp $"
 
 /**@file   pub_event.h
  * @brief  public methods for managing events

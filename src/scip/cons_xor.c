@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (c) 2002-2004 Tobias Achterberg                              */
+/*    Copyright (c) 2002-2005 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2004 Konrad-Zuse-Zentrum                            */
+/*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.19 2005/01/17 12:45:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.20 2005/01/18 09:26:44 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints

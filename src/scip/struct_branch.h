@@ -3,8 +3,8 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2004 Tobias Achterberg                              */
-/*                  2002-2004 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
+/*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.11 2004/12/14 12:35:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.12 2005/01/18 09:26:55 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
