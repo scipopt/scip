@@ -114,9 +114,19 @@ RETCODE validateArith(
    }
 
    /* check if the operand and resultant constraints are already added to the problem */
-   if( !SCIPconsIsInProb(operand1) || !SCIPconsIsInProb(operand2) || !SCIPconsIsInProb(resultant) )
+   if( !SCIPconsIsInProb(operand1) && !SCIPisConstBitvar(operand1) )
    {
-      errorMessage("operands and resultant of bitarith constraint must have been added to the problem");
+      errorMessage("first operand of bitarith constraint must either be constant or been added to the problem");
+      return SCIP_INVALIDDATA;
+   }
+   if( !SCIPconsIsInProb(operand2) && !SCIPisConstBitvar(operand2) )
+   {
+      errorMessage("second operand of bitarith constraint must either be constant or been added to the problem");
+      return SCIP_INVALIDDATA;
+   }
+   if( !SCIPconsIsInProb(resultant) && !SCIPisConstBitvar(resultant) )
+   {
+      errorMessage("resultant of bitarith constraint must either be constant or been added to the problem");
       return SCIP_INVALIDDATA;
    }
 
@@ -567,7 +577,7 @@ RETCODE checkAddWord(
    if( violation != NULL )
       *violation = ABS(sum);
    *violated = !SCIPisFeasZero(scip, sum);
-   
+
    return SCIP_OKAY;
 }
 

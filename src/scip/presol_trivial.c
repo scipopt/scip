@@ -15,7 +15,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define DEBUG
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
  * @author Tobias Achterberg
@@ -61,10 +60,6 @@ DECL_PRESOLEXEC(presolExecTrivial)
    Real ub;
    Bool infeasible;
    int nvars;
-   int nbin;
-   int nint;
-   int nimpl;
-   int ncont;
    int v;
 
    assert(result != NULL);
@@ -72,7 +67,8 @@ DECL_PRESOLEXEC(presolExecTrivial)
    *result = SCIP_DIDNOTFIND;
 
    /* get the problem variables */
-   CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, &nimpl, &ncont) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    /* scan the variables for trivial bound reductions
     * loop backwards, since a variable fixing can change the actual and the subsequent slots in the vars array
@@ -84,12 +80,10 @@ DECL_PRESOLEXEC(presolExecTrivial)
       ub = SCIPvarGetUbGlobal(vars[v]);
 
       /* is variable integral? */
-      if( v < nbin + nint + nimpl )
+      if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINOUS )
       {
          Real newlb;
          Real newub;
-
-         assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINOUS);
          
          /* round fractional bounds on integer variables */
          newlb = SCIPceil(scip, lb);
@@ -137,8 +131,6 @@ DECL_PRESOLEXEC(presolExecTrivial)
       }
       else
       {
-         assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINOUS);
-         
          /* check bounds on continous variable for infeasibility */
          if( SCIPisFeasGT(scip, lb, ub) )
          {

@@ -140,4 +140,10 @@ int SCIPgetWordPowerBitvar(
    int              word                /**< word number */
    );
 
+/** returns whether the bitvar was created as a constant */
+extern
+Bool SCIPisConstBitvar(
+   CONS*            cons                /**< bitvar constraint */
+   );
+
 #endif

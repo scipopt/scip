@@ -15,7 +15,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define DEBUG
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
  * @author Tobias Achterberg
