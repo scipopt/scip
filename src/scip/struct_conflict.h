@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.2 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -65,16 +65,11 @@ struct Conflict
 /** conflict analysis data structure for infeasible LP conflicts */
 struct LPConflict
 {
-   /* ????? MARC: hier kannst Du Deine "permanent" gehaltenen Daten unterbringen, z.B. wie das folgende;
-    *             beachte, dass Du das in SCIPlpconflictCreate() und SCIPlpconflictFree() initialisierst bzw. freigibst
-    */
    CLOCK*           analyzetime;        /**< time used for infeasible LP conflict analysis */
    LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
-   VAR**            conflictvars;       /**< variables resembling the conflict clause */
-   int              conflictvarssize;   /**< size of conflictvars array */
-   int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
    Longint          ncalls;             /**< number of calls to infeasible LP conflict analysis */
    Longint          nconflicts;         /**< number of valid conflicts detected in infeasible LP conflict analysis */
+   Longint          nlpiterations;      /**< total number of iterations used for solving alternative LPs */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.80 2004/01/15 14:33:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.81 2004/01/16 11:25:03 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1264,7 +1264,7 @@ RETCODE consdataTightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisSumLT(scip, newub, lb) )
+            if( SCIPisFeasLT(scip, newub, lb) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, newub);
                *result = SCIP_CUTOFF;
@@ -1290,7 +1290,7 @@ RETCODE consdataTightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisSumGT(scip, newlb, ub) )
+            if( SCIPisFeasGT(scip, newlb, ub) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), newlb, ub);
                *result = SCIP_CUTOFF;
@@ -1320,7 +1320,7 @@ RETCODE consdataTightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisSumGT(scip, newlb, ub) )
+            if( SCIPisFeasGT(scip, newlb, ub) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), newlb, ub);
                *result = SCIP_CUTOFF;
@@ -1346,7 +1346,7 @@ RETCODE consdataTightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisSumLT(scip, newub, lb) )
+            if( SCIPisFeasLT(scip, newub, lb) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, newub);
                *result = SCIP_CUTOFF;
@@ -2758,7 +2758,7 @@ DECL_CONSPROP(consPropLinear)
          /* check constraint for infeasibility and redundancy */
          consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
          
-         if( SCIPisGT(scip, minactivity, consdata->rhs) || SCIPisLT(scip, maxactivity, consdata->lhs) )
+         if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
          {
             debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
@@ -3962,7 +3962,7 @@ RETCODE preprocessConstraintPairs(
          debug(consdataPrint(scip, consdata0, NULL));
          debug(consdataPrint(scip, consdata1, NULL));
          /* check for infeasibility */
-         if( SCIPisGT(scip, consdata1->lhs, consdata0->rhs) )
+         if( SCIPisFeasGT(scip, consdata1->lhs, consdata0->rhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
             *result = SCIP_CUTOFF;
@@ -3982,7 +3982,7 @@ RETCODE preprocessConstraintPairs(
          debug(consdataPrint(scip, consdata1, NULL));
          debug(consdataPrint(scip, consdata0, NULL));
          /* check for infeasibility */
-         if( SCIPisGT(scip, consdata0->lhs, consdata1->rhs) )
+         if( SCIPisFeasGT(scip, consdata0->lhs, consdata1->rhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
             *result = SCIP_CUTOFF;
@@ -4002,7 +4002,7 @@ RETCODE preprocessConstraintPairs(
          debug(consdataPrint(scip, consdata0, NULL));
          debug(consdataPrint(scip, consdata1, NULL));
          /* check for infeasibility */
-         if( SCIPisLT(scip, consdata1->rhs, consdata0->lhs) )
+         if( SCIPisFeasLT(scip, consdata1->rhs, consdata0->lhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
             *result = SCIP_CUTOFF;
@@ -4022,7 +4022,7 @@ RETCODE preprocessConstraintPairs(
          debug(consdataPrint(scip, consdata1, NULL));
          debug(consdataPrint(scip, consdata0, NULL));
          /* check for infeasibility */
-         if( SCIPisLT(scip, consdata0->rhs, consdata1->lhs) )
+         if( SCIPisFeasLT(scip, consdata0->rhs, consdata1->lhs) )
          {
             debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
             *result = SCIP_CUTOFF;
@@ -4194,7 +4194,7 @@ DECL_CONSPRESOL(consPresolLinear)
       /* check, if constraint is empty */
       if( consdata->nvars == 0 )
       {
-         if( SCIPisPositive(scip, consdata->lhs) || SCIPisNegative(scip, consdata->rhs) )
+         if( SCIPisFeasPositive(scip, consdata->lhs) || SCIPisFeasNegative(scip, consdata->rhs) )
          {
             debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
                SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
@@ -4217,7 +4217,7 @@ DECL_CONSPRESOL(consPresolLinear)
       CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
 
       /* check bounds */
-      if( SCIPisGT(scip, consdata->lhs, consdata->rhs) )
+      if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
       {
          debugMessage("linear constraint <%s> is infeasible: sides=[%g,%g]\n",
             SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
@@ -4237,7 +4237,7 @@ DECL_CONSPRESOL(consPresolLinear)
 
       /* check constraint for infeasibility and redundancy */
       consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-      if( SCIPisGT(scip, minactivity, consdata->rhs) || SCIPisLT(scip, maxactivity, consdata->lhs) )
+      if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
       {
          debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
             SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
@@ -4450,7 +4450,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
    assert(conflictvars != NULL || nconflictvars == 0);
    assert(result != NULL);
 
-   /* don't already resolved conflicts */
+   /* don't process already resolved conflicts */
    if( resolved )
    {
       *result = SCIP_DIDNOTRUN;
@@ -4463,7 +4463,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
       vals[v] = 1.0;
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%d", SCIPgetNConss(scip));
+   sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
                   FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.29 2004/01/15 12:09:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.30 2004/01/16 11:25:03 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2491,7 +2491,7 @@ DECL_CONFLICTEXEC(conflictExecSetppc)
    assert(conflictvars != NULL || nconflictvars == 0);
    assert(result != NULL);
 
-   /* don't already resolved conflicts */
+   /* don't process already resolved conflicts */
    if( resolved )
    {
       *result = SCIP_DIDNOTRUN;
@@ -2499,7 +2499,7 @@ DECL_CONFLICTEXEC(conflictExecSetppc)
    }
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%d", SCIPgetNConss(scip));
+   sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
                   FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
    CHECK_OKAY( SCIPaddCons(scip, cons) );

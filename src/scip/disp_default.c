@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.33 2004/01/13 11:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.34 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -93,20 +93,28 @@
 #define DISP_POSI_MAXDEPTH      2100
 #define DISP_STRI_MAXDEPTH      TRUE
 
-#define DISP_NAME_ACTVARS       "actvars"
-#define DISP_DESC_ACTVARS       "number of variables in actual node"
-#define DISP_HEAD_ACTVARS       "vars"
-#define DISP_WIDT_ACTVARS       5
-#define DISP_PRIO_ACTVARS       120
-#define DISP_POSI_ACTVARS       3000
-#define DISP_STRI_ACTVARS       TRUE
+#define DISP_NAME_VARS          "vars"
+#define DISP_DESC_VARS          "number of variables in the problem"
+#define DISP_HEAD_VARS          "vars"
+#define DISP_WIDT_VARS          5
+#define DISP_PRIO_VARS          130
+#define DISP_POSI_VARS          3000
+#define DISP_STRI_VARS          TRUE
+
+#define DISP_NAME_CONSS         "conss"
+#define DISP_DESC_CONSS         "number of globally valid constraints in the problem"
+#define DISP_HEAD_CONSS         "cons"
+#define DISP_WIDT_CONSS         5
+#define DISP_PRIO_CONSS         140
+#define DISP_POSI_CONSS         3100
+#define DISP_STRI_CONSS         TRUE
 
 #define DISP_NAME_ACTCONSS      "actconss"
 #define DISP_DESC_ACTCONSS      "number of enabled constraints in actual node"
-#define DISP_HEAD_ACTCONSS      "cons"
+#define DISP_HEAD_ACTCONSS      "acons"
 #define DISP_WIDT_ACTCONSS      5
-#define DISP_PRIO_ACTCONSS      130
-#define DISP_POSI_ACTCONSS      3100
+#define DISP_PRIO_ACTCONSS      70
+#define DISP_POSI_ACTCONSS      3200
 #define DISP_STRI_ACTCONSS      TRUE
 
 #define DISP_NAME_ACTCOLS       "actcols"
@@ -114,7 +122,7 @@
 #define DISP_HEAD_ACTCOLS       "cols"
 #define DISP_WIDT_ACTCOLS       5
 #define DISP_PRIO_ACTCOLS       100
-#define DISP_POSI_ACTCOLS       3200
+#define DISP_POSI_ACTCOLS       3300
 #define DISP_STRI_ACTCOLS       TRUE
 
 #define DISP_NAME_ACTROWS       "actrows"
@@ -122,7 +130,7 @@
 #define DISP_HEAD_ACTROWS       "rows"
 #define DISP_WIDT_ACTROWS       5
 #define DISP_PRIO_ACTROWS       110
-#define DISP_POSI_ACTROWS       3300
+#define DISP_POSI_ACTROWS       3400
 #define DISP_STRI_ACTROWS       TRUE
 
 #define DISP_NAME_CUTS          "cuts"
@@ -130,7 +138,7 @@
 #define DISP_HEAD_CUTS          "cuts"
 #define DISP_WIDT_CUTS          5
 #define DISP_PRIO_CUTS          90
-#define DISP_POSI_CUTS          3400
+#define DISP_POSI_CUTS          3500
 #define DISP_STRI_CUTS          TRUE
 
 #define DISP_NAME_SEPAROUNDS    "separounds"
@@ -138,15 +146,15 @@
 #define DISP_HEAD_SEPAROUNDS    "sepa"
 #define DISP_WIDT_SEPAROUNDS    4
 #define DISP_PRIO_SEPAROUNDS    10
-#define DISP_POSI_SEPAROUNDS    3500
+#define DISP_POSI_SEPAROUNDS    3600
 #define DISP_STRI_SEPAROUNDS    TRUE
 
 #define DISP_NAME_POOLSIZE      "poolsize"
 #define DISP_DESC_POOLSIZE      "number of LP rows in the cut pool"
 #define DISP_HEAD_POOLSIZE      "pool"
 #define DISP_WIDT_POOLSIZE      5
-#define DISP_PRIO_POOLSIZE      70
-#define DISP_POSI_POOLSIZE      3600
+#define DISP_PRIO_POOLSIZE      60
+#define DISP_POSI_POOLSIZE      3700
 #define DISP_STRI_POOLSIZE      TRUE
 
 #define DISP_NAME_CONFLICTS     "conflicts"
@@ -319,13 +327,13 @@ DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
 }
 
 static
-DECL_DISPOUTPUT(SCIPdispOutputActvars)
+DECL_DISPOUTPUT(SCIPdispOutputVars)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTVARS) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_VARS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNVars(scip), DISP_WIDT_ACTVARS);
+   SCIPdispDecimal(file, (Longint)SCIPgetNVars(scip), DISP_WIDT_VARS);
 
    return SCIP_OKAY;
 }
@@ -338,6 +346,18 @@ DECL_DISPOUTPUT(SCIPdispOutputActconss)
    assert(scip != NULL);
 
    SCIPdispDecimal(file, (Longint)SCIPgetNEnabledConss(scip), DISP_WIDT_ACTCONSS);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_DISPOUTPUT(SCIPdispOutputConss)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONSS) == 0);
+   assert(scip != NULL);
+
+   SCIPdispDecimal(file, (Longint)SCIPgetNGlobalConss(scip), DISP_WIDT_CONSS);
 
    return SCIP_OKAY;
 }
@@ -537,9 +557,12 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MAXDEPTH, DISP_DESC_MAXDEPTH, DISP_HEAD_MAXDEPTH,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputMaxdepth, NULL, 
                   DISP_WIDT_MAXDEPTH, DISP_PRIO_MAXDEPTH, DISP_POSI_MAXDEPTH, DISP_STRI_MAXDEPTH) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTVARS, DISP_DESC_ACTVARS, DISP_HEAD_ACTVARS,
-                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActvars, NULL, 
-                  DISP_WIDT_ACTVARS, DISP_PRIO_ACTVARS, DISP_POSI_ACTVARS, DISP_STRI_ACTVARS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_VARS, DISP_DESC_VARS, DISP_HEAD_VARS,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputVars, NULL, 
+                  DISP_WIDT_VARS, DISP_PRIO_VARS, DISP_POSI_VARS, DISP_STRI_VARS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_CONSS, DISP_DESC_CONSS, DISP_HEAD_CONSS,
+                  SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputConss, NULL, 
+                  DISP_WIDT_CONSS, DISP_PRIO_CONSS, DISP_POSI_CONSS, DISP_STRI_CONSS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCONSS, DISP_DESC_ACTCONSS, DISP_HEAD_ACTCONSS,
                   SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, SCIPdispOutputActconss, NULL, 
                   DISP_WIDT_ACTCONSS, DISP_PRIO_ACTCONSS, DISP_POSI_ACTCONSS, DISP_STRI_ACTCONSS) );

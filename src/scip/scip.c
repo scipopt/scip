@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.119 2004/01/15 14:33:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.120 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2997,8 +2997,8 @@ RETCODE SCIPsolve(
 
       /* continue solution process */
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob, scip->tree, 
-                     scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->cutpool, scip->lpconflict,
-                     scip->primal, scip->eventfilter, scip->eventqueue) );
+                     scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->cutpool, 
+                     scip->conflict, scip->lpconflict, scip->primal, scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
       if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
@@ -6844,14 +6844,14 @@ int SCIPgetPlungeDepth(
 }
 
 /** gets total number of active constraints at the current node */
-int SCIPgetNConss(
+int SCIPgetNActiveConss(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    int nconss;
    int h;
 
-   CHECK_ABORT( checkStage(scip, "SCIPgetNConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    nconss = 0;
    for( h = 0; h < scip->set->nconshdlrs; ++h )
@@ -6875,6 +6875,30 @@ int SCIPgetNEnabledConss(
       nenabledconss += SCIPconshdlrGetNEnabledConss(scip->set->conshdlrs[h]);
 
    return nenabledconss;
+}
+
+/** gets total number of globally valid constraints currently in the problem */
+int SCIPgetNGlobalConss(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNGlobalConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return scip->origprob->nconss;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      return scip->transprob->nconss;
+
+   default:
+      errorMessage("Unknown SCIP stage\n");
+      abort();
+   }
 }
 
 /** gets average dual bound of all unprocessed nodes */
@@ -7210,10 +7234,11 @@ void printConflictStatistics(
       SCIPconflictGetTime(scip->conflict),
       SCIPconflictGetNCalls(scip->conflict),
       SCIPconflictGetNConflicts(scip->conflict));
-   fprintf(file, "  infeasible LP    : %12.2f %12lld %12lld\n",
+   fprintf(file, "  infeasible LP    : %12.2f %12lld %12lld   (%lld LP iterations)\n",
       SCIPlpconflictGetTime(scip->lpconflict),
       SCIPlpconflictGetNCalls(scip->lpconflict),
-      SCIPlpconflictGetNConflicts(scip->lpconflict));
+      SCIPlpconflictGetNConflicts(scip->lpconflict),
+      SCIPlpconflictGetNLPIterations(scip->lpconflict));
 }
 
 static

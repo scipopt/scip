@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.50 2003/12/18 13:44:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.51 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -980,14 +980,25 @@ RETCODE SCIPlpiClear(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int ncols;
+   int nrows;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXdelcols(cpxenv, lpi->cpxlp, 0, CPXgetnumcols(cpxenv, lpi->cpxlp)-1) );
-   CHECK_ZERO( CPXdelrows(cpxenv, lpi->cpxlp, 0, CPXgetnumrows(cpxenv, lpi->cpxlp)-1) );
+   ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
+   nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
+   if( ncols >= 1 )
+   {
+      CHECK_ZERO( CPXdelcols(cpxenv, lpi->cpxlp, 0, ncols-1) );
+   }
+   if( nrows >= 1 )
+   {
+      CHECK_ZERO( CPXdelrows(cpxenv, lpi->cpxlp, 0, nrows-1) );
+   }
 
    return SCIP_OKAY;
 }

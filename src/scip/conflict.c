@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.20 2004/01/15 15:36:40 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.21 2004/01/16 11:25:03 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -100,14 +100,12 @@
 #include "def.h"
 #include "message.h"
 #include "set.h"
+#include "stat.h"
 #include "clock.h"
-
-/* MARC: */
-#include "lp.h"
-
 #include "lpi.h"
 #include "misc.h"
 #include "paramset.h"
+#include "lp.h"
 #include "var.h"
 #include "prob.h"
 #include "scip.h"
@@ -141,29 +139,6 @@ RETCODE conflictEnsureConflictvarsMem(
       conflict->conflictvarssize = newsize;
    }
    assert(num <= conflict->conflictvarssize);
-
-   return SCIP_OKAY;
-}
-
-/** resizes conflictvars array to be able to store at least num constraints */
-static
-RETCODE lpconflictEnsureConflictvarsMem(
-   LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
-   const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimal number of slots in array */
-   )
-{
-   assert(lpconflict != NULL);
-
-   if( num > lpconflict->conflictvarssize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&lpconflict->conflictvars, newsize) );
-      lpconflict->conflictvarssize = newsize;
-   }
-   assert(num <= lpconflict->conflictvarssize);
 
    return SCIP_OKAY;
 }
@@ -551,13 +526,13 @@ RETCODE SCIPconflictAddVar(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and creates a conflict set in the
- *  conflict analysis data structure
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
 static
 RETCODE conflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   const SET*       set,                /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
    int              maxsize,            /**< maximal size of conflict set */
    Bool*            success             /**< pointer to store whether the conflict set is valid */
    )
@@ -570,7 +545,8 @@ RETCODE conflictAnalyze(
    assert(conflict != NULL);
    assert(success != NULL);
 
-   debugMessage("analyzing conflict with %d conflict candidates\n", SCIPpqueueNElems(conflict->varqueue));
+   debugMessage("analyzing conflict with %d conflict candidates (maxsize=%d)\n",
+      SCIPpqueueNElems(conflict->varqueue), maxsize);
 
    *success = FALSE;
 
@@ -591,12 +567,12 @@ RETCODE conflictAnalyze(
 #ifdef DEBUG
       {
          int v;
-         printf("processing conflict var <%s>\n", SCIPvarGetName(var));
-         printf(" - conflict set   :");
+         debugMessage("processing conflict var <%s>\n", SCIPvarGetName(var));
+         debugMessage(" - conflict set   :");
          for( v = 0; v < conflict->nconflictvars; ++v )
             printf(" <%s>", SCIPvarGetName(conflict->conflictvars[v]));
          printf("\n");
-         printf(" - candidate queue:");
+         debugMessage(" - candidate queue:");
          for( v = 0; v < SCIPpqueueNElems(conflict->varqueue); ++v )
             printf(" <%s>", SCIPvarGetName((VAR*)(SCIPpqueueElems(conflict->varqueue)[v])));
          printf("\n");
@@ -651,13 +627,35 @@ RETCODE conflictAnalyze(
       var = (VAR*)(SCIPpqueueRemove(conflict->varqueue));
    }
 
-   *success = (var == NULL);
+   /* if a valid conflict set was found, call the conflict handlers */
+   if( var == NULL )
+   {
+      RESULT result;
+      int h;
+
+      assert(conflict->conflictvars != NULL);
+      assert(conflict->nconflictvars > 0);
+
+      debugMessage(" -> found conflict set of size %d/%d\n", conflict->nconflictvars, maxsize);
+
+      /* sort conflict handlers by priority */
+      SCIPsetSortConflicthdlrs(set);
+
+      /* call conflict handlers to create a conflict constraint */
+      for( h = 0; h < set->nconflicthdlrs; ++h )
+      {
+         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, 
+                        conflict->conflictvars, conflict->nconflictvars, *success, &result) );
+         *success = *success || (result == SCIP_CONSADDED);
+      }
+   }
 
    return SCIP_OKAY;
 }
 
 /** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+ *  updates statistics for propagation conflict analysis
  */
 RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
@@ -676,6 +674,10 @@ RETCODE SCIPconflictAnalyze(
    if( success != NULL )
       *success = FALSE;
 
+   /* check, if propagation conflict analysis is enabled */
+   if( !set->usepropconflict )
+      return SCIP_OKAY;
+
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
@@ -691,38 +693,15 @@ RETCODE SCIPconflictAnalyze(
 
    conflict->ncalls++;
 
-   /* analyze conflict */
+   /* analyze the conflict set, and create a conflict constraint on success */
    CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, &valid) );
 
-   /* if a valid conflict set was found, call the conflict handlers */
+   /* check, if a conflict constraint was created */
    if( valid )
    {
-      RESULT result;
-      Bool resolved;
-      int h;
-
-      assert(conflict->conflictvars != NULL);
-      assert(conflict->nconflictvars > 0);
-
-      /* sort conflict handlers by priority */
-      SCIPsetSortConflicthdlrs(set);
-
-      /* call conflict handlers to create a conflict constraint */
-      resolved = FALSE;
-      for( h = 0; h < set->nconflicthdlrs; ++h )
-      {
-         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, 
-                        conflict->conflictvars, conflict->nconflictvars, resolved, &result) );
-         resolved = resolved || (result == SCIP_CONSADDED);
-      }
-
-      /* check, if a conflict constraint was created */
-      if( resolved )
-      {
-         if( success != NULL )
-            *success = TRUE;
-         conflict->nconflicts++;
-      }
+      conflict->nconflicts++;
+      if( success != NULL )
+         *success = TRUE;
    }
 
    /* stop timing */
@@ -768,250 +747,237 @@ Longint SCIPconflictGetNConflicts(
  * Infeasible LP Conflict Analysis
  */
 
-/* ?????? MARC: Hier sollten Deine Methoden hinkommen; bitte halte Dich ein bisschen an das Sourcecode-Format,
- *              das Du oben siehst, insbesondere alle externen Methoden mit SCIP... beginnen und ins conflict.h
- *              file eintragen, alle internen Methoden static machen und den Namen mit nem Kleinbuchstaben
- *              anfangen lassen
- */
-
-
 /** Generate the alternative lp from the current lp */
-/** @todo Correct hard coded 1000.0 */
+/**@todo Correct hard coded 1000.0 */
 static
 RETCODE lpGenerateAltLP(
-			LP*        lp,      /**< LP data */
-			const SET* set,     /**< global SCIP settings */
-			LPI* alt_lpi,       /**< alternative lp on output */
-			int* alt_nRowVars,  /**< number of columns in the alt. lp on output */
-			int* alt_nColVars,
-			ROW** alt_RowVars,
-			COL** alt_ColVars,
-			Bool* alt_isLower
-			)
+   LP*              lp,                 /**< LP data */
+   const SET*       set,                /**< global SCIP settings */
+   LPI*             alt_lpi,            /**< alternative lp on output */
+   int*             alt_nrowvars,       /**< number of variables in the alt. LP on output belonging to original rows */
+   int*             alt_ncolvars,       /**< number of variables in the alt. LP on output belonging to original columns */
+   ROW**            alt_rowvars,        /**< array to store the original rows belonging to the variables in the alt. LP */
+   COL**            alt_colvars,        /**< array to store the original cols belonging to the variables in the alt. LP */
+   Bool*            alt_islower         /**< array to store whether the alt. LP variable belongs to the lower bound */
+   )
 {
-  int ncols, nrows;
-  COL** cols;
-  ROW** rows;
-  COL* col;
-  ROW* row;
+   ROW** rows;
+   COL** cols;
+   ROW* row;
+   COL* col;
+   Real* vals;
+   Real* rhs;
+   int* inds;
+   Real obj;
+   Real lb;
+   Real lpi_infinity;
+   Real sum_rhs;    /* sum of the absolute nonzeros in the last row */
+   int beg;
+   int cnt;
+   int nrows;
+   int ncols;
+   int i;
+   int j;
 
-  Real sum_rhs;    /* sum of the nonzeros for the last row */
-  int i, j;
+   assert(lp != NULL);
+   assert(alt_rowvars != NULL);
+   assert(alt_colvars != NULL);
+   assert(alt_nrowvars != NULL);
+   assert(alt_ncolvars != NULL);
+   assert(alt_islower != NULL);
 
-  Real lpi_infinity;
+   lpi_infinity = SCIPlpiInfinity(lp->lpi);
+   sum_rhs = 0.0;
+   *alt_nrowvars = 0;
+   *alt_ncolvars = 0;
 
-  int beg;
-  int cnt;
-  int* inds;
-  Real* vals;
-  Real obj;
-  Real lb;
-  Real* rhs;
+   /* get original LP data */
+   ncols = SCIPlpGetNCols(lp);
+   nrows = SCIPlpGetNRows(lp);
+   cols = SCIPlpGetCols(lp);
+   rows = SCIPlpGetRows(lp);
 
-  assert(alt_RowVars != NULL);
-  assert(alt_ColVars != NULL);
-  assert(alt_nRowVars != NULL);
-  assert(alt_nColVars != NULL);
-  assert(lp != NULL);
+   /* allocate memory buffer for storing a single column of the alternative LP */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &inds, ncols + 1) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &vals, ncols + 1) );
 
-  /* ------------------------------------------- */
-  lpi_infinity = SCIPlpiInfinity(lp->lpi);
-  sum_rhs = 0.0;
-  *alt_nRowVars = 0;
-  *alt_nColVars = 0;
+   /* add empty rows to the alternative LP */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rhs, ncols + 1) );
+   clearMemoryArray(rhs, ncols + 1); /* clear rhs vector; the rhs of the last row will be modified later */
+   clearMemoryArray(inds, ncols + 1); /* use inds array for storing "beg"; no matrix entries are used -> all zeros */
+   CHECK_OKAY( SCIPlpiAddRows(alt_lpi, ncols+1, rhs, rhs, NULL, 0, inds, inds, vals) );
+   SCIPsetFreeBufferArray(set, &rhs);
 
-  ncols = SCIPlpGetNCols(lp);
-  nrows = SCIPlpGetNRows(lp);
+   /* set up main part */
+   /**@todo Check for equality constraints and add only one column corr. to unbounded variable */
+   for( i = 0; i < nrows; ++i )
+   {
+      row = rows[i];
+      assert( row != NULL );
 
-  cols = SCIPlpGetCols(lp);
-  rows = SCIPlpGetRows(lp);
+      /* left hand side */
+      if( !SCIPsetIsInfinity(set, - row->lhs) )
+      {
+         cnt = 0;
+         for( j = 0; j < row->len; ++j )
+         {
+            inds[cnt] = row->cols[j]->lppos;
+            vals[cnt] = - row->vals[j];
+            ++cnt;
+         }
+         if( !SCIPsetIsZero(set, row->lhs) )
+         {
+            inds[cnt] = ncols;
+            vals[cnt] = row->lhs;
+            sum_rhs += ABS(row->lhs);
+            ++cnt;
+         }
+         if( row->local )
+            obj = 1000.0;
+         else
+            obj = 0.0;
+         lb = 0.0;
+         beg = 0;
+         CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
+         alt_rowvars[*alt_nrowvars] = row;
+         ++(*alt_nrowvars);
+      }
 
-  CHECK_OKAY( SCIPsetAllocBufferArray(set, &rhs, ncols + 1) );
-  CHECK_OKAY( SCIPsetAllocBufferArray(set, &inds, ncols + 1) );
-  CHECK_OKAY( SCIPsetAllocBufferArray(set, &vals, ncols + 1) );
-
-
-  /* define lhs and rhs */
-  clearMemoryArray(rhs, ncols + 1);
-  clearMemoryArray(inds, ncols + 1);
-
-  /* Use beg-array with all zeros, because no matrix entries are used */
-  CHECK_OKAY( SCIPlpiAddRows(alt_lpi, ncols+1, rhs, rhs, NULL, 0, inds, inds, vals) );
-
-  /* set up main part */
-  /** @todo Check for equality constraints and add only one column corr. to unbounded variable */
-  for (i = 0; i < nrows; ++i)
-  {
-     row = rows[i];
-     assert( row != NULL );
-
-     /* left hand side */
-     if ( ! SCIPsetIsInfinity(set, - row->lhs) )
-     {
-	cnt = 0;
-	for (j = 0; j < row->len; ++j)
-	{
-	   inds[cnt] = row->cols[j]->lppos;
-	   vals[cnt] = - row->vals[j];
-	   ++cnt;
-	}
-	if ( ! SCIPsetIsZero(set, row->lhs) )
-	{
-	   inds[cnt] = ncols;
-	   vals[cnt] = row->lhs;
-	   sum_rhs += ABS(row->lhs);
-	   ++cnt;
-	}
-	if ( row->local )
-	  obj = 1000.0;
-	else
-	  obj = 0.0;
-	lb = 0.0;
-	beg = 0;
-	CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
-	alt_RowVars[*alt_nRowVars] = row;
-	++(*alt_nRowVars);
-     }
-
-     /* right hand side */
-     if ( ! SCIPsetIsInfinity(set, row->rhs) )
-     {
-	cnt = 0;
-	for (j = 0; j < row->len; ++j)
-	{
-	   inds[cnt] = row->cols[j]->lppos;
-	   vals[cnt] = row->vals[j];
-	   ++cnt;
-	}
-	if ( ! SCIPsetIsZero(set, row->rhs) )
-	{
-	   inds[cnt] = ncols;
-	   vals[cnt] = row->rhs;
-	   sum_rhs += ABS(row->rhs);
-	   ++cnt;
-	}
-	if ( row->local )
-	  obj = 1000.0;
-	else
-	  obj = 0.0;
-	lb = 0.0;
-	beg = 0;
-	CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
-	alt_RowVars[*alt_nRowVars] = row;
-	++(*alt_nRowVars);
-     }
-  }
+      /* right hand side */
+      if( !SCIPsetIsInfinity(set, row->rhs) )
+      {
+         cnt = 0;
+         for( j = 0; j < row->len; ++j )
+         {
+            inds[cnt] = row->cols[j]->lppos;
+            vals[cnt] = row->vals[j];
+            ++cnt;
+         }
+         if( !SCIPsetIsZero(set, row->rhs) )
+         {
+            inds[cnt] = ncols;
+            vals[cnt] = row->rhs;
+            sum_rhs += ABS(row->rhs);
+            ++cnt;
+         }
+         if( row->local )
+            obj = 1000.0;
+         else
+            obj = 0.0;
+         lb = 0.0;
+         beg = 0;
+         CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
+         alt_rowvars[*alt_nrowvars] = row;
+         ++(*alt_nrowvars);
+      }
+   }
   
-  /* add column for objective function */
-  cnt = 0;
-  for (j = 0; j < ncols; ++j)
-  {
-     col = cols[j];
-     assert( col != NULL);
+   /* add column for objective function */
+   cnt = 0;
+   for( j = 0; j < ncols; ++j )
+   {
+      col = cols[j];
+      assert( col != NULL);
   
-     if ( ! SCIPsetIsZero(set, col->obj) )
-     {
-	inds[cnt] = j;
-	vals[cnt] = col->obj;
-	++cnt;
-     }
-  }
-  if ( ! SCIPsetIsZero(set, lp->upperbound) )
-  {
-     inds[cnt] = ncols;
-     vals[cnt] = lp->upperbound;
-     ++cnt;
-  }
-  obj = 0.0;
-  lb = 0.0;
-  beg = 0;
-  CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
-  alt_RowVars[*alt_nRowVars] = NULL;
-  ++(*alt_nRowVars);
+      if( !SCIPsetIsZero(set, col->obj) )
+      {
+         inds[cnt] = j;
+         vals[cnt] = col->obj;
+         ++cnt;
+      }
+   }
+   if( !SCIPsetIsZero(set, lp->upperbound) )
+   {
+      inds[cnt] = ncols;
+      vals[cnt] = lp->upperbound;
+      ++cnt;
+   }
+   obj = 0.0;
+   lb = 0.0;
+   beg = 0;
+   CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
+   alt_rowvars[*alt_nrowvars] = NULL;
+   ++(*alt_nrowvars);
 
-  /* set up part for bounds */
-  for (j = 0; j < ncols; ++j)
-  {
-     col = cols[j];
-     assert( col != NULL);
-     /* lower bounds */
-     if ( ! SCIPsetIsInfinity(set, - col->lb) )
-     {
-	cnt = 0;
-	inds[cnt] = j;
-	vals[cnt] = - 1.0;
-	++cnt;
+   /* set up part for bounds */
+   for( j = 0; j < ncols; ++j )
+   {
+      col = cols[j];
+      assert( col != NULL);
+      /* lower bounds */
+      if( !SCIPsetIsInfinity(set, - col->lb) )
+      {
+         cnt = 0;
+         inds[cnt] = j;
+         vals[cnt] = - 1.0;
+         ++cnt;
 
-	if ( ! SCIPsetIsZero(set, col->lb) )
-	{
-	   inds[cnt] = ncols;
-	   vals[cnt] = - col->lb;
-	   sum_rhs += ABS(col->lb);
-	   ++cnt;
-	}
-	if ( ! SCIPsetIsEQ(set, SCIPvarGetLbGlobal(col->var), col->lb) )
-	{
-	   if ( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
-	     obj = 1.0;
-	   else
-	     obj = 1000.0;
-	}
-	else
-	  obj = 0.0;
-	lb = 0.0;
-	beg = 0;
-	CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
-	alt_ColVars[*alt_nColVars] = col;
-	alt_isLower[*alt_nColVars] = TRUE;
-	++(*alt_nColVars);
-     }
+         if( !SCIPsetIsZero(set, col->lb) )
+         {
+            inds[cnt] = ncols;
+            vals[cnt] = - col->lb;
+            sum_rhs += ABS(col->lb);
+            ++cnt;
+         }
+         if( !SCIPsetIsEQ(set, SCIPvarGetLbGlobal(col->var), col->lb) )
+         {
+            if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
+               obj = 1.0;
+            else
+               obj = 1000.0;
+         }
+         else
+            obj = 0.0;
+         lb = 0.0;
+         beg = 0;
+         CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
+         alt_colvars[*alt_ncolvars] = col;
+         alt_islower[*alt_ncolvars] = TRUE;
+         ++(*alt_ncolvars);
+      }
 
-     /* upper bounds */
-     if ( ! SCIPsetIsInfinity(set, col->ub) )
-     {
-	cnt = 0;
-	inds[cnt] = j;
-	vals[cnt] = 1.0;
-	++cnt;
+      /* upper bounds */
+      if( !SCIPsetIsInfinity(set, col->ub) )
+      {
+         cnt = 0;
+         inds[cnt] = j;
+         vals[cnt] = 1.0;
+         ++cnt;
 
-	if ( ! SCIPsetIsZero(set, col->ub) )
-	{
-	   inds[cnt] = ncols;
-	   vals[cnt] = col->ub;
-	   sum_rhs += ABS(col->ub);
-	   ++cnt;
-	}
-	if ( ! SCIPsetIsEQ(set, SCIPvarGetUbGlobal(col->var), col->ub) )
-	{
-	   if ( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
-	     obj = 1.0;
-	   else
-	     obj = 1000.0;
-	}
-	else
-	  obj = 0.0;
-	lb = 0.0;
-	beg = 0;
-	CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
-	alt_ColVars[*alt_nColVars] = col;
-	alt_isLower[*alt_nColVars] = FALSE;
-	++(*alt_nColVars);
-     }
-  }
+         if( !SCIPsetIsZero(set, col->ub) )
+         {
+            inds[cnt] = ncols;
+            vals[cnt] = col->ub;
+            sum_rhs += ABS(col->ub);
+            ++cnt;
+         }
+         if( !SCIPsetIsEQ(set, SCIPvarGetUbGlobal(col->var), col->ub) )
+         {
+            if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
+               obj = 1.0;
+            else
+               obj = 1000.0;
+         }
+         else
+            obj = 0.0;
+         lb = 0.0;
+         beg = 0;
+         CHECK_OKAY( SCIPlpiAddCols(alt_lpi, 1, &obj, &lb, &lpi_infinity, NULL, cnt, &beg, inds, vals) );
+         alt_colvars[*alt_ncolvars] = col;
+         alt_islower[*alt_ncolvars] = FALSE;
+         ++(*alt_ncolvars);
+      }
+   }
 
-  /* adjust rhs of last row */
-  sum_rhs = - sum_rhs;
-  CHECK_OKAY( SCIPlpiChgSides(alt_lpi, 1, &ncols, &sum_rhs, &sum_rhs) );
+   /* adjust rhs of last row */
+   sum_rhs = - sum_rhs;
+   CHECK_OKAY( SCIPlpiChgSides(alt_lpi, 1, &ncols, &sum_rhs, &sum_rhs) );
 
-  /* free space */
-  SCIPsetFreeBufferArray(set, &vals);
-  SCIPsetFreeBufferArray(set, &inds);
-  SCIPsetFreeBufferArray(set, &rhs);
+   /* free space */
+   SCIPsetFreeBufferArray(set, &vals);
+   SCIPsetFreeBufferArray(set, &inds);
 
-  CHECK_OKAY( SCIPlpiWriteLP(alt_lpi, "alt.lp") );
-  /* printf("shift = %g\n", SCIPretransformObj(set->scip, 0.0)); */
-
-  return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 
@@ -1027,11 +993,9 @@ RETCODE SCIPlpconflictCreate(
 
    CHECK_OKAY( SCIPclockCreate(&(*lpconflict)->analyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPlpiCreate(&(*lpconflict)->lpi, "LPconflict") );
-   (*lpconflict)->conflictvars = NULL;
-   (*lpconflict)->conflictvarssize = 0;
-   (*lpconflict)->nconflictvars = 0;
    (*lpconflict)->ncalls = 0;
    (*lpconflict)->nconflicts = 0;
+   (*lpconflict)->nlpiterations = 0;
    
    return SCIP_OKAY;
 }
@@ -1046,7 +1010,6 @@ RETCODE SCIPlpconflictFree(
 
    SCIPclockFree(&(*lpconflict)->analyzetime);
    CHECK_OKAY( SCIPlpiFree(&(*lpconflict)->lpi) );
-   freeMemoryArrayNull(&(*lpconflict)->conflictvars);
    freeMemory(lpconflict);
 
    return SCIP_OKAY;
@@ -1056,128 +1019,151 @@ RETCODE SCIPlpconflictFree(
 static
 RETCODE lpconflictAnalyze(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
-   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   int              maxsize,            /**< maximal size of conflict set */
    Bool*            success             /**< pointer to store whether the conflict set is valid */
    )
 {
-  int i, j;
-  LPI* alt_lpi;
-  Real* psol;
-  int ncols, nrows;
-  Bool error;
-  
-  int alt_nColVars;
-  int alt_nRowVars;
-  COL** alt_ColVars;
-  ROW** alt_RowVars;
-  COL* col;
-  Bool* alt_isLower;  
-  
-  assert(lpconflict != NULL);
-  assert(success != NULL);
-  
-  *success = FALSE;
-  
-  /*lint --e{715}
-   * ????? MARC: Hier kommen Deine wesentlichen Methoden!
-   *             Diese sollten das LP analysieren (Zugriff ueber Methoden aus lp.h) und
-   *             als Output sollten Sie das lpconflict->conflictvars array fuellen, und zwar
-   *             mit der Bedeutung, dass das Setzen aller Variablen in dem Array auf FALSE zu
-   *             einem unzulaessigen LP fuehrt (das Constraint "mindestens eine dieser Variablen
-   *             muss TRUE sein" wird dann automatisch erzeugt).
-   *             Die Methode der Wahl, um das Array in die richtige Groesse zu bringen, ist
-   *               CHECK_OKAY( lpconflictEnsureConflictvarsMem(lpconflict, set, num) );
-   *             wobei num die gewuenschte Mindestgroesse ist.
-   *             Das LPI interface kennst Du ja schon ein bisschen. Fuer den Anfang wuerde ich
-   *             die Analyze erst mal mit nem 
-   *               CHECK_OKAY( SCIPlpiClear(lpi) );
-   *             beginnen. Wie man das macht, dass das LP nur upgedated werden muss, koennen wir
-   *             uns ja spaeter noch ueberlegen.
-   */
-  printf("LP infeasible: analyze LP conflict\n"); /*??????????????????????*/
-  
-  ncols = SCIPlpGetNCols(lp);
-  nrows = SCIPlpGetNRows(lp);
-  CHECK_OKAY( SCIPsetAllocBufferArray(set, &alt_RowVars, 2*nrows + 1) );
-  CHECK_OKAY( SCIPsetAllocBufferArray(set, &alt_ColVars, 2*ncols) );
-  CHECK_OKAY( SCIPsetAllocBufferArray(set, &alt_isLower, 2*ncols) );
-  
-  CHECK_OKAY( SCIPlpiCreate(&alt_lpi, "alt_lpi") );
-  CHECK_OKAY( lpGenerateAltLP(lp, set, alt_lpi, &alt_nRowVars, &alt_nColVars, alt_RowVars, alt_ColVars, alt_isLower) );
-  
-  CHECK_OKAY( SCIPlpiSolvePrimal(alt_lpi) );
+   COL** alt_colvars;
+   ROW** alt_rowvars;
+   Bool* alt_islower;  
+   int alt_ncolvars;
+   int alt_nrowvars;
+   int ncols;
+   int nrows;
+   int iterations;
 
-  error = FALSE;  
-  if ( ! SCIPlpiIsPrimalInfeasible(alt_lpi) )
-  {
-     printf("found IIS\n");
+   assert(lpconflict != NULL);
+   assert(success != NULL);
+  
+   *success = FALSE;
+  
+   ncols = SCIPlpGetNCols(lp);
+   nrows = SCIPlpGetNRows(lp);
+
+   /* get temporary memory for alternative LP information */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &alt_rowvars, 2*nrows + 1) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &alt_colvars, 2*ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &alt_islower, 2*ncols) );
+
+   /* create alternative LP */
+   CHECK_OKAY( SCIPlpiClear(lpconflict->lpi) );
+   CHECK_OKAY( lpGenerateAltLP(lp, set, lpconflict->lpi, 
+                  &alt_nrowvars, &alt_ncolvars, alt_rowvars, alt_colvars, alt_islower) );
+
+   /* solve alternative LP with primal simplex, because the LP is primal feasible but not necessary dual feasible */
+   CHECK_OKAY( SCIPlpiSolvePrimal(lpconflict->lpi) );
+
+   /* update the LP iteration count */
+   CHECK_OKAY( SCIPlpiGetIntpar(lpconflict->lpi, SCIP_LPPAR_LPITER, &iterations) );
+   lpconflict->nlpiterations += iterations;
+
+   /* check, if we have a primal feasible solution */
+   if( !SCIPlpiIsPrimalInfeasible(lpconflict->lpi) )
+   {
+      COL* col;
+      Real* psol;
+      Bool valid;
+      int i;
+      int j;
+
+      debugMessage("found IIS\n");
      
-     CHECK_OKAY( SCIPsetAllocBufferArray(set, &psol, alt_nRowVars + alt_nColVars) );
-     CHECK_OKAY( SCIPlpiGetSol(alt_lpi, NULL, psol, NULL, NULL, NULL) ); 
+      /* get primal solution of alternative LP: the non-zero variables define an IIS in the original LP */
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &psol, alt_nrowvars + alt_ncolvars) );
+      CHECK_OKAY( SCIPlpiGetSol(lpconflict->lpi, NULL, psol, NULL, NULL, NULL) ); 
 
-     for (i = 0; i < alt_nRowVars; ++i)
-     {
-	if ( (alt_RowVars[i] != NULL) && (alt_RowVars[i]->local) && (SCIPsetIsPositive(set, psol[i])) )
-	{
-	   printf("Found local cut in IIS!\n");
-	   error = TRUE;
-	   break;
-	}
-	if ( (alt_RowVars[i] == NULL) && (SCIPsetIsPositive(set, psol[i])) )
-	{
-	   printf("Objective function in IIS!\n");  /* ????????????????*/
-	}
-     }
-     if (! error)
-     {
-	lpconflict->nconflictvars = 0;
-	for (j = 0; j < alt_nColVars; ++j)
-	{
-	   if ( SCIPsetIsPositive(set, psol[j + alt_nRowVars]) )
-	   {
-	      col = alt_ColVars[j];
-	      if ( ( alt_isLower[j] && ( ! SCIPsetIsEQ(set, SCIPvarGetLbGlobal(col->var), col->lb) ) ) ||
-		   ( ! alt_isLower[j] && ( ! SCIPsetIsEQ(set, SCIPvarGetUbGlobal(col->var), col->ub) ) ) )
-	      {
-		 if ( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )	   
-		 {
-		    CHECK_OKAY( lpconflictEnsureConflictvarsMem(lpconflict, set, lpconflict->nconflictvars+1) );
-		    lpconflict->conflictvars[lpconflict->nconflictvars] = col->var;
-		    ++lpconflict->nconflictvars;
-		 }
-		 else
-		 {
-		    printf("Found integer variable branching in IIS!\n");
-		    error = TRUE;
-		    break;
-		 }
-	      }      
-	   }
-	}
-	*success = ! error;
-     }
-     SCIPsetFreeBufferArray(set, &psol);      
-  }
+      valid = TRUE;
+
+      /* scan the rows of the IIS for local cuts (the global upper bound is denoted by alt_rowvars[i] == NULL) */
+      for( i = 0; i < alt_nrowvars; ++i )
+      {
+         if( alt_rowvars[i] != NULL && alt_rowvars[i]->local && SCIPsetIsPositive(set, psol[i]) )
+         {
+            debugMessage(" -> IIS includes local cut <%s>\n", SCIProwGetName(alt_rowvars[i]));
+            valid = FALSE;
+            break;
+         }
+      }
+
+      if( valid )
+      {
+         /* initialize conflict data */
+         CHECK_OKAY( SCIPconflictInit(conflict) );
+
+         /* scan the column's bounds of the IIS:
+          *  - if bound is an unchanged bound, we can ignore it, because it is valid in the root node
+          *  - if bound is a changed bound of a binary variable, we have to include the variable in the conflict set
+          *  - if bound is a changed bound of a non-binary variable, we must abort (conflict set can only include binaries)
+          */
+         for( j = 0; j < alt_ncolvars; ++j )
+         {
+            /* check, if the specific bound belongs to the IIS */
+            if( SCIPsetIsPositive(set, psol[j + alt_nrowvars]) )
+            {
+               col = alt_colvars[j];
+
+               /* check, if the specific bound differs from the root LP */
+               if( (alt_islower[j] && !SCIPsetIsEQ(set, SCIPvarGetLbGlobal(col->var), col->lb))
+                  || (!alt_islower[j] && !SCIPsetIsEQ(set, SCIPvarGetUbGlobal(col->var), col->ub)) )
+               {
+                  /* check, if the bound belongs to a binary variable */
+                  if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
+                  {
+                     /* put binary variable into the conflict set */
+                     CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, col->var) );
+                  }
+                  else
+                  {
+                     /* we cannot put a non-binary variable into the conflict set: we have to abort */
+                     debugMessage(" -> IIS includes changed bound of non-binary variable <%s>\n", SCIPvarGetName(col->var));
+                     valid = FALSE;
+                     break;
+                  }
+               }      
+            }
+         }
+
+         if( valid )
+         {
+            /* analyze the conflict set, and create a conflict constraint on success */
+            CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
+         }
+      }
+      
+      /* free memory buffer for primal solution of alternative LP */
+      SCIPsetFreeBufferArray(set, &psol);      
+   }
+#if 0
+   else
+      errorMessage("Warning! alternative LP is primal infeasible\n");
+#endif
+
+   /* free memory buffers for alternative LP information */
+   SCIPsetFreeBufferArray(set, &alt_islower);
+   SCIPsetFreeBufferArray(set, &alt_colvars);
+   SCIPsetFreeBufferArray(set, &alt_rowvars);
   
-  SCIPsetFreeBufferArray(set, &alt_isLower);
-  SCIPsetFreeBufferArray(set, &alt_ColVars);
-  SCIPsetFreeBufferArray(set, &alt_RowVars);
-  
-  CHECK_OKAY( SCIPlpiFree(&alt_lpi) );
-  
-  return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set
+/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the infeasibility;
+ *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
+ *  a conflict constraint out of the resulting conflict set;
+ *  updates statistics for infeasible LP conflict analysis
  */
 RETCODE SCIPlpconflictAnalyze(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
@@ -1186,12 +1172,21 @@ RETCODE SCIPlpconflictAnalyze(
 
    assert(lpconflict != NULL);
    assert(set != NULL);
+   assert(prob != NULL);
 
    if( success != NULL )
       *success = FALSE;
 
+   /* check, if infeasible LP conflict analysis is enabled */
+   if( !set->uselpconflict )
+      return SCIP_OKAY;
+
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* if the root LP was infeasible, nothing has to be done */
+   if( stat->nnodes == 1 )
       return SCIP_OKAY;
 
    /* calculate the maximal size of the conflict set */
@@ -1206,34 +1201,14 @@ RETCODE SCIPlpconflictAnalyze(
    lpconflict->ncalls++;
 
    /* analyze conflict */
-   CHECK_OKAY( lpconflictAnalyze(lpconflict, set, lp, maxsize, &valid) );
+   CHECK_OKAY( lpconflictAnalyze(lpconflict, memhdr, set, stat, lp, conflict, maxsize, &valid) );
 
-   /* if a valid conflict set was found, call the conflict handlers */
+   /* check, if a valid conflict have been found */
    if( valid )
    {
-      RESULT result;
-      Bool resolved;
-      int h;
-
-      assert(lpconflict->conflictvars != NULL);
-      assert(lpconflict->nconflictvars > 0);
-
-      /* call conflict handlers to create a conflict constraint */
-      resolved = FALSE;
-      for( h = 0; h < set->nconflicthdlrs; ++h )
-      {
-         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, 
-                        lpconflict->conflictvars, lpconflict->nconflictvars, resolved, &result) );
-         resolved = resolved || (result == SCIP_CONSADDED);
-      }
-
-      /* check, if a conflict constraint was created */
-      if( resolved )
-      {
-         if( success != NULL )
-            *success = TRUE;
-         lpconflict->nconflicts++;
-      }
+      lpconflict->nconflicts++;
+      if( success != NULL )
+         *success = TRUE;
    }
 
    /* stop timing */
@@ -1270,4 +1245,14 @@ Longint SCIPlpconflictGetNConflicts(
    assert(lpconflict != NULL);
 
    return lpconflict->nconflicts;
+}
+
+/** gets number of LP iterations in infeasible LP conflict analysis */
+Longint SCIPlpconflictGetNLPIterations(
+   LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
+   )
+{
+   assert(lpconflict != NULL);
+
+   return lpconflict->nlpiterations;
 }

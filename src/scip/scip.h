@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.100 2004/01/15 14:33:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.101 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2870,13 +2870,19 @@ int SCIPgetPlungeDepth(
 
 /** gets total number of active constraints at the current node */
 extern
-int SCIPgetNConss(
+int SCIPgetNActiveConss(
    SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets total number of enabled constraints at the current node */
 extern
 int SCIPgetNEnabledConss(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of globally valid constraints currently in the problem */
+extern
+int SCIPgetNGlobalConss(
    SCIP*            scip                /**< SCIP data structure */
    );
 

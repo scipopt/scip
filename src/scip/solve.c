@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.81 2004/01/15 09:12:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.82 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -403,6 +403,7 @@ RETCODE solveNodeLP(
    PRICESTORE*      pricestore,         /**< pricing storage */
    SEPASTORE*       sepastore,          /**< separation storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal,             /**< primal data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -664,10 +665,9 @@ RETCODE solveNodeLP(
    debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
 
    /* analyze an infeasible LP */
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
-      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
    {
-      CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, set, prob, lp, NULL) );
+      CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, memhdr, set, stat, prob, lp, conflict, NULL) );
    }
 
    return SCIP_OKAY;
@@ -1105,6 +1105,7 @@ RETCODE SCIPsolveCIP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal,             /**< primal data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -1265,8 +1266,9 @@ RETCODE SCIPsolveCIP(
                do
                {
                   /* continue solving the LP with price and cut */
-                  CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, lpconflict,
-                                 primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa, &cutoff) );
+                  CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, 
+                                 conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
+                                 &cutoff) );
                   assert(cutoff || lp->solved);
                   
                   /* reduced cost bound strengthening */

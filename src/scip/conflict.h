@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.10 2004/01/15 15:37:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.11 2004/01/16 11:25:03 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -138,7 +138,8 @@ RETCODE SCIPconflictAddVar(
    );
 
 /** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+ *  updates statistics for propagation conflict analysis
  */
 extern
 RETCODE SCIPconflictAnalyze(
@@ -186,16 +187,21 @@ RETCODE SCIPlpconflictFree(
    LPCONFLICT**     lpconflict          /**< pointer to LP conflict analysis data */
    );
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set
+/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the infeasibility;
+ *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
+ *  a conflict constraint out of the resulting conflict set;
+ *  updates statistics for infeasible LP conflict analysis
  */
 extern
 RETCODE SCIPlpconflictAnalyze(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
-   Bool*            success             /**< pointer to store whether a conflict constraint was created */
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
 /** gets time in seconds used for analyzing infeasible LP conflicts */
@@ -213,6 +219,12 @@ Longint SCIPlpconflictGetNCalls(
 /** gets number of valid conflicts detected in infeasible LP conflict analysis */
 extern
 Longint SCIPlpconflictGetNConflicts(
+   LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
+   );
+
+/** gets number of LP iterations in infeasible LP conflict analysis */
+extern
+Longint SCIPlpconflictGetNLPIterations(
    LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.19 2003/12/01 14:41:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.20 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -75,6 +75,7 @@ RETCODE SCIPsolveCIP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal,             /**< primal data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */

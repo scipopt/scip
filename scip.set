@@ -30,6 +30,10 @@ numerics/sumepsilon = 1e-06
 # [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
+# minimal improve for strengthening bounds
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
+numerics/boundstreps = 0.0001
+
 # epsilon for deciding if a cut is violated
 # [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
@@ -110,13 +114,21 @@ separating/cutagelimit = 128
 # [type: int, range: [1,2147483647], default: 128]
 constraints/consagelimit = 128
 
+# should propagation conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/usepropconflict = TRUE
+
+# should infeasible LP conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/uselpconflict = FALSE
+
 # maximal fraction of binary variables involved in a conflict clause
 # [type: real, range: [0,1.79769313486232e+308], default: 0.02]
-constraints/maxconfvarsfac = 0.02
+conflict/maxconfvarsfac = 0.02
 
 # minimal absolute maximum of variables involved in a conflict clause
 # [type: int, range: [0,2147483647], default: 20]
-constraints/minmaxconfvars = 20
+conflict/minmaxconfvars = 20
 
 # maximal number of nodes to process (-1: no limit)
 # [type: longint, range: [-1,9223372036854775807], default: -1]
@@ -150,6 +162,10 @@ lp/lpsolvefreq = 4
 # [type: int, range: [-1,2147483647], default: -1]
 lp/lpsolvedepth = -1
 
+# frequency for applying reduced cost fixing (-1: never; 0: only root LP)
+# [type: int, range: [-1,2147483647], default: 4]
+lp/redcostfreq = 4
+
 # should FASTMIP setting of LP solver be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 lp/fastmip = TRUE
@@ -166,11 +182,11 @@ lp/cleanupcols = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 lp/cleanuprows = TRUE
 
-# maximum age a column can reach before it is deleted from the LP
+# maximum age a dynamic column can reach before it is deleted from the LP
 # [type: int, range: [1,2147483647], default: 8]
 lp/colagelimit = 8
 
-# maximum age a row can reach before it is deleted from the LP
+# maximum age a dynamic row can reach before it is deleted from the LP
 # [type: int, range: [1,2147483647], default: 8]
 lp/rowagelimit = 8
 
@@ -215,7 +231,7 @@ constraints/linear/sepafreq = 4
 constraints/linear/propfreq = 4
 
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
-# [type: int, range: [-1,2147483647], default: 5]
+# [type: int, range: [-1,2147483647], default: 1]
 constraints/linear/tightenboundsfreq = 5
 
 # maximal allowed relative gain in maximum norm for constraint aggregation
@@ -466,9 +482,13 @@ display/actdepth/active = 1
 # [type: int, range: [0,2], default: 1]
 display/maxdepth/active = 1
 
-# display activation status of display column <actvars> (0: off, 1: auto, 2:on)
+# display activation status of display column <vars> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/actvars/active = 1
+display/vars/active = 1
+
+# display activation status of display column <conss> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/conss/active = 1
 
 # display activation status of display column <actconss> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

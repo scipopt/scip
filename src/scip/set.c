@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.83 2004/01/15 14:33:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.84 2004/01/16 11:25:04 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -116,6 +116,8 @@
 
 
 /* Conflict Analysis */
+#define SCIP_DEFAULT_USEPROPCONFLICT  TRUE /**< should propagation conflict analysis be used? */
+#define SCIP_DEFAULT_USELPCONFLICT   FALSE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_MAXCONFVARSFAC   0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_MINMAXCONFVARS     20 /**< minimal absolute maximum of variables involved in a conflict clause */
 
@@ -397,13 +399,23 @@ RETCODE SCIPsetCreate(
                   "maximum age an unnecessary constraint can reach before it is deleted",
                   &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT, 1, INT_MAX,
                   NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "conflict/usepropconflict",
+                  "should propagation conflict analysis be used?",
+                  &(*set)->usepropconflict, SCIP_DEFAULT_USEPROPCONFLICT,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "conflict/uselpconflict",
+                  "should infeasible LP conflict analysis be used?",
+                  &(*set)->uselpconflict, SCIP_DEFAULT_USELPCONFLICT,
+                  NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "constraints/maxconfvarsfac",
+                  "conflict/maxconfvarsfac",
                   "maximal fraction of binary variables involved in a conflict clause",
                   &(*set)->maxconfvarsfac, SCIP_DEFAULT_MAXCONFVARSFAC, 0.0, REAL_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "constraints/minmaxconfvars",
+                  "conflict/minmaxconfvars",
                   "minimal absolute maximum of variables involved in a conflict clause",
                   &(*set)->minmaxconfvars, SCIP_DEFAULT_MINMAXCONFVARS, 0, INT_MAX,
                   NULL, NULL) );
