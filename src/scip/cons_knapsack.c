@@ -14,14 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.58 2004/07/19 15:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.59 2004/07/19 15:52:00 bzfpfets Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
  * @author Tobias Achterberg
  * @author Kati Wolter
  */
-#define DEBUG
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>

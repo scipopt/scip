@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.186 2004/07/13 15:03:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.187 2004/07/19 15:49:13 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6680,6 +6680,97 @@ int SCIPgetNPoolCuts(
 
    return SCIPcutpoolGetNCuts(scip->cutpool);
 }
+
+/** creates a cut pool */
+RETCODE SCIPcreateCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcreateCutpool", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPcutpoolCreate(cutpool, scip->mem->solvemem, agelimit) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a cut pool */
+RETCODE SCIPfreeCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL**        cutpool             /**< pointer to store cut pool */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPfreeCutpool", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPcutpoolFree(cutpool, scip->mem->solvemem, scip->set, scip->lp) );
+
+   return SCIP_OKAY;
+}
+
+/** if not already existing, adds row to a cut pool and captures it */
+RETCODE SCIPaddRowCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   ROW*             row                 /**< cutting plane to add */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPcutpoolAddRow(cutpool, scip->mem->solvemem, scip->set, row) );
+
+   return SCIP_OKAY;
+}
+
+/** adds row to a cut pool and captures it; doesn't check for multiple cuts */
+RETCODE SCIPaddNewRowCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   ROW*             row                 /**< cutting plane to add */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddNewRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPcutpoolAddNewRow(cutpool, scip->mem->solvemem, scip->set, row) );
+
+   return SCIP_OKAY;
+}
+
+/** removes the LP row from a cut pool */
+RETCODE SCIPdelRowCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   ROW*             row                 /**< row to remove */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPdelRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPcutpoolDelRow(cutpool, scip->mem->solvemem, scip->set, scip->stat, scip->lp, row) );
+   return SCIP_OKAY;
+}
+
+/** separates cuts from a cut pool */
+RETCODE SCIPseparateCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert(scip->tree->actnode != NULL);
+
+   if( !scip->tree->actnodehaslp )
+   {
+      errorMessage("cannot add cuts, because node LP is not processed\n");
+      return SCIP_INVALIDCALL;
+   }
+   
+   CHECK_OKAY( SCIPcutpoolSeparate(cutpool, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->sepastore,
+				   (SCIPnodeGetDepth(scip->tree->actnode) == 0), result) );
+   return SCIP_OKAY;
+}
+
 
 
 

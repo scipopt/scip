@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.149 2004/07/13 15:03:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.150 2004/07/19 15:49:13 bzfpfets Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2627,6 +2627,53 @@ RETCODE SCIPdelPoolCut(
 extern
 int SCIPgetNPoolCuts(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** creates a cut pool */
+extern
+RETCODE SCIPcreateCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
+   );
+
+/** frees a cut pool */
+extern
+RETCODE SCIPfreeCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL**        cutpool             /**< pointer to store cut pool */
+   );
+
+/** if not already existing, adds row to a cut pool and captures it */
+extern
+RETCODE SCIPaddRowCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   ROW*             row                 /**< cutting plane to add */
+   );
+
+/** adds row to a cut pool and captures it; doesn't check for multiple cuts */
+extern
+RETCODE SCIPaddNewRowCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   ROW*             row                 /**< cutting plane to add */
+   );
+
+/** removes the LP row from a cut pool */
+extern
+RETCODE SCIPdelRowCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   ROW*             row                 /**< row to remove */
+   );
+
+/** separates cuts from a cut pool */
+extern
+RETCODE SCIPseparateCutpool(
+   SCIP*            scip,               /**< SCIP data structure */
+   CUTPOOL*         cutpool,            /**< cut pool */
+   RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
 /**@} */
