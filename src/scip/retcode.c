@@ -37,11 +37,26 @@ void SCIPretcodePrint(                  /**< prints error message for return cod
 
    switch( retcode )
    {
-   case SCIP_SUCCESS:
-      fprintf(errout, "normal termination with success");
+   case SCIP_DIDNOTRUN:
+      fprintf(errout, "the method was not executed");
       break;
    case SCIP_FAILURE:
-      fprintf(errout, "normal termination without success");
+      fprintf(errout, "the method was executed, but did not have success to find anything");
+      break;
+   case SCIP_BRANCHED:
+      fprintf(errout, "the method created a branching");
+      break;
+   case SCIP_REDUCEDDOM:
+      fprintf(errout, "the method reduced the domain of a variable");
+      break;
+   case SCIP_SEPARATED:
+      fprintf(errout, "the method added a cutting plane");
+      break;
+   case SCIP_INFEASIBLE:
+      fprintf(errout, "an infeasibility was detected");
+      break;
+   case SCIP_FEASIBLE:
+      fprintf(errout, "no infeasibility could be found");
       break;
    case SCIP_OKAY:
       fprintf(errout, "normal termination");

@@ -81,10 +81,16 @@ struct LPi
    int              retval;             /**< return value of last optimization call */
    int              solstat;            /**< solution status of last optimization call */
    CPXPARAM         cpxparam;           /**< actual parameter values for this LP */
+   char*            larray;             /**< array with 'L' entries for changing lower bounds */
+   char*            uarray;             /**< array with 'U' entries for changing upper bounds */
+   char*            senarray;           /**< array for storing row senses */
+   Real*            rngarray;           /**< array for storing range values */
+   int              boundchgarraysize;  /**< size of larray and uarray */
+   int              sidechgarraysize;   /**< size of senarray and rngarray */
 };
 
-/** LP state stores basis information */
-struct LPState
+/** LPi state stores basis information */
+struct LPiState
 {
    unsigned int     ncol:20;            /**< number of LP columns */
    unsigned int     nrow:20;            /**< number of LP rows */
@@ -102,7 +108,64 @@ static int          numlp = 0;          /**< number of open LP objects */
 
 
 /*
- * LP state methods
+ * dynamic memory arrays
+ */
+
+static
+RETCODE ensureBoundchgarrayMem(         /**< resizes larray and uarray to have at least num entries */
+   LPI*             lpi,                /**< LP interface structure */
+   int              num                 /**< minimal number of entries in array */
+   )
+{
+   assert(lpi != NULL);
+
+   if( num > lpi->boundchgarraysize )
+   {
+      int newsize;
+      int i;
+
+      newsize = MAX(2*lpi->boundchgarraysize, num);
+      ALLOC_OKAY( reallocMemoryArray(lpi->larray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(lpi->uarray, newsize) );
+      for( i = lpi->boundchgarraysize; i < newsize; ++i )
+      {
+         lpi->larray[i] = 'L';
+         lpi->uarray[i] = 'U';
+      }
+      lpi->boundchgarraysize = newsize;
+   }
+   assert(num <= lpi->boundchgarraysize);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE ensureSidechgarrayMem(          /**< resizes senarray and rngarray to have at least num entries */
+   LPI*             lpi,                /**< LP interface structure */
+   int              num                 /**< minimal number of entries in array */
+   )
+{
+   assert(lpi != NULL);
+
+   if( num > lpi->sidechgarraysize )
+   {
+      int newsize;
+
+      newsize = MAX(2*lpi->sidechgarraysize, num);
+      ALLOC_OKAY( reallocMemoryArray(lpi->senarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(lpi->rngarray, newsize) );
+      lpi->sidechgarraysize = newsize;
+   }
+   assert(num <= lpi->sidechgarraysize);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
+ * LPi state methods
  */
 
 static 
@@ -122,70 +185,70 @@ int rowpacketNum(                       /**< returns the number of packets neede
 }
 
 static
-void lpstatePack(                       /**< store row and column basis status in a packed LP state object */
-   LPSTATE*        lpstate,             /**< pointer to LP state data */
+void lpistatePack(                      /**< store row and column basis status in a packed LPi state object */
+   LPISTATE*       lpistate,            /**< pointer to LPi state data */
    const int*      cstat,               /**< basis status of columns in unpacked format */
    const int*      rstat                /**< basis status of rows in unpacked format */
    )
 {
-   assert(lpstate != NULL);
-   assert(lpstate->packcstat != NULL);
-   assert(lpstate->packrstat != NULL);
+   assert(lpistate != NULL);
+   assert(lpistate->packcstat != NULL);
+   assert(lpistate->packrstat != NULL);
 
-   SCIPencodeDualBit(cstat, lpstate->packcstat, lpstate->ncol);
-   SCIPencodeSingleBit(rstat, lpstate->packrstat, lpstate->nrow);
+   SCIPencodeDualBit(cstat, lpistate->packcstat, lpistate->ncol);
+   SCIPencodeSingleBit(rstat, lpistate->packrstat, lpistate->nrow);
 }
 
 static
-void lpstateUnpack(                     /**< unpacks row and column basis status from a packed LP state object */
-   const LPSTATE*  lpstate,             /**< pointer to LP state data */
+void lpistateUnpack(                    /**< unpacks row and column basis status from a packed LPi state object */
+   const LPISTATE* lpistate,            /**< pointer to LPi state data */
    int*            cstat,               /**< buffer for storing basis status of columns in unpacked format */
    int*            rstat                /**< buffer for storing basis status of rows in unpacked format */
    )
 {
-   assert(lpstate != NULL);
-   assert(lpstate->packcstat != NULL);
-   assert(lpstate->packrstat != NULL);
+   assert(lpistate != NULL);
+   assert(lpistate->packcstat != NULL);
+   assert(lpistate->packrstat != NULL);
 
-   SCIPdecodeDualBit(lpstate->packcstat, cstat, lpstate->ncol);
-   SCIPdecodeSingleBit(lpstate->packrstat, rstat, lpstate->nrow);
+   SCIPdecodeDualBit(lpistate->packcstat, cstat, lpistate->ncol);
+   SCIPdecodeSingleBit(lpistate->packrstat, rstat, lpistate->nrow);
 }
 
 static
-RETCODE lpstateCreate(                  /**< creates LP state information object */
-   LPSTATE**        lpstate,            /**< pointer to LP state */
+RETCODE lpistateCreate(                 /**< creates LPi state information object */
+   LPISTATE**       lpistate,           /**< pointer to LPi state */
    MEMHDR*          memhdr,             /**< block memory */
    int              ncol,               /**< number of columns to store */
    int              nrow                /**< number of rows to store */
    )
 {
-   assert(lpstate != NULL);
+   assert(lpistate != NULL);
    assert(memhdr != NULL);
    assert(ncol >= 0);
    assert(nrow >= 0);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *lpstate) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpstate)->packcstat, colpacketNum(ncol)) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpstate)->packrstat, rowpacketNum(nrow)) );
-   (*lpstate)->dnorm = NULL;
+   ALLOC_OKAY( allocBlockMemory(memhdr, *lpistate) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpistate)->packcstat, colpacketNum(ncol)) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpistate)->packrstat, rowpacketNum(nrow)) );
+   (*lpistate)->dnorm = NULL;
 
    return SCIP_OKAY;
 }
 
 static
-void lpstateFree(                       /**< frees LP state information */
-   LPSTATE**        lpstate,            /**< pointer to LP state information (like basis information) */
+void lpistateFree(                      /**< frees LPi state information */
+   LPISTATE**       lpistate,           /**< pointer to LPi state information (like basis information) */
    MEMHDR*          memhdr              /**< block memory */
    )
 {
    assert(memhdr != NULL);
-   assert(lpstate != NULL);
-   assert(*lpstate != NULL);
+   assert(lpistate != NULL);
+   assert(*lpistate != NULL);
 
-   freeBlockMemoryArray(memhdr, (*lpstate)->packcstat, colpacketNum((*lpstate)->ncol));
-   freeBlockMemoryArray(memhdr, (*lpstate)->packrstat, rowpacketNum((*lpstate)->nrow));
-   freeBlockMemoryArrayNull(memhdr, (*lpstate)->dnorm, (*lpstate)->ncol);
-   freeBlockMemory(memhdr, *lpstate);
+   freeBlockMemoryArray(memhdr, (*lpistate)->packcstat, colpacketNum((*lpistate)->ncol));
+   freeBlockMemoryArray(memhdr, (*lpistate)->packrstat, rowpacketNum((*lpistate)->nrow));
+   freeBlockMemoryArrayNull(memhdr, (*lpistate)->dnorm, (*lpistate)->ncol);
+   freeBlockMemory(memhdr, *lpistate);
 }
 
 
@@ -283,6 +346,7 @@ int getIntParam(LPI* lpi, const int param)
 
    errorMessage("Unknown CPLEX integer parameter");
    abort();
+   return 0;
 }
 
 static
@@ -298,6 +362,7 @@ double getDblParam(LPI* lpi, const int param)
 
    errorMessage("Unknown CPLEX double parameter");
    abort();
+   return 0.0;
 }
 
 static
@@ -390,10 +455,21 @@ int cpxObjsen(OBJSEN objsen)
    default:
       errorMessage("invalid objective sense");
       abort();
+      return 0;
    }
 }
 
-RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
+static char cpxname[255];
+
+const char* SCIPlpiGetSolverName(       /**< gets name and version of LP solver */
+   void
+   )
+{
+   sprintf(cpxname, "CPLEX %.2f", (Real)CPX_VERSION/100.0);
+   return cpxname;
+}
+
+RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*      name                /**< problem name */
    )
@@ -419,6 +495,12 @@ RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
 
    /* create LP */
    allocMemory(*lpi);
+   (*lpi)->larray = NULL;
+   (*lpi)->uarray = NULL;
+   (*lpi)->senarray = NULL;
+   (*lpi)->rngarray = NULL;
+   (*lpi)->boundchgarraysize = 0;
+   (*lpi)->sidechgarraysize = 0;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
    CHECK_ZERO(restat);
    invalidateSolution(*lpi);
@@ -428,7 +510,7 @@ RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiClose(                   /**< deletes an LP problem object */
+RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
    LPI**            lpi                 /**< pointer to an LP interface structure */
    )
 {
@@ -438,6 +520,12 @@ RETCODE SCIPlpiClose(                   /**< deletes an LP problem object */
 
    /* free LP */
    CHECK_ZERO( CPXfreeprob(cpxenv, &((*lpi)->cpxlp)) );
+
+   /* free memory */
+   freeMemoryArray((*lpi)->larray);
+   freeMemoryArray((*lpi)->uarray);
+   freeMemoryArray((*lpi)->senarray);
+   freeMemoryArray((*lpi)->rngarray);
    freeMemory(*lpi);
 
    /* free environment */
@@ -468,8 +556,6 @@ RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object 
    const char**     rname               /**< row names */
    )
 {
-   int     restat;
-
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -477,8 +563,7 @@ RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object 
    invalidateSolution(lpi);
 
    CHECK_ZERO( CPXcopylpwnames(cpxenv, lpi->cpxlp, ncol, nrow, cpxObjsen(objsen), 
-                  (Real*)obj, (Real*)rhs, (char*)sen, (int*)beg, (int*)cnt, (int*)ind, (Real*)val,
-                  (Real*)lb, (Real*)ub, NULL, (char**)cname, (char**)rname) );
+                  obj, rhs, sen, beg, cnt, ind, val, lb, ub, NULL, (char**)cname, (char**)rname) );
 
    return SCIP_OKAY;
 }
@@ -487,13 +572,14 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              ncol,               /**< number of columns to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const Real*      obj,                /**< objective function vector of new columns */
-   const Real*      lb,                 /**< lower bound vector of new columns */
-   const Real*      ub,                 /**< upper bound vector of new columns */
+   const Real*      obj,                /**< objective function values of new columns */
+   const Real*      lb,                 /**< lower bounds of new columns */
+   const Real*      ub,                 /**< upper bounds of new columns */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   char**           name                /**< column names */
+   char**           name,               /**< column names */
+   Real             infinity            /**< value used as infinity */
    )
 {
    assert(cpxenv != NULL);
@@ -546,21 +632,52 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const Real*      rhs,                /**< right hand side vector of new rows */
-   const char*      sen,                /**< row senses */
+   const Real*      lhs,                /**< left hand sides of new rows */
+   const Real*      rhs,                /**< right hand sides of new rows */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   char**           name                /**< row names */
+   char**           name,               /**< row names */
+   Real             infinity            /**< value used as infinity */
    )
 {
+   int i;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, rhs, sen, beg, ind, val, NULL, name) );
+   CHECK_OKAY( ensureSidechgarrayMem(lpi, nrow) );
+
+   /* convert lhs/rhs into rhs/range pairs */
+   for( i = 0; i < nrow; ++i )
+   {
+      assert(lhs[i] <= rhs[i]);
+      assert(rhs[i] < infinity);
+      if( lhs[i] == rhs[i] )
+      {
+         lpi->senarray[i] = 'E';
+         lpi->rngarray[i] = 0.0;
+      }
+      else if( lhs[i] <= -infinity )
+      {
+         lpi->senarray[i] = 'L';
+         lpi->rngarray[i] = 0.0;
+      }
+      else
+      {
+         /* CPLEX defines a ranged row to be within rhs and rhs+rng
+          * -> to keep SCIP's meaning of the rhs value, we have to use negative range values: rng := lhs - rng
+          */
+         lpi->senarray[i] = 'R';
+         lpi->rngarray[i] = lhs[i] - rhs[i];
+      }
+   }
+
+   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, rhs, lpi->senarray, beg, ind, val, NULL, name) );
+   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, nrow, ind, lpi->rngarray) );
 
    return SCIP_OKAY;
 }
@@ -631,44 +748,13 @@ RETCODE SCIPlpiGetBinvARow(             /**< get dense row of inverse basis matr
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetLb(                   /**< gets lower bounds of variables */
+RETCODE SCIPlpiChgBounds(               /**< changes lower and upper bounds of columns */
    LPI*             lpi,                /**< LP interface structure */
-   int              beg,                /**< first variable to get bound for */
-   int              end,                /**< last variable to get bound for */
-   Real*            lb                  /**< vector to store the bounds */
-   )
-{
-   assert(cpxenv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->cpxlp != NULL);
-
-   CHECK_ZERO( CPXgetlb(cpxenv, lpi->cpxlp, lb, beg, end) );
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPlpiGetUb(                   /**< gets upper bounds of variables */
-   LPI*             lpi,                /**< LP interface structure */
-   int              beg,                /**< first variable to get bound for */
-   int              end,                /**< last variable to get bound for */
-   Real*            ub                  /**< vector to store the bounds */
-   )
-{
-   assert(cpxenv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->cpxlp != NULL);
-
-   CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, ub, beg, end) );
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPlpiChgBd(                   /**< changes bounds of the variables in the LP */
-   LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of bounds to be changed */
+   int              n,                  /**< number of columns to change bounds for */
    const int*       ind,                /**< column indices */
-   const char*      lu,                 /**< specifies, if 'L'ower or 'U'pper bound should be changed */
-   const Real*      bd                  /**< values for the new bounds */
+   const Real*      lb,                 /**< values for the new lower bounds */
+   const Real*      ub,                 /**< values for the new upper bounds */
+   Real             infinity            /**< value used as infinity */
    )
 {
    assert(cpxenv != NULL);
@@ -677,25 +763,61 @@ RETCODE SCIPlpiChgBd(                   /**< changes bounds of the variables in 
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, (int*)ind, (char*)lu, (Real*)bd) );
+   CHECK_OKAY( ensureBoundchgarrayMem(lpi, n) );
+
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->larray, (Real*)lb) );
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->uarray, (Real*)ub) );
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiChgRhs(                  /**< changes right hand sides of rows in the LP */
+RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides of rows */
    LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of rows to change */
+   int              n,                  /**< number of rows to change sides for */
    const int*       ind,                /**< row indices */
-   const Real*      rhs                 /**< new values for right hand sides */
+   const Real*      lhs,                /**< new values for left hand sides */
+   const Real*      rhs,                /**< new values for right hand sides */
+   Real             infinity            /**< value used as infinity */
    )
 {
+   int i;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, (int*)ind, (Real*)rhs) );
+   CHECK_OKAY( ensureSidechgarrayMem(lpi, n) );
+
+   /* convert lhs/rhs into rhs/range pairs */
+   for( i = 0; i < n; ++i )
+   {
+      assert(lhs[i] <= rhs[i]);
+      assert(rhs[i] < infinity);
+      if( lhs[i] == rhs[i] )
+      {
+         lpi->senarray[i] = 'E';
+         lpi->rngarray[i] = 0.0;
+      }
+      else if( lhs[i] <= -infinity )
+      {
+         lpi->senarray[i] = 'L';
+         lpi->rngarray[i] = 0.0;
+      }
+      else
+      {
+         /* CPLEX defines a ranged row to be within rhs and rhs+rng
+          * -> to keep SCIP's meaning of the rhs value, we have to use negative range values: rng := lhs - rng
+          */
+         lpi->senarray[i] = 'R';
+         lpi->rngarray[i] = lhs[i] - rhs[i];
+      }
+   }
+
+   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, (Real*)rhs) );
+   CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, n, ind, lpi->senarray) );
+   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, n, ind, lpi->rngarray) );
 
    return SCIP_OKAY;
 }
@@ -736,8 +858,6 @@ RETCODE SCIPlpiGetIntpar(               /**< gets integer parameter of LP */
    int*             ival                /**< buffer to store the parameter value */
    )
 {
-   int advind;
-
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -913,7 +1033,7 @@ RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iteration
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, (int*)cand, ncand, down, up, itlim) );
+   CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, cand, ncand, down, up, itlim) );
 
    return SCIP_OKAY;
 }
@@ -1112,10 +1232,10 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
 }
 
 
-RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpstate object */
+RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis information) into lpistate object */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
+   LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
    int  ncol;
@@ -1127,15 +1247,15 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-   assert(lpstate != NULL);
+   assert(lpistate != NULL);
 
    ncol = CPXgetnumcols(cpxenv, lpi->cpxlp);
    nrow = CPXgetnumrows(cpxenv, lpi->cpxlp);
    assert(ncol >= 0);
    assert(nrow >= 0);
    
-   /* allocate lpstate data */
-   CHECK_OKAY( lpstateCreate(lpstate, memhdr, ncol, nrow) );
+   /* allocate lpistate data */
+   CHECK_OKAY( lpistateCreate(lpistate, memhdr, ncol, nrow) );
 
    /* allocate temporary buffer for storing uncompressed basis information */
    ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, ncol) );
@@ -1143,19 +1263,19 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
 
    if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpstate)->dnorm, ncol) );
-      CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, cstat, rstat, (*lpstate)->dnorm) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpistate)->dnorm, ncol) );
+      CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, cstat, rstat, (*lpistate)->dnorm) );
    }
    else
    {
-      (*lpstate)->dnorm = NULL;
+      (*lpistate)->dnorm = NULL;
       CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, cstat, rstat) );
    }
 
-   /* fill LP state data */
-   (*lpstate)->ncol = ncol;
-   (*lpstate)->nrow = nrow;
-   lpstatePack(*lpstate, cstat, rstat);
+   /* fill LPi state data */
+   (*lpistate)->ncol = ncol;
+   (*lpistate)->nrow = nrow;
+   lpistatePack(*lpistate, cstat, rstat);
 
    /* free temporary memory */
    freeBlockMemoryArray(memhdr, cstat, ncol);
@@ -1164,13 +1284,12 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiSetState(                /**< loads LP state (like basis information) into solver */
+RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis information) into solver */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSTATE*         lpstate             /**< LP state information (like basis information) */
+   LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
-   int  pricing;
    int* cstat;
    int* rstat;
 
@@ -1178,18 +1297,18 @@ RETCODE SCIPlpiSetState(                /**< loads LP state (like basis informat
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-   assert(lpstate != NULL);
-   assert(lpstate->ncol == CPXgetnumcols(cpxenv, lpi->cpxlp));
-   assert(lpstate->nrow == CPXgetnumrows(cpxenv, lpi->cpxlp));
+   assert(lpistate != NULL);
+   assert(lpistate->ncol == CPXgetnumcols(cpxenv, lpi->cpxlp));
+   assert(lpistate->nrow == CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    /* allocate temporary buffer for storing uncompressed basis information */
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, lpstate->ncol) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, lpstate->nrow) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, lpistate->ncol) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, lpistate->nrow) );
 
-   lpstateUnpack(lpstate, cstat, rstat);
-   if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP && lpstate->dnorm != NULL )
+   lpistateUnpack(lpistate, cstat, rstat);
+   if( lpistate->dnorm != NULL && getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
-      CHECK_ZERO( CPXcopybasednorms(cpxenv, lpi->cpxlp, cstat, rstat, lpstate->dnorm) );
+      CHECK_ZERO( CPXcopybasednorms(cpxenv, lpi->cpxlp, cstat, rstat, lpistate->dnorm) );
    }
    else
    {
@@ -1197,26 +1316,27 @@ RETCODE SCIPlpiSetState(                /**< loads LP state (like basis informat
    }
 
    /* free temporary memory */
-   freeBlockMemoryArray(memhdr, cstat, lpstate->ncol);
-   freeBlockMemoryArray(memhdr, rstat, lpstate->nrow);
+   freeBlockMemoryArray(memhdr, cstat, lpistate->ncol);
+   freeBlockMemoryArray(memhdr, rstat, lpistate->nrow);
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiFreeState(               /**< frees LP state information */
+RETCODE SCIPlpiFreeState(               /**< frees LPi state information */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
+   LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
    assert(lpi != NULL);
 
-   lpstateFree(lpstate, memhdr);
+   debugMessage("freeing LPI state\n");
+   lpistateFree(lpistate, memhdr);
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiWriteState(              /**< writes LP state (like basis information) to a file */
+RETCODE SCIPlpiWriteState(              /**< writes LPi state (like basis information) to a file */
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    )

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.10 2003/01/20 15:58:59 bzfpfend Exp $
+# $Id: Makefile,v 1.11 2003/01/28 16:25:13 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -62,8 +62,8 @@ BINDIR		=	bin
 LIBDIR		=	lib
 
 CPPFLAGS	=	-I$(SRCDIR)
-CFLAGS		=	-O
-CXXFLAGS	=	-O
+CFLAGS		=	
+CXXFLAGS	=	
 LDFLAGS		=	-lpthread -lm
 ARFLAGS		=	cr
 DFLAGS		=	-MM
@@ -89,6 +89,7 @@ NAME		=	scip
 
 LIBOBJ		=	bab.o \
 			cons.o \
+			cons_integral.o \
 			cons_linear.o \
 			lp.o \
 			mem.o \
@@ -100,6 +101,7 @@ LIBOBJ		=	bab.o \
 			prob.o \
 			retcode.o \
 			scip.o \
+			sepa.o \
 			set.o \
 			solve.o \
 			sort.o \

@@ -1,6 +1,6 @@
-#--- $Id: make.seq.linux.x86.gnu.opt,v 1.1 2002/10/23 14:31:41 bzfpfend Exp $
+#--- $Id: make.seq.linux.x86.gnu.opt,v 1.2 2003/01/28 16:25:14 bzfpfend Exp $
 CPPFLAGS	+=	-DNDEBUG -DWITH_READLINE
-CFLAGS		=	-O6 -march=pentiumpro -g
-CXXFLAGS	=	-O6 -march=pentiumpro -g
+CFLAGS		=	-O3 -march=pentiumpro -g
+CXXFLAGS	=	-O3 -march=pentiumpro -g
 ARFLAGS		=	crs
 LDFLAGS		+=	-lreadline -lncurses #-static

@@ -45,7 +45,7 @@ RETCODE SCIPpriceFree(                  /**< frees pricing storage */
    );
 
 extern
-RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage */
+RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage and capture it */
    PRICE*           price,              /**< pricing storage */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< priced variable */
@@ -53,7 +53,7 @@ RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage */
    );
 
 extern
-RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates the bounds to array of bound violations */
+RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates the bounds to pricing storage, capture it */
    PRICE*           price,              /**< pricing storage */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
@@ -67,13 +67,14 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricers, prices 
    const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            transprob,          /**< transformed problem after presolve */
+   PROB*            prob,               /**< transformed problem after presolve */
    LP*              lp                  /**< LP data */
    );
 
 extern
 RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by zero to its original value */
    PRICE*           price,              /**< pricing storage */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< LP data */
    );

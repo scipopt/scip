@@ -31,17 +31,22 @@
 /** return codes for SCIP methods: negative return codes are errors */
 enum Retcode
 {
-   SCIP_SUCCESS     =   2,              /**< normal termination with success */
-   SCIP_FAILURE     =   1,              /**< normal termination without success */
+   SCIP_DIDNOTRUN   =   7,              /**< the method was not executed */
+   SCIP_FAILURE     =   6,              /**< the method was executed, but did not have success to find anything */
+   SCIP_BRANCHED    =   5,              /**< the method created a branching */
+   SCIP_REDUCEDDOM  =   4,              /**< the method reduced the domain of a variable */
+   SCIP_SEPARATED   =   3,              /**< the method added a cutting plane */
+   SCIP_INFEASIBLE  =   2,              /**< an infeasibility was detected */
+   SCIP_FEASIBLE    =   1,              /**< no infeasibility could be found */
    SCIP_OKAY        =   0,              /**< normal termination */
-   SCIP_ERROR       =  -1,              /**< unspecified error */
-   SCIP_NOMEMORY    =  -2,              /**< insufficient memory error */
-   SCIP_READERR     =  -3,              /**< file read error */
-   SCIP_NOFILE      =  -4,              /**< file not found error */
-   SCIP_LPERROR     =  -5,              /**< error in LP solver */
-   SCIP_NOPROBLEM   =  -6,              /**< no problem exists */
-   SCIP_INVALIDCALL =  -7,              /**< method cannot be called at this time in solution process */
-   SCIP_INVALIDDATA =  -8               /**< error in input data */
+   SCIP_ERROR       =  -1,              /**< ERROR: unspecified error */
+   SCIP_NOMEMORY    =  -2,              /**< ERROR: insufficient memory error */
+   SCIP_READERR     =  -3,              /**< ERROR: file read error */
+   SCIP_NOFILE      =  -4,              /**< ERROR: file not found error */
+   SCIP_LPERROR     =  -5,              /**< ERROR: error in LP solver */
+   SCIP_NOPROBLEM   =  -6,              /**< ERROR: no problem exists */
+   SCIP_INVALIDCALL =  -7,              /**< ERROR: method cannot be called at this time in solution process */
+   SCIP_INVALIDDATA =  -8               /**< ERROR: error in input data */
 };
 typedef enum Retcode RETCODE;           /**< return code for SCIP method */
 

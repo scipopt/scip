@@ -43,43 +43,14 @@ struct Prob
    char*            name;               /**< problem name */
    VAR**            vars;               /**< array with problem variables ordered binary, integer, implicit, continous */
    CONSLIST*        conslist;           /**< list of constraints of the problem */
-   int              varssize;           /**< available slots in vars vector */
-   int              nvars;              /**< number of variables in the problem (number of used slots in vars vector) */
+   int              varssize;           /**< available slots in vars array */
+   int              nvars;              /**< number of variables in the problem (number of used slots in vars array) */
    int              nbin;               /**< number of binary variables */
    int              nint;               /**< number of general integer variables */
    int              nimpl;              /**< number of implicit integer variables */
    int              ncont;              /**< number of continous variables */
+   int              ncons;              /**< number of constraints in the problem (number of used slots in cons array) */
 };
-
-
-/*
- * problem information
- */
-
-extern
-const char* SCIPprobGetName(            /**< gets problem name */
-   const PROB*      prob                /**< problem data */
-   );
-
-
-/*
- * problem modification
- */
-
-extern
-RETCODE SCIPprobAddVar(                 /**< adds variable to the problem */
-   PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var                 /**< variable to add */
-   );
-
-extern
-RETCODE SCIPprobAddCons(                /**< adds constraint to the problem */
-   PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
-   CONS*            cons                /**< constraint to add */
-   );
-
 
 
 /*
@@ -107,5 +78,48 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    const SET*       set,                /**< global SCIP settings */
    PROB**           target              /**< pointer to target problem data structure */
    );
+
+extern
+RETCODE SCIPprobActivate(               /**< activates constraints in the problem */
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+extern
+RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the problem */
+   PROB*            prob                /**< problem data */
+   );
+
+
+/*
+ * problem modification
+ */
+
+extern
+RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable to add */
+   );
+
+extern
+RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   CONS*            cons                /**< constraint to add */
+   );
+
+
+
+/*
+ * problem information
+ */
+
+extern
+const char* SCIPprobGetName(            /**< gets problem name */
+   const PROB*      prob                /**< problem data */
+   );
+
+
 
 #endif

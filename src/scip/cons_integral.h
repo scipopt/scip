@@ -16,40 +16,33 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   solve.h
- * @brief  main solving loop and node processing
+/**@file   cons_integral.h
+ * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SOLVE_H__
-#define __SOLVE_H__
+#ifndef __CONS_INTEGRAL_H__
+#define __CONS_INTEGRAL_H__
 
 
-#include "def.h"
-#include "retcode.h"
-#include "set.h"
-#include "mem.h"
-#include "stat.h"
-#include "prob.h"
-#include "tree.h"
-#include "lp.h"
-#include "price.h"
-#include "sepa.h"
+#include "scip.h"
+
+
+DECL_CONSINIT(SCIPconsInitIntegral);
+DECL_CONSEXIT(SCIPconsExitIntegral);
+DECL_CONSFREE(SCIPconsFreeIntegral);
+DECL_CONSTRAN(SCIPconsTranIntegral);
+DECL_CONSCHCK(SCIPconsSepaIntegral);
+DECL_CONSENFO(SCIPconsEnfoIntegral);
+DECL_CONSCHCK(SCIPconsChckIntegral);
+DECL_CONSPROP(SCIPconsPropIntegral);
 
 
 extern
-RETCODE SCIPsolveCIP(                   /**< main solving loop */
-   SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory buffers */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   PRICE*           price,              /**< pricing storage */
-   SEPA*            sepa                /**< separation storage */
+RETCODE SCIPincludeConsHdlrIntegral(    /**< creates the handler for the integrality constraint and includes it in SCIP */
+   SCIP*            scip                /**< SCIP data structure */
    );
-
 
 #endif

@@ -1,50 +1,58 @@
 $(OBJDIR)/bab.o: src/bab.c src/bab.h src/def.h
 $(OBJDIR)/cons.o: src/cons.c src/cons.h src/scip.h src/def.h src/retcode.h \
   src/memory.h src/message.h src/var.h src/lp.h src/mem.h src/set.h \
-  src/sort.h src/nodesel.h src/tree.h src/stat.h src/lpi.h
+  src/sort.h src/nodesel.h src/tree.h src/lpi.h src/prob.h src/stat.h
+$(OBJDIR)/cons_integral.o: src/cons_integral.c src/cons_integral.h src/scip.h \
+  src/def.h src/retcode.h src/memory.h src/message.h src/cons.h src/mem.h \
+  src/set.h src/sort.h src/nodesel.h src/tree.h src/lp.h src/stat.h \
+  src/lpi.h src/var.h src/prob.h
 $(OBJDIR)/cons_linear.o: src/cons_linear.c src/cons_linear.h src/scip.h src/def.h \
   src/retcode.h src/memory.h src/message.h src/cons.h src/mem.h src/set.h \
   src/sort.h src/nodesel.h src/tree.h src/lp.h src/stat.h src/lpi.h \
-  src/var.h
+  src/var.h src/prob.h
 $(OBJDIR)/lp.o: src/lp.c src/sort.h src/def.h src/retcode.h src/lp.h src/mem.h \
   src/memory.h src/set.h src/scip.h src/message.h src/cons.h src/var.h \
-  src/stat.h src/tree.h src/nodesel.h src/lpi.h
+  src/stat.h src/tree.h src/lpi.h src/nodesel.h src/prob.h
 $(OBJDIR)/mem.o: src/mem.c src/mem.h src/def.h src/memory.h src/retcode.h src/set.h \
   src/sort.h src/scip.h src/message.h src/cons.h src/lp.h src/stat.h \
-  src/lpi.h src/var.h src/tree.h src/nodesel.h
-$(OBJDIR)/memory.o: src/memory.c src/memory.h src/def.h src/message.h
+  src/lpi.h src/var.h src/tree.h src/nodesel.h src/prob.h
+$(OBJDIR)/memory.o: src/memory.c src/message.h src/memory.h src/def.h
 $(OBJDIR)/message.o: src/message.c src/message.h
 $(OBJDIR)/nodesel.o: src/nodesel.c src/nodesel.h src/scip.h src/def.h src/retcode.h \
   src/memory.h src/message.h src/cons.h src/mem.h src/set.h src/sort.h \
-  src/lp.h src/stat.h src/lpi.h src/var.h src/tree.h
+  src/lp.h src/stat.h src/lpi.h src/var.h src/tree.h src/prob.h
 $(OBJDIR)/nodesel_dfs.o: src/nodesel_dfs.c src/nodesel_dfs.h src/scip.h src/def.h \
   src/retcode.h src/memory.h src/message.h src/cons.h src/mem.h src/set.h \
   src/sort.h src/nodesel.h src/tree.h src/lp.h src/stat.h src/lpi.h \
-  src/var.h
+  src/var.h src/prob.h
 $(OBJDIR)/price.o: src/price.c src/set.h src/def.h src/sort.h src/retcode.h \
   src/scip.h src/memory.h src/message.h src/cons.h src/mem.h src/lp.h \
   src/stat.h src/lpi.h src/var.h src/tree.h src/nodesel.h src/prob.h \
   src/price.h
 $(OBJDIR)/prob.o: src/prob.c src/def.h src/prob.h src/memory.h src/retcode.h \
   src/cons.h src/scip.h src/message.h src/var.h src/lp.h src/mem.h \
-  src/set.h src/sort.h src/nodesel.h src/tree.h src/stat.h src/lpi.h
+  src/set.h src/sort.h src/nodesel.h src/tree.h src/lpi.h src/stat.h
 $(OBJDIR)/retcode.o: src/retcode.c src/retcode.h
 $(OBJDIR)/scip.o: src/scip.c src/set.h src/def.h src/sort.h src/retcode.h \
   src/scip.h src/memory.h src/message.h src/cons.h src/mem.h src/lp.h \
   src/stat.h src/lpi.h src/var.h src/tree.h src/nodesel.h src/prob.h \
-  src/solve.h src/price.h
+  src/solve.h src/price.h src/sepa.h
+$(OBJDIR)/sepa.o: src/sepa.c src/set.h src/def.h src/sort.h src/retcode.h \
+  src/scip.h src/memory.h src/message.h src/cons.h src/mem.h src/lp.h \
+  src/stat.h src/lpi.h src/var.h src/tree.h src/nodesel.h src/prob.h \
+  src/cons_linear.h src/sepa.h
 $(OBJDIR)/set.o: src/set.c src/memory.h src/def.h src/tree.h src/lp.h src/mem.h \
   src/retcode.h src/set.h src/sort.h src/scip.h src/message.h src/cons.h \
-  src/var.h src/stat.h src/nodesel.h src/lpi.h
+  src/var.h src/stat.h src/nodesel.h src/lpi.h src/prob.h
 $(OBJDIR)/solve.o: src/solve.c src/cons.h src/scip.h src/def.h src/retcode.h \
   src/memory.h src/message.h src/var.h src/lp.h src/mem.h src/set.h \
-  src/sort.h src/nodesel.h src/tree.h src/stat.h src/lpi.h src/solve.h \
-  src/prob.h src/price.h
+  src/sort.h src/nodesel.h src/tree.h src/lpi.h src/prob.h src/stat.h \
+  src/solve.h src/price.h src/sepa.h
 $(OBJDIR)/sort.o: src/sort.c src/memory.h src/def.h src/retcode.h src/sort.h
 $(OBJDIR)/stat.o: src/stat.c src/memory.h src/def.h src/stat.h src/retcode.h
 $(OBJDIR)/tree.o: src/tree.c src/def.h src/tree.h src/lp.h src/mem.h src/memory.h \
   src/retcode.h src/set.h src/sort.h src/scip.h src/message.h src/cons.h \
-  src/var.h src/stat.h src/nodesel.h src/lpi.h
+  src/var.h src/stat.h src/nodesel.h src/lpi.h src/prob.h
 $(OBJDIR)/var.o: src/var.c src/var.h src/def.h src/memory.h src/retcode.h src/lp.h \
   src/mem.h src/set.h src/sort.h src/scip.h src/message.h src/cons.h \
-  src/tree.h src/nodesel.h src/stat.h src/lpi.h
+  src/tree.h src/lpi.h src/nodesel.h src/prob.h src/stat.h

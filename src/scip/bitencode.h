@@ -27,9 +27,9 @@
 #ifndef __BITENCODE_H__
 #define __BITENCODE_H__
 
-typedef int SINGLEPACKET;                         /**< storing single bits in packed format */
+typedef unsigned int SINGLEPACKET;                /**< storing single bits in packed format */
 #define SINGLEPACKETSIZE (sizeof(SINGLEPACKET)*8) /**< each entry needs one bit of information */
-typedef int DUALPACKET;                           /**< storing bit pairs in packed format */
+typedef unsigned int DUALPACKET;                  /**< storing bit pairs in packed format */
 #define DUALPACKETSIZE   (sizeof(DUALPACKET)*4)   /**< each entry needs two bits of information */
 
 

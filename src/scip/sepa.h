@@ -16,40 +16,57 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   solve.h
- * @brief  main solving loop and node processing
+/**@file   sepa.h
+ * @brief  methods and datastructures for separating cuts
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SOLVE_H__
-#define __SOLVE_H__
+#ifndef __SEPA_H__
+#define __SEPA_H__
+
+
+typedef struct Sepa SEPA;             /**< storage for sepad variables */
 
 
 #include "def.h"
 #include "retcode.h"
-#include "set.h"
-#include "mem.h"
-#include "stat.h"
-#include "prob.h"
-#include "tree.h"
-#include "lp.h"
-#include "price.h"
-#include "sepa.h"
 
 
 extern
-RETCODE SCIPsolveCIP(                   /**< main solving loop */
-   SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory buffers */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   PRICE*           price,              /**< pricing storage */
+RETCODE SCIPsepaCreate(                 /**< creates separation storage */
+   SEPA**           sepa                /**< pointer to store separation storage */
+   );
+
+extern
+RETCODE SCIPsepaFree(                   /**< frees separation storage */
+   SEPA**           sepa                /**< pointer to store separation storage */
+   );
+
+extern
+RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and captures it */
+   SEPA*            sepa,               /**< separation storage */
+   const SET*       set,                /**< global SCIP settings */
+   ROW*             cut,                /**< separated cut */
+   Real             score,              /**< separation score of cut (the larger, the better the cut) */
+   Bool             pool                /**< should the cut be used in the global cut pool? Cut must be global valid! */
+   );
+
+extern
+RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears separation storage */
+   SEPA*            sepa,               /**< separation storage */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< LP data */
+   );
+
+extern
+int SCIPsepaGetNCuts(                   /**< get number of cuts in the separation storage */
    SEPA*            sepa                /**< separation storage */
    );
+
 
 
 #endif

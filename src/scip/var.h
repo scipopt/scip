@@ -48,14 +48,6 @@ enum Vartype
 };
 typedef enum Vartype VARTYPE;
 
-/** type of bound: lower or upper bound */
-enum BoundType
-{
-   SCIP_BOUNDTYPE_LOWER = 0,            /**< lower bound */
-   SCIP_BOUNDTYPE_UPPER = 1             /**< upper bound */
-};
-typedef enum BoundType BOUNDTYPE;
-
 typedef struct DomChg DOMCHG;           /**< changes in domains of variables (fixed sized arrays) */
 typedef struct DomChgDyn DOMCHGDYN;     /**< changes in domains of variables (dynamically sized arrays) */
 typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
@@ -100,58 +92,20 @@ struct Var
       AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
    } data;
    VAR*             origvar;            /**< pointer to original problem variable this var represents, or NULL */
-   char*            name;               /**< name of the column */
+   char*            name;               /**< name of the variable */
    DOM              dom;                /**< domain of variable */
    Real             obj;                /**< objective function value of variable */
+   int              numuses;            /**< number of times, this variable is referenced */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
+   unsigned int     inprob:1;           /**< TRUE iff variable is stored in a problem object */
 };
 
 
 
-
-extern
-RETCODE SCIPdomchgdynCreate(            /**< creates a dynamically sized domain change data structure */
-   DOMCHGDYN**      domchgdyn           /**< pointer to dynamically sized domain change data structure */
-   );
-
-extern
-void SCIPdomchgdynFree(                 /**< frees a dynamically sized domain change data structure */
-   DOMCHGDYN**      domchgdyn           /**< pointer to dynamically sized domain change data structure */
-   );
-
-extern
-RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain change into dynamically sized one */
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   const SET*       set,                /**< global SCIP settings */
-   DOMCHG*          domchg              /**< static domain change */
-   );
-
-extern
-RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes */
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var,                /**< variable to change the bounds for */
-   Real             newbound,           /**< new value for bound */
-   Real             oldbound,           /**< old value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   );
-
-extern
-RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes */
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   const SET*       set,                /**< global SCIP settings */
-   HOLELIST**       ptr,                /**< changed list pointer */
-   HOLELIST*        newlist,            /**< new value of list pointer */
-   HOLELIST*        oldlist             /**< old value of list pointer */
-   );
-
-extern
-RETCODE SCIPdomchgCreate(               /**< creates domain change data (fixed size) from dynamically sized data */
-   DOMCHG**         domchg,             /**< pointer to fixed size domain change data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const DOMCHGDYN* domchgdyn           /**< dynamically sized domain change data structure */
-   );
+/*
+ * domain change methods
+ */
 
 extern
 void SCIPdomchgFree(                    /**< frees fixed size domain change data */
@@ -174,6 +128,71 @@ RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
    );
 
 
+/*
+ * dynamic size attachment methods
+ */
+
+extern
+RETCODE SCIPdomchgdynCreate(            /**< creates a dynamic size attachment for a domain change data structure */
+   DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+void SCIPdomchgdynFree(                 /**< frees a dynamic size attachment for a domain change data structure */
+   DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+void SCIPdomchgdynAttach(               /**< attaches dynamic size information to domain change data */
+   DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
+   DOMCHG**         domchg              /**< pointer to static domain change */
+   );
+
+extern
+RETCODE SCIPdomchgdynDetach(            /**< detaches dynamic size information and shrinks domain change data */
+   DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+void SCIPdomchgdynDiscard(              /**< frees attached domain change data and detaches dynamic size attachment */
+   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes */
+   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable to change the bounds for */
+   Real             newbound,           /**< new value for bound */
+   Real             oldbound,           /**< old value for bound */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
+extern
+RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes */
+   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   HOLELIST**       ptr,                /**< changed list pointer */
+   HOLELIST*        newlist,            /**< new value of list pointer */
+   HOLELIST*        oldlist             /**< old value of list pointer */
+   );
+
+extern
+DOMCHG** SCIPdomchgdynGetDomchgPtr(     /**< gets pointer to domain change data the dynamic size information references */
+   DOMCHGDYN*       domchgdyn           /**< dynamically sized domain change data structure */
+   );
+
+
+
+/*
+ * methods for variables 
+ */
 
 extern
 RETCODE SCIPvarCreate(                  /**< creates an original problem variable */
@@ -201,6 +220,19 @@ RETCODE SCIPvarCreateTransformed(       /**< creates a variable belonging only t
 
 extern
 void SCIPvarFree(                       /**< frees a variable */
+   VAR**            var,                /**< pointer to variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   );
+
+extern
+void SCIPvarCapture(                    /**< increases usage counter of variable */
+   VAR*             var                 /**< variable */
+   );
+
+extern
+void SCIPvarRelease(                    /**< decreases usage counter of variable, and frees memory if necessary */
    VAR**            var,                /**< pointer to variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -271,6 +303,36 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
    Real             newbound            /**< new bound for variable */
    );
 
+extern
+const char* SCIPvarGetName(             /**< get name of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+Real SCIPvarGetLb(                      /**< gets lower bound of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+Real SCIPvarGetUb(                      /**< gets upper bound of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+Real SCIPvarGetPrimsol(                 /**< get primal solution value of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and adds them with the coefficient to the row */
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   STAT*            stat,               /**< problem statistics */
+   ROW*             row,                /**< LP row */
+   Real             val                 /**< value of coefficient */
+   );
 
 
 #endif

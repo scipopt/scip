@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "memory.h"
 #include "tree.h"
@@ -67,6 +68,7 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->verblevel = SCIP_DEFAULT_VERBLEVEL;
    (*set)->epsilon = SCIP_DEFAULT_EPSILON;
    (*set)->infinity = SCIP_DEFAULT_INFINITY;
+   (*set)->feastol = SCIP_DEFAULT_FEASTOL;
    (*set)->memGrowFac = SCIP_DEFAULT_MEMGROWFAC;
    (*set)->memGrowInit = SCIP_DEFAULT_MEMGROWINIT;
    (*set)->bufGrowFac = SCIP_DEFAULT_BUFGROWFAC;
@@ -83,6 +85,7 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->nodeselssize = 0;
    (*set)->nodesel = NULL;
    (*set)->maxpricevars = SCIP_DEFAULT_MAXPRICEVARS;
+   (*set)->maxsepacuts = SCIP_DEFAULT_MAXSEPACUTS;
 
    return SCIP_OKAY;
 }
@@ -284,6 +287,23 @@ RETCODE SCIPsetSetVerbLevel(            /**< sets verbosity level for message ou
    return SCIP_OKAY;
 }
 
+RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data (or NULL) */
+   Real             feastol             /**< new feasibility tolerance */
+   )
+{
+   assert(set != NULL);
+
+   set->feastol = feastol;
+   if( lp != NULL )
+   {
+      CHECK_OKAY( SCIPlpSetFeastol(lp, feastol) );
+   }
+
+   return SCIP_OKAY;
+}
+
 Bool SCIPsetIsEQ(                       /**< checks, if values are in range of epsilon */
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
@@ -361,47 +381,34 @@ Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -eps
    return( val < -set->epsilon );
 }
 
-
-#if 0
-SCIP* SCIPsetGetScip(                   /**< returns scip main data structure */
-   const SET*       set                 /**< global SCIP settings */
+Bool SCIPsetIsFeasible(                 /**< checks, if value is non-negative within the LP feasibility bounds */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
    )
 {
-   assert(set != NULL);
-   assert(set->scip != NULL);
-
-   return set->scip;
+   return( val >= -set->feastol );
 }
 
-VERBLEVEL SCIPsetGetVerbLevel(          /**< gets verbosity level for message output */
-   const SET*       set                 /**< global SCIP settings */
+Real SCIPsetFloor(                      /**< rounds value down to the next integer */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
    )
 {
-   assert(set != NULL);
-
-   return set->verblevel;
+   return floor(val + set->feastol);
 }
 
-NODESEL* SCIPsetGetNodesel(             /**< returns actual node selector */
-   const SET*       set                 /**< global SCIP settings */
+Real SCIPsetCeil(                       /**< rounds value up to the next integer */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
    )
 {
-   assert(set != NULL);
-
-   return set->nodesel;
+   return ceil(val - set->feastol);
 }
 
-Real SCIPsetGetInfinity(                /**< returns infinity value */
-   const SET*       set                 /**< global SCIP settings */
+Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within the LP feasibility bounds */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
    )
 {
-   return set->infinity;
+   return (SCIPsetCeil(set, val) - SCIPsetFloor(set, val) < 0.5);
 }
-
-Real SCIPsetGetEpsilon(                 /**< returns value treated as zero */
-   const SET*       set                 /**< global SCIP settings */
-   )
-{
-   return set->epsilon;
-}
-#endif

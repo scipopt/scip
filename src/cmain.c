@@ -28,6 +28,7 @@
 #include <assert.h>
 
 #include "scip.h"
+#include "cons_integral.h"
 #include "cons_linear.h"
 #include "nodesel_dfs.h"
 
@@ -37,20 +38,19 @@ static const int   nvars = 2;
 
 static const char* var_name[] = { "x1"    , "x2"     };
 static const Real  var_obj [] = { -1.0    , -1.0     };     /* min  -x1 -x2 */
-static const Real  var_lb  [] = {  1.0    ,  0.0     };     /*   0 <= x1 <= 10 integer */
+static const Real  var_lb  [] = {  1.0    ,  0.0     };     /*   1 <= x1 <= 10 integer */
 static const Real  var_ub  [] = { 10.0    ,  5.0     };     /*   0 <= x2 <= 5  integer */
 
 static const char* row_name[] = { "lin1"  , "lin2"   };     /* such that */
-static const int   row_len [] = {        2,        2 };     /*   lin1: +2x1 + x2 <= 2 */
-static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2: + x1 +2x2 <= 2 */
+static const int   row_len [] = {        2,        2 };     /*   lin1: +2x1 + x2 <= 4 */
+static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2: + x1 +2x2 <= 3 */
 static const Real  row_val [] = { 2.0, 1.0, 1.0, 2.0 };
-static const Real  row_rhs [] = {      2.0,      2.0 };
+static const Real  row_rhs [] = {      4.0,      3.0 };
 
 int
 main(void)
 {
    SCIP* scip = NULL;
-   RETCODE retcode;
    VAR** vars;
    VAR** rowvars;
    Real* rowvals;
@@ -59,7 +59,7 @@ main(void)
    int i;
    int pos;
 
-   printf("SCIP version %g\n", SCIPversion());
+   SCIPprintVersion(NULL);
 
    /***************************
     * Local Memory Allocation *
@@ -83,6 +83,7 @@ main(void)
    CHECK_SCIP( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
 
    /* include user defined callbacks */
+   CHECK_SCIP( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_SCIP( SCIPincludeConsHdlrLinear(scip) );
    CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
 
@@ -100,6 +101,7 @@ main(void)
    for( v = 0; v < nvars; ++v )
    {
       CHECK_SCIP( SCIPcreateVar(scip, &vars[v], var_name[v], var_lb[v], var_ub[v], var_obj[v], SCIP_VARTYPE_INTEGER) );
+      CHECK_SCIP( SCIPcaptureVar(scip, vars[v]) ); /* we need the variables for constraint creation */
       CHECK_SCIP( SCIPaddVar(scip, vars[v]) );
    }
 
@@ -111,12 +113,18 @@ main(void)
 
       for( i = 0; i < row_len[r]; ++i )
       {
-         rowvars[i] = vars[row_idx[pos]];
+         rowvars[i] = vars[row_idx[pos]];  /* we captured the variables, so this is valid */
          rowvals[i] = row_val[pos];
          pos++;
       }
       CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, row_name[r], row_len[r], rowvars, rowvals, 0.0, row_rhs[r], TRUE) );
       CHECK_SCIP( SCIPaddCons(scip, cons) ); /* add as a global constraint */
+   }
+
+   /* release variables, because we don't need them any longer */
+   for( v = 0; v < nvars; ++v )
+   {
+      CHECK_SCIP( SCIPreleaseVar(scip, &vars[v]) );
    }
 
 
@@ -128,6 +136,7 @@ main(void)
    printf("\nsolve problem\n");
    CHECK_SCIP( SCIPsolve(scip) );
 
+#if 1
    /* free solution process */
    printf("\nfree problem solution\n");
    CHECK_SCIP( SCIPfreeSolve(scip) );
@@ -135,6 +144,7 @@ main(void)
    /* solve problem again */
    printf("\nsolve problem again\n");
    CHECK_SCIP( SCIPsolve(scip) );
+#endif
 
 #ifndef NDEBUG
    /*SCIPdebugMemory(scip);*/

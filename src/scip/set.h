@@ -45,6 +45,7 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "scip.h"
 #include "cons.h"
 #include "nodesel.h"
+#include "lp.h"
 #include "message.h"
 
 
@@ -55,6 +56,7 @@ struct Set
    VERBLEVEL        verblevel;          /**< verbosity level of output */
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
    Real             infinity;           /**< values larger than this are considered infinity */
+   Real             feastol;            /**< LP feasibility tolerance */
    Real             memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
    int              memGrowInit;        /**< initial size of dynamically allocated arrays */
    Real             bufGrowFac;         /**< memory growing factor for buffer arrays */
@@ -71,6 +73,7 @@ struct Set
    int              nodeselssize;       /**< size of nodesel array */
    NODESEL*         nodesel;            /**< active node selector */
    int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
+   int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
 };
 
 
@@ -145,6 +148,13 @@ RETCODE SCIPsetSetVerbLevel(            /**< sets verbosity level for message ou
    );
 
 extern
+RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data (or NULL) */
+   Real             feastol             /**< new feasibility tolerance */
+   );
+
+extern
 Bool SCIPsetIsEQ(                       /**< checks, if values are in range of epsilon */
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
@@ -199,6 +209,42 @@ Bool SCIPsetIsPos(                      /**< checks, if value is greater than ep
 
 extern
 Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -epsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Real SCIPsetFloor(                      /**< rounds value down to the next integer */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Real SCIPsetCeil(                       /**< rounds value up to the next integer */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsFeasible(                 /**< checks, if value is non-negative within the LP feasibility bounds */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Real SCIPsetFloor(                      /**< rounds value down to the next integer */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Real SCIPsetCeil(                       /**< rounds value up to the next integer */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within the LP feasibility bounds */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );

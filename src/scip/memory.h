@@ -27,12 +27,17 @@
 #define __MEMORY_H__
 
 
-typedef struct memory_header MEMHDR;
-
-
 #include <stdlib.h>
 #include "def.h"
 
+
+/*
+ * standard memory management
+ */
+
+#ifdef SCIP_SAFEMEMORY
+
+/* safe memory management with leakage detection in debug mode */
 
 #define allocMemory(ptr)                   ((ptr) = allocMemory_call( sizeof(*(ptr)), __FILE__, __LINE__ ))
 #define allocMemoryArray(ptr,num)          ((ptr) = allocMemory_call( (num)*sizeof(*(ptr)), __FILE__, __LINE__ ))
@@ -56,6 +61,68 @@ typedef struct memory_header MEMHDR;
 #define freeMemoryNull(ptr)                if( (ptr) != NULL ) freeMemory( (ptr) )
 #define freeMemoryArray(ptr)               freeMemory_call( (void**)(&(ptr)), __FILE__, __LINE__ )
 #define freeMemoryArrayNull(ptr)           if( (ptr) != NULL ) freeMemoryArray( (ptr) )
+
+void*  allocMemory_call(size_t size, const char *filename, int line);
+void*  reallocMemory_call(void* ptr, size_t size, const char *filename, int line);
+void   copyMemory_call(void* ptr, const void* source, size_t size);
+void*  duplicateMemory_call(const void* source, size_t size, const char *filename, int line);
+void   freeMemory_call(void** ptr, const char *filename, int line);
+
+#ifndef NDEBUG
+void   memoryDiagnostic(void);
+void   memoryCheckEmpty(void);
+size_t memorySize(void *ptr);
+#endif
+
+
+#else
+
+/* standard memory management via malloc */
+
+#include <string.h>
+
+#define allocMemory(ptr)                   ((ptr) = malloc( sizeof(*(ptr)) ))
+#define allocMemoryArray(ptr,num)          ((ptr) = malloc( (num)*sizeof(*(ptr)) ))
+#define allocMemorySize(ptr,size)          ((ptr) = malloc( (size_t)(size) ))
+#define allocMemoryCPP(size)               malloc( (size_t)(size) )
+#define allocMemoryArrayCPP(num,size)      malloc( (size_t)((num)*(size)) )
+#define reallocMemoryArray(ptr,num)        ((ptr) = realloc( (ptr), (num)*sizeof(*(ptr)) ))
+#define reallocMemorySize(ptr,size)        ((ptr) = realloc( (ptr), (size_t)(size) ))
+#define copyMemory(ptr, source)            memcpy( (void*)(ptr), (const void*)source, sizeof(*(ptr)) )
+#define copyMemoryArray(ptr, source, num)  memcpy( (void*)(ptr), (const void*)source, (num)*sizeof(*(ptr)) )
+#define copyMemorySize(ptr, source, size)  memcpy( (void*)(ptr), (const void*)source, (size_t)(size) )
+#define duplicateMemory(ptr, source)       ((ptr) = duplicateMemory_call( (const void*)source, sizeof(*(ptr))))
+#define duplicateMemoryArray(ptr, source, num) ((ptr) = duplicateMemory_call( (const void*)source, (num)*sizeof(*(ptr))))
+#define duplicateMemorySize(ptr, source, size) ((ptr) = duplicateMemory_call( (const void*)source, (size_t)(size)))
+#define freeMemory(ptr)                    { free(ptr); ptr = NULL; }
+#define freeMemoryNull(ptr)                if( (ptr) != NULL ) freeMemory( (ptr) )
+#define freeMemoryArray(ptr)               freeMemory(ptr)
+#define freeMemoryArrayNull(ptr)           if( (ptr) != NULL ) freeMemoryArray( (ptr) )
+
+void *  duplicateMemory_call(const void* source, size_t size);
+
+#ifndef NDEBUG
+#define memoryDiagnostic()                 /**/
+#define memoryCheckEmpty()                 /**/
+#define memorySize(ptr)                    0
+#endif
+
+
+#endif
+
+
+
+
+/*
+ * block memory management
+ */
+
+typedef struct memory_header MEMHDR;
+
+
+#ifdef SCIP_BLOCKMEMORY
+
+/* block memory methods for faster memory access */
 
 #define createBlockMemory(csz,clr,gbf)     createBlockMemory_call( (csz), (clr), (gbf), __FILE__, __LINE__ )
 #define clearBlockMemory(mem)              clearBlockMemory_call( (mem), __FILE__, __LINE__ )
@@ -90,22 +157,12 @@ typedef struct memory_header MEMHDR;
 
 
 #ifndef NDEBUG
-void   memoryDiagnostic(void);
-void   memoryCheckEmpty(void);
-size_t memorySize(void *ptr);
 size_t blockMemorySize(MEMHDR *mem, void *ptr);
 void   blockMemoryDiagnostic(MEMHDR *mem);
 #endif
 
-void   errorMessage_call(const char *msg, const char *filename, int line);
 void   alignMemsize(size_t* size);
 int    isAligned(size_t size);
-
-void*  allocMemory_call(size_t size, const char *filename, int line);
-void*  reallocMemory_call(void* ptr, size_t size, const char *filename, int line);
-void   copyMemory_call(void* ptr, const void* source, size_t size);
-void*  duplicateMemory_call(const void* source, size_t size, const char *filename, int line);
-void   freeMemory_call(void** ptr, const char *filename, int line);
 
 /* Create a block memory allocation structure.
  * Parameters:
@@ -152,6 +209,41 @@ void * duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, c
  *    size : size of memory block.
  */
 void freeBlockMemory_call(MEMHDR* mem, void** ptr, size_t size, const char *filename, int line);
+
+
+
+#else
+
+/* block memory management mapped to standard memory management */
+
+#define createBlockMemory(csz,clr,gbf)       (void*)(0x01) /* dummy to not return a NULL pointer */
+#define clearBlockMemory(mem)                /**/
+#define clearBlockMemoryNull(mem)            /**/
+#define destroyBlockMemory(mem)              /**/
+#define destroyBlockMemoryNull(mem)          /**/
+
+#define allocBlockMemory(mem,ptr)                         allocMemory(ptr)
+#define allocBlockMemoryArray(mem,ptr,num)                allocMemoryArray(ptr,num)
+#define allocBlockMemorySize(mem,ptr,size)                allocMemorySize(ptr,size)
+#define reallocBlockMemoryArray(mem,ptr,oldnum,newnum)    reallocMemoryArray(ptr,newnum)
+#define reallocBlockMemorySize(mem,ptr,oldsize,newsize)   reallocMemorySize(ptr,newsize)
+#define duplicateBlockMemory(mem, ptr, source)            duplicateMemory(ptr,source)
+#define duplicateBlockMemoryArray(mem, ptr, source, num)  duplicateMemoryArray(ptr,source,num)
+#define freeBlockMemory(mem,ptr)                          freeMemory(ptr)
+#define freeBlockMemoryNull(mem,ptr)                      freeMemoryNull(ptr)
+#define freeBlockMemoryArray(mem,ptr,num)                 freeMemoryArray(ptr)
+#define freeBlockMemoryArrayNull(mem,ptr,num)             freeMemoryArrayNull(ptr)
+#define freeBlockMemorySize(mem,ptr,size)                 freeMemory(ptr)
+#define freeBlockMemorySizeNull(mem,ptr,size)             freeMemoryNull(ptr)
+
+#ifndef NDEBUG
+#define blockMemorySize(mem,ptr)             0
+#define blockMemoryDiagnostic(mem)           /**/
+#endif
+
+
+#endif
+
 
 
 

@@ -37,14 +37,14 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
  */
-#define DECL_NODESELINIT(x) RETCODE x (NODESEL* self, SCIP* scip)
+#define DECL_NODESELINIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
 /** deinitialization method of node selector
  *  possible return values:
  *    SCIP_OKAY   : normal termination
  *    neg. values : error codes
  */
-#define DECL_NODESELEXIT(x) RETCODE x (NODESEL* self, SCIP* scip)
+#define DECL_NODESELEXIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
 /** node selection method of node selector
  *  possible return values:
@@ -54,7 +54,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *    NULL    : problem is solved, because tree is empty
  *    non-NULL: node to be solved next
  */
-#define DECL_NODESELSLCT(x) RETCODE x (NODESEL* self, SCIP* scip, NODE** selnode)
+#define DECL_NODESELSLCT(x) RETCODE x (NODESEL* nodesel, SCIP* scip, NODE** selnode)
 
 /** node comparison method of node selector
  *  possible return values:
@@ -62,14 +62,15 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *    = 0: both nodes have the same value
  *    > 0: node2 comes after (is worse than) node2
  */
-#define DECL_NODESELCOMP(x) int x (NODESEL* self, SCIP* scip, NODE* node1, NODE* node2)
+#define DECL_NODESELCOMP(x) int x (NODESEL* nodesel, SCIP* scip, NODE* node1, NODE* node2)
 
 
 
 #include "scip.h"
 #include "retcode.h"
+#include "set.h"
 #include "tree.h"
-
+#include "lp.h"
 
 
 extern
@@ -78,8 +79,17 @@ RETCODE SCIPnodepqInit(                 /**< initializes node priority queue */
    );
 
 extern
-void SCIPnodepqFree(                    /**< frees node priority queue, but not the data nodes themselves */
+void SCIPnodepqDestroy(                 /**< frees node priority queue, but not the data nodes themselves */
    NODEPQ**         nodepq              /**< pointer to a node priority queue */
+   );
+
+extern
+RETCODE SCIPnodepqFree(                 /**< frees node priority queue and all nodes in the queue */
+   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern

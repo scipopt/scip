@@ -34,6 +34,8 @@ DECL_CONSINIT(SCIPconsInitLinear);
 DECL_CONSEXIT(SCIPconsExitLinear);
 DECL_CONSFREE(SCIPconsFreeLinear);
 DECL_CONSTRAN(SCIPconsTranLinear);
+DECL_CONSCHCK(SCIPconsSepaLinear);
+DECL_CONSENFO(SCIPconsEnfoLinear);
 DECL_CONSCHCK(SCIPconsChckLinear);
 DECL_CONSPROP(SCIPconsPropLinear);
 
@@ -53,6 +55,14 @@ RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
    Real*            val,                /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
+   Bool             model               /**< is constraint necessary for feasibility? */
+   );
+
+extern
+RETCODE SCIPcreateConsLPRow(            /**< creates a linear constraint from an LP row and captures the row */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons,               /**< pointer to hold the created constraint */
+   ROW*             row,                /**< LP row */
    Bool             model               /**< is constraint necessary for feasibility? */
    );
 

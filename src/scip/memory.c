@@ -28,17 +28,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "memory.h"
 #include "message.h"
-
-
-
-#define BLOCKHASH_SIZE     1013	/* should be prime */
-#define CHUNKLENGTH_MAX 1048576	/* maximal size of a chunk (in bytes) */
-#define STORESIZE_MAX      8192	/* maximal number of elements in one chunk */
-#define ALIGNMENT       (sizeof(FREELIST))
-#define GARBAGE_SIZE        256	/* size of lazy free list to start
-				   garbage collection */
+#include "memory.h"
 
 
 
@@ -46,9 +37,15 @@
  * Standard Memory Management *
  ******************************/
 
-#ifndef NDEBUG
 
-#include <string.h>
+#ifdef SCIP_SAFEMEMORY
+
+/*
+ * safe memory management with leakage detection in debug mode
+ */
+
+
+#ifndef NDEBUG
 
 typedef struct MemList MEMLIST;
 
@@ -164,7 +161,7 @@ allocMemory_call(size_t size, const char *filename, int line)
 {
    void   *ptr = NULL;
 
-   /* printf( "malloc %ld bytes [%s:%d]\n", (long)size, filename, line );*/ /* ??? */
+   /* debugMessage("malloc %ld bytes [%s:%d]\n", (long)size, filename, line); ??? */
    size = MAX(size, 1);
    ptr = malloc(size);
 
@@ -248,9 +245,49 @@ freeMemory_call(void **ptr, const char *filename, int line)
 }
 
 
+
+#else
+
+/*
+ * standard memory management via malloc
+ */
+
+void *
+duplicateMemory_call(const void* source, size_t size)
+{
+   void   *ptr = NULL;
+
+   allocMemorySize(ptr, size);
+   if( ptr != NULL )
+      copyMemorySize(ptr, source, size);
+   return ptr;
+}
+
+#endif
+
+
+
+
+
+
+
 /***************************
  * Block Memory Management *
  ***************************/
+
+
+#ifdef SCIP_BLOCKMEMORY
+
+/* 
+ * block memory methods for faster memory access
+ */
+
+#define BLOCKHASH_SIZE     1013	/* should be prime */
+#define CHUNKLENGTH_MAX 1048576	/* maximal size of a chunk (in bytes) */
+#define STORESIZE_MAX      8192	/* maximal number of elements in one chunk */
+#define ALIGNMENT       (sizeof(FREELIST))
+#define GARBAGE_SIZE        256	/* size of lazy free list to start
+				   garbage collection */
 
 typedef struct free_list FREELIST;
 typedef struct chunk_header CHKHDR;
@@ -523,7 +560,7 @@ checkMem(MEMHDR *mem)
 #define checkMem(mem) /**/
 #endif
 /* links chunk to the block's chunk list */
-   static void
+static void
 linkChunk(BLKHDR * blk, CHKHDR * chk)
 {
    assert(chk->next == NULL);
@@ -636,8 +673,8 @@ createChunk(BLKHDR * blk)
    newchunk->storeSize = storeSize;
    newchunk->store = (void *) ((char *) newchunk + sizeof(CHKHDR));
 
-   /* printf( "allocated new chunk: %d elements with size %ld\n", 
-      newchunk->storeSize, (long)(newchunk->elem_size)); ??? */
+   /* debugMessage("allocated new chunk %p: %d elements with size %ld\n", 
+      newchunk, newchunk->storeSize, (long)(newchunk->elem_size)); ??? */
 
    /* add new memory to the lazy free list */
    for( i = 0; i < newchunk->storeSize - 1; ++i )
@@ -680,9 +717,6 @@ static void
 destroyChunk(CHKHDR * chk)
 {
    assert(chk != NULL);
-
-   /* printf( "destroy chunk: %d elements with size %ld\n",
-      chk->storeSize, (long)(chk->block->elem_size)); ??? */
 
    /* free chunk header and store (allocated in one call) */
    freeMemory(chk);
@@ -1110,7 +1144,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
    ptr = allocBlockElement(*blkptr);
    if( ptr == NULL )
       errorMessage_call("Error! Insufficient memory for new chunk.", filename, line);
-   /* printf( "[%s:%4d] alloced %8ld bytes in %p\n", filename, line, (long)size, ptr ); ??? */
+   /* debugMessage("[%s:%4d] alloced %8ld bytes in %p\n", filename, line, (long)size, ptr); ??? */
 
    checkMem(mem);
 
@@ -1137,7 +1171,7 @@ reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, 
 
    newptr = allocBlockMemory_call(mem, newsize, filename, line);
    if( newptr != NULL )
-      copyMemory_call(newptr, ptr, MIN(oldsize, newsize));
+      copyMemorySize(newptr, ptr, MIN(oldsize, newsize));
    freeBlockMemory_call(mem, &ptr, oldsize, filename, line);
    
    return newptr;
@@ -1151,7 +1185,7 @@ duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const ch
    assert(source != NULL);
    ptr = allocBlockMemory_call(mem, size, filename, line);
    if( ptr != NULL )
-      copyMemory_call(ptr, source, size);
+      copyMemorySize(ptr, source, size);
 
    return ptr;
 }
@@ -1240,7 +1274,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       alignSize(&size);
       hashNumber = getHashNumber(size);
 
-      /* printf( "[%s:%4d] free    %8ld bytes in %p\n", filename, line, (long)size, *ptr ); ??? */
+      /* debugMessage("[%s:%4d] free    %8ld bytes in %p\n", filename, line, (long)size, *ptr ); ??? */
       /* find correspoding block header */
       blk = mem->blockhash[hashNumber];
       while( blk != NULL && blk->elem_size != size )
@@ -1374,5 +1408,10 @@ blockMemoryDiagnostic(MEMHDR *mem)
       printf(" (%.1f%%)", 100.0 * (double) freeMem / (double) allocedMem);
    printf("\n");
 }
+
 #endif
 
+
+
+
+#endif

@@ -35,14 +35,14 @@ struct NodePQ
 {
    int              len;                /**< number of used element slots */
    int              size;               /**< total number of available element slots */
-   void**           slots;              /**< array of element slots */
+   NODE**           slots;              /**< array of element slots */
 };
 
 /** node selector */
 struct Nodesel
 {
-   const char*      name;               /**< name of node selector */
-   const char*      desc;               /**< description of node selector */
+   char*            name;               /**< name of node selector */
+   char*            desc;               /**< description of node selector */
    DECL_NODESELINIT((*nodeselinit));    /**< initialise node selector */
    DECL_NODESELEXIT((*nodeselexit));    /**< deinitialise node selector */
    DECL_NODESELSLCT((*nodeselslct));    /**< node selection method */
@@ -91,14 +91,40 @@ RETCODE SCIPnodepqInit(                 /**< initializes node priority queue */
    return SCIP_OKAY;
 }
 
-void SCIPnodepqFree(                    /**< frees node priority queue, but not the data nodes themselves */
+void SCIPnodepqDestroy(                 /**< frees node priority queue, but not the data nodes themselves */
    NODEPQ**         nodepq              /**< pointer to a node priority queue */
    )
 {
    assert(nodepq != NULL);
+   assert(*nodepq != NULL);
 
    freeMemoryArrayNull((*nodepq)->slots);
    freeMemory(*nodepq);
+}
+
+RETCODE SCIPnodepqFree(                 /**< frees node priority queue and all nodes in the queue */
+   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   int i;
+
+   assert(nodepq != NULL);
+   assert(*nodepq != NULL);
+
+   /* free the nodes of the queue */
+   for( i = 0; i < (*nodepq)->len; ++i )
+   {
+      CHECK_OKAY( SCIPnodeFree(&(*nodepq)->slots[i], memhdr, set, tree, lp) );
+   }
+   
+   /* free the queue data structure */
+   SCIPnodepqDestroy(nodepq);
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPnodepqInsert(               /**< inserts node into node priority queue */
@@ -110,7 +136,6 @@ RETCODE SCIPnodepqInsert(               /**< inserts node into node priority que
    SCIP* scip;
    NODESEL* nodesel;
    int pos;
-   int cmpresult;
 
    assert(nodepq != NULL);
    assert(nodepq->len >= 0);

@@ -36,7 +36,8 @@
 /** node selector data for depth first search node selection */
 struct NodeselData
 {
-   /* no data needed */
+   /* no data needed, but C standard forbits empty structs */
+   int              dummy;              /**< circumvent forbidden empty struct */
 };
 
 
@@ -47,8 +48,8 @@ struct NodeselData
 
 DECL_NODESELINIT(SCIPnodeselInitDfs)
 {
-   assert(self != NULL);
-   assert(strcmp(SCIPgetNodeselName(self), NODESEL_NAME) == 0);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "initialise depth first search node selector");
@@ -58,8 +59,8 @@ DECL_NODESELINIT(SCIPnodeselInitDfs)
 
 DECL_NODESELEXIT(SCIPnodeselExitDfs)
 {
-   assert(self != NULL);
-   assert(strcmp(SCIPgetNodeselName(self), NODESEL_NAME) == 0);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_FULL, "exit depth first search node selector");
@@ -69,8 +70,8 @@ DECL_NODESELEXIT(SCIPnodeselExitDfs)
 
 DECL_NODESELSLCT(SCIPnodeselSlctDfs)
 {
-   assert(self != NULL);
-   assert(strcmp(SCIPgetNodeselName(self), NODESEL_NAME) == 0);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
 
@@ -82,8 +83,8 @@ DECL_NODESELCOMP(SCIPnodeselCompDfs)
    int depth1;
    int depth2;
 
-   assert(self != NULL);
-   assert(strcmp(SCIPgetNodeselName(self), NODESEL_NAME) == 0);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPgetNodeselName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    depth1 = SCIPnodeGetDepth(node1);

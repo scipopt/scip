@@ -192,6 +192,72 @@ void* SCIPpqueueFirst(                  /**< returns the best element of the que
 
 
 
+void SCIPbsortPtr(                      /**< bubble sort of an array of pointers */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int actpos;
+   int sortpos;
+   void* tmpptr;
+
+   assert(len == 0 || ptrarray != NULL);
+
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      actpos = firstpos;
+      sortpos = firstpos;
+      while( actpos < lastpos )
+      {
+         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
+            actpos++;
+         if( actpos >= lastpos )
+            break;
+         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
+         tmpptr = ptrarray[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos+1];
+            actpos++;
+         }
+         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
+         ptrarray[actpos] = tmpptr;
+         sortpos = actpos;
+         actpos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      actpos = lastpos;
+      sortpos = lastpos;
+      while( actpos > firstpos )
+      {
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
+            actpos--;
+         if( actpos <= firstpos )
+            break;
+         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
+         tmpptr = ptrarray[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos-1];
+            actpos--;
+         }
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
+         ptrarray[actpos] = tmpptr;
+         sortpos = actpos;
+         actpos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
 void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of pointers/Reals, sorted by first array */
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
@@ -206,6 +272,9 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
    void* tmpptr;
    Real tmpdbl;
 
+   assert(len == 0 || ptrarray != NULL);
+   assert(len == 0 || dblarray != NULL);
+
    firstpos = 0;
    lastpos = len-1;
    while( firstpos < lastpos )
@@ -215,11 +284,11 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
       sortpos = firstpos;
       while( actpos < lastpos )
       {
-         while( actpos < lastpos && (*ptrcmp)(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
+         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
             actpos++;
          if( actpos >= lastpos )
             break;
-         assert( (*ptrcmp)(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
+         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
          tmpptr = ptrarray[actpos];
          tmpdbl = dblarray[actpos];
          do
@@ -228,7 +297,7 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
             dblarray[actpos] = dblarray[actpos+1];
             actpos++;
          }
-         while( actpos < lastpos && (*ptrcmp)(tmpptr, ptrarray[actpos+1]) > 0 );
+         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
          ptrarray[actpos] = tmpptr;
          dblarray[actpos] = tmpdbl;
          sortpos = actpos;
@@ -241,11 +310,11 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
       sortpos = lastpos;
       while( actpos > firstpos )
       {
-         while( actpos > firstpos && (*ptrcmp)(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
             actpos--;
          if( actpos <= firstpos )
             break;
-         assert( (*ptrcmp)(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
+         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
          tmpptr = ptrarray[actpos];
          tmpdbl = dblarray[actpos];
          do
@@ -254,7 +323,7 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
             dblarray[actpos] = dblarray[actpos-1];
             actpos--;
          }
-         while( actpos > firstpos && (*ptrcmp)(ptrarray[actpos-1], tmpptr) > 0 );
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
          ptrarray[actpos] = tmpptr;
          dblarray[actpos] = tmpdbl;
          sortpos = actpos;

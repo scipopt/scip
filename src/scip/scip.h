@@ -21,6 +21,26 @@
  * @author Tobias Achterberg
  */
 
+/** Creating, capturing, releasing, and adding data objects.
+ *
+ *  If the user wants to add a data object (variable, constraint, row) to SCIP
+ *  without using it for himself, he has to call the object's create() method
+ *  and the corresponding add() method. He doesn't have to take care of the
+ *  destruction, because SCIP will free the object if no longer needed. The
+ *  user should not use the object after it was added to SCIP, because he cannot
+ *  assume, that the object is still living.
+ *
+ *  If the user wants to use the data object for himself, he has to call the
+ *  object's create() method and the capture() method to tell SCIP, the object
+ *  is in use by the user. The user may add the object to SCIP with a call to
+ *  the add() method. If the user doesn't need the object any more, he must
+ *  call the release() method to tell SCIP, that the object may be destroyed,
+ *  if it is no longer in use.
+ *  
+ *  Don't call the release() method of an object, if you didn't call the capture()
+ *  method before, because this can destroy an object used by SCIP.
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_H__
@@ -89,6 +109,11 @@ Real SCIPversion(                       /**< returns scip version number */
    );
 
 extern
+void SCIPprintVersion(                  /**< prints a version information line to a file stream */
+   FILE*            file                /**< file stream to write version information, or NULL for stdout */
+   );
+
+extern
 void SCIPerror(                         /**< prints error message and aborts program execution */
    FILE*            errout,             /**< file stream to write error message */
    RETCODE          retcode,            /**< SCIP return code causing the error */
@@ -139,22 +164,44 @@ RETCODE SCIPcreateVar(                  /**< create problem variable */
    );
 
 extern
+RETCODE SCIPcaptureVar(                 /**< increases usage counter of variable */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to capture */
+   );
+
+extern
+RETCODE SCIPreleaseVar(                 /**< decreases usage counter of variable, and frees memory if necessary */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR**            var                 /**< pointer to variable */
+   );
+
+extern
 RETCODE SCIPaddVar(                     /**< adds variable to the problem */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to add */
    );
 
 extern
-RETCODE SCIPcreateRow(                  /**< creates an LP row and captures it */
+RETCODE SCIPgetVars(                    /**< gets variables of the problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
+   int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
+   int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
+   );
+
+extern
+RETCODE SCIPcreateRow(                  /**< creates an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
-   Real             rhs,                /**< right hand side of row */
-   Real             epsilon,            /**< maximal normed violation of row */
-   Bool             equality            /**< is row an equality? otherwise, it is a lower or equal inequality */
+   Real             lhs,                /**< left hand side of row */
+   Real             rhs                 /**< right hand side of row */
    );
 
 extern
@@ -170,14 +217,48 @@ RETCODE SCIPreleaseRow(                 /**< decreases usage counter of LP row, 
    );
 
 extern
+RETCODE SCIPaddVarToRow(                /**< resolves variable to columns and adds them with the coefficient to the row */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   VAR*             var,                /**< problem variable */
+   Real             val                 /**< value of coefficient */
+   );
+
+extern
+RETCODE SCIPprintRow(                   /**< output row to file stream */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+extern
+RETCODE SCIPaddCut(                     /**< adds cut to separation storage */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             cut,                /**< separated cut */
+   Real             score,              /**< separation score of cut (the larger, the better the cut) */
+   Bool             pool                /**< should the cut be used in the global cut pool? Cut must be global valid! */
+   );
+
+extern
+RETCODE SCIPcreateChild(                /**< creates a child node of the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE**           node                /**< pointer to node data structure */
+   );
+
+extern
 RETCODE SCIPincludeConsHdlr(            /**< creates a constraint handler and includes it in SCIP */
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
+   int              sepapriority,       /**< priority of the constraint handler for separation */
+   int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
    DECL_CONSINIT((*consinit)),          /**< initialise constraint handler */
    DECL_CONSEXIT((*consexit)),          /**< deinitialise constraint handler */
-   DECL_CONSFREE((*consfree)),          /**< frees specific constraint data */
-   DECL_CONSTRAN((*constran)),          /**< transforms constraint data into data belonging to the transformed problem */
+   DECL_CONSFREE((*consfree)),          /**< free specific constraint data */
+   DECL_CONSTRAN((*constran)),          /**< transform constraint data into data belonging to the transformed problem */
+   DECL_CONSSEPA((*conssepa)),          /**< separate cutting planes */
+   DECL_CONSENFO((*consenfo)),          /**< enforcing constraints */
    DECL_CONSCHCK((*conschck)),          /**< check feasibility of primal solution */
    DECL_CONSPROP((*consprop)),          /**< propagate variable domains */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -216,9 +297,22 @@ extern
 RETCODE SCIPcreateCons(                 /**< creates a constraint of the given constraint handler */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to constraint */
+   const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
    Bool             model               /**< is constraint necessary for feasibility? */
+   );
+
+extern
+RETCODE SCIPcaptureCons(                /**< increases usage counter of constraint */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to capture */
+   );
+
+extern
+RETCODE SCIPreleaseCons(                /**< decreases usage counter of constraint, and frees memory if necessary */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons                /**< pointer to constraint */
    );
 
 extern
@@ -234,14 +328,53 @@ RETCODE SCIPaddLocalCons(               /**< adds local constraint to the actual
    );
 
 extern
-RETCODE SCIPgetChildren(                /**< gets children of actual node */
+RETCODE SCIPchgNodeBd(                  /**< changes bound of variable at the given node */
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
+extern
+RETCODE SCIPchgNodeLb(                  /**< changes lower bound of variable in the given node */
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+extern
+RETCODE SCIPchgNodeUb(                  /**< changes upper bound of variable in the given node */
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+extern
+RETCODE SCIPchgLocalLb(                 /**< changes lower bound of variable in the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+extern
+RETCODE SCIPchgLocalUb(                 /**< changes upper bound of variable in the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+extern
+RETCODE SCIPgetChildren(                /**< gets children of active node */
    SCIP*            scip,               /**< SCIP data structure */
    NODE***          children,           /**< pointer to store children array */
    int*             nchildren           /**< pointer to store number of children */
    );
 
 extern
-RETCODE SCIPgetSiblings(                /**< gets siblings of actual node */
+RETCODE SCIPgetSiblings(                /**< gets siblings of active node */
    SCIP*            scip,               /**< SCIP data structure */
    NODE***          siblings,           /**< pointer to store siblings array */
    int*             nsiblings           /**< pointer to store number of siblings */
@@ -345,6 +478,30 @@ Bool SCIPisPos(                         /**< checks, if value is greater than ep
 
 extern
 Bool SCIPisNeg(                         /**< checks, if value is lower than -epsZero */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Real SCIPfloor(                         /**< rounds value down to the next integer */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Real SCIPceil(                          /**< rounds value up to the next integer */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisIntegral(                    /**< checks, if value is integral within the LP feasibility bounds */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisFeasible(                    /**< checks, if value is non-negative within the LP feasibility bounds */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );

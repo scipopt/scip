@@ -28,7 +28,7 @@
 
 
 typedef struct LPi LPI;                 /**< solver dependent LP interface */
-typedef struct LPState LPSTATE;         /**< complete LP state (i.e. basis information, dual norms) */
+typedef struct LPiState LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */
 
 /** objective sense */
 enum ObjSen
@@ -76,14 +76,19 @@ typedef enum Pricing PRICING;
  * LP interface methods
  */
 
+extern
+const char* SCIPlpiGetSolverName(       /**< gets name and version of LP solver */
+   void
+   );
+
 extern 
-RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
+RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*      name                /**< problem name */
    );
 
 extern
-RETCODE SCIPlpiClose(                   /**< deletes an LP problem object */
+RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
    LPI**            lpi                 /**< pointer to an LP interface structure */
    );
 
@@ -111,13 +116,14 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              ncol,               /**< number of columns to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const Real*      obj,                /**< objective function vector of new columns */
-   const Real*      lb,                 /**< lower bound vector of new columns */
-   const Real*      ub,                 /**< upper bound vector of new columns */
+   const Real*      obj,                /**< objective function values of new columns */
+   const Real*      lb,                 /**< lower bounds of new columns */
+   const Real*      ub,                 /**< upper bounds of new columns */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   char**           name                /**< column names */
+   char**           name,               /**< column names */
+   Real             infinity            /**< value used as infinity */
    );
 
 extern 
@@ -140,12 +146,13 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const Real*      rhs,                /**< right hand side vector of new rows */
-   const char*      sen,                /**< row senses */
+   const Real*      lhs,                /**< left hand sides of new rows */
+   const Real*      rhs,                /**< right hand sides of new rows */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   char**           name                /**< row names */
+   char**           name,               /**< row names */
+   Real             infinity            /**< value used as infinity */
    );
 
 extern 
@@ -179,36 +186,23 @@ RETCODE SCIPlpiGetBinvARow(             /**< get dense row of inverse basis matr
    );
 
 extern 
-RETCODE SCIPlpiGetLb(                   /**< gets lower bounds of variables */
+RETCODE SCIPlpiChgBounds(               /**< changes lower and upper bounds of columns */
    LPI*             lpi,                /**< LP interface structure */
-   int              beg,                /**< first variable to get bound for */
-   int              end,                /**< last variable to get bound for */
-   Real*            lb                  /**< vector to store the bounds */
-   );
-
-extern 
-RETCODE SCIPlpiGetUb(                   /**< gets upper bounds of variables */
-   LPI*             lpi,                /**< LP interface structure */
-   int              beg,                /**< first variable to get bound for */
-   int              end,                /**< last variable to get bound for */
-   Real*            ub                  /**< vector to store the bounds */
-   );
-
-extern 
-RETCODE SCIPlpiChgBd(                   /**< changes bounds of the variables in the LP */
-   LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of bounds to be changed */
+   int              n,                  /**< number of columns to change bounds for */
    const int*       ind,                /**< column indices */
-   const char*      lu,                 /**< specifies, if 'L'ower or 'U'pper bound should be changed */
-   const Real*      bd                  /**< values for the new bounds */
+   const Real*      lb,                 /**< values for the new lower bounds */
+   const Real*      ub,                 /**< values for the new upper bounds */
+   Real             infinity            /**< value used as infinity */
    );
 
 extern 
-RETCODE SCIPlpiChgRhs(                  /**< changes right hand sides of rows in the LP */
+RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides of rows */
    LPI*             lpi,                /**< LP interface structure */
-   int              n,                  /**< number of rows to change */
+   int              n,                  /**< number of rows to change sides for */
    const int*       ind,                /**< row indices */
-   const Real*      rhs                 /**< new values for right hand sides */
+   const Real*      lhs,                /**< new values for left hand sides */
+   const Real*      rhs,                /**< new values for right hand sides */
+   Real             infinity            /**< value used as infinity */
    );
 
 extern 
@@ -328,24 +322,24 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
    );
 
 extern
-RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpstate object */
+RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpistate object */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
+   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
 extern
 RETCODE SCIPlpiSetState(                /**< loads LP state (like basis information) into solver */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSTATE*         lpstate             /**< LP state information (like basis information) */
+   LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
 extern
 RETCODE SCIPlpiFreeState(               /**< frees LP state information */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
+   LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
 extern 

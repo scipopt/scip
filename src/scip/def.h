@@ -67,8 +67,10 @@ typedef int Bool;                       /**< type used for boolean values */
 
 typedef double Real;                    /**< type used for floating point values */
 #define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
+#define SCIP_DEFAULT_FEASTOL     1e-06  /**< default LP feasibility tolerance */
 #define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
 #define SCIP_INVALID           1.0E+99  /**< floating point value is not valid */
+
 
 
 /*
@@ -106,7 +108,18 @@ typedef double Real;                    /**< type used for floating point values
  */
 
 #define SCIP_DEFAULT_MAXPRICEVARS    16      /**< maximal number of variables priced in per pricing round */
+#define SCIP_DEFAULT_MAXSEPACUTS     16      /**< maximal number of cuts separated per separation round */
 #define SCIP_PRICE_SCALELOOSE         1.0E-4 /**< scaling for pricing score of loose variables */
+
+
+
+/*
+ * Block Memory
+ */
+
+#define SCIP_SAFEMEMORY                 /**< use memory leakage detection in debug mode */
+//#define SCIP_BLOCKMEMORY                /**< use block memory */
+
 
 
 /*

@@ -45,6 +45,7 @@ typedef struct PQueue PQUEUE;           /**< priority queue */
 #define DECL_SORTPTRCOMP(x) int x (void* elem1, void* elem2)
 
 
+#if 0 /* PRIORITY QUEUE NOT NEEDED */
 extern
 RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
@@ -72,6 +73,14 @@ void* SCIPpqueueRemove(                 /**< removes and returns best element fr
 extern
 void* SCIPpqueueFirst(                  /**< returns the best element of the queue without removing it */
    const PQUEUE*    pqueue              /**< pointer to a priority queue */
+   );
+#endif
+
+extern
+void SCIPbsortPtr(                      /**< bubble sort of an array of pointers */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
 extern

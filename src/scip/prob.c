@@ -60,100 +60,10 @@ RETCODE probEnsureVarsMem(              /**< resizes vars array to be able to st
 
 
 
-/*
- * problem information
- */
-
-const char* SCIPprobGetName(            /**< gets problem name */
-   const PROB*      prob                /**< problem data */
-   )
-{
-   assert(prob != NULL);
-   return prob->name;
-}
-
-
-
 
 /*
- * problem modification
+ * problem creation
  */
-
-RETCODE SCIPprobAddVar(                 /**< adds variable to the problem */
-   PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var                 /**< variable to add */
-   )
-{
-   int insertpos;
-   int intstart;
-   int implstart;
-   int contstart;
-
-   assert(prob != NULL);
-   assert(set != NULL);
-   assert(var != NULL);
-
-   CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
-
-   /* insert variable at the correct position, depending on its type */
-   insertpos = prob->nvars;
-   intstart = prob->nbin;
-   implstart = intstart + prob->nint;
-   contstart = implstart + prob->nimpl;
-   if( var->vartype == SCIP_VARTYPE_CONTINOUS )
-      prob->ncont++;
-   else
-   {
-      prob->vars[insertpos] = prob->vars[contstart];
-      insertpos = contstart;
-      if( var->vartype == SCIP_VARTYPE_IMPLINT )
-         prob->nimpl++;
-      else
-      {
-         prob->vars[insertpos] = prob->vars[implstart];
-         insertpos = implstart;
-         if( var->vartype == SCIP_VARTYPE_INTEGER )
-            prob->nint++;
-         else
-         {
-            assert(var->vartype == SCIP_VARTYPE_BINARY);
-            prob->vars[insertpos] = prob->vars[intstart];
-            insertpos = intstart;
-            prob->nbin++;
-         }
-      }
-   }
-
-   prob->nvars++;
-
-   assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
-   assert((var->vartype == SCIP_VARTYPE_BINARY && insertpos == prob->nbin - 1)
-      || (var->vartype == SCIP_VARTYPE_INTEGER && insertpos == prob->nbin + prob->nint - 1)
-      || (var->vartype == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbin + prob->nint + prob->nimpl - 1)
-      || (var->vartype == SCIP_VARTYPE_CONTINOUS && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
-
-   prob->vars[insertpos] = var;
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPprobAddCons(                /**< adds constraint to the problem */
-   PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
-   CONS*            cons                /**< constraint to add */
-   )
-{
-   assert(prob != NULL);
-   assert(memhdr != NULL);
-   assert(cons != NULL);
-
-   CHECK_OKAY( SCIPconslistAdd(&(prob->conslist), memhdr, cons) );
-
-   return SCIP_OKAY;
-}
-
-
 
 RETCODE SCIPprobCreate(                 /**< creates problem data structure */
    PROB**           prob,               /**< pointer to problem data structure */
@@ -174,6 +84,7 @@ RETCODE SCIPprobCreate(                 /**< creates problem data structure */
    (*prob)->nint = 0;
    (*prob)->nimpl = 0;
    (*prob)->ncont = 0;
+   (*prob)->ncons = 0;
 
    return SCIP_OKAY;
 }
@@ -192,15 +103,17 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
    
    freeMemoryArray((*prob)->name);
 
-   /* free problem variables */
+   /* release problem variables */
    for( v = 0; v < (*prob)->nvars; ++v )
    {
-      SCIPvarFree(&(*prob)->vars[v], memhdr, set, lp);
+      assert((*prob)->vars[v]->inprob);
+      (*prob)->vars[v]->inprob = FALSE;
+      SCIPvarRelease(&(*prob)->vars[v], memhdr, set, lp);
    }
    freeMemoryArrayNull((*prob)->vars);
 
-   /* free constraints */
-   SCIPconslistFree(&(*prob)->conslist, memhdr, set);
+   /* release constraints and free constraint list */
+   CHECK_OKAY( SCIPconslistFree(&(*prob)->conslist, memhdr, set) );
 
    freeMemory(*prob);
    
@@ -248,3 +161,144 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
 
    return SCIP_OKAY;
 }
+
+RETCODE SCIPprobActivate(               /**< activates constraints in the problem */
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   CONSLIST* conslist;
+
+   assert(prob != NULL);
+   assert(prob->ncons == 0 || prob->conslist != NULL);
+   assert(set != NULL);
+
+   conslist = prob->conslist;
+   while( conslist != NULL )
+   {
+      CHECK_OKAY( SCIPconsActivate(conslist->cons, set) );
+      conslist = conslist->next;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the problem */
+   PROB*            prob                /**< problem data */
+   )
+{
+   CONSLIST* conslist;
+
+   assert(prob != NULL);
+   assert(prob->ncons == 0 || prob->conslist != NULL);
+
+   conslist = prob->conslist;
+   while( conslist != NULL )
+   {
+      CHECK_OKAY( SCIPconsDeactivate(conslist->cons) );
+      conslist = conslist->next;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+/*
+ * problem modification
+ */
+
+RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable to add */
+   )
+{
+   int insertpos;
+   int intstart;
+   int implstart;
+   int contstart;
+
+   assert(prob != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(!var->inprob);
+
+   CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
+
+   /* insert variable at the correct position, depending on its type */
+   insertpos = prob->nvars;
+   intstart = prob->nbin;
+   implstart = intstart + prob->nint;
+   contstart = implstart + prob->nimpl;
+   if( var->vartype == SCIP_VARTYPE_CONTINOUS )
+      prob->ncont++;
+   else
+   {
+      prob->vars[insertpos] = prob->vars[contstart];
+      insertpos = contstart;
+      if( var->vartype == SCIP_VARTYPE_IMPLINT )
+         prob->nimpl++;
+      else
+      {
+         prob->vars[insertpos] = prob->vars[implstart];
+         insertpos = implstart;
+         if( var->vartype == SCIP_VARTYPE_INTEGER )
+            prob->nint++;
+         else
+         {
+            assert(var->vartype == SCIP_VARTYPE_BINARY);
+            prob->vars[insertpos] = prob->vars[intstart];
+            insertpos = intstart;
+            prob->nbin++;
+         }
+      }
+   }
+
+   prob->nvars++;
+
+   assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
+   assert((var->vartype == SCIP_VARTYPE_BINARY && insertpos == prob->nbin - 1)
+      || (var->vartype == SCIP_VARTYPE_INTEGER && insertpos == prob->nbin + prob->nint - 1)
+      || (var->vartype == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbin + prob->nint + prob->nimpl - 1)
+      || (var->vartype == SCIP_VARTYPE_CONTINOUS && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
+
+   prob->vars[insertpos] = var;
+
+   SCIPvarCapture(var);
+   var->inprob = TRUE;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(prob != NULL);
+   assert(memhdr != NULL);
+   assert(cons != NULL);
+
+   /* add the constraint to the problem's constraint list and capture it */
+   CHECK_OKAY( SCIPconslistAdd(&prob->conslist, memhdr, cons) );
+   prob->ncons++;
+
+   return SCIP_OKAY;
+}
+
+
+
+/*
+ * problem information
+ */
+
+const char* SCIPprobGetName(            /**< gets problem name */
+   const PROB*      prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->name;
+}
+
