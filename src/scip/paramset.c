@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.18 2004/02/05 14:12:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.19 2004/03/22 16:03:29 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -933,7 +933,7 @@ void paramFree(
       }
       else
       {
-         freeMemoryArray(&(*param)->data.stringparam.valueptr);
+         freeMemoryArray((*param)->data.stringparam.valueptr);
       }
       break;
    default:
@@ -1208,14 +1208,15 @@ RETCODE paramWrite(
 
 /** creates parameter set */
 RETCODE SCIPparamsetCreate(
-   PARAMSET**       paramset            /**< pointer to store the parameter set */
+   PARAMSET**       paramset,           /**< pointer to store the parameter set */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
    assert(paramset != NULL);
 
    ALLOC_OKAY( allocMemory(paramset) );
 
-   CHECK_OKAY( SCIPhashtableCreate(&(*paramset)->hashtable, SCIP_HASHSIZE_PARAMS,
+   CHECK_OKAY( SCIPhashtableCreate(&(*paramset)->hashtable, memhdr, SCIP_HASHSIZE_PARAMS,
                   hashGetKeyParam, SCIPhashKeyEqString, SCIPhashKeyValString) );
 
    (*paramset)->params = NULL;
@@ -1243,7 +1244,7 @@ void SCIPparamsetFree(
       paramFree(&(*paramset)->params[i], memhdr);
    }
 
-   SCIPhashtableFree(&(*paramset)->hashtable, memhdr);
+   SCIPhashtableFree(&(*paramset)->hashtable);
 
    freeMemoryArrayNull(&(*paramset)->params);
    freeMemory(paramset);
@@ -1253,7 +1254,6 @@ void SCIPparamsetFree(
 static
 RETCODE paramsetAdd(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
    PARAM*           param               /**< parameter to add */
    )
 {
@@ -1261,7 +1261,7 @@ RETCODE paramsetAdd(
    assert(param != NULL);
 
    /* insert the parameter name to the hash table */
-   CHECK_OKAY( SCIPhashtableSafeInsert(paramset->hashtable, memhdr, (void*)param) );
+   CHECK_OKAY( SCIPhashtableSafeInsert(paramset->hashtable, (void*)param) );
 
    /* ensure, that there is enough space in the params array */
    if( paramset->nparams >= paramset->paramssize )
@@ -1299,7 +1299,7 @@ RETCODE SCIPparamsetAddBool(
    CHECK_OKAY( paramCreateBool(&param, memhdr, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, memhdr, param) );
+   CHECK_OKAY( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
@@ -1327,7 +1327,7 @@ RETCODE SCIPparamsetAddInt(
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, memhdr, param) );
+   CHECK_OKAY( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
@@ -1355,7 +1355,7 @@ RETCODE SCIPparamsetAddLongint(
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, memhdr, param) );
+   CHECK_OKAY( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
@@ -1383,7 +1383,7 @@ RETCODE SCIPparamsetAddReal(
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, memhdr, param) );
+   CHECK_OKAY( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
@@ -1409,7 +1409,7 @@ RETCODE SCIPparamsetAddChar(
    CHECK_OKAY( paramCreateChar(&param, memhdr, name, desc, valueptr, defaultvalue, allowedvalues, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, memhdr, param) );
+   CHECK_OKAY( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
@@ -1434,7 +1434,7 @@ RETCODE SCIPparamsetAddString(
    CHECK_OKAY( paramCreateString(&param, memhdr, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, memhdr, param) );
+   CHECK_OKAY( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }

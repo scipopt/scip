@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.85 2004/03/19 09:41:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.86 2004/03/22 16:03:31 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -29,6 +29,7 @@
 #include "message.h"
 #include "set.h"
 #include "stat.h"
+#include "vbc.h"
 #include "lpi.h"
 #include "lp.h"
 #include "var.h"
@@ -554,14 +555,18 @@ RETCODE SCIPnodeCreate(
    NODE**           node,               /**< pointer to node data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree                /**< branch-and-bound tree */
    )
 {
    assert(node != NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(tree != NULL);
    assert(tree->pathlen == 0 || tree->path != NULL);
+
+   stat->ncreatednodes++;
 
    ALLOC_OKAY( allocBlockMemory(memhdr, node) );
    (*node)->parent = NULL;
@@ -585,7 +590,11 @@ RETCODE SCIPnodeCreate(
       CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, NULL) );
    }
 
+   /* output node creation to VBC file */
+   CHECK_OKAY( SCIPvbcNewChild(stat->vbc, stat, *node) );
+
    debugMessage("created child node %p at depth %d\n", *node, (*node)->depth);
+
    return SCIP_OKAY;
 }
 
@@ -2175,6 +2184,7 @@ RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    )
@@ -2208,7 +2218,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->cutoffdelayed = FALSE;
 
    /* create root node */
-   CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, *tree) );
+   CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, stat, *tree) );
    assert((*tree)->nchildren == 1);
 
    /* move root to the queue, convert it to LEAF */
@@ -2394,9 +2404,19 @@ RETCODE SCIPtreeBranchVar(
       
       debugMessage("pseudo branch on variable <%s> with value %g\n", SCIPvarGetName(var), solval);
       
+      /* create child node with x <= x'-1, if this would be feasible */
+      if( SCIPsetIsGE(set, fixval-1, SCIPvarGetLbLocal(var)) )
+      {
+         debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), fixval-1);
+         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+                        var, fixval-1, SCIP_BOUNDTYPE_UPPER) );
+         debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
+      }
+                  
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), fixval);
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
@@ -2409,21 +2429,11 @@ RETCODE SCIPtreeBranchVar(
       }
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
-      /* create child node with x <= x'-1, if this would be feasible */
-      if( SCIPsetIsGE(set, fixval-1, SCIPvarGetLbLocal(var)) )
-      {
-         debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), fixval-1);
-         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                        var, fixval-1, SCIP_BOUNDTYPE_UPPER) );
-         debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
-      }
-                  
       /* create child node with x >= x'+1, if this would be feasible */
       if( SCIPsetIsLE(set, fixval+1, SCIPvarGetUbLocal(var)) )
       {
          debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), fixval+1);
-         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                         var, fixval+1, SCIP_BOUNDTYPE_LOWER) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -2435,14 +2445,14 @@ RETCODE SCIPtreeBranchVar(
       
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFloor(set, solval));
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                      var, SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), SCIPsetCeil(set, solval));
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                      var, SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);

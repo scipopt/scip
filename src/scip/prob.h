@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.29 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.30 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -54,6 +54,7 @@
 extern
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
+   MEMHDR*          memhdr,             /**< block memory */
    const char*      name,               /**< problem name */
    DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
@@ -101,7 +102,6 @@ void SCIPprobSetData(
 extern
 RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -127,11 +127,12 @@ RETCODE SCIPprobVarChangedStatus(
    VAR*             var                 /**< problem variable */
    );
 
-/** adds constraint to the problem and captures it; a local constraint is automatically upgraded into a global constraint */
+/** adds constraint to the problem and captures it;
+ *  a local constraint is automatically upgraded into a global constraint
+ */
 extern
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.25 2004/02/05 14:12:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.26 2004/03/22 16:03:29 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -232,6 +232,7 @@ Bool cutIsAged(
 /** creates cut pool */
 RETCODE SCIPcutpoolCreate(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   MEMHDR*          memhdr,             /**< block memory */
    int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
    )
 {
@@ -242,7 +243,7 @@ RETCODE SCIPcutpoolCreate(
 
    CHECK_OKAY( SCIPclockCreate(&(*cutpool)->clock, SCIP_CLOCKTYPE_DEFAULT) );
 
-   CHECK_OKAY( SCIPhashtableCreate(&(*cutpool)->hashtable, SCIP_HASHSIZE_CUTPOOLS,
+   CHECK_OKAY( SCIPhashtableCreate(&(*cutpool)->hashtable, memhdr, SCIP_HASHSIZE_CUTPOOLS,
                   hashGetKeyCut, hashKeyEqCut, hashKeyValCut) );
 
    (*cutpool)->cuts = NULL;
@@ -275,7 +276,7 @@ RETCODE SCIPcutpoolFree(
    SCIPclockFree(&(*cutpool)->clock);
 
    /* free hash table */
-   SCIPhashtableFree(&(*cutpool)->hashtable, memhdr);
+   SCIPhashtableFree(&(*cutpool)->hashtable);
 
    /* free cuts */
    for( i = 0; i < (*cutpool)->ncuts; ++i )
@@ -340,7 +341,7 @@ RETCODE SCIPcutpoolAddNewRow(
    cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
 
    /* insert cut in the hash table */
-   CHECK_OKAY( SCIPhashtableInsert(cutpool->hashtable, memhdr, (void*)cut) );
+   CHECK_OKAY( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
 
    /* lock the row */
    CHECK_OKAY( SCIProwLock(row) );
@@ -377,7 +378,7 @@ RETCODE cutpoolDelCut(
    CHECK_OKAY( SCIProwUnlock(cut->row) );
 
    /* remove the cut from the hash table */
-   CHECK_OKAY( SCIPhashtableRemove(cutpool->hashtable, memhdr, (void*)cut) );
+   CHECK_OKAY( SCIPhashtableRemove(cutpool->hashtable, (void*)cut) );
 
    /* free the cut */
    CHECK_OKAY( cutFree(&cutpool->cuts[pos], memhdr, set, lp) );

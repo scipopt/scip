@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.92 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.93 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -29,6 +29,7 @@
 #include "set.h"
 #include "stat.h"
 #include "clock.h"
+#include "vbc.h"
 #include "interrupt.h"
 #include "misc.h"
 #include "event.h"
@@ -1642,6 +1643,9 @@ RETCODE SCIPsolveCIP(
                         &cutoff, &infeasible) );
       }
       assert(!cutoff || infeasible);
+
+      /* change color of node in VBC output */
+      SCIPvbcSolvedNode(stat->vbc, stat, tree->actnode);
 
       /* check, if the current solution is feasible */
       if( !infeasible )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.31 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.32 2004/03/22 16:03:29 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -28,6 +28,8 @@
 #include "def.h"
 #include "message.h"
 #include "set.h"
+#include "stat.h"
+#include "vbc.h"
 #include "event.h"
 #include "lp.h"
 #include "prob.h"
@@ -73,6 +75,7 @@ RETCODE SCIPprimalCreate(
    PRIMAL**         primal,             /**< pointer to primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< problem data */
    LP*              lp                  /**< current LP data */
    )
@@ -91,7 +94,7 @@ RETCODE SCIPprimalCreate(
 
    objlim = SCIPprobGetInternObjlim(prob, set);
    objlim = MIN(objlim, set->infinity);
-   CHECK_OKAY( SCIPprimalSetUpperbound(*primal, memhdr, set, prob, NULL, lp, objlim) );
+   CHECK_OKAY( SCIPprimalSetUpperbound(*primal, memhdr, set, stat, prob, NULL, lp, objlim) );
 
    return SCIP_OKAY;
 }
@@ -122,6 +125,7 @@ RETCODE SCIPprimalSetUpperbound(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< current LP data */
@@ -129,6 +133,7 @@ RETCODE SCIPprimalSetUpperbound(
    )
 {
    assert(primal != NULL);
+   assert(stat != NULL);
    assert(lp != NULL);
    assert(upperbound <= set->infinity);
 
@@ -157,6 +162,9 @@ RETCODE SCIPprimalSetUpperbound(
       errorMessage("Invalid increase in upper bound\n");
       return SCIP_INVALIDDATA;
    }
+
+   /* update upper bound in VBC output */
+   SCIPvbcUpperbound(stat->vbc, stat, primal->upperbound);
 
    return SCIP_OKAY;
 }
@@ -237,12 +245,15 @@ RETCODE primalAddSol(
    CHECK_OKAY( SCIPeventChgSol(&event, sol) );
    CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
 
+   /* change color of node in VBC output */
+   SCIPvbcFoundSolution(stat->vbc, stat, tree->actnode);
+
    /* check, if the global upper bound has to be updated */
    obj = SCIPsolGetObj(sol);
    if( obj < primal->upperbound )
    {
       /* update the upper bound */
-      CHECK_OKAY( SCIPprimalSetUpperbound(primal, memhdr, set, prob, tree, lp, obj) );
+      CHECK_OKAY( SCIPprimalSetUpperbound(primal, memhdr, set, stat, prob, tree, lp, obj) );
       
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.34 2004/03/16 13:41:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.35 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -30,6 +30,7 @@
 #include "set.h"
 #include "stat.h"
 #include "clock.h"
+#include "vbc.h"
 #include "mem.h"
 #include "history.h"
 
@@ -58,6 +59,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glblphistory, memhdr) );
+   CHECK_OKAY( SCIPvbcCreate(&(*stat)->vbc) );
 
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
@@ -88,6 +90,7 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->nodeactivationtime);
 
    SCIPhistoryFree(&(*stat)->glblphistory, memhdr);
+   SCIPvbcFree(&(*stat)->vbc);
 
    freeMemory(stat);
 
@@ -156,6 +159,7 @@ void SCIPstatReset(
    stat->nredcoststrcalls = 0;
    stat->nredcoststrfound = 0;
    stat->nnodes = 0;
+   stat->ncreatednodes = 0;
    stat->nboundchanges = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;

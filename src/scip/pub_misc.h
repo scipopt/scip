@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.2 2004/02/04 17:27:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.3 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -102,6 +102,7 @@ void** SCIPpqueueElems(
 extern
 RETCODE SCIPhashtableCreate(
    HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
+   MEMHDR*          memhdr,             /**< block memory used to store hash table entries */
    int              tablesize,          /**< size of the hash table */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
@@ -111,15 +112,13 @@ RETCODE SCIPhashtableCreate(
 /** frees the hash table */
 extern
 void SCIPhashtableFree(
-   HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
-   MEMHDR*          memhdr              /**< block memory */
+   HASHTABLE**      hashtable           /**< pointer to the hash table */
    );
 
 /** inserts element in hash table (multiple inserts of same element possible) */
 extern
 RETCODE SCIPhashtableInsert(
    HASHTABLE*       hashtable,          /**< hash table */
-   MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to append to the list */
    );
 
@@ -127,7 +126,6 @@ RETCODE SCIPhashtableInsert(
 extern
 RETCODE SCIPhashtableSafeInsert(
    HASHTABLE*       hashtable,          /**< hash table */
-   MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to insert into the table */
    );
 
@@ -142,7 +140,6 @@ void* SCIPhashtableRetrieve(
 extern
 RETCODE SCIPhashtableRemove(
    HASHTABLE*       hashtable,          /**< hash table */
-   MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to remove from the table */
    );
 
@@ -159,6 +156,65 @@ DECL_HASHKEYEQ(SCIPhashKeyEqString);
 /** standard hashing function for string keys */
 extern
 DECL_HASHKEYVAL(SCIPhashKeyValString);
+
+
+
+
+/*
+ * Hash Map
+ */
+
+/** creates a hash map mapping pointers to pointers */
+extern
+RETCODE SCIPhashmapCreate(
+   HASHMAP**        hashmap,            /**< pointer to store the created hash map */
+   MEMHDR*          memhdr,             /**< block memory used to store hash map entries */
+   int              mapsize             /**< size of the hash map */
+   );
+
+/** frees the hash map */
+extern
+void SCIPhashmapFree(
+   HASHMAP**        hashmap             /**< pointer to the hash map */
+   );
+
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+extern
+RETCODE SCIPhashmapInsert(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin,             /**< origin to set image for */
+   void*            image               /**< new image for origin */
+   );
+
+/** retrieves image of given origin from the hash map, or NULL if no image exists */
+extern
+void* SCIPhashmapGetImage(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin              /**< origin to retrieve image for */
+   );
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
+ *  new origin->image pair
+ */
+extern
+RETCODE SCIPhashmapSetImage(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin,             /**< origin to set image for */
+   void*            image               /**< new image for origin */
+   );
+
+/** removes existing origin->image pair from the hash map */
+extern
+RETCODE SCIPhashmapRemove(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin              /**< origin to remove from the list */
+   );
+
+/** prints statistics about hash map usage */
+extern
+void SCIPhashmapPrintStatistics(
+   HASHMAP*         hashmap             /**< hash map */
+   );
 
 
 

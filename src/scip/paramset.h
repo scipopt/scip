@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.8 2004/02/04 17:27:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.9 2004/03/22 16:03:29 bzfpfend Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -39,7 +39,8 @@
 /** creates parameter set */
 extern
 RETCODE SCIPparamsetCreate(
-   PARAMSET**       paramset            /**< pointer to store the parameter set */
+   PARAMSET**       paramset,           /**< pointer to store the parameter set */
+   MEMHDR*          memhdr              /**< block memory */
    );
 
 /** frees parameter set */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.8 2004/03/16 13:41:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.9 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -30,6 +30,7 @@
 #include "def.h"
 #include "type_stat.h"
 #include "type_clock.h"
+#include "type_vbc.h"
 #include "type_history.h"
 
 
@@ -45,6 +46,7 @@ struct Stat
    Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
    Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
    Longint          nnodes;             /**< number of nodes processed (including active node) */
+   Longint          ncreatednodes;      /**< number of nodes created */
    Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
    Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
@@ -62,6 +64,7 @@ struct Stat
    CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
    CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    HISTORY*         glblphistory;       /**< average branching history for downwards and upwards branching on LP */
+   VBC*             vbc;                /**< VBC Tool information */
    int              nvaridx;            /**< number of used variable indices */
    int              ncolidx;            /**< number of used column indices */
    int              nrowidx;            /**< number of used row indices */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.2 2004/02/04 17:27:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.3 2004/03/22 16:03:31 bzfpfend Exp $"
 
 /**@file   type_misc.h
  * @brief  type definitions for miscellaneous datastructures
@@ -29,7 +29,9 @@
 
 typedef struct PQueue PQUEUE;           /**< priority queue */
 typedef struct HashTable HASHTABLE;     /**< hash table */
-typedef struct HashList HASHLIST;       /**< element list to store in a hash table */
+typedef struct HashTableList HASHTABLELIST; /**< element list to store single elements of a hash table */
+typedef struct HashMap HASHMAP;         /**< hash map to map pointers to pointers */
+typedef struct HashMapList HASHMAPLIST; /**< element list to store single mappings of a hash map */
 typedef struct RealArray REALARRAY;     /**< dynamic array for storing Real values */
 typedef struct IntArray INTARRAY;       /**< dynamic array for storing int values */
 typedef struct BoolArray BOOLARRAY;     /**< dynamic array for storing Bool values */

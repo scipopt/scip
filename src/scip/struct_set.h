@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.14 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.15 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -87,6 +87,7 @@ struct Set
    NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    BRANCHRULE**     branchrules;        /**< branching rules */
    DISP**           disps;              /**< display columns */
+   char*            vbcfilename;        /**< name of the VBC Tool output file, or - if no output should be created */
    int              nreaders;           /**< number of file readers */
    int              readerssize;        /**< size of readers array */
    int              npricers;           /**< number of variable pricers */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.3 2004/02/25 16:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.4 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -51,11 +51,11 @@ struct PQueue
    int              size;               /**< total number of available element slots */
 };
 
-/** element list to store in a hash table */
-struct HashList
+/** element list to store single elements of a hash table */
+struct HashTableList
 {
    void*            element;            /**< this element */
-   HASHLIST*        next;               /**< rest of the hash list */
+   HASHTABLELIST*   next;               /**< rest of the hash table list */
 };
 
 /** hash table data structure */
@@ -64,8 +64,25 @@ struct HashTable
    DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
    DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
-   HASHLIST**       lists;              /**< hash lists of the hash table */
+   MEMHDR*          memhdr;             /**< block memory used to store hash map entries */
+   HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
    int              nlists;             /**< number of lists stored in the hash table */
+};
+
+/** element list to store single mappings of a hash map */
+struct HashMapList
+{
+   void*            origin;             /**< origin of the mapping origin -> image */
+   void*            image;              /**< image of the mapping origin -> image */
+   HASHMAPLIST*     next;               /**< rest of the hash map list */
+};
+
+/** hash map data structure to map pointers on pointers */
+struct HashMap
+{
+   MEMHDR*          memhdr;             /**< block memory used to store hash map entries */
+   HASHMAPLIST**    lists;              /**< hash map lists of the hash map */
+   int              nlists;             /**< number of lists stored in the hash map */
 };
 
 /** dynamic array for storing real values */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.92 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.93 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -157,6 +157,10 @@
 #define SCIP_DEFAULT_TIMELIMIT       1e+20 /**< maximal time in seconds to run */
 
 
+/* VBC Tool output */
+#define SCIP_DEFAULT_VBCFILENAME       "-" /**< name of the VBC Tool output file, or - if no output should be created */
+
+
 
 /** calculate memory size for dynamically allocated arrays */
 static
@@ -230,7 +234,7 @@ RETCODE SCIPsetCreate(
 
    (*set)->scip = scip;
 
-   CHECK_OKAY( SCIPparamsetCreate(&(*set)->paramset) );
+   CHECK_OKAY( SCIPparamsetCreate(&(*set)->paramset, memhdr) );
    CHECK_OKAY( SCIPbufferCreate(&(*set)->buffer) );
 
    (*set)->readers = NULL;
@@ -507,11 +511,16 @@ RETCODE SCIPsetCreate(
                   "should LP solutions be checked, resolving LP when numerical troubles occur?",
                   &(*set)->checklpfeas, SCIP_DEFAULT_CHECKLPFEAS,
                   NULL, NULL) );
+   /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
+#if 0
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "lp/exactsolve",
                   "should the problem be solved exactly (with proven dual bounds)?",
                   &(*set)->exactsolve, SCIP_DEFAULT_EXACTSOLVE,
                   NULL, NULL) );
+#else
+   (*set)->exactsolve = FALSE;
+#endif
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "lp/fastmip",
                   "should FASTMIP setting of LP solver be used?",
@@ -558,6 +567,10 @@ RETCODE SCIPsetCreate(
                   "should the CTRL-C interrupt be catched by SCIP?",
                   &(*set)->catchctrlc, SCIP_DEFAULT_CATCHCTRLC,
                   NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddStringParam(*set, memhdr,
+                  "misc/vbcfilename",
+                  "name of the VBC Tool output file, or - if no VBC Tool output should be created",
+                  &(*set)->vbcfilename, SCIP_DEFAULT_VBCFILENAME, NULL, NULL) );
 
    return SCIP_OKAY;
 }

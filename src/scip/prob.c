@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.41 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.42 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -127,6 +127,7 @@ RETCODE probEnsureConssMem(
  */
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
+   MEMHDR*          memhdr,             /**< block memory */
    const char*      name,               /**< problem name */
    DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
@@ -144,7 +145,7 @@ RETCODE SCIPprobCreate(
    (*prob)->probdelorig = probdelorig;
    (*prob)->probtrans = probtrans;
    (*prob)->probdeltrans = probdeltrans;
-   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, SCIP_HASHSIZE_NAMES,
+   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, memhdr, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->fixedvars = NULL;
    (*prob)->fixedvarssize = 0;
@@ -157,7 +158,7 @@ RETCODE SCIPprobCreate(
    (*prob)->nimplvars = 0;
    (*prob)->ncontvars = 0;
    (*prob)->ncolvars = 0;
-   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
+   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, memhdr, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->conss = NULL;
    (*prob)->consssize = 0;
@@ -233,8 +234,8 @@ RETCODE SCIPprobFree(
    freeMemoryArrayNull(&(*prob)->fixedvars);
 
    /* free hash tables for names */
-   SCIPhashtableFree(&(*prob)->varnames, memhdr);
-   SCIPhashtableFree(&(*prob)->consnames, memhdr);
+   SCIPhashtableFree(&(*prob)->varnames);
+   SCIPhashtableFree(&(*prob)->consnames);
 
    freeMemory(prob);
    
@@ -267,7 +268,7 @@ RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    sprintf(transname, "t_%s", source->name);
-   CHECK_OKAY( SCIPprobCreate(target, transname, NULL, NULL, source->probdeltrans, NULL, TRUE) );
+   CHECK_OKAY( SCIPprobCreate(target, memhdr, transname, NULL, NULL, source->probdeltrans, NULL, TRUE) );
 
    /* transform objective limit */
    if( source->objlim < SCIP_INVALID )
@@ -278,7 +279,7 @@ RETCODE SCIPprobTransform(
    for( v = 0; v < source->nvars; ++v )
    {
       CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
-      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, lp, branchcand, targetvar) );
+      CHECK_OKAY( SCIPprobAddVar(*target, set, lp, branchcand, targetvar) );
       CHECK_OKAY( SCIPvarRelease(&targetvar, memhdr, set, NULL) );
    }
    assert((*target)->nvars == source->nvars);
@@ -287,7 +288,7 @@ RETCODE SCIPprobTransform(
    for( c = 0; c < source->nconss; ++c )
    {
       CHECK_OKAY( SCIPconsTransform(source->conss[c], memhdr, set, &targetcons) );
-      CHECK_OKAY( SCIPprobAddCons(*target, memhdr, set, targetcons) );
+      CHECK_OKAY( SCIPprobAddCons(*target, set, targetcons) );
       CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
    }
 
@@ -500,7 +501,6 @@ void probRemoveVar(
 /** adds variable to the problem and captures it */
 RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -525,7 +525,7 @@ RETCODE SCIPprobAddVar(
    SCIPvarCapture(var);
 
    /* add variable's name to the namespace */
-   CHECK_OKAY( SCIPhashtableInsert(prob->varnames, memhdr, (void*)var) );
+   CHECK_OKAY( SCIPhashtableInsert(prob->varnames, (void*)var) );
 
    /* update branching candidates and pseudo and loose objective value in the LP */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
@@ -630,16 +630,16 @@ RETCODE SCIPprobVarChangedStatus(
    return SCIP_OKAY;
 }
 
-/** adds constraint to the problem and captures it; a local constraint is automatically upgraded into a global constraint */
+/** adds constraint to the problem and captures it;
+ *  a local constraint is automatically upgraded into a global constraint
+ */
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    )
 {
    assert(prob != NULL);
-   assert(memhdr != NULL);
    assert(cons != NULL);
    assert(cons->addconssetchg == NULL);
    assert(cons->addarraypos == -1);
@@ -664,7 +664,7 @@ RETCODE SCIPprobAddCons(
    SCIPconsCapture(cons);
 
    /* add constraint's name to the namespace */
-   CHECK_OKAY( SCIPhashtableInsert(prob->consnames, memhdr, (void*)cons) );
+   CHECK_OKAY( SCIPhashtableInsert(prob->consnames, (void*)cons) );
 
    /* if the problem is the transformed problem, activate and lock constraint */
    if( prob->transformed )
@@ -721,7 +721,7 @@ RETCODE SCIPprobDelCons(
    assert(!cons->enabled || cons->updatedeactivate);
 
    /* remove constraint's name from the namespace */
-   CHECK_OKAY( SCIPhashtableRemove(prob->consnames, memhdr, (void*)cons) );
+   CHECK_OKAY( SCIPhashtableRemove(prob->consnames, (void*)cons) );
 
    /* remove the constraint from the problem's constraint array */
    arraypos = cons->addarraypos;

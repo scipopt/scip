@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.21 2004/02/05 14:12:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.22 2004/03/22 16:03:29 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -222,40 +222,40 @@ void** SCIPpqueueElems(
 
 /** appends element to the hash list */
 static
-RETCODE hashlistAppend(
-   HASHLIST**       hashlist,           /**< pointer to hash list to free */
+RETCODE hashtablelistAppend(
+   HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to append to the list */
    )
 {
-   HASHLIST* newlist;
+   HASHTABLELIST* newlist;
 
-   assert(hashlist != NULL);
+   assert(hashtablelist != NULL);
    assert(memhdr != NULL);
    assert(element != NULL);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, &newlist) );
    newlist->element = element;
-   newlist->next = *hashlist;
-   *hashlist = newlist;
+   newlist->next = *hashtablelist;
+   *hashtablelist = newlist;
 
    return SCIP_OKAY;
 }
 
 /** frees a hash list entry and all its successors */
 static
-void hashlistFree(
-   HASHLIST**       hashlist,           /**< pointer to hash list to free */
+void hashtablelistFree(
+   HASHTABLELIST**  hashtablelist,      /**< pointer to hash list to free */
    MEMHDR*          memhdr              /**< block memory */
    )
 {
-   HASHLIST* list;
-   HASHLIST* nextlist;
+   HASHTABLELIST* list;
+   HASHTABLELIST* nextlist;
 
-   assert(hashlist != NULL);
+   assert(hashtablelist != NULL);
    assert(memhdr != NULL);
    
-   list = *hashlist;
+   list = *hashtablelist;
    while( list != NULL )
    {
       nextlist = list->next;
@@ -263,13 +263,13 @@ void hashlistFree(
       list = nextlist;
    }
 
-   *hashlist = NULL;
+   *hashtablelist = NULL;
 }
 
-/** retrieves element with given key from the hash list, or NULL */
+/** finds hash list entry pointing to element with given key in the hash list, returns NULL if not found */
 static
-void* hashlistRetrieve(
-   HASHLIST*        hashlist,           /**< hash list */
+HASHTABLELIST* hashtablelistFind(
+   HASHTABLELIST*   hashtablelist,      /**< hash list */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
@@ -283,55 +283,79 @@ void* hashlistRetrieve(
    assert(hashkeyeq != NULL);
    assert(key != NULL);
 
-   while( hashlist != NULL )
+   while( hashtablelist != NULL )
    {
-      currentkey = hashgetkey(hashlist->element);
+      currentkey = hashgetkey(hashtablelist->element);
       currentkeyval = hashkeyval(currentkey);
       if( currentkeyval == keyval && hashkeyeq(currentkey, key) )
-         return hashlist->element;
-      hashlist = hashlist->next;
+         return hashtablelist;
+      hashtablelist = hashtablelist->next;
    }
 
    return NULL;
 }
 
+/** retrieves element with given key from the hash list, or NULL */
+static
+void* hashtablelistRetrieve(
+   HASHTABLELIST*   hashtablelist,      /**< hash list */
+   DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   unsigned int     keyval,             /**< hash value of key */
+   void*            key                 /**< key to retrieve */
+   )
+{
+   HASHTABLELIST* h;
+
+   /* find hash list entry */
+   h = hashtablelistFind(hashtablelist, hashgetkey, hashkeyeq, hashkeyval, keyval, key);
+
+   /* return element */
+   if( h != NULL )
+      return h->element;
+   else
+      return NULL;
+}
+
 /** removes element from the hash list */
 static
-RETCODE hashlistRemove(
-   HASHLIST**       hashlist,           /**< pointer to hash list to free */
+RETCODE hashtablelistRemove(
+   HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to remove from the list */
    )
 {
-   HASHLIST* nextlist;
+   HASHTABLELIST* nextlist;
 
-   assert(hashlist != NULL);
+   assert(hashtablelist != NULL);
    assert(memhdr != NULL);
    assert(element != NULL);
 
-   while( *hashlist != NULL && (*hashlist)->element != element )
+   while( *hashtablelist != NULL && (*hashtablelist)->element != element )
    {
-      hashlist = &(*hashlist)->next;
+      hashtablelist = &(*hashtablelist)->next;
    }
-   if( *hashlist != NULL )
+   if( *hashtablelist != NULL )
    {
-      nextlist = (*hashlist)->next;
-      freeBlockMemory(memhdr, hashlist);
-      *hashlist = nextlist;
-
-      return SCIP_OKAY;
+      nextlist = (*hashtablelist)->next;
+      freeBlockMemory(memhdr, hashtablelist);
+      *hashtablelist = nextlist;
    }
    else
    {
       errorMessage("element not found in the hash table\n");
       return SCIP_INVALIDDATA;
    }
+
+   return SCIP_OKAY;
 }
 
    
 /** creates a hash table */
 RETCODE SCIPhashtableCreate(
    HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
+   MEMHDR*          memhdr,             /**< block memory used to store hash table entries */
    int              tablesize,          /**< size of the hash table */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
@@ -348,6 +372,7 @@ RETCODE SCIPhashtableCreate(
 
    ALLOC_OKAY( allocMemory(hashtable) );
    ALLOC_OKAY( allocMemoryArray(&(*hashtable)->lists, tablesize) );
+   (*hashtable)->memhdr = memhdr;
    (*hashtable)->nlists = tablesize;
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
@@ -362,18 +387,17 @@ RETCODE SCIPhashtableCreate(
 
 /** frees the hash table */
 void SCIPhashtableFree(
-   HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
-   MEMHDR*          memhdr              /**< block memory */
+   HASHTABLE**      hashtable           /**< pointer to the hash table */
    )
 {
    int i;
 
    assert(hashtable != NULL);
-   assert(memhdr != NULL);
+   assert(*hashtable != NULL);
 
    /* free hash lists */
    for( i = 0; i < (*hashtable)->nlists; ++i )
-      hashlistFree(&(*hashtable)->lists[i], memhdr);
+      hashtablelistFree(&(*hashtable)->lists[i], (*hashtable)->memhdr);
 
    /* free main hast table data structure */
    freeMemoryArray(&(*hashtable)->lists);
@@ -383,7 +407,6 @@ void SCIPhashtableFree(
 /** inserts element in hash table (multiple inserts of same element possible) */
 RETCODE SCIPhashtableInsert(
    HASHTABLE*       hashtable,          /**< hash table */
-   MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to insert into the table */
    )
 {
@@ -397,7 +420,6 @@ RETCODE SCIPhashtableInsert(
    assert(hashtable->hashgetkey != NULL);
    assert(hashtable->hashkeyeq != NULL);
    assert(hashtable->hashkeyval != NULL);
-   assert(memhdr != NULL);
    assert(element != NULL);
 
    /* get the hash key and its hash value */
@@ -406,7 +428,7 @@ RETCODE SCIPhashtableInsert(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
-   CHECK_OKAY( hashlistAppend(&hashtable->lists[hashval], memhdr, element) );
+   CHECK_OKAY( hashtablelistAppend(&hashtable->lists[hashval], hashtable->memhdr, element) );
    
    return SCIP_OKAY;
 }
@@ -414,7 +436,6 @@ RETCODE SCIPhashtableInsert(
 /** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
 RETCODE SCIPhashtableSafeInsert(
    HASHTABLE*       hashtable,          /**< hash table */
-   MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to insert into the table */
    )
 {
@@ -426,7 +447,7 @@ RETCODE SCIPhashtableSafeInsert(
       return SCIP_KEYALREADYEXISTING;
 
    /* insert element in hash table */
-   CHECK_OKAY( SCIPhashtableInsert(hashtable, memhdr, element) );
+   CHECK_OKAY( SCIPhashtableInsert(hashtable, element) );
    
    return SCIP_OKAY;
 }
@@ -452,14 +473,13 @@ void* SCIPhashtableRetrieve(
    keyval = hashtable->hashkeyval(key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
-   return hashlistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, hashtable->hashkeyval,
-      keyval, key);
+   return hashtablelistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, 
+      hashtable->hashkeyval, keyval, key);
 }
 
 /** removes existing element from the hash table */
 RETCODE SCIPhashtableRemove(
    HASHTABLE*       hashtable,          /**< hash table */
-   MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to remove from the table */
    )
 {
@@ -473,7 +493,6 @@ RETCODE SCIPhashtableRemove(
    assert(hashtable->hashgetkey != NULL);
    assert(hashtable->hashkeyeq != NULL);
    assert(hashtable->hashkeyval != NULL);
-   assert(memhdr != NULL);
    assert(element != NULL);
 
    /* get the hash key and its hash value */
@@ -482,7 +501,7 @@ RETCODE SCIPhashtableRemove(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
-   CHECK_OKAY( hashlistRemove(&hashtable->lists[hashval], memhdr, element) );
+   CHECK_OKAY( hashtablelistRemove(&hashtable->lists[hashval], hashtable->memhdr, element) );
    
    return SCIP_OKAY;
 }
@@ -492,7 +511,7 @@ void SCIPhashtablePrintStatistics(
    HASHTABLE*       hashtable           /**< hash table */
    )
 {
-   HASHLIST* hashlist;
+   HASHTABLELIST* hashtablelist;
    int usedslots;
    int maxslotsize;
    int sumslotsize;
@@ -506,15 +525,15 @@ void SCIPhashtablePrintStatistics(
    sumslotsize = 0;
    for( i = 0; i < hashtable->nlists; ++i )
    {
-      hashlist = hashtable->lists[i];
-      if( hashlist != NULL )
+      hashtablelist = hashtable->lists[i];
+      if( hashtablelist != NULL )
       {
          usedslots++;
          slotsize = 0;
-         while( hashlist != NULL )
+         while( hashtablelist != NULL )
          {
             slotsize++;
-            hashlist = hashlist->next;
+            hashtablelist = hashtablelist->next;
          }
          maxslotsize = MAX(maxslotsize, slotsize);
          sumslotsize += slotsize;
@@ -569,6 +588,335 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
 
    return sum;
 }
+
+
+
+
+/*
+ * Hash Map
+ */
+
+/** appends origin->image pair to the hash list */
+static
+RETCODE hashmaplistAppend(
+   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            origin,             /**< origin of the mapping origin -> image */
+   void*            image               /**< image of the mapping origin -> image */
+   )
+{
+   HASHMAPLIST* newlist;
+
+   assert(hashmaplist != NULL);
+   assert(memhdr != NULL);
+   assert(origin != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, &newlist) );
+   newlist->origin = origin;
+   newlist->image = image;
+   newlist->next = *hashmaplist;
+   *hashmaplist = newlist;
+
+   return SCIP_OKAY;
+}
+
+/** frees a hash list entry and all its successors */
+static
+void hashmaplistFree(
+   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list to free */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   HASHMAPLIST* list;
+   HASHMAPLIST* nextlist;
+
+   assert(hashmaplist != NULL);
+   assert(memhdr != NULL);
+   
+   list = *hashmaplist;
+   while( list != NULL )
+   {
+      nextlist = list->next;
+      freeBlockMemory(memhdr, &list);
+      list = nextlist;
+   }
+
+   *hashmaplist = NULL;
+}
+
+/** finds hash list entry pointing to given origin in the hash list, returns NULL if not found */
+static
+HASHMAPLIST* hashmaplistFind(
+   HASHMAPLIST*     hashmaplist,        /**< hash list */
+   void*            origin              /**< origin to find */
+   )
+{
+   assert(origin != NULL);
+
+   while( hashmaplist != NULL )
+   {
+      if( hashmaplist->origin == origin )
+         return hashmaplist;
+      hashmaplist = hashmaplist->next;
+   }
+
+   return NULL;
+}
+
+/** retrieves image of given origin from the hash list, or NULL */
+static
+void* hashmaplistGetImage(
+   HASHMAPLIST*     hashmaplist,        /**< hash list */
+   void*            origin              /**< origin to retrieve image for */
+   )
+{
+   HASHMAPLIST* h;
+
+   /* find hash list entry */
+   h = hashmaplistFind(hashmaplist, origin);
+
+   /* return image */
+   if( h != NULL )
+      return h->image;
+   else
+      return NULL;
+}
+
+/** sets image for given origin in the hash list, either by modifying existing origin->image pair or by appending a
+ *  new origin->image pair
+ */
+static
+RETCODE hashmaplistSetImage(
+   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            origin,             /**< origin to set image for */
+   void*            image               /**< new image for origin */
+   )
+{
+   HASHMAPLIST* h;
+
+   /* find hash list entry */
+   h = hashmaplistFind(*hashmaplist, origin);
+
+   /* set image or add origin->image pair */
+   if( h != NULL )
+      h->image = image;
+   else
+   {
+      CHECK_OKAY( hashmaplistAppend(hashmaplist, memhdr, origin, image) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes origin->image pair from the hash list */
+static
+RETCODE hashmaplistRemove(
+   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            origin              /**< origin to remove from the list */
+   )
+{
+   HASHMAPLIST* nextlist;
+
+   assert(hashmaplist != NULL);
+   assert(memhdr != NULL);
+   assert(origin != NULL);
+
+   while( *hashmaplist != NULL && (*hashmaplist)->origin != origin )
+   {
+      hashmaplist = &(*hashmaplist)->next;
+   }
+   if( *hashmaplist != NULL )
+   {
+      nextlist = (*hashmaplist)->next;
+      freeBlockMemory(memhdr, hashmaplist);
+      *hashmaplist = nextlist;
+   }
+   else
+   {
+      errorMessage("origin not found in the hash map\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** creates a hash map mapping pointers to pointers */
+RETCODE SCIPhashmapCreate(
+   HASHMAP**        hashmap,            /**< pointer to store the created hash map */
+   MEMHDR*          memhdr,             /**< block memory used to store hash map entries */
+   int              mapsize             /**< size of the hash map */
+   )
+{
+   int i;
+
+   assert(hashmap != NULL);
+   assert(mapsize > 0);
+
+   ALLOC_OKAY( allocMemory(hashmap) );
+   ALLOC_OKAY( allocMemoryArray(&(*hashmap)->lists, mapsize) );
+   (*hashmap)->memhdr = memhdr;
+   (*hashmap)->nlists = mapsize;
+
+   /* initialize hash lists */
+   for( i = 0; i < mapsize; ++i )
+      (*hashmap)->lists[i] = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** frees the hash map */
+void SCIPhashmapFree(
+   HASHMAP**        hashmap             /**< pointer to the hash map */
+   )
+{
+   int i;
+
+   assert(hashmap != NULL);
+   assert(*hashmap != NULL);
+
+   /* free hash lists */
+   for( i = 0; i < (*hashmap)->nlists; ++i )
+      hashmaplistFree(&(*hashmap)->lists[i], (*hashmap)->memhdr);
+
+   /* free main hast map data structure */
+   freeMemoryArray(&(*hashmap)->lists);
+   freeMemory(hashmap);
+}
+
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+RETCODE SCIPhashmapInsert(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin,             /**< origin to set image for */
+   void*            image               /**< new image for origin */
+   )
+{
+   unsigned int hashval;
+
+   assert(hashmap != NULL);
+   assert(hashmap->lists != NULL);
+   assert(hashmap->nlists > 0);
+   assert(origin != NULL);
+
+   /* get the hash value */
+   hashval = (unsigned int)origin % hashmap->nlists;
+
+   /* append origin->image pair to the list at the hash position */
+   CHECK_OKAY( hashmaplistAppend(&hashmap->lists[hashval], hashmap->memhdr, origin, image) );
+   
+   return SCIP_OKAY;
+}
+
+/** retrieves image of given origin from the hash map, or NULL if no image exists */
+void* SCIPhashmapGetImage(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin              /**< origin to retrieve image for */
+   )
+{
+   unsigned int hashval;
+
+   assert(hashmap != NULL);
+   assert(hashmap->lists != NULL);
+   assert(hashmap->nlists > 0);
+   assert(origin != NULL);
+
+   /* get the hash value */
+   hashval = (unsigned int)origin % hashmap->nlists;
+
+   /* get image for origin from hash list */
+   return hashmaplistGetImage(hashmap->lists[hashval], origin);
+}
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
+ *  new origin->image pair
+ */
+RETCODE SCIPhashmapSetImage(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin,             /**< origin to set image for */
+   void*            image               /**< new image for origin */
+   )
+{
+   unsigned int hashval;
+
+   assert(hashmap != NULL);
+   assert(hashmap->lists != NULL);
+   assert(hashmap->nlists > 0);
+   assert(origin != NULL);
+
+   /* get the hash value */
+   hashval = (unsigned int)origin % hashmap->nlists;
+
+   /* set image for origin in hash list */
+   CHECK_OKAY( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->memhdr, origin, image) );
+   
+   return SCIP_OKAY;
+}
+
+/** removes existing origin->image pair from the hash map */
+RETCODE SCIPhashmapRemove(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin              /**< origin to remove from the list */
+   )
+{
+   unsigned int hashval;
+
+   assert(hashmap != NULL);
+   assert(hashmap->lists != NULL);
+   assert(hashmap->nlists > 0);
+   assert(origin != NULL);
+
+   /* get the hash value */
+   hashval = (unsigned int)origin % hashmap->nlists;
+
+   /* append element to the list at the hash position */
+   CHECK_OKAY( hashmaplistRemove(&hashmap->lists[hashval], hashmap->memhdr, origin) );
+   
+   return SCIP_OKAY;
+}
+
+/** prints statistics about hash map usage */
+void SCIPhashmapPrintStatistics(
+   HASHMAP*         hashmap             /**< hash map */
+   )
+{
+   HASHMAPLIST* hashmaplist;
+   int usedslots;
+   int maxslotsize;
+   int sumslotsize;
+   int slotsize;
+   int i;
+
+   assert(hashmap != NULL);
+
+   usedslots = 0;
+   maxslotsize = 0;
+   sumslotsize = 0;
+   for( i = 0; i < hashmap->nlists; ++i )
+   {
+      hashmaplist = hashmap->lists[i];
+      if( hashmaplist != NULL )
+      {
+         usedslots++;
+         slotsize = 0;
+         while( hashmaplist != NULL )
+         {
+            slotsize++;
+            hashmaplist = hashmaplist->next;
+         }
+         maxslotsize = MAX(maxslotsize, slotsize);
+         sumslotsize += slotsize;
+      }
+   }
+
+   printf("%d hash entries, used %d/%d slots (%.1f%%)",
+      sumslotsize, usedslots, hashmap->nlists, 100.0*(Real)usedslots/(Real)(hashmap->nlists));
+   if( usedslots > 0 )
+      printf(", avg. %.1f entries/used slot, max. %d entries in slot", (Real)sumslotsize/(Real)usedslots, maxslotsize);
+   printf("\n");
+}
+
 
 
 

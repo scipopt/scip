@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.70 2004/02/04 17:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.71 2004/03/22 16:03:29 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -29,6 +29,82 @@
 #include "scipdefplugins.h"
 
 
+static
+RETCODE readParams(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename            /**< parameter file name, or NULL */
+   )
+{
+   if( filename != NULL )
+   {
+      if( SCIPfileExists(filename) )
+      {
+         printf("reading parameter file <%s>\n", filename);
+         CHECK_OKAY( SCIPreadParams(scip, filename) );
+      }
+      else
+         printf("parameter file <%s> not found - using default parameters\n", filename);
+   }
+   else if( SCIPfileExists("scip.set") )
+   {
+      printf("reading parameter file <scip.set>\n");
+      CHECK_OKAY( SCIPreadParams(scip, "scip.set") );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE fromCommandLine(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename            /**< input file name */
+   )
+{
+   /********************
+    * Problem Creation *
+    ********************/
+
+   printf("\nread problem <%s>\n", filename);
+   printf("============\n\n");
+   CHECK_OKAY( SCIPreadProb(scip, filename) );
+
+
+   /*******************
+    * Problem Solving *
+    *******************/
+
+   /* solve problem */
+   printf("\nsolve problem\n");
+   printf("=============\n\n");
+   CHECK_OKAY( SCIPsolve(scip) );
+
+   printf("\nprimal solution:\n");
+   printf("================\n\n");
+   CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
+
+
+   /**************
+    * Statistics *
+    **************/
+
+   printf("\nStatistics\n");
+   printf("==========\n\n");
+
+   CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE interactive(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   /* start user interactive mode */
+   CHECK_OKAY( SCIPstartInteraction(scip) );
+
+   return SCIP_OKAY;
+}
 
 static
 RETCODE runSCIP(
@@ -64,76 +140,31 @@ RETCODE runSCIP(
 
    if( argc >= 3 )
    {
-      if( SCIPfileExists(argv[2]) )
-      {
-         printf("reading parameter file <%s>\n", argv[2]);
-         CHECK_OKAY( SCIPreadParams(scip, argv[2]) );
-      }
-      else
-         printf("parameter file <%s> not found - using default parameters\n", argv[2]);
+      CHECK_OKAY( readParams(scip, argv[2]) );
    }
-   else if( SCIPfileExists("scip.set") )
+   else
    {
-      printf("reading parameter file <scip.set>\n");
-      CHECK_OKAY( SCIPreadParams(scip, "scip.set") );
+      CHECK_OKAY( readParams(scip, NULL) );
    }
    /*CHECK_OKAY( SCIPwriteParams(scip, "scip.set", TRUE) );*/
 
 
-   /********************
-    * Interactive mode *
-    ********************/
+   /**************
+    * Start SCIP *
+    **************/
 
-   if( argc < 2 )
+   if( argc >= 2 )
+   {
+      CHECK_OKAY( fromCommandLine(scip, argv[1]) );
+   }
+   else
    {
       printf("\n");
 
-      /* start user interactive mode */
-      CHECK_OKAY( SCIPstartInteraction(scip) );
-
-      return SCIP_OKAY;
+      CHECK_OKAY( interactive(scip) );
    }
 
    
-   /********************
-    * Problem Creation *
-    ********************/
-
-   printf("\nread problem <%s>\n", argv[1]);
-   printf("============\n\n");
-   CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
-
-
-   /*******************
-    * Problem Solving *
-    *******************/
-
-   /* solve problem */
-   printf("\nsolve problem\n");
-   printf("=============\n\n");
-   CHECK_OKAY( SCIPsolve(scip) );
-
-#if 1
-   printf("\nprimal solution:\n");
-   printf("================\n\n");
-   CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
-#endif
-
-#ifndef NDEBUG
-   /*SCIPdebugMemory(scip);*/
-#endif
-
-
-   /**************
-    * Statistics *
-    **************/
-
-   printf("\nStatistics\n");
-   printf("==========\n\n");
-
-   CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
-
-
    /********************
     * Deinitialization *
     ********************/

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.134 2004/03/19 09:41:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.135 2004/03/22 16:03:30 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -31,6 +31,7 @@
 #include "set.h"
 #include "stat.h"
 #include "clock.h"
+#include "vbc.h"
 #include "interrupt.h"
 #include "lpi.h"
 #include "mem.h"
@@ -1768,7 +1769,8 @@ RETCODE SCIPcreateProb(
    scip->stage = SCIP_STAGE_PROBLEM;
    
    CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
-   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelorig, probtrans, probdeltrans, probdata, FALSE) );
+   CHECK_OKAY( SCIPprobCreate(&scip->origprob, scip->mem->probmem, name, 
+                  probdelorig, probtrans, probdeltrans, probdata, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -1951,8 +1953,8 @@ RETCODE SCIPsetObjlimit(
       objlimit = SCIPprobGetInternObjlim(scip->transprob, scip->set);
       if( SCIPsetIsLT(scip->set, objlimit, scip->primal->upperbound) )
       {
-         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->tree, 
-                        scip->lp, objlimit) );
+         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+                        scip->tree, scip->lp, objlimit) );
       }
       break;
    default:
@@ -2053,7 +2055,7 @@ RETCODE SCIPaddVar(
          errorMessage("Cannot add transformed variables to original problem\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPprobAddVar(scip->origprob, scip->mem->probmem, scip->set, scip->lp, scip->branchcand, var) );
+      CHECK_OKAY( SCIPprobAddVar(scip->origprob, scip->set, scip->lp, scip->branchcand, var) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -2072,7 +2074,7 @@ RETCODE SCIPaddVar(
          }
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand, var) );
+      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->set, scip->lp, scip->branchcand, var) );
       return SCIP_OKAY;
 
    default:
@@ -2114,7 +2116,7 @@ RETCODE SCIPaddPricedVar(
          }
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand, var) );
+      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->set, scip->lp, scip->branchcand, var) );
    }
 
    /* add variable to pricing storage */
@@ -2482,18 +2484,18 @@ RETCODE SCIPaddCons(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->mem->probmem, scip->set, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->set, cons) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, cons) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       if( SCIPconsIsGlobal(cons) )
       {
-         CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+         CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, cons) );
       }
       else
       {
@@ -2600,7 +2602,7 @@ RETCODE SCIPaddConsNode(
    {
       assert(node == scip->tree->root);
       cons->local = FALSE;
-      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, cons) );
    }
    else
    {
@@ -2969,12 +2971,15 @@ RETCODE SCIPpresolve(
    /* mark statistics before solving */
    SCIPstatMark(scip->stat);
 
+   /* create VBC output file */
+   CHECK_OKAY( SCIPvbcInit(scip->stat->vbc, scip->mem->solvemem, scip->set) );
+
    /* init solve data structures */
    CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
    CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
-   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->lp, 
+   CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
                   SCIPsetGetNodesel(scip->set, scip->stat)) );
 
    /* copy problem in solve memory */
@@ -3013,10 +3018,10 @@ RETCODE SCIPpresolve(
    /* init solution process data structures */
    CHECK_OKAY( SCIPpricestoreCreate(&scip->pricestore) );
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
-   CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
+   CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
    CHECK_OKAY( SCIPlpconflictCreate(&scip->lpconflict) );
-   CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->lp) );
+   CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp) );
 
    /* inform problem, that presolving is finished and the branch and bound process starts now */
    SCIPprobSolvingStarts(scip->transprob);
@@ -3089,8 +3094,8 @@ RETCODE SCIPpresolve(
       if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->upperbound) )
       {
          /* add 1.0 to primal bound, such that solution with worst bound may be found */
-         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->tree,
-                        scip->lp, objbound + 1.0) );
+         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+                        scip->tree, scip->lp, objbound + 1.0) );
       }
    }
 
@@ -3233,6 +3238,9 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
       CHECK_OKAY( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
       CHECK_OKAY( SCIPeventqueueFree(&scip->eventqueue) );
+
+      /* close VBC output file */
+      SCIPvbcExit(scip->stat->vbc, scip->set);
 
       /* free the solve block memory */
 #ifndef NDEBUG
@@ -4238,7 +4246,7 @@ RETCODE aggregateActiveIntVars(
                   aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
                   SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary),
                   SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary) ) );
-   CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand, aggvar) );
+   CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->set, scip->lp, scip->branchcand, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
                   scip->lp, scip->branchcand, scip->eventqueue, aggvar, (Real)(-b), (Real)xsol, infeasible) );
    if( !(*infeasible) )
@@ -5878,7 +5886,7 @@ RETCODE SCIPcreateChild(
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateChild", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeCreate(node, scip->mem->solvemem, scip->set, scip->tree) );
+   CHECK_OKAY( SCIPnodeCreate(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree) );
    
    return SCIP_OKAY;
 }
