@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.82 2005/02/03 12:19:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.83 2005/02/03 15:30:19 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1290,17 +1290,22 @@ RETCODE mergeMultiples(
             /* variables v and w are opposite: subtract smaller weight from larger weight, reduce capacity,
              * and delete item of smaller weight
              */
-            if( consdata->weights[v] <= consdata->weights[w] )
+            if( consdata->weights[v] == consdata->weights[w] )
+            {
+               /* both variables eliminate themselves: w*x + w*(1-x) == w */
+               consdata->capacity -= consdata->weights[v];
+               CHECK_OKAY( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
+               assert(consdata->vars[w] == negvar);
+               CHECK_OKAY( delCoefPos(scip, cons, w) );
+               v = MIN(v, consdata->nvars); /* we could have removed the last two coefficients */
+            }
+            else if( consdata->weights[v] < consdata->weights[w] )
             {
                consdata->capacity -= consdata->weights[v];
                consdataChgWeight(consdata, w, consdata->weights[w] - consdata->weights[v]);
                CHECK_OKAY( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
                assert(consdata->vars[w] == negvar);
-               assert(consdata->weights[w] >= 0);
-               if( consdata->weights[w] == 0 )
-               {
-                  CHECK_OKAY( delCoefPos(scip, cons, w) );
-               }
+               assert(consdata->weights[w] > 0);
             }
             else
             {

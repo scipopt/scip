@@ -68,9 +68,11 @@ fixed bugs:
   to infinity even if its objective value is zero
 - fixed bug in knapsack constraint handler that fixed variables are sometimes not removed in presolving
 - made conflict analysis available in presolving stage (for probing conflicts)
+- removed bug in knapsack constraint handler with merging negated variables of equal weight at the end of the variables'
+  array
 
 known bugs:
-- conflict analysis should be made available in presolving (for probing)
+- primal bound becomes wrong, if in a prior run the optimal solution was found and the cutoff bound was thereby reduced
 
 
 SCIP version 0.78
