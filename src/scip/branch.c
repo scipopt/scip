@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.40 2004/03/31 13:41:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.41 2004/04/05 15:48:26 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -118,6 +118,7 @@ RETCODE SCIPbranchcandCreate(
    (*branchcand)->nlpcands = 0;
    (*branchcand)->npriolpcands = 0;
    (*branchcand)->npriolpbins = 0;
+   (*branchcand)->lpmaxpriority = INT_MIN;
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
    (*branchcand)->npriopseudocands = 0;
@@ -174,7 +175,6 @@ RETCODE branchcandCalcLPCands(
       Real primsol;
       Real frac;
       VARTYPE vartype;
-      int maxbranchpriority;
       int branchpriority;
       int ncols;
       int c;
@@ -188,7 +188,7 @@ RETCODE branchcandCalcLPCands(
       /* construct the LP branching candidate set, moving the candidates with maximal priority to the front */
       CHECK_OKAY( ensureLpcandsSize(branchcand, set, ncols) );
 
-      maxbranchpriority = INT_MIN;
+      branchcand->lpmaxpriority = INT_MIN;
       branchcand->nlpcands = 0;
       branchcand->npriolpcands = 0;
       branchcand->npriolpbins = 0;
@@ -222,7 +222,7 @@ RETCODE branchcandCalcLPCands(
                branchpriority = SCIPvarGetBranchPriority(var);
                insertpos = branchcand->nlpcands;
                branchcand->nlpcands++;
-               if( branchpriority > maxbranchpriority )
+               if( branchpriority > branchcand->lpmaxpriority )
                {
                   /* candidate has higher priority than the current maximum:
                    * move it to the front and declare it to be the single best candidate
@@ -236,9 +236,9 @@ RETCODE branchcandCalcLPCands(
                   }
                   branchcand->npriolpcands = 1;
                   branchcand->npriolpbins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
-                  maxbranchpriority = branchpriority;
+                  branchcand->lpmaxpriority = branchpriority;
                }
-               else if( branchpriority == maxbranchpriority )
+               else if( branchpriority == branchcand->lpmaxpriority )
                {
                   /* candidate has equal priority as the current maximum:
                    * move away the first non-maximal priority candidate, move the current candidate to the correct
@@ -269,7 +269,8 @@ RETCODE branchcandCalcLPCands(
                branchcand->lpcandsfrac[insertpos] = frac;
 
                debugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n", 
-                  branchcand->nlpcands, SCIPvarGetName(var), primsol, frac, branchpriority, maxbranchpriority, insertpos);
+                  branchcand->nlpcands, SCIPvarGetName(var), primsol, frac, branchpriority, branchcand->lpmaxpriority,
+                  insertpos);
             }
          }
       }
@@ -1154,7 +1155,10 @@ Real SCIPbranchGetScore(
    return score;
 }
 
-/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+ *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
+ *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
+ */
 RETCODE SCIPbranchExecLP(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
    SET*             set,                /**< global SCIP settings */
@@ -1185,6 +1189,16 @@ RETCODE SCIPbranchExecLP(
    /* do nothing, if no fractional variables exist */
    if( branchcand->nlpcands == 0 )
       return SCIP_OKAY;
+
+   /* if there is a non-fixed variable with higher priority than the maximal priority of the fractional candidates,
+    * use pseudo solution branching instead
+    */
+   if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
+   {
+      CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, result) );
+      assert(*result != SCIP_DIDNOTRUN);
+      return SCIP_OKAY;
+   }
 
    /* sort the branching rules by priority */
    SCIPsetSortBranchrules(set);

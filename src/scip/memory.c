@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.28 2004/02/05 14:12:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.29 2004/04/05 15:48:28 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1185,7 +1185,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
    ptr = allocBlockElement(*blkptr);
    if( ptr == NULL )
       fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for new chunk\n", filename, line);
-   debugMessage("[%s:%4d] alloced %8ld bytes in %p\n", filename, line, (long)size, ptr);
+   debugMessage("alloced %8ld bytes in %p [%s:%4d]\n", (long)size, ptr, filename, line);
 
    mem->memused += size;
 
@@ -1313,7 +1313,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       alignSize(&size);
       hashNumber = getHashNumber((int)size);
 
-      debugMessage("[%s:%4d] free    %8ld bytes in %p\n", filename, line, (long)size, *ptr );
+      debugMessage("free    %8ld bytes in %p [%s:%4d]\n", (long)size, *ptr, filename, line);
       /* find correspoding block header */
       blk = mem->blockhash[hashNumber];
       while( blk != NULL && blk->elemSize != (int)size )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.35 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.36 2004/04/05 15:48:27 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1823,6 +1823,7 @@ DECL_CONSRESCVAR(consRescvarLogicor)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
    assert(infervar != NULL);
+   assert(result != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1853,6 +1854,8 @@ DECL_CONSRESCVAR(consRescvarLogicor)
 
    /* reduce the age of the constraint, because it was responsible for the conflict */
    CHECK_OKAY( SCIPaddConsAge(scip, cons, -1.0) );
+
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.31 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.32 2004/04/05 15:48:27 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1196,6 +1196,9 @@ DECL_CONSSEPA(consSepaKnapsack)
    depth = SCIPgetDepth(scip);
    nrounds = SCIPgetNSepaRounds(scip);
 
+   debugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
+      nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
+
    /* only call the separator a given number of times at each node */
    if( (depth == 0 && nrounds >= conshdlrdata->maxroundsroot)
       || (depth > 0 && nrounds >= conshdlrdata->maxrounds) )
@@ -1379,10 +1382,13 @@ DECL_CONSRESCVAR(consRescvarKnapsack)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
    int i;
+
+   assert(result != NULL);
+
    consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
  
    assert(SCIPvarGetUbLocal(infervar) < 0.5);
-   assert(consdata != NULL);
 
    for( i = 0; i < consdata->nvars; i++ )
    {
@@ -1391,6 +1397,7 @@ DECL_CONSRESCVAR(consRescvarKnapsack)
          CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
       }
    }
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
@@ -1685,6 +1692,14 @@ RETCODE SCIPincludeConshdlrKnapsack(
                   "constraints/knapsack/maxroundsroot",
                   "maximal number of separation rounds per node in the root node",
                   &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "constraints/knapsack/maxsepacuts",
+                  "maximal number of cuts separated per separation round",
+                  &conshdlrdata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "constraints/knapsack/maxsepacutsroot",
+                  "maximal number of cuts separated per separation round in the root node",
+                  &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

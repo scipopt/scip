@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.86 2004/03/22 16:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.87 2004/04/05 15:48:29 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -2402,7 +2402,8 @@ RETCODE SCIPtreeBranchVar(
       fixval = SCIPsetCeil(set, solval);
       assert(SCIPsetIsEQ(set, SCIPsetCeil(set, solval), SCIPsetFloor(set, solval)));
       
-      debugMessage("pseudo branch on variable <%s> with value %g\n", SCIPvarGetName(var), solval);
+      debugMessage("pseudo branch on variable <%s> with value %g, priority %d\n", 
+         SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var));
       
       /* create child node with x <= x'-1, if this would be feasible */
       if( SCIPsetIsGE(set, fixval-1, SCIPvarGetLbLocal(var)) )
@@ -2441,7 +2442,8 @@ RETCODE SCIPtreeBranchVar(
    }
    else
    {   
-      debugMessage("LP branch on variable <%s> with value %g\n", SCIPvarGetName(var), solval);
+      debugMessage("LP branch on variable <%s> with value %g, priority %d\n", 
+         SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var));
       
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFloor(set, solval));

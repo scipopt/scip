@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.1 2004/03/30 12:51:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.2 2004/04/05 15:48:27 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -55,6 +55,8 @@ struct ConsData
    VAR*             resvar;             /**< resultant variable */
    ROW**            rows;               /**< rows for linear relaxation of or constraint */
    int              nvars;              /**< number of variables in or operation */
+   int              varssize;           /**< size of vars array */
+   int              rowssize;           /**< size of rows array */
    int              watchedvar1;        /**< position of first watched operator variable */
    int              watchedvar2;        /**< position of second watched operator variable */
    unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
@@ -66,6 +68,23 @@ struct ConshdlrData
 {
    EVENTHDLR*       eventhdlr;          /**< event handler for bound tighten events on watched variables */
 };
+
+
+
+
+/*
+ * Propagation rules
+ */
+
+enum Proprule
+{
+   PROPRULE_1,                          /**< v_i = TRUE                                   =>  r   = TRUE            */
+   PROPRULE_2,                          /**< r   = FALSE                                  =>  v_i = FALSE for all i */
+   PROPRULE_3,                          /**< v_i = FALSE for all i                        =>  r   = FALSE           */
+   PROPRULE_4,                          /**< r   = TRUE, v_i = FALSE for all i except j   =>  v_j = TRUE            */
+   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+};
+typedef enum Proprule PROPRULE;
 
 
 
@@ -389,6 +408,8 @@ RETCODE consdataCreate(
    (*consdata)->resvar = resvar;
    (*consdata)->rows = NULL;
    (*consdata)->nvars = nvars;
+   (*consdata)->varssize = nvars;
+   (*consdata)->rowssize = 0;
    (*consdata)->watchedvar1 = -1;
    (*consdata)->watchedvar2 = -1;
    (*consdata)->propagated = FALSE;
@@ -441,10 +462,10 @@ RETCODE consdataFree(
       {
          CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->rows[r]) );
       }
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->rows, consdataGetNRows(*consdata));
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->rows, (*consdata)->rowssize);
    }
 
-   SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
  
    return SCIP_OKAY;
@@ -520,6 +541,12 @@ RETCODE delCoefPos(
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
    consdata->nvars--;
 
+   /* if the last variable (that moved) was watched, update the watched position */
+   if( consdata->watchedvar1 == consdata->nvars )
+      consdata->watchedvar1 = pos;
+   if( consdata->watchedvar2 == consdata->nvars )
+      consdata->watchedvar2 = pos;
+
    consdata->propagated = FALSE;
 
    return SCIP_OKAY;
@@ -584,8 +611,9 @@ RETCODE createRelaxation(
    nvars = consdata->nvars;
 
    /* get memory for rows */
-   CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdataGetNRows(consdata)) );
-   assert(consdataGetNRows(consdata) == nvars+1);
+   consdata->rowssize = consdataGetNRows(consdata);
+   CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->rowssize) );
+   assert(consdata->rowssize == nvars+1);
 
    /* create operator rows */
    for( i = 0; i < nvars; ++i )
@@ -731,11 +759,6 @@ RETCODE separateCons(
    return SCIP_OKAY;
 }
 
-#define PROPRULE1 1
-#define PROPRULE2 2
-#define PROPRULE3 3
-#define PROPRULE4 4
-
 /** propagates constraint with the following rules:
  *   (1) v_i = TRUE                                   =>  r   = TRUE
  *   (2) r   = FALSE                                  =>  v_i = FALSE for all i
@@ -792,7 +815,7 @@ RETCODE propagateCons(
       {
          debugMessage("constraint <%s>: operator var <%s> fixed to 1.0 -> fix resultant <%s> to 1.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
-         CHECK_OKAY( SCIPinferBinVar(scip, resvar, TRUE, cons, PROPRULE1, &infeasible, &tightened) );
+         CHECK_OKAY( SCIPinferBinVar(scip, resvar, TRUE, cons, PROPRULE_1, &infeasible, &tightened) );
          *cutoff = *cutoff || infeasible;
          if( tightened )
             (*nfixedvars)++;
@@ -811,7 +834,7 @@ RETCODE propagateCons(
       {
          debugMessage("constraint <%s>: resultant var <%s> fixed to 0.0 -> fix operator var <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
-         CHECK_OKAY( SCIPinferBinVar(scip, vars[i], FALSE, cons, PROPRULE2, &infeasible, &tightened) );
+         CHECK_OKAY( SCIPinferBinVar(scip, vars[i], FALSE, cons, PROPRULE_2, &infeasible, &tightened) );
          *cutoff = *cutoff || infeasible;
          if( tightened )
             (*nfixedvars)++;
@@ -883,7 +906,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
-      CHECK_OKAY( SCIPinferBinVar(scip, resvar, FALSE, cons, PROPRULE3, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinVar(scip, resvar, FALSE, cons, PROPRULE_3, &infeasible, &tightened) );
       *cutoff = *cutoff || infeasible;
       if( tightened )
          (*nfixedvars)++;
@@ -900,7 +923,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
-      CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons, PROPRULE4, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons, PROPRULE_4, &infeasible, &tightened) );
       *cutoff = *cutoff || infeasible;
       if( tightened )
          (*nfixedvars)++;
@@ -929,7 +952,8 @@ RETCODE resolveConflict(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< or constraint to be processed */
    VAR*             infervar,           /**< variable that was deduced */
-   int              inferinfo           /**< user inference information */
+   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   RESULT*          result              /**< pointer to store the result of the conflict variable resolving call */
    )
 {
    CONSDATA* consdata;
@@ -937,14 +961,16 @@ RETCODE resolveConflict(
    int nvars;
    int i;
 
+   assert(result != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    vars = consdata->vars;
    nvars = consdata->nvars;
 
-   switch( inferinfo )
+   switch( proprule )
    {
-   case PROPRULE1:
+   case PROPRULE_1:
       /* the resultant was infered to TRUE, because one operand variable was TRUE */
       assert(SCIPvarGetUbLocal(infervar) < 0.5);
       assert(infervar == consdata->resvar);
@@ -956,17 +982,19 @@ RETCODE resolveConflict(
             break;
          }
       }
+      *result = SCIP_SUCCESS;
       break;
 
-   case PROPRULE2:
+   case PROPRULE_2:
       /* the operand variable was infered to FALSE, because the resultant was FALSE */
       assert(SCIPvarGetUbLocal(infervar) < 0.5);
       assert(SCIPvarWasFixedEarlier(consdata->resvar, infervar));
       assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
       CHECK_OKAY( SCIPaddConflictVar(scip, consdata->resvar) );
+      *result = SCIP_SUCCESS;
       break;
 
-   case PROPRULE3:
+   case PROPRULE_3:
       /* the resultant was infered to FALSE, because all operand variables were FALSE */
       assert(SCIPvarGetUbLocal(infervar) < 0.5);
       assert(infervar == consdata->resvar);
@@ -976,9 +1004,10 @@ RETCODE resolveConflict(
          assert(SCIPvarGetUbLocal(vars[i]) < 0.5);
          CHECK_OKAY( SCIPaddConflictVar(scip, vars[i]) );
       }
+      *result = SCIP_SUCCESS;
       break;
 
-   case PROPRULE4:
+   case PROPRULE_4:
       /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
       assert(SCIPvarGetLbLocal(infervar) > 0.5);
       assert(SCIPvarWasFixedEarlier(consdata->resvar, infervar));
@@ -993,10 +1022,11 @@ RETCODE resolveConflict(
             CHECK_OKAY( SCIPaddConflictVar(scip, vars[i]) );
          }
       }
+      *result = SCIP_SUCCESS;
       break;
 
    default:
-      errorMessage("invalid inference information %d in or constraint <%s>\n", inferinfo, SCIPconsGetName(cons));
+      errorMessage("invalid inference information %d in or constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
    }
 
@@ -1324,7 +1354,7 @@ DECL_CONSPRESOL(consPresolOr)
 static
 DECL_CONSRESCVAR(consRescvarOr)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolveConflict(scip, cons, infervar, inferinfo) );
+   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, result) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.116 2004/03/31 15:44:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.117 2004/04/05 15:48:28 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1612,7 +1612,15 @@ extern
 RETCODE SCIPchgVarBranchPriority(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              branchpriority      /**< branching priority of the variable */
+   int              branchpriority      /**< branch priority of the variable */
+   );
+
+/** changes the branch priority of the variable to the given value, if it is larger than the current priority */
+extern
+RETCODE SCIPupdateVarBranchPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              branchpriority      /**< new branch priority of the variable, if it is larger than current priority */
    );
 
 /** adds the given value to the branch priority of the variable */
@@ -1620,7 +1628,7 @@ extern
 RETCODE SCIPaddVarBranchPriority(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              addpriority         /**< value to add to the branching priority of the variable */
+   int              addpriority         /**< value to add to the branch priority of the variable */
    );
 
 /** changes type of variable in the problem; this changes the vars array returned from
@@ -2439,7 +2447,10 @@ RETCODE SCIPbranchVar(
    VAR*             var                 /**< variable to branch on */
    );
 
-/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+ *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
+ *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
+ */
 extern
 RETCODE SCIPbranchLP(
    SCIP*            scip,               /**< SCIP data structure */

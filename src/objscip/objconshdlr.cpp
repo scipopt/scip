@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.5 2004/03/12 08:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.6 2004/04/05 15:48:28 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -293,7 +293,7 @@ DECL_CONSRESCVAR(consRescvarObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_rescvar(scip, conshdlr, cons, infervar) );
+   CHECK_OKAY( conshdlrdata->objconshdlr->scip_rescvar(scip, conshdlr, cons, infervar, result) );
 
    return SCIP_OKAY;
 }

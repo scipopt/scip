@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.6 2004/03/12 08:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.7 2004/04/05 15:48:29 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -339,10 +339,13 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *
  *  This method is called during conflict analysis. If the conflict handler wants to support conflict analysis,
  *  it should call SCIPinferBinVar() in domain propagation in order to fix binary variables to deduced values.
- *  In this call, the handler provides the constraint, that deduced the variable's assignment. The conflict
- *  variable resolving method must then be implemented, to provide the "reasons" for the variable assignment,
- *  i.e. the fixed binary variables, that forced the constraint to set the conflict variable to its current
- *  value. The variables that form the reason of the assignment must be provided by calls to SCIPaddConflictVar().
+ *  In this call, the handler provides the constraint, that deduced the variable's assignment, and an integer
+ *  value "inferinfo" that can be arbitrarily chosen.
+ *  The conflict variable resolving method must then be implemented, to provide the "reasons" for the variable
+ *  assignment, i.e. the fixed binary variables, that forced the constraint to set the conflict variable to its
+ *  current value. It can use the "inferinfo" tag to identify its own propagation rule and thus identify the
+ *  "reason" variables. The variables that form the reason of the assignment must then be provided by calls to
+ *  SCIPaddConflictVar() in the conflict variable resolving method.
  *
  *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE, if both, x and y, are assigned
  *  to FALSE. It uses SCIPinferBinVar(scip, z, TRUE, c) to apply this assignment. In the conflict analysis, the
@@ -357,8 +360,16 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - cons            : the constraint that deduced the assignment of the conflict variable
  *  - infervar        : the binary conflict variable that has to be resolved
  *  - inferinfo       : the user information passed to the corresponding SCIPinferBinVar() call
+ *
+ *  output:
+ *  - result          : pointer to store the result of the presolving call
+ *
+ *  possible return values for *result:
+ *  - SCIP_SUCCESS    : the conflict variable has been successfully resolved by adding all reason variables
+ *  - SCIP_DIDNOTFIND : the conflict variable could not be resolved and has to be put into the conflict set
  */
-#define DECL_CONSRESCVAR(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar, int inferinfo)
+#define DECL_CONSRESCVAR(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar, int inferinfo, \
+                                       RESULT* result)
 
 /** variable rounding lock method of constraint handler
  *

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.39 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.40 2004/04/05 15:48:27 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2094,6 +2094,7 @@ DECL_CONSRESCVAR(consRescvarSetppc)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
    assert(infervar != NULL);
+   assert(result != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2144,6 +2145,8 @@ DECL_CONSRESCVAR(consRescvarSetppc)
       }
       assert(reasonvarfound);
    }
+
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

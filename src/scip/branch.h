@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.26 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.27 2004/04/05 15:48:26 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -205,7 +205,10 @@ Real SCIPbranchGetScore(
    Real             upgain              /**< prediction of objective gain for branching upwards */
    );
 
-/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+ *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
+ *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
+ */
 extern
 RETCODE SCIPbranchExecLP(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.139 2004/03/31 15:44:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.140 2004/04/05 15:48:28 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4036,7 +4036,7 @@ RETCODE SCIPscaleVarBranchFactor(
 RETCODE SCIPchgVarBranchPriority(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              branchpriority      /**< branching priority of the variable */
+   int              branchpriority      /**< branch priority of the variable */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
@@ -4046,11 +4046,26 @@ RETCODE SCIPchgVarBranchPriority(
    return SCIP_OKAY;
 }
 
+/** changes the branch priority of the variable to the given value, if it is larger than the current priority */
+RETCODE SCIPupdateVarBranchPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              branchpriority      /**< new branch priority of the variable, if it is larger than current priority */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPupdateVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( branchpriority > SCIPvarGetBranchPriority(var) )
+      SCIPvarChgBranchPriority(var, scip->set, branchpriority);
+
+   return SCIP_OKAY;
+}
+
 /** adds the given value to the branch priority of the variable */
 RETCODE SCIPaddVarBranchPriority(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   int              addpriority         /**< value to add to the branching priority of the variable */
+   int              addpriority         /**< value to add to the branch priority of the variable */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
@@ -6033,7 +6048,10 @@ RETCODE SCIPbranchVar(
    return SCIP_OKAY;
 }
 
-/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+ *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
+ *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
+ */
 RETCODE SCIPbranchLP(
    SCIP*            scip,               /**< SCIP data structure */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */

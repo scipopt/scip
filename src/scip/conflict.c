@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.34 2004/03/31 14:52:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.35 2004/04/05 15:48:27 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -546,7 +546,8 @@ RETCODE conflictAnalyze(
    VAR* nextvar;
    VAR* infervar;
    CONS* infercons;
-   Bool resolved;
+   RESULT result;
+   int nresolutions;
 
    assert(conflict != NULL);
    assert(tree != NULL);
@@ -569,7 +570,7 @@ RETCODE conflictAnalyze(
 
    /* clear the conflict set */
    conflict->nconflictvars = 0;
-   resolved = FALSE;
+   nresolutions = 0;
 
    /* process all variables in the conflict candidate queue */
    var = (VAR*)(SCIPpqueueRemove(conflict->varqueue));
@@ -597,8 +598,12 @@ RETCODE conflictAnalyze(
        * variable
        */
       nextvar = (VAR*)(SCIPpqueueFirst(conflict->varqueue));
+      assert(nextvar == NULL || SCIPvarGetInferDepth(var) >= SCIPvarGetInferDepth(nextvar));
+
       if( var != nextvar )
       {
+         Bool resolved = FALSE;
+
          /* check, if the variable can and should be resolved */
          infercons = SCIPvarGetInferCons(var);
          if( nextvar != NULL
@@ -616,13 +621,14 @@ RETCODE conflictAnalyze(
             debugMessage("resolving conflict var <%s>: constraint <%s> infered <%s> == %g at depth %d, num %d\n",
                SCIPvarGetName(var), SCIPconsGetName(infercons), SCIPvarGetName(infervar), SCIPvarGetLbLocal(infervar),
                SCIPvarGetInferDepth(var), SCIPvarGetInferIndex(var));
-            CHECK_OKAY( SCIPconsResolveConflictVar(infercons, set, SCIPvarGetInferVar(var)) );
-            resolved = TRUE;
+            CHECK_OKAY( SCIPconsResolveConflictVar(infercons, set, SCIPvarGetInferVar(var), &result) );
+            resolved = (result == SCIP_SUCCESS);
          }
+
+         if( resolved )
+            nresolutions++;
          else
          {
-            assert(nextvar == NULL || infercons == NULL || SCIPvarGetInferDepth(var) > SCIPvarGetInferDepth(nextvar));
-            assert(nextvar == NULL || SCIPvarGetInferDepth(var) >= SCIPvarGetInferDepth(nextvar));
             assert(SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
             assert(SCIPsetIsFeasZero(set, SCIPvarGetLbLocal(var)));
 
@@ -641,7 +647,7 @@ RETCODE conflictAnalyze(
    }
 
    /* if a valid conflict set was found (where at least one resolution was applied), call the conflict handlers */
-   if( var == NULL && (!mustresolve || resolved) )
+   if( var == NULL && (!mustresolve || nresolutions >= 1) )
    {
       NODE* node;
       BOUNDCHG* boundchgs;
@@ -655,7 +661,8 @@ RETCODE conflictAnalyze(
       assert(conflict->conflictvars != NULL);
       assert(conflict->nconflictvars > 0);
 
-      debugMessage(" -> found conflict set of size %d/%d\n", conflict->nconflictvars, maxsize);
+      debugMessage(" -> found conflict set of size %d/%d after %d resolutions\n", 
+         conflict->nconflictvars, maxsize, nresolutions);
 
       /* identify the depth, at which the conflict clause should be added:
        * - if the branching rule operates on variables only, and if all branching variables up to a certain

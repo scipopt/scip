@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.60 2004/03/12 08:54:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.61 2004/04/05 15:48:27 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -452,7 +452,8 @@ extern
 RETCODE SCIPconsResolveConflictVar(
    CONS*            cons,               /**< constraint that deduced the assignment */
    const SET*       set,                /**< global SCIP settings */
-   VAR*             var                 /**< conflict variable, that was deduced by the constraint */
+   VAR*             var,                /**< conflict variable, that was deduced by the constraint */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** locks rounding of variables involved in the costraint */

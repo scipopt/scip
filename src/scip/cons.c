@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.69 2004/03/12 08:54:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.70 2004/04/05 15:48:27 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3320,23 +3320,35 @@ RETCODE SCIPconsResetAge(
 RETCODE SCIPconsResolveConflictVar(
    CONS*            cons,               /**< constraint that deduced the assignment */
    const SET*       set,                /**< global SCIP settings */
-   VAR*             var                 /**< conflict variable, that was deduced by the constraint */
+   VAR*             var,                /**< conflict variable, that was deduced by the constraint */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
+   CONSHDLR* conshdlr;
+
    assert(cons != NULL);
-   assert(cons->conshdlr != NULL);
    assert(var != NULL);
    assert(SCIPvarGetInferCons(var) == cons);
    assert(SCIPvarGetInferVar(var) == var);
+   assert(result != NULL);
 
-   if( cons->conshdlr->consrescvar == NULL )
+   *result = SCIP_DIDNOTRUN;
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   if( conshdlr->consrescvar != NULL )
    {
-      errorMessage("constraint handler <%s> is unable to resolve conflict variable <%s> due to missing resolving method\n",
-         cons->conshdlr->name, SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      CHECK_OKAY( conshdlr->consrescvar(set->scip, conshdlr, cons, var, SCIPvarGetInferInfo(var), result) );
+      
+      /* check result code */
+      if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
+      {
+         errorMessage("conflict variable resolving method of constraint handler <%s> returned invalid result <%d>\n", 
+            conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
    }
-
-   CHECK_OKAY( cons->conshdlr->consrescvar(set->scip, cons->conshdlr, cons, var, SCIPvarGetInferInfo(var)) );
 
    return SCIP_OKAY;
 }
@@ -3539,14 +3551,14 @@ Bool SCIPconsIsEnabled(
    return cons->updateenable || (cons->enabled && !cons->updatedisable);
 }
 
-/** returns TRUE iff constraint is marked to be deleted */
+/** returns TRUE iff constraint is deleted or marked to be deleted */
 Bool SCIPconsIsDeleted(
    CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
-   return cons->updatedelete;
+   return cons->deleted || cons->updatedelete;
 }
 
 /** returns TRUE iff constraint is marked obsolete */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.19 2004/03/09 18:03:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.20 2004/04/05 15:48:28 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -64,10 +64,10 @@
                                            __FILE__, __LINE__ ))
 #define freeMemory(ptr)                    { freeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
                                              assert(*(ptr) == NULL); }
-#define freeMemoryNull(ptr)                if( *(ptr) != NULL ) freeMemory( (ptr) )
+#define freeMemoryNull(ptr)                { if( *(ptr) != NULL ) freeMemory( (ptr) ); }
 #define freeMemoryArray(ptr)               { freeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
                                              assert(*(ptr) == NULL); }
-#define freeMemoryArrayNull(ptr)           if( *(ptr) != NULL ) freeMemoryArray( (ptr) )
+#define freeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) freeMemoryArray( (ptr) ); }
 
 void*  allocMemory_call(size_t size, const char *filename, int line);
 void*  reallocMemory_call(void* ptr, size_t size, const char *filename, int line);
@@ -103,9 +103,9 @@ size_t memorySize(void *ptr);
 #define duplicateMemorySize(ptr, source, size) (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), \
                                                (size_t)(size)))
 #define freeMemory(ptr)                    { free(*(ptr)); *(ptr) = NULL; }
-#define freeMemoryNull(ptr)                if( *(ptr) != NULL ) freeMemory( (ptr) )
+#define freeMemoryNull(ptr)                { if( *(ptr) != NULL ) freeMemory( (ptr) ); }
 #define freeMemoryArray(ptr)               freeMemory(ptr)
-#define freeMemoryArrayNull(ptr)           if( *(ptr) != NULL ) freeMemoryArray( (ptr) )
+#define freeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) freeMemoryArray( (ptr) ); }
 
 void *  duplicateMemory_call(const void* source, size_t size);
 
@@ -134,9 +134,9 @@ typedef struct memory_header MEMHDR;
 
 #define createBlockMemory(csz,clr,gbf)     createBlockMemory_call( (csz), (clr), (gbf), __FILE__, __LINE__ )
 #define freeAllBlockMemory(mem)            freeAllBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define freeAllBlockMemoryNull(mem)        if( (mem) != NULL ) freeAllBlockMemory( (mem) )
+#define freeAllBlockMemoryNull(mem)        { if( (mem) != NULL ) freeAllBlockMemory( (mem) ); }
 #define destroyBlockMemory(mem)            destroyBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define destroyBlockMemoryNull(mem)        if( *(mem) != NULL ) destroyBlockMemory( (mem) )
+#define destroyBlockMemoryNull(mem)        { if( *(mem) != NULL ) destroyBlockMemory( (mem) ); }
 
 #define allocBlockMemory(mem,ptr)          (*(void**)(ptr) = allocBlockMemory_call((mem), sizeof(**(ptr)), \
                                            __FILE__, __LINE__))
@@ -159,15 +159,15 @@ typedef struct memory_header MEMHDR;
 #define freeBlockMemory(mem,ptr)           { freeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
                                              __FILE__, __LINE__ ); \
                                              assert(*(ptr) == NULL); }
-#define freeBlockMemoryNull(mem,ptr)       if( *(ptr) != NULL ) freeBlockMemory( (mem), (ptr) )
+#define freeBlockMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) freeBlockMemory( (mem), (ptr) ); }
 #define freeBlockMemoryArray(mem,ptr,num)  { freeBlockMemory_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), \
                                              __FILE__, __LINE__ ); \
                                              assert(*(ptr) == NULL); }
-#define freeBlockMemoryArrayNull(mem,ptr,num)  if( *(ptr) != NULL ) freeBlockMemoryArray( (mem), (ptr), (num) )
+#define freeBlockMemoryArrayNull(mem,ptr,num)  { if( *(ptr) != NULL ) freeBlockMemoryArray( (mem), (ptr), (num) ); }
 #define freeBlockMemorySize(mem,ptr,size)  { freeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), \
                                              __FILE__, __LINE__ ); \
                                              assert(*(ptr) == NULL); }
-#define freeBlockMemorySizeNull(mem,ptr,size)  if( *(ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) )
+#define freeBlockMemorySizeNull(mem,ptr,size)  { if( *(ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) ); }
 
 
 #ifndef NDEBUG

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.8 2004/03/12 08:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.9 2004/04/05 15:48:28 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -390,10 +390,13 @@ public:
     *
     *  This method is called during conflict analysis. If the conflict handler wants to support conflict analysis,
     *  it should call SCIPinferBinVar() in domain propagation in order to fix binary variables to deduced values.
-    *  In this call, the handler provides the constraint, that deduced the variable's assignment. The conflict
-    *  variable resolving method must then be implemented, to provide the "reasons" for the variable assignment,
-    *  i.e. the fixed binary variables, that forced the constraint to set the conflict variable to its current
-    *  value. The variables that form the reason of the assignment must be provided by calls to SCIPaddConflictVar().
+    *  In this call, the handler provides the constraint, that deduced the variable's assignment, and an integer
+    *  value "inferinfo" that can be arbitrarily chosen.
+    *  The conflict variable resolving method must then be implemented, to provide the "reasons" for the variable
+    *  assignment, i.e. the fixed binary variables, that forced the constraint to set the conflict variable to its
+    *  current value. It can use the "inferinfo" tag to identify its own propagation rule and thus identify the
+    *  "reason" variables. The variables that form the reason of the assignment must then be provided by calls to
+    *  SCIPaddConflictVar() in the conflict variable resolving method.
     *
     *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE, if both, x and y, are assigned
     *  to FALSE. It uses SCIPinferBinVar(scip, z, TRUE, c) to apply this assignment. In the conflict analysis, the
@@ -401,17 +404,22 @@ public:
     *  the handler can find out, that variable z is currently assigned to TRUE, and should call 
     *  SCIPaddConflictVar(scip, x) and SCIPaddConflictVar(scip, y) to tell SCIP, that the assignments to x and y were
     *  the reason for the deduction of z.
+    *
+    *  possible return values for *result:
+    *  - SCIP_SUCCESS    : the conflict variable has been successfully resolved by adding all reason variables
+    *  - SCIP_DIDNOTFIND : the conflict variable could not be resolved and has to be put into the conflict set
     */
    virtual RETCODE scip_rescvar(
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       CONS*         cons,               /**< the constraint that deduced the assignment of the conflict variable */
-      VAR*          infervar            /**< the binary conflict variable that has to be resolved */
+      VAR*          infervar,           /**< the binary conflict variable that has to be resolved */
+      RESULT*       result              /**< pointer to store the result of the conflict variable resolving call */
       )
    {
-      errorMessage("conflict variable resolving method of constraint handler <%s> not implemented\n",
-         SCIPconshdlrGetName(conshdlr));
-      return SCIP_INVALIDCALL;
+      assert(result != NULL);
+      *result = SCIP_DIDNOTFIND;
+      return SCIP_OKAY;
    }
 
    /** variable rounding lock method of constraint handler

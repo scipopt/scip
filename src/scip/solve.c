@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.97 2004/03/31 14:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.98 2004/04/05 15:48:29 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -938,6 +938,9 @@ RETCODE priceAndCutLoop(
          assert(*cutoff || *lperror || lp->solved);
          debugMessage("price-and-cut-loop: LP status: %d, LP obj: %g\n", SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
 
+         /**@todo implement reduced cost strengthening as external plugin: create a new callback in separators
+          *       named "propagate"; implement (full) strong branching bound strengthening in the same way
+          */
          /* reduced cost bound strengthening */
          if( !(*cutoff) && !(*lperror)
             && ((set->redcostfreq == 0 && tree->actnode->depth == 0)
@@ -1206,6 +1209,7 @@ RETCODE enforceConstraints(
           *   resolve the infeasibility by branching -> solve LP (and maybe price in additional variables)
           */
          assert(tree->nchildren == 0);
+         assert(SCIPbranchcandGetNPseudoCands(branchcand) == 0);
 
          if( prob->ncontvars == 0 && set->nactivepricers == 0 )
          {
@@ -1720,7 +1724,7 @@ RETCODE SCIPsolveCIP(
 
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, (SCIPnodeGetDepth(actnode) == 0) && infeasible && !foundsol) );
-      
+
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
          SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
       debugMessage("**********************************************************************\n");
