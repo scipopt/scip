@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.149 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.150 2004/11/22 16:09:46 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1596,52 +1596,54 @@ RETCODE solveNode(
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
       /* check, if we want to solve the LP at this node */
-      if( solvelpagain && SCIPtreeHasFocusNodeLP(tree) && !(*cutoff) )
+      if( solvelpagain && !(*cutoff) )
       {
          solvelpagain = FALSE;
-
-         /* solve the node's LP */
-         CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore,
-               cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
-               initiallpsolved, cutoff, unbounded, &lperror) );
-         initiallpsolved = TRUE;
-         debugMessage(" -> LP status: %d, LP obj: %g, iter: %lld, count: %d\n", 
-            SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set),
-            stat->nlpiterations, stat->lpcount);
-
-         /* check, if the path was cutoff */
-         *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
-
-         /* if an error occured during LP solving, switch to pseudo solution */
-         if( lperror )
+         if( SCIPtreeHasFocusNodeLP(tree) )
          {
-            SCIPtreeSetFocusNodeLP(tree, FALSE);
-            nlperrors++;
-            infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %lld) unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n", 
-               stat->nnodes, stat->nlps, nlperrors);
-         }
-               
-         /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
-          * we have to forget about the LP and use the pseudo solution instead
-          */
-         if( !(*cutoff) && set->misc_exactsolve && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
-            && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
-         {
-            if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && prob->ncontvars > 0 )
-            {
-               errorMessage("(node %lld) could not prove infeasibility of LP %d, all variables are fixed, %d continuous vars\n",
-                  stat->nnodes, stat->nlps, prob->ncontvars);
-               errorMessage("(node %lld)  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
-               /**@todo call PerPlex */
-               return SCIP_LPERROR;
-            }
-            else
+            /* solve the node's LP */
+            CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore,
+                  cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
+                  initiallpsolved, cutoff, unbounded, &lperror) );
+            initiallpsolved = TRUE;
+            debugMessage(" -> LP status: %d, LP obj: %g, iter: %lld, count: %d\n", 
+               SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set),
+               stat->nlpiterations, stat->lpcount);
+            
+            /* check, if the path was cutoff */
+            *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
+            
+            /* if an error occured during LP solving, switch to pseudo solution */
+            if( lperror )
             {
                SCIPtreeSetFocusNodeLP(tree, FALSE);
+               nlperrors++;
                infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n", 
-                  stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
+                  "(node %lld) unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n", 
+                  stat->nnodes, stat->nlps, nlperrors);
+            }
+               
+            /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
+             * we have to forget about the LP and use the pseudo solution instead
+             */
+            if( !(*cutoff) && set->misc_exactsolve && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+               && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
+            {
+               if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && prob->ncontvars > 0 )
+               {
+                  errorMessage("(node %lld) could not prove infeasibility of LP %d, all variables are fixed, %d continuous vars\n",
+                     stat->nnodes, stat->nlps, prob->ncontvars);
+                  errorMessage("(node %lld)  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
+                  /**@todo call PerPlex */
+                  return SCIP_LPERROR;
+               }
+               else
+               {
+                  SCIPtreeSetFocusNodeLP(tree, FALSE);
+                  infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                     "(node %lld) could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n", 
+                     stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
+               }
             }
          }
       }

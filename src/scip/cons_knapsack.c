@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.69 2004/11/17 15:53:57 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.70 2004/11/22 16:09:46 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -944,6 +944,7 @@ RETCODE propagateCons(
    Bool infeasible;
    Bool tightened;
    Longint zerosweightsum;
+   Longint onesweightsum;
    int i;
 
    assert(cutoff != NULL);
@@ -965,81 +966,65 @@ RETCODE propagateCons(
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
    CHECK_OKAY( SCIPincConsAge(scip, cons) );
 
-   /* check, if weights of fixed variables already exceeds knapsack capacity */
-   if( consdata->capacity < consdata->onesweightsum )
+   do
    {
-      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-      *cutoff = TRUE;
+      /* store the sum of weights of fixed-to-one variables locally, because the constraint data's sum can
+       * change due to event processing
+       */
+      onesweightsum = consdata->onesweightsum;
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* check, if weights of fixed variables already exceeds knapsack capacity */
+      if( consdata->capacity < onesweightsum )
       {
-         /* start conflict analysis with the fixed-to-one variables */
-         CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-         for( i = 0; i < consdata->nvars; i++ )
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *cutoff = TRUE;
+
+         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
          {
-            if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+            /* start conflict analysis with the fixed-to-one variables */
+            CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+            for( i = 0; i < consdata->nvars; i++ )
             {
-               CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+               if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+               {
+                  CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+               }
             }
-         }
          
-         CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
-      }
-
-      return SCIP_OKAY;
-   }
-
-   /* make sure, the items are sorted by non-decreasing weight */
-   sortItems(consdata);
-
-   /* fix all variables to zero, that don't fit into the knapsack anymore */
-   zerosweightsum = 0;
-   for( i = consdata->nvars - 1; i >= 0; i-- )
-   {
-      if( consdata->weights[i] > consdata->capacity - consdata->onesweightsum )
-      {
-         if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 )
-         {
-            if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
-            {
-               CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-               CHECK_OKAY( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
-               assert(!infeasible);
-               assert(tightened);
-               (*nfixedvars)++;
-            }
-            zerosweightsum += consdata->weights[i];
+            CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
          }
+
+         return SCIP_OKAY;
       }
-      else
-         break;
-   }
 
-   /* check again, if weights of fixed variables already exceeds knapsack capacity
-    * (fixings to zero can trigger fixings to one due to aggregated variables)
-    */
-   if( consdata->capacity < consdata->onesweightsum )
-   {
-      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-      *cutoff = TRUE;
+      /* make sure, the items are sorted by non-decreasing weight */
+      sortItems(consdata);
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* fix all variables to zero, that don't fit into the knapsack anymore */
+      zerosweightsum = 0;
+      for( i = consdata->nvars - 1; i >= 0; i-- )
       {
-         /* start conflict analysis with the fixed-to-one variables */
-         CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-         for( i = 0; i < consdata->nvars; i++ )
+         if( consdata->weights[i] > consdata->capacity - consdata->onesweightsum )
          {
-            if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+            if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 )
             {
-               CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+               if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
+               {
+                  CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+                  CHECK_OKAY( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
+                  assert(!infeasible);
+                  assert(tightened);
+                  (*nfixedvars)++;
+               }
+               zerosweightsum += consdata->weights[i];
             }
          }
-         
-         CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+         else
+            break;
       }
-
-      return SCIP_OKAY;
+      assert(consdata->onesweightsum >= onesweightsum);
    }
+   while( consdata->onesweightsum > onesweightsum );
 
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
    if( consdata->weightsum - zerosweightsum <= consdata->capacity )
@@ -1629,8 +1614,10 @@ DECL_CONSPRESOL(consPresolKnapsack)
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
    
-   for( i = 0; i < nconss && !cutoff; i++ )
+   for( i = 0; i < nconss; i++ )
    {
+      int thisnfixedvars;
+
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
@@ -1638,21 +1625,30 @@ DECL_CONSPRESOL(consPresolKnapsack)
       if( nrounds == 0 )
          consdata->propagated = FALSE;
 
-      /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
+      /* remove all fixed variables */
       CHECK_OKAY( applyFixings(scip, conss[i], eventhdlr) );
 
       if( consdata->propagated )
          continue;
 
       /* propagate constraint */
+      thisnfixedvars = *nfixedvars;
       CHECK_OKAY( propagateCons(scip, conss[i], &cutoff, &redundant, nfixedvars) );
+      if( cutoff )
+         break;
       if( redundant )
       {
          (*ndelconss)++;
          continue;
       }
 
-      if( !cutoff && !SCIPconsIsModifiable(conss[i]) )
+      /* remove again all fixed variables, if further fixings were found */
+      if( *nfixedvars > thisnfixedvars )
+      {
+         CHECK_OKAY( applyFixings(scip, conss[i], eventhdlr) );
+      }
+
+      if( !SCIPconsIsModifiable(conss[i]) )
       {
          /* divide weights by their greatest common divisor */
          normalizeWeights(scip, conss[i], nchgcoefs, nchgsides);

@@ -24,6 +24,8 @@ fixed bugs:
 - implemented missing case in solve.c with branching rules that add constraints
 - solving loop is now immediately aborted, if a node on the active path is marked to be cut off
 - removed bug in resolving an interrupted problem, after the last solved node was cut off
+- removed bug with infinite solving loop if LP solving is turned off
+- removed bug in knapsack presolver
 
 
 SCIP version 0.77
