@@ -298,26 +298,6 @@ RETCODE SCIPvarRelease(
    LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
    );
 
-/** adds a hole to the variable's global domain and to its current local domain */
-extern
-RETCODE SCIPvarAddHoleGlobal(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   Real             left,               /**< left bound of open interval in new hole */
-   Real             right               /**< right bound of open interval in new hole */
-   );
-
-/** adds a hole to the variable's current local domain */
-extern
-RETCODE SCIPvarAddHoleLocal(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   Real             left,               /**< left bound of open interval in new hole */
-   Real             right               /**< right bound of open interval in new hole */
-   );
-
 /** copies original variable into loose transformed variable, that is captured */
 extern
 RETCODE SCIPvarTransform(
@@ -327,6 +307,70 @@ RETCODE SCIPvarTransform(
    STAT*            stat,               /**< problem statistics */
    OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
    VAR*             origvar             /**< original problem variable */
+   );
+
+/** increases lock number for rounding down; tells variable, that rounding its value down will make the solution
+ *  infeasible
+ */
+extern
+void SCIPvarForbidRoundDown(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** increases lock number for rounding up; tells variable, that rounding its value up will make the solution infeasible */
+extern
+void SCIPvarForbidRoundUp(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** increases lock number for rounding down and up; tells variable, that rounding value in either direction will make
+ *  the solution infeasible
+ */
+extern
+void SCIPvarForbidRound(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** decreases lock number for rounding down; cancels a prior forbidRoundDown() */
+extern
+void SCIPvarAllowRoundDown(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** decreases lock number for rounding up; cancels a prior forbidRoundUp() */
+extern
+void SCIPvarAllowRoundUp(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** decreases lock number for rounding down & up; cancels a prior forbidRound() */
+extern
+void SCIPvarAllowRound(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets number of locks for rounding down */
+extern
+int SCIPvarGetNLocksDown(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets number of locks for rounding up */
+extern
+int SCIPvarGetNLocksUp(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** is it possible, to round variable down and stay feasible? */
+extern
+Bool SCIPvarMayRoundDown(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** is it possible, to round variable up and stay feasible? */
+extern
+Bool SCIPvarMayRoundUp(
+   VAR*             var                 /**< problem variable */
    );
 
 /** converts transformed variable into column variable and creates LP column */
@@ -393,70 +437,6 @@ extern
 RETCODE SCIPvarChgType(
    VAR*             var,                /**< problem variable to change */
    VARTYPE          vartype             /**< new type of variable */
-   );
-
-/**< increases lock number for rounding down; tells variable, that rounding its value down will make the solution
- *   infeasible
- */
-extern
-void SCIPvarForbidRoundDown(
-   VAR*             var                 /**< problem variable */
-   );
-
-/**< increases lock number for rounding up; tells variable, that rounding its value up will make the solution infeasible */
-extern
-void SCIPvarForbidRoundUp(
-   VAR*             var                 /**< problem variable */
-   );
-
-/**< increases lock number for rounding down and up; tells variable, that rounding value in either direction will make
- *   the solution infeasible
- */
-extern
-void SCIPvarForbidRound(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** decreases lock number for rounding down; cancels a prior forbidRoundDown() */
-extern
-void SCIPvarAllowRoundDown(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** decreases lock number for rounding up; cancels a prior forbidRoundUp() */
-extern
-void SCIPvarAllowRoundUp(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** decreases lock number for rounding down & up; cancels a prior forbidRound() */
-extern
-void SCIPvarAllowRound(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** gets number of locks for rounding down */
-extern
-int SCIPvarGetNLocksDown(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** gets number of locks for rounding up */
-extern
-int SCIPvarGetNLocksUp(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** is it possible, to round variable down and stay feasible? */
-extern
-Bool SCIPvarMayRoundDown(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** is it possible, to round variable up and stay feasible? */
-extern
-Bool SCIPvarMayRoundUp(
-   VAR*             var                 /**< problem variable */
    );
 
 /** changes objective value of variable */
@@ -586,6 +566,26 @@ RETCODE SCIPvarChgUbDive(
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    Real             newbound            /**< new bound for variable */
+   );
+
+/** adds a hole to the variable's global domain and to its current local domain */
+extern
+RETCODE SCIPvarAddHoleGlobal(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   Real             left,               /**< left bound of open interval in new hole */
+   Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** adds a hole to the variable's current local domain */
+extern
+RETCODE SCIPvarAddHoleLocal(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   Real             left,               /**< left bound of open interval in new hole */
+   Real             right               /**< right bound of open interval in new hole */
    );
 
 /** get name of variable */

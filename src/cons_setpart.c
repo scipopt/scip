@@ -262,10 +262,7 @@ RETCODE setpartconsLockCoef(
 
    /* forbid rounding of variable */
    if( !setpartcons->local )
-   {
-      SCIPvarForbidRoundDown(var);
-      SCIPvarForbidRoundUp(var);
-   }
+      SCIPvarForbidRound(var);
 
    return SCIP_OKAY;
 }
@@ -307,10 +304,7 @@ RETCODE setpartconsUnlockCoef(
 
    /* allow rounding of variable */
    if( !setpartcons->local )
-   {
-      SCIPvarAllowRoundDown(var);
-      SCIPvarAllowRoundUp(var);
-   }
+      SCIPvarAllowRound(var);
 
    return SCIP_OKAY;
 }
