@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.113 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.114 2004/10/05 16:08:08 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -53,143 +53,142 @@
  * Default settings
  */
 
-/* Message Output */
-
-#define SCIP_DEFAULT_VERBLEVEL    SCIP_VERBLEVEL_NORMAL
-#define SCIP_DEFAULT_LPINFO           FALSE /**< should the LP solver display status messages? */
-
-
-/* CTRL-C interrupt */
-
-#define SCIP_DEFAULT_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
-
-
-/* Dynamic Memory */
-
-#define SCIP_DEFAULT_MEMLIMIT         1e+20 /**< maximal memory usage in MB */
-#define SCIP_DEFAULT_MEMSAVEFAC         0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
-#define SCIP_DEFAULT_MEMGROWFAC         1.2 /**< memory growing factor for dynamically allocated arrays */
-#define SCIP_DEFAULT_MEMGROWINIT          4 /**< initial size of dynamically allocated arrays */
-#define SCIP_DEFAULT_TREEGROWFAC        2.0 /**< memory growing factor for tree array */
-#define SCIP_DEFAULT_TREEGROWINIT     65536 /**< initial size of tree array */
-#define SCIP_DEFAULT_PATHGROWFAC        2.0 /**< memory growing factor for path array */
-#define SCIP_DEFAULT_PATHGROWINIT       256 /**< initial size of path array */
-
 
 /* Branching */
-#define SCIP_DEFAULT_BRANCHSCOREFAC   0.167 /**< branching score factor to weigh downward and upward gain prediction */
-#define SCIP_DEFAULT_PREFERBINBRANCH  FALSE /**< should branching on binary variables be prefered? */
 
-
-/* Presolving */
-#define SCIP_DEFAULT_RESTARTBDCHGS      100 /**< number of root node bound changes triggering a restart with preprocessing
-                                             *   (-1: no restart, 0: restart only after complete root node evaluation) */
-#define SCIP_DEFAULT_MAXPRESOLROUNDS     -1 /**< maximal number of presolving rounds (-1: unlimited) */
-#define SCIP_DEFAULT_PRESOLABORTFAC   1e-04 /**< abort presolve, if l.t. frac of the problem was changed in last round */
-
-
-/* Propagating */
-#define SCIP_DEFAULT_MAXPROPROUNDS      100 /**< maximal number of propagation rounds per node (-1: unlimited) */
-#define SCIP_DEFAULT_MAXPROPROUNDSROOT 1000 /**< maximal number of propagation rounds in the root node (-1: unlimited) */
-
-
-/* LP Solving */
-
-#define SCIP_DEFAULT_CHECKLPFEAS       TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
-#define SCIP_DEFAULT_EXACTSOLVE       FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
-#define SCIP_DEFAULT_FASTMIP           TRUE /**< should FASTMIP setting of LP solver be used? */
-#define SCIP_DEFAULT_SCALING           TRUE /**< should scaling of LP solver be used? */
-#define SCIP_DEFAULT_LPSOLVEFREQ          1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
-#define SCIP_DEFAULT_LPSOLVEDEPTH        -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_REDCOSTFREQ          1 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
-#define SCIP_DEFAULT_COLAGELIMIT         10 /**< maximum age a dynamic column can reach before it is deleted from the LP */
-#define SCIP_DEFAULT_ROWAGELIMIT         10 /**< maximum age a dynamic row can reach before it is deleted from the LP */
-
-
-/* Pricing */
-
-#define SCIP_DEFAULT_MAXPRICEVARS       100 /**< maximal number of variables priced in per pricing round */
-#define SCIP_DEFAULT_MAXPRICEVARSROOT  2000 /**< maximal number of priced variables at the root node */
-#define SCIP_DEFAULT_ABORTPRICEVARSFAC  2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
-#define SCIP_DEFAULT_CLEANUPCOLS      FALSE /**< should new non-basic columns be removed after LP solving? */
-
-
-/* Cut Separation */
-
-#define SCIP_DEFAULT_MAXSEPABOUNDDIST   0.2 /**< maximal relative distance from current node's dual bound to primal bound
-                                             *   compared to best node's dual bound for applying separation
-                                             *   (0.0: only on current best node, 1.0: on all nodes) */
-#define SCIP_DEFAULT_MAXSEPACUTS        100 /**< maximal number of cuts separated per separation round */
-#define SCIP_DEFAULT_MAXSEPACUTSROOT   2000 /**< maximal separated cuts at the root node */
-#define SCIP_DEFAULT_MINCUTEFFICACY    0.05 /**< minimal efficacy for a cut to enter the LP */
-#define SCIP_DEFAULT_MINCUTEFFICACYROOT 0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_MINCUTORTHO        0.5 /**< minimal orthogonality for a cut to enter the LP */
-#define SCIP_DEFAULT_MINCUTORTHOROOT    0.5 /**< minimal orthogonality for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_CUTORTHOFAC        1.0 /**< factor to scale orthogonality of cut in separation score calculation */
-#define SCIP_DEFAULT_CUTAGELIMIT        100 /**< maximum age a cut can reach before it is deleted from global pool, or -1 */
-#define SCIP_DEFAULT_POOLFREQ             5 /**< separation frequency for the global cut pool */
-#define SCIP_DEFAULT_CLEANUPROWS       TRUE /**< should new basic rows be removed after LP solving? */
-
-
-/* Constraint Settings */
-
-#define SCIP_DEFAULT_CONSAGELIMIT       200 /**< maximum age an unnecessary constr. can reach before it is deleted, or -1 */
-#define SCIP_DEFAULT_CONSOBSOLETEAGE    100 /**< age of a constraint after which it is marked obsolete */
-
-
-/* Pseudo Cost Settings */
-
-#define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01 /**< default minimal variable distance value to use for pseudo cost updates */
-#define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04 /**< default minimal objective distance value to use for pseudo cost updates */
+#define SCIP_DEFAULT_BRANCH_SCOREFAC      0.167 /**< branching score factor to weigh downward and upward gain prediction */
+#define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be prefered? */
 
 
 /* Conflict Analysis */
-#define SCIP_DEFAULT_USEPROPCONFLICT   TRUE /**< should propagation conflict analysis be used? */
-#define SCIP_DEFAULT_USELPCONFLICT    FALSE /**< should infeasible LP conflict analysis be used? */
-#define SCIP_DEFAULT_USESBCONFLICT    FALSE /**< should infeasible strong branching conflict analysis be used? */
-#define SCIP_DEFAULT_USEPSEUDOCONFLICT TRUE /**< should pseudo solution conflict analysis be used? */
-#define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
-#define SCIP_DEFAULT_MINMAXCONFVARS      30 /**< minimal absolute maximum of variables involved in a conflict clause */
-#define SCIP_DEFAULT_MAXCONFLPLOOPS     100 /**< maximal number of LP resolving loops during conflict analysis */
-#define SCIP_DEFAULT_CONFFUIPLEVELS      -1 /**< number of depth levels up to which first UIP's are used in conflict
-                                             *   analysis (-1: use All-FirstUIP rule) */
-#define SCIP_DEFAULT_CONFINTERCLAUSES     1 /**< maximal number of intermediate conflict clauses generated in conflict
-                                             *   graph (-1: use every intermediate clause) */
-#define SCIP_DEFAULT_REPROPCONFLICT    TRUE /**< should earlier nodes be repropagated in order to replace branching
-                                             *   decisions by deductions */
+
+#define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of binary variables involved in a conflict clause */
+#define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict clause */
+#define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of LP resolving loops during conflict analysis */
+#define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
+                                                 *   analysis (-1: use All-FirstUIP rule) */
+#define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
+                                                 *   graph (-1: use every intermediate clause) */
+#define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
+                                                 *   decisions by deductions */
 
 
-/* Primal Solutions */
+/* Constraints */
 
-#define SCIP_DEFAULT_GAPLIMIT           0.0 /**< solving stops, if the gap is below the given value */
-#define SCIP_DEFAULT_SOLLIMIT            -1 /**< solving stops, if given number of solutions were found (-1: no limit) */
-#define SCIP_DEFAULT_BESTSOLLIMIT        -1 /**< solving stops, if given number of solution improvements were found
-                                             *   (-1: no limit) */
-#define SCIP_DEFAULT_MAXSOL             100 /**< maximal number of solutions to store in the solution storage */
-
-
-/* Tree */
-
-#define SCIP_DEFAULT_NODELIMIT         -1LL /**< maximal number of nodes to process (-1: no limit) */
+#define SCIP_DEFAULT_CONS_AGELIMIT          200 /**< maximum age an unnecessary constraint can reach before it is deleted
+                                                 *   (-1: constraints are never deleted) */
+#define SCIP_DEFAULT_CONS_OBSOLETEAGE       100 /**< age of a constraint after which it is marked obsolete
+                                                 *   (-1: constraints are never marked obsolete) */
 
 
 /* Display */
 
-#define SCIP_DEFAULT_DISPWIDTH          139 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ           100 /**< frequency for displaying node information lines */
-#define SCIP_DEFAULT_DISPHEADERFREQ      15 /**< frequency for displaying header lines (every n'th node information line) */
+#define SCIP_DEFAULT_DISP_VERBLEVEL SCIP_VERBLEVEL_NORMAL /**< verbosity level of output */
+#define SCIP_DEFAULT_DISP_WIDTH             139 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
+#define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
+
+
+/* Limits */
+
+#define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
+#define SCIP_DEFAULT_LIMIT_MEMORY         1e+20 /**< maximal memory usage in MB */
+#define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
+#define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
+#define SCIP_DEFAULT_LIMIT_SOL               -1 /**< solving stops, if given number of sols were found (-1: no limit) */
+#define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
+                                                 *   (-1: no limit) */
+#define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
+
+
+/* LP */
+
+#define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
+#define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
+#define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from LP */
+#define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from LP */
+#define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
+#define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
+#define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
+#define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
+
+
+/* Memory */
+
+#define SCIP_DEFAULT_MEM_SAVEFAC            0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
+#define SCIP_DEFAULT_MEM_ARRAYGROWFAC       1.2 /**< memory growing factor for dynamically allocated arrays */
+#define SCIP_DEFAULT_MEM_TREEGROWFAC        2.0 /**< memory growing factor for tree array */
+#define SCIP_DEFAULT_MEM_PATHGROWFAC        2.0 /**< memory growing factor for path array */
+#define SCIP_DEFAULT_MEM_ARRAYGROWINIT        4 /**< initial size of dynamically allocated arrays */
+#define SCIP_DEFAULT_MEM_TREEGROWINIT     65536 /**< initial size of tree array */
+#define SCIP_DEFAULT_MEM_PATHGROWINIT       256 /**< initial size of path array */
+
+
+/* Miscellaneous */
+
+#define SCIP_DEFAULT_MISC_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
+#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+
+
+/* Presolving */
+
+#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if l.t. frac of the problem was changed in last round */
+#define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
+#define SCIP_DEFAULT_PRESOL_RESTARTBDCHGS   100 /**< number of root node bound changes triggering a restart with
+                                                 *   preprocessing (-1: no restart, 0: restart only after complete root
+                                                 *   node evaluation) */
+
+
+/* Pricing */
+
+#define SCIP_DEFAULT_PRICE_ABORTFAC         2.0 /**< pricing is aborted, if fac * price_maxvars pricing candidates were
+                                                 *   found */
+#define SCIP_DEFAULT_PRICE_MAXVARS          100 /**< maximal number of variables priced in per pricing round */
+#define SCIP_DEFAULT_PRICE_MAXVARSROOT     2000 /**< maximal number of priced variables at the root node */
+
+
+/* Propagating */
+
+#define SCIP_DEFAULT_PROP_MAXROUNDS         100 /**< maximal number of propagation rounds per node (-1: unlimited) */
+#define SCIP_DEFAULT_PROP_MAXROUNDSROOT    1000 /**< maximal number of propagation rounds in root node (-1: unlimited) */
+#define SCIP_DEFAULT_PROP_REDCOSTFREQ         1 /**< frequency for reduced cost fixing (-1: never; 0: only root LP) */
+
+
+/* Separation */
+
+#define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal 
+                                                 *   bound compared to best node's dual bound for applying separation
+                                                 *   (0.0: only on current best node, 1.0: on all nodes) */
+#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
+                                                 *   (-1: cuts are never deleted from the global cut pool) */
+#define SCIP_DEFAULT_SEPA_POOLFREQ            5 /**< separation frequency for the global cut pool */
 
 
 /* Timing */
 
-#define SCIP_DEFAULT_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
-#define SCIP_DEFAULT_CLOCKSENABLED     TRUE /**< is timing enabled? */
-#define SCIP_DEFAULT_TIMELIMIT        1e+20 /**< maximal time in seconds to run */
+#define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
+#define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
 
 
 /* VBC Tool output */
-#define SCIP_DEFAULT_VBCFILENAME        "-" /**< name of the VBC Tool output file, or - if no output should be created */
-#define SCIP_DEFAULT_VBCUSEREALTIME    TRUE /**< should the real solving time be used instead of a time step counter in VBC output? */
+#define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the VBC Tool output file, or "-" if no output should be
+                                                 *   created */
+#define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
+                                                 *   in VBC output? */
+
 
 
 
@@ -229,7 +228,7 @@ DECL_PARAMCHGD(paramChgdFeastol)
    newfeastol = SCIPparamGetReal(param);
    
    /* change the feastol through the SCIP call in order to mark the LP unsolved */
-   CHECK_OKAY( SCIPsetFeastol(scip, newfeastol) );
+   CHECK_OKAY( SCIPchgFeastol(scip, newfeastol) );
 
    return SCIP_OKAY;
 }
@@ -243,7 +242,7 @@ DECL_PARAMCHGD(paramChgdDualfeastol)
    newdualfeastol = SCIPparamGetReal(param);
    
    /* change the dualfeastol through the SCIP call in order to mark the LP unsolved */
-   CHECK_OKAY( SCIPsetDualfeastol(scip, newdualfeastol) );
+   CHECK_OKAY( SCIPchgDualfeastol(scip, newdualfeastol) );
 
    return SCIP_OKAY;
 }
@@ -310,390 +309,419 @@ RETCODE SCIPsetCreate(
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
-   (*set)->vbcfilename = NULL;
+   (*set)->vbc_filename = NULL;
 
-   /* SCIP parameters */
+   /* branching parameters */
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+         "branching/scorefac",
+         "branching score factor to weigh downward and upward gain prediction",
+         &(*set)->branch_scorefac, SCIP_DEFAULT_BRANCH_SCOREFAC, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "branching/preferbinary",
+         "should branching on binary variables be prefered?",
+         &(*set)->branch_preferbinary, SCIP_DEFAULT_BRANCH_PREFERBINARY,
+         NULL, NULL) );
+
+   /* conflict analysis parameters */
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "conflict/useprop",
+         "should propagation conflict analysis be used?",
+         &(*set)->conf_useprop, SCIP_DEFAULT_CONF_USEPROP,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "conflict/uselp",
+         "should infeasible LP conflict analysis be used?",
+         &(*set)->conf_uselp, SCIP_DEFAULT_CONF_USELP,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "conflict/usesb",
+         "should infeasible strong branching conflict analysis be used?",
+         &(*set)->conf_usesb, SCIP_DEFAULT_CONF_USESB,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "conflict/usepseudo",
+         "should pseudo solution conflict analysis be used?",
+         &(*set)->conf_usepseudo, SCIP_DEFAULT_CONF_USEPSEUDO,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "conflict/maxvarsfac",
+         "maximal fraction of binary variables involved in a conflict clause",
+         &(*set)->conf_maxvarsfac, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, REAL_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "conflict/minmaxvars",
+         "minimal absolute maximum of variables involved in a conflict clause",
+         &(*set)->conf_minmaxvars, SCIP_DEFAULT_CONF_MINMAXVARS, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "conflict/maxlploops",
+         "maximal number of LP resolving loops during conflict analysis",
+         &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, 1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "conflict/fuiplevels",
+         "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
+         &(*set)->conf_fuiplevels, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "conflict/interclauses",
+         "maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)",
+         &(*set)->conf_interclauses, SCIP_DEFAULT_CONF_INTERCLAUSES, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "conflict/repropagate",
+         "should earlier nodes be repropagated in order to replace branching decisions by deductions",
+         &(*set)->conf_repropagate, SCIP_DEFAULT_CONF_REPROPAGATE,
+         NULL, NULL) );
+
+   /* constraint parameters */
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "constraints/agelimit",
+         "maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints",
+         &(*set)->cons_agelimit, SCIP_DEFAULT_CONS_AGELIMIT, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "constraints/obsoleteage",
+         "age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete",
+         &(*set)->cons_obsoleteage, SCIP_DEFAULT_CONS_OBSOLETEAGE, -1, INT_MAX,
+         NULL, NULL) );
+
+   /* display parameters */
    assert(sizeof(int) == sizeof(VERBLEVEL));
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "display/verblevel",
          "verbosity level of output",
-         (int*)&(*set)->verblevel, (int)SCIP_DEFAULT_VERBLEVEL, (int)SCIP_VERBLEVEL_NONE, (int)SCIP_VERBLEVEL_FULL,
+         (int*)&(*set)->disp_verblevel, (int)SCIP_DEFAULT_DISP_VERBLEVEL,
+         (int)SCIP_VERBLEVEL_NONE, (int)SCIP_VERBLEVEL_FULL,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "display/width",
+         "maximal number of characters in a node information line",
+         &(*set)->disp_width, SCIP_DEFAULT_DISP_WIDTH, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "display/freq",
+         "frequency for displaying node information lines",
+         &(*set)->disp_freq, SCIP_DEFAULT_DISP_FREQ, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "display/headerfreq",
+         "frequency for displaying header lines (every n'th node information line)",
+         &(*set)->disp_headerfreq, SCIP_DEFAULT_DISP_HEADERFREQ, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
          "display/lpinfo",
          "should the LP solver display status messages?",
-         &(*set)->lpinfo, SCIP_DEFAULT_LPINFO,
+         &(*set)->disp_lpinfo, SCIP_DEFAULT_DISP_LPINFO,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "display/dispwidth",
-         "maximal number of characters in a node information line",
-         &(*set)->dispwidth, SCIP_DEFAULT_DISPWIDTH, 0, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "display/dispfreq",
-         "frequency for displaying node information lines",
-         &(*set)->dispfreq, SCIP_DEFAULT_DISPFREQ, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "display/dispheaderfreq",
-         "frequency for displaying header lines (every n'th node information line)",
-         &(*set)->dispheaderfreq, SCIP_DEFAULT_DISPHEADERFREQ, -1, INT_MAX,
-         NULL, NULL) );
+
+   /* limit parameters */
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/infinity",
-         "values larger than this are considered infinity",
-         &(*set)->infinity, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/epsilon",
-         "absolute values smaller than this are considered zero",
-         &(*set)->epsilon, SCIP_DEFAULT_EPSILON, SCIP_MINEPSILON, SCIP_MAXEPSILON,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/sumepsilon",
-         "absolute values of sums smaller than this are considered zero",
-         &(*set)->sumepsilon, SCIP_DEFAULT_SUMEPSILON, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/feastol",
-         "LP feasibility tolerance for constraints",
-         &(*set)->feastol, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
-         paramChgdFeastol, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/dualfeastol",
-         "LP feasibility tolerance for reduced costs",
-         &(*set)->dualfeastol, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
-         paramChgdDualfeastol, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/boundstreps",
-         "minimal improve for strengthening bounds",
-         &(*set)->boundstreps, SCIP_DEFAULT_BOUNDSTREPS, SCIP_MINEPSILON*1e+03, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/pseudocosteps",
-         "minimal variable distance value to use for branching pseudo cost updates",
-         &(*set)->pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, SCIP_MINEPSILON*1e+03, 1.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/pseudocostdelta",
-         "minimal objective distance value to use for branching pseudo cost updates",
-         &(*set)->pseudocostdelta, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, REAL_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
-         "memory/memsavefac",
-         "fraction of maximal memory usage resulting in switch to memory saving mode",
-         &(*set)->memsavefac, SCIP_DEFAULT_MEMSAVEFAC, 0.0, 1.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "memory/memgrowfac",
-         "memory growing factor for dynamically allocated arrays",
-         &(*set)->memgrowfac, SCIP_DEFAULT_MEMGROWFAC, 1.0, 10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "memory/memgrowinit",
-         "initial size of dynamically allocated arrays",
-         &(*set)->memgrowinit, SCIP_DEFAULT_MEMGROWINIT, 0, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "memory/treegrowfac",
-         "memory growing factor for tree array",
-         &(*set)->treegrowfac, SCIP_DEFAULT_TREEGROWFAC, 1.0, 10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "memory/treegrowinit",
-         "initial size of tree array",
-         &(*set)->treegrowinit, SCIP_DEFAULT_TREEGROWINIT, 0, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
-         "memory/pathgrowfac",
-         "memory growing factor for path array",
-         &(*set)->pathgrowfac, SCIP_DEFAULT_PATHGROWFAC, 1.0, 10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "memory/pathgrowinit",
-         "initial size of path array",
-         &(*set)->pathgrowinit, SCIP_DEFAULT_PATHGROWINIT, 0, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
-         "branching/branchscorefac",
-         "branching score factor to weigh downward and upward gain prediction",
-         &(*set)->branchscorefac, SCIP_DEFAULT_BRANCHSCOREFAC, 0.0, 1.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "branching/preferbinbranch",
-         "should branching on binary variables be prefered?",
-         &(*set)->preferbinbranch, SCIP_DEFAULT_PREFERBINBRANCH,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "presolving/restartbdchgs",
-         "number of root node bound changes triggering a restart with preprocessing (-1: no restart, 0: restart only after complete root node evaluation)",
-         &(*set)->restartbdchgs, SCIP_DEFAULT_RESTARTBDCHGS, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "presolving/maxpresolrounds",
-         "maximal number of presolving rounds (-1: unlimited)",
-         &(*set)->maxpresolrounds, SCIP_DEFAULT_MAXPRESOLROUNDS, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
-         "presolving/presolabortfac",
-         "abort presolve, if less than this fraction of the problem was changed in last presolve round",
-         &(*set)->presolabortfac, SCIP_DEFAULT_PRESOLABORTFAC, 0.0, 1.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "pricing/maxpricevars",
-         "maximal number of variables priced in per pricing round",
-         &(*set)->maxpricevars, SCIP_DEFAULT_MAXPRICEVARS, 1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "pricing/maxpricevarsroot",
-         "maximal number of priced variables at the root node",
-         &(*set)->maxpricevarsroot, SCIP_DEFAULT_MAXPRICEVARSROOT, 1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "pricing/abortpricevarsfac",
-         "pricing is aborted, if fac * maxpricevars pricing candidates were found",
-         &(*set)->abortpricevarsfac, SCIP_DEFAULT_ABORTPRICEVARSFAC, 1.0, REAL_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "propagation/maxproprounds",
-         "maximal number of propagation rounds per node (-1: unlimited)",
-         &(*set)->maxproprounds, SCIP_DEFAULT_MAXPROPROUNDS, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "propagation/maxproproundsroot",
-         "maximal number of propagation rounds in the root node (-1: unlimited)",
-         &(*set)->maxproproundsroot, SCIP_DEFAULT_MAXPROPROUNDSROOT, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "separating/maxsepabounddist",
-         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)",
-         &(*set)->maxsepabounddist, SCIP_DEFAULT_MAXSEPABOUNDDIST, 0.0, 1.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "separating/maxsepacuts",
-         "maximal number of cuts separated per separation round (0: disable local separation)",
-         &(*set)->maxsepacuts, SCIP_DEFAULT_MAXSEPACUTS, 0, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "separating/maxsepacutsroot",
-         "maximal number of separated cuts at the root node (0: disable root node separation)",
-         &(*set)->maxsepacutsroot, SCIP_DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "separating/mincutefficacy",
-         "minimal efficacy for a cut to enter the LP",
-         &(*set)->mincutefficacy, SCIP_DEFAULT_MINCUTEFFICACY, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "separating/mincutefficacyroot",
-         "minimal efficacy for a cut to enter the LP in the root node",
-         &(*set)->mincutefficacyroot, SCIP_DEFAULT_MINCUTEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "separating/mincutortho",
-         "minimal orthogonality for a cut to enter the LP",
-         &(*set)->mincutortho, SCIP_DEFAULT_MINCUTORTHO, 0.0, 1.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "separating/mincutorthoroot",
-         "minimal orthogonality for a cut to enter the LP in the root node",
-         &(*set)->mincutorthoroot, SCIP_DEFAULT_MINCUTORTHOROOT, 0.0, 1.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "separating/cutorthofac",
-         "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
-         &(*set)->cutorthofac, SCIP_DEFAULT_CUTORTHOFAC, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "separating/cutagelimit",
-         "maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts",
-         &(*set)->cutagelimit, SCIP_DEFAULT_CUTAGELIMIT, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "separating/poolfreq",
-         "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
-         &(*set)->poolfreq, SCIP_DEFAULT_POOLFREQ, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "constraints/consagelimit",
-         "maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints",
-         &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "constraints/consobsoleteage",
-         "age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete",
-         &(*set)->consobsoleteage, SCIP_DEFAULT_CONSOBSOLETEAGE, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "conflict/usepropconflict",
-         "should propagation conflict analysis be used?",
-         &(*set)->usepropconflict, SCIP_DEFAULT_USEPROPCONFLICT,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "conflict/uselpconflict",
-         "should infeasible LP conflict analysis be used?",
-         &(*set)->uselpconflict, SCIP_DEFAULT_USELPCONFLICT,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "conflict/usesbconflict",
-         "should infeasible strong branching conflict analysis be used?",
-         &(*set)->usesbconflict, SCIP_DEFAULT_USESBCONFLICT,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "conflict/usepseudoconflict",
-         "should pseudo solution conflict analysis be used?",
-         &(*set)->usepseudoconflict, SCIP_DEFAULT_USEPSEUDOCONFLICT,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "conflict/maxconfvarsfac",
-         "maximal fraction of binary variables involved in a conflict clause",
-         &(*set)->maxconfvarsfac, SCIP_DEFAULT_MAXCONFVARSFAC, 0.0, REAL_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "conflict/minmaxconfvars",
-         "minimal absolute maximum of variables involved in a conflict clause",
-         &(*set)->minmaxconfvars, SCIP_DEFAULT_MINMAXCONFVARS, 0, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "conflict/maxconflploops",
-         "maximal number of LP resolving loops during conflict analysis",
-         &(*set)->maxconflploops, SCIP_DEFAULT_MAXCONFLPLOOPS, 1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "conflict/conffuiplevels",
-         "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
-         &(*set)->conffuiplevels, SCIP_DEFAULT_CONFFUIPLEVELS, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "conflict/confinterclauses",
-         "maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)",
-         &(*set)->confinterclauses, SCIP_DEFAULT_CONFINTERCLAUSES, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "conflict/repropconflict",
-         "should earlier nodes be repropagated in order to replace branching decisions by deductions",
-         &(*set)->repropconflict, SCIP_DEFAULT_REPROPCONFLICT,
+         "limits/time",
+         "maximal time in seconds to run",
+         &(*set)->limit_time, SCIP_DEFAULT_LIMIT_TIME, 0.0, REAL_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
-         "limits/nodelimit",
+         "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
-         &(*set)->nodelimit, SCIP_DEFAULT_NODELIMIT, -1LL, LONGINT_MAX,
+         &(*set)->limit_nodes, SCIP_DEFAULT_LIMIT_NODES, -1LL, LONGINT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "limits/timelimit",
-         "maximal time in seconds to run",
-         &(*set)->timelimit, SCIP_DEFAULT_TIMELIMIT, 0.0, REAL_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "limits/memlimit",
+         "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->memlimit, SCIP_DEFAULT_MEMLIMIT, 0.0, REAL_MAX,
+         &(*set)->limit_memory, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, REAL_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "limits/gaplimit",
+         "limits/gap",
          "solving stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value",
-         &(*set)->gaplimit, SCIP_DEFAULT_GAPLIMIT, 0.0, REAL_MAX,
+         &(*set)->limit_gap, SCIP_DEFAULT_LIMIT_GAP, 0.0, REAL_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "limits/sollimit",
+         "limits/sol",
          "solving stops, if the given number of solutions were found (-1: no limit)",
-         &(*set)->sollimit, SCIP_DEFAULT_SOLLIMIT, -1, INT_MAX,
+         &(*set)->limit_sol, SCIP_DEFAULT_LIMIT_SOL, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "limits/bestsollimit",
+         "limits/bestsol",
          "solving stops, if the given number of solution improvements were found (-1: no limit)",
-         &(*set)->bestsollimit, SCIP_DEFAULT_BESTSOLLIMIT, -1, INT_MAX,
+         &(*set)->limit_bestsol, SCIP_DEFAULT_LIMIT_BESTSOL, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "limits/maxsol",
          "maximal number of solutions to store in the solution storage",
-         &(*set)->maxsol, SCIP_DEFAULT_MAXSOL, 1, INT_MAX,
+         &(*set)->limit_maxsol, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
          NULL, NULL) );
+
+   /* LP parameters */
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "lp/lpsolvefreq",
+         "lp/solvefreq",
          "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
-         &(*set)->lpsolvefreq, SCIP_DEFAULT_LPSOLVEFREQ, -1, INT_MAX,
+         &(*set)->lp_solvefreq, SCIP_DEFAULT_LP_SOLVEFREQ, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "lp/lpsolvedepth",
+         "lp/solvedepth",
          "maximal depth for solving LP at the nodes (-1: no depth limit)",
-         &(*set)->lpsolvedepth, SCIP_DEFAULT_LPSOLVEDEPTH, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-         "lp/redcostfreq",
-         "frequency for applying reduced cost fixing (-1: never; 0: only root LP)",
-         &(*set)->redcostfreq, SCIP_DEFAULT_REDCOSTFREQ, -1, INT_MAX,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "lp/checklpfeas",
-         "should LP solutions be checked, resolving LP when numerical troubles occur?",
-         &(*set)->checklpfeas, SCIP_DEFAULT_CHECKLPFEAS,
-         NULL, NULL) );
-   /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#if 0
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "lp/exactsolve",
-         "should the problem be solved exactly (with proven dual bounds)?",
-         &(*set)->exactsolve, SCIP_DEFAULT_EXACTSOLVE,
-         NULL, NULL) );
-#else
-   (*set)->exactsolve = FALSE;
-#endif
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "lp/fastmip",
-         "should FASTMIP setting of LP solver be used?",
-         &(*set)->fastmip, SCIP_DEFAULT_FASTMIP,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "lp/scaling",
-         "should scaling of LP solver be used?",
-         &(*set)->scaling, SCIP_DEFAULT_SCALING,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "lp/cleanupcols",
-         "should new non-basic columns be removed after LP solving?",
-         &(*set)->cleanupcols, SCIP_DEFAULT_CLEANUPCOLS,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "lp/cleanuprows",
-         "should new basic rows be removed after LP solving?",
-         &(*set)->cleanuprows, SCIP_DEFAULT_CLEANUPROWS,
+         &(*set)->lp_solvedepth, SCIP_DEFAULT_LP_SOLVEDEPTH, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "lp/colagelimit",
          "maximum age a dynamic column can reach before it is deleted from the LP",
-         &(*set)->colagelimit, SCIP_DEFAULT_COLAGELIMIT, 0, INT_MAX,
+         &(*set)->lp_colagelimit, SCIP_DEFAULT_LP_COLAGELIMIT, 0, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "lp/rowagelimit",
          "maximum age a dynamic row can reach before it is deleted from the LP",
-         &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT, 0, INT_MAX,
+         &(*set)->lp_rowagelimit, SCIP_DEFAULT_LP_ROWAGELIMIT, 0, INT_MAX,
          NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/cleanupcols",
+         "should new non-basic columns be removed after LP solving?",
+         &(*set)->lp_cleanupcols, SCIP_DEFAULT_LP_CLEANUPCOLS,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/cleanuprows",
+         "should new basic rows be removed after LP solving?",
+         &(*set)->lp_cleanuprows, SCIP_DEFAULT_LP_CLEANUPROWS,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/checkfeas",
+         "should LP solutions be checked, resolving LP when numerical troubles occur?",
+         &(*set)->lp_checkfeas, SCIP_DEFAULT_LP_CHECKFEAS,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/fastmip",
+         "should FASTMIP setting of LP solver be used?",
+         &(*set)->lp_fastmip, SCIP_DEFAULT_LP_FASTMIP,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/scaling",
+         "should scaling of LP solver be used?",
+         &(*set)->lp_scaling, SCIP_DEFAULT_LP_SCALING,
+         NULL, NULL) );
+
+   /* memory parameters */
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+         "memory/savefac",
+         "fraction of maximal memory usage resulting in switch to memory saving mode",
+         &(*set)->mem_savefac, SCIP_DEFAULT_MEM_SAVEFAC, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "memory/arraygrowfac",
+         "memory growing factor for dynamically allocated arrays",
+         &(*set)->mem_arraygrowfac, SCIP_DEFAULT_MEM_ARRAYGROWFAC, 1.0, 10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "memory/arraygrowinit",
+         "initial size of dynamically allocated arrays",
+         &(*set)->mem_arraygrowinit, SCIP_DEFAULT_MEM_ARRAYGROWINIT, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "memory/treegrowfac",
+         "memory growing factor for tree array",
+         &(*set)->mem_treegrowfac, SCIP_DEFAULT_MEM_TREEGROWFAC, 1.0, 10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "memory/treegrowinit",
+         "initial size of tree array",
+         &(*set)->mem_treegrowinit, SCIP_DEFAULT_MEM_TREEGROWINIT, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+         "memory/pathgrowfac",
+         "memory growing factor for path array",
+         &(*set)->mem_pathgrowfac, SCIP_DEFAULT_MEM_PATHGROWFAC, 1.0, 10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "memory/pathgrowinit",
+         "initial size of path array",
+         &(*set)->mem_pathgrowinit, SCIP_DEFAULT_MEM_PATHGROWINIT, 0, INT_MAX,
+         NULL, NULL) );
+
+   /* miscellaneous parameters */
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "misc/catchctrlc",
+         "should the CTRL-C interrupt be caught by SCIP?",
+         &(*set)->misc_catchctrlc, SCIP_DEFAULT_MISC_CATCHCTRLC,
+         NULL, NULL) );
+   /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
+#if 0
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "misc/exactsolve",
+         "should the problem be solved exactly (with proven dual bounds)?",
+         &(*set)->misc_exactsolve, SCIP_DEFAULT_MISC_EXACTSOLVE,
+         NULL, NULL) );
+#else
+   (*set)->misc_exactsolve = FALSE;
+#endif
+
+   /* numerical parameters */
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/infinity",
+         "values larger than this are considered infinity",
+         &(*set)->num_infinity, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/epsilon",
+         "absolute values smaller than this are considered zero",
+         &(*set)->num_epsilon, SCIP_DEFAULT_EPSILON, SCIP_MINEPSILON, SCIP_MAXEPSILON,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/sumepsilon",
+         "absolute values of sums smaller than this are considered zero",
+         &(*set)->num_sumepsilon, SCIP_DEFAULT_SUMEPSILON, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/feastol",
+         "LP feasibility tolerance for constraints",
+         &(*set)->num_feastol, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         paramChgdFeastol, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/dualfeastol",
+         "LP feasibility tolerance for reduced costs",
+         &(*set)->num_dualfeastol, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         paramChgdDualfeastol, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/boundstreps",
+         "minimal improve for strengthening bounds",
+         &(*set)->num_boundstreps, SCIP_DEFAULT_BOUNDSTREPS, SCIP_MINEPSILON*1e+03, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/pseudocosteps",
+         "minimal variable distance value to use for branching pseudo cost updates",
+         &(*set)->num_pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, SCIP_MINEPSILON*1e+03, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "numerics/pseudocostdelta",
+         "minimal objective distance value to use for branching pseudo cost updates",
+         &(*set)->num_pseudocostdelta, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, REAL_MAX,
+         NULL, NULL) );
+
+   /* presolving parameters */
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "presolving/maxrounds",
+         "maximal number of presolving rounds (-1: unlimited)",
+         &(*set)->presol_maxrounds, SCIP_DEFAULT_PRESOL_MAXROUNDS, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+         "presolving/abortfac",
+         "abort presolve, if less than this fraction of the problem was changed in last presolve round",
+         &(*set)->presol_abortfac, SCIP_DEFAULT_PRESOL_ABORTFAC, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "presolving/restartbdchgs",
+         "number of root node bound changes triggering a restart with preprocessing (-1: no restart, 0: restart only after complete root node evaluation)",
+         &(*set)->presol_restartbdchgs, SCIP_DEFAULT_PRESOL_RESTARTBDCHGS, -1, INT_MAX,
+         NULL, NULL) );
+
+   /* pricing parameters */
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "pricing/maxvars",
+         "maximal number of variables priced in per pricing round",
+         &(*set)->price_maxvars, SCIP_DEFAULT_PRICE_MAXVARS, 1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "pricing/maxvarsroot",
+         "maximal number of priced variables at the root node",
+         &(*set)->price_maxvarsroot, SCIP_DEFAULT_PRICE_MAXVARSROOT, 1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "pricing/abortfac",
+         "pricing is aborted, if fac * pricing/maxvars pricing candidates were found",
+         &(*set)->price_abortfac, SCIP_DEFAULT_PRICE_ABORTFAC, 1.0, REAL_MAX,
+         NULL, NULL) );
+
+   /* propagation parameters */
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "propagating/maxrounds",
+         "maximal number of propagation rounds per node (-1: unlimited)",
+         &(*set)->prop_maxrounds, SCIP_DEFAULT_PROP_MAXROUNDS, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "propagating/maxroundsroot",
+         "maximal number of propagation rounds in the root node (-1: unlimited)",
+         &(*set)->prop_maxroundsroot, SCIP_DEFAULT_PROP_MAXROUNDSROOT, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "propagating/redcostfreq",
+         "frequency for applying reduced cost fixing (-1: never; 0: only root LP)",
+         &(*set)->prop_redcostfreq, SCIP_DEFAULT_PROP_REDCOSTFREQ, -1, INT_MAX,
+         NULL, NULL) );
+
+   /* separation parameters */
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/maxbounddist",
+         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)",
+         &(*set)->sepa_maxbounddist, SCIP_DEFAULT_SEPA_MAXBOUNDDIST, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/minefficacy",
+         "minimal efficacy for a cut to enter the LP",
+         &(*set)->sepa_minefficacy, SCIP_DEFAULT_SEPA_MINEFFICACY, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/minefficacyroot",
+         "minimal efficacy for a cut to enter the LP in the root node",
+         &(*set)->sepa_minefficacyroot, SCIP_DEFAULT_SEPA_MINEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/minortho",
+         "minimal orthogonality for a cut to enter the LP",
+         &(*set)->sepa_minortho, SCIP_DEFAULT_SEPA_MINORTHO, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/minorthoroot",
+         "minimal orthogonality for a cut to enter the LP in the root node",
+         &(*set)->sepa_minorthoroot, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/orthofac",
+         "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
+         &(*set)->sepa_orthofac, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/maxcuts",
+         "maximal number of cuts separated per separation round (0: disable local separation)",
+         &(*set)->sepa_maxcuts, SCIP_DEFAULT_SEPA_MAXCUTS, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/maxcutsroot",
+         "maximal number of separated cuts at the root node (0: disable root node separation)",
+         &(*set)->sepa_maxcutsroot, SCIP_DEFAULT_SEPA_MAXCUTSROOT, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/cutagelimit",
+         "maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts",
+         &(*set)->sepa_cutagelimit, SCIP_DEFAULT_SEPA_CUTAGELIMIT, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "separating/poolfreq",
+         "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
+         &(*set)->sepa_poolfreq, SCIP_DEFAULT_SEPA_POOLFREQ, -1, INT_MAX,
+         NULL, NULL) );
+
+   /* timing parameters */
    assert(sizeof(int) == sizeof(CLOCKTYPE));
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "timing/clocktype",
          "default clock type (1: CPU user seconds, 2: wall clock time)",
-         (int*)&(*set)->clocktype, (int)SCIP_DEFAULT_CLOCKTYPE, 1, 2,
+         (int*)&(*set)->time_clocktype, (int)SCIP_DEFAULT_TIME_CLOCKTYPE, 1, 2,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "timing/clocksenabled",
+         "timing/enabled",
          "is timing enabled?",
-         &(*set)->clocksenabled, SCIP_DEFAULT_CLOCKSENABLED,
+         &(*set)->time_enabled, SCIP_DEFAULT_TIME_ENABLED,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "misc/catchctrlc",
-         "should the CTRL-C interrupt be caught by SCIP?",
-         &(*set)->catchctrlc, SCIP_DEFAULT_CATCHCTRLC,
-         NULL, NULL) );
+
+   /* VBC tool parameters */
    CHECK_OKAY( SCIPsetAddStringParam(*set, memhdr,
-         "misc/vbcfilename",
+         "vbc/filename",
          "name of the VBC Tool output file, or - if no VBC Tool output should be created",
-         &(*set)->vbcfilename, SCIP_DEFAULT_VBCFILENAME, 
+         &(*set)->vbc_filename, SCIP_DEFAULT_VBC_FILENAME, 
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-         "misc/vbcuserealtime",
+         "vbc/realtime",
          "should the real solving time be used instead of a time step counter in VBC output?",
-         &(*set)->vbcuserealtime, SCIP_DEFAULT_VBCUSEREALTIME,
+         &(*set)->vbc_realtime, SCIP_DEFAULT_VBC_REALTIME,
          NULL, NULL) );
 
    return SCIP_OKAY;
@@ -1988,7 +2016,7 @@ int SCIPsetCalcMemGrowSize(
    int              num                 /**< minimum number of entries to store */
    )
 {
-   return calcGrowSize(set->memgrowinit, set->memgrowfac, num);
+   return calcGrowSize(set->mem_arraygrowinit, set->mem_arraygrowfac, num);
 }
 
 /** calculate memory size for tree array */
@@ -1997,7 +2025,7 @@ int SCIPsetCalcTreeGrowSize(
    int              num                 /**< minimum number of entries to store */
    )
 {
-   return calcGrowSize(set->treegrowinit, set->treegrowfac, num);
+   return calcGrowSize(set->mem_treegrowinit, set->mem_treegrowfac, num);
 }
 
 /** calculate memory size for path array */
@@ -2006,7 +2034,7 @@ int SCIPsetCalcPathGrowSize(
    int              num                 /**< minimum number of entries to store */
    )
 {
-   return calcGrowSize(set->pathgrowinit, set->pathgrowfac, num);
+   return calcGrowSize(set->mem_pathgrowinit, set->mem_pathgrowfac, num);
 }
 
 /** sets verbosity level for message output */
@@ -2023,7 +2051,7 @@ RETCODE SCIPsetSetVerbLevel(
       return SCIP_INVALIDCALL;
    }
    
-   set->verblevel = verblevel;
+   set->disp_verblevel = verblevel;
 
    return SCIP_OKAY;
 }
@@ -2036,7 +2064,7 @@ RETCODE SCIPsetSetFeastol(
 {
    assert(set != NULL);
 
-   set->feastol = feastol;
+   set->num_feastol = feastol;
 
    return SCIP_OKAY;
 }
@@ -2049,13 +2077,13 @@ RETCODE SCIPsetSetDualfeastol(
 {
    assert(set != NULL);
 
-   set->dualfeastol = dualfeastol;
+   set->num_dualfeastol = dualfeastol;
 
    return SCIP_OKAY;
 }
 
 /** returns the maximal number of variables priced into the LP per round */
-int SCIPsetGetMaxpricevars(
+int SCIPsetGetPriceMaxvars(
    SET*             set,                /**< global SCIP settings */
    Bool             root                /**< are we at the root node? */
    )
@@ -2063,13 +2091,13 @@ int SCIPsetGetMaxpricevars(
    assert(set != NULL);
 
    if( root )
-      return set->maxpricevarsroot;
+      return set->price_maxvarsroot;
    else
-      return set->maxpricevars;
+      return set->price_maxvars;
 }
 
 /** returns the maximal number of cuts separated per round */
-int SCIPsetGetMaxsepacuts(
+int SCIPsetGetSepaMaxcuts(
    SET*             set,                /**< global SCIP settings */
    Bool             root                /**< are we at the root node? */
    )
@@ -2077,9 +2105,9 @@ int SCIPsetGetMaxsepacuts(
    assert(set != NULL);
 
    if( root )
-      return set->maxsepacutsroot;
+      return set->sepa_maxcutsroot;
    else
-      return set->maxsepacuts;
+      return set->sepa_maxcuts;
 }
 
    
@@ -2089,6 +2117,76 @@ int SCIPsetGetMaxsepacuts(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** returns value treated as infinity */
+Real SCIPsetInfinity(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_infinity;
+}
+
+/** returns value treated as zero */
+Real SCIPsetEpsilon(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_epsilon;
+}
+
+/** returns value treated as zero for sums of floating point values */
+Real SCIPsetSumepsilon(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_sumepsilon;
+}
+
+/** returns feasibility tolerance for constraints */
+Real SCIPsetFeastol(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_feastol;
+}
+
+/** returns feasibility tolerance for reduced costs */
+Real SCIPsetDualfeastol(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_dualfeastol;
+}
+
+/** returns minimal variable distance value to use for pseudo cost updates */
+Real SCIPsetPseudocosteps(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_pseudocosteps;
+}
+
+/** returns minimal minimal objective distance value to use for pseudo cost updates */
+Real SCIPsetPseudocostdelta(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_pseudocostdelta;
+}
 
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
 Real SCIPsetRelDiff(
@@ -2120,7 +2218,7 @@ Bool SCIPsetIsEQ(
 {
    assert(set != NULL);
 
-   return EPSEQ(val1, val2, set->epsilon);
+   return EPSEQ(val1, val2, set->num_epsilon);
 }
 
 /** checks, if val1 is (more than epsilon) lower than val2 */
@@ -2132,7 +2230,7 @@ Bool SCIPsetIsLT(
 {
    assert(set != NULL);
 
-   return EPSLT(val1, val2, set->epsilon);
+   return EPSLT(val1, val2, set->num_epsilon);
 }
 
 /** checks, if val1 is not (more than epsilon) greater than val2 */
@@ -2144,7 +2242,7 @@ Bool SCIPsetIsLE(
 {
    assert(set != NULL);
 
-   return EPSLE(val1, val2, set->epsilon);
+   return EPSLE(val1, val2, set->num_epsilon);
 }
 
 /** checks, if val1 is (more than epsilon) greater than val2 */
@@ -2156,7 +2254,7 @@ Bool SCIPsetIsGT(
 {
    assert(set != NULL);
 
-   return EPSGT(val1, val2, set->epsilon);
+   return EPSGT(val1, val2, set->num_epsilon);
 }
 
 /** checks, if val1 is not (more than epsilon) lower than val2 */
@@ -2168,7 +2266,7 @@ Bool SCIPsetIsGE(
 {
    assert(set != NULL);
 
-   return EPSGE(val1, val2, set->epsilon);
+   return EPSGE(val1, val2, set->num_epsilon);
 }
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -2179,7 +2277,7 @@ Bool SCIPsetIsZero(
 {
    assert(set != NULL);
 
-   return EPSZ(val, set->epsilon);
+   return EPSZ(val, set->num_epsilon);
 }
 
 /** checks, if value is greater than epsilon */
@@ -2190,7 +2288,7 @@ Bool SCIPsetIsPositive(
 {
    assert(set != NULL);
 
-   return EPSP(val, set->epsilon);
+   return EPSP(val, set->num_epsilon);
 }
 
 /** checks, if value is lower than -epsilon */
@@ -2201,7 +2299,7 @@ Bool SCIPsetIsNegative(
 {
    assert(set != NULL);
 
-   return EPSN(val, set->epsilon);
+   return EPSN(val, set->num_epsilon);
 }
 
 /** checks, if values are in range of sumepsilon */
@@ -2213,7 +2311,7 @@ Bool SCIPsetIsSumEQ(
 {
    assert(set != NULL);
 
-   return EPSEQ(val1, val2, set->sumepsilon);
+   return EPSEQ(val1, val2, set->num_sumepsilon);
 }
 
 /** checks, if val1 is (more than sumepsilon) lower than val2 */
@@ -2225,7 +2323,7 @@ Bool SCIPsetIsSumLT(
 {
    assert(set != NULL);
 
-   return EPSLT(val1, val2, set->sumepsilon);
+   return EPSLT(val1, val2, set->num_sumepsilon);
 }
 
 /** checks, if val1 is not (more than sumepsilon) greater than val2 */
@@ -2237,7 +2335,7 @@ Bool SCIPsetIsSumLE(
 {
    assert(set != NULL);
 
-   return EPSLE(val1, val2, set->sumepsilon);
+   return EPSLE(val1, val2, set->num_sumepsilon);
 }
 
 /** checks, if val1 is (more than sumepsilon) greater than val2 */
@@ -2249,7 +2347,7 @@ Bool SCIPsetIsSumGT(
 {
    assert(set != NULL);
 
-   return EPSGT(val1, val2, set->sumepsilon);
+   return EPSGT(val1, val2, set->num_sumepsilon);
 }
 
 /** checks, if val1 is not (more than sumepsilon) lower than val2 */
@@ -2261,7 +2359,7 @@ Bool SCIPsetIsSumGE(
 {
    assert(set != NULL);
 
-   return EPSGE(val1, val2, set->sumepsilon);
+   return EPSGE(val1, val2, set->num_sumepsilon);
 }
 
 /** checks, if value is in range sumepsilon of 0.0 */
@@ -2272,7 +2370,7 @@ Bool SCIPsetIsSumZero(
 {
    assert(set != NULL);
 
-   return EPSZ(val, set->sumepsilon);
+   return EPSZ(val, set->num_sumepsilon);
 }
 
 /** checks, if value is greater than sumepsilon */
@@ -2283,7 +2381,7 @@ Bool SCIPsetIsSumPositive(
 {
    assert(set != NULL);
 
-   return EPSP(val, set->sumepsilon);
+   return EPSP(val, set->num_sumepsilon);
 }
 
 /** checks, if value is lower than -sumepsilon */
@@ -2294,7 +2392,7 @@ Bool SCIPsetIsSumNegative(
 {
    assert(set != NULL);
 
-   return EPSN(val, set->sumepsilon);
+   return EPSN(val, set->num_sumepsilon);
 }
 
 /** checks, if relative difference of values is in range of feastol */
@@ -2310,7 +2408,7 @@ Bool SCIPsetIsFeasEQ(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSZ(diff, set->feastol);
+   return EPSZ(diff, set->num_feastol);
 }
 
 /** checks, if relative difference of val1 and val2 is lower than feastol */
@@ -2326,7 +2424,7 @@ Bool SCIPsetIsFeasLT(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSN(diff, set->feastol);
+   return EPSN(diff, set->num_feastol);
 }
 
 /** checks, if relative difference of val1 and val2 is not greater than feastol */
@@ -2342,7 +2440,7 @@ Bool SCIPsetIsFeasLE(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return !EPSP(diff, set->feastol);
+   return !EPSP(diff, set->num_feastol);
 }
 
 /** checks, if relative difference of val1 and val2 is greater than feastol */
@@ -2358,7 +2456,7 @@ Bool SCIPsetIsFeasGT(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSP(diff, set->feastol);
+   return EPSP(diff, set->num_feastol);
 }
 
 /** checks, if relative difference of val1 and val2 is not lower than -feastol */
@@ -2374,7 +2472,7 @@ Bool SCIPsetIsFeasGE(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return !EPSN(diff, set->feastol);
+   return !EPSN(diff, set->num_feastol);
 }
 
 /** checks, if value is in range feasibility tolerance of 0.0 */
@@ -2385,7 +2483,7 @@ Bool SCIPsetIsFeasZero(
 {
    assert(set != NULL);
 
-   return EPSZ(val, set->feastol);
+   return EPSZ(val, set->num_feastol);
 }
 
 /** checks, if value is greater than feasibility tolerance */
@@ -2396,7 +2494,7 @@ Bool SCIPsetIsFeasPositive(
 {
    assert(set != NULL);
 
-   return EPSP(val, set->feastol);
+   return EPSP(val, set->num_feastol);
 }
 
 /** checks, if value is lower than -feasibility tolerance */
@@ -2407,7 +2505,7 @@ Bool SCIPsetIsFeasNegative(
 {
    assert(set != NULL);
 
-   return EPSN(val, set->feastol);
+   return EPSN(val, set->num_feastol);
 }
 
 /** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
@@ -2419,7 +2517,7 @@ Bool SCIPsetIsLbBetter(
 {
    assert(set != NULL);
 
-   return EPSGT(lb1, lb2, set->boundstreps);
+   return EPSGT(lb1, lb2, set->num_boundstreps);
 }
 
 /** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
@@ -2431,7 +2529,7 @@ Bool SCIPsetIsUbBetter(
 {
    assert(set != NULL);
 
-   return EPSLT(ub1, ub2, set->boundstreps);
+   return EPSLT(ub1, ub2, set->num_boundstreps);
 }
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
@@ -2444,9 +2542,9 @@ Bool SCIPsetIsEfficacious(
    assert(set != NULL);
 
    if( root )
-      return EPSP(efficacy, set->mincutefficacyroot);
+      return EPSP(efficacy, set->sepa_minefficacyroot);
    else
-      return EPSP(efficacy, set->mincutefficacy);
+      return EPSP(efficacy, set->sepa_minefficacy);
 }
 
 /** checks, if relative difference of values is in range of epsilon */
@@ -2462,7 +2560,7 @@ Bool SCIPsetIsRelEQ(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSZ(diff, set->epsilon);
+   return EPSZ(diff, set->num_epsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is lower than epsilon */
@@ -2478,7 +2576,7 @@ Bool SCIPsetIsRelLT(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSN(diff, set->epsilon);
+   return EPSN(diff, set->num_epsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is not greater than epsilon */
@@ -2494,7 +2592,7 @@ Bool SCIPsetIsRelLE(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return !EPSP(diff, set->epsilon);
+   return !EPSP(diff, set->num_epsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is greater than epsilon */
@@ -2510,7 +2608,7 @@ Bool SCIPsetIsRelGT(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSP(diff, set->epsilon);
+   return EPSP(diff, set->num_epsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is not lower than -epsilon */
@@ -2526,7 +2624,7 @@ Bool SCIPsetIsRelGE(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return !EPSN(diff, set->epsilon);
+   return !EPSN(diff, set->num_epsilon);
 }
 
 /** checks, if relative difference of values is in range of sumepsilon */
@@ -2542,7 +2640,7 @@ Bool SCIPsetIsSumRelEQ(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSZ(diff, set->sumepsilon);
+   return EPSZ(diff, set->num_sumepsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is lower than sumepsilon */
@@ -2558,7 +2656,7 @@ Bool SCIPsetIsSumRelLT(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSN(diff, set->sumepsilon);
+   return EPSN(diff, set->num_sumepsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
@@ -2574,7 +2672,7 @@ Bool SCIPsetIsSumRelLE(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return !EPSP(diff, set->sumepsilon);
+   return !EPSP(diff, set->num_sumepsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is greater than sumepsilon */
@@ -2590,7 +2688,7 @@ Bool SCIPsetIsSumRelGT(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return EPSP(diff, set->sumepsilon);
+   return EPSP(diff, set->num_sumepsilon);
 }
 
 /** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
@@ -2606,7 +2704,7 @@ Bool SCIPsetIsSumRelGE(
 
    diff = SCIPsetRelDiff(set, val1, val2);
 
-   return !EPSN(diff, set->sumepsilon);
+   return !EPSN(diff, set->num_sumepsilon);
 }
 
 /** checks, if value is (positive) infinite */
@@ -2617,7 +2715,7 @@ Bool SCIPsetIsInfinity(
 {
    assert(set != NULL);
 
-   return (val >= set->infinity);
+   return (val >= set->num_infinity);
 }
 
 /** checks, if value is non-negative within the LP feasibility bounds */
@@ -2628,7 +2726,7 @@ Bool SCIPsetIsFeasible(
 {
    assert(set != NULL);
 
-   return (val >= -set->feastol);
+   return (val >= -set->num_feastol);
 }
 
 /** checks, if value is integral within the LP feasibility bounds */
@@ -2639,7 +2737,7 @@ Bool SCIPsetIsIntegral(
 {
    assert(set != NULL);
 
-   return EPSISINT(val, set->feastol);
+   return EPSISINT(val, set->num_feastol);
 }
 
 /** checks, if given fractional part is smaller than feastol */
@@ -2649,10 +2747,10 @@ Bool SCIPsetIsFracIntegral(
    )
 {
    assert(set != NULL);
-   assert(SCIPsetIsGE(set, val, -set->feastol));
-   assert(SCIPsetIsLE(set, val, 1.0+set->feastol));
+   assert(SCIPsetIsGE(set, val, -set->num_feastol));
+   assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
 
-   return (val <= set->feastol);
+   return (val <= set->num_feastol);
 }
 
 /** rounds value + feasibility tolerance down to the next integer */
@@ -2663,7 +2761,7 @@ Real SCIPsetFloor(
 {
    assert(set != NULL);
 
-   return EPSFLOOR(val, set->feastol);
+   return EPSFLOOR(val, set->num_feastol);
 }
 
 /** rounds value - feasibility tolerance up to the next integer */
@@ -2674,7 +2772,7 @@ Real SCIPsetCeil(
 {
    assert(set != NULL);
 
-   return EPSCEIL(val, set->feastol);
+   return EPSCEIL(val, set->num_feastol);
 }
 
 /** returns fractional part of value, i.e. x - floor(x) */
@@ -2685,7 +2783,7 @@ Real SCIPsetFrac(
 {
    assert(set != NULL);
 
-   return EPSFRAC(val, set->feastol);
+   return EPSFRAC(val, set->num_feastol);
 }
 
 

@@ -1,22 +1,174 @@
+# branching score factor to weigh downward and upward gain prediction
+# [type: real, range: [0,1], default: 0.167]
+branching/scorefac = 0.167
+
+# should branching on binary variables be prefered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+branching/preferbinary = FALSE
+
+# should propagation conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/useprop = TRUE
+
+# should infeasible LP conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/uselp = FALSE
+
+# should infeasible strong branching conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/usesb = FALSE
+
+# should pseudo solution conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/usepseudo = TRUE
+
+# maximal fraction of binary variables involved in a conflict clause
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
+conflict/maxvarsfac = 0.02
+
+# minimal absolute maximum of variables involved in a conflict clause
+# [type: int, range: [0,2147483647], default: 30]
+conflict/minmaxvars = 30
+
+# maximal number of LP resolving loops during conflict analysis
+# [type: int, range: [1,2147483647], default: 100]
+conflict/maxlploops = 100
+
+# number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)
+# [type: int, range: [-1,2147483647], default: -1]
+conflict/fuiplevels = -1
+
+# maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)
+# [type: int, range: [-1,2147483647], default: 1]
+conflict/interclauses = 1
+
+# should earlier nodes be repropagated in order to replace branching decisions by deductions
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/repropagate = TRUE
+
+# maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
+# [type: int, range: [-1,2147483647], default: 200]
+constraints/agelimit = 200
+
+# age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/obsoleteage = 100
+
 # verbosity level of output
 # [type: int, range: [0,4], default: 2]
 display/verblevel = 4
+
+# maximal number of characters in a node information line
+# [type: int, range: [0,2147483647], default: 139]
+display/width = 139
+
+# frequency for displaying node information lines
+# [type: int, range: [-1,2147483647], default: 100]
+display/freq = 100
+
+# frequency for displaying header lines (every n'th node information line)
+# [type: int, range: [-1,2147483647], default: 15]
+display/headerfreq = 15
 
 # should the LP solver display status messages?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 display/lpinfo = FALSE
 
-# maximal number of characters in a node information line
-# [type: int, range: [0,2147483647], default: 139]
-display/dispwidth = 139
+# maximal time in seconds to run
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+limits/time = 1e+20
 
-# frequency for displaying node information lines
-# [type: int, range: [-1,2147483647], default: 100]
-display/dispfreq = 100
+# maximal number of nodes to process (-1: no limit)
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+limits/nodes = -1
 
-# frequency for displaying header lines (every n'th node information line)
-# [type: int, range: [-1,2147483647], default: 15]
-display/dispheaderfreq = 15
+# maximal memory usage in MB; reported memory usage is lower than real memory usage!
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+limits/memory = 1e+20
+
+# solving stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+limits/gap = 0
+
+# solving stops, if the given number of solutions were found (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+limits/sol = -1
+
+# solving stops, if the given number of solution improvements were found (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+limits/bestsol = -1
+
+# maximal number of solutions to store in the solution storage
+# [type: int, range: [1,2147483647], default: 100]
+limits/maxsol = 100
+
+# frequency for solving LP at the nodes (-1: never; 0: only root LP)
+# [type: int, range: [-1,2147483647], default: 1]
+lp/solvefreq = 1
+
+# maximal depth for solving LP at the nodes (-1: no depth limit)
+# [type: int, range: [-1,2147483647], default: -1]
+lp/solvedepth = -1
+
+# maximum age a dynamic column can reach before it is deleted from the LP
+# [type: int, range: [0,2147483647], default: 10]
+lp/colagelimit = 10
+
+# maximum age a dynamic row can reach before it is deleted from the LP
+# [type: int, range: [0,2147483647], default: 10]
+lp/rowagelimit = 10
+
+# should new non-basic columns be removed after LP solving?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+lp/cleanupcols = FALSE
+
+# should new basic rows be removed after LP solving?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/cleanuprows = TRUE
+
+# should LP solutions be checked, resolving LP when numerical troubles occur?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/checkfeas = TRUE
+
+# should FASTMIP setting of LP solver be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/fastmip = TRUE
+
+# should scaling of LP solver be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/scaling = TRUE
+
+# fraction of maximal memory usage resulting in switch to memory saving mode
+# [type: real, range: [0,1], default: 0.8]
+memory/savefac = 0.8
+
+# memory growing factor for dynamically allocated arrays
+# [type: real, range: [1,10], default: 1.2]
+memory/arraygrowfac = 1.2
+
+# initial size of dynamically allocated arrays
+# [type: int, range: [0,2147483647], default: 4]
+memory/arraygrowinit = 4
+
+# memory growing factor for tree array
+# [type: real, range: [1,10], default: 2]
+memory/treegrowfac = 2
+
+# initial size of tree array
+# [type: int, range: [0,2147483647], default: 65536]
+memory/treegrowinit = 65536
+
+# memory growing factor for path array
+# [type: real, range: [1,10], default: 2]
+memory/pathgrowfac = 2
+
+# initial size of path array
+# [type: int, range: [0,2147483647], default: 256]
+memory/pathgrowinit = 256
+
+# should the CTRL-C interrupt be caught by SCIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+misc/catchctrlc = TRUE
 
 # values larger than this are considered infinity
 # [type: real, range: [10000000000,1e+98], default: 1e+20]
@@ -50,105 +202,73 @@ numerics/pseudocosteps = 0.1
 # [type: real, range: [0,1.79769313486232e+308], default: 0.0001]
 numerics/pseudocostdelta = 0.0001
 
-# fraction of maximal memory usage resulting in switch to memory saving mode
-# [type: real, range: [0,1], default: 0.8]
-memory/memsavefac = 0.8
+# maximal number of presolving rounds (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/maxrounds = -1
 
-# memory growing factor for dynamically allocated arrays
-# [type: real, range: [1,10], default: 1.2]
-memory/memgrowfac = 1.2
-
-# initial size of dynamically allocated arrays
-# [type: int, range: [0,2147483647], default: 4]
-memory/memgrowinit = 4
-
-# memory growing factor for tree array
-# [type: real, range: [1,10], default: 2]
-memory/treegrowfac = 2
-
-# initial size of tree array
-# [type: int, range: [0,2147483647], default: 65536]
-memory/treegrowinit = 65536
-
-# memory growing factor for path array
-# [type: real, range: [1,10], default: 2]
-memory/pathgrowfac = 2
-
-# initial size of path array
-# [type: int, range: [0,2147483647], default: 256]
-memory/pathgrowinit = 256
-
-# branching score factor to weigh downward and upward gain prediction
-# [type: real, range: [0,1], default: 0.167]
-branching/branchscorefac = 0.167
-
-# should branching on binary variables be prefered?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-branching/preferbinbranch = FALSE
+# abort presolve, if less than this fraction of the problem was changed in last presolve round
+# [type: real, range: [0,1], default: 0.0001]
+presolving/abortfac = 0.0001
 
 # number of root node bound changes triggering a restart with preprocessing (-1: no restart, 0: restart only after complete root node evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 presolving/restartbdchgs = 100
 
-# maximal number of presolving rounds (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-presolving/maxpresolrounds = -1
-
-# abort presolve, if less than this fraction of the problem was changed in last presolve round
-# [type: real, range: [0,1], default: 0.0001]
-presolving/presolabortfac = 0.0001
-
 # maximal number of variables priced in per pricing round
 # [type: int, range: [1,2147483647], default: 100]
-pricing/maxpricevars = 100
+pricing/maxvars = 100
 
 # maximal number of priced variables at the root node
 # [type: int, range: [1,2147483647], default: 2000]
-pricing/maxpricevarsroot = 2000
+pricing/maxvarsroot = 2000
 
-# pricing is aborted, if fac * maxpricevars pricing candidates were found
+# pricing is aborted, if fac * pricing/maxvars pricing candidates were found
 # [type: real, range: [1,1.79769313486232e+308], default: 2]
-pricing/abortpricevarsfac = 2
+pricing/abortfac = 2
 
 # maximal number of propagation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 100]
-propagation/maxproprounds = 100
+propagating/maxrounds = 100
 
 # maximal number of propagation rounds in the root node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 1000]
-propagation/maxproproundsroot = 1000
+propagating/maxroundsroot = 1000
+
+# frequency for applying reduced cost fixing (-1: never; 0: only root LP)
+# [type: int, range: [-1,2147483647], default: 1]
+propagating/redcostfreq = 1
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0.2]
-separating/maxsepabounddist = 0.2
-
-# maximal number of cuts separated per separation round (0: disable local separation)
-# [type: int, range: [0,2147483647], default: 100]
-separating/maxsepacuts = 100
-
-# maximal number of separated cuts at the root node (0: disable root node separation)
-# [type: int, range: [0,2147483647], default: 2000]
-separating/maxsepacutsroot = 2000
+separating/maxbounddist = 0.2
 
 # minimal efficacy for a cut to enter the LP
 # [type: real, range: [0,1e+98], default: 0.05]
-separating/mincutefficacy = 0.05
+separating/minefficacy = 0.05
 
 # minimal efficacy for a cut to enter the LP in the root node
 # [type: real, range: [0,1e+98], default: 0.01]
-separating/mincutefficacyroot = 0.01
+separating/minefficacyroot = 0.01
 
 # minimal orthogonality for a cut to enter the LP
 # [type: real, range: [0,1], default: 0.5]
-separating/mincutortho = 0.5
+separating/minortho = 0.5
 
 # minimal orthogonality for a cut to enter the LP in the root node
 # [type: real, range: [0,1], default: 0.5]
-separating/mincutorthoroot = 0.5
+separating/minorthoroot = 0.5
 
 # factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)
 # [type: real, range: [0,1e+98], default: 1]
-separating/cutorthofac = 1
+separating/orthofac = 1
+
+# maximal number of cuts separated per separation round (0: disable local separation)
+# [type: int, range: [0,2147483647], default: 100]
+separating/maxcuts = 100
+
+# maximal number of separated cuts at the root node (0: disable root node separation)
+# [type: int, range: [0,2147483647], default: 2000]
+separating/maxcutsroot = 2000
 
 # maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts
 # [type: int, range: [-1,2147483647], default: 100]
@@ -158,141 +278,21 @@ separating/cutagelimit = 100
 # [type: int, range: [-1,2147483647], default: 5]
 separating/poolfreq = 5
 
-# maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
-# [type: int, range: [-1,2147483647], default: 200]
-constraints/consagelimit = 200
-
-# age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/consobsoleteage = 100
-
-# should propagation conflict analysis be used?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/usepropconflict = TRUE
-
-# should infeasible LP conflict analysis be used?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-conflict/uselpconflict = FALSE
-
-# should infeasible strong branching conflict analysis be used?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-conflict/usesbconflict = FALSE
-
-# should pseudo solution conflict analysis be used?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/usepseudoconflict = TRUE
-
-# maximal fraction of binary variables involved in a conflict clause
-# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
-conflict/maxconfvarsfac = 0.02
-
-# minimal absolute maximum of variables involved in a conflict clause
-# [type: int, range: [0,2147483647], default: 30]
-conflict/minmaxconfvars = 30
-
-# maximal number of LP resolving loops during conflict analysis
-# [type: int, range: [1,2147483647], default: 100]
-conflict/maxconflploops = 100
-
-# number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)
-# [type: int, range: [-1,2147483647], default: -1]
-conflict/conffuiplevels = -1
-
-# maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)
-# [type: int, range: [-1,2147483647], default: 1]
-conflict/confinterclauses = 1
-
-# should earlier nodes be repropagated in order to replace branching decisions by deductions
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/repropconflict = TRUE
-
-# maximal number of nodes to process (-1: no limit)
-# [type: longint, range: [-1,9223372036854775807], default: -1]
-limits/nodelimit = -1
-
-# maximal time in seconds to run
-# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
-limits/timelimit = 1e+20
-
-# maximal memory usage in MB; reported memory usage is lower than real memory usage!
-# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
-limits/memlimit = 1e+20
-
-# solving stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value
-# [type: real, range: [0,1.79769313486232e+308], default: 0]
-limits/gaplimit = 0
-
-# solving stops, if the given number of solutions were found (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-limits/sollimit = -1
-
-# solving stops, if the given number of solution improvements were found (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-limits/bestsollimit = -1
-
-# maximal number of solutions to store in the solution storage
-# [type: int, range: [1,2147483647], default: 100]
-limits/maxsol = 100
-
-# frequency for solving LP at the nodes (-1: never; 0: only root LP)
-# [type: int, range: [-1,2147483647], default: 1]
-lp/lpsolvefreq = 1
-
-# maximal depth for solving LP at the nodes (-1: no depth limit)
-# [type: int, range: [-1,2147483647], default: -1]
-lp/lpsolvedepth = -1
-
-# frequency for applying reduced cost fixing (-1: never; 0: only root LP)
-# [type: int, range: [-1,2147483647], default: 1]
-lp/redcostfreq = 1
-
-# should LP solutions be checked, resolving LP when numerical troubles occur?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/checklpfeas = TRUE
-
-# should FASTMIP setting of LP solver be used?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/fastmip = TRUE
-
-# should scaling of LP solver be used?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/scaling = TRUE
-
-# should new non-basic columns be removed after LP solving?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-lp/cleanupcols = FALSE
-
-# should new basic rows be removed after LP solving?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/cleanuprows = TRUE
-
-# maximum age a dynamic column can reach before it is deleted from the LP
-# [type: int, range: [0,2147483647], default: 10]
-lp/colagelimit = 10
-
-# maximum age a dynamic row can reach before it is deleted from the LP
-# [type: int, range: [0,2147483647], default: 10]
-lp/rowagelimit = 10
-
 # default clock type (1: CPU user seconds, 2: wall clock time)
 # [type: int, range: [1,2], default: 1]
 timing/clocktype = 1
 
 # is timing enabled?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-timing/clocksenabled = TRUE
-
-# should the CTRL-C interrupt be caught by SCIP?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-misc/catchctrlc = TRUE
+timing/enabled = TRUE
 
 # name of the VBC Tool output file, or - if no VBC Tool output should be created
 # [type: string, default: "-"]
-misc/vbcfilename = "-"
+vbc/filename = "-"
 
 # should the real solving time be used instead of a time step counter in VBC output?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-misc/vbcuserealtime = TRUE
+vbc/realtime = TRUE
 
 # priority of conflict handler <linear>
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
@@ -1100,15 +1100,15 @@ heuristics/simplerounding/maxdepth = -1
 
 # priority of propagator <pseudoobj>
 # [type: int, range: [-2147483648,2147483647], default: 0]
-propagation/pseudoobj/priority = 0
+propagating/pseudoobj/priority = 0
 
 # frequency for calling propagator <pseudoobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-propagation/pseudoobj/freq = 1
+propagating/pseudoobj/freq = 1
 
 # maximal number of variables to look at in a single propagation round (-1: process all variables)
 # [type: int, range: [-1,2147483647], default: 100]
-propagation/pseudoobj/maxcands = 100
+propagating/pseudoobj/maxcands = 100
 
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -1000]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.50 2004/09/23 15:46:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.51 2004/10/05 16:08:08 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -236,26 +236,26 @@ void SCIPstatUpdateMemsaveMode(
    assert(stat != NULL);
    assert(set != NULL);
 
-   if( SCIPsetIsLT(set, set->memsavefac, 1.0) )
+   if( SCIPsetIsLT(set, set->mem_savefac, 1.0) )
    {
       Longint memused;
 
       memused = SCIPmemGetUsed(mem);
-      if( !stat->memsavemode && memused >= set->memsavefac * set->memlimit * 1024.0 * 1024.0 )
+      if( !stat->memsavemode && memused >= set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */
-         infoMessage(set->verblevel, SCIP_VERBLEVEL_HIGH,
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(node %lld) switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
-            stat->nnodes, (Real)memused/(1024.0*1024.0), set->memlimit);
+            stat->nnodes, (Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = TRUE;
          set->nodesel = NULL;
       }
-      else if( stat->memsavemode && memused < 0.5 * set->memsavefac * set->memlimit * 1024.0 * 1024.0 )
+      else if( stat->memsavemode && memused < 0.5 * set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to standard mode */
-         infoMessage(set->verblevel, SCIP_VERBLEVEL_HIGH,
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(node %lld) switching to standard mode (mem: %.1fM/%.1fM)\n", 
-            stat->nnodes, (Real)memused/(1024.0*1024.0), set->memlimit);
+            stat->nnodes, (Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = FALSE;
          set->nodesel = NULL;
       }

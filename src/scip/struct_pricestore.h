@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricestore.h,v 1.3 2004/02/04 17:27:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricestore.h,v 1.4 2004/10/05 16:08:08 bzfpfend Exp $"
 
 /**@file   struct_pricestore.h
  * @brief  datastructures for storing priced variables
@@ -43,7 +43,7 @@ struct Pricestore
    Real*            bdviolvarslb;       /**< lower bounds of bdviolvars */
    Real*            bdviolvarsub;       /**< upper bounds of bdbiolvars */
    int              varssize;           /**< size of vars and score arrays */
-   int              nvars;              /**< number of priced variables (max. is set->maxpricevars) */
+   int              nvars;              /**< number of priced variables (max. is set->price_maxvars) */
    int              bdviolvarssize;     /**< size of bdviolvars, bdviolvarslb, and bdviolvarsub arrays */
    int              nbdviolvars;        /**< number of variables, where zero violates the bounds */
    int              naddedbdviolvars;   /**< number of bound violated variables already added to the LP */

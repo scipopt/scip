@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.6 2004/09/23 15:46:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.7 2004/10/05 16:08:09 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -130,19 +130,19 @@ RETCODE SCIPvbcInit(
 {
    assert(vbc != NULL);
    assert(set != NULL);
-   assert(set->vbcfilename != NULL);
+   assert(set->vbc_filename != NULL);
 
-   if( set->vbcfilename[0] == '-' && set->vbcfilename[1] == '\0' )
+   if( set->vbc_filename[0] == '-' && set->vbc_filename[1] == '\0' )
       return SCIP_OKAY;
 
-   infoMessage(set->verblevel, SCIP_VERBLEVEL_NORMAL, "storing VBC information in file <%s>\n", set->vbcfilename);
-   vbc->file = fopen(set->vbcfilename, "w");
+   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "storing VBC information in file <%s>\n", set->vbc_filename);
+   vbc->file = fopen(set->vbc_filename, "w");
    vbc->timestep = 0;
-   vbc->userealtime = set->vbcuserealtime;
+   vbc->userealtime = set->vbc_realtime;
 
    if( vbc->file == NULL )
    {
-      errorMessage("error creating file <%s>\n", set->vbcfilename);
+      errorMessage("error creating file <%s>\n", set->vbc_filename);
       return SCIP_FILECREATEERROR;
    }
 
@@ -168,7 +168,7 @@ void SCIPvbcExit(
 
    if( vbc->file != NULL )
    {
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
       
       fclose(vbc->file);
       vbc->file = NULL;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.55 2004/09/07 18:22:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.56 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1037,9 +1037,9 @@ Real SCIPprobExternObjval(
    assert(prob != NULL);
 
    if( SCIPsetIsInfinity(set, objval) )
-      return (Real)prob->objsense * set->infinity;
+      return (Real)prob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
-      return -(Real)prob->objsense * set->infinity;
+      return -(Real)prob->objsense * SCIPsetInfinity(set);
    else
       return (Real)prob->objsense * (objval + prob->objoffset);
 }
@@ -1054,9 +1054,9 @@ Real SCIPprobInternObjval(
    assert(prob != NULL);
 
    if( SCIPsetIsInfinity(set, objval) )
-      return (Real)prob->objsense * set->infinity;
+      return (Real)prob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
-      return -(Real)prob->objsense * set->infinity;
+      return -(Real)prob->objsense * SCIPsetInfinity(set);
    else
       return (Real)prob->objsense * objval - prob->objoffset;
 }

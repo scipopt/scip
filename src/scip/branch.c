@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.51 2004/10/05 11:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.52 2004/10/05 16:08:06 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -309,7 +309,7 @@ RETCODE SCIPbranchcandGetLPCands(
    if( nlpcands != NULL )
       *nlpcands = branchcand->nlpcands;
    if( npriolpcands != NULL )
-      *npriolpcands = (set->preferbinbranch && branchcand->npriolpbins > 0 ? branchcand->npriolpbins
+      *npriolpcands = (set->branch_preferbinary && branchcand->npriolpbins > 0 ? branchcand->npriolpbins
          : branchcand->npriolpcands);
 
    return SCIP_OKAY;
@@ -371,7 +371,7 @@ RETCODE SCIPbranchcandGetPseudoCands(
    if( npseudocands != NULL )
       *npseudocands = branchcand->npseudocands;
    if( npriopseudocands != NULL )
-      *npriopseudocands = (set->preferbinbranch && branchcand->npriopseudobins > 0 ? branchcand->npriopseudobins
+      *npriopseudocands = (set->branch_preferbinary && branchcand->npriopseudobins > 0 ? branchcand->npriopseudobins
          : branchcand->npriopseudocands);
 
    return SCIP_OKAY;
@@ -1255,12 +1255,12 @@ Real SCIPbranchGetScore(
 
    /* weigh the two child nodes with branchscorefac and 1-branchscorefac */
    if( downgain > upgain )
-      score = set->branchscorefac * downgain + (1.0-set->branchscorefac) * upgain;
+      score = set->branch_scorefac * downgain + (1.0-set->branch_scorefac) * upgain;
    else
-      score = set->branchscorefac * upgain + (1.0-set->branchscorefac) * downgain;
+      score = set->branch_scorefac * upgain + (1.0-set->branch_scorefac) * downgain;
 
    /* slightly increase gains, such that for zero gains, the branch factor comes into account */
-   score += set->sumepsilon;
+   score += SCIPsetSumepsilon(set);
 
    /* apply the branch factor of the variable */
    if( var != NULL )
@@ -1277,13 +1277,15 @@ Real SCIPbranchGetScoreMultiple(
    Real*            gains               /**< prediction of objective gain for each child */
    )
 {
-   Real min1 = set->infinity;
-   Real min2 = set->infinity;
+   Real min1;
+   Real min2;
    int c;
 
    assert(nchildren == 0 || gains != NULL);
 
    /* search for the two minimal gains in the child list and use these to calculate the branching score */
+   min1 = SCIPsetInfinity(set);
+   min2 = SCIPsetInfinity(set);
    for( c = 0; c < nchildren; ++c )
    {
       if( gains[c] < min1 )

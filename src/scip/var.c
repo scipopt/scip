@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.113 2004/10/05 11:01:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.114 2004/10/05 16:08:09 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1565,7 +1565,7 @@ Real adjustedLb(
    )
 {
    if( SCIPsetIsInfinity(set, -lb) )
-      return -set->infinity;
+      return -SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetCeil(set, lb);
    else if( SCIPsetIsZero(set, lb) )
@@ -1583,7 +1583,7 @@ Real adjustedUb(
    )
 {
    if( SCIPsetIsInfinity(set, ub) )
-      return set->infinity;
+      return SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFloor(set, ub);
    else if( SCIPsetIsZero(set, ub) )
@@ -2862,22 +2862,22 @@ RETCODE varUpdateAggregationBounds(
       if( scalar > 0.0 )
       {
          if( SCIPsetIsInfinity(set, -aggvar->glbdom.lb) )
-            varlb = -set->infinity;
+            varlb = -SCIPsetInfinity(set);
          else
             varlb = aggvar->glbdom.lb * scalar + constant;
          if( SCIPsetIsInfinity(set, aggvar->glbdom.ub) )
-            varub = set->infinity;
+            varub = SCIPsetInfinity(set);
          else
             varub = aggvar->glbdom.ub * scalar + constant;
       }
       else
       {
          if( SCIPsetIsInfinity(set, -aggvar->glbdom.lb) )
-            varub = set->infinity;
+            varub = SCIPsetInfinity(set);
          else
             varub = aggvar->glbdom.lb * scalar + constant;
          if( SCIPsetIsInfinity(set, aggvar->glbdom.ub) )
-            varlb = -set->infinity;
+            varlb = -SCIPsetInfinity(set);
          else
             varlb = aggvar->glbdom.ub * scalar + constant;
       }
@@ -2925,22 +2925,22 @@ RETCODE varUpdateAggregationBounds(
       if( scalar > 0.0 )
       {
          if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-            aggvarlb = -set->infinity;
+            aggvarlb = -SCIPsetInfinity(set);
          else
             aggvarlb = (var->glbdom.lb - constant) / scalar;
          if( SCIPsetIsInfinity(set, var->glbdom.ub) )
-            aggvarub = set->infinity;
+            aggvarub = SCIPsetInfinity(set);
          else
             aggvarub = (var->glbdom.ub - constant) / scalar;
       }
       else
       {
          if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-            aggvarub = set->infinity;
+            aggvarub = SCIPsetInfinity(set);
          else
             aggvarub = (var->glbdom.lb - constant) / scalar;
          if( SCIPsetIsInfinity(set, var->glbdom.ub) )
-            aggvarlb = -set->infinity;
+            aggvarlb = -SCIPsetInfinity(set);
          else
             aggvarlb = (var->glbdom.ub - constant) / scalar;
       }
@@ -5255,7 +5255,7 @@ void varProcessChgBranchFactor(
    assert(set != NULL);
 
    /* only use positive values */
-   branchfactor = MAX(branchfactor, set->epsilon);
+   branchfactor = MAX(branchfactor, SCIPsetEpsilon(set));
 
    debugMessage("process changing branch factor of <%s> from %f to %f\n", var->name, var->branchfactor, branchfactor);
 

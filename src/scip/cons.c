@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.95 2004/09/23 15:46:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.96 2004/10/05 16:08:06 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -210,7 +210,7 @@ Bool consExceedsAgelimit(
    assert(cons != NULL);
    assert(set != NULL);
 
-   return (set->consagelimit >= 0 && cons->age > set->consagelimit);
+   return (set->cons_agelimit >= 0 && cons->age > set->cons_agelimit);
 }
 
 /** returns whether the constraint's age exceeds the obsolete age limit */
@@ -223,7 +223,7 @@ Bool consExceedsObsoleteage(
    assert(cons != NULL);
    assert(set != NULL);
 
-   return (set->consobsoleteage >= 0 && cons->age > set->consobsoleteage);
+   return (set->cons_obsoleteage >= 0 && cons->age > set->cons_obsoleteage);
 }
 
 /** marks constraint to be obsolete; it will be moved to the last part of the constraint arrays, such that

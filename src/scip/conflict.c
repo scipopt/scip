@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.63 2004/09/28 09:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.64 2004/10/05 16:08:06 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -687,8 +687,9 @@ RETCODE SCIPconflictCreate(
 #if 0
    CHECK_OKAY( SCIPlpiCreate(&(*conflict)->lpi, "LPconflict") );
 #endif
-   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->binbdchgqueue, set->memgrowinit, set->memgrowfac, conflictBdchginfoComp) );
-   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->nonbinbdchgqueue, set->memgrowinit, set->memgrowfac, 
+   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->binbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
+         conflictBdchginfoComp) );
+   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->nonbinbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac, 
          conflictBdchginfoComp) );
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvardepths = NULL;
@@ -1060,7 +1061,7 @@ RETCODE conflictAddClause(
          /* reactivate propagation on the node at depth level of the last but one fixed conflict variable,
           * such that the last fixed conflict variable can be deduced to the opposite value
           */
-         if( set->repropconflict )
+         if( set->conf_repropagate )
          {
             propdepth = conflictGetPropagateDepth(conflict);
             assert(0 <= propdepth && propdepth < tree->pathlen);
@@ -1125,8 +1126,8 @@ RETCODE conflictAnalyze(
    currentdepth = SCIPtreeGetCurrentDepth(tree);
    assert(currentdepth == tree->pathlen-1);
 
-   resolvedepth = ((set->conffuiplevels >= 0 && set->conffuiplevels < currentdepth)
-      ? currentdepth - set->conffuiplevels : 0);
+   resolvedepth = ((set->conf_fuiplevels >= 0 && set->conf_fuiplevels < currentdepth)
+      ? currentdepth - set->conf_fuiplevels : 0);
    assert(0 <= resolvedepth && resolvedepth <= currentdepth);
 
    debugMessage("analyzing conflict with %d+%d conflict candidates and starting conflict set of size %d in depth %d (maxsize=%d, resolvedepth=%d)\n",
@@ -1168,7 +1169,7 @@ RETCODE conflictAnalyze(
 
       /* create intermediate conflict clause */
       if( nresolutions > lastclausenresolutions
-         && (set->confinterclauses == -1 || *nclauses < set->confinterclauses)
+         && (set->conf_interclauses == -1 || *nclauses < set->conf_interclauses)
          && validdepth < currentdepth
          && SCIPpqueueNElems(conflict->nonbinbdchgqueue) == 0
          && bdchgdepth < lastclauseresoldepth )
@@ -1435,7 +1436,7 @@ RETCODE SCIPconflictAnalyze(
       *success = FALSE;
 
    /* check, if propagation conflict analysis is enabled */
-   if( !set->usepropconflict )
+   if( !set->conf_useprop )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -1443,8 +1444,8 @@ RETCODE SCIPconflictAnalyze(
       return SCIP_OKAY;
 
    /* calculate the maximal size of the conflict set */
-   maxsize = (int)(set->maxconfvarsfac * prob->nbinvars);
-   maxsize = MAX(maxsize, set->minmaxconfvars);
+   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
+   maxsize = MAX(maxsize, set->conf_minmaxvars);
    if( maxsize < 2 )
       return SCIP_OKAY;
 
@@ -1906,7 +1907,7 @@ RETCODE conflictAnalyzeLPAltpoly(
    }
    else
    {
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, 
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL, 
          "(node %lld) alternative LP is unstable or primal infeasible\n", stat->nnodes);
    }
 
@@ -2288,14 +2289,14 @@ RETCODE addCand(
 
    /* if the bound change is not useable in conflict analysis, we have to undo it */
    if( !useable )
-      score = set->infinity;
+      score = SCIPsetInfinity(set);
    else
    {
        /* calculate score for undoing the bound change */
        score = 1.0 - proofactdelta/(prooflhs - proofact);
        score = MAX(score, 0.0) + 1e-6;
        score *= depth;
-       score = MIN(score, set->infinity/2);
+       score = MIN(score, SCIPsetInfinity(set)/2);
    }
    
    /* get enough memory to store new candidate */
@@ -2765,7 +2766,7 @@ RETCODE undoBdchgsDualsol(
    /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
     * infeasible
     */
-   duallhs = -(lp->cutoffbound - set->sumepsilon);
+   duallhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
    dualact = 0.0;
 
    /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
@@ -3073,8 +3074,8 @@ RETCODE conflictAnalyzeLP(
       return SCIP_OKAY;
 
    /* calculate the maximal size of the conflict set */
-   maxsize = (int)(set->maxconfvarsfac * prob->nbinvars);
-   maxsize = MAX(maxsize, set->minmaxconfvars);
+   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
+   maxsize = MAX(maxsize, set->conf_minmaxvars);
    if( maxsize < 2 )
       return SCIP_OKAY;
 
@@ -3370,7 +3371,7 @@ RETCODE conflictAnalyzeLP(
          debugMessage(" -> finished infeasible LP conflict analysis loop %d (iter: %d, nbdchgs: %d)\n",
             nloops, iter, nbdchgs - lastnbdchgs);
       }
-      while( resolve && nloops < set->maxconflploops );
+      while( resolve && nloops < set->conf_maxlploops );
       debugMessage("finished undoing bound changes after %d loops (valid=%d)\n", nloops, valid);
 
       /* reset variables to local bounds */
@@ -3446,7 +3447,7 @@ RETCODE SCIPconflictAnalyzeLP(
       *success = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->uselpconflict )
+   if( !set->conf_uselp )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -3576,7 +3577,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
       *upconflict = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->usesbconflict )
+   if( !set->conf_usesb )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -3803,7 +3804,7 @@ RETCODE SCIPconflictAnalyzePseudo(
       *success = FALSE;
 
    /* check, if pseudo solution conflict analysis is enabled */
-   if( !set->usepseudoconflict )
+   if( !set->conf_usepseudo )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -3811,8 +3812,8 @@ RETCODE SCIPconflictAnalyzePseudo(
       return SCIP_OKAY;
 
    /* calculate the maximal size of the conflict set */
-   maxsize = (int)(set->maxconfvarsfac * prob->nbinvars);
-   maxsize = MAX(maxsize, set->minmaxconfvars);
+   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
+   maxsize = MAX(maxsize, set->conf_minmaxvars);
    if( maxsize < 2 )
       return SCIP_OKAY;
 
@@ -3850,7 +3851,7 @@ RETCODE SCIPconflictAnalyzePseudo(
    /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
     * infeasible
     */
-   pseudolhs = -(lp->cutoffbound - set->sumepsilon);
+   pseudolhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
 
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;

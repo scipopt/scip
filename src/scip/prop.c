@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.1 2004/09/23 15:46:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.2 2004/10/05 16:08:08 bzfpfend Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -104,12 +104,12 @@ RETCODE SCIPpropCreate(
    (*prop)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "propagation/%s/priority", name);
+   sprintf(paramname, "propagating/%s/priority", name);
    sprintf(paramdesc, "priority of propagator <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
          &(*prop)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdPropPriority, (PARAMDATA*)(*prop)) ); /*lint !e740*/
-   sprintf(paramname, "propagation/%s/freq", name);
+   sprintf(paramname, "propagating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
          &(*prop)->freq, freq, -1, INT_MAX, NULL, NULL) );

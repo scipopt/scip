@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.31 2004/10/05 11:01:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.32 2004/10/05 16:08:09 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -51,34 +51,6 @@
 /** global SCIP settings */
 struct Set
 {
-   Real             infinity;           /**< values larger than this are considered infinity */
-   Real             epsilon;            /**< absolute values smaller than this are considered zero */
-   Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
-   Real             feastol;            /**< feasibility tolerance for constraints */
-   Real             dualfeastol;        /**< feasibility tolerance for reduced costs */
-   Real             boundstreps;        /**< minimal improve for strengthening bounds */
-   Real             pseudocosteps;      /**< minimal variable distance value to use for pseudo cost updates */
-   Real             pseudocostdelta;    /**< minimal objective distance value to use for pseudo cost updates */
-   Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
-   Real             treegrowfac;        /**< memory growing factor for tree array */
-   Real             pathgrowfac;        /**< memory growing factor for path array */
-   Real             branchscorefac;     /**< branching score factor to weigh downward and upward gain prediction */
-   Real             presolabortfac;     /**< abort presolve, if l.t. this frac of the problem was changed in last round */
-   Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
-   Real             maxsepabounddist;   /**< maximal relative distance from current node's dual bound to primal bound
-                                         *   compared to best node's dual bound for applying separation
-                                         *   (0.0: only on current best node, 1.0: on all nodes) */
-   Real             mincutefficacy;     /**< minimal efficacy for a cut to enter the LP */
-   Real             mincutefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
-   Real             mincutortho;        /**< minimal orthogonality for a cut to enter the LP */
-   Real             mincutorthoroot;    /**< minimal orthogonality for a cut to enter the LP in the root node */
-   Real             cutorthofac;        /**< factor to scale orthogonality of cut in separation score calculation */
-   Real             maxconfvarsfac;     /**< maximal fraction of binary variables involved in a conflict clause */
-   Real             timelimit;          /**< maximal time in seconds to run */
-   Real             memlimit;           /**< maximal memory usage in MB */
-   Real             gaplimit;           /**< solving stops, if the given gap is reached */
-   Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
-   Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
    SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    PARAMSET*        paramset;           /**< set of parameters */
    BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
@@ -95,7 +67,6 @@ struct Set
    NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    BRANCHRULE**     branchrules;        /**< branching rules */
    DISP**           disps;              /**< display columns */
-   char*            vbcfilename;        /**< name of the VBC Tool output file, or - if no output should be created */
    int              nreaders;           /**< number of file readers */
    int              readerssize;        /**< size of readers array */
    int              npricers;           /**< number of variable pricers */
@@ -121,42 +92,6 @@ struct Set
    int              branchrulessize;    /**< size of branchrules array */
    int              ndisps;             /**< number of display columns */
    int              dispssize;          /**< size of disps array */
-   int              memgrowinit;        /**< initial size of dynamically allocated arrays */
-   int              treegrowinit;       /**< initial size of tree array */
-   int              pathgrowinit;       /**< initial size of path array */
-   int              dispwidth;          /**< maximal number of characters in a node information line */
-   int              dispfreq;           /**< frequency for displaying node information lines */
-   int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
-   int              restartbdchgs;      /**< number of root node bound changes triggering a restart with preprocessing
-                                         *   (-1: no restart, 0: restart only after complete root node evaluation) */
-   int              maxpresolrounds;    /**< maximal number of presolving rounds (-1: unlimited) */
-   int              maxproprounds;      /**< maximal number of propagation rounds per node (-1: unlimited) */
-   int              maxproproundsroot;  /**< maximal number of propagation rounds in the root node (-1: unlimited) */
-   int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
-   int              maxpricevarsroot;   /**< maximal number of priced variables at the root node */
-   int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
-   int              maxsepacutsroot;    /**< maximal number of separated cuts at the root node */
-   int              minmaxconfvars;     /**< minimal absolute maximum of variables involved in a conflict clause */
-   int              maxconflploops;     /**< maximal number of LP resolving loops during conflict analysis */
-   int              conffuiplevels;     /**< number of depth levels up to which first UIP's are used in conflict
-                                         *   analysis (-1: use All-FirstUIP rule) */
-   int              confinterclauses;   /**< maximal number of intermediate conflict clauses generated in conflict
-                                         *   graph (-1: use every intermediate clause) */
-   int              colagelimit;        /**< maximum age a column can reach before it is deleted from the LP */
-   int              rowagelimit;        /**< maximum age a row can reach before it is deleted from the LP */
-   int              cutagelimit;        /**< maximum age a cut can reach before it is deleted from the global cut pool */
-   int              poolfreq;           /**< separation frequency for the global cut pool */
-   int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted, or -1 */
-   int              consobsoleteage;    /**< age of a constraint after which it is marked obsolete (not useful anymore) */
-   int              maxsol;             /**< maximal number of solutions to store in the solution storage */
-   int              sollimit;           /**< solving stops, if the given number of solutions were found (-1: no limit) */
-   int              bestsollimit;       /**< solving stops, if the given number of solution improvements were found
-                                         *   (-1: no limit) */
-   int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
-   int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
-   int              redcostfreq;        /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
-   VERBLEVEL        verblevel;          /**< verbosity level of output */
-   CLOCKTYPE        clocktype;          /**< default clock type to use */
    Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
    Bool             presolssorted;      /**< are the presolvers sorted by priority? */
@@ -164,23 +99,118 @@ struct Set
    Bool             propssorted;        /**< are the propagators sorted by priority? */
    Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
-   Bool             catchctrlc;         /**< should the CTRL-C interrupt be caught by SCIP? */
-   Bool             usepropconflict;    /**< should propagation conflict analysis be used? */
-   Bool             uselpconflict;      /**< should infeasible LP conflict analysis be used? */
-   Bool             usesbconflict;      /**< should infeasible strong branching conflict analysis be used? */
-   Bool             usepseudoconflict;  /**< should pseudo solution conflict analysis be used? */
-   Bool             repropconflict;     /**< should earlier nodes be repropagated in order to replace branching
+
+   /* branching settings */
+   Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction */
+   Bool             branch_preferbinary;/**< should branching on binary variables be prefered? */
+
+   /* conflict analysis settings */
+   Real             conf_maxvarsfac;    /**< maximal fraction of binary variables involved in a conflict clause */
+   int              conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict clause */
+   int              conf_maxlploops;    /**< maximal number of LP resolving loops during conflict analysis */
+   int              conf_fuiplevels;    /**< number of depth levels up to which first UIP's are used in conflict
+                                         *   analysis (-1: use All-FirstUIP rule) */
+   int              conf_interclauses;  /**< maximal number of intermediate conflict clauses generated in conflict
+                                         *   graph (-1: use every intermediate clause) */
+   Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
+   Bool             conf_uselp;         /**< should infeasible LP conflict analysis be used? */
+   Bool             conf_usesb;         /**< should infeasible strong branching conflict analysis be used? */
+   Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
+   Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                          *   decisions by deductions */
-   Bool             checklpfeas;        /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
-   Bool             exactsolve;         /**< should the problem be solved exactly (with proven dual bounds)? */
-   Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
-   Bool             scaling;            /**< should scaling of LP solver be used? */
-   Bool             lpinfo;             /**< should the LP solver display status messages? */
-   Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
-   Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
-   Bool             clocksenabled;      /**< is timing enabled? */
-   Bool             preferbinbranch;    /**< should branching on binary variables be prefered? */
-   Bool             vbcuserealtime;     /**< should the real solving time be used instead of time step counter in VBC output? */
+
+   /* constraint settings */
+   int              cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted, or -1 */
+   int              cons_obsoleteage;   /**< age of a constraint after which it is marked obsolete (not useful anymore) */
+
+   /* display settings */
+   VERBLEVEL        disp_verblevel;     /**< verbosity level of output */
+   int              disp_width;         /**< maximal number of characters in a node information line */
+   int              disp_freq;          /**< frequency for displaying node information lines */
+   int              disp_headerfreq;    /**< frequency for displaying header lines (every n'th node information line) */
+   Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
+
+   /* limit settings */
+   Real             limit_time;         /**< maximal time in seconds to run */
+   Real             limit_memory;       /**< maximal memory usage in MB */
+   Real             limit_gap;          /**< solving stops, if the given gap is reached */
+   Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
+   int              limit_sol;          /**< solving stops, if the given number of solutions were found (-1: no limit) */
+   int              limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
+                                         *   (-1: no limit) */
+   int              limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
+
+   /* LP settings */
+   int              lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
+   int              lp_solvedepth;      /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
+   int              lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the LP */
+   int              lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP */
+   Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after LP solving? */
+   Bool             lp_cleanuprows;     /**< should new basic rows be removed after LP solving? */
+   Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
+   Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
+   Bool             lp_scaling;         /**< should scaling of LP solver be used? */
+
+   /* memory settings */
+   Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
+   Real             mem_arraygrowfac;   /**< memory growing factor for dynamically allocated arrays */
+   Real             mem_treegrowfac;    /**< memory growing factor for tree array */
+   Real             mem_pathgrowfac;    /**< memory growing factor for path array */
+   int              mem_arraygrowinit;  /**< initial size of dynamically allocated arrays */
+   int              mem_treegrowinit;   /**< initial size of tree array */
+   int              mem_pathgrowinit;   /**< initial size of path array */
+   
+   /* miscellaneous settings */
+   Bool             misc_catchctrlc;    /**< should the CTRL-C interrupt be caught by SCIP? */
+   Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
+
+   /* numerical settings */
+   Real             num_infinity;       /**< values larger than this are considered infinity */
+   Real             num_epsilon;        /**< absolute values smaller than this are considered zero */
+   Real             num_sumepsilon;     /**< absolute values of sums smaller than this are considered zero */
+   Real             num_feastol;        /**< feasibility tolerance for constraints */
+   Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
+   Real             num_boundstreps;    /**< minimal improve for strengthening bounds */
+   Real             num_pseudocosteps;  /**< minimal variable distance value to use for pseudo cost updates */
+   Real             num_pseudocostdelta;/**< minimal objective distance value to use for pseudo cost updates */
+
+   /* presolving settings */
+   Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
+   int              presol_maxrounds;   /**< maximal number of presolving rounds (-1: unlimited) */
+   int              presol_restartbdchgs; /**< number of root node bound changes triggering a restart with preprocessing
+                                           *   (-1: no restart, 0: restart only after complete root node evaluation) */
+
+   /* pricing settings */
+   Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+   int              price_maxvars;      /**< maximal number of variables priced in per pricing round */
+   int              price_maxvarsroot;  /**< maximal number of priced variables at the root node */
+
+   /* propagation settings */
+   int              prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */
+   int              prop_maxroundsroot; /**< maximal number of propagation rounds in the root node (-1: unlimited) */
+   int              prop_redcostfreq;   /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
+
+   /* separation settings */
+   Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound
+                                         *   compared to best node's dual bound for applying separation
+                                         *   (0.0: only on current best node, 1.0: on all nodes) */
+   Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
+   Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
+   Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
+   Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
+   Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
+   int              sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
+   int              sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
+   int              sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */
+   int              sepa_poolfreq;      /**< separation frequency for the global cut pool */
+
+   /* timing settings */
+   CLOCKTYPE        time_clocktype;     /**< default clock type to use */
+   Bool             time_enabled;       /**< is timing enabled? */
+
+   /* VBC tool settings */
+   char*            vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
+   Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
 };
 
 

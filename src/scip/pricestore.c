@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.20 2004/10/05 11:01:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.21 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -195,7 +195,7 @@ RETCODE SCIPpricestoreAddVar(
    else
    {
       pricestore->nvarsfound++;
-      maxpricevars = root ? set->maxpricevarsroot : set->maxpricevars;
+      maxpricevars = SCIPsetGetPriceMaxvars(set, root);
    }
    assert(maxpricevars >= 1);
    assert(pricestore->nvars <= maxpricevars);
@@ -371,9 +371,9 @@ RETCODE SCIPpricestoreAddProbVars(
       return SCIP_OKAY;
 
    root = (SCIPtreeGetCurrentDepth(tree) == 0);
-   maxpricevars = SCIPsetGetMaxpricevars(set, root);
+   maxpricevars = SCIPsetGetPriceMaxvars(set, root);
    assert(maxpricevars >= 1);
-   abortpricevars = (int)(set->abortpricevarsfac * maxpricevars);
+   abortpricevars = (int)(set->price_abortfac * maxpricevars);
    assert(abortpricevars >= maxpricevars);
    
    /**@todo test pricing: is abortpricevars a good idea? -> like strong branching, lookahead, ... */

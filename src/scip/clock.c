@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.11 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.12 2004/10/05 16:08:06 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -201,9 +201,9 @@ void SCIPclockStart(
    assert(clock != NULL);
    assert(set != NULL);
 
-   if( set->clocksenabled && clock->enabled )
+   if( set->time_enabled && clock->enabled )
    {
-      clockUpdateDefaultType(clock, set->clocktype);
+      clockUpdateDefaultType(clock, set->time_clocktype);
 
       if( clock->nruns == 0 )
       {
@@ -252,7 +252,7 @@ void SCIPclockStop(
    assert(clock != NULL);
    assert(set != NULL);
 
-   if( set->clocksenabled && clock->enabled )
+   if( set->time_enabled && clock->enabled )
    {
       assert(clock->nruns >= 1);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.48 2004/10/05 11:01:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.49 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -281,7 +281,7 @@ RETCODE primalSetUpperbound(
    assert(primal != NULL);
    assert(set != NULL);
    assert(stat != NULL);
-   assert(upperbound <= set->infinity);
+   assert(upperbound <= SCIPsetInfinity(set));
    assert(upperbound <= primal->upperbound || tree == NULL);
 
    debugMessage("changing upper bound from %g to %g\n", primal->upperbound, upperbound);
@@ -291,7 +291,7 @@ RETCODE primalSetUpperbound(
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
    if( SCIPprobIsObjIntegral(prob) )
    {
-      primal->cutoffbound = SCIPsetCeil(set, upperbound) - (1.0 - 10.0*set->feastol);
+      primal->cutoffbound = SCIPsetCeil(set, upperbound) - (1.0 - 10.0*SCIPsetFeastol(set));
    }
    else
       primal->cutoffbound = upperbound;
@@ -329,7 +329,7 @@ RETCODE SCIPprimalSetUpperbound(
    )
 {
    assert(primal != NULL);
-   assert(upperbound <= set->infinity);
+   assert(upperbound <= SCIPsetInfinity(set));
 
    if( upperbound < primal->upperbound )
    {
@@ -366,7 +366,7 @@ RETCODE SCIPprimalUpdateUpperbound(
 
    /* recalculate internal objective limit */
    upperbound = SCIPprobGetInternObjlim(prob, set);
-   upperbound = MIN(upperbound, set->infinity);
+   upperbound = MIN(upperbound, SCIPsetInfinity(set));
 
    /* resort current primal solutions */
    for( i = 1; i < primal->nsols; ++i )
@@ -430,7 +430,7 @@ RETCODE primalAddSol(
 
    assert(primal != NULL);
    assert(sol != NULL);
-   assert(0 <= insertpos && insertpos < set->maxsol);
+   assert(0 <= insertpos && insertpos < set->limit_maxsol);
 
    debugMessage("insert primal solution at position %d:", insertpos);
    debug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL) );
@@ -457,18 +457,18 @@ RETCODE primalAddSol(
    CHECK_OKAY( SCIPsolUnlink(sol, set, prob) );
 
    /* allocate memory for solution storage */
-   CHECK_OKAY( ensureSolsSize(primal, set, set->maxsol) );
+   CHECK_OKAY( ensureSolsSize(primal, set, set->limit_maxsol) );
    
    /* if the solution storage is full, free the last solution(s)
-    * more than one solution may be freed, if set->maxsol was decreased in the meantime
+    * more than one solution may be freed, if set->limit_maxsol was decreased in the meantime
     */
-   for( pos = set->maxsol-1; pos < primal->nsols; ++pos )
+   for( pos = set->limit_maxsol-1; pos < primal->nsols; ++pos )
    {
       CHECK_OKAY( SCIPsolFree(&primal->sols[pos], memhdr, primal) );
    }
 
    /* insert solution at correct position */
-   primal->nsols = MIN(primal->nsols+1, set->maxsol);
+   primal->nsols = MIN(primal->nsols+1, set->limit_maxsol);
    for( pos = primal->nsols-1; pos > insertpos; --pos )
       primal->sols[pos] = primal->sols[pos-1];
 
@@ -478,11 +478,8 @@ RETCODE primalAddSol(
    debugMessage(" -> stored at position %d of %d solutions, found %lld solutions\n", 
       insertpos, primal->nsols, primal->nsolsfound);
 
-   /* update the solution value sums in variables ???????????????????????????*/
-   if( primal->nsols == 1 )
-      SCIPsolUpdateVarsum(sol, set, stat, prob, 1.0);
-   else
-      SCIPsolUpdateVarsum(sol, set, stat, prob, (Real)(primal->nsols - insertpos)/(Real)(2.0*primal->nsols));
+   /* update the solution value sums in variables */
+   SCIPsolUpdateVarsum(sol, set, stat, prob, (Real)(primal->nsols - insertpos)/(Real)(2.0*primal->nsols - 1.0));
 
    /* change color of node in VBC output */
    SCIPvbcFoundSolution(stat->vbc, stat, SCIPtreeGetCurrentNode(tree));
@@ -567,7 +564,7 @@ RETCODE SCIPprimalAddSol(
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
 
-   if( insertpos < set->maxsol )
+   if( insertpos < set->limit_maxsol )
    {
       SOL* solcopy;
 
@@ -609,7 +606,7 @@ RETCODE SCIPprimalAddSolFree(
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(*sol));
 
-   if( insertpos < set->maxsol )
+   if( insertpos < set->limit_maxsol )
    {
       /* insert solution into solution storage */
       CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, *sol, insertpos) );
@@ -709,12 +706,12 @@ RETCODE SCIPprimalTrySol(
    assert(stored != NULL);
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->exactsolve;
+   checklprows = checklprows || set->misc_exactsolve;
 
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
 
-   if( insertpos < set->maxsol )
+   if( insertpos < set->limit_maxsol )
    {
       /* check solution for feasibility */
       CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );
@@ -768,12 +765,12 @@ RETCODE SCIPprimalTrySolFree(
    *stored = FALSE;
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->exactsolve;
+   checklprows = checklprows || set->misc_exactsolve;
 
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(*sol));
 
-   if( insertpos < set->maxsol )
+   if( insertpos < set->limit_maxsol )
    {
       /* check solution for feasibility */
       CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );

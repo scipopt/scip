@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.147 2004/10/05 11:01:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.148 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1939,7 +1939,7 @@ RETCODE lpSetUobjlim(
    assert(set != NULL);
 
    /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
-   if( set->exactsolve )
+   if( set->misc_exactsolve )
       return SCIP_OKAY;
 
    CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
@@ -2708,7 +2708,7 @@ Real SCIPcolGetFeasibility(
    if( SCIPsetIsEQ(set, col->lb, col->ub) )
    {
       /* dual row is free */
-      return set->infinity;
+      return SCIPsetInfinity(set);
    }
    else
    {
@@ -3006,8 +3006,8 @@ RETCODE SCIPcolGetStrongbranch(
       /* if a loose variables has an infinite best bound, the LP bound is -infinity and no gain can be achieved */
       if( lp->looseobjvalinf > 0 )
       {
-         col->strongbranchdown = -set->infinity;
-         col->strongbranchup = -set->infinity;
+         col->strongbranchdown = -SCIPsetInfinity(set);
+         col->strongbranchup = -SCIPsetInfinity(set);
       }
       else
       {
@@ -3284,7 +3284,7 @@ void rowCalcNorms(
    row->sqrnorm = 0.0;
    row->maxval = 0.0;
    row->nummaxval = 1;
-   row->minval = set->infinity;
+   row->minval = SCIPsetInfinity(set);
    row->numminval = 1;
    row->minidx = INT_MAX;
    row->maxidx = INT_MIN;
@@ -3540,11 +3540,11 @@ RETCODE SCIProwCreate(
    (*row)->constant = 0.0;
    (*row)->lhs = lhs;
    (*row)->rhs = rhs;
-   (*row)->flushedlhs = -set->infinity;
-   (*row)->flushedrhs = set->infinity;
+   (*row)->flushedlhs = -SCIPsetInfinity(set);
+   (*row)->flushedrhs = SCIPsetInfinity(set);
    (*row)->sqrnorm = 0.0;
    (*row)->maxval = 0.0;
-   (*row)->minval = set->infinity;
+   (*row)->minval = SCIPsetInfinity(set);
    (*row)->dualsol = 0.0;
    (*row)->activity = SCIP_INVALID;
    (*row)->dualfarkas = 0.0;
@@ -3968,9 +3968,9 @@ RETCODE SCIProwChgRhs(
 }
 
 
-#define DIVTOL      (1e+06*set->epsilon)
-#define TWOMULTTOL  (1e+03*set->epsilon)
-#define RATIONALTOL (1e+02*set->epsilon)
+#define DIVTOL      (1e+06*SCIPsetEpsilon(set))
+#define TWOMULTTOL  (1e+03*SCIPsetEpsilon(set))
+#define RATIONALTOL (1e+02*SCIPsetEpsilon(set))
 /** tries to find a value, such that all row coefficients, if scaled with this value become integral */
 RETCODE SCIProwCalcIntegralScalar(
    ROW*             row,                /**< LP row */
@@ -4483,8 +4483,8 @@ RETCODE SCIProwGetSolActivity(
       (*solactivity) += row->vals[i] * SCIPsolGetVal(sol, stat, col->var);
    }
 
-   *solactivity = MAX(*solactivity, -set->infinity);
-   *solactivity = MIN(*solactivity, +set->infinity);
+   *solactivity = MAX(*solactivity, -SCIPsetInfinity(set));
+   *solactivity = MIN(*solactivity, +SCIPsetInfinity(set));
 
    return SCIP_OKAY;
 }
@@ -4560,9 +4560,9 @@ void rowCalcActivityBounds(
    }
 
    if( mininfinite )
-      row->minactivity = -set->infinity;
+      row->minactivity = -SCIPsetInfinity(set);
    if( maxinfinite )
-      row->maxactivity = set->infinity;
+      row->maxactivity = SCIPsetInfinity(set);
    row->validactivitybdsdomchg = stat->domchgcount;
 
    assert(!row->integral || mininfinite || EPSISINT(row->minactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
@@ -4657,7 +4657,7 @@ Real SCIProwGetEfficacy(
    assert(set != NULL);
 
    norm = SCIProwGetNorm(row);
-   norm = MAX(norm, set->sumepsilon);
+   norm = MAX(norm, SCIPsetSumepsilon(set));
    feasibility = SCIProwGetLPFeasibility(row, stat, lp);
 
    return -feasibility / norm;
@@ -5966,7 +5966,7 @@ RETCODE SCIPlpCreate(
    (*lp)->looseobjval = 0.0;
    (*lp)->looseobjvalinf = 0;
    (*lp)->nloosevars = 0;
-   (*lp)->cutoffbound = set->infinity;
+   (*lp)->cutoffbound = SCIPsetInfinity(set);
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
    (*lp)->lpirowssize = 0;
@@ -5998,9 +5998,9 @@ RETCODE SCIPlpCreate(
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
    (*lp)->divelpistate = NULL;
-   (*lp)->lpiuobjlim = set->infinity;
-   (*lp)->lpifeastol = set->feastol;
-   (*lp)->lpidualfeastol = set->dualfeastol;
+   (*lp)->lpiuobjlim = SCIPsetInfinity(set);
+   (*lp)->lpifeastol = SCIPsetFeastol(set);
+   (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
    (*lp)->lpifromscratch = FALSE;
    (*lp)->lpifastmip = TRUE;
    (*lp)->lpiscaling = TRUE;
@@ -6443,8 +6443,8 @@ RETCODE SCIPlpSumRows(
          weights[r] = 0.0;
    }
 
-   *sumlhs = -set->infinity;
-   *sumrhs = set->infinity;
+   *sumlhs = -SCIPsetInfinity(set);
+   *sumrhs = SCIPsetInfinity(set);
 
    return SCIP_OKAY;
 }
@@ -7651,12 +7651,12 @@ RETCODE lpSolveStable(
 
    /* solve with given settings (usually fast but unprecise) */
    CHECK_OKAY( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
-   CHECK_OKAY( lpSetFeastol(lp, set->feastol) );
-   CHECK_OKAY( lpSetDualFeastol(lp, set->dualfeastol) );
+   CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set)) );
+   CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set)) );
    CHECK_OKAY( lpSetFromscratch(lp, fromscratch) );
    CHECK_OKAY( lpSetFastmip(lp, fastmip) );
-   CHECK_OKAY( lpSetScaling(lp, set->scaling) );
-   CHECK_OKAY( lpSetLPInfo(lp, set->lpinfo) );
+   CHECK_OKAY( lpSetScaling(lp, set->lp_scaling) );
+   CHECK_OKAY( lpSetLPInfo(lp, set->disp_lpinfo) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
 
    /* check for stability */
@@ -7666,7 +7666,7 @@ RETCODE lpSolveStable(
    /* if FASTMIP is turned on, solve again without FASTMIP */
    if( fastmip )
    {
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again without FASTMIP with %s simplex\n", 
          stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
       CHECK_OKAY( lpSetFastmip(lp, FALSE) );
@@ -7680,7 +7680,7 @@ RETCODE lpSolveStable(
    /* if not already done, solve again from scratch */
    if( !fromscratch )
    {
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
          stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
       CHECK_OKAY( lpSetFromscratch(lp, TRUE) );
@@ -7692,10 +7692,10 @@ RETCODE lpSolveStable(
    }
 
    /* solve again with a tighter feasibility tolerance */
-   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
       stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSetFeastol(lp, 0.001*set->feastol) );
+   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set)) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
 
    /* check for stability */
@@ -7703,10 +7703,10 @@ RETCODE lpSolveStable(
       return SCIP_OKAY;
 
    /* solve again, use other simplex this time */
-   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
       stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSetFeastol(lp, set->feastol) );
+   CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set)) );
    CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */
@@ -7714,10 +7714,10 @@ RETCODE lpSolveStable(
       return SCIP_OKAY;
 
    /* solve again with tighter feasibility tolerance, use other simplex this time */
-   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
       stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSetFeastol(lp, 0.001*set->feastol) );
+   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set)) );
    CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */
@@ -7725,10 +7725,10 @@ RETCODE lpSolveStable(
       return SCIP_OKAY;
 
    /* solve again with opposite scaling setting */
-   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
-      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->scaling ? "with" : "without");
-   CHECK_OKAY( lpSetScaling(lp, !set->scaling) );
+      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
+   CHECK_OKAY( lpSetScaling(lp, !set->lp_scaling) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
    
    /* check for stability */
@@ -7736,16 +7736,16 @@ RETCODE lpSolveStable(
       return SCIP_OKAY;
 
    /* solve again with opposite scaling, use other simplex this time */
-   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
-      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->scaling ? "with" : "without");
+      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
    CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */
    if( !SCIPlpiIsStable(lp->lpi) )
    {
       /* nothing worked -- store the instable LP to a file and exit with an LPERROR */
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_HIGH, "(node %lld) unresolved numerical troubles in LP %d\n", 
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %lld) unresolved numerical troubles in LP %d\n", 
          stat->nnodes, stat->nlps);
       *lperror = TRUE;
    }
@@ -7794,7 +7794,7 @@ RETCODE lpSolve(
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          debugMessage("optimal solution %g exceeds objective limit %g\n", lp->lpobjval, lp->lpiuobjlim);
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-         lp->lpobjval = set->infinity;
+         lp->lpobjval = SCIPsetInfinity(set);
       }
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
@@ -7804,32 +7804,32 @@ RETCODE lpSolve(
       {
          errorMessage("objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
          lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-         lp->lpobjval = -set->infinity;
+         lp->lpobjval = -SCIPsetInfinity(set);
          return SCIP_LPERROR;
       }
 #endif
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-      lp->lpobjval = set->infinity;
+      lp->lpobjval = SCIPsetInfinity(set);
    }
    else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
-      lp->lpobjval = set->infinity;
+      lp->lpobjval = SCIPsetInfinity(set);
    }
    else if( SCIPlpiIsPrimalUnbounded(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
-      lp->lpobjval = -set->infinity;
+      lp->lpobjval = -SCIPsetInfinity(set);
    }
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
-      lp->lpobjval = -set->infinity;
+      lp->lpobjval = -SCIPsetInfinity(set);
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
-      lp->lpobjval = -set->infinity;
+      lp->lpobjval = -SCIPsetInfinity(set);
    }
    else
    {
@@ -7912,7 +7912,7 @@ RETCODE SCIPlpSolveAndEval(
       Bool fromscratch;
 
       /* set initial LP solver settings */
-      fastmip = set->fastmip && !lp->flushaddedcols && !lp->flushdeletedcols;
+      fastmip = set->lp_fastmip && !lp->flushaddedcols && !lp->flushdeletedcols;
       fromscratch = FALSE;
 
    SOLVEAGAIN:
@@ -7928,7 +7928,7 @@ RETCODE SCIPlpSolveAndEval(
       switch( SCIPlpGetSolstat(lp) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
-         if( set->checklpfeas )
+         if( set->lp_checkfeas )
          {
             /* get LP solution and check the solution's feasibility again */
             CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &primalfeasible, &dualfeasible) );
@@ -7959,7 +7959,7 @@ RETCODE SCIPlpSolveAndEval(
             if( fastmip )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
-               infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fastmip = FALSE;
@@ -7968,7 +7968,7 @@ RETCODE SCIPlpSolveAndEval(
             else if( !fromscratch )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
-               infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fromscratch = TRUE;
@@ -7984,7 +7984,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->exactsolve )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
             CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set, stat) );
          }
@@ -7997,7 +7997,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->exactsolve )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
             CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, NULL) );
          }
@@ -8053,7 +8053,7 @@ Real SCIPlpGetObjval(
    else if( SCIPsetIsInfinity(set, lp->lpobjval) )
       return lp->lpobjval;
    else if( lp->looseobjvalinf > 0 )
-      return -set->infinity;
+      return -SCIPsetInfinity(set);
    else
       return lp->lpobjval + lp->looseobjval;
 }
@@ -8083,7 +8083,7 @@ Real SCIPlpGetLooseObjval(
    if( !lp->flushed )
       return SCIP_INVALID;
    else if( lp->looseobjvalinf > 0 )
-      return -set->infinity;
+      return -SCIPsetInfinity(set);
    else
       return lp->looseobjval;
 }
@@ -8099,7 +8099,7 @@ Real SCIPlpGetPseudoObjval(
    assert(set != NULL);
 
    if( lp->pseudoobjvalinf > 0 )
-      return -set->infinity;
+      return -SCIPsetInfinity(set);
    else
       return lp->pseudoobjval;
 }
@@ -8134,7 +8134,7 @@ Real SCIPlpGetModifiedPseudoObjval(
    assert(pseudoobjvalinf >= 0);
 
    if( pseudoobjvalinf > 0 )
-      return -set->infinity;
+      return -SCIPsetInfinity(set);
    else
       return pseudoobjval;
 }
@@ -8189,7 +8189,7 @@ Real SCIPlpGetModifiedProvedPseudoObjval(
    assert(pseudoobjvalinf >= 0);
 
    if( pseudoobjvalinf > 0 )
-      return -set->infinity;
+      return -SCIPsetInfinity(set);
    else
       return pseudoobjval;
 }
@@ -8408,7 +8408,7 @@ RETCODE SCIPlpUpdateVarObj(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->exactsolve )
+   if( set->misc_exactsolve )
    {
       if( oldobj != newobj )
       {
@@ -8440,7 +8440,7 @@ RETCODE SCIPlpUpdateVarLb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->exactsolve )
+   if( set->misc_exactsolve )
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 )
       {
@@ -8472,7 +8472,7 @@ RETCODE SCIPlpUpdateVarUb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->exactsolve )
+   if( set->misc_exactsolve )
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 )
       {
@@ -8638,7 +8638,7 @@ RETCODE SCIPlpUpdateVarColumn(
 {
    assert(set != NULL);
 
-   if( set->exactsolve )
+   if( set->misc_exactsolve )
    {
       CHECK_OKAY( lpUpdateVarColumnProved(lp, set, var) );
    }
@@ -8759,7 +8759,7 @@ RETCODE SCIPlpUpdateVarLoose(
 {
    assert(set != NULL);
 
-   if( set->exactsolve )
+   if( set->misc_exactsolve )
    {
       CHECK_OKAY( lpUpdateVarLooseProved(lp, set, var) );
    }
@@ -8953,7 +8953,7 @@ RETCODE SCIPlpGetUnboundedSol(
    assert(SCIPsetIsNegative(set, rayobjval));
 
    /* scale the ray, such that the resulting point has infinite objective value */
-   rayscale = -2*set->infinity/rayobjval;
+   rayscale = -2*SCIPsetInfinity(set)/rayobjval;
 
    /* calculate the unbounded point: x' = x + rayscale * ray */
    debugMessage("unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
@@ -9308,7 +9308,7 @@ RETCODE lpRemoveObsoleteCols(
       assert(cols[c]->lpipos == c);
       if( cols[c]->removeable
          && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling) */
-         && cols[c]->age > set->colagelimit
+         && cols[c]->age > set->lp_colagelimit
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
@@ -9379,7 +9379,7 @@ RETCODE lpRemoveObsoleteRows(
       assert(rows[r]->lpipos == r);
       if( rows[r]->removeable
          && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling) */
-         && rows[r]->age > set->rowagelimit )
+         && rows[r]->age > set->lp_rowagelimit )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -9603,13 +9603,13 @@ RETCODE SCIPlpCleanupNew(
    assert(set != NULL);
 
    debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d)\n",
-      lp->firstnewcol, lp->ncols, set->cleanupcols, lp->firstnewrow, lp->nrows, set->cleanuprows);
+      lp->firstnewcol, lp->ncols, set->lp_cleanupcols, lp->firstnewrow, lp->nrows, set->lp_cleanuprows);
 
-   if( set->cleanupcols && lp->firstnewcol < lp->ncols )
+   if( set->lp_cleanupcols && lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, set, stat, lp->firstnewcol) );
    }
-   if( set->cleanuprows && lp->firstnewrow < lp->nrows )
+   if( set->lp_cleanuprows && lp->firstnewrow < lp->nrows )
    {
       CHECK_OKAY( lpCleanupRows(lp, memhdr, set, stat, lp->firstnewrow) );
    }
@@ -9632,11 +9632,11 @@ RETCODE SCIPlpCleanupAll(
 
    debugMessage("removing all unused columns and rows\n");
 
-   if( /*set->cleanupcols &&*/ 0 < lp->ncols )
+   if( /*set->lp_cleanupcols &&*/ 0 < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, set, stat, 0) );
    }
-   if( /*set->cleanuprows &&*/ 0 < lp->nrows )
+   if( /*set->lp_cleanuprows &&*/ 0 < lp->nrows )
    {
       CHECK_OKAY( lpCleanupRows(lp, memhdr, set, stat, 0) );
    }
@@ -9730,7 +9730,7 @@ RETCODE SCIPlpEndDive(
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, &lperror) );
    if( lperror )
    {
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) unresolved numerical troubles while resolving LP %d after diving\n", stat->nnodes, stat->nlps);
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.61 2004/09/28 09:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.62 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -155,15 +155,17 @@
 #define REAL_MIN        -(Real)DBL_MAX
 #define REAL_FORMAT              "%lf"
 
-#define SCIP_DEFAULT_INFINITY    1e+20  /**< default value considered to be infinity */
-#define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
-#define SCIP_DEFAULT_SUMEPSILON  1e-06  /**< default upper bound for sums of floating points to be considered zero */
-#define SCIP_DEFAULT_FEASTOL     1e-06  /**< default feasibility tolerance for constraints */
-#define SCIP_DEFAULT_DUALFEASTOL 1e-09  /**< default feasibility tolerance for reduced costs */
-#define SCIP_DEFAULT_BOUNDSTREPS 1e-04  /**< default minimal improve for strengthening bounds */
-#define SCIP_MAXEPSILON          1e-03  /**< maximum value for any numerical epsilon */
-#define SCIP_MINEPSILON          1e-20  /**< minimum value for any numerical epsilon */
-#define SCIP_INVALID             1e+99  /**< floating point value is not valid */
+#define SCIP_DEFAULT_INFINITY         1e+20  /**< default value considered to be infinity */
+#define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
+#define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
+#define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
+#define SCIP_DEFAULT_DUALFEASTOL      1e-09  /**< default feasibility tolerance for reduced costs */
+#define SCIP_DEFAULT_BOUNDSTREPS      1e-04  /**< default minimal improve for strengthening bounds */
+#define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01 /**< default minimal variable distance value to use for pseudo cost updates */
+#define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04 /**< default minimal objective distance value to use for pseudo cost updates */
+#define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
+#define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
+#define SCIP_INVALID                  1e+99  /**< floating point value is not valid */
 
 
 /*

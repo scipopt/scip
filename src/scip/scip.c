@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.212 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.213 2004/10/05 16:08:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -448,7 +448,7 @@ void SCIPmessage(
    CHECK_ABORT( checkStage(scip, "SCIPmessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    va_start(ap, formatstr);
-   vinfoMessage(scip->set->verblevel, msgverblevel, formatstr, ap);
+   vinfoMessage(scip->set->disp_verblevel, msgverblevel, formatstr, ap);
    va_end(ap);
 }
 
@@ -480,7 +480,7 @@ Bool SCIPisExactSolve(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (scip->set->exactsolve);
+   return (scip->set->misc_exactsolve);
 }
 
 /** returns whether the user pressed CTRL-C to interrupt the solving process */
@@ -1982,7 +1982,7 @@ RETCODE SCIPreadProb(
    case SCIP_SUCCESS:
       if( scip->origprob != NULL )
       {      
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
             "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
             scip->origprob->nvars, scip->origprob->nbinvars, scip->origprob->nintvars,
             scip->origprob->nimplvars, scip->origprob->ncontvars,
@@ -3056,7 +3056,7 @@ RETCODE transformProb(
          scip->tree, scip->lp) );
 
    /* print transformed problem statistics */
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL,
+   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "transformed problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
       scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
       scip->transprob->ncontvars, scip->transprob->nconss);
@@ -3068,11 +3068,11 @@ RETCODE transformProb(
       nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
       if( nconss > 0 )
       {
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL,
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
       }
    }
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL, "\n");
+   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
    /* init callback methods */
    CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
@@ -3145,16 +3145,16 @@ RETCODE presolve(
    nchgcoefs = 0;
    nchgsides = 0;
 
-   maxnrounds = scip->set->maxpresolrounds;
+   maxnrounds = scip->set->presol_maxrounds;
    if( maxnrounds == -1 )
       maxnrounds = INT_MAX;
 
-   abortfac = scip->set->presolabortfac;
+   abortfac = scip->set->presol_abortfac;
 
    aborted = SCIPsolveIsStopped(scip->set, scip->stat);
    result = SCIP_DIDNOTRUN;
 
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
+   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < scip->set->npresols; ++i )
@@ -3242,8 +3242,8 @@ RETCODE presolve(
       if( !aborted )
       {
          /* print presolving statistics */
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "(round %d)", nrounds);
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH,
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(round %d)", nrounds);
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
             nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
       }
@@ -3266,8 +3266,8 @@ RETCODE presolve(
    }
 
    /* print presolving statistics */
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving (%d rounds):\n", nrounds);
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
+   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving (%d rounds):\n", nrounds);
+   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
       nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
 
@@ -3312,7 +3312,7 @@ RETCODE initSolve(
    /* init solution process data structures */
    CHECK_OKAY( SCIPpricestoreCreate(&scip->pricestore) );
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
-   CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->cutagelimit) );
+   CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->sepa_cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
          SCIPsetGetNodesel(scip->set, scip->stat)) );
@@ -3359,7 +3359,7 @@ RETCODE initSolve(
          {
             bd = SCIPvarGetWorstBound(var);
             if( SCIPsetIsInfinity(scip->set, ABS(bd)) )
-               objbound = scip->set->infinity;
+               objbound = SCIPsetInfinity(scip->set);
             else
                objbound += obj * bd;
          }
@@ -3493,7 +3493,7 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( checkStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* capture the CTRL-C interrupt */
-   if( scip->set->catchctrlc )
+   if( scip->set->misc_catchctrlc )
       SCIPinterruptCapture(scip->interrupt);
 
    switch( scip->stage )
@@ -3521,11 +3521,11 @@ RETCODE SCIPpresolve(
          /* print solution message */
          if( infeasible )
          {
-            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.\n");
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.\n");
          }
          else
          {
-            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
          }
       }
       else
@@ -3533,7 +3533,7 @@ RETCODE SCIPpresolve(
          int h;
 
          /* print presolved problem statistics */
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
             "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
             scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
             scip->transprob->ncontvars, scip->transprob->nconss);
@@ -3545,19 +3545,19 @@ RETCODE SCIPpresolve(
             nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
             if( nconss > 0 )
             {
-               infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH,
+               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
                   " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
             }
          }
 
          if( SCIPprobIsObjIntegral(scip->transprob) )
          {
-            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "objective value is always integral\n");
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "objective value is always integral\n");
          }
       }
       
       /* display timing statistics */
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH,
+      infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "Presolving Time: %.2f\n", SCIPclockGetTime(scip->stat->presolvingtime));
       break;
 
@@ -3570,7 +3570,7 @@ RETCODE SCIPpresolve(
    }
 
    /* release the CTRL-C interrupt */
-   if( scip->set->catchctrlc )
+   if( scip->set->misc_catchctrlc )
       SCIPinterruptRelease(scip->interrupt);
 
    return SCIP_OKAY;
@@ -3616,7 +3616,7 @@ RETCODE SCIPsolve(
          /* initialize solving process data structures */
          CHECK_OKAY( initSolve(scip) );
          assert(scip->stage == SCIP_STAGE_SOLVING);
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
       
          /*lint -fallthrough*/
 
@@ -3625,7 +3625,7 @@ RETCODE SCIPsolve(
          SCIPstatResetDisplay(scip->stat);
 
          /* capture the CTRL-C interrupt */
-         if( scip->set->catchctrlc )
+         if( scip->set->misc_catchctrlc )
             SCIPinterruptCapture(scip->interrupt);
 
          /* continue solution process */
@@ -3634,7 +3634,7 @@ RETCODE SCIPsolve(
                scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
 
          /* release the CTRL-C interrupt */
-         if( scip->set->catchctrlc )
+         if( scip->set->misc_catchctrlc )
             SCIPinterruptRelease(scip->interrupt);
          
          /* detect, whether problem is solved */
@@ -3671,7 +3671,7 @@ RETCODE SCIPsolve(
    while( restart && !SCIPsolveIsStopped(scip->set, scip->stat) );
 
    /* display most relevant statistics */
-   if( scip->set->verblevel >= SCIP_VERBLEVEL_NORMAL )
+   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
    {
       printf("\n");
       printf("SCIP Status        : ");
@@ -4120,7 +4120,7 @@ RETCODE SCIPgetVarStrongbranch(
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough
     * declare the sub nodes infeasible
     */
-   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->exactsolve )
+   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
       Bool downcutoff;
       Bool upcutoff;
@@ -4136,7 +4136,7 @@ RETCODE SCIPgetVarStrongbranch(
        * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
        * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict clause
        */
-      if( scip->set->usesbconflict && scip->set->nconflicthdlrs > 0
+      if( scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
          && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
          && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
       {
@@ -5318,9 +5318,9 @@ RETCODE aggregateActiveIntVars(
    *aggregated = FALSE;
 
    /* get rational representation of coefficients */
-   success = SCIPrealToRational(scalarx, scip->set->epsilon, MAXDNOM, &scalarxn, &scalarxd);
+   success = SCIPrealToRational(scalarx, SCIPsetEpsilon(scip->set), MAXDNOM, &scalarxn, &scalarxd);
    if( success )
-      success = SCIPrealToRational(scalary, scip->set->epsilon, MAXDNOM, &scalaryn, &scalaryd);
+      success = SCIPrealToRational(scalary, SCIPsetEpsilon(scip->set), MAXDNOM, &scalaryn, &scalaryd);
    if( !success )
       return SCIP_OKAY;
    assert(scalarxd >= 1);
@@ -7499,7 +7499,7 @@ RETCODE SCIPchgVarObjDive(
    /* invalidate the LP's cutoff bound, since this has nothing to do with the current objective value anymore;
     * the cutoff bound is reset in SCIPendDive()
     */
-   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->set->infinity) );
+   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, SCIPsetInfinity(scip->set)) );
 
    return SCIP_OKAY;
 }
@@ -8649,7 +8649,7 @@ RETCODE SCIPcheckSol(
    CHECK_OKAY( checkStage(scip, "SCIPcheckSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || scip->set->exactsolve;
+   checklprows = checklprows || scip->set->misc_exactsolve;
    
    CHECK_OKAY( SCIPsolCheck(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
          checkintegrality, checklprows, feasible) );
@@ -9436,7 +9436,7 @@ Real SCIPgetGap(
    dualbound = SCIPgetDualbound(scip);
 
    if( SCIPsetIsZero(scip->set, dualbound) || SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
-      return scip->set->infinity;
+      return SCIPsetInfinity(scip->set);
    else
       return ABS((primalbound - dualbound)/dualbound);
 }
@@ -9457,7 +9457,7 @@ Real SCIPgetTransGap(
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
       return 0.0;
    else if( SCIPsetIsZero(scip->set, lowerbound) || SCIPsetIsInfinity(scip->set, upperbound) )
-      return scip->set->infinity;
+      return SCIPsetInfinity(scip->set);
    else
       return ABS((upperbound - lowerbound)/lowerbound);
 }
@@ -10285,7 +10285,7 @@ RETCODE SCIPprintDisplayLine(
 {
    CHECK_OKAY( checkStage(scip, "SCIPprintDisplayLine", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( (VERBLEVEL)scip->set->verblevel >= verblevel )
+   if( (VERBLEVEL)scip->set->disp_verblevel >= verblevel )
    {
       CHECK_OKAY( SCIPdispPrintLine(scip->set, scip->stat, TRUE) );
    }
@@ -10471,7 +10471,7 @@ Real SCIPinfinity(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return scip->set->infinity;
+   return SCIPsetInfinity(scip->set);
 }
 
 /** returns value treated as zero */
@@ -10482,7 +10482,7 @@ Real SCIPepsilon(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return scip->set->epsilon;
+   return SCIPsetEpsilon(scip->set);
 }
 
 /** returns value treated as zero for sums of floating point values */
@@ -10493,7 +10493,7 @@ Real SCIPsumepsilon(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return scip->set->sumepsilon;
+   return SCIPsetSumepsilon(scip->set);
 }
 
 /** returns feasibility tolerance for constraints */
@@ -10504,7 +10504,7 @@ Real SCIPfeastol(
    assert(scip != NULL);
    assert(scip->set != NULL);
  
-   return scip->set->feastol;
+   return SCIPsetFeastol(scip->set);
 }
 
 /** returns feasibility tolerance for reduced costs */
@@ -10515,19 +10515,19 @@ Real SCIPdualfeastol(
    assert(scip != NULL);
    assert(scip->set != NULL);
  
-   return scip->set->dualfeastol;
+   return SCIPsetDualfeastol(scip->set);
 }
 
 /** sets the feasibility tolerance for constraints */
-RETCODE SCIPsetFeastol(
+RETCODE SCIPchgFeastol(
    SCIP*            scip,               /**< SCIP data structure */
    Real             feastol             /**< new feasibility tolerance for constraints */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPsetFeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPchgFeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    /* mark the LP unsolved, if the feasibility tolerance was tightened */
-   if( scip->lp != NULL && feastol < scip->set->feastol )
+   if( scip->lp != NULL && feastol < SCIPsetFeastol(scip->set) )
       scip->lp->solved = FALSE;
 
    /* change the settings */
@@ -10537,15 +10537,15 @@ RETCODE SCIPsetFeastol(
 }
 
 /** sets the feasibility tolerance for reduced costs */
-RETCODE SCIPsetDualfeastol(
+RETCODE SCIPchgDualfeastol(
    SCIP*            scip,               /**< SCIP data structure */
    Real             dualfeastol         /**< new feasibility tolerance for reduced costs */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPsetDualfeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPchgDualfeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    /* mark the LP unsolved, if the dual feasibility tolerance was tightened */
-   if( scip->lp != NULL && dualfeastol < scip->set->dualfeastol )
+   if( scip->lp != NULL && dualfeastol < SCIPsetDualfeastol(scip->set) )
       scip->lp->solved = FALSE;
 
    /* change the settings */
@@ -11050,7 +11050,7 @@ Bool SCIPisIntegral(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   if( scip->set->exactsolve )
+   if( scip->set->misc_exactsolve )
       return (val == SCIPsetFloor(scip->set, val));
    else
       return SCIPsetIsIntegral(scip->set, val);
@@ -11065,7 +11065,7 @@ Bool SCIPisFracIntegral(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   if( scip->set->exactsolve )
+   if( scip->set->misc_exactsolve )
       return (val == 0.0);
    else
       return SCIPsetIsFracIntegral(scip->set, val);

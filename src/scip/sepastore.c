@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.26 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.27 2004/10/05 16:08:08 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -249,7 +249,7 @@ RETCODE sepastoreAddCut(
    if( forcecut )
       maxsepacuts = INT_MAX;
    else
-      maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
+      maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
    assert(sepastore->ncuts <= maxsepacuts);
    if( maxsepacuts == 0 )
       return SCIP_OKAY;
@@ -257,15 +257,15 @@ RETCODE sepastoreAddCut(
    /* calculate cut's efficacy; orthogonality starts with 1.0 and is reduced when the cut is inserted */
    if( maxsepacuts == INT_MAX )
    {
-      cutefficacy = set->infinity;
+      cutefficacy = SCIPsetInfinity(set);
       cutorthogonality = 1.0;
-      cutscore = set->infinity;
+      cutscore = SCIPsetInfinity(set);
    }
    else
    {
       cutefficacy = -SCIProwGetLPFeasibility(cut, stat, lp) / SCIProwGetNorm(cut);
       cutorthogonality = 1.0;
-      cutscore = cutefficacy + set->cutorthofac * cutorthogonality;
+      cutscore = cutefficacy + set->sepa_orthofac * cutorthogonality;
    }
 
    /* check, if cut has potential to belong to the best "maxsepacuts" separation cuts */
@@ -273,7 +273,7 @@ RETCODE sepastoreAddCut(
       return SCIP_OKAY;
 
    /* calculate minimal cut orthogonality */
-   mincutorthogonality = (root ? set->mincutorthoroot : set->mincutortho);
+   mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
       
    /* get enough memory to store the cut */
    CHECK_OKAY( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
@@ -287,7 +287,7 @@ RETCODE sepastoreAddCut(
    for( c = 0; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
    {
       /* update the minimal orthogonality of the cut and it's score */
-      if( set->cutorthofac > 0.0 && !forcecut )
+      if( set->sepa_orthofac > 0.0 && !forcecut )
       {
          Real thisortho;
          
@@ -296,7 +296,7 @@ RETCODE sepastoreAddCut(
          if( thisortho < cutorthogonality )
          {
             cutorthogonality = thisortho;
-            cutscore = cutefficacy + set->cutorthofac * cutorthogonality;
+            cutscore = cutefficacy + set->sepa_orthofac * cutorthogonality;
             
             /* check, if the cut (after regarding orthogonality) is still good enough */
             if( (sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1])
@@ -335,7 +335,7 @@ RETCODE sepastoreAddCut(
       assert(!SCIPsetIsInfinity(set, currentscore));
 
       /* update orthogonality and score of cut at slot i-1 due to new cut */
-      if( set->cutorthofac > 0.0 )
+      if( set->sepa_orthofac > 0.0 )
       {
          Real thisortho;
                
@@ -344,9 +344,9 @@ RETCODE sepastoreAddCut(
          {
             currentorthogonality = thisortho;
             if( currentorthogonality < mincutorthogonality )
-               currentscore = -set->infinity;
+               currentscore = -SCIPsetInfinity(set);
             else
-               currentscore = currentefficacy + set->cutorthofac * currentorthogonality;
+               currentscore = currentefficacy + set->sepa_orthofac * currentorthogonality;
          }
       }
 
@@ -359,7 +359,7 @@ RETCODE sepastoreAddCut(
          sepastore->scores[j] = sepastore->scores[j+1];
 
          /* update orthogonality and score of cut at slot i-1 */
-         if( set->cutorthofac > 0.0 && !SCIPsetIsInfinity(set, -currentscore) )
+         if( set->sepa_orthofac > 0.0 && !SCIPsetIsInfinity(set, -currentscore) )
          {
             Real thisortho;
                   
@@ -367,7 +367,7 @@ RETCODE sepastoreAddCut(
             if( thisortho < currentorthogonality )
             {
                currentorthogonality = thisortho;
-               currentscore = currentefficacy + set->cutorthofac * currentorthogonality;
+               currentscore = currentefficacy + set->sepa_orthofac * currentorthogonality;
             }
          }
       }

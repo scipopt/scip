@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.10 2004/05/24 17:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.11 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -158,12 +158,12 @@ void SCIPhistoryUpdatePseudocost(
    assert(SCIPsetIsPositive(set, distance));
 
    /* apply a lower limit on the distance to avoid numerical instabilities due to very large summands */
-   distance = MAX(distance, set->pseudocosteps);
+   distance = MAX(distance, SCIPsetPseudocosteps(set));
 
    /* slightly increase objective delta, s.t. pseudo cost values are not zero, and fractionalities are
     * always used at least a bit
     */
-   objdelta += set->pseudocostdelta;
+   objdelta += SCIPsetPseudocostdelta(set);
 
    /* update the pseudo cost values */
    history->pscostcount[dir] += weight;

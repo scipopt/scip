@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.32 2004/06/30 14:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.33 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -305,25 +305,25 @@ RETCODE SCIPdispPrintLine(
    )
 {
    assert(set != NULL);
-   assert(set->dispfreq >= -1);
-   assert(set->dispheaderfreq >= -1);
+   assert(set->disp_freq >= -1);
+   assert(set->disp_headerfreq >= -1);
    assert(stat != NULL);
 
-   if( (VERBLEVEL)set->verblevel < SCIP_VERBLEVEL_NORMAL || set->dispfreq == -1 )
+   if( (VERBLEVEL)set->disp_verblevel < SCIP_VERBLEVEL_NORMAL || set->disp_freq == -1 )
       return SCIP_OKAY;
 
    if( forcedisplay
       || (stat->nnodes != stat->lastdispnode
-         && set->dispfreq > 0
-         && (stat->nnodes % set->dispfreq == 0 || stat->nnodes == 1)) )
+         && set->disp_freq > 0
+         && (stat->nnodes % set->disp_freq == 0 || stat->nnodes == 1)) )
    {
       int i;
       int j;
       Bool stripline;
 
       /* display header line */
-      if( (set->dispheaderfreq == 0 && stat->ndisplines == 0)
-         || (set->dispheaderfreq > 0 && stat->ndisplines % set->dispheaderfreq == 0) )
+      if( (set->disp_headerfreq == 0 && stat->ndisplines == 0)
+         || (set->disp_headerfreq > 0 && stat->ndisplines % set->disp_headerfreq == 0) )
       {
          int fillspace;
 
@@ -420,7 +420,7 @@ RETCODE SCIPdispAutoActivate(
          width = disps[i]->width;
          if( disps[i]->stripline )
             width++;
-         if( totalwidth + width <= set->dispwidth )
+         if( totalwidth + width <= set->disp_width )
          {
             disps[i]->active = TRUE;
             totalwidth += width;

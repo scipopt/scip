@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.36 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.37 2004/10/05 16:08:07 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -127,7 +127,7 @@ void nodepqCalcLowerbound(
 
    nodepq->validlowerbound = TRUE;
    nodepq->lowerboundnode = NULL;
-   nodepq->lowerbound = set->infinity;
+   nodepq->lowerbound = SCIPsetInfinity(set);
    nodepq->nlowerbounds = 0;
 
    for( i = 0; i < nodepq->len; ++i )
@@ -150,7 +150,7 @@ RETCODE SCIPnodepqCreate(
    (*nodepq)->size = 0;
    (*nodepq)->lowerboundnode = NULL;
    (*nodepq)->lowerboundsum = 0.0;
-   (*nodepq)->lowerbound = set->infinity;
+   (*nodepq)->lowerbound = SCIPsetInfinity(set);
    (*nodepq)->nlowerbounds = 0;
    (*nodepq)->validlowerbound = TRUE;
 
@@ -507,7 +507,7 @@ Real SCIPnodepqGetLowerbound(
          return SCIPnodeGetLowerbound(nodepq->slots[0]);
       }
       else
-         return set->infinity;
+         return SCIPsetInfinity(set);
    }
    else
    {
@@ -555,7 +555,7 @@ NODE* SCIPnodepqGetLowerboundNode(
       
       assert(nodepq->validlowerbound);
       assert(nodepq->lowerbound < SCIP_INVALID);
-      assert(nodepq->lowerbound == set->infinity || nodepq->lowerboundnode != NULL); /*lint !e777*/
+      assert(nodepq->lowerbound == SCIPsetInfinity(set) || nodepq->lowerboundnode != NULL); /*lint !e777*/
 
       return nodepq->lowerboundnode;
    }

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.85 2004/10/05 11:01:35 bzfpfend Exp $
+# $Id: Makefile,v 1.86 2004/10/05 16:08:06 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -169,7 +169,7 @@ ifeq ($(LPS),clpdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH) -lcoindbg.$(OSTYPE).$(ARCH)
-LPILIBOBJ	=	lpi_clpdbg.o bitencode.o memory.o
+LPILIBOBJ	=	lpi_clp.o bitencode.o memory.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.cpp))
 endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.169 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.170 2004/10/05 16:08:08 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4139,14 +4139,14 @@ Real SCIPdualfeastol(
 
 /** sets the feasibility tolerance for constraints */
 extern
-RETCODE SCIPsetFeastol(
+RETCODE SCIPchgFeastol(
    SCIP*            scip,               /**< SCIP data structure */
    Real             feastol             /**< new feasibility tolerance for constraints */
    );
 
 /** sets the feasibility tolerance for reduced costs */
 extern
-RETCODE SCIPsetDualfeastol(
+RETCODE SCIPchgDualfeastol(
    SCIP*            scip,               /**< SCIP data structure */
    Real             dualfeastol         /**< new feasibility tolerance for reduced costs */
    );

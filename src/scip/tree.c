@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.114 2004/10/05 11:01:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.115 2004/10/05 16:08:09 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -670,7 +670,7 @@ RETCODE nodeCreate(
    (*node)->parent = NULL;
    (*node)->conssetchg = NULL;
    (*node)->domchg = NULL;
-   (*node)->lowerbound = -set->infinity;
+   (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -863,7 +863,7 @@ void SCIPnodeCutoff(
    assert(tree != NULL);
 
    node->cutoff = TRUE;
-   node->lowerbound = set->infinity;
+   node->lowerbound = SCIPsetInfinity(set);
    if( node->active )
       tree->cutoffdepth = MIN(tree->cutoffdepth, node->depth);
 
@@ -1103,7 +1103,7 @@ RETCODE nodeActivate(
        * could be generated; if propagation conflict analysis is turned off, repropagating the node makes no
        * sense, since it is already cut off
        */
-      node->reprop = set->usepropconflict;
+      node->reprop = set->conf_useprop;
 
       /* mark the node to be cut off */
       SCIPnodeCutoff(node, set, stat, tree);
@@ -1347,7 +1347,7 @@ RETCODE SCIPnodeAddBoundinfer(
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
       
       /* update the child's lower bound */
-      if( set->exactsolve )
+      if( set->misc_exactsolve )
          newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
@@ -2382,7 +2382,7 @@ RETCODE focusnodeToFork(
       if( !lp->solved || !lp->flushed )
       {
          debugMessage("resolving LP after cleanup\n");
-         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
+         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->lp_fastmip, FALSE, &lperror) );
 
          /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
          if( lp->validsollp == stat->lpcount-1 )
@@ -2408,7 +2408,7 @@ RETCODE focusnodeToFork(
     */
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
          stat->nnodes, stat->nlps);
 
@@ -2490,7 +2490,7 @@ RETCODE focusnodeToSubroot(
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )
       {
-         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
+         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->lp_fastmip, FALSE, &lperror) );
 
          /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
          if( lp->validsollp == stat->lpcount-1 )
@@ -2516,7 +2516,7 @@ RETCODE focusnodeToSubroot(
     */
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 
          stat->nnodes, stat->nlps);
 
@@ -2981,7 +2981,7 @@ RETCODE SCIPtreeCreate(
 
    /* move root to the queue, convert it to LEAF */
    CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, stat, lp, (*tree)->children, &(*tree)->nchildren, NULL, 
-         set->infinity) );
+         SCIPsetInfinity(set)) );
 
    return SCIP_OKAY;
 }
@@ -3049,7 +3049,7 @@ RETCODE SCIPtreeSetNodesel(
       /* issue message */
       if( stat->nnodes > 0 )
       {
-         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %lld) switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
       }
    }
@@ -3190,7 +3190,7 @@ RETCODE SCIPtreeBranchVar(
                   
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), fixval);
-      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, set->infinity) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, SCIPsetInfinity(set)) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
@@ -3728,8 +3728,8 @@ NODE* SCIPtreeGetLowerboundNode(
 
    /* get the lower bound from the queue */
    lowerboundnode = SCIPnodepqGetLowerboundNode(tree->leaves, set);
-   lowerbound = lowerboundnode != NULL ? lowerboundnode->lowerbound : set->infinity;
-   bestprio = -set->infinity;
+   lowerbound = lowerboundnode != NULL ? lowerboundnode->lowerbound : SCIPsetInfinity(set);
+   bestprio = -SCIPsetInfinity(set);
 
    /* compare lower bound with children */
    for( i = 0; i < tree->nchildren; ++i )
