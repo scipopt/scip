@@ -13,6 +13,8 @@ features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm
 - improved knapsack relaxation in linear constraint handler separator to scale the constraint in order to get
   integral coefficients instead of just rounding down all coefficients
+- improved presolving of linear constraint handler: aggregation of two constraints with equal coefficient vector
+  into single constraint
 
 fixed bugs:
 - removed bug in knapsack constraint handler that appears if a variable is fixed to zero in knapsack presolving,

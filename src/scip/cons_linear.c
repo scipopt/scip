@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.130 2004/11/23 16:09:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.131 2004/11/23 17:11:11 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -84,10 +84,6 @@
 /** constraint data for linear constraints */
 struct ConsData
 {
-   ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
-   VAR**            vars;               /**< variables of constraint entries */
-   Real*            vals;               /**< coefficients of constraint entries */
-   EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             rhs;                /**< right hand side of row */
    Real             maxabsval;          /**< maximum absolute value of all coefficients */
@@ -96,6 +92,10 @@ struct ConsData
                                          *   ignoring the coefficients contributing with infinite value */
    Real             maxactivity;        /**< maximal value w.r.t. the variable's bounds for the constraint's activity,
                                          *   ignoring the coefficients contributing with infinite value */
+   ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   VAR**            vars;               /**< variables of constraint entries */
+   Real*            vals;               /**< coefficients of constraint entries */
+   EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    int              minactivityinf;     /**< number of coefficients contributing with infinite value to minactivity */
    int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
    int              varssize;           /**< size of the vars- and vals-arrays */
@@ -4784,6 +4784,14 @@ DECL_CONSPRESOL(consPresolLinear)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      /* remember the first changed constraint to begin the next aggregation round with */
+      if( firstchange == INT_MAX && consdata->changed )
+         firstchange = c;
+
+      /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
+      if( firstupgradetry == INT_MAX && !consdata->upgradetried )
+         firstupgradetry = c;
+
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
          consdata->propagated = FALSE;
@@ -4797,14 +4805,6 @@ DECL_CONSPRESOL(consPresolLinear)
       /* mark constraint being propagated/preprocessed */
       consdata->propagated = TRUE;
       consdata->boundstightened = TRUE;
-
-      /* remember the first changed constraint to begin the next aggregation round with */
-      if( firstchange == INT_MAX && consdata->changed )
-         firstchange = c;
-
-      /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
-      if( firstupgradetry == INT_MAX && !consdata->upgradetried )
-         firstupgradetry = c;
 
       debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
       debug(consdataPrint(scip, consdata, NULL));
