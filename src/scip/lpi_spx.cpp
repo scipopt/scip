@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.29 2004/10/13 17:41:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.30 2004/10/14 13:28:44 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1556,7 +1556,7 @@ Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED && lpi->spx->basis().status() == SPxBasis::PRIMAL);
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -1582,7 +1582,7 @@ Bool SCIPlpiHasDualRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE && lpi->spx->basis().status() == SPxBasis::DUAL);
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE);
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -1608,8 +1608,7 @@ Bool SCIPlpiIsDualInfeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED
-      || (lpi->spx->getStatus() == SPxSolver::INFEASIBLE && lpi->spx->basis().status() != SPxBasis::DUAL));
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
 }
 
 /** returns TRUE iff LP was solved to optimality */

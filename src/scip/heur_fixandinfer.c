@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.2 2004/10/12 14:06:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.3 2004/10/14 13:28:44 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -167,11 +167,10 @@ DECL_HEUREXEC(heurExecFixandinfer)
    }
 
    /* check, if we are still feasible */
-   if( !cutoff )
+   if( !cutoff && ncands == 0 )
    {
       Bool success;
 
-      assert(ncands == 0);
       success = FALSE;
 
       /* try to add solution to SCIP */
