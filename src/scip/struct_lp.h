@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.5 2004/01/19 14:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.6 2004/01/22 14:42:30 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -197,6 +197,7 @@ struct Lp
    Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
    Real             lpiuobjlim;         /**< current upper objective limit in LPI */
    Real             lpifeastol;         /**< current feasibility tolerance in LPI */
+   Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    Bool             lpifastmip;         /**< current FASTMIP setting in LPI */
    Bool             lpiscaling;         /**< current SCALING setting in LPI */

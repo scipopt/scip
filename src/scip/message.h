@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.h,v 1.11 2003/12/01 14:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.h,v 1.12 2004/01/22 14:42:28 bzfpfend Exp $"
 
 /**@file   message.h
  * @brief  message output methods
@@ -44,8 +44,8 @@
 /** verbosity levels of output */
 enum VerbLevel
 {
-   SCIP_VERBLEVEL_NONE    = 0,           /**< only error messages are displayed */
-   SCIP_VERBLEVEL_MINIMAL = 1,           /**< only error and warning messages are displayed */
+   SCIP_VERBLEVEL_NONE    = 0,           /**< only error and warning messages are displayed */
+   SCIP_VERBLEVEL_MINIMAL = 1,           /**< a reduced number of messages are displayed */
    SCIP_VERBLEVEL_NORMAL  = 2,           /**< standard messages are displayed */
    SCIP_VERBLEVEL_HIGH    = 3,           /**< a lot of information is displayed */
    SCIP_VERBLEVEL_FULL    = 4            /**< all messages are displayed */

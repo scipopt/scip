@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.92 2004/01/19 14:10:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.93 2004/01/22 14:42:27 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2129,7 +2129,9 @@ void rowCalcNorms(
    }
 }
 
-/** scales row with given factor, and rounds coefficients to integers if close enough */
+/** scales row with given factor, and rounds coefficients to integers if close enough;
+ *  the constant is automatically moved to the sides
+ */
 static
 RETCODE rowScale(
    ROW*             row,                /**< LP row */
@@ -2151,6 +2153,8 @@ RETCODE rowScale(
    assert(row->len == 0 || row->vals != NULL);
    assert(SCIPsetIsPositive(set, scaleval));
    assert(!SCIPsetIsNegative(set, roundtol));
+
+   debugMessage("scale row <%s> with %g (tolerance=%g)\n", row->name, scaleval, roundtol);
 
    /* scale the row coefficients */
    for( c = 0; c < row->len; ++c )
@@ -2183,24 +2187,24 @@ RETCODE rowScale(
       coefChanged(row, col, lp);
    }
 
-   /* scale the row constant */
-   CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, row->constant * scaleval) );
-
-   /* scale the row sides */
+   /* scale the row sides, and move the constant to the sides */
    if( !SCIPsetIsInfinity(set, -row->lhs) )
    {
-      newval = row->lhs * scaleval;
+      newval = (row->lhs - row->constant) * scaleval;
       if( EPSISINT(newval, roundtol) )
          newval = EPSFLOOR(newval, roundtol);
       CHECK_OKAY( SCIProwChgLhs(row, set, lp, newval) );
    }
    if( !SCIPsetIsInfinity(set, row->rhs) )
    {
-      newval = row->rhs * scaleval;
+      newval = (row->rhs - row->constant) * scaleval;
       if( EPSISINT(newval, roundtol) )
          newval = EPSFLOOR(newval, roundtol);
       CHECK_OKAY( SCIProwChgRhs(row, set, lp, newval) );
    }
+
+   /* clear the row constant */
+   CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, 0.0) );
 
    return SCIP_OKAY;
 }
@@ -2701,10 +2705,9 @@ RETCODE SCIProwChgRhs(
 
 
 
-#define DIVTOL      (1e+03*set->sumepsilon)
-#define TWOMULTTOL  (1e+00*set->sumepsilon)
-#define RATIONALTOL (1e-01*set->sumepsilon)
-
+#define DIVTOL      (1e+06*set->epsilon)
+#define TWOMULTTOL  (1e+03*set->epsilon)
+#define RATIONALTOL (1e+02*set->epsilon)
 /** tries to find a rational representation of the row and multiplies coefficients with common denominator */
 RETCODE SCIProwMakeRational(
    ROW*             row,                /**< LP row */
@@ -2712,6 +2715,7 @@ RETCODE SCIProwMakeRational(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal value to scale row with */
    Bool*            success             /**< stores whether row could be made rational */
    )
 {
@@ -2739,8 +2743,6 @@ RETCODE SCIProwMakeRational(
       *success = TRUE;
       return SCIP_OKAY;
    }
-
-   usedtol = set->epsilon;
 
    /* get minimal and maximal non-zero coefficient of row */
    minval = SCIProwGetMinval(row, set);
@@ -2771,123 +2773,148 @@ RETCODE SCIProwMakeRational(
       Bool scalable;
       Bool twomult;
       Real scaleval;
-      Longint scalemultval;
-      Longint twomultval;
+      Real twomultval;
 
       /* try, if row coefficients can be made integral by 
-       *  - multiplying them with the reciprocal of the smallest coefficient and a power of 10
+       *  - multiplying them with the reciprocal of the smallest coefficient and a power of 2
        *  - by multiplying them by a power of 2
        */
       scalable = TRUE;
       scaleval = 1.0/minval;
-      scalemultval = 1;
       twomult = TRUE;
-      twomultval = 1;
+      twomultval = 1.0;
       for( c = 0; c < row->len && (scalable || twomult); ++c )
       {
          val = row->vals[c];
          if( scalable )
          {
-            while( scalemultval <= maxdnom && !EPSISINT(val * scaleval * scalemultval, DIVTOL) )
-               scalemultval *= 2;
-            scalable = (scalemultval <= (Real)maxdnom);
+            while( scaleval <= maxscale && !EPSISINT(val * scaleval, DIVTOL) )
+               scaleval *= 2.0;
+            scalable = (scaleval <= maxscale);
          }
          if( twomult )
          {
-            while( twomultval <= maxdnom && !EPSISINT(val * twomultval, TWOMULTTOL) )
-               twomultval <<= 1;
-            twomult = (twomultval <= maxdnom);
+            while( twomultval <= maxscale && !EPSISINT(val * twomultval, TWOMULTTOL) )
+               twomultval *= 2.0;
+            twomult = (twomultval <= maxscale);
          }
       }
 
       if( scalable )
       {
          /* make row coefficients integral by dividing them by the smallest coefficient */
-         CHECK_OKAY( rowScale(row, set, stat, lp, scaleval * scalemultval, DIVTOL) );
-         usedtol = DIVTOL;
+         assert(scaleval <= maxscale);
+         CHECK_OKAY( rowScale(row, set, stat, lp, scaleval, DIVTOL) );
          *success = TRUE;
       }
       else if( twomult )
       {
          /* make row coefficients integral by multiplying them with a power of 2 */
-         CHECK_OKAY( rowScale(row, set, stat, lp, (Real)twomultval, TWOMULTTOL) );
-         usedtol = TWOMULTTOL;
+         assert(twomultval <= maxscale);
+         CHECK_OKAY( rowScale(row, set, stat, lp, twomultval, TWOMULTTOL) );
          *success = TRUE;
       }
       else
       {
+         Longint gcd;
          Longint scm;
          Longint nominator;
          Longint denominator;
          Bool rational;
          
-         /* convert each coefficient into a rational number, calculate the smallest common multiple of the
-          * denominators
+         /* convert each coefficient into a rational number, calculate the greatest common divisor of the nominators
+          * and the smallest common multiple of the denominators
           */
+         gcd = 1;
          scm = 1;
          rational = TRUE;
-         for( c = 0; c < row->len && rational; ++c )
+         if( row->len > 0 )
          {
-            val = row->vals[c];
+            /* first coefficient (to initialize gcd) */
+            val = row->vals[0];
             rational = SCIPrealToRational(val, RATIONALTOL, maxdnom, &nominator, &denominator);
             if( rational )
-               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational = rational && (scm <= maxdnom);
+            {
+               assert(denominator > 0);
+               gcd = (nominator == 0 ? 1 : ABS(nominator));
+               scm = denominator;
+               rational = ((Real)scm/(Real)gcd <= maxscale);
+            }
+            /* remaining coefficients */
+            for( c = 1; c < row->len && rational; ++c )
+            {
+               val = row->vals[c];
+               rational = SCIPrealToRational(val, RATIONALTOL, maxdnom, &nominator, &denominator);
+               if( rational )
+               {
+                  assert(denominator > 0);
+                  if( nominator != 0 )
+                     gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+                  scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+                  rational = ((Real)scm/(Real)gcd <= maxscale);
+               }
+            }
          }
+
+#if 0 /*??????????????????????*/
+         /* convert the sides into a rational number, calculate the greatest common divisor of the nominators
+          * and the smallest common multiple of the denominators
+          */
+         if( rational && !SCIPsetIsInfinity(set, -row->lhs) )
+         {
+            rational = SCIPrealToRational(row->lhs - row->constant, RATIONALTOL, maxdnom, &nominator, &denominator);
+            if( rational && nominator != 0  )
+            {
+               assert(denominator > 0);
+               if( nominator != 0 )
+                  gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+               rational = ((Real)scm/(Real)gcd <= maxscale);
+            }
+         }
+         if( rational && !SCIPsetIsInfinity(set, row->rhs) )
+         {
+            rational = SCIPrealToRational(row->rhs - row->constant, RATIONALTOL, maxdnom, &nominator, &denominator);
+            if( rational && nominator != 0 )
+            {
+               assert(denominator > 0);
+               if( nominator != 0 )
+                  gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+               rational = ((Real)scm/(Real)gcd <= maxscale);
+            }
+         }
+#endif
 
          if( rational )
          {
             /* make row coefficients integral by multiplying them with the smallest common multiple of the denominators */
-            CHECK_OKAY( rowScale(row, set, stat, lp, (Real)scm, RATIONALTOL) );
-            usedtol = RATIONALTOL;
+            assert((Real)scm/(Real)gcd <= maxscale);
+            CHECK_OKAY( rowScale(row, set, stat, lp, (Real)scm/(Real)gcd, RATIONALTOL) );
             *success = TRUE;
          }
       }
    }
    else
    {
-      /* all coefficients are integral: we have nothing to do */
+      /* all coefficients are integral: we have nothing to do except moving the constant to the sides */
+      CHECK_OKAY( SCIProwChgLhs(row, set, lp, row->lhs - row->constant) );
+      CHECK_OKAY( SCIProwChgRhs(row, set, lp, row->rhs - row->constant) );
+      CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, 0.0) );
       *success = TRUE;
    }
 
    /* clean up the row sides */
    if( *success )
    {
-      /* move the constant to the row's sides */
-      if( !SCIPsetIsInfinity(set, -row->lhs) )
-         row->lhs -= row->constant;
-      if( !SCIPsetIsInfinity(set, row->rhs) )
-         row->rhs -= row->constant;
-      row->constant = 0.0;
+      assert(row->constant == 0.0); /* in rowScale(), the constant should be moved to the sides */
       if( !contvars )
       {
          /* no continuous variables exist in the row, all coefficients of the new row are integral -> round sides */
-#if 0 /*???????????????????*/
          if( !SCIPsetIsInfinity(set, -row->lhs) )
             row->lhs = SCIPsetCeil(set, row->lhs);
          if( !SCIPsetIsInfinity(set, row->rhs) )
             row->rhs = SCIPsetFloor(set, row->rhs);
-#else
-         if( !SCIPsetIsInfinity(set, -row->lhs) )
-            row->lhs = EPSCEIL(row->lhs, usedtol);
-         if( !SCIPsetIsInfinity(set, row->rhs) )
-            row->rhs = EPSFLOOR(row->rhs, usedtol);
-#endif
-      }
-      else
-      {
-         /* the sides may be fractional, but if they are very close to integral, round them */
-#if 0 /*????????????????*/
-         if( !SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsIntegral(set, row->lhs) )
-            row->lhs = SCIPsetFloor(set, row->lhs);
-         if( !SCIPsetIsInfinity(set, row->rhs) && SCIPsetIsIntegral(set, row->rhs) )
-            row->rhs = SCIPsetFloor(set, row->rhs);
-#else
-         if( !SCIPsetIsInfinity(set, -row->lhs) && EPSISINT(row->lhs, usedtol) )
-            row->lhs = EPSCEIL(row->lhs, usedtol);
-         if( !SCIPsetIsInfinity(set, row->rhs) && EPSISINT(row->rhs, usedtol) )
-            row->rhs = EPSFLOOR(row->rhs, usedtol);
-#endif
       }
    }
 
@@ -4187,6 +4214,7 @@ RETCODE SCIPlpCreate(
    (*lp)->diving = FALSE;
    (*lp)->lpiuobjlim = set->infinity;
    (*lp)->lpifeastol = set->feastol;
+   (*lp)->lpidualfeastol = set->dualfeastol;
    (*lp)->lpifromscratch = FALSE;
    (*lp)->lpifastmip = TRUE;
    (*lp)->lpiscaling = TRUE;
@@ -4198,6 +4226,7 @@ RETCODE SCIPlpCreate(
    /* set default parameters in LP solver */
    CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim) );
    CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol) );
+   CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_DUALFEASTOL, (*lp)->lpidualfeastol) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
@@ -4571,7 +4600,7 @@ void sumMIRRow(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
    int              nvars,              /**< number of active variables in the problem */
-   Real*            weights,            /**< row weights in row summation */
+   Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*             slacksign,          /**< stores the sign of the row's slack variable in summation */
@@ -4596,61 +4625,60 @@ void sumMIRRow(
    *emptyrow = TRUE;
    for( r = 0; r < lp->nrows; ++r )
    {
-      if( !SCIPsetIsZero(set, weights[r]) )
-      {
-         row = lp->rows[r];
-         assert(row != NULL);
-         assert(row->len == 0 || row->cols != NULL);
-         assert(row->len == 0 || row->cols_probindex != NULL);
-         assert(row->len == 0 || row->vals != NULL);
+      row = lp->rows[r];
+      assert(row != NULL);
+      assert(row->len == 0 || row->cols != NULL);
+      assert(row->len == 0 || row->cols_probindex != NULL);
+      assert(row->len == 0 || row->vals != NULL);
 
-         /* check, if row is modifiable */
-         if( row->modifiable )
-            weights[r] = 0.0;
+      /* modifiable rows cannot be part of a MIR row summation; close to zero weights are ignored */
+      if( !row->modifiable && !SCIPsetIsZero(set, weights[r]) )
+      {
+         /* Decide, if we want to use the left or the right hand side of the row in the summation.
+          * If the actual row activity is closer to the left hand side, we use the  lhs <= a*x  part of the row,
+          * and treat it implicitly as  a*x - s == lhs. Otherwise, we use the  a*x <= rhs  part of the row,
+          * and treat it implicitly as  a*x + s == rhs. We have to remember, which sign the implicit slack variable
+          * has.
+          */
+         *emptyrow = FALSE;
+         rowactivity = SCIProwGetLPActivity(row, stat, lp);
+         assert(SCIPsetIsFeasGE(set, rowactivity, row->lhs));
+         assert(SCIPsetIsFeasLE(set, rowactivity, row->rhs));
+            
+         if( rowactivity < (row->lhs + row->rhs)/2.0 )
+         {
+            slacksign[r] = -1;
+            (*mirrhs) += weights[r] * (row->lhs - row->constant);
+         }
          else
          {
-            /* Decide, if we want to use the left or the right hand side of the row in the summation.
-             * If the actual row activity is closer to the left hand side, we use the  lhs <= a*x  part of the row,
-             * and treat it implicitly as  a*x - s == lhs. Otherwise, we use the  a*x <= rhs  part of the row,
-             * and treat it implicitly as  a*x + s == rhs. We have to remember, which sign the implicit slack variable
-             * has.
-             */
-            *emptyrow = FALSE;
-            rowactivity = SCIProwGetLPActivity(row, stat, lp);
-            assert(SCIPsetIsFeasGE(set, rowactivity, row->lhs));
-            assert(SCIPsetIsFeasLE(set, rowactivity, row->rhs));
-            
-            if( rowactivity < (row->lhs + row->rhs)/2.0 )
-            {
-               slacksign[r] = -1;
-               (*mirrhs) += weights[r] * (row->lhs - row->constant);
-            }
-            else
-            {
-               slacksign[r] = +1;
-               (*mirrhs) += weights[r] * (row->rhs - row->constant);
-            }
+            slacksign[r] = +1;
+            (*mirrhs) += weights[r] * (row->rhs - row->constant);
+         }
 
-            /* add the row coefficients to the sum */
-            for( i = 0; i < row->len; ++i )
-            {
-               assert(row->cols[i] != NULL);
-               assert(row->cols[i]->var != NULL);
-               assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-               assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
-               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
-               idx = row->cols_probindex[i];
-               assert(0 <= idx && idx < nvars);
-               mircoef[idx] += weights[r] * row->vals[i];
-            }
+         /* add the row coefficients to the sum */
+         for( i = 0; i < row->len; ++i )
+         {
+            assert(row->cols[i] != NULL);
+            assert(row->cols[i]->var != NULL);
+            assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+            assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
+            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
+            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
+            idx = row->cols_probindex[i];
+            assert(0 <= idx && idx < nvars);
+            mircoef[idx] += weights[r] * row->vals[i];
          }
       }
       else
+      {
          slacksign[r] = 0;
+         weights[r] = 0.0;
+      }
    }
 }
 
+#define BOUNDSWITCH 0.9999
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
  *    a*x' == b, 0 <= x' <= ub'.
  *  Transform variables:
@@ -4670,6 +4698,8 @@ void transformMIRRow(
    )
 {
    VAR* var;
+   Real lb;
+   Real ub;
    int idx;
    int v;
 
@@ -4688,27 +4718,58 @@ void transformMIRRow(
       idx = SCIPvarGetProbIndex(var);
       assert(0 <= idx && idx < nvars);
 
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))
-         && SCIPvarGetCol(var)->primsol > 0.5*(SCIPvarGetLbLocal(var) + SCIPvarGetUbLocal(var)) )
+      if( SCIPsetIsZero(set, mircoef[idx]) )
+      {
+         varsign[idx] = +1;
+         continue;
+      }
+
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      {
+         if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+         {
+            varsign[idx] = +1;
+            (*mirrhs) -= mircoef[idx] * lb;
+         }
+         else
+         {
+            varsign[idx] = -1;
+            (*mirrhs) -= mircoef[idx] * ub;
+         }
+      }
+      else if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
+      {
+         if( SCIPvarGetCol(var)->primsol <= (1.0-BOUNDSWITCH)*lb + BOUNDSWITCH*ub )
+         {
+            varsign[idx] = +1;
+            (*mirrhs) -= mircoef[idx] * lb;
+         }
+         else
+         {
+            varsign[idx] = -1;
+            (*mirrhs) -= mircoef[idx] * ub;
+         }
+      }
+      else if( !SCIPsetIsInfinity(set, -lb) )
+      {
+         varsign[idx] = +1;
+         (*mirrhs) -= mircoef[idx] * lb;
+      }
+      else if( !SCIPsetIsInfinity(set, ub) )
       {
          varsign[idx] = -1;
-         (*mirrhs) -= mircoef[idx] * SCIPvarGetUbLocal(var);
+         (*mirrhs) -= mircoef[idx] * ub;
       }
       else
       {
-         varsign[idx] = +1;
-         if( !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) )
-            (*mirrhs) -= mircoef[idx] * SCIPvarGetLbLocal(var);
-         else if( !SCIPsetIsZero(set, mircoef[idx]) )
-         {
-            /* we found a free variable in the row with non-zero coefficient
-             *  -> the MIR row cannot be transformed in standard form
-             */
-            *freevariable = TRUE;
-            return;
-         }            
-      }
+         /* we found a free variable in the row with non-zero coefficient
+          *  -> the MIR row cannot be transformed in standard form
+          */
+         *freevariable = TRUE;
+         return;
+      }            
    }
 }
 
@@ -4890,7 +4951,7 @@ RETCODE SCIPlpCalcMIR(
    int              nvars,              /**< number of active variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
-   Real*            weights,            /**< row weights in row summation */
+   Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
@@ -5083,6 +5144,40 @@ RETCODE lpSetFeastol(
    return SCIP_OKAY;
 }
 
+/** sets the reduced costs feasibility tolerance of the LP solver */
+static
+RETCODE lpSetDualFeastol(
+   LP*              lp,                 /**< actual LP data */
+   Real             dualfeastol         /**< new reduced costs feasibility tolerance */
+   )
+{
+   assert(lp != NULL);
+   assert(dualfeastol >= 0.0);
+   
+#ifndef NDEBUG
+   {
+      Real olddualfeastol;
+      
+      CHECK_OKAY( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_DUALFEASTOL, &olddualfeastol) );
+      assert(olddualfeastol == lp->lpidualfeastol);
+   }
+#endif
+
+   if( dualfeastol != lp->lpidualfeastol )
+   {
+      CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_DUALFEASTOL, dualfeastol) );
+      if( lp->nrows > 0 && dualfeastol < lp->lpidualfeastol )
+      {
+         lp->solved = FALSE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         lp->primalfeasible = FALSE;
+      }
+      lp->lpidualfeastol = dualfeastol;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** sets the FROMSCRATCH setting of the LP solver */
 static
 RETCODE lpSetFromscratch(
@@ -5196,13 +5291,13 @@ RETCODE lpPrimalSimplex(
       stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
 #if 0 /*???????????????????????*/
-   if( stat->nnodes >= 3200 )
+   if( stat->nnodes <= 1 && !lp->diving  )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+      printf("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
    }
 #endif
 
@@ -5256,13 +5351,13 @@ RETCODE lpDualSimplex(
       stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
 #if 0 /*???????????????????????*/
-   if( stat->nnodes >= 3200 )
+   if( stat->nnodes <= 1 && !lp->diving )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+      printf("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
    }
 #endif
 
@@ -5346,6 +5441,7 @@ RETCODE lpSolveStable(
    /* solve with given settings (usually fast but unprecise) */
    CHECK_OKAY( lpSetUobjlim(lp, lp->cutoffbound - lp->looseobjval) );
    CHECK_OKAY( lpSetFeastol(lp, set->feastol) );
+   CHECK_OKAY( lpSetDualFeastol(lp, set->dualfeastol) );
    CHECK_OKAY( lpSetFromscratch(lp, fromscratch) );
    CHECK_OKAY( lpSetFastmip(lp, fastmip) );
    CHECK_OKAY( lpSetScaling(lp, set->scaling) );
@@ -5465,7 +5561,7 @@ RETCODE lpSolve(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      if( SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim) )
+      if( SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;

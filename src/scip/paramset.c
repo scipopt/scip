@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.15 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.16 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -250,6 +250,17 @@ Bool SCIPparamGetBool(
       return param->data.boolparam.actvalue;
 }
 
+/** returns default value of Bool parameter */
+Bool SCIPparamGetBoolDefault(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_BOOL);
+
+   return param->data.boolparam.defaultvalue;
+}
+
 /** returns value of int parameter */
 int SCIPparamGetInt(
    PARAM*           param               /**< parameter */
@@ -284,6 +295,17 @@ int SCIPparamGetIntMax(
    assert(param->paramtype == SCIP_PARAMTYPE_INT);
 
    return param->data.intparam.maxvalue;
+}
+
+/** returns default value of int parameter */
+int SCIPparamGetIntDefault(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_INT);
+
+   return param->data.intparam.defaultvalue;
 }
 
 /** returns value of Longint parameter */
@@ -322,6 +344,17 @@ Longint SCIPparamGetLongintMax(
    return param->data.longintparam.maxvalue;
 }
 
+/** returns default value of Longint parameter */
+Longint SCIPparamGetLongintDefault(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+
+   return param->data.longintparam.defaultvalue;
+}
+
 /** returns value of Real parameter */
 Real SCIPparamGetReal(
    PARAM*           param               /**< parameter */
@@ -358,6 +391,17 @@ Real SCIPparamGetRealMax(
    return param->data.realparam.maxvalue;
 }
 
+/** returns default value of Real parameter */
+Real SCIPparamGetRealDefault(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+
+   return param->data.realparam.defaultvalue;
+}
+
 /** returns value of char parameter */
 char SCIPparamGetChar(
    PARAM*           param               /**< parameter */
@@ -372,6 +416,17 @@ char SCIPparamGetChar(
       return param->data.charparam.actvalue;
 }
 
+/** returns default value of char parameter */
+char SCIPparamGetCharDefault(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+
+   return param->data.charparam.defaultvalue;
+}
+
 /** returns value of string parameter */
 char* SCIPparamGetString(
    PARAM*           param               /**< parameter */
@@ -384,6 +439,17 @@ char* SCIPparamGetString(
       return *param->data.stringparam.valueptr;
    else
       return param->data.stringparam.actvalue;
+}
+
+/** returns default value of String parameter */
+char* SCIPparamGetStringDefault(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_STRING);
+
+   return param->data.stringparam.defaultvalue;
 }
 
 /** sets value of Bool parameter */
@@ -549,6 +615,81 @@ RETCODE SCIPparamSetString(
    if( param->paramchgd != NULL && scip != NULL )
    {
       CHECK_OKAY( param->paramchgd(scip, param) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the parameter is on its default setting */
+Bool SCIPparamIsDefault(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+
+   switch( param->paramtype )
+   {
+   case SCIP_PARAMTYPE_BOOL:
+      return (SCIPparamGetBool(param) == SCIPparamGetBoolDefault(param));
+
+   case SCIP_PARAMTYPE_INT:
+      return (SCIPparamGetInt(param) == SCIPparamGetIntDefault(param));
+
+   case SCIP_PARAMTYPE_LONGINT:
+      return (SCIPparamGetLongint(param) == SCIPparamGetLongintDefault(param));
+
+   case SCIP_PARAMTYPE_REAL:
+      return EPSZ(SCIPparamGetReal(param) - SCIPparamGetRealDefault(param), 1e-16);
+
+   case SCIP_PARAMTYPE_CHAR:
+      return (SCIPparamGetChar(param) == SCIPparamGetCharDefault(param));
+
+   case SCIP_PARAMTYPE_STRING:
+      return (strcmp(SCIPparamGetString(param), SCIPparamGetStringDefault(param)) == 0);
+      
+   default:
+      errorMessage("unknown parameter type\n");
+      abort();
+   }
+}
+
+/** sets the parameter to its default setting */
+RETCODE SCIPparamSetToDefault(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   )
+{
+   assert(param != NULL);
+
+   switch( param->paramtype )
+   {
+   case SCIP_PARAMTYPE_BOOL:
+      CHECK_OKAY( SCIPparamSetBool(param, scip, SCIPparamGetBoolDefault(param)) );
+      break;
+
+   case SCIP_PARAMTYPE_INT:
+      CHECK_OKAY( SCIPparamSetInt(param, scip, SCIPparamGetIntDefault(param)) );
+      break;
+
+   case SCIP_PARAMTYPE_LONGINT:
+      CHECK_OKAY( SCIPparamSetLongint(param, scip, SCIPparamGetLongintDefault(param)) );
+      break;
+
+   case SCIP_PARAMTYPE_REAL:
+      CHECK_OKAY( SCIPparamSetReal(param, scip, SCIPparamGetRealDefault(param)) );
+      break;
+
+   case SCIP_PARAMTYPE_CHAR:
+      CHECK_OKAY( SCIPparamSetChar(param, scip, SCIPparamGetCharDefault(param)) );
+      break;
+
+   case SCIP_PARAMTYPE_STRING:
+      CHECK_OKAY( SCIPparamSetString(param, scip, SCIPparamGetStringDefault(param)) );
+      break;
+      
+   default:
+      errorMessage("unknown parameter type\n");
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -978,12 +1119,18 @@ static
 RETCODE paramWrite(
    PARAM*           param,              /**< parameter */
    FILE*            file,               /**< file to write parameter to */
-   Bool             comments            /**< should parameter descriptions be written as comments? */
+   Bool             comments,           /**< should parameter descriptions be written as comments? */
+   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    assert(param != NULL);
    assert(file != NULL);
 
+   /* write paramters at default values only, if the onlychanged flag is not set */
+   if( onlychanged && SCIPparamIsDefault(param) )
+      return SCIP_OKAY;
+
+   /* write parameter description, bounds, and defaults as comments */
    if( comments )
    {
       fprintf(file, "# %s\n", param->desc);
@@ -1018,33 +1165,36 @@ RETCODE paramWrite(
          return SCIP_INVALIDDATA;
       }
    }
+
+   /* write parameter value */
    fprintf(file, "%s = ", param->name);
    switch( param->paramtype )
    {
    case SCIP_PARAMTYPE_BOOL:
-      fprintf(file, "%s", SCIPparamGetBool(param) ? "TRUE" : "FALSE");
+      fprintf(file, "%s\n", SCIPparamGetBool(param) ? "TRUE" : "FALSE");
       break;
    case SCIP_PARAMTYPE_INT:
-      fprintf(file, "%d", SCIPparamGetInt(param));
+      fprintf(file, "%d\n", SCIPparamGetInt(param));
       break;
    case SCIP_PARAMTYPE_LONGINT:
-      fprintf(file, "%lld", SCIPparamGetLongint(param));
+      fprintf(file, "%lld\n", SCIPparamGetLongint(param));
       break;
    case SCIP_PARAMTYPE_REAL:
-      fprintf(file, "%.15g", SCIPparamGetReal(param));
+      fprintf(file, "%.15g\n", SCIPparamGetReal(param));
       break;
    case SCIP_PARAMTYPE_CHAR:
-      fprintf(file, "%c", SCIPparamGetChar(param));
+      fprintf(file, "%c\n", SCIPparamGetChar(param));
       break;
    case SCIP_PARAMTYPE_STRING:
-      fprintf(file, "\"%s\"", SCIPparamGetString(param));
+      fprintf(file, "\"%s\"\n", SCIPparamGetString(param));
       break;
    default:
       errorMessage("unknown parameter type\n");
       return SCIP_INVALIDDATA;
    }
 
-   fprintf(file, "\n");
+   if( comments )
+      fprintf(file, "\n");
 
    return SCIP_OKAY;
 }
@@ -1762,7 +1912,8 @@ RETCODE SCIPparamsetRead(
 RETCODE SCIPparamsetWrite(
    PARAMSET*        paramset,           /**< parameter set */
    const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments            /**< should parameter descriptions be written as comments? */
+   Bool             comments,           /**< should parameter descriptions be written as comments? */
+   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    FILE* file;
@@ -1787,9 +1938,7 @@ RETCODE SCIPparamsetWrite(
    /* write the parameters to the file */
    for( i = 0; i < paramset->nparams; ++i )
    {
-      CHECK_OKAY( paramWrite(paramset->params[i], file, comments) );
-      if( comments )
-         fprintf(file, "\n");
+      CHECK_OKAY( paramWrite(paramset->params[i], file, comments, onlychanged) );
    }
 
    /* close output file */

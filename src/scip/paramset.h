@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.6 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.7 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -247,7 +247,8 @@ RETCODE SCIPparamsetRead(
 RETCODE SCIPparamsetWrite(
    PARAMSET*        paramset,           /**< parameter set */
    const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments            /**< should parameter descriptions be written as comments? */
+   Bool             comments,           /**< should parameter descriptions be written as comments? */
+   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
 /** returns the array of parameters */

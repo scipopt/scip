@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.74 2004/01/19 14:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.75 2004/01/22 14:42:30 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -434,6 +434,7 @@ RETCODE nodeAssignParent(
    assert(node->conssetchg == NULL);
    assert(node->domchg == NULL);
    assert(node->data.child.arraypos == -1);
+   assert(SCIPsetIsInfinity(set, -node->lowerbound)); /* node was just created */
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(tree != NULL);
@@ -944,7 +945,7 @@ RETCODE SCIPnodeAddBoundchg(
       
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
-      node->lowerbound = MAX(node->lowerbound, newpseudoobjval);
+      SCIPnodeUpdateLowerbound(node, newpseudoobjval);
    }
    else
    {
@@ -975,17 +976,6 @@ RETCODE SCIPnodeAddBoundchg(
    }
 
    return SCIP_OKAY;
-}
-
-/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
-void SCIPnodeUpdateLowerbound(
-   NODE*            node,               /**< node to update lower bound for */
-   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
-   )
-{
-   assert(node != NULL);
-
-   node->lowerbound = MAX(node->lowerbound, newbound);
 }
 
 
@@ -1023,6 +1013,17 @@ Real SCIPnodeGetLowerbound(
    assert(node != NULL);
 
    return node->lowerbound;
+}
+
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+void SCIPnodeUpdateLowerbound(
+   NODE*            node,               /**< node to update lower bound for */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   )
+{
+   assert(node != NULL);
+
+   node->lowerbound = MAX(node->lowerbound, newbound);
 }
 
 #endif
@@ -1823,7 +1824,7 @@ RETCODE actnodeToSubroot(
    {
       CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
    }
-   else /* ???????????? */
+   else
 #endif
    {
       CHECK_OKAY( SCIPlpRemoveAllObsoletes(lp, memhdr, set, stat) );

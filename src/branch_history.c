@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.4 2004/01/19 14:10:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.5 2004/01/22 14:42:26 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -33,7 +33,8 @@
 #define BRANCHRULE_DESC          "history branching"
 #define BRANCHRULE_PRIORITY      10000
 
-#define DEFAULT_RELIABLE         4.0    /**< minimum history size to regard history value as reliable */
+#define DEFAULT_MINRELIABLE      4.0    /**< minimal value for minimum history size to regard history value as reliable */
+#define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum history size to regard history value as reliable */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_STRONGBRANCHCAND 100    /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_STRONGBRANCHITER 0      /**< iteration limit for strong branching init of history entries (0: auto) */
@@ -42,7 +43,8 @@
 /** branching rule data */
 struct BranchruleData
 {
-   Real             reliable;           /**< minimum history size to regard history value as reliable */
+   Real             minreliable;        /**< minimal value for minimum history size to regard history value as reliable */
+   Real             maxreliable;        /**< maximal value for minimum history size to regard history value as reliable */
    int              maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int              strongbranchcand;   /**< maximal number of candidates initialized with strong branching per node */
    int              strongbranchiter;   /**< iteration limit for strong branching init of history entries (0: auto) */
@@ -77,6 +79,9 @@ DECL_BRANCHFREE(branchFreeHistory)
 #define branchExitHistory NULL
 
 
+#define MINMAXDEPTH   20
+#define MAXMAXDEPTH  100
+#define MAXSIZE     5000
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpHistory)
@@ -87,13 +92,12 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    Real* lpcandsfrac;
    Real lowerbound;
    Real cutoffbound;
-   Real bestdown;
-   Real bestup;
-   Real bestscore;
+   Real bestsbdown;
+   Real bestsbup;
    Bool bestisstrongbranch;
    Bool allcolsinlp;
    int nlpcands;
-   int bestlpcand;
+   int bestcand;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -119,15 +123,15 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
    assert(nlpcands > 0);
 
-   bestlpcand = -1;
+   bestcand = -1;
    bestisstrongbranch = FALSE;
-   bestdown = SCIP_INVALID;
-   bestup = SCIP_INVALID;
+   bestsbdown = SCIP_INVALID;
+   bestsbup = SCIP_INVALID;
 
    if( nlpcands == 1 )
    {
       /* only one candidate: nothing has to be done */
-      bestlpcand = 0;
+      bestcand = 0;
    }
    else
    {
@@ -143,7 +147,19 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       Real up;
       Real downgain;
       Real upgain;
+      Real besthistscore;
+      Real bestsbscore;
+      Real depthfac;
+      Real sizefac;
+      Real prio;
       Longint actnodenum;
+      Bool usesb;
+      int actdepth;
+      int maxdepth;
+      int nintvars;
+      int reliable;
+      int besthistcand;
+      int bestsbcand;
       int maxlookahead;
       int lookahead;
       int sbiter;
@@ -157,11 +173,27 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       CHECK_OKAY( SCIPallocBufferArray(scip, &sbcandscores, maxnsbcands+1) );
       nsbcands = 0;
 
-      /* get current node number */
+      /* get current node number, depth, maximal depth, and number of binary/integer variables */
       actnodenum = SCIPgetNodenum(scip);
+      actdepth = SCIPgetActDepth(scip);
+      maxdepth = SCIPgetMaxDepth(scip);
+      maxdepth = MAX(maxdepth, MINMAXDEPTH);
+      maxdepth = MIN(maxdepth, MAXMAXDEPTH);
+      nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+
+      /* calculate value used as reliability */
+      depthfac = 1.1 - (Real)actdepth/(Real)maxdepth;
+      depthfac = MAX(depthfac, 0.0);
+      depthfac = MIN(depthfac, 1.0);
+      sizefac = 1.1 - (Real)nintvars/(Real)MAXSIZE;
+      sizefac = MAX(sizefac, 0.0);
+      sizefac = MIN(sizefac, 1.0);
+      prio = depthfac * sizefac;
+      reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
       /* search for the best history candidate, while remembering unreliable candidates in a sorted buffer */
-      bestscore = -SCIPinfinity(scip);
+      besthistcand = -1;
+      besthistscore = -SCIPinfinity(scip);
       for( c = 0; c < nlpcands; ++c )
       {
          assert(lpcands[c] != NULL);
@@ -185,6 +217,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
             /* calculate score out of old strong branching values */
             score = SCIPgetBranchScore(scip, downgain, upgain);
             score *= SCIPvarGetBranchingPriority(lpcands[c]);
+
+            /* don't use strong branching on variables that have already been initialized at the current node */
+            usesb = FALSE;
          }
          else
          {
@@ -196,31 +231,38 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
             downsize = SCIPgetVarLPHistoryCount(scip, lpcands[c], 0);
             upsize = SCIPgetVarLPHistoryCount(scip, lpcands[c], 1);
             size = MIN(downsize, upsize);
-            if( size < branchruledata->reliable )
+
+            /* use strong branching on variables with unreliable history scores */
+            usesb = (size < reliable);
+         }
+
+         if( usesb )
+         {
+            /* history of variable is not reliable: insert candidate in sbcands buffer */
+            for( j = nsbcands; j > 0 && score > sbcandscores[j-1]; --j )
             {
-               /* history of variable is not reliable: insert candidate in sbcands buffer */
-               for( j = nsbcands; j > 0 && score > sbcandscores[j-1]; --j )
-               {
-                  sbcands[j] = sbcands[j-1];
-                  sbcandscores[j] = sbcandscores[j-1];
-               }
-               sbcands[j] = c;
-               sbcandscores[j] = score;
-               nsbcands++;
-               nsbcands = MIN(nsbcands, maxnsbcands);
+               sbcands[j] = sbcands[j-1];
+               sbcandscores[j] = sbcandscores[j-1];
+            }
+            sbcands[j] = c;
+            sbcandscores[j] = score;
+            nsbcands++;
+            nsbcands = MIN(nsbcands, maxnsbcands);
+         }
+         else
+         {
+            /* variable will keep it's history value: check for better history score of candidate */
+            if( score > besthistscore )
+            {
+               besthistscore = score;
+               besthistcand = c;
             }
          }
-
-         /* check for better score of candidate */
-         if( score > bestscore )
-         {
-            bestscore = score;
-            bestlpcand = c;
-         }
       }
-      assert(bestlpcand >= 0);
 
-      /* initialize unreliable candidates with strong branching until maxlookahead is reached */
+      /* initialize unreliable candidates with strong branching until maxlookahead is reached,
+       * search best strong branching candidate
+       */
       maxlookahead = branchruledata->maxlookahead;
       sbiter = branchruledata->strongbranchiter;
       if( sbiter == 0 )
@@ -229,6 +271,8 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          sbiter = 2*(SCIPgetNLPIterations(scip)) / MAX(1, nlps);
          sbiter = MAX(sbiter, 10);
       }
+      bestsbcand = -1;
+      bestsbscore = -SCIPinfinity(scip);
       lookahead = 0;
       for( i = 0; i < nsbcands && lookahead < maxlookahead; ++i )
       {
@@ -285,30 +329,41 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          /* check for a better score */
          score = SCIPgetBranchScore(scip, downgain, upgain) + 1e-4; /* no gain -> use fractionalities */
          score *= SCIPvarGetBranchingPriority(lpcands[c]);
-         if( score > bestscore )
+         if( score > bestsbscore )
          {
-            bestlpcand = c;
-            bestdown = down;
-            bestup = up;
-            bestscore = score;
+            bestsbcand = c;
+            bestsbscore = score;
+            bestsbdown = down;
+            bestsbup = up;
             lookahead = 0;
-            bestisstrongbranch = TRUE;
          }
-         else if( SCIPisLT(scip, score, bestscore) )
+         else if( SCIPisLT(scip, score, bestsbscore) )
             lookahead++;
       
          /* update history values */
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
       
-         debugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, prio=%g, score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
-            SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, SCIPvarGetBranchingPriority(lpcands[c]), score,
-            SCIPvarGetName(lpcands[bestlpcand]), bestscore, lookahead, maxlookahead);
+         debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), prio=%g, score=%g) -- best: <%s>, lookahead=%d/%d\n",
+            SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, SCIPvarGetBranchingPriority(lpcands[c]), 
+            score, SCIPvarGetName(lpcands[c]), lookahead, maxlookahead);
       }
 
       /* free buffer for the unreliable candidates */
       CHECK_OKAY( SCIPfreeBufferArray(scip, &sbcandscores) );
       CHECK_OKAY( SCIPfreeBufferArray(scip, &sbcands) );
+
+      /* compare best strong branching candidate against best history candidate */
+      if( bestsbscore >= besthistscore )
+      {
+         bestisstrongbranch = TRUE;
+         bestcand = bestsbcand;
+      }
+      else
+      {
+         assert(!bestisstrongbranch);
+         bestcand = besthistcand;
+      }
    }
 
    /* if no domain could be reduced, create the branching */
@@ -317,35 +372,35 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       NODE* node;
 
       assert(*result == SCIP_DIDNOTRUN);
-      assert(0 <= bestlpcand && bestlpcand < nlpcands);
-      assert(!SCIPisIntegral(scip, lpcandssol[bestlpcand]));
+      assert(0 <= bestcand && bestcand < nlpcands);
+      assert(!SCIPisIntegral(scip, lpcandssol[bestcand]));
 
       /* perform the branching */
-      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, down=%g, up=%g, prio=%g, score=%g)\n",
-         nlpcands, bestlpcand, SCIPvarGetName(lpcands[bestlpcand]), lpcandssol[bestlpcand], bestdown, bestup, 
-         SCIPvarGetBranchingPriority(lpcands[bestlpcand]), bestscore);
+      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, down=%g, up=%g, prio=%g, sb=%d)\n",
+         nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestsbdown, bestsbup, 
+         SCIPvarGetBranchingPriority(lpcands[bestcand]), bestisstrongbranch);
 
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",
-         SCIPvarGetName(lpcands[bestlpcand]), SCIPfloor(scip, lpcandssol[bestlpcand]));
+         SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
-      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestlpcand], SCIPfloor(scip, lpcandssol[bestlpcand])) );
+      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && bestisstrongbranch )
       {
-         assert(SCIPisLT(scip, bestdown, cutoffbound));
-         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
+         assert(SCIPisLT(scip, bestsbdown, cutoffbound));
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestsbdown) );
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", 
-         SCIPvarGetName(lpcands[bestlpcand]), SCIPceil(scip, lpcandssol[bestlpcand]));
+         SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
-      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestlpcand], SCIPceil(scip, lpcandssol[bestlpcand])) );
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && bestisstrongbranch )
       {
-         assert(SCIPisLT(scip, bestup, cutoffbound));
-         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
+         assert(SCIPisLT(scip, bestsbup, cutoffbound));
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestsbup) );
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
 
@@ -383,9 +438,13 @@ RETCODE SCIPincludeBranchruleHistory(
 
    /* history branching rule parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "branching/history/reliable", 
-                  "minimum history size to regard history value as reliable",
-                  &branchruledata->reliable, DEFAULT_RELIABLE, 0.0, REAL_MAX, NULL, NULL) );
+                  "branching/history/minreliable", 
+                  "minimal value for minimum history size to regard history value as reliable",
+                  &branchruledata->minreliable, DEFAULT_MINRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "branching/history/maxreliable", 
+                  "maximal value for minimum history size to regard history value as reliable",
+                  &branchruledata->maxreliable, DEFAULT_MAXRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "branching/history/maxlookahead", 
                   "maximal number of further variables evaluated without better score",

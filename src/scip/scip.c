@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.121 2004/01/19 14:10:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.122 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -740,12 +740,13 @@ RETCODE SCIPreadParams(
 RETCODE SCIPwriteParams(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments            /**< should parameter descriptions be written as comments? */
+   Bool             comments,           /**< should parameter descriptions be written as comments? */
+   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPwriteParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetWriteParams(scip->set, filename, comments) );
+   CHECK_OKAY( SCIPsetWriteParams(scip->set, filename, comments, onlychanged) );
 
    return SCIP_OKAY;
 }
@@ -3153,7 +3154,7 @@ RETCODE SCIPfreeSolve(
 #ifndef NDEBUG
       blockMemoryCheckEmpty(scip->mem->solvemem);
 #endif
-      clearBlockMemoryNull(scip->mem->solvemem);
+      freeAllBlockMemoryNull(scip->mem->solvemem);
 
       /* reset statistics to the point before solving started */
       SCIPstatReset(scip->stat);
@@ -4023,9 +4024,9 @@ RETCODE aggregateActiveIntVars(
    *aggregated = FALSE;
 
    /* get rational representation of coefficients */
-   success = SCIPrealToRational(scalarx, scip->set->feastol, MAXDNOM, &scalarxn, &scalarxd);
+   success = SCIPrealToRational(scalarx, scip->set->epsilon, MAXDNOM, &scalarxn, &scalarxd);
    if( success )
-      success = SCIPrealToRational(scalary, scip->set->feastol, MAXDNOM, &scalaryn, &scalaryd);
+      success = SCIPrealToRational(scalary, scip->set->epsilon, MAXDNOM, &scalaryn, &scalaryd);
    if( !success )
       return SCIP_OKAY;
    assert(scalarxd >= 1);
@@ -4974,7 +4975,7 @@ RETCODE SCIPsumLPRows(
 RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
-   Real*            weights,            /**< row weights in row summation */
+   Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
@@ -5374,12 +5375,13 @@ RETCODE SCIPmakeRowRational(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal value to scale row with */
    Bool*            success             /**< stores whether row could be made rational */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPmakeRowRational", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwMakeRational(row, scip->set, scip->stat, scip->lp, maxdnom, success) );
+   CHECK_OKAY( SCIProwMakeRational(row, scip->set, scip->stat, scip->lp, maxdnom, maxscale, success) );
 
    return SCIP_OKAY;
 }
@@ -7847,7 +7849,7 @@ Real SCIPsumepsilon(
    return scip->set->sumepsilon;
 }
 
-/** returns feasibility tolerance */
+/** returns feasibility tolerance for constraints */
 Real SCIPfeastol(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -7858,15 +7860,49 @@ Real SCIPfeastol(
    return scip->set->feastol;
 }
 
-/** sets the feasibility tolerance */
+/** returns feasibility tolerance for reduced costs */
+Real SCIPdualfeastol(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+ 
+   return scip->set->dualfeastol;
+}
+
+/** sets the feasibility tolerance for constraints */
 RETCODE SCIPsetFeastol(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             feastol             /**< new feasibility tolerance */
+   Real             feastol             /**< new feasibility tolerance for constraints */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetFeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
+   /* mark the LP unsolved, if the feasibility tolerance was tightened */
+   if( scip->lp != NULL && feastol < scip->set->feastol )
+      scip->lp->solved = FALSE;
+
+   /* change the settings */
    CHECK_OKAY( SCIPsetSetFeastol(scip->set, feastol) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the feasibility tolerance for reduced costs */
+RETCODE SCIPsetDualfeastol(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             dualfeastol         /**< new feasibility tolerance for reduced costs */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetDualfeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   /* mark the LP unsolved, if the dual feasibility tolerance was tightened */
+   if( scip->lp != NULL && dualfeastol < scip->set->dualfeastol )
+      scip->lp->solved = FALSE;
+
+   /* change the settings */
+   CHECK_OKAY( SCIPsetSetDualfeastol(scip->set, dualfeastol) );
 
    return SCIP_OKAY;
 }

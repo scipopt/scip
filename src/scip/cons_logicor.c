@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.25 2004/01/16 11:25:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.26 2004/01/22 14:42:27 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -36,7 +36,7 @@
 #define CONSHDLR_SEPAPRIORITY   +800000
 #define CONSHDLR_ENFOPRIORITY   +800000
 #define CONSHDLR_CHECKPRIORITY  -800000
-#define CONSHDLR_SEPAFREQ             4
+#define CONSHDLR_SEPAFREQ             1
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
 

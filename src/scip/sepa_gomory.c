@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.13 2004/01/19 14:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.14 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory Cuts
@@ -32,12 +32,12 @@
 #define SEPA_NAME          "gomory"
 #define SEPA_DESC          "gomory cuts separator"
 #define SEPA_PRIORITY                 0
-#define SEPA_FREQ                     8
+#define SEPA_FREQ                    10
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of gomory separation rounds per node */
 #define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node */
-#define DEFAULT_MAXSEPACUTS          32 /**< maximal number of gomory cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     128 /**< maximal number of gomory cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTS          25 /**< maximal number of gomory cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 
@@ -85,7 +85,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    Real* binvrow;
    Real* cutcoef;
    Real cutrhs;
-   Bool success;
+   Real maxscale;
    Longint maxdnom;
    int* basisind;
    int nvars;
@@ -98,6 +98,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    int ncuts;
    int c;
    int i;
+   Bool success;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -130,16 +131,31 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
-   /* set the maximal denominator in rational representation of gomory cut to avoid numerical instabilities */
+   /* set the maximal denominator in rational representation of gomory cut and the maximal scale factor to
+    * scale resulting cut to integral values to avoid numerical instabilities
+    */
+   /**@todo find better but still stable gomory cut settings: look at dcmulti, gesa3, khb0525, misc06, p2756 */
    maxdepth = SCIPgetMaxDepth(scip);
    if( actdepth == 0 )
+   {
       maxdnom = 1000000;
+      maxscale = 65536.0;
+   }
    else if( actdepth <= maxdepth/4 )
+   {
       maxdnom = 100;
+      maxscale = 128.0;
+   }
    else if( actdepth <= maxdepth/2 )
+   {
       maxdnom = 10;
+      maxscale = 16.0;
+   }
    else
+   {
       maxdnom = 1;
+      maxscale = 4.0;
+   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -158,7 +174,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   debugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%lld, maxcuts=%d\n", ncols, nrows, maxdnom, maxsepacuts);
+   debugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%lld, maxscale=%g, maxcuts=%d\n",
+      ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    /* for all basic columns belonging to integer variables, try to generate a gomory cut */
    ncuts = 0;
@@ -243,7 +260,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      /* create the cut */
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
-                                 TRUE, FALSE, sepadata->dynamiccuts) );
+                                    (actdepth > 0), FALSE, sepadata->dynamiccuts) );
 #if 0
                      debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f, norm=%f\n",
                         cutname, cutact, cutrhs, cutnorm);
@@ -251,7 +268,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
 #endif
 
                      /* try to scale the cut to integral values */
-                     CHECK_OKAY( SCIPmakeRowRational(scip, cut, maxdnom, &success) );
+                     CHECK_OKAY( SCIPmakeRowRational(scip, cut, maxdnom, maxscale, &success) );
                      
                      /* if scaling was successful, add the cut */
                      if( success )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.50 2004/01/19 14:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.51 2004/01/22 14:42:30 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -137,12 +137,28 @@ RETCODE SCIPnodeAddBoundchg(
    CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
    );
 
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
 extern
 void SCIPnodeUpdateLowerbound(
    NODE*            node,               /**< node to update lower bound for */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPnodeUpdateLowerbound(node, newbound)  { (node)->lowerbound = MAX((node)->lowerbound, newbound); }
+
+#endif
 
 
 

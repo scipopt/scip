@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.25 2003/12/01 16:14:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.26 2004/01/22 14:42:28 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1095,7 +1095,7 @@ createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
  *    mem : Pointer to memory header to clear.
  */
 void
-clearBlockMemory_call(MEMHDR *mem, const char *filename, int line)
+freeAllBlockMemory_call(MEMHDR *mem, const char *filename, int line)
 {
    BLKHDR *blk;
    BLKHDR *nextblk;
@@ -1133,7 +1133,7 @@ destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
 
    if( *mem != NULL )
    {
-      clearBlockMemory_call(*mem, filename, line);
+      freeAllBlockMemory_call(*mem, filename, line);
       freeMemory(mem);
       assert(*mem == NULL);
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.102 2004/01/19 14:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.103 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -362,7 +362,8 @@ extern
 RETCODE SCIPwriteParams(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments            /**< should parameter descriptions be written as comments? */
+   Bool             comments,           /**< should parameter descriptions be written as comments? */
+   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
 /** returns the array of all available SCIP parameters */
@@ -1933,7 +1934,7 @@ extern
 RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
-   Real*            weights,            /**< row weights in row summation */
+   Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
@@ -2126,6 +2127,7 @@ RETCODE SCIPmakeRowRational(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal value to scale row with */
    Bool*            success             /**< stores whether row could be made rational */
    );
 
@@ -3099,17 +3101,30 @@ Real SCIPsumepsilon(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** returns feasibility tolerance */
+/** returns feasibility tolerance for constraints */
 extern
 Real SCIPfeastol(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** sets the feasibility tolerance */
+/** returns feasibility tolerance for reduced costs */
+extern
+Real SCIPdualfeastol(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** sets the feasibility tolerance for constraints */
 extern
 RETCODE SCIPsetFeastol(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             feastol             /**< new feasibility tolerance */
+   Real             feastol             /**< new feasibility tolerance for constraints */
+   );
+
+/** sets the feasibility tolerance for reduced costs */
+extern
+RETCODE SCIPsetDualfeastol(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             dualfeastol         /**< new feasibility tolerance for reduced costs */
    );
 
 #ifndef NDEBUG

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.7 2004/01/19 14:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.8 2004/01/22 14:42:30 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -100,7 +100,8 @@ struct Set
    Real             infinity;           /**< values larger than this are considered infinity */
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
    Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
-   Real             feastol;            /**< LP feasibility tolerance */
+   Real             feastol;            /**< feasibility tolerance for constraints */
+   Real             dualfeastol;        /**< feasibility tolerance for reduced costs */
    Real             boundstreps;        /**< minimal improve for strengthening bounds */
    Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
    Real             cutviolepsroot;     /**< epsilon for deciding if a cut is violated in the root node */
@@ -129,7 +130,7 @@ struct Set
    int              colagelimit;        /**< maximum age a column can reach before it is deleted from the LP */
    int              rowagelimit;        /**< maximum age a row can reach before it is deleted from the LP */
    int              cutagelimit;        /**< maximum age a cut can reach before it is deleted from the global cut pool */
-   int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted */
+   int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted, or -1 */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
    Real             timelimit;          /**< maximal time in seconds to run */

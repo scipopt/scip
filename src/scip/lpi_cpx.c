@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.51 2004/01/16 11:25:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.52 2004/01/22 14:42:28 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1497,35 +1497,38 @@ RETCODE SCIPlpiSolvePrimal(
 
    if( lpi->solstat == CPX_STAT_INForUNBD )
    {
-      /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
-      debugMessage("CPLEX returned INForUNBD -> calling CPLEX primal simplex again without presolve\n");
-      
-      /* switch off preprocessing */
-      setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
-      CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
-
-      retval = CPXprimopt(cpxenv, lpi->cpxlp);
-      switch( retval  )
+      if( getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON )
       {
-      case 0:
-         break;
-      case CPXERR_NO_MEMORY:
-         return SCIP_NOMEMORY;
-      default:
-         return SCIP_LPERROR;
-      }
+         /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+         debugMessage("CPLEX returned INForUNBD -> calling CPLEX primal simplex again without presolve\n");
+         
+         /* switch off preprocessing */
+         setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
+         CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
+         
+         retval = CPXprimopt(cpxenv, lpi->cpxlp);
+         switch( retval  )
+         {
+         case 0:
+            break;
+         case CPXERR_NO_MEMORY:
+            return SCIP_NOMEMORY;
+         default:
+            return SCIP_LPERROR;
+         }
 
-      lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-      debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+         lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+         debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+
+         /* switch on preprocessing again */
+         setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
+      }
 
       if( lpi->solstat == CPX_STAT_INForUNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          errorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
-
-      /* switch on preprocessing again */
-      setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
    }
 
    return SCIP_OKAY;
@@ -1565,35 +1568,38 @@ RETCODE SCIPlpiSolveDual(
 
    if( lpi->solstat == CPX_STAT_INForUNBD )
    {
-      /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
-      debugMessage("CPLEX returned INForUNBD -> calling CPLEX dual simplex again without presolve\n");
-      
-      /* switch off preprocessing */
-      setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
-      CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
-
-      retval = CPXdualopt(cpxenv, lpi->cpxlp);
-      switch( retval  )
+      if( getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON )
       {
-      case 0:
-         break;
-      case CPXERR_NO_MEMORY:
-         return SCIP_NOMEMORY;
-      default:
-         return SCIP_LPERROR;
-      }
+         /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+         debugMessage("CPLEX returned INForUNBD -> calling CPLEX dual simplex again without presolve\n");
+         
+         /* switch off preprocessing */
+         setIntParam(lpi, CPX_PARAM_PREIND, CPX_OFF);
+         CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
+         
+         retval = CPXdualopt(cpxenv, lpi->cpxlp);
+         switch( retval  )
+         {
+         case 0:
+            break;
+         case CPXERR_NO_MEMORY:
+            return SCIP_NOMEMORY;
+         default:
+            return SCIP_LPERROR;
+         }
 
-      lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-      debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+         lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+         debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+
+         /* switch on preprocessing again */
+         setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
+      }
 
       if( lpi->solstat == CPX_STAT_INForUNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
-
-      /* switch on preprocessing again */
-      setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
    }
 
    return SCIP_OKAY;
@@ -2354,6 +2360,9 @@ RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_FEASTOL:
       *dval = getDblParam(lpi, CPX_PARAM_EPRHS);
       break;
+   case SCIP_LPPAR_DUALFEASTOL:
+      *dval = getDblParam(lpi, CPX_PARAM_EPOPT);
+      break;
    case SCIP_LPPAR_LOBJLIM:
       *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
       break;
@@ -2385,6 +2394,8 @@ RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
+      break;
+   case SCIP_LPPAR_DUALFEASTOL:
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);
       break;
    case SCIP_LPPAR_LOBJLIM:

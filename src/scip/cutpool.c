@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.22 2003/12/15 17:45:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.23 2004/01/22 14:42:27 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -210,6 +210,19 @@ RETCODE cutFree(
    return SCIP_OKAY;
 }
 
+/** returns whether the cut's age exceeds the age limit */
+static
+Bool cutIsAged(
+   CUT*             cut,                /**< cut to check */
+   int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool, or -1 */
+   )
+{
+   assert(cut != NULL);
+
+   return (agelimit >= 0 && cut->age > agelimit);
+}
+
+
 
 
 /*
@@ -223,7 +236,7 @@ RETCODE SCIPcutpoolCreate(
    )
 {
    assert(cutpool != NULL);
-   assert(agelimit >= 0);
+   assert(agelimit >= -1);
 
    ALLOC_OKAY( allocMemory(cutpool) );
 
@@ -492,7 +505,7 @@ RETCODE SCIPcutpoolSeparate(
             else
             {
                cut->age++;
-               if( cut->age > cutpool->agelimit )
+               if( cutIsAged(cut, cutpool->agelimit) )
                {
                   CHECK_OKAY( cutpoolDelCut(cutpool, memhdr, set, stat, lp, cut) );
                }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.63 2004/01/19 14:10:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.64 2004/01/22 14:42:27 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -361,6 +361,7 @@ RETCODE SCIProwMakeRational(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal value to scale row with */
    Bool*            success             /**< stores whether row could be made rational */
    );
 
@@ -570,7 +571,7 @@ RETCODE SCIPlpCalcMIR(
    int              nvars,              /**< number of active variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
-   Real*            weights,            /**< row weights in row summation */
+   Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */

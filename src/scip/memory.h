@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.16 2003/11/27 17:48:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.17 2004/01/22 14:42:28 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -133,8 +133,8 @@ typedef struct memory_header MEMHDR;
 /* block memory methods for faster memory access */
 
 #define createBlockMemory(csz,clr,gbf)     createBlockMemory_call( (csz), (clr), (gbf), __FILE__, __LINE__ )
-#define clearBlockMemory(mem)              clearBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define clearBlockMemoryNull(mem)          if( (mem) != NULL ) clearBlockMemory( (mem) )
+#define freeAllBlockMemory(mem)            freeAllBlockMemory_call( (mem), __FILE__, __LINE__ )
+#define freeAllBlockMemoryNull(mem)        if( (mem) != NULL ) freeAllBlockMemory( (mem) )
 #define destroyBlockMemory(mem)            destroyBlockMemory_call( (mem), __FILE__, __LINE__ )
 #define destroyBlockMemoryNull(mem)        if( *(mem) != NULL ) destroyBlockMemory( (mem) )
 
@@ -196,7 +196,7 @@ MEMHDR* createBlockMemory_call(int initChunkSize, int clearUnusedBlocks, int gar
  * Parameters:
  *    mem : Pointer to memory header to clear.
  */
-void clearBlockMemory_call(MEMHDR* mem, const char *filename, int line);
+void freeAllBlockMemory_call(MEMHDR* mem, const char *filename, int line);
 
 /* Delete a block allocation.
  * Parameters:

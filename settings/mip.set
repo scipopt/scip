@@ -19,31 +19,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
-# LP feasibility tolerance
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# LP feasibility tolerance for constraints
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
+# LP feasibility tolerance for reduced costs
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
+numerics/dualfeastol = 1e-09
+
 # minimal improve for strengthening bounds
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal distance value to use for branching history updates
-# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
+# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
 numerics/historyeps = 0.1
 
 # fraction of maximal memory usage resulting in switch to memory saving mode
@@ -87,32 +91,32 @@ presolving/maxpresolrounds = -1
 presolving/presolabortfac = 0.0001
 
 # maximal number of variables priced in per pricing round
-# [type: int, range: [1,2147483647], default: 128]
-pricing/maxpricevars = 128
+# [type: int, range: [1,2147483647], default: 100]
+pricing/maxpricevars = 100
 
 # maximal number of priced variables at the root node
-# [type: int, range: [1,2147483647], default: 2048]
-pricing/maxpricevarsroot = 2048
+# [type: int, range: [1,2147483647], default: 2000]
+pricing/maxpricevarsroot = 2000
 
 # pricing is aborted, if fac * maxpricevars pricing candidates were found
 # [type: real, range: [1,1.79769313486232e+308], default: 2]
 pricing/abortpricevarsfac = 2
 
 # maximal number of cuts separated per separation round
-# [type: int, range: [1,2147483647], default: 128]
-separating/maxsepacuts = 128
+# [type: int, range: [1,2147483647], default: 100]
+separating/maxsepacuts = 100
 
 # maximal number of separated cuts at the root node
-# [type: int, range: [1,2147483647], default: 2048]
-separating/maxsepacutsroot = 2048
+# [type: int, range: [1,2147483647], default: 2000]
+separating/maxsepacutsroot = 2000
 
-# maximum age a cut can reach before it is deleted from the global cut pool
-# [type: int, range: [1,2147483647], default: 128]
-separating/cutagelimit = 128
+# maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts
+# [type: int, range: [-1,2147483647], default: 100]
+separating/cutagelimit = 100
 
-# maximum age an unnecessary constraint can reach before it is deleted
-# [type: int, range: [1,2147483647], default: 128]
-constraints/consagelimit = 128
+# maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
+# [type: int, range: [-1,2147483647], default: 2000]
+constraints/consagelimit = 2000
 
 # should propagation conflict analysis be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -151,8 +155,8 @@ limits/gaplimit = 0
 limits/sollimit = -1
 
 # maximal number of solutions to store in the solution storage
-# [type: int, range: [1,2147483647], default: 256]
-limits/maxsol = 256
+# [type: int, range: [1,2147483647], default: 100]
+limits/maxsol = 100
 
 # frequency for solving LP at the nodes (-1: never; 0: only root LP)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -163,8 +167,8 @@ lp/lpsolvefreq = 1
 lp/lpsolvedepth = -1
 
 # frequency for applying reduced cost fixing (-1: never; 0: only root LP)
-# [type: int, range: [-1,2147483647], default: 4]
-lp/redcostfreq = 4
+# [type: int, range: [-1,2147483647], default: 5]
+lp/redcostfreq = 1
 
 # should LP solutions be checked, resolving LP when numerical troubles occur?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -187,12 +191,12 @@ lp/cleanupcols = FALSE
 lp/cleanuprows = TRUE
 
 # maximum age a dynamic column can reach before it is deleted from the LP
-# [type: int, range: [1,2147483647], default: 8]
-lp/colagelimit = 8
+# [type: int, range: [0,2147483647], default: 10]
+lp/colagelimit = 10
 
 # maximum age a dynamic row can reach before it is deleted from the LP
-# [type: int, range: [1,2147483647], default: 8]
-lp/rowagelimit = 8
+# [type: int, range: [0,2147483647], default: 10]
+lp/rowagelimit = 10
 
 # default clock type (1: CPU user seconds, 2: wall clock time)
 # [type: int, range: [1,2], default: 1]
@@ -227,28 +231,28 @@ constraints/integral/propfreq = -1
 conflict/linear/priority = -1000000
 
 # frequency for separating cuts of constraint handler <linear> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 4]
+# [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/sepafreq = 0
 
 # frequency for propagating domains of constraint handler <linear> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 4]
-constraints/linear/propfreq = 4
+# [type: int, range: [-1,2147483647], default: 5]
+constraints/linear/propfreq = 5
 
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/linear/tightenboundsfreq = 1
 
 # maximal allowed relative gain in maximum norm for constraint aggregation
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-constraints/linear/maxaggrnormscale = 4
+# [type: real, range: [0,1.79769313486232e+308], default: 5]
+constraints/linear/maxaggrnormscale = 5
 
 # priority of conflict handler <logicor>
 # [type: int, range: [-2147483648,2147483647], default: 800000]
 conflict/logicor/priority = 800000
 
 # frequency for separating cuts of constraint handler <logicor> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 4]
-constraints/logicor/sepafreq = 4
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/logicor/sepafreq = 1
 
 # frequency for propagating domains of constraint handler <logicor> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -271,7 +275,7 @@ constraints/logicor/minvarusefac = -0.2
 conflict/setppc/priority = 700000
 
 # frequency for separating cuts of constraint handler <setppc> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 4]
+# [type: int, range: [-1,2147483647], default: 1]
 constraints/setppc/sepafreq = 0
 
 # frequency for propagating domains of constraint handler <setppc> (-1: never, 0: only in root node)
@@ -315,8 +319,8 @@ nodeselection/bfs/stdpriority = 100000
 nodeselection/bfs/memsavepriority = 0
 
 # minimal plunging depth, before new best node may be selected
-# [type: int, range: [0,2147483647], default: 10]
-nodeselection/bfs/minplungedepth = 2
+# [type: int, range: [0,2147483647], default: 5]
+nodeselection/bfs/minplungedepth = 5
 
 # maximal plunging depth, before new best node is forced to be selected
 # [type: int, range: [0,2147483647], default: 25]
@@ -347,16 +351,20 @@ nodeselection/restartdfs/memsavepriority = 50000
 nodeselection/restartdfs/selectbestfreq = 1000
 
 # priority of branching rule <fullstrong>
-# [type: int, range: [-2147483648,2147483647], default: 1000]
+# [type: int, range: [-2147483648,2147483647], default: 0]
 branching/fullstrong/priority = 0
 
 # priority of branching rule <history>
 # [type: int, range: [-2147483648,2147483647], default: 10000]
 branching/history/priority = 10000
 
-# minimum history size to regard history value as reliable
+# minimal value for minimum history size to regard history value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 4]
-branching/history/reliable = 4
+branching/history/minreliable = 4
+
+# maximal value for minimum history size to regard history value as reliable
+# [type: real, range: [0,1.79769313486232e+308], default: 16]
+branching/history/maxreliable = 16
 
 # maximal number of further variables evaluated without better score
 # [type: int, range: [1,2147483647], default: 8]
@@ -431,7 +439,7 @@ heuristics/simplerounding/freq = 1
 separating/gomory/priority = 0
 
 # frequency for calling separator <gomory> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 8]
+# [type: int, range: [-1,2147483647], default: 10]
 separating/gomory/freq = 0
 
 # maximal number of gomory separation rounds per node
@@ -443,12 +451,12 @@ separating/gomory/maxrounds = 3
 separating/gomory/maxroundsroot = 6
 
 # maximal number of gomory cuts separated per separation round
-# [type: int, range: [0,2147483647], default: 32]
-separating/gomory/maxsepacuts = 32
+# [type: int, range: [0,2147483647], default: 25]
+separating/gomory/maxsepacuts = 25
 
 # maximal number of gomory cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 128]
-separating/gomory/maxsepacutsroot = 128
+# [type: int, range: [0,2147483647], default: 100]
+separating/gomory/maxsepacutsroot = 100
 
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.13 2004/01/19 14:10:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.14 2004/01/22 14:42:26 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -31,7 +31,7 @@
 
 #define BRANCHRULE_NAME          "fullstrong"
 #define BRANCHRULE_DESC          "full strong branching"
-#define BRANCHRULE_PRIORITY      1000
+#define BRANCHRULE_PRIORITY      0
 
 
 
@@ -39,6 +39,19 @@
  * Callback methods
  */
 
+/** destructor of branching rule to free user data (called when SCIP is exiting) */
+#define branchFreeFullstrong NULL
+
+
+/** initialization method of branching rule (called when problem solving starts) */
+#define branchInitFullstrong NULL
+
+
+/** deinitialization method of branching rule (called when problem solving exits) */
+#define branchExitFullstrong NULL
+
+
+/** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpFullstrong)
 {  /*lint --e{715}*/
@@ -47,18 +60,12 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    Real* lpcandsfrac;
    Real cutoffbound;
    Real lowerbound;
-   Real down;
-   Real up;
-   Real downgain;
-   Real upgain;
-   Real score;
    Real bestdown;
    Real bestup;
    Real bestscore;
    Bool allcolsinlp;
    int nlpcands;
    int bestlpcand;
-   int c;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -89,6 +96,13 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    }
    else
    {
+      Real down;
+      Real up;
+      Real downgain;
+      Real upgain;
+      Real score;
+      int c;
+
       /* search the full strong candidate */
       bestscore = -SCIPinfinity(scip);
       bestlpcand = -1;
@@ -200,6 +214,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 }
 
 
+/** branching execution method for not completely fixed pseudo solutions */
+#define branchExecpsFullstrong NULL
+
 
 
 
@@ -212,9 +229,16 @@ RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   BRANCHRULEDATA* branchruledata;
+
+   /* create fullstrong branching rule data */
+   branchruledata = NULL;
+
+   /* include fullstrong branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
-                  NULL, NULL, NULL, branchExeclpFullstrong, NULL,
-                  NULL) );
+                  branchFreeFullstrong, branchInitFullstrong, branchExitFullstrong, 
+                  branchExeclpFullstrong, branchExecpsFullstrong,
+                  branchruledata) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.23 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.24 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -42,7 +42,7 @@
  * Default parameter settings
  */
 
-#define MINPLUNGEDEPTH               10 /**< minimal plunging depth, before new best node may be selected */
+#define MINPLUNGEDEPTH                5 /**< minimal plunging depth, before new best node may be selected */
 #define MAXPLUNGEDEPTH               25 /**< maximal plunging depth, before new best node is forced to be selected */
 #define MAXPLUNGEQUOT               1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                          *   where plunging is performed */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.22 2004/01/19 14:10:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.23 2004/01/22 14:42:26 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -816,24 +816,24 @@ RETCODE lpGenerateAltLP(
       assert( row != NULL );
 
       /* left hand side */
-      if( !SCIPsetIsInfinity(set, - row->lhs) )
+      if( !SCIPsetIsInfinity(set, -row->lhs) )
       {
          cnt = 0;
          for( j = 0; j < row->len; ++j )
          {
             inds[cnt] = row->cols[j]->lppos;
-            vals[cnt] = - row->vals[j];
+            vals[cnt] = -row->vals[j];
             ++cnt;
          }
          if( !SCIPsetIsZero(set, row->lhs) )
          {
             inds[cnt] = ncols;
-            vals[cnt] = row->lhs;
+            vals[cnt] = -(row->lhs - row->constant);
             sum_rhs += ABS(row->lhs);
             ++cnt;
          }
          if( row->local )
-            obj = 1000.0;
+            obj = 2000.0;
          else
             obj = 0.0;
          lb = 0.0;
@@ -856,12 +856,12 @@ RETCODE lpGenerateAltLP(
          if( !SCIPsetIsZero(set, row->rhs) )
          {
             inds[cnt] = ncols;
-            vals[cnt] = row->rhs;
+            vals[cnt] = row->rhs - row->constant;
             sum_rhs += ABS(row->rhs);
             ++cnt;
          }
          if( row->local )
-            obj = 1000.0;
+            obj = 3000.0;
          else
             obj = 0.0;
          lb = 0.0;
@@ -905,17 +905,17 @@ RETCODE lpGenerateAltLP(
       col = cols[j];
       assert( col != NULL);
       /* lower bounds */
-      if( !SCIPsetIsInfinity(set, - col->lb) )
+      if( !SCIPsetIsInfinity(set, -col->lb) )
       {
          cnt = 0;
          inds[cnt] = j;
-         vals[cnt] = - 1.0;
+         vals[cnt] = -1.0;
          ++cnt;
 
          if( !SCIPsetIsZero(set, col->lb) )
          {
             inds[cnt] = ncols;
-            vals[cnt] = - col->lb;
+            vals[cnt] = -col->lb;
             sum_rhs += ABS(col->lb);
             ++cnt;
          }
@@ -1062,8 +1062,9 @@ RETCODE lpconflictAnalyze(
    CHECK_OKAY( SCIPlpiGetIntpar(lpconflict->lpi, SCIP_LPPAR_LPITER, &iterations) );
    lpconflict->nlpiterations += iterations;
 
-   /* check, if we have a primal feasible solution */
-   if( !SCIPlpiIsPrimalInfeasible(lpconflict->lpi) )
+   /* check, if the LP is stable and we have a primal feasible solution */
+   if( SCIPlpiIsStable(lpconflict->lpi)
+      && (SCIPlpiIsOptimal(lpconflict->lpi) || SCIPlpiIsPrimalUnbounded(lpconflict->lpi)) )
    {
       COL* col;
       Real* psol;
@@ -1106,7 +1107,6 @@ RETCODE lpconflictAnalyze(
             if( SCIPsetIsPositive(set, psol[j + alt_nrowvars]) )
             {
                col = alt_colvars[j];
-
                /* check, if the specific bound differs from the root LP */
                if( (alt_islower[j] && !SCIPsetIsEQ(set, SCIPvarGetLbGlobal(col->var), col->lb))
                   || (!alt_islower[j] && !SCIPsetIsEQ(set, SCIPvarGetUbGlobal(col->var), col->ub)) )
@@ -1116,6 +1116,7 @@ RETCODE lpconflictAnalyze(
                   {
                      /* put binary variable into the conflict set */
                      CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, col->var) );
+                     debugMessage(" -> adding <%s> to IIS\n", SCIPvarGetName(col->var));
                   }
                   else
                   {
@@ -1138,10 +1139,11 @@ RETCODE lpconflictAnalyze(
       /* free memory buffer for primal solution of alternative LP */
       SCIPsetFreeBufferArray(set, &psol);      
    }
-#if 0
    else
-      errorMessage("Warning! alternative LP is primal infeasible\n");
-#endif
+   {
+      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, 
+         "(node %lld) alternative LP is unstable or primal infeasible\n", stat->nnodes);
+   }
 
    /* free memory buffers for alternative LP information */
    SCIPsetFreeBufferArray(set, &alt_islower);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.60 2004/01/15 14:33:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.61 2004/01/22 14:42:30 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -259,7 +259,8 @@ extern
 RETCODE SCIPsetWriteParams(
    SET*             set,                /**< global SCIP settings */
    const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments            /**< should parameter descriptions be written as comments? */
+   Bool             comments,           /**< should parameter descriptions be written as comments? */
+   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
 /** returns the array of all available SCIP parameters */
@@ -516,6 +517,13 @@ extern
 RETCODE SCIPsetSetFeastol(
    SET*             set,                /**< global SCIP settings */
    Real             feastol             /**< new feasibility tolerance */
+   );
+
+/** sets LP feasibility tolerance for reduced costs */
+extern
+RETCODE SCIPsetSetDualfeastol(
+   SET*             set,                /**< global SCIP settings */
+   Real             dualfeastol         /**< new reduced costs feasibility tolerance */
    );
 
 /** returns the maximal number of variables priced into the LP per round */

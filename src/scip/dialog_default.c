@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.13 2004/01/15 14:33:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.14 2004/01/22 14:42:27 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -681,8 +681,28 @@ DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 
    if( filename[0] != '\0' )
    {
-      CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE) );
+      CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE, FALSE) );
       printf("saved parameter file <%s>\n", filename);
+   }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set diffsave command */
+DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave)
+{  /*lint --e{715}*/
+   const char* filename;
+
+   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
+   if( filename[0] != '\0' )
+   {
+      CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE, TRUE) );
+      printf("saved non-default parameter settings to file <%s>\n", filename);
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1279,7 +1299,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( SCIPdialogFindEntry(root, "set", &setmenu) != 1 )
       return SCIP_PLUGINNOTFOUND;
 
-   /* set read */
+   /* set load */
    if( !SCIPdialogHasEntry(setmenu, "load") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetLoad, NULL,
@@ -1288,11 +1308,20 @@ RETCODE SCIPincludeDialogDefaultSet(
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* set write */
+   /* set save */
    if( !SCIPdialogHasEntry(setmenu, "save") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetSave, NULL,
                      "save", "save parameter settings to a file", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set diffsave */
+   if( !SCIPdialogHasEntry(setmenu, "diffsave") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetDiffsave, NULL,
+                     "diffsave", "save non-default parameter settings to a file", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.1 2003/12/01 14:41:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.2 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   pub_paramset.h
  * @brief  public methods for handling parameter settings
@@ -63,6 +63,12 @@ Bool SCIPparamGetBool(
    PARAM*           param               /**< parameter */
    );
 
+/** returns default value of Bool parameter */
+extern
+Bool SCIPparamGetBoolDefault(
+   PARAM*           param               /**< parameter */
+   );
+
 /** returns value of int parameter */
 extern
 int SCIPparamGetInt(
@@ -78,6 +84,12 @@ int SCIPparamGetIntMin(
 /** returns maximal value of int parameter */
 extern
 int SCIPparamGetIntMax(
+   PARAM*           param               /**< parameter */
+   );
+
+/** returns default value of int parameter */
+extern
+int SCIPparamGetIntDefault(
    PARAM*           param               /**< parameter */
    );
 
@@ -99,6 +111,12 @@ Longint SCIPparamGetLongintMax(
    PARAM*           param               /**< parameter */
    );
 
+/** returns default value of Longint parameter */
+extern
+Longint SCIPparamGetLongintDefault(
+   PARAM*           param               /**< parameter */
+   );
+
 /** returns value of Real parameter */
 extern
 Real SCIPparamGetReal(
@@ -117,15 +135,33 @@ Real SCIPparamGetRealMax(
    PARAM*           param               /**< parameter */
    );
 
+/** returns default value of Real parameter */
+extern
+Real SCIPparamGetRealDefault(
+   PARAM*           param               /**< parameter */
+   );
+
 /** returns value of char parameter */
 extern
 char SCIPparamGetChar(
    PARAM*           param               /**< parameter */
    );
 
+/** returns default value of char parameter */
+extern
+char SCIPparamGetCharDefault(
+   PARAM*           param               /**< parameter */
+   );
+
 /** returns value of string parameter */
 extern
 char* SCIPparamGetString(
+   PARAM*           param               /**< parameter */
+   );
+
+/** returns default value of String parameter */
+extern
+char* SCIPparamGetStringDefault(
    PARAM*           param               /**< parameter */
    );
 
@@ -174,6 +210,19 @@ RETCODE SCIPparamSetString(
    PARAM*           param,              /**< parameter */
    SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    const char*      value               /**< new value of the parameter */
+   );
+
+/** returns whether the parameter is on its default setting */
+extern
+Bool SCIPparamIsDefault(
+   PARAM*           param               /**< parameter */
+   );
+
+/** sets the parameter to its default setting */
+extern
+RETCODE SCIPparamSetToDefault(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    );
 
 

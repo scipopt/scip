@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.85 2004/01/19 14:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.86 2004/01/22 14:42:29 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -90,30 +90,30 @@
 #define SCIP_DEFAULT_SCALING          TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LPSOLVEDEPTH       -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_REDCOSTFREQ         4 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
-#define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a dynamic column can reach before it is deleted from the LP */
-#define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a dynamic row can reach before it is deleted from the LP */
+#define SCIP_DEFAULT_REDCOSTFREQ         5 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
+#define SCIP_DEFAULT_COLAGELIMIT        10 /**< maximum age a dynamic column can reach before it is deleted from the LP */
+#define SCIP_DEFAULT_ROWAGELIMIT        10 /**< maximum age a dynamic row can reach before it is deleted from the LP */
 
 
 /* Pricing */
 
-#define SCIP_DEFAULT_MAXPRICEVARS      128 /**< maximal number of variables priced in per pricing round */
-#define SCIP_DEFAULT_MAXPRICEVARSROOT 2048 /**< maximal number of priced variables at the root node */
+#define SCIP_DEFAULT_MAXPRICEVARS      100 /**< maximal number of variables priced in per pricing round */
+#define SCIP_DEFAULT_MAXPRICEVARSROOT 2000 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
 #define SCIP_DEFAULT_CLEANUPCOLS     FALSE /**< should new non-basic columns be removed after LP solving? */
 
 
 /* Cut Separation */
 
-#define SCIP_DEFAULT_MAXSEPACUTS       128 /**< maximal number of cuts separated per separation round */
-#define SCIP_DEFAULT_MAXSEPACUTSROOT  2048 /**< maximal separated cuts at the root node */
-#define SCIP_DEFAULT_CUTAGELIMIT       128 /**< maximum age a cut can reach before it is deleted from global cut pool */
+#define SCIP_DEFAULT_MAXSEPACUTS       100 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_MAXSEPACUTSROOT  2000 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global pool, or -1 */
 #define SCIP_DEFAULT_CLEANUPROWS      TRUE /**< should new basic rows be removed after LP solving? */
 
 
 /* Constraint Settings */
 
-#define SCIP_DEFAULT_CONSAGELIMIT      128 /**< maximum age an unnecessary constraint can reach before it is deleted */
+#define SCIP_DEFAULT_CONSAGELIMIT     2000 /**< maximum age an unnecessary constr. can reach before it is deleted, or -1 */
 
 
 /* Conflict Analysis */
@@ -127,7 +127,7 @@
 
 #define SCIP_DEFAULT_GAPLIMIT          0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_SOLLIMIT           -1 /**< solving stops, if the given number of solutions were found (-1: no limit) */
-#define SCIP_DEFAULT_MAXSOL            256 /**< maximal number of solutions to store in the solution storage */
+#define SCIP_DEFAULT_MAXSOL            100 /**< maximal number of solutions to store in the solution storage */
 
 
 /* Tree */
@@ -187,6 +187,20 @@ DECL_PARAMCHGD(paramChgdFeastol)
    
    /* change the feastol through the SCIP call in order to mark the LP unsolved */
    CHECK_OKAY( SCIPsetFeastol(scip, newfeastol) );
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of dualfeastol */
+static
+DECL_PARAMCHGD(paramChgdDualfeastol)
+{  /*lint --e{715}*/
+   Real newdualfeastol;
+
+   newdualfeastol = SCIPparamGetReal(param);
+   
+   /* change the dualfeastol through the SCIP call in order to mark the LP unsolved */
+   CHECK_OKAY( SCIPsetDualfeastol(scip, newdualfeastol) );
 
    return SCIP_OKAY;
 }
@@ -292,9 +306,14 @@ RETCODE SCIPsetCreate(
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "numerics/feastol",
-                  "LP feasibility tolerance",
+                  "LP feasibility tolerance for constraints",
                   &(*set)->feastol, SCIP_DEFAULT_FEASTOL, machineeps*1e+03, SCIP_MAXEPSILON,
                   paramChgdFeastol, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "numerics/dualfeastol",
+                  "LP feasibility tolerance for reduced costs",
+                  &(*set)->dualfeastol, SCIP_DEFAULT_DUALFEASTOL, machineeps*1e+03, SCIP_MAXEPSILON,
+                  paramChgdDualfeastol, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "numerics/boundstreps",
                   "minimal improve for strengthening bounds",
@@ -392,13 +411,13 @@ RETCODE SCIPsetCreate(
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "separating/cutagelimit",
-                  "maximum age a cut can reach before it is deleted from the global cut pool",
-                  &(*set)->cutagelimit, SCIP_DEFAULT_CUTAGELIMIT, 1, INT_MAX,
+                  "maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts",
+                  &(*set)->cutagelimit, SCIP_DEFAULT_CUTAGELIMIT, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "constraints/consagelimit",
-                  "maximum age an unnecessary constraint can reach before it is deleted",
-                  &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT, 1, INT_MAX,
+                  "maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints",
+                  &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "conflict/usepropconflict",
@@ -493,12 +512,12 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "lp/colagelimit",
                   "maximum age a dynamic column can reach before it is deleted from the LP",
-                  &(*set)->colagelimit, SCIP_DEFAULT_COLAGELIMIT, 1, INT_MAX,
+                  &(*set)->colagelimit, SCIP_DEFAULT_COLAGELIMIT, 0, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "lp/rowagelimit",
                   "maximum age a dynamic row can reach before it is deleted from the LP",
-                  &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT, 1, INT_MAX,
+                  &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT, 0, INT_MAX,
                   NULL, NULL) );
    assert(sizeof(int) == sizeof(CLOCKTYPE));
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
@@ -928,12 +947,13 @@ RETCODE SCIPsetReadParams(
 RETCODE SCIPsetWriteParams(
    SET*             set,                /**< global SCIP settings */
    const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments            /**< should parameter descriptions be written as comments? */
+   Bool             comments,           /**< should parameter descriptions be written as comments? */
+   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetWrite(set->paramset, filename, comments) );
+   CHECK_OKAY( SCIPparamsetWrite(set->paramset, filename, comments, onlychanged) );
 
    return SCIP_OKAY;
 }
@@ -1780,6 +1800,19 @@ RETCODE SCIPsetSetFeastol(
    assert(set != NULL);
 
    set->feastol = feastol;
+
+   return SCIP_OKAY;
+}
+
+/** sets LP feasibility tolerance for reduced costs */
+RETCODE SCIPsetSetDualfeastol(
+   SET*             set,                /**< global SCIP settings */
+   Real             dualfeastol         /**< new reduced costs feasibility tolerance */
+   )
+{
+   assert(set != NULL);
+
+   set->dualfeastol = dualfeastol;
 
    return SCIP_OKAY;
 }

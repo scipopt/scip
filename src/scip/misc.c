@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.17 2003/12/01 16:14:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.18 2004/01/22 14:42:28 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2022,8 +2022,8 @@ Longint SCIPcalcGreComDiv(
    Longint t;
    Longint gcd;
 
-   assert(val1 >= 0);
-   assert(val2 >= 0);
+   assert(val1 > 0);
+   assert(val2 > 0);
 
    /* extract all prime factors 2 */
    gcd = 1;
@@ -2061,8 +2061,8 @@ Longint SCIPcalcSmaComMul(
 {
    Longint gcd;
 
-   assert(val1 >= 0);
-   assert(val2 >= 0);
+   assert(val1 > 0);
+   assert(val2 > 0);
 
    gcd = SCIPcalcGreComDiv(val1, val2);
    

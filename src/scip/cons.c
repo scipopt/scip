@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.61 2003/12/18 13:44:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.62 2004/01/22 14:42:26 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -197,6 +197,19 @@ RETCODE conshdlrEnsureUpdateconssMem(
 /*
  * Constraint handler methods
  */
+
+/** returns whether the constraint's age exceeds the age limit */
+static
+Bool consIsAged(
+   CONS*            cons,               /**< constraint to check */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   return (set->consagelimit >= 0 && cons->age > set->consagelimit);
+}
 
 /** marks constraint to be obsolete; if constraint is not necessary for feasibility, it will be deleted completely;
  *  otherwise, it will be moved to the last part of the constraint arrays, such that it is checked, enforced, separated,
@@ -830,7 +843,7 @@ RETCODE conshdlrProcessUpdates(
          cons->updatedeactivate = FALSE;
          cons->updateenable = FALSE;
          cons->updatedisable = FALSE;
-         cons->obsolete = (cons->age >= set->consagelimit);
+         cons->obsolete = consIsAged(cons, set);
          cons->updateobsolete = FALSE;
       }
       else if( cons->updateenable )
@@ -852,12 +865,12 @@ RETCODE conshdlrProcessUpdates(
       }
       if( cons->updateobsolete )
       {
-         if( !cons->obsolete && cons->age >= set->consagelimit )
+         if( !cons->obsolete && consIsAged(cons, set) )
          {
             /* the constraint's status must be switched to obsolete */
             CHECK_OKAY( conshdlrMarkConsObsolete(conshdlr, memhdr, set, prob, cons) );
          }
-         else if( cons->obsolete && cons->age < set->consagelimit )
+         else if( cons->obsolete && !consIsAged(cons, set) )
          {
             /* the constraint's status must be switched to useful */
             CHECK_OKAY( conshdlrMarkConsUseful(conshdlr, cons) );
@@ -3097,7 +3110,7 @@ RETCODE SCIPconsIncAge(
 
    cons->age++;
    
-   if( !cons->obsolete && cons->age >= set->consagelimit )
+   if( !cons->obsolete && consIsAged(cons, set) )
    {
       if( cons->conshdlr->delayupdates )
       {
@@ -3169,7 +3182,8 @@ RETCODE SCIPconsResolveConflictVar(
 
    if( cons->conshdlr->consrescvar == NULL )
    {
-      errorMessage("inference constraint is unable to resolve conflict variable due to missing resolving method\n");
+      errorMessage("constraint handler <%s> is unable to resolve conflict variable <%s> due to missing resolving method\n",
+         cons->conshdlr->name, SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.10 2004/01/15 12:09:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.11 2004/01/22 14:42:27 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -118,6 +118,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLoad);
 /** dialog execution method for the set save command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecSetSave);
+
+/** dialog execution method for the set diffsave command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave);
 
 /** dialog execution method for the set parameter command */
 extern
