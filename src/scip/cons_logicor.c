@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.66 2004/11/30 17:41:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.67 2004/12/15 19:51:03 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -292,22 +292,19 @@ RETCODE switchWatchedvars(
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
 
    /* if one watched variable is equal to the old other watched variable, just switch positions */
-   if( watchedvar1 >= 0 )
+   if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
-      if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
-      {
-         int tmp;
-         
-         tmp = consdata->watchedvar1;
-         consdata->watchedvar1 = consdata->watchedvar2;
-         consdata->watchedvar2 = tmp;
-         tmp = consdata->filterpos1;
-         consdata->filterpos1 = consdata->filterpos2;
-         consdata->filterpos2 = tmp;
-      }
-      assert(watchedvar1 != consdata->watchedvar2);
-      assert(watchedvar2 != consdata->watchedvar1);
+      int tmp;
+      
+      tmp = consdata->watchedvar1;
+      consdata->watchedvar1 = consdata->watchedvar2;
+      consdata->watchedvar2 = tmp;
+      tmp = consdata->filterpos1;
+      consdata->filterpos1 = consdata->filterpos2;
+      consdata->filterpos2 = tmp;
    }
+   assert(watchedvar1 == -1 || watchedvar1 != consdata->watchedvar2);
+   assert(watchedvar2 == -1 || watchedvar2 != consdata->watchedvar1);
 
    /* drop events on old watched variables */
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )

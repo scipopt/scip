@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.127 2004/12/10 13:36:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.128 2004/12/15 19:51:04 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -143,7 +143,8 @@
 
 /* Presolving */
 
-#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if l.t. frac of the problem was changed in last round */
+#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
+                                                 *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTBDCHGS   100 /**< number of root node bound changes triggering a restart with
                                                  *   preprocessing (-1: no restart, 0: restart only after complete root
@@ -631,7 +632,7 @@ RETCODE SCIPsetCreate(
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
          "presolving/abortfac",
-         "abort presolve, if less than this fraction of the problem was changed in last presolve round",
+         "abort presolve, if at most this fraction of the problem was changed in last presolve round",
          &(*set)->presol_abortfac, SCIP_DEFAULT_PRESOL_ABORTFAC, 0.0, 1.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 

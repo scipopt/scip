@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.152 2004/11/24 17:36:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.153 2004/12/15 19:51:04 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -131,6 +131,20 @@ RETCODE SCIPpropagateDomains(
       propround++;
       propagain = FALSE;
 
+      /* sort propagators */
+      SCIPsetSortProps(set);
+
+      /* call additional propagators with nonnegative priority */
+      for( p = 0; p < set->nprops && !(*cutoff); ++p )
+      {
+         if( SCIPpropGetPriority(set->props[p]) < 0 )
+            continue;
+
+         CHECK_OKAY( SCIPpropExec(set->props[p], set, stat, depth, &result) );
+         propagain = propagain || (result == SCIP_REDUCEDDOM);
+         *cutoff = *cutoff || (result == SCIP_CUTOFF);
+      }
+
       /* propagate constraints */
       for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
       {
@@ -139,9 +153,12 @@ RETCODE SCIPpropagateDomains(
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
       }
 
-      /* call additional propagators */
+      /* call additional propagators with negative priority */
       for( p = 0; p < set->nprops && !(*cutoff); ++p )
       {
+         if( SCIPpropGetPriority(set->props[p]) >= 0 )
+            continue;
+
          CHECK_OKAY( SCIPpropExec(set->props[p], set, stat, depth, &result) );
          propagain = propagain || (result == SCIP_REDUCEDDOM);
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
@@ -903,6 +920,21 @@ RETCODE priceAndCutLoop(
          {
             separateagain = FALSE;
 
+            /* sort separators by priority */
+            SCIPsetSortSepas(set);
+
+            /* call LP separators with nonnegative priority */
+            for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts && lp->flushed; ++s )
+            {
+               if( SCIPsepaGetPriority(set->sepas[s]) < 0 )
+                  continue;
+
+               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, actdepth, &result) );
+               *cutoff = *cutoff || (result == SCIP_CUTOFF);
+               separateagain = separateagain || (result == SCIP_CONSADDED);
+               enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+            }
+
             /* try separating constraints of the constraint handlers until the cut pool is at least half full;
              * we have to stop after a domain reduction was found, because they go directly into the LP and invalidate
              * the current solution
@@ -916,12 +948,12 @@ RETCODE priceAndCutLoop(
                enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
             }
 
-            /* sort separators by priority */
-            SCIPsetSortSepas(set);
-
-            /* call LP separators */
+            /* call LP separators with negative priority */
             for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts && lp->flushed; ++s )
             {
+               if( SCIPsepaGetPriority(set->sepas[s]) >= 0 )
+                  continue;
+
                CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, actdepth, &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
                separateagain = separateagain || (result == SCIP_CONSADDED);

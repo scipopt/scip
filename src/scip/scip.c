@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.237 2004/12/14 12:35:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.238 2004/12/15 19:51:03 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -323,7 +323,7 @@ RETCODE checkStage(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }
 }
@@ -527,7 +527,7 @@ RETCODE SCIPprintStage(
       fprintf(file, "freeing transformed problem");
       break;
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_INVALIDDATA;
    }
 
@@ -1317,7 +1317,7 @@ RETCODE SCIPincludePresol(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
-   int              priority,           /**< priority of the presolver */
+   int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
@@ -1468,7 +1468,7 @@ RETCODE SCIPincludeSepa(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of separator */
    const char*      desc,               /**< description of separator */
-   int              priority,           /**< priority of the separator */
+   int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling separator */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
@@ -1543,7 +1543,7 @@ RETCODE SCIPincludeProp(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of propagator */
    const char*      desc,               /**< description of propagator */
-   int              priority,           /**< priority of the propagator */
+   int              priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling propagator */
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
@@ -2285,7 +2285,7 @@ PROBDATA* SCIPgetProbData(
       return SCIPprobGetData(scip->transprob);
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2317,7 +2317,7 @@ RETCODE SCIPsetProbData(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2380,7 +2380,7 @@ RETCODE SCIPsetObjlimit(
             scip->tree, scip->lp) );
       break;
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -2418,7 +2418,7 @@ RETCODE SCIPsetObjIntegral(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2444,7 +2444,7 @@ Bool SCIPisObjIntegral(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2502,7 +2502,7 @@ RETCODE SCIPaddVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2603,7 +2603,7 @@ RETCODE SCIPgetVarsData(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2630,7 +2630,7 @@ VAR** SCIPgetVars(
       return scip->transprob->vars;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2655,7 +2655,7 @@ int SCIPgetNVars(
       return scip->transprob->nvars;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2680,7 +2680,7 @@ int SCIPgetNBinVars(
       return scip->transprob->nbinvars;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2705,7 +2705,7 @@ int SCIPgetNIntVars(
       return scip->transprob->nintvars;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2730,7 +2730,7 @@ int SCIPgetNImplVars(
       return scip->transprob->nimplvars;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2755,7 +2755,7 @@ int SCIPgetNContVars(
       return scip->transprob->ncontvars;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2884,7 +2884,7 @@ VAR* SCIPfindVar(
          return var;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2938,7 +2938,7 @@ RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2971,7 +2971,7 @@ RETCODE SCIPdelCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -3007,7 +3007,7 @@ CONS* SCIPfindCons(
          return cons;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -3113,7 +3113,7 @@ RETCODE SCIPdisableConsLocal(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -3304,7 +3304,7 @@ RETCODE transformProb(
       if( nconss > 0 )
       {
          infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
+            "%7d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
       }
    }
    infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
@@ -3426,9 +3426,12 @@ RETCODE presolve(
       /* sort presolvers by priority */
       SCIPsetSortPresols(scip->set);
 
-      /* call included presolvers */
+      /* call included presolvers with nonnegative priority */
       for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
       {
+         if( SCIPpresolGetPriority(scip->set->presols[i]) < 0 )
+            continue;
+
          CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, nrounds, 
                &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
                &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
@@ -3447,6 +3450,19 @@ RETCODE presolve(
          *infeasible = *infeasible || (result == SCIP_CUTOFF);
       }
 
+      /* call included presolvers with negative priority */
+      for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
+      {
+         if( SCIPpresolGetPriority(scip->set->presols[i]) >= 0 )
+            continue;
+
+         CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, nrounds, 
+               &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
+               &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
+         *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
+         *infeasible = *infeasible || (result == SCIP_CUTOFF);
+      }
+
       /* check, if we should abort presolving due to not enough changes in the last round */
       aborted = TRUE;
 
@@ -3454,18 +3470,18 @@ RETCODE presolve(
       aborted = aborted
          && (scip->transprob->nvars == 0
             || (nfixedvars - lastnfixedvars + naggrvars - lastnaggrvars + nchgvartypes - lastnchgvartypes
-               + nchgbds - lastnchgbds + naddholes - lastnaddholes < abortfac * scip->transprob->nvars));
+               + nchgbds - lastnchgbds + naddholes - lastnaddholes <= abortfac * scip->transprob->nvars));
 
       /* don't abort, if enough changes were applied to the constraints */
       aborted = aborted
          && (scip->transprob->nconss == 0
             || (ndelconss - lastndelconss + nupgdconss - lastnupgdconss + nchgsides - lastnchgsides
-               < abortfac * scip->transprob->nconss));
+               <= abortfac * scip->transprob->nconss));
 
       /* don't abort, if enough changes were applied to the coefficients (assume a 20% density of non-zero elements) */
       aborted = aborted
          && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
-            || (nchgcoefs - lastnchgcoefs < abortfac * 0.2 * scip->transprob->nvars * scip->transprob->nconss));
+            || (nchgcoefs - lastnchgcoefs <= abortfac * 0.2 * scip->transprob->nvars * scip->transprob->nconss));
 
       /* abort if time limit was reached or user interrupted */
       aborted = aborted || SCIPsolveIsStopped(scip->set, scip->stat);
@@ -3814,7 +3830,7 @@ RETCODE SCIPpresolve(
             if( nconss > 0 )
             {
                infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                  " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
+                  "%7d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
             }
          }
 
@@ -3833,7 +3849,7 @@ RETCODE SCIPpresolve(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }
 
@@ -3938,7 +3954,7 @@ RETCODE SCIPsolve(
          break;
 
       default:
-         errorMessage("invalid SCIP stage\n");
+         errorMessage("invalid SCIP stage <%d>\n", scip->stage);
          return SCIP_ERROR;
       }  /*lint !e788*/
 
@@ -4005,7 +4021,7 @@ RETCODE SCIPfreeSolve(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4039,7 +4055,7 @@ RETCODE SCIPfreeTransform(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4091,7 +4107,7 @@ RETCODE SCIPcreateVar(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -4146,7 +4162,7 @@ RETCODE SCIPreleaseVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4511,7 +4527,7 @@ RETCODE SCIPchgVarObj(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -4540,7 +4556,7 @@ RETCODE SCIPaddVarObj(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -4592,6 +4608,7 @@ RETCODE SCIPchgVarLb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
@@ -4611,7 +4628,7 @@ RETCODE SCIPchgVarLb(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4631,6 +4648,7 @@ RETCODE SCIPchgVarUb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
@@ -4650,7 +4668,7 @@ RETCODE SCIPchgVarUb(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4715,7 +4733,7 @@ RETCODE SCIPtightenVarLb(
 
    assert(infeasible != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPtightenVarLb", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
 
@@ -4742,6 +4760,13 @@ RETCODE SCIPtightenVarLb(
 
    switch( scip->stage )
    {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
@@ -4755,7 +4780,7 @@ RETCODE SCIPtightenVarLb(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -4783,7 +4808,7 @@ RETCODE SCIPtightenVarUb(
 
    assert(infeasible != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPtightenVarUb", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
 
@@ -4810,6 +4835,13 @@ RETCODE SCIPtightenVarUb(
 
    switch( scip->stage )
    {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
@@ -4823,7 +4855,7 @@ RETCODE SCIPtightenVarUb(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -4880,6 +4912,13 @@ RETCODE SCIPinferVarLbCons(
 
    switch( scip->stage )
    {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
@@ -4894,7 +4933,7 @@ RETCODE SCIPinferVarLbCons(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -4951,6 +4990,13 @@ RETCODE SCIPinferVarUbCons(
 
    switch( scip->stage )
    {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
@@ -4965,7 +5011,7 @@ RETCODE SCIPinferVarUbCons(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5054,7 +5100,7 @@ RETCODE SCIPinferBinvarCons(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5111,6 +5157,13 @@ RETCODE SCIPinferVarLbProp(
 
    switch( scip->stage )
    {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
@@ -5125,7 +5178,7 @@ RETCODE SCIPinferVarLbProp(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5182,6 +5235,13 @@ RETCODE SCIPinferVarUbProp(
 
    switch( scip->stage )
    {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
@@ -5196,7 +5256,7 @@ RETCODE SCIPinferVarUbProp(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5285,7 +5345,7 @@ RETCODE SCIPinferBinvarProp(
       break;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5327,8 +5387,9 @@ RETCODE SCIPaddVarVub(
    return SCIP_OKAY;
 }
 
-/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b 
- *  if y is binary variable the corresponding valid implication for y is allso added */    
+/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
+ *  if y is binary variable the corresponding valid implication for y is allso added
+ */
 RETCODE SCIPaddVarImplic(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
@@ -5529,7 +5590,7 @@ RETCODE SCIPchgVarType(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -5592,7 +5653,7 @@ RETCODE SCIPfixVar(
       return SCIP_OKAY;
       
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -6570,7 +6631,7 @@ RETCODE SCIPcreateCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -6623,7 +6684,7 @@ RETCODE SCIPreleaseCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -9843,7 +9904,7 @@ int SCIPgetNGlobalConss(
       return scip->transprob->nconss;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       abort();
    }
 }
@@ -10728,7 +10789,7 @@ RETCODE SCIPprintStatistics(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
@@ -10806,7 +10867,7 @@ RETCODE SCIPprintBranchingStatistics(
       return SCIP_OKAY;
       
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
@@ -11147,7 +11208,7 @@ MEMHDR* SCIPmemhdr(
       return scip->mem->solvemem;
 
    default:
-      errorMessage("invalid SCIP stage\n");
+      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return NULL;
    }  /*lint !e788*/
 }

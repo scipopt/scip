@@ -31,6 +31,10 @@ interface:
 - new methods SCIPfindObj...() and SCIPgetObj...() in C++ wrapper interface to get the corresponding plugin object
 - new branching rule plugin methods INITSOL and EXITSOL
 
+parameters:
+- slightly changed the meaning of parameter presolving/abortfac: a value of 0 now means to abort presolving only
+  after no more change has been found
+
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm
 - improved knapsack relaxation in linear constraint handler separator to scale the constraint in order to get
@@ -38,6 +42,9 @@ features:
 - improved presolving of linear constraint handler: aggregation of two constraints with equal coefficient vector
   into single constraint
 - improved presolving of knapsack constraint handler: aggregation of equal or negated variables in same constraint
+- priority of separators, propagators, and presolvers decide whether the plugin is called before the corresponding
+  constraint handler methods or after: plugins with nonnegative priorities are called before, plugins with negative
+  priorities are called after the constraint handlers
 
 fixed bugs:
 - removed bug in knapsack constraint handler that appears if a variable is fixed to zero in knapsack presolving,
@@ -60,6 +67,9 @@ fixed bugs:
   gap to a value larger than epsilon
 - fixed wrong assertion in xor constraint handler with switching both watched variables to unwatched
 - removed bug in SCIPisScalingIntegral()
+- removed bugs with calling SCIPtightenVarLb(), SCIPtightenVarUb(), SCIPinferVarLbCons(), SCIPinferVarUbCons(),
+  SCIPinferVarLbProp(), and SCIPinferVarUbProp() in PROBLEM stage
+- fixed bug in presolving with wrong number of newly fixed/aggregated/... variables/bounds/... after a restart
 
 
 SCIP version 0.77

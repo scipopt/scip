@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.17 2004/07/01 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.18 2004/12/15 19:51:03 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -46,7 +46,7 @@ RETCODE SCIPpresolCreate(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
-   int              priority,           /**< priority of the presolver */
+   int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */

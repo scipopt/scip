@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.191 2004/12/14 12:35:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.192 2004/12/15 19:51:04 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -632,7 +632,7 @@ RETCODE SCIPincludePresol(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
-   int              priority,           /**< priority of the presolver */
+   int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
@@ -718,7 +718,7 @@ RETCODE SCIPincludeSepa(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of separator */
    const char*      desc,               /**< description of separator */
-   int              priority,           /**< priority of the separator */
+   int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling separator */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
@@ -760,7 +760,7 @@ RETCODE SCIPincludeProp(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of propagator */
    const char*      desc,               /**< description of propagator */
-   int              priority,           /**< priority of the propagator */
+   int              priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling propagator */
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
@@ -1903,7 +1903,9 @@ RETCODE SCIPaddVarVub(
    Real             vubconstant         /**< constant d    in x <= b*z + d */
    );
 
-/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b */
+/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
+ *  if y is binary variable the corresponding valid implication for y is allso added
+ */
 RETCODE SCIPaddVarImplic(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */

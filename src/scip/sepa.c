@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.38 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.39 2004/12/15 19:51:04 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -68,7 +68,7 @@ RETCODE SCIPsepaCreate(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of separator */
    const char*      desc,               /**< description of separator */
-   int              priority,           /**< priority of the separator */
+   int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling separator */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */

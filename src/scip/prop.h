@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.1 2004/09/23 15:46:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.2 2004/12/15 19:51:03 bzfpfend Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -49,7 +49,7 @@ RETCODE SCIPpropCreate(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of propagator */
    const char*      desc,               /**< description of propagator */
-   int              priority,           /**< priority of propagator */
+   int              priority,           /**< priority of propagator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling propagator */
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
