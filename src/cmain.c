@@ -38,6 +38,79 @@
 #include "heur_rounding.h"
 
 
+
+/*
+ * Test Event Handler
+ */
+
+static
+DECL_EVENTFREE(eventFreeTest)
+{
+   printf("free test event handler\n");
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_EVENTINIT(eventInitTest)
+{
+   printf("init test event handler\n");
+
+   CHECK_OKAY( SCIPcatchEvent(scip, 
+                  /* SCIP_EVENTTYPE_NODEACTIVATED
+                     | SCIP_EVENTTYPE_NODEFEASIBLE
+                     | SCIP_EVENTTYPE_NODEINFEASIBLE
+                     | SCIP_EVENTTYPE_NODEBRANCHED
+                     | SCIP_EVENTTYPE_FIRSTLPSOLVED
+                     | SCIP_EVENTTYPE_LPSOLVED
+                     | SCIP_EVENTTYPE_POORSOLFOUND
+                     | */
+                  SCIP_EVENTTYPE_BESTSOLFOUND,
+                  eventhdlr, NULL) );
+   
+   return SCIP_OKAY;
+}
+
+static
+DECL_EVENTEXIT(eventExitTest)
+{
+   printf("exit test event handler\n");
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_EVENTDELE(eventDeleTest)
+{
+   printf("dele test event handler\n");
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_EVENTEXEC(eventExecTest)
+{
+   EVENTTYPE eventtype;
+
+   CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
+   printf("exec test event handler: eventtype=0x%x\n", eventtype);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE includeTestEventHdlr(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( SCIPincludeEventhdlr(scip, "testeventhdlr", "test event handler description",
+                  eventFreeTest, eventInitTest, eventExitTest, eventDeleTest, eventExecTest, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+
 #if 0
 static const int   nrows = 2;
 static const int   nvars = 2;
@@ -160,6 +233,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
 
+   CHECK_OKAY( includeTestEventHdlr(scip) );
 
 
    /********************
@@ -276,6 +350,9 @@ main(
    )
 {
    RETCODE retcode;
+
+   todoMessage("switch DECL_ callback definition to have SCIP* scip as the first parameter");
+   todoMessage("implement remaining events");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

@@ -28,32 +28,56 @@
 enum Eventtype
 {
    SCIP_EVENTTYPE_DISABLED       = 0x00000000, /**< the event was disabled and has no effect any longer */
-   SCIP_EVENTTYPE_VARCREATED     = 0x00000001, /**< a variable has been created */
-   SCIP_EVENTTYPE_VARFIXED       = 0x00000002, /**< a variable has been fixed, aggregated, or multiaggregated */
+
+   /* variable events */
+   SCIP_EVENTTYPE_VARCREATED     = 0x00000001, /**< ??? TODO: a variable has been created */
+   SCIP_EVENTTYPE_VARFIXED       = 0x00000002, /**< ??? TODO: a variable has been fixed, aggregated, or multiaggregated */
    SCIP_EVENTTYPE_LBTIGHTENED    = 0x00000004, /**< the lower bound of a variable has been increased */
    SCIP_EVENTTYPE_LBRELAXED      = 0x00000008, /**< the lower bound of a variable has been decreased */
    SCIP_EVENTTYPE_UBTIGHTENED    = 0x00000010, /**< the upper bound of a variable has been decreased */
    SCIP_EVENTTYPE_UBRELAXED      = 0x00000020, /**< the upper bound of a variable has been increased */
-   SCIP_EVENTTYPE_HOLEADDED      = 0x00000040, /**< a hole has been added to the hole list of a variable's domain */
-   SCIP_EVENTTYPE_HOLEREMOVED    = 0x00000080, /**< a hole has been removed from the hole list of a variable's domain */
+   SCIP_EVENTTYPE_HOLEADDED      = 0x00000040, /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
+   SCIP_EVENTTYPE_HOLEREMOVED    = 0x00000080, /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
+
+   /* node events */
    SCIP_EVENTTYPE_NODEACTIVATED  = 0x00000100, /**< a node has been activated and is now the current active node */
-   SCIP_EVENTTYPE_NODESOLVED     = 0x00000200, /**< the active node has been solved by branching or bounding */
-   SCIP_EVENTTYPE_NODEBRANCHED   = 0x00000400, /**< the active node has been solved by branching */
-   SCIP_EVENTTYPE_NODEINFEASIBLE = 0x00000800, /**< the active node has been proven to be infeasible */
-   SCIP_EVENTTYPE_NODEFEASIBLE   = 0x00001000, /**< the LP or pseudo solution of the node was feasible */
-   SCIP_EVENTTYPE_FIRSTLPSOLVED  = 0x00002000, /**< the node's initial LP was solved */
-   SCIP_EVENTTYPE_LPSOLVED       = 0x00004000, /**< the node's LP was completely solved with cut & price */
+   SCIP_EVENTTYPE_NODEFEASIBLE   = 0x00000200, /**< the LP/pseudo solution of the node was feasible */
+   SCIP_EVENTTYPE_NODEINFEASIBLE = 0x00000400, /**< the active node has been proven to be infeasible or was bounded */
+   SCIP_EVENTTYPE_NODEBRANCHED   = 0x00000800, /**< the active node has been solved by branching */
+
+   /* LP events */
+   SCIP_EVENTTYPE_FIRSTLPSOLVED  = 0x00001000, /**< the node's initial LP was solved */
+   SCIP_EVENTTYPE_LPSOLVED       = 0x00002000, /**< the node's LP was completely solved with cut & price */
+
+   /* primal solution events */
+   SCIP_EVENTTYPE_POORSOLFOUND   = 0x00004000, /**< a good enough primal feasible (but not new best) solution was found */
+   SCIP_EVENTTYPE_BESTSOLFOUND   = 0x00008000, /**< a new best primal feasible solution was found */
+
+   /* event masks for variable events */
    SCIP_EVENTTYPE_LBCHANGED      = SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
    SCIP_EVENTTYPE_UBCHANGED      = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
    SCIP_EVENTTYPE_BOUNDCHANGED   = SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED,
    SCIP_EVENTTYPE_HOLECHANGED    = SCIP_EVENTTYPE_HOLEADDED | SCIP_EVENTTYPE_HOLEREMOVED,
-   SCIP_EVENTTYPE_DOMCHANGED     = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED
+   SCIP_EVENTTYPE_DOMCHANGED     = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED,
+   SCIP_EVENTTYPE_VAREVENT       = SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_DOMCHANGED,
+   
+   /* event masks for node events */
+   SCIP_EVENTTYPE_NODESOLVED     = SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE |SCIP_EVENTTYPE_NODEBRANCHED,
+   SCIP_EVENTTYPE_NODEEVENT      = SCIP_EVENTTYPE_NODEACTIVATED | SCIP_EVENTTYPE_NODESOLVED,
+
+   /* event masks for LP events */
+   SCIP_EVENTTYPE_LPEVENT        = SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED,
+
+   /* event masks for primal solution events */
+   SCIP_EVENTTYPE_SOLFOUND       = SCIP_EVENTTYPE_POORSOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND,
+   SCIP_EVENTTYPE_SOLEVENT       = SCIP_EVENTTYPE_SOLFOUND
 };
 typedef enum Eventtype EVENTTYPE;       /**< type of event (bit field) */
 
 typedef struct EventHdlr EVENTHDLR;     /**< event handler for a specific events */
 typedef struct EventHdlrData EVENTHDLRDATA; /**< event handler data */
 typedef struct Event EVENT;             /**< event data structure */
+typedef struct EventBdChg EVENTBDCHG;   /**< data for bound change events */
 typedef struct EventData EVENTDATA;     /**< locally defined event specific data */
 typedef struct EventFilter EVENTFILTER; /**< event filter to select events to be processed by an event handler */
 typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and process them later */
@@ -120,6 +144,26 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
 
 
 
+/** data for bound change events */
+struct EventBdChg
+{
+   VAR*             var;                /**< variable whose bound changed */
+   Real             oldbound;           /**< old bound before bound changed */
+   Real             newbound;           /**< new bound after bound changed */
+};
+
+/** event data structure */
+struct Event
+{
+   union
+   {
+      EVENTBDCHG    eventbdchg;         /**< data for bound change events */
+      NODE*         node;               /**< data for node and LP events */
+      SOL*          sol;                /**< data for primal solution events */
+   } data;
+   EVENTTYPE        eventtype;          /**< type of event */
+};
+
 /** event filter to select events to be processed by an event handler */
 struct EventFilter
 {
@@ -128,6 +172,7 @@ struct EventFilter
    EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
    int              size;               /**< size of filter arrays (available slots in arrays) */
    int              len;                /**< number entries in filter arrays */
+   EVENTTYPE        eventmask;          /**< mask for events that are handled by any event handler in the filter */
 };
 
 
@@ -245,6 +290,13 @@ RETCODE SCIPeventGetType(
    EVENTTYPE*       eventtype           /**< pointer to store the event type */
    );
 
+/** sets type of event */
+extern
+RETCODE SCIPeventChgType(
+   EVENT*           event,              /**< event */
+   EVENTTYPE        eventtype           /**< new event type */
+   );
+
 /** gets variable for a domain change event */
 extern
 RETCODE SCIPeventGetVar(
@@ -266,15 +318,44 @@ RETCODE SCIPeventGetNewbound(
    Real*            bound               /**< pointer to store the bound */
    );
 
+/** gets node for a node event */
+extern
+RETCODE SCIPeventGetNode(
+   EVENT*           event,              /**< event */
+   NODE**           node                /**< pointer to store the node */
+   );
+
+/** sets node for a node event */
+extern
+RETCODE SCIPeventChgNode(
+   EVENT*           event,              /**< event */
+   NODE*            node                /**< new node */
+   );
+
+/** gets solution for a primal solution event */
+extern
+RETCODE SCIPeventGetSol(
+   EVENT*           event,              /**< event */
+   SOL**            sol                 /**< pointer to store the new primal solution */
+   );
+
+/** sets solution for a primal solution event */
+extern
+RETCODE SCIPeventChgSol(
+   EVENT*           event,              /**< event */
+   SOL*             sol                 /**< new primal solution */
+   );
+
 /** processes event by calling the appropriate event handlers */
 extern
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
+   LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
+   EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for BOUNDCHANGED events */
    );
 
 
@@ -351,9 +432,10 @@ RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
+   LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
+   EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for BOUNDCHANGED events */
    EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    );
 
@@ -371,7 +453,8 @@ RETCODE SCIPeventqueueProcess(
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    );
 
 

@@ -228,7 +228,7 @@ RETCODE SCIPpriceAddBdviolvar(
    assert(price != NULL);
    assert(set != NULL);
    assert(var != NULL);
-   assert(SCIPsetIsPos(set, var->dom.lb) || SCIPsetIsNeg(set, var->dom.ub));
+   assert(SCIPsetIsPositive(set, var->dom.lb) || SCIPsetIsNegative(set, var->dom.ub));
    assert(price->naddedbdviolvars <= price->nbdviolvars);
 
    debugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", var->name, var->dom.lb, var->dom.ub);
@@ -253,7 +253,7 @@ RETCODE SCIPpriceAddBdviolvar(
     * at the same time.
     * The correct bounds must be reset with a call to SCIPpriceResetBounds().
     */
-   if( SCIPsetIsPos(set, var->dom.lb) )
+   if( SCIPsetIsPositive(set, var->dom.lb) )
    {
       CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 0.0) );
    }
@@ -319,24 +319,24 @@ RETCODE SCIPpriceVars(
           * In addition, we have to add all variables, where zero violates the bounds.
           */
          /*debugMessage("price loose variable <%s> in bounds [%g,%g]\n", var->name, var->dom.lb, var->dom.ub);*/
-         if( SCIPsetIsNeg(set, var->dom.lb) )
+         if( SCIPsetIsNegative(set, var->dom.lb) )
          {
-            if( SCIPsetIsNeg(set, var->dom.ub) )
+            if( SCIPsetIsNegative(set, var->dom.ub) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
             }
-            else if( SCIPsetIsPos(set, var->obj) )
+            else if( SCIPsetIsPositive(set, var->obj) )
             {
                CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.lb, root) );
             }
          }
-         else if( SCIPsetIsPos(set, var->dom.ub) )
+         else if( SCIPsetIsPositive(set, var->dom.ub) )
          {
-            if( SCIPsetIsPos(set, var->dom.lb) )
+            if( SCIPsetIsPositive(set, var->dom.lb) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
             }
-            else if( SCIPsetIsNeg(set, var->obj) )
+            else if( SCIPsetIsNegative(set, var->obj) )
             {
                CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.ub, root) );
             }
@@ -360,27 +360,27 @@ RETCODE SCIPpriceVars(
    
             /* add variable, if zero is not best bound w.r.t. objective function */
             added = FALSE;
-            if( SCIPsetIsNeg(set, var->dom.lb) )
+            if( SCIPsetIsNegative(set, var->dom.lb) )
             {
-               if( SCIPsetIsNeg(set, var->dom.ub) )
+               if( SCIPsetIsNegative(set, var->dom.ub) )
                {
                   CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
                   added = TRUE;
                }
-               else if( SCIPsetIsPos(set, var->obj) )
+               else if( SCIPsetIsPositive(set, var->obj) )
                {
                   CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.lb, root) );
                   added = TRUE;
                }
             }
-            else if( SCIPsetIsPos(set, var->dom.ub) )
+            else if( SCIPsetIsPositive(set, var->dom.ub) )
             {
-               if( SCIPsetIsPos(set, var->dom.lb) )
+               if( SCIPsetIsPositive(set, var->dom.lb) )
                {
                   CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
                   added = TRUE;
                }
-               else if( SCIPsetIsNeg(set, var->obj) )
+               else if( SCIPsetIsNegative(set, var->obj) )
                {
                   CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.ub, root) );
                   added = TRUE;
@@ -390,8 +390,8 @@ RETCODE SCIPpriceVars(
             if( !added )
             {
                /* a column not in LP that doesn't have zero in its bounds was added by bound checking above */
-               assert(!SCIPsetIsPos(set, col->var->dom.lb));
-               assert(!SCIPsetIsNeg(set, col->var->dom.ub));
+               assert(!SCIPsetIsPositive(set, col->var->dom.lb));
+               assert(!SCIPsetIsNegative(set, col->var->dom.ub));
                
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {

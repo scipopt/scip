@@ -316,14 +316,14 @@ Bool SCIPsetIsZero(
 
 /** checks, if value is greater than epsilon */
 extern
-Bool SCIPsetIsPos(
+Bool SCIPsetIsPositive(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -epsilon */
 extern
-Bool SCIPsetIsNeg(
+Bool SCIPsetIsNegative(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
@@ -377,14 +377,14 @@ Bool SCIPsetIsSumZero(
 
 /** checks, if value is greater than sumepsilon */
 extern
-Bool SCIPsetIsSumPos(
+Bool SCIPsetIsSumPositive(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -sumepsilon */
 extern
-Bool SCIPsetIsSumNeg(
+Bool SCIPsetIsSumNegative(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
@@ -438,14 +438,14 @@ Bool SCIPsetIsFeasZero(
 
 /** checks, if value is greater than feasibility tolerance */
 extern
-Bool SCIPsetIsFeasPos(
+Bool SCIPsetIsFeasPositive(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -feasibility tolerance */
 extern
-Bool SCIPsetIsFeasNeg(
+Bool SCIPsetIsFeasNegative(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
@@ -599,8 +599,8 @@ Bool SCIPsetIsFixed(
 #define SCIPsetIsGT(set, val1, val2)       ( EPSGT(val1, val2, (set)->epsilon) )
 #define SCIPsetIsGE(set, val1, val2)       ( EPSGE(val1, val2, (set)->epsilon) )
 #define SCIPsetIsZero(set, val)            ( EPSZ(val, (set)->epsilon) )
-#define SCIPsetIsPos(set, val)             ( EPSP(val, (set)->epsilon) )
-#define SCIPsetIsNeg(set, val)             ( EPSN(val, (set)->epsilon) )
+#define SCIPsetIsPositive(set, val)        ( EPSP(val, (set)->epsilon) )
+#define SCIPsetIsNegative(set, val)        ( EPSN(val, (set)->epsilon) )
 
 #define SCIPsetIsSumEQ(set, val1, val2)    ( EPSEQ(val1, val2, (set)->sumepsilon) )
 #define SCIPsetIsSumLT(set, val1, val2)    ( EPSLT(val1, val2, (set)->sumepsilon) )
@@ -608,8 +608,8 @@ Bool SCIPsetIsFixed(
 #define SCIPsetIsSumGT(set, val1, val2)    ( EPSGT(val1, val2, (set)->sumepsilon) )
 #define SCIPsetIsSumGE(set, val1, val2)    ( EPSGE(val1, val2, (set)->sumepsilon) )
 #define SCIPsetIsSumZero(set, val)         ( EPSZ(val, (set)->sumepsilon) )
-#define SCIPsetIsSumPos(set, val)          ( EPSP(val, (set)->sumepsilon) )
-#define SCIPsetIsSumNeg(set, val)          ( EPSN(val, (set)->sumepsilon) )
+#define SCIPsetIsSumPositive(set, val)     ( EPSP(val, (set)->sumepsilon) )
+#define SCIPsetIsSumNegative(set, val)     ( EPSN(val, (set)->sumepsilon) )
 
 #define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSEQ(val1, val2, (set)->feastol) )
 #define SCIPsetIsFeasLT(set, val1, val2)   ( EPSLT(val1, val2, (set)->feastol) )
@@ -617,8 +617,8 @@ Bool SCIPsetIsFixed(
 #define SCIPsetIsFeasGT(set, val1, val2)   ( EPSGT(val1, val2, (set)->feastol) )
 #define SCIPsetIsFeasGE(set, val1, val2)   ( EPSGE(val1, val2, (set)->feastol) )
 #define SCIPsetIsFeasZero(set, val)        ( EPSZ(val, (set)->feastol) )
-#define SCIPsetIsFeasPos(set, val)         ( EPSP(val, (set)->feastol) )
-#define SCIPsetIsFeasNeg(set, val)         ( EPSN(val, (set)->feastol) )
+#define SCIPsetIsFeasPositive(set, val)    ( EPSP(val, (set)->feastol) )
+#define SCIPsetIsFeasNegative(set, val)    ( EPSN(val, (set)->feastol) )
 
 #define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
 #define SCIPsetIsRelLT(set, val1, val2)    ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )

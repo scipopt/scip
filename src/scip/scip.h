@@ -1007,7 +1007,24 @@ RETCODE SCIPtrySolCopy(
  * event methods
  */
 
-/** catches an event on the given variable */
+/** catches a global (not variable dependent) event */
+extern
+RETCODE SCIPcatchEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   );
+
+/** drops a global event (stops to track event) */
+extern
+RETCODE SCIPdropEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   );
+
+/** catches a domain change event on the given variable */
 extern
 RETCODE SCIPcatchVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1017,7 +1034,7 @@ RETCODE SCIPcatchVarEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    );
 
-/** drops an event (stops to track event) on the given variable */
+/** drops a domain change event (stops to track event) on the given variable */
 extern
 RETCODE SCIPdropVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1256,14 +1273,14 @@ Bool SCIPisZero(
 
 /** checks, if value is greater than epsilon */
 extern
-Bool SCIPisPos(
+Bool SCIPisPositive(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -epsilon */
 extern
-Bool SCIPisNeg(
+Bool SCIPisNegative(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );
@@ -1317,14 +1334,14 @@ Bool SCIPisSumZero(
 
 /** checks, if value is greater than sumepsilon */
 extern
-Bool SCIPisSumPos(
+Bool SCIPisSumPositive(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -sumepsilon */
 extern
-Bool SCIPisSumNeg(
+Bool SCIPisSumNegative(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );
@@ -1378,14 +1395,14 @@ Bool SCIPisFeasZero(
 
 /** checks, if value is greater than feasibility tolerance */
 extern
-Bool SCIPisFeasPos(
+Bool SCIPisFeasPositive(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -feasibility tolerance */
 extern
-Bool SCIPisFeasNeg(
+Bool SCIPisFeasNegative(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );

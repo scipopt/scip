@@ -54,6 +54,7 @@ RETCODE SCIPsolveCIP(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal,             /**< primal data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 

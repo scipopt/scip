@@ -54,6 +54,7 @@ struct Scip
    BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    CUTPOOL*         cutpool;            /**< global cut pool */
    PRIMAL*          primal;             /**< primal data and solution storage */
+   EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
 };
 
@@ -92,6 +93,7 @@ RETCODE checkStage(
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
+      assert(scip->eventfilter == NULL);
       assert(scip->eventqueue == NULL);
       assert(scip->tree == NULL);
 
@@ -113,6 +115,7 @@ RETCODE checkStage(
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
+      assert(scip->eventfilter == NULL);
       assert(scip->eventqueue == NULL);
       assert(scip->tree == NULL);
 
@@ -147,6 +150,7 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
+      assert(scip->eventfilter != NULL);
       assert(scip->eventqueue != NULL);
       assert(scip->tree == NULL);
 
@@ -168,6 +172,7 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
+      assert(scip->eventfilter != NULL);
       assert(scip->eventqueue != NULL);
       assert(scip->tree != NULL);
 
@@ -189,6 +194,7 @@ RETCODE checkStage(
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
+      assert(scip->eventfilter != NULL);
       assert(scip->eventqueue != NULL);
       assert(scip->tree != NULL);
 
@@ -297,6 +303,7 @@ RETCODE SCIPcreate(
    (*scip)->branchcand = NULL;
    (*scip)->cutpool = NULL;
    (*scip)->primal = NULL;
+   (*scip)->eventfilter = NULL;
    (*scip)->eventqueue = NULL;
    
    return SCIP_OKAY;
@@ -953,14 +960,16 @@ RETCODE SCIPsolve(
       /* mark statistics before solving */
       SCIPstatMark(scip->stat);
 
-      /* init callback methods */
-      CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
-
       /* init solve data structures */
       CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
       CHECK_OKAY( SCIPpriceCreate(&scip->price) );
       CHECK_OKAY( SCIPsepaCreate(&scip->sepa) );
       CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->agelimit) );
+      CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
+      CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
+
+      /* init callback methods */
+      CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
 
       /* copy problem in solve memory */
       CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, &scip->transprob) );
@@ -973,9 +982,6 @@ RETCODE SCIPsolve(
 
       /* create branching candidate storage */
       CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand, scip->set, scip->transprob) );
-
-      /* create event queue */
-      CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
 
       /* switch stage to PRESOLVING */
       scip->stage = SCIP_STAGE_PRESOLVING;
@@ -995,7 +1001,7 @@ RETCODE SCIPsolve(
       /* continue solution process */
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
                      scip->lp, scip->price, scip->sepa, scip->branchcand, scip->cutpool, scip->primal,
-                     scip->eventqueue) );
+                     scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
       todoMessage("detect, whether problem is solved");
@@ -1034,23 +1040,26 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( SCIPprobDeactivate(scip->transprob) );
 
       /* deactivate the active node */
-      CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, 
+      CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
                      scip->branchcand, scip->eventqueue) );
       CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
 
       /* free solution process data */
-      CHECK_OKAY( SCIPeventqueueFree(&scip->eventqueue) );
+      CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
       CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
-      CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
+
+      /* exit callback methods */
+      CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
+
+      /* free solve data structures */
+      CHECK_OKAY( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
+      CHECK_OKAY( SCIPeventqueueFree(&scip->eventqueue) );
       CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPsepaFree(&scip->sepa) );
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
-
-      /* exit callback methods */
-      CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
 
       clearBlockMemoryNull(scip->mem->solvemem);
 
@@ -2377,7 +2386,7 @@ RETCODE SCIPaddSolMove(
    CHECK_OKAY( checkStage(scip, "SCIPaddSolMove", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalAddSolMove(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, sol) );
+                  scip->lp, scip->eventfilter, sol) );
 
    return SCIP_OKAY;
 }
@@ -2391,7 +2400,7 @@ RETCODE SCIPaddSolCopy(
    CHECK_OKAY( checkStage(scip, "SCIPaddSolCopy", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalAddSolCopy(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, sol) );
+                  scip->lp, scip->eventfilter, sol) );
 
    return SCIP_OKAY;
 }
@@ -2408,7 +2417,7 @@ RETCODE SCIPtrySolMove(
    CHECK_OKAY( checkStage(scip, "SCIPtrySolMove", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalTrySolMove(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, sol, chckintegrality, chcklprows, stored) );
+                  scip->lp, scip->eventfilter, sol, chckintegrality, chcklprows, stored) );
 
    return SCIP_OKAY;
 }
@@ -2425,7 +2434,7 @@ RETCODE SCIPtrySolCopy(
    CHECK_OKAY( checkStage(scip, "SCIPtrySolCopy", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalTrySolCopy(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, sol, chckintegrality, chcklprows, stored) );
+                  scip->lp, scip->eventfilter, sol, chckintegrality, chcklprows, stored) );
 
    return SCIP_OKAY;
 }
@@ -2437,7 +2446,38 @@ RETCODE SCIPtrySolCopy(
  * event methods
  */
 
-/** catches an event on the given variable */
+/** catches a global (not variable dependent) event */
+RETCODE SCIPcatchEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   )
+{
+   todoMessage("catching events must be possible anytime -> which memory block to use in the event filter?");
+
+   CHECK_OKAY( checkStage(scip, "SCIPcatchEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPeventfilterAdd(scip->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
+
+   return SCIP_OKAY;
+}
+
+/** drops a global event (stops to track event) */
+RETCODE SCIPdropEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPdropEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE) );
+
+   CHECK_OKAY( SCIPeventfilterDel(scip->eventfilter, scip->mem->solvemem, scip->set, eventhdlr, eventdata) );
+   
+   return SCIP_OKAY;
+}
+
+/** catches a domain change event on the given variable */
 RETCODE SCIPcatchVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to catch event for */
@@ -2447,7 +2487,6 @@ RETCODE SCIPcatchVarEvent(
    )
 {
    assert(var != NULL);
-   assert(eventhdlr != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPcatchVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -2457,12 +2496,18 @@ RETCODE SCIPcatchVarEvent(
       return SCIP_INVALIDDATA;
    }
 
+   if( (eventtype & SCIP_EVENTTYPE_DOMCHANGED) == 0 )
+   {
+      errorMessage("event is not a domain change event");
+      return SCIP_INVALIDDATA;
+   }
+
    CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
 
    return SCIP_OKAY;
 }
 
-/** drops an event (stops to track event) on the given variable */
+/** drops a domain change event (stops to track event) on the given variable */
 RETCODE SCIPdropVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to drop event for */
@@ -2471,7 +2516,6 @@ RETCODE SCIPdropVarEvent(
    )
 {
    assert(var != NULL);
-   assert(eventhdlr != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPdropVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE) );
 
@@ -2916,7 +2960,7 @@ Bool SCIPisZero(
 }
 
 /** checks, if value is greater than epsilon */
-Bool SCIPisPos(
+Bool SCIPisPositive(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -2924,11 +2968,11 @@ Bool SCIPisPos(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsPos(scip->set, val);
+   return SCIPsetIsPositive(scip->set, val);
 }
 
 /** checks, if value is lower than -epsilon */
-Bool SCIPisNeg(
+Bool SCIPisNegative(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -2936,7 +2980,7 @@ Bool SCIPisNeg(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsNeg(scip->set, val);
+   return SCIPsetIsNegative(scip->set, val);
 }
 
 /** checks, if values are in range of sumepsilon */
@@ -3017,7 +3061,7 @@ Bool SCIPisSumZero(
 }
 
 /** checks, if value is greater than sumepsilon */
-Bool SCIPisSumPos(
+Bool SCIPisSumPositive(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -3025,11 +3069,11 @@ Bool SCIPisSumPos(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsSumPos(scip->set, val);
+   return SCIPsetIsSumPositive(scip->set, val);
 }
 
 /** checks, if value is lower than -sumepsilon */
-Bool SCIPisSumNeg(
+Bool SCIPisSumNegative(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -3037,7 +3081,7 @@ Bool SCIPisSumNeg(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsSumNeg(scip->set, val);
+   return SCIPsetIsSumNegative(scip->set, val);
 }
 
 /** checks, if values are in range of feasibility tolerance */
@@ -3118,7 +3162,7 @@ Bool SCIPisFeasZero(
 }
 
 /** checks, if value is greater than feasibility tolerance */
-Bool SCIPisFeasPos(
+Bool SCIPisFeasPositive(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -3126,11 +3170,11 @@ Bool SCIPisFeasPos(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsFeasPos(scip->set, val);
+   return SCIPsetIsFeasPositive(scip->set, val);
 }
 
 /** checks, if value is lower than -feasibility tolerance */
-Bool SCIPisFeasNeg(
+Bool SCIPisFeasNegative(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -3138,7 +3182,7 @@ Bool SCIPisFeasNeg(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsFeasNeg(scip->set, val);
+   return SCIPsetIsFeasNegative(scip->set, val);
 }
 
 /** checks, if relative difference of values is in range of epsilon */

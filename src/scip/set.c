@@ -800,7 +800,7 @@ Bool SCIPsetIsZero(
 }
 
 /** checks, if value is greater than epsilon */
-Bool SCIPsetIsPos(
+Bool SCIPsetIsPositive(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    )
@@ -811,7 +811,7 @@ Bool SCIPsetIsPos(
 }
 
 /** checks, if value is lower than -epsilon */
-Bool SCIPsetIsNeg(
+Bool SCIPsetIsNegative(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    )
@@ -893,7 +893,7 @@ Bool SCIPsetIsSumZero(
 }
 
 /** checks, if value is greater than sumepsilon */
-Bool SCIPsetIsSumPos(
+Bool SCIPsetIsSumPositive(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    )
@@ -904,7 +904,7 @@ Bool SCIPsetIsSumPos(
 }
 
 /** checks, if value is lower than -sumepsilon */
-Bool SCIPsetIsSumNeg(
+Bool SCIPsetIsSumNegative(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    )
@@ -986,7 +986,7 @@ Bool SCIPsetIsFeasZero(
 }
 
 /** checks, if value is greater than feasibility tolerance */
-Bool SCIPsetIsFeasPos(
+Bool SCIPsetIsFeasPositive(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    )
@@ -997,7 +997,7 @@ Bool SCIPsetIsFeasPos(
 }
 
 /** checks, if value is lower than -feasibility tolerance */
-Bool SCIPsetIsFeasNeg(
+Bool SCIPsetIsFeasNegative(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    )

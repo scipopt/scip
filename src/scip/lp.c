@@ -2178,7 +2178,7 @@ void SCIProwForbidRounding(
    {
       assert(cols[c] != NULL);
 
-      if( SCIPsetIsPos(set, vals[c]) )
+      if( SCIPsetIsPositive(set, vals[c]) )
       {
          if( lhsexists )
             SCIPvarForbidRoundDown(cols[c]->var);
@@ -2187,7 +2187,7 @@ void SCIProwForbidRounding(
       }
       else
       {
-         assert(SCIPsetIsNeg(set, vals[c]));
+         assert(SCIPsetIsNegative(set, vals[c]));
          if( lhsexists )
             SCIPvarForbidRoundUp(cols[c]->var);
          if( rhsexists )
@@ -2222,7 +2222,7 @@ void SCIProwAllowRounding(
    {
       assert(cols[c] != NULL);
 
-      if( SCIPsetIsPos(set, vals[c]) )
+      if( SCIPsetIsPositive(set, vals[c]) )
       {
          if( lhsexists )
             SCIPvarAllowRoundDown(cols[c]->var);
@@ -2231,7 +2231,7 @@ void SCIProwAllowRounding(
       }
       else
       {
-         assert(SCIPsetIsNeg(set, vals[c]));
+         assert(SCIPsetIsNegative(set, vals[c]));
          if( lhsexists )
             SCIPvarAllowRoundUp(cols[c]->var);
          if( rhsexists )
@@ -4247,7 +4247,7 @@ RETCODE SCIPlpGetUnboundedSol(
       assert(lp->lpicols[c]->var != NULL);
       rayobjval += ray[c] * lp->lpicols[c]->var->obj;
    }
-   assert(SCIPsetIsNeg(set, rayobjval));
+   assert(SCIPsetIsNegative(set, rayobjval));
 
    /* scale the ray, such that the resulting point has infinite objective value */
    rayscale = -2*set->infinity/rayobjval;

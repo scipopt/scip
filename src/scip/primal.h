@@ -75,6 +75,7 @@ RETCODE SCIPprimalAddSolMove(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
    );
 
@@ -88,6 +89,7 @@ RETCODE SCIPprimalAddSolCopy(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol                 /**< primal CIP solution */
    );
 
@@ -101,6 +103,7 @@ RETCODE SCIPprimalTrySolMove(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
@@ -117,6 +120,7 @@ RETCODE SCIPprimalTrySolCopy(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */

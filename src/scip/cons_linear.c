@@ -411,14 +411,14 @@ RETCODE linconsdataAddCoef(
 
    if( linconsdata->model )
    {
-      if( SCIPisPos(scip, val) )
+      if( SCIPisPositive(scip, val) )
       {
          if( !SCIPisInfinity(scip, -linconsdata->lhs) )
             SCIPvarForbidRoundDown(var);
          if( !SCIPisInfinity(scip, linconsdata->rhs) )
             SCIPvarForbidRoundUp(var);
       }
-      else if( SCIPisNeg(scip, val) )
+      else if( SCIPisNegative(scip, val) )
       {
          if( !SCIPisInfinity(scip, linconsdata->rhs) )
             SCIPvarForbidRoundDown(var);
@@ -695,7 +695,7 @@ RETCODE linconsdataForbidRounding(
    {
       assert(vars[v] != NULL);
 
-      if( SCIPisPos(scip, vals[v]) )
+      if( SCIPisPositive(scip, vals[v]) )
       {
          if( lhsexists )
             SCIPvarForbidRoundDown(vars[v]);
@@ -704,7 +704,7 @@ RETCODE linconsdataForbidRounding(
       }
       else
       {
-         assert(SCIPisNeg(scip, vals[v]));
+         assert(SCIPisNegative(scip, vals[v]));
          if( lhsexists )
             SCIPvarForbidRoundUp(vars[v]);
          if( rhsexists )
@@ -742,7 +742,7 @@ RETCODE linconsdataAllowRounding(
    {
       assert(vars[v] != NULL);
 
-      if( SCIPisPos(scip, vals[v]) )
+      if( SCIPisPositive(scip, vals[v]) )
       {
          if( lhsexists )
             SCIPvarAllowRoundDown(vars[v]);
@@ -751,7 +751,7 @@ RETCODE linconsdataAllowRounding(
       }
       else
       {
-         assert(SCIPisNeg(scip, vals[v]));
+         assert(SCIPisNegative(scip, vals[v]));
          if( lhsexists )
             SCIPvarAllowRoundUp(vars[v]);
          if( rhsexists )

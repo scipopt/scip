@@ -147,10 +147,12 @@ RETCODE primalAddSol(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
    int              insertpos           /**< position in solution storage to add solution to */
    )
 {
+   EVENT event;
    int pos;
 
    assert(primal != NULL);
@@ -184,6 +186,20 @@ RETCODE primalAddSol(
    debugMessage(" -> stored at position %d of %d solutions, found %d solutions\n", 
       insertpos, primal->nsols, primal->nsolsfound);
    
+   /* issue POORLPSOLVED or BESTLPSOLVED event */
+   if( insertpos == 0 )
+   {
+      /* issue BESTLPSOLVED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
+   }
+   else
+   {
+      /* issue POORLPSOLVED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
+   }
+   CHECK_OKAY( SCIPeventChgSol(&event, sol) );
+   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+
    /* check, if the global upper bound has to be updated */
    if( SCIPsolGetObj(sol) < primal->upperbound )
    {
@@ -238,6 +254,7 @@ RETCODE SCIPprimalAddSolMove(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
    )
 {
@@ -253,7 +270,7 @@ RETCODE SCIPprimalAddSolMove(
    if( insertpos < set->maxsol )
    {
       /* insert solution into solution storage */
-      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, *sol, insertpos) );
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, *sol, insertpos) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
@@ -277,6 +294,7 @@ RETCODE SCIPprimalAddSolCopy(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol                 /**< primal CIP solution */
    )
 {
@@ -296,7 +314,7 @@ RETCODE SCIPprimalAddSolCopy(
       CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
       
       /* insert copied solution into solution storage */
-      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, solcopy, insertpos) );
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
    }
 
    return SCIP_OKAY;
@@ -311,6 +329,7 @@ RETCODE SCIPprimalTrySolMove(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
@@ -339,7 +358,7 @@ RETCODE SCIPprimalTrySolMove(
    if( feasible )
    {
       /* insert solution into solution storage */
-      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, *sol, insertpos) );
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, *sol, insertpos) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
@@ -365,6 +384,7 @@ RETCODE SCIPprimalTrySolCopy(
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
@@ -397,7 +417,7 @@ RETCODE SCIPprimalTrySolCopy(
       CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
       
       /* insert copied solution into solution storage */
-      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, solcopy, insertpos) );
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
 
       *stored = TRUE;
    }

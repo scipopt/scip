@@ -151,11 +151,13 @@ RETCODE solveNodeLP(
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal,             /**< primal data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    CONSHDLR**       conshdlrs_sepa      /**< constraint handlers sorted by separation priority */
    )
 {
    RESULT result;
+   EVENT event;
    Bool mustprice;
    Bool mustsepar;
    Bool root;
@@ -192,6 +194,11 @@ RETCODE solveNodeLP(
    debugMessage("node: solve LP\n");
    CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
    assert(lp->solved);
+
+   /* issue FIRSTLPSOLVED event */
+   CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
+   CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
+   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
    /* price-and-cut loop */
    mustprice = TRUE;
@@ -282,6 +289,11 @@ RETCODE solveNodeLP(
    /* update lower bound w.r.t. the the LP solution */
    tree->actnode->lowerbound = SCIPlpGetObjval(lp);
    tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+
+   /* issue LPSOLVED event */
+   CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
+   CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
+   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -515,12 +527,14 @@ RETCODE SCIPsolveCIP(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal,             /**< primal data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    CONSHDLR** conshdlrs_sepa;
    CONSHDLR** conshdlrs_enfo;
    NODE* actnode;
+   EVENT event;
    RESULT result;
    Bool cutoff;
    Bool infeasible;
@@ -539,6 +553,7 @@ RETCODE SCIPsolveCIP(
    assert(branchcand != NULL);
    assert(cutpool != NULL);
    assert(primal != NULL);
+   assert(eventfilter != NULL);
    assert(eventqueue != NULL);
 
    todoMessage("every variable, where zero is not the best bound (w.r.t. objective function) has to be in the problem");
@@ -580,11 +595,16 @@ RETCODE SCIPsolveCIP(
       CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
 
       /* activate selected node */
-      CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
+      CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
       assert(tree->actnode == actnode);
 
+      /* issue NODEACTIVATED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
+      CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+
       /* process the delayed events */
-      CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, tree, lp, branchcand) );
+      CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, tree, lp, branchcand, eventfilter) );
 
       /* if no more node was selected, we finished optimisation */
       if( actnode == NULL )
@@ -640,7 +660,7 @@ RETCODE SCIPsolveCIP(
             {
                /* solve the LP */
                CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepa, cutpool, primal, branchcand, 
-                              eventqueue, conshdlrs_sepa) );
+                              eventfilter, eventqueue, conshdlrs_sepa) );
                assert(lp->solved);
             }
             assert(SCIPsepaGetNCuts(sepa) == 0);
@@ -667,7 +687,12 @@ RETCODE SCIPsolveCIP(
          if( !infeasible )
          {
             SOL* sol;
-            
+
+            /* issue NODEFEASIBLE event */
+            CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
+            CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+            CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+               
             /* found a feasible solution */
             if( tree->actnodehaslp )
             {
@@ -677,8 +702,25 @@ RETCODE SCIPsolveCIP(
             {
                CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, stat, tree, NULL) );
             }
-            CHECK_OKAY( SCIPprimalAddSolMove(primal, memhdr, set, stat, prob, tree, lp, &sol) );
+            CHECK_OKAY( SCIPprimalAddSolMove(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
          }
+      }
+
+      /* if node solution is not feasible, issue NODEINFEASIBLE or NODEBRANCHED event */
+      if( infeasible )
+      {
+         if( tree->nchildren == 0 )
+         {
+            /* issue NODEINFEASIBLE event */
+            CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+         }
+         else
+         {
+            /* issue NODEBRANCHED event */
+            CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
+         }
+         CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+         CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
       }
 
       /* call primal heuristics */

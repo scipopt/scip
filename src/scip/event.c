@@ -43,25 +43,6 @@ struct EventHdlr
    unsigned int     initialized:1;      /**< is event handler initialized? */
 };
 
-/** data for bound change events */
-struct Boundchange
-{
-   VAR*             var;                /**< variable whose bound changed */
-   Real             oldbound;           /**< old bound before bound changed */
-   Real             newbound;           /**< new bound after bound changed */
-};
-typedef struct Boundchange BOUNDCHANGE; /**< data for bound change events */
-
-/** event data structure */
-struct Event
-{
-   union
-   {
-      BOUNDCHANGE   boundchange;        /**< data for bound change events */
-   } data;
-   EVENTTYPE        eventtype;          /**< type of event */
-};
-
 /** event queue to cache events and process them later */
 struct EventQueue
 {
@@ -272,9 +253,9 @@ RETCODE SCIPeventCreateLbChanged(
       (*event)->eventtype = SCIP_EVENTTYPE_LBTIGHTENED;
    else
       (*event)->eventtype = SCIP_EVENTTYPE_LBRELAXED;
-   (*event)->data.boundchange.var = var;
-   (*event)->data.boundchange.oldbound = oldbound;
-   (*event)->data.boundchange.newbound = newbound;
+   (*event)->data.eventbdchg.var = var;
+   (*event)->data.eventbdchg.oldbound = oldbound;
+   (*event)->data.eventbdchg.newbound = newbound;
 
    return SCIP_OKAY;
 }
@@ -297,9 +278,9 @@ RETCODE SCIPeventCreateUbChanged(
       (*event)->eventtype = SCIP_EVENTTYPE_UBTIGHTENED;
    else
       (*event)->eventtype = SCIP_EVENTTYPE_UBRELAXED;
-   (*event)->data.boundchange.var = var;
-   (*event)->data.boundchange.oldbound = oldbound;
-   (*event)->data.boundchange.newbound = newbound;
+   (*event)->data.eventbdchg.var = var;
+   (*event)->data.eventbdchg.oldbound = oldbound;
+   (*event)->data.eventbdchg.newbound = newbound;
 
    return SCIP_OKAY;
 }
@@ -343,6 +324,19 @@ RETCODE SCIPeventGetType(
    return SCIP_OKAY;
 }
 
+/** sets type of event */
+RETCODE SCIPeventChgType(
+   EVENT*           event,              /**< event */
+   EVENTTYPE        eventtype           /**< new event type */
+   )
+{
+   assert(event != NULL);
+
+   event->eventtype = eventtype;
+
+   return SCIP_OKAY;
+}
+
 /** gets variable for a domain change event */
 RETCODE SCIPeventGetVar(
    EVENT*           event,              /**< event */
@@ -365,13 +359,14 @@ RETCODE SCIPeventGetVar(
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      *var = event->data.boundchange.var;
+      *var = event->data.eventbdchg.var;
       assert(*var != NULL);
       break;
 
    case SCIP_EVENTTYPE_HOLEADDED:
       errorMessage("HOLEADDED event not implemented yet");
       abort();
+
    case SCIP_EVENTTYPE_HOLEREMOVED:
       errorMessage("HOLEREMOVED event not implemented yet");
       abort();
@@ -400,7 +395,7 @@ RETCODE SCIPeventGetOldbound(
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      *bound = event->data.boundchange.oldbound;
+      *bound = event->data.eventbdchg.oldbound;
       break;
 
    default:
@@ -426,7 +421,7 @@ RETCODE SCIPeventGetNewbound(
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      *bound = event->data.boundchange.newbound;
+      *bound = event->data.eventbdchg.newbound;
       break;
 
    default:
@@ -437,14 +432,93 @@ RETCODE SCIPeventGetNewbound(
    return SCIP_OKAY;
 }
 
+/** gets node for a node event */
+RETCODE SCIPeventGetNode(
+   EVENT*           event,              /**< event */
+   NODE**           node                /**< pointer to store the node */
+   )
+{
+   assert(event != NULL);
+   assert(node != NULL);
+
+   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   {
+      errorMessage("event is neither node nor LP event");
+      return SCIP_INVALIDDATA;
+   }
+
+   *node = event->data.node;
+
+   return SCIP_OKAY;
+}
+
+/** sets node for a node event */
+RETCODE SCIPeventChgNode(
+   EVENT*           event,              /**< event */
+   NODE*            node                /**< new node */
+   )
+{
+   assert(event != NULL);
+
+   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   {
+      errorMessage("event is neither node nor LP event");
+      return SCIP_INVALIDDATA;
+   }
+
+   event->data.node = node;
+
+   return SCIP_OKAY;
+}
+
+/** gets solution for a primal solution event */
+RETCODE SCIPeventGetSol(
+   EVENT*           event,              /**< event */
+   SOL**            sol                 /**< pointer to store the new primal solution */
+   )
+{
+   assert(event != NULL);
+   assert(sol != NULL);
+
+   if( (event->eventtype & (SCIP_EVENTTYPE_SOLEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   {
+      errorMessage("event is not a primal solution event");
+      return SCIP_INVALIDDATA;
+   }
+
+   *sol = event->data.sol;
+
+   return SCIP_OKAY;
+}
+
+/** sets solution for a primal solution event */
+RETCODE SCIPeventChgSol(
+   EVENT*           event,              /**< event */
+   SOL*             sol                 /**< new primal solution */
+   )
+{
+   assert(event != NULL);
+
+   if( (event->eventtype & SCIP_EVENTTYPE_SOLEVENT) == 0 )
+   {
+      errorMessage("event is not a primal solution event");
+      return SCIP_INVALIDDATA;
+   }
+
+   event->data.sol = sol;
+
+   return SCIP_OKAY;
+}
+
 /** processes event by calling the appropriate event handlers */
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
+   LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
+   EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for BOUNDCHANGED events */
    )
 {
    VAR* var;
@@ -459,21 +533,20 @@ RETCODE SCIPeventProcess(
       break;
    case SCIP_EVENTTYPE_VARCREATED:
    case SCIP_EVENTTYPE_VARFIXED:
-   case SCIP_EVENTTYPE_HOLEADDED:
-   case SCIP_EVENTTYPE_HOLEREMOVED:
    case SCIP_EVENTTYPE_NODEACTIVATED:
-   case SCIP_EVENTTYPE_NODESOLVED:
-   case SCIP_EVENTTYPE_NODEBRANCHED:
-   case SCIP_EVENTTYPE_NODEINFEASIBLE:
    case SCIP_EVENTTYPE_NODEFEASIBLE:
+   case SCIP_EVENTTYPE_NODEINFEASIBLE:
+   case SCIP_EVENTTYPE_NODEBRANCHED:
    case SCIP_EVENTTYPE_FIRSTLPSOLVED:
    case SCIP_EVENTTYPE_LPSOLVED:
-      todoMessage("standard event filter not implemented yet");
+   case SCIP_EVENTTYPE_POORSOLFOUND:
+   case SCIP_EVENTTYPE_BESTSOLFOUND:
+      CHECK_OKAY( SCIPeventfilterProcess(eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
-      var = event->data.boundchange.var;
+      var = event->data.eventbdchg.var;
       assert(var != NULL);
       assert(var->eventqueueindexlb == -1);
 
@@ -483,10 +556,10 @@ RETCODE SCIPeventProcess(
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
             CHECK_OKAY( SCIPcolBoundChanged(var->data.col, memhdr, set, lp, SCIP_BOUNDTYPE_LOWER,
-                           event->data.boundchange.oldbound, event->data.boundchange.newbound) );
+                           event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          }
          CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_LOWER,
-                        event->data.boundchange.oldbound, event->data.boundchange.newbound) );
+                        event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
@@ -496,7 +569,7 @@ RETCODE SCIPeventProcess(
 
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      var = event->data.boundchange.var;
+      var = event->data.eventbdchg.var;
       assert(var != NULL);
       assert(var->eventqueueindexub == -1);
 
@@ -506,16 +579,24 @@ RETCODE SCIPeventProcess(
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
             CHECK_OKAY( SCIPcolBoundChanged(var->data.col, memhdr, set, lp, SCIP_BOUNDTYPE_UPPER,
-                           event->data.boundchange.oldbound, event->data.boundchange.newbound) );
+                           event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          }
          CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_UPPER,
-                        event->data.boundchange.oldbound, event->data.boundchange.newbound) );
+                        event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
       /* process variable's event filter */
       CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
+
+   case SCIP_EVENTTYPE_HOLEADDED:
+      errorMessage("HOLEADDED event not implemented yet");
+      abort();
+
+   case SCIP_EVENTTYPE_HOLEREMOVED:
+      errorMessage("HOLEREMOVED event not implemented yet");
+      abort();
 
    default:
       {
@@ -578,6 +659,7 @@ RETCODE SCIPeventfilterCreate(
    (*eventfilter)->eventdatas = NULL;
    (*eventfilter)->size = 0;
    (*eventfilter)->len = 0;
+   (*eventfilter)->eventmask = SCIP_EVENTTYPE_DISABLED;
    
    return SCIP_OKAY;
 }
@@ -676,6 +758,9 @@ RETCODE SCIPeventfilterAdd(
    eventfilter->eventhdlrs[right] = eventhdlr;
    eventfilter->eventdatas[right] = eventdata;
 
+   /* update eventfilter mask */
+   eventfilter->eventmask |= eventtype;
+
    return SCIP_OKAY;
 }
 
@@ -773,6 +858,7 @@ RETCODE SCIPeventfilterProcess(
    EVENT*           event               /**< event to process */
    )
 {
+   Bool processed;
    int i;
 
    assert(eventfilter != NULL);
@@ -781,14 +867,25 @@ RETCODE SCIPeventfilterProcess(
 
    debugMessage("processing event filter %p with event type 0x%x\n", eventfilter, event->eventtype);
 
-   for( i = 0; i < eventfilter->len; ++i )
+   /* check, if there may be any event handler for specific event */
+   if( (event->eventtype & eventfilter->eventmask) != 0 )
    {
-      /* check, if event is applicable for the filter element */
-      if( (event->eventtype & eventfilter->eventtypes[i]) != 0 )
+      processed = FALSE;
+      for( i = 0; i < eventfilter->len; ++i )
       {
-         /* call event handler */
-         CHECK_OKAY( SCIPeventhdlrExec(eventfilter->eventhdlrs[i], set, event, eventfilter->eventdatas[i]) );         
+         /* check, if event is applicable for the filter element */
+         if( (event->eventtype & eventfilter->eventtypes[i]) != 0 )
+         {
+            /* call event handler */
+            CHECK_OKAY( SCIPeventhdlrExec(eventfilter->eventhdlrs[i], set, event, eventfilter->eventdatas[i]) );
+            
+            processed = TRUE;
+         }
       }
+      
+      /* update eventfilter mask, if event was not processed by any event handler */
+      if( !processed )
+         eventfilter->eventmask &= !event->eventtype;
    }
 
    return SCIP_OKAY;
@@ -887,9 +984,10 @@ RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
+   LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
+   EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for BOUNDCHANGED events */
    EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    )
 {
@@ -904,7 +1002,7 @@ RETCODE SCIPeventqueueAdd(
    if( !eventqueue->delayevents )
    {
       /* immediately process event */
-      CHECK_OKAY( SCIPeventProcess(*event, memhdr, set, tree, lp, branchcand) );
+      CHECK_OKAY( SCIPeventProcess(*event, memhdr, set, tree, lp, branchcand, eventfilter) );
       CHECK_OKAY( SCIPeventFree(event, memhdr) );
    }
    else
@@ -919,22 +1017,22 @@ RETCODE SCIPeventqueueAdd(
          return SCIP_INVALIDDATA;
       case SCIP_EVENTTYPE_VARCREATED:
       case SCIP_EVENTTYPE_VARFIXED:
-      case SCIP_EVENTTYPE_HOLEADDED:
-      case SCIP_EVENTTYPE_HOLEREMOVED:
       case SCIP_EVENTTYPE_NODEACTIVATED:
-      case SCIP_EVENTTYPE_NODESOLVED:
-      case SCIP_EVENTTYPE_NODEBRANCHED:
-      case SCIP_EVENTTYPE_NODEINFEASIBLE:
       case SCIP_EVENTTYPE_NODEFEASIBLE:
+      case SCIP_EVENTTYPE_NODEINFEASIBLE:
+      case SCIP_EVENTTYPE_NODEBRANCHED:
       case SCIP_EVENTTYPE_FIRSTLPSOLVED:
       case SCIP_EVENTTYPE_LPSOLVED:
+      case SCIP_EVENTTYPE_POORSOLFOUND:
+      case SCIP_EVENTTYPE_BESTSOLFOUND:
          /* these events cannot be merged; just add them to the queue */
          CHECK_OKAY( eventqueueAppend(eventqueue, set, event) );
          break;
+
       case SCIP_EVENTTYPE_LBTIGHTENED:
       case SCIP_EVENTTYPE_LBRELAXED:
          /* changes in lower bound may be merged with older changes in lower bound */
-         var = (*event)->data.boundchange.var;
+         var = (*event)->data.eventbdchg.var;
          assert(var != NULL);
          pos = var->eventqueueindexlb;
          if( pos >= 0 )
@@ -944,24 +1042,24 @@ RETCODE SCIPeventqueueAdd(
             qevent = eventqueue->events[pos];
             assert(qevent != NULL);
             assert(qevent->eventtype == SCIP_EVENTTYPE_LBTIGHTENED || qevent->eventtype == SCIP_EVENTTYPE_LBRELAXED);
-            assert(qevent->data.boundchange.var == var);
-            assert(SCIPsetIsEQ(set, (*event)->data.boundchange.oldbound, qevent->data.boundchange.newbound));
+            assert(qevent->data.eventbdchg.var == var);
+            assert(SCIPsetIsEQ(set, (*event)->data.eventbdchg.oldbound, qevent->data.eventbdchg.newbound));
 
             debugMessage(" -> merging LB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
-               (*event)->data.boundchange.var->name, (*event)->data.boundchange.oldbound,
-               (*event)->data.boundchange.newbound,
-               pos, qevent->data.boundchange.var->name, qevent->data.boundchange.oldbound, 
-               qevent->data.boundchange.newbound);
+               (*event)->data.eventbdchg.var->name, (*event)->data.eventbdchg.oldbound,
+               (*event)->data.eventbdchg.newbound,
+               pos, qevent->data.eventbdchg.var->name, qevent->data.eventbdchg.oldbound, 
+               qevent->data.eventbdchg.newbound);
 
-            qevent->data.boundchange.newbound = (*event)->data.boundchange.newbound;
-            if( SCIPsetIsLT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
+            if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_LBRELAXED;
-            else if( SCIPsetIsGT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            else if( SCIPsetIsGT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_LBTIGHTENED;
             else
             {
                /* the queued bound change was reversed -> disable the event in the queue */
-               assert(SCIPsetIsEQ(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound));
+               assert(SCIPsetIsEQ(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound));
                eventDisable(qevent);
                var->eventqueueindexlb = -1;
                debugMessage(" -> event disabled\n");
@@ -977,10 +1075,11 @@ RETCODE SCIPeventqueueAdd(
             CHECK_OKAY( eventqueueAppend(eventqueue, set, event) );
          }
          break;
+
       case SCIP_EVENTTYPE_UBTIGHTENED:
       case SCIP_EVENTTYPE_UBRELAXED:
          /* changes in upper bound may be merged with older changes in upper bound */
-         var = (*event)->data.boundchange.var;
+         var = (*event)->data.eventbdchg.var;
          assert(var != NULL);
          pos = var->eventqueueindexub;
          if( pos >= 0 )
@@ -990,24 +1089,24 @@ RETCODE SCIPeventqueueAdd(
             qevent = eventqueue->events[pos];
             assert(qevent != NULL);
             assert(qevent->eventtype == SCIP_EVENTTYPE_UBTIGHTENED || qevent->eventtype == SCIP_EVENTTYPE_UBRELAXED);
-            assert(qevent->data.boundchange.var == var);
-            assert(SCIPsetIsEQ(set, (*event)->data.boundchange.oldbound, qevent->data.boundchange.newbound));
+            assert(qevent->data.eventbdchg.var == var);
+            assert(SCIPsetIsEQ(set, (*event)->data.eventbdchg.oldbound, qevent->data.eventbdchg.newbound));
 
             debugMessage(" -> merging UB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
-               (*event)->data.boundchange.var->name, (*event)->data.boundchange.oldbound,
-               (*event)->data.boundchange.newbound,
-               pos, qevent->data.boundchange.var->name, qevent->data.boundchange.oldbound,
-               qevent->data.boundchange.newbound);
+               (*event)->data.eventbdchg.var->name, (*event)->data.eventbdchg.oldbound,
+               (*event)->data.eventbdchg.newbound,
+               pos, qevent->data.eventbdchg.var->name, qevent->data.eventbdchg.oldbound,
+               qevent->data.eventbdchg.newbound);
 
-            qevent->data.boundchange.newbound = (*event)->data.boundchange.newbound;
-            if( SCIPsetIsLT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
+            if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_UBTIGHTENED;
-            else if( SCIPsetIsGT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            else if( SCIPsetIsGT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_UBRELAXED;
             else
             {
                /* the queued bound change was reversed -> disable the event in the queue */
-               assert(SCIPsetIsEQ(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound));
+               assert(SCIPsetIsEQ(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound));
                eventDisable(qevent);
                var->eventqueueindexub = -1;
             }
@@ -1022,6 +1121,15 @@ RETCODE SCIPeventqueueAdd(
             CHECK_OKAY( eventqueueAppend(eventqueue, set, event) );
          }
          break;
+
+      case SCIP_EVENTTYPE_HOLEADDED:
+         errorMessage("HOLEADDED event not implemented yet");
+         abort();
+
+      case SCIP_EVENTTYPE_HOLEREMOVED:
+         errorMessage("HOLEREMOVED event not implemented yet");
+         abort();
+
       default:
          {
             char s[255];
@@ -1057,7 +1165,8 @@ RETCODE SCIPeventqueueProcess(
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    )
 {
    EVENT* event;
@@ -1082,16 +1191,16 @@ RETCODE SCIPeventqueueProcess(
       /* unmark the event queue index of a variable with changed bounds */
       if( (event->eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
       {
-         assert(event->data.boundchange.var->eventqueueindexlb == i);
-         event->data.boundchange.var->eventqueueindexlb = -1;
+         assert(event->data.eventbdchg.var->eventqueueindexlb == i);
+         event->data.eventbdchg.var->eventqueueindexlb = -1;
       }
       else if( (event->eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0 )
       {
-         assert(event->data.boundchange.var->eventqueueindexub == i);
-         event->data.boundchange.var->eventqueueindexub = -1;
+         assert(event->data.eventbdchg.var->eventqueueindexub == i);
+         event->data.eventbdchg.var->eventqueueindexub = -1;
       }
 
-      CHECK_OKAY( SCIPeventProcess(event, memhdr, set, tree, lp, branchcand) );
+      CHECK_OKAY( SCIPeventProcess(event, memhdr, set, tree, lp, branchcand, eventfilter) );
 
       /* free the event immediately, because additionally raised events during event processing
        * can lead to a large event queue

@@ -1474,7 +1474,7 @@ RETCODE varEventLbChanged(
       EVENT* event;
    
       CHECK_OKAY( SCIPeventCreateLbChanged(&event, memhdr, var, oldbound, newbound) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, tree, lp, branchcand, &event) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, tree, lp, branchcand, NULL, &event) );
    }
 
    return SCIP_OKAY;
@@ -1507,7 +1507,7 @@ RETCODE varEventUbChanged(
       EVENT* event;
    
       CHECK_OKAY( SCIPeventCreateUbChanged(&event, memhdr, var, oldbound, newbound) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, tree, lp, branchcand, &event) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, tree, lp, branchcand, NULL, &event) );
    }
 
    return SCIP_OKAY;
@@ -1592,13 +1592,13 @@ RETCODE varProcessChgLb(
       
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         if( SCIPsetIsPos(set, parentvar->data.aggregate.scalar) )
+         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
             CHECK_OKAY( varProcessChgLb(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
-         else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
+         else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
          {
             /* a < 0 -> change upper bound of y */
             CHECK_OKAY( varProcessChgUb(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
@@ -1683,13 +1683,13 @@ RETCODE varProcessChgUb(
       
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         if( SCIPsetIsPos(set, parentvar->data.aggregate.scalar) )
+         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
          {
             /* a > 0 -> change upper bound of y */
             CHECK_OKAY( varProcessChgUb(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
-         else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
+         else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
          {
             /* a < 0 -> change lower bound of y */
             CHECK_OKAY( varProcessChgLb(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
@@ -1761,13 +1761,13 @@ RETCODE SCIPvarChgLb(
          
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(var->data.aggregate.var != NULL);
-         if( SCIPsetIsPos(set, var->data.aggregate.scalar) )
+         if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
             CHECK_OKAY( SCIPvarChgLb(var->data.aggregate.var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 
                            (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
          }
-         else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
+         else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
          {
             /* a < 0 -> change upper bound of y */
             CHECK_OKAY( SCIPvarChgUb(var->data.aggregate.var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 
@@ -1844,13 +1844,13 @@ RETCODE SCIPvarChgUb(
          
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(var->data.aggregate.var != NULL);
-         if( SCIPsetIsPos(set, var->data.aggregate.scalar) )
+         if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
          {
             /* a > 0 -> change upper bound of y */
             CHECK_OKAY( SCIPvarChgUb(var->data.aggregate.var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 
                            (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
          }
-         else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
+         else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
          {
             /* a < 0 -> change lower bound of y */
             CHECK_OKAY( SCIPvarChgLb(var->data.aggregate.var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 
