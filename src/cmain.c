@@ -221,7 +221,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* change settings */
-   CHECK_OKAY( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_HIGH) );
+   CHECK_OKAY( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
 
    /* include user defined callbacks */
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );
@@ -367,7 +367,10 @@ main(
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
-      SCIPerror(stderr, retcode);
+   {
+      SCIPprintError(stderr, retcode);
+      return -1;
+   }
 
    return 0;
 }

@@ -143,7 +143,7 @@ struct Var
 
 /** frees fixed size domain change data */
 extern
-void SCIPdomchgFree(
+RETCODE SCIPdomchgFree(
    DOMCHG**         domchg,             /**< pointer to domain change */
    MEMHDR*          memhdr              /**< block memory */
    );
@@ -209,7 +209,7 @@ RETCODE SCIPdomchgdynDetach(
 
 /** frees attached domain change data and detaches dynamic size attachment */
 extern
-void SCIPdomchgdynDiscard(
+RETCODE SCIPdomchgdynDiscard(
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
    MEMHDR*          memhdr              /**< block memory */
    );

@@ -256,8 +256,8 @@ void SCIPprintVersion(
    fprintf(file, " [LP solver: %s]\n", SCIPlpiGetSolverName());
 }
 
-/** prints error message and aborts program execution */
-void SCIPerror(
+/** prints error message for the given SCIP return code */
+void SCIPprintError(
    FILE*            errout,             /**< file stream to write error message */
    RETCODE          retcode             /**< SCIP return code causing the error */
    )
@@ -265,7 +265,6 @@ void SCIPerror(
    fprintf(errout, "SCIP Error (%d): ", retcode);
    SCIPretcodePrint(errout, retcode);
    fprintf(errout, "\n");
-   abort();
 }
 
 
@@ -868,7 +867,7 @@ RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddCons(scip->tree->root, scip->mem->solvemem, scip->set, cons) );
+      CHECK_OKAY( SCIPnodeAddCons(scip->tree->root, scip->mem->solvemem, scip->set, scip->tree, cons) );
       return SCIP_OKAY;
 
    default:
@@ -932,7 +931,7 @@ RETCODE SCIPaddConsNode(
    if( node == NULL )
       node = scip->tree->actnode;
 
-   CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, cons) );
+   CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
    
    return SCIP_OKAY;
 }
@@ -951,7 +950,7 @@ RETCODE SCIPdisableConsNode(
    if( node == NULL )
       node = scip->tree->actnode;
 
-   CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, cons) );
+   CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
    
    return SCIP_OKAY;
 }

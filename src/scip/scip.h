@@ -106,9 +106,9 @@ void SCIPprintVersion(
    FILE*            file                /**< file stream to write version information, or NULL for stdout */
    );
 
-/** prints error message and aborts program execution */
+/** prints error message for the given SCIP return code */
 extern
-void SCIPerror(
+void SCIPprintError(
    FILE*            errout,             /**< file stream to write error message */
    RETCODE          retcode             /**< SCIP return code causing the error */
    );

@@ -122,8 +122,7 @@ struct Node
       SUBROOT*      subroot;            /**< data for subroot nodes */
    } data;
    NODE*            parent;             /**< parent node in the tree */
-   CONSLIST*        addedconss;         /**< list of constraints created at this node */
-   CONSLIST*        disabledconss;      /**< list of constraints disabled at this node (e.g. due to redundancy) */
+   CONSSETCHG*      conssetchg;         /**< constraint set changes at this node or NULL */
    DOMCHG*          domchg;             /**< domain changes at this node or NULL */
    Real             lowerbound;         /**< lower (dual) LP bound of subtree */
    unsigned int     depth:16;           /**< depth in the tree */
@@ -142,6 +141,9 @@ struct Tree
    NODE*            actsubroot;         /**< root of the active subtree */
    NODE**           children;           /**< array with children of the active node */
    NODE**           siblings;           /**< array with siblings of the active node */
+   CONSSETCHGDYN*   actnodeconssetchg;  /**< constraint set changed of the active node */
+   CONSSETCHGDYN**  childrenconssetchg; /**< constraint set changed of the child nodes */
+   CONSSETCHGDYN**  siblingsconssetchg; /**< constraint set changed of the sibling nodes */
    DOMCHGDYN*       actnodedomchg;      /**< domain changes of the active node */
    DOMCHGDYN**      childrendomchg;     /**< domain changes of the child nodes */
    DOMCHGDYN**      siblingsdomchg;     /**< domain changes of the sibling nodes */
@@ -221,15 +223,17 @@ RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
    CONS*            cons                /**< constraint to add */
    );
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the node */
+/** disables constraint's separation, enforcing, and propagation capabilities at the node, and captures constraint */
 extern
 RETCODE SCIPnodeDisableCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
    CONS*            cons                /**< constraint to add */
    );
 

@@ -88,6 +88,23 @@ struct Cons
    unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
 };
 
+/** tracks additions and removals of the set of active constraints */
+struct ConsSetChg
+{
+   CONS**           addedconss;         /**< constraints added to the set of active constraints */
+   CONS**           disabledconss;      /**< constraints disabled in the set of active constraints */
+   int              naddedconss;        /**< number of added constraints */
+   int              ndisabledconss;     /**< number of disabled constraints */
+};
+
+/** dynamic size attachment for constraint set change data */
+struct ConsSetChgDyn
+{
+   CONSSETCHG**     conssetchg;         /**< pointer to constraint set change data */
+   int              addedconsssize;     /**< size of added constraints array */
+   int              disabledconsssize;  /**< size of disabled constraints array */
+};
+
 
 
 
@@ -1157,127 +1174,447 @@ DECL_HASHGETKEY(SCIPhashGetKeyCons)
 
 
 
+
 /*
- * Constraint list methods
+ * Constraint set change methods
  */
 
-/** adds constraint to a list of constraints and captures it */
-RETCODE SCIPconslistAdd(
-   CONSLIST**       conslist,           /**< constraint list to extend */
-   MEMHDR*          memhdr,             /**< block memory */
-   CONS*            cons                /**< constraint to add */
+/** creates empty fixed size constraint set change data */
+static
+RETCODE conssetchgCreate(
+   CONSSETCHG**     conssetchg,         /**< pointer to fixed size constraint set change data */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
-   CONSLIST* newlist;
-
-   assert(conslist != NULL);
+   assert(conssetchg != NULL);
    assert(memhdr != NULL);
-   assert(cons != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, conssetchg) );
+   (*conssetchg)->addedconss = NULL;
+   (*conssetchg)->disabledconss = NULL;
+   (*conssetchg)->naddedconss = 0;
+   (*conssetchg)->ndisabledconss = 0;
+
+   return SCIP_OKAY;
+}
+
+/** releases all constraints of the constraint set change data */
+static
+RETCODE conssetchgRelease(
+   CONSSETCHG*      conssetchg,         /**< constraint set change data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   int i;
    
-   ALLOC_OKAY( allocBlockMemory(memhdr, &newlist) );
-   newlist->cons = cons;
-   newlist->next = *conslist;
-   *conslist = newlist;
+   assert(conssetchg != NULL);
+   
+   /* release constraints */
+   for( i = 0; i < conssetchg->naddedconss; ++i )
+   {
+      CHECK_OKAY( SCIPconsRelease(&conssetchg->addedconss[i], memhdr, set) );
+   }
+   for( i = 0; i < conssetchg->ndisabledconss; ++i )
+   {
+      CHECK_OKAY( SCIPconsRelease(&conssetchg->disabledconss[i], memhdr, set) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees fixed size constraint set change data and releases all included constraints */
+RETCODE SCIPconssetchgFree(
+   CONSSETCHG**     conssetchg,         /**< pointer to constraint set change */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(conssetchg != NULL);
+   assert(memhdr != NULL);
+
+   if( *conssetchg != NULL )
+   {
+      /* release constraints */
+      CHECK_OKAY( conssetchgRelease(*conssetchg, memhdr, set) );
+
+      /* free memory */
+      freeBlockMemoryArrayNull(memhdr, &(*conssetchg)->addedconss, (*conssetchg)->naddedconss);
+      freeBlockMemoryArrayNull(memhdr, &(*conssetchg)->disabledconss, (*conssetchg)->ndisabledconss);
+      freeBlockMemory(memhdr, conssetchg);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** applies constraint set change */
+RETCODE SCIPconssetchgApply(
+   CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   int i;
+
+   debugMessage("applying constraint set changes at %p\n", conssetchg);
+
+   if( conssetchg == NULL )
+      return SCIP_OKAY;
+
+   debugMessage(" -> %d constraint additions, %d constraint disablings\n", 
+      conssetchg->naddedconss, conssetchg->ndisabledconss);
+
+   /* apply constraint additions */
+   for( i = 0; i < conssetchg->naddedconss; ++i )
+   {
+      CHECK_OKAY( SCIPconsActivate(conssetchg->addedconss[i], set) );
+   }
+
+   /* apply constraint disablings */
+   for( i = 0; i < conssetchg->ndisabledconss; ++i )
+   {
+      CHECK_OKAY( SCIPconsDisable(conssetchg->disabledconss[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** undoes constraint set change */
+RETCODE SCIPconssetchgUndo(
+   CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   int i;
+
+   debugMessage("undoing constraint set changes at %p\n", conssetchg);
+
+   if( conssetchg == NULL )
+      return SCIP_OKAY;
+
+   debugMessage(" -> %d constraint additions, %d constraint disablings\n", 
+      conssetchg->naddedconss, conssetchg->ndisabledconss);
+
+   /* undo constraint disablings */
+   for( i = 0; i < conssetchg->ndisabledconss; ++i )
+   {
+      CHECK_OKAY( SCIPconsEnable(conssetchg->disabledconss[i], set) );
+   }
+
+   /* undo constraint additions */
+   for( i = 0; i < conssetchg->naddedconss; ++i )
+   {
+      CHECK_OKAY( SCIPconsDeactivate(conssetchg->addedconss[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
+ * dynamic size attachment methods for constraint set changes
+ */
+
+/** ensures, that addedconss array can store at least num entries */
+static
+RETCODE ensureAddedconssSize(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   CONSSETCHG** conssetchg;
+
+   assert(conssetchgdyn != NULL);
+   assert(conssetchgdyn->conssetchg != NULL);
+
+   conssetchg = conssetchgdyn->conssetchg;
+   assert(*conssetchg != NULL || conssetchgdyn->addedconsssize == 0);
+   assert(*conssetchg == NULL || (*conssetchg)->naddedconss <= conssetchgdyn->addedconsssize);
+
+   if( num > conssetchgdyn->addedconsssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      if( *conssetchg == NULL )
+      {
+         CHECK_OKAY( conssetchgCreate(conssetchg, memhdr) );
+      }
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*conssetchg)->addedconss, conssetchgdyn->addedconsssize, newsize) );
+      conssetchgdyn->addedconsssize = newsize;
+   }
+   assert(num <= conssetchgdyn->addedconsssize);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that disabledconss array can store at least num entries */
+static
+RETCODE ensureDisabledconssSize(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   CONSSETCHG** conssetchg;
+
+   assert(conssetchgdyn != NULL);
+   assert(conssetchgdyn->conssetchg != NULL);
+
+   conssetchg = conssetchgdyn->conssetchg;
+   assert(*conssetchg != NULL || conssetchgdyn->disabledconsssize == 0);
+   assert(*conssetchg == NULL || (*conssetchg)->ndisabledconss <= conssetchgdyn->disabledconsssize);
+
+   if( num > conssetchgdyn->disabledconsssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      if( *conssetchg == NULL )
+      {
+         CHECK_OKAY( conssetchgCreate(conssetchg, memhdr) );
+      }
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*conssetchg)->disabledconss, conssetchgdyn->disabledconsssize, 
+                     newsize) );
+      conssetchgdyn->disabledconsssize = newsize;
+   }
+   assert(num <= conssetchgdyn->disabledconsssize);
+
+   return SCIP_OKAY;
+}
+
+/** creates a dynamic size attachment for a constraint set change data structure */
+RETCODE SCIPconssetchgdynCreate(
+   CONSSETCHGDYN**  conssetchgdyn,      /**< pointer to dynamic size attachment */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(conssetchgdyn != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, conssetchgdyn) );
+
+   (*conssetchgdyn)->conssetchg = NULL;
+   (*conssetchgdyn)->addedconsssize = 0;
+   (*conssetchgdyn)->disabledconsssize = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees a dynamic size attachment for a constraint set change data structure */
+void SCIPconssetchgdynFree(
+   CONSSETCHGDYN**  conssetchgdyn,      /**< pointer to dynamic size attachment */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(conssetchgdyn != NULL);
+   assert(*conssetchgdyn != NULL);
+   assert((*conssetchgdyn)->conssetchg == NULL);
+   assert((*conssetchgdyn)->addedconsssize == 0);
+   assert((*conssetchgdyn)->disabledconsssize == 0);
+
+   freeBlockMemory(memhdr, conssetchgdyn);
+}
+
+/** attaches dynamic size information to constraint set change data */
+void SCIPconssetchgdynAttach(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamic size information */
+   CONSSETCHG**     conssetchg          /**< pointer to static constraint set change */
+   )
+{
+   assert(conssetchgdyn != NULL);
+   assert(conssetchgdyn->conssetchg == NULL);
+   assert(conssetchgdyn->addedconsssize == 0);
+   assert(conssetchgdyn->disabledconsssize == 0);
+   assert(conssetchg != NULL);
+
+   debugMessage("attaching dynamic size information at %p to constraint set change data at %p\n",
+      conssetchgdyn, conssetchg);
+
+   conssetchgdyn->conssetchg = conssetchg;
+   if( *conssetchg != NULL )
+   {
+      conssetchgdyn->addedconsssize = (*conssetchg)->naddedconss;
+      conssetchgdyn->disabledconsssize = (*conssetchg)->ndisabledconss;
+   }
+   else
+   {
+      conssetchgdyn->addedconsssize = 0;
+      conssetchgdyn->disabledconsssize = 0;
+   }
+}
+
+/** detaches dynamic size information and shrinks constraint set change data */
+RETCODE SCIPconssetchgdynDetach(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamic size information */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(conssetchgdyn != NULL);
+   assert(conssetchgdyn->conssetchg != NULL);
+   assert(conssetchgdyn->addedconsssize == 0 || *conssetchgdyn->conssetchg != NULL);
+   assert(conssetchgdyn->addedconsssize == 0 || (*conssetchgdyn->conssetchg)->naddedconss <= conssetchgdyn->addedconsssize);
+   assert(conssetchgdyn->disabledconsssize == 0 || *conssetchgdyn->conssetchg != NULL);
+   assert(conssetchgdyn->disabledconsssize == 0
+      || (*conssetchgdyn->conssetchg)->ndisabledconss <= conssetchgdyn->disabledconsssize);
+
+   debugMessage("detaching dynamic size information at %p from constraint set change data at %p\n",
+      conssetchgdyn, conssetchgdyn->conssetchg);
+
+   /* shrink static constraint set change data to the size of the used elements */
+   if( *conssetchgdyn->conssetchg != NULL )
+   {
+      if( (*conssetchgdyn->conssetchg)->naddedconss == 0 )
+      {
+         freeBlockMemoryArrayNull(memhdr, &(*conssetchgdyn->conssetchg)->addedconss, conssetchgdyn->addedconsssize);
+      }
+      else
+      {
+         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*conssetchgdyn->conssetchg)->addedconss,
+                        conssetchgdyn->addedconsssize, (*conssetchgdyn->conssetchg)->naddedconss) );
+      }
+      if( (*conssetchgdyn->conssetchg)->ndisabledconss == 0 )
+      {
+         freeBlockMemoryArrayNull(memhdr, &(*conssetchgdyn->conssetchg)->disabledconss, conssetchgdyn->disabledconsssize);
+      }
+      else
+      {
+         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*conssetchgdyn->conssetchg)->disabledconss,
+                        conssetchgdyn->disabledconsssize, (*conssetchgdyn->conssetchg)->ndisabledconss) );
+      }
+      if( (*conssetchgdyn->conssetchg)->naddedconss == 0 && (*conssetchgdyn->conssetchg)->ndisabledconss == 0 )
+      {
+         CHECK_OKAY( SCIPconssetchgFree(conssetchgdyn->conssetchg, memhdr, set) );
+      }
+   }
+   else
+   {
+      assert(conssetchgdyn->addedconsssize == 0);
+      assert(conssetchgdyn->disabledconsssize == 0);
+   }
+
+   /* detach constraint set change data */
+   conssetchgdyn->conssetchg = NULL;
+   conssetchgdyn->disabledconsssize = 0;
+   conssetchgdyn->addedconsssize = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees attached constraint set change data and detaches dynamic size attachment */
+RETCODE SCIPconssetchgdynDiscard(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(conssetchgdyn != NULL);
+   assert(conssetchgdyn->conssetchg != NULL);
+   assert(conssetchgdyn->addedconsssize == 0 || *conssetchgdyn->conssetchg != NULL);
+   assert(conssetchgdyn->addedconsssize == 0 || (*conssetchgdyn->conssetchg)->naddedconss <= conssetchgdyn->addedconsssize);
+   assert(conssetchgdyn->disabledconsssize == 0 || *conssetchgdyn->conssetchg != NULL);
+   assert(conssetchgdyn->disabledconsssize == 0
+      || (*conssetchgdyn->conssetchg)->ndisabledconss <= conssetchgdyn->disabledconsssize);
+
+   debugMessage("discarding dynamic size information at %p from constraint set change data at %p\n", 
+      conssetchgdyn, conssetchgdyn->conssetchg);
+
+   /* free static constraint set change data */
+   if( *conssetchgdyn->conssetchg != NULL )
+   {  
+      /* release constraints of the constraint set change data */
+      CHECK_OKAY( conssetchgRelease(*conssetchgdyn->conssetchg, memhdr, set) );
+
+      /* clear the constraint set change data */
+      freeBlockMemoryArrayNull(memhdr, &(*conssetchgdyn->conssetchg)->addedconss, conssetchgdyn->addedconsssize);
+      (*conssetchgdyn->conssetchg)->naddedconss = 0;
+      freeBlockMemoryArrayNull(memhdr, &(*conssetchgdyn->conssetchg)->disabledconss, conssetchgdyn->disabledconsssize);
+      (*conssetchgdyn->conssetchg)->ndisabledconss = 0;
+
+      /* free the constraint set change data */
+      CHECK_OKAY( SCIPconssetchgFree(conssetchgdyn->conssetchg, memhdr, set) );
+      conssetchgdyn->addedconsssize = 0;
+      conssetchgdyn->disabledconsssize = 0;
+   }
+
+   /* detach constraint set change data */
+   conssetchgdyn->conssetchg = NULL;
+   assert(conssetchgdyn->addedconsssize == 0);
+   assert(conssetchgdyn->disabledconsssize == 0);
+
+   return SCIP_OKAY;
+}
+
+/** adds constraint addition to constraint set changes, and captures constraint */
+RETCODE SCIPconssetchgdynAddAddedCons(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< added constraint */
+   )
+{
+   CONSSETCHG* conssetchg;
+   int naddedconss;
+
+   assert(conssetchgdyn != NULL);
+   assert(conssetchgdyn->conssetchg != NULL);
+   assert(cons != NULL);
+
+   naddedconss = (*conssetchgdyn->conssetchg == NULL ? 0 : (*conssetchgdyn->conssetchg)->naddedconss);
+   CHECK_OKAY( ensureAddedconssSize(conssetchgdyn, memhdr, set, naddedconss+1) );
+
+   conssetchg = *conssetchgdyn->conssetchg;
+   assert(conssetchg != NULL);
+
+   conssetchg->addedconss[conssetchg->naddedconss] = cons;
+   conssetchg->naddedconss++;
 
    SCIPconsCapture(cons);
 
    return SCIP_OKAY;
 }
 
-/** partially unlinks and releases the constraints in the list */
-RETCODE SCIPconslistFreePart(
-   CONSLIST**       conslist,           /**< constraint list to delete from */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+/** adds constraint disabling to constraint set changes, and captures constraint */
+RETCODE SCIPconssetchgdynAddDisabledCons(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   CONSLIST*        firstkeep           /**< first constraint list entry to keep */
+   CONS*            cons                /**< disabled constraint */
    )
 {
-   CONSLIST* next;
+   CONSSETCHG* conssetchg;
+   int ndisabledconss;
 
-   assert(conslist != NULL);
-   assert(memhdr != NULL);
-   
-   while(*conslist != NULL && *conslist != firstkeep)
-   {
-      CHECK_OKAY( SCIPconsRelease(&(*conslist)->cons, memhdr, set) );
-      next = (*conslist)->next;
-      freeBlockMemory(memhdr, conslist);
-      *conslist = next;
-   }
-   assert(*conslist == firstkeep); /* firstkeep should be part of conslist */
+   assert(conssetchgdyn != NULL);
+   assert(conssetchgdyn->conssetchg != NULL);
+   assert(cons != NULL);
+
+   ndisabledconss = (*conssetchgdyn->conssetchg == NULL ? 0 : (*conssetchgdyn->conssetchg)->ndisabledconss);
+   CHECK_OKAY( ensureDisabledconssSize(conssetchgdyn, memhdr, set, ndisabledconss+1) );
+
+   conssetchg = *conssetchgdyn->conssetchg;
+   assert(conssetchg != NULL);
+
+   conssetchg->disabledconss[conssetchg->ndisabledconss] = cons;
+   conssetchg->ndisabledconss++;
+
+   SCIPconsCapture(cons);
 
    return SCIP_OKAY;
 }
 
-/** unlinks and releases all the constraints in the list */
-RETCODE SCIPconslistFree(
-   CONSLIST**       conslist,           /**< constraint list to delete from */
-   MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set                 /**< global SCIP settings */
+/** gets pointer to constraint set change data the dynamic size information references */
+CONSSETCHG** SCIPconssetchgdynGetConssetchgPtr(
+   CONSSETCHGDYN*   conssetchgdyn       /**< dynamically sized constraint set change data structure */
    )
 {
-   return SCIPconslistFreePart(conslist, memhdr, set, NULL);
+   assert(conssetchgdyn != NULL);
+
+   return conssetchgdyn->conssetchg;
 }
 
 
-/** activates all constraints in the list */
-RETCODE SCIPconslistActivate(
-   CONSLIST*        conslist,           /**< constraint list */
-   const SET*       set                 /**< global SCIP settings */
-   )
-{
-   while( conslist != NULL )
-   {
-      CHECK_OKAY( SCIPconsActivate(conslist->cons, set) );
-      conslist = conslist->next;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** deactivates all constraints in the list */
-RETCODE SCIPconslistDeactivate(
-   CONSLIST*        conslist            /**< constraint list */
-   )
-{
-   while( conslist != NULL )
-   {
-      CHECK_OKAY( SCIPconsDeactivate(conslist->cons) );
-      conslist = conslist->next;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** enables separation, enforcing, and propagation capabilities of all constraints in the list */
-RETCODE SCIPconslistEnable(
-   CONSLIST*        conslist,           /**< constraint list */
-   const SET*       set                 /**< global SCIP settings */
-   )
-{
-   todoMessage("remove deactivated constraints from conslist (may be deactivated due to aging)");
-
-   while( conslist != NULL )
-   {
-      CHECK_OKAY( SCIPconsEnable(conslist->cons, set) );
-      conslist = conslist->next;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** disables separation, enforcing, and propagation capabilities of all constraints in the list */
-RETCODE SCIPconslistDisable(
-   CONSLIST*        conslist            /**< constraint list */
-   )
-{
-   todoMessage("remove deactivated constraints from conslist (may be deactivated due to aging)");
-
-   while( conslist != NULL )
-   {
-      CHECK_OKAY( SCIPconsDisable(conslist->cons) );
-      conslist = conslist->next;
-   }
-
-   return SCIP_OKAY;
-}

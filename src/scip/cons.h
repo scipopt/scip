@@ -28,9 +28,11 @@
 
 typedef struct ConsHdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct Cons CONS;               /**< constraint data structure */
-typedef struct ConsList CONSLIST;       /**< list of constraints */
 typedef struct ConsHdlrData CONSHDLRDATA; /**< constraint handler data */
 typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
+typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
+typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for constraint set change data */
+
 
 
 /** destructor of constraint handler to free user data (called when SCIP is exiting)
@@ -222,15 +224,6 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 #include "mem.h"
 #include "lp.h"
 #include "sol.h"
-
-
-
-/** linked list of constraints */
-struct ConsList
-{
-   CONS*            cons;               /**< pointer to constraint data structure */
-   CONSLIST*        next;               /**< next list entry */
-};
 
 
 
@@ -524,59 +517,99 @@ DECL_HASHGETKEY(SCIPhashGetKeyCons);
 
 
 
+
 /*
- * Constraint list methods
+ * Constraint set change methods
  */
 
-/** adds constraint to a list of constraints and captures it */
+/** frees fixed size constraint set change data and releases all included constraints */
 extern
-RETCODE SCIPconslistAdd(
-   CONSLIST**       conslist,           /**< constraint list to extend */
+RETCODE SCIPconssetchgFree(
+   CONSSETCHG**     conssetchg,         /**< pointer to constraint set change */
    MEMHDR*          memhdr,             /**< block memory */
-   CONS*            cons                /**< constraint to add */
+   const SET*       set                 /**< global SCIP settings */
    );
 
-/** partially unlinks and frees the constraints in the list */
+/** applies constraint set change */
 extern
-RETCODE SCIPconslistFreePart(
-   CONSLIST**       conslist,           /**< constraint list to delete from */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+RETCODE SCIPconssetchgApply(
+   CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** undoes constraint set change */
+extern
+RETCODE SCIPconssetchgUndo(
+   CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+
+
+
+/*
+ * dynamic size attachment methods for constraint set changes
+ */
+
+/** creates a dynamic size attachment for a constraint set change data structure */
+extern
+RETCODE SCIPconssetchgdynCreate(
+   CONSSETCHGDYN**  conssetchgdyn,      /**< pointer to dynamic size attachment */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+/** frees a dynamic size attachment for a constraint set change data structure */
+extern
+void SCIPconssetchgdynFree(
+   CONSSETCHGDYN**  conssetchgdyn,      /**< pointer to dynamic size attachment */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+/** attaches dynamic size information to constraint set change data */
+extern
+void SCIPconssetchgdynAttach(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamic size information */
+   CONSSETCHG**     conssetchg          /**< pointer to static constraint set change */
+   );
+
+/** detaches dynamic size information and shrinks constraint set change data */
+extern
+RETCODE SCIPconssetchgdynDetach(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamic size information */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** frees attached constraint set change data and detaches dynamic size attachment */
+extern
+RETCODE SCIPconssetchgdynDiscard(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** adds constraint addition to constraint set changes, and captures constraint */
+extern
+RETCODE SCIPconssetchgdynAddAddedCons(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   CONSLIST*        firstkeep           /**< first constraint list entry to keep */
+   CONS*            cons                /**< added constraint */
    );
 
-/** unlinks and frees all the constraints in the list */
+/** adds constraint disabling to constraint set changes, and captures constraint */
 extern
-RETCODE SCIPconslistFree(
-   CONSLIST**       conslist,           /**< constraint list to delete from */
-   MEMHDR*          memhdr,             /**< block memory buffer */
-   const SET*       set                 /**< global SCIP settings */
+RETCODE SCIPconssetchgdynAddDisabledCons(
+   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< disabled constraint */
    );
 
-/** activates all constraints in the list */
+/** gets pointer to constraint set change data the dynamic size information references */
 extern
-RETCODE SCIPconslistActivate(
-   CONSLIST*        conslist,           /**< constraint list */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-/** deactivates all constraints in the list */
-extern
-RETCODE SCIPconslistDeactivate(
-   CONSLIST*        conslist            /**< constraint list */
-   );
-
-/** enables separation, enforcing, and propagation capabilities of all constraints in the list */
-extern
-RETCODE SCIPconslistEnable(
-   CONSLIST*        conslist,           /**< constraint list */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-/** disables separation, enforcing, and propagation capabilities of all constraints in the list */
-extern
-RETCODE SCIPconslistDisable(
-   CONSLIST*        conslist            /**< constraint list */
+CONSSETCHG** SCIPconssetchgdynGetConssetchgPtr(
+   CONSSETCHGDYN*   conssetchgdyn       /**< dynamically sized constraint set change data structure */
    );
 
 

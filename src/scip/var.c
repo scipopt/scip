@@ -327,7 +327,7 @@ RETCODE domMerge(
  */
 
 /** frees fixed size domain change data */
-void SCIPdomchgFree(
+RETCODE SCIPdomchgFree(
    DOMCHG**         domchg,             /**< pointer to domain change */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -341,6 +341,8 @@ void SCIPdomchgFree(
       freeBlockMemoryArrayNull(memhdr, &(*domchg)->holechg, (*domchg)->nholechg);
       freeBlockMemory(memhdr, domchg);
    }
+
+   return SCIP_OKAY;
 }
 
 /** applies domain change */
@@ -542,7 +544,9 @@ RETCODE SCIPdomchgdynDetach(
                         domchgdyn->holechgsize, (*domchgdyn->domchg)->nholechg) );
       }
       if( (*domchgdyn->domchg)->nboundchg == 0 && (*domchgdyn->domchg)->nholechg == 0 )
-         SCIPdomchgFree(domchgdyn->domchg, memhdr);
+      {
+         CHECK_OKAY( SCIPdomchgFree(domchgdyn->domchg, memhdr) );
+      }
    }
    else
    {
@@ -559,7 +563,7 @@ RETCODE SCIPdomchgdynDetach(
 }
 
 /** frees attached domain change data and detaches dynamic size attachment */
-void SCIPdomchgdynDiscard(
+RETCODE SCIPdomchgdynDiscard(
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -579,13 +583,15 @@ void SCIPdomchgdynDiscard(
       (*domchgdyn->domchg)->nboundchg = 0;
       freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->holechg, domchgdyn->holechgsize);
       (*domchgdyn->domchg)->nholechg = 0;
-      SCIPdomchgFree(domchgdyn->domchg, memhdr);
+      CHECK_OKAY( SCIPdomchgFree(domchgdyn->domchg, memhdr) );
       domchgdyn->boundchgsize = 0;
       domchgdyn->holechgsize = 0;
    }
 
    /* detach domain change data */
    domchgdyn->domchg = NULL;
+
+   return SCIP_OKAY;
 }
 
 /** adds bound change to domain changes */
