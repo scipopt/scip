@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.31 2004/10/18 12:40:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.32 2004/10/20 10:51:15 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -2270,6 +2270,9 @@ RETCODE SCIPlpiGetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      *dval = lpi->spx->delta();
+      break;
+   case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->delta();
       break;
    case SCIP_LPPAR_LOBJLIM:
