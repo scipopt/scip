@@ -150,6 +150,7 @@ extern
 RETCODE SCIPaddBoolParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    Bool             defaultvalue        /**< default value of the parameter */
    );
@@ -159,8 +160,11 @@ extern
 RETCODE SCIPaddIntParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
-   int              defaultvalue        /**< default value of the parameter */
+   int              defaultvalue,       /**< default value of the parameter */
+   int              minvalue,           /**< minimum value for parameter */
+   int              maxvalue            /**< maximum value for parameter */
    );
 
 /** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
@@ -168,8 +172,11 @@ extern
 RETCODE SCIPaddLongintParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Longint          defaultvalue        /**< default value of the parameter */
+   Longint          defaultvalue,       /**< default value of the parameter */
+   Longint          minvalue,           /**< minimum value for parameter */
+   Longint          maxvalue            /**< maximum value for parameter */
    );
 
 /** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
@@ -177,8 +184,11 @@ extern
 RETCODE SCIPaddRealParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Real             defaultvalue        /**< default value of the parameter */
+   Real             defaultvalue,       /**< default value of the parameter */
+   Real             minvalue,           /**< minimum value for parameter */
+   Real             maxvalue            /**< maximum value for parameter */
    );
 
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
@@ -186,8 +196,10 @@ extern
 RETCODE SCIPaddCharParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   char             defaultvalue        /**< default value of the parameter */
+   char             defaultvalue,       /**< default value of the parameter */
+   const char*      allowedvalues       /**< array with possible parameter values, or NULL if not restricted */
    );
 
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
@@ -195,6 +207,7 @@ extern
 RETCODE SCIPaddStringParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
    const char*      defaultvalue        /**< default value of the parameter */
    );
@@ -292,6 +305,21 @@ RETCODE SCIPsetStringParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
    const char*      value               /**< new value of the parameter */
+   );
+
+/** reads parameters from a file */
+extern
+RETCODE SCIPreadParams(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename            /**< file name */
+   );
+
+/** writes all parameters in the parameter set to a file */
+extern
+RETCODE SCIPwriteParams(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename,           /**< file name, or NULL for stdout */
+   Bool             comments            /**< should parameter descriptions be written as comments? */
    );
 
 

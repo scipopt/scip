@@ -69,7 +69,7 @@ RETCODE checkStage(
    Bool             freesolve           /**< may method be called in the FREESOLVE stage? */
    )
 {
-   char s[255];
+   char s[MAXSTRLEN];
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -358,13 +358,14 @@ STAGE SCIPstage(
 RETCODE SCIPaddBoolParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
    Bool             defaultvalue        /**< default value of the parameter */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddBoolParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddBoolParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -373,13 +374,16 @@ RETCODE SCIPaddBoolParam(
 RETCODE SCIPaddIntParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
-   int              defaultvalue        /**< default value of the parameter */
+   int              defaultvalue,       /**< default value of the parameter */
+   int              minvalue,           /**< minimum value for parameter */
+   int              maxvalue            /**< maximum value for parameter */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue) );
 
    return SCIP_OKAY;
 }
@@ -388,13 +392,17 @@ RETCODE SCIPaddIntParam(
 RETCODE SCIPaddLongintParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Longint          defaultvalue        /**< default value of the parameter */
+   Longint          defaultvalue,       /**< default value of the parameter */
+   Longint          minvalue,           /**< minimum value for parameter */
+   Longint          maxvalue            /**< maximum value for parameter */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddLongintParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddLongintParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddLongintParam(scip->set, scip->mem->setmem, name, desc,
+                  valueptr, defaultvalue, minvalue, maxvalue) );
 
    return SCIP_OKAY;
 }
@@ -403,13 +411,16 @@ RETCODE SCIPaddLongintParam(
 RETCODE SCIPaddRealParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Real             defaultvalue        /**< default value of the parameter */
+   Real             defaultvalue,       /**< default value of the parameter */
+   Real             minvalue,           /**< minimum value for parameter */
+   Real             maxvalue            /**< maximum value for parameter */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue) );
 
    return SCIP_OKAY;
 }
@@ -418,13 +429,15 @@ RETCODE SCIPaddRealParam(
 RETCODE SCIPaddCharParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   char             defaultvalue        /**< default value of the parameter */
+   char             defaultvalue,       /**< default value of the parameter */
+   const char*      allowedvalues       /**< array with possible parameter values, or NULL if not restricted */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, allowedvalues) );
 
    return SCIP_OKAY;
 }
@@ -433,13 +446,14 @@ RETCODE SCIPaddCharParam(
 RETCODE SCIPaddStringParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
+   const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
    const char*      defaultvalue        /**< default value of the parameter */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetAddStringParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+   CHECK_OKAY( SCIPsetAddStringParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -608,6 +622,33 @@ RETCODE SCIPsetStringParam(
    CHECK_OKAY( checkStage(scip, "SCIPsetStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetSetStringParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** reads parameters from a file */
+RETCODE SCIPreadParams(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename            /**< file name */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPreadParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetReadParams(scip->set, filename) );
+
+   return SCIP_OKAY;
+}
+
+/** writes all parameters in the parameter set to a file */
+RETCODE SCIPwriteParams(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename,           /**< file name, or NULL for stdout */
+   Bool             comments            /**< should parameter descriptions be written as comments? */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPwriteParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetWriteParams(scip->set, filename, comments) );
 
    return SCIP_OKAY;
 }
@@ -959,7 +1000,7 @@ RETCODE SCIPreadProb(
 {
    RESULT result;
    int i;
-   char s[255];
+   char s[MAXSTRLEN];
 
    assert(filename != NULL);
 
@@ -976,7 +1017,7 @@ RETCODE SCIPreadProb(
    {
    case SCIP_DIDNOTRUN:
       failureMessage("No reader for input file <%s> available\n", filename);
-      return SCIP_READERR;
+      return SCIP_READERROR;
 
    case SCIP_SUCCESS:
       assert(scip->origprob != NULL);
@@ -999,7 +1040,7 @@ RETCODE SCIPreadProb(
       sprintf(s, "invalid result code <%d> from reader <%s> reading file <%s>", 
          result, SCIPreaderGetName(scip->set->readers[i]), filename);
       errorMessage(s);
-      return SCIP_READERR;
+      return SCIP_READERROR;
    }
 }
 
@@ -1586,7 +1627,7 @@ RETCODE SCIPsolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   char s[255];
+   char s[MAXSTRLEN];
    int i;
 
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
@@ -1665,7 +1706,7 @@ RETCODE SCIPsolve(
       /* detect, whether problem is solved */
       if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
       {
-         char s[255];
+         char s[MAXSTRLEN];
             
          /* tree is empty, and no active node exists -> problem is solved */
          scip->stage = SCIP_STAGE_SOLVED;
@@ -3115,7 +3156,7 @@ RETCODE SCIPbranchVar(
 
    if( SCIPsetIsFixed(scip->set, var->dom.lb, var->dom.ub) )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "cannot branch on variable <%s> with fixed domain [%g,%g]", var->name, var->dom.lb, var->dom.ub);
       errorMessage(s);
       return SCIP_INVALIDDATA;

@@ -461,7 +461,7 @@ RETCODE enforceConstraints(
             CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, prob, &result) );
             if( SCIPsepastoreGetNCuts(sepastore) != 0 )
             {
-               char s[255];
+               char s[MAXSTRLEN];
                sprintf(s, "pseudo enforcing method of constraint handler <%s> separated cuts",
                   SCIPconshdlrGetName(conshdlrs_enfo[h]));
                errorMessage(s);
@@ -540,7 +540,7 @@ RETCODE enforceConstraints(
 
          default:
             {
-               char s[255];
+               char s[MAXSTRLEN];
                sprintf(s, "invalid result code <%d> from enforcing method of constraint handler <%s>",
                   result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
                errorMessage(s);
@@ -604,7 +604,7 @@ RETCODE enforceConstraints(
 
       default:
          {
-            char s[255];
+            char s[MAXSTRLEN];
             sprintf(s, "invalid result code <%d> from pseudoBranch()", result);
             errorMessage(s);
             abort();
@@ -667,7 +667,7 @@ RETCODE SCIPsolveCIP(
    SCIPbsortPtr((void**)conshdlrs_sepa, set->nconshdlrs, SCIPconshdlrCompSepa);
    SCIPbsortPtr((void**)conshdlrs_enfo, set->nconshdlrs, SCIPconshdlrCompEnfo);
 
-   while( stat->nnodes < set->nodelimit )
+   while( set->nodelimit == -1 || stat->nnodes < set->nodelimit )
    {
       assert(set->buffer->firstfree == 0);
 
@@ -752,8 +752,8 @@ RETCODE SCIPsolveCIP(
          debug(SCIPprobPrintPseudoSol(prob, set));
          
          /* check, if we want to solve the LP at the selected node */
-         tree->actnodehaslp = ((int)(actnode->depth) <= set->lpsolvedepth
-            && set->lpsolvefreq >= 1 && actnode->depth % set->lpsolvefreq == 0);
+         tree->actnodehaslp = (set->lpsolvedepth == -1 || (int)(actnode->depth) <= set->lpsolvedepth);
+         tree->actnodehaslp &= (set->lpsolvefreq >= 1 && actnode->depth % set->lpsolvefreq == 0);
          /* solve at least the root LP, if there are continous variables present */
          tree->actnodehaslp |= (actnode->depth == 0 && prob->ncont > 0);
          /* solve the root LP, if the LP solve frequency is set to 0 */

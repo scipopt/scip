@@ -182,7 +182,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      && SCIPisCutViolated(scip, cutact/cutnorm, cutrhs/cutnorm) )
                   {
                      ROW* cut;
-                     char cutname[255];
+                     char cutname[MAXSTRLEN];
                      Bool success;
 
                      /* create the cut */

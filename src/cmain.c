@@ -343,7 +343,6 @@ RETCODE runSCIP(
    /*CHECK_OKAY( includeTestEventHdlr(scip) );*/
 
 
-
    /**************
     * Parameters *
     **************/

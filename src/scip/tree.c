@@ -933,7 +933,7 @@ RETCODE SCIPnodeAddBoundchg(
 
       if( SCIPsetIsLE(set, newbound, oldbound) )
       {
-         char s[255];
+         char s[MAXSTRLEN];
          sprintf(s, "variable's lower bound was not tightened: var <%s>, oldbound=%f, newbound=%f",
             var->name, oldbound, newbound);
          errorMessage(s);
@@ -947,7 +947,7 @@ RETCODE SCIPnodeAddBoundchg(
 
       if( SCIPsetIsGE(set, newbound, oldbound) )
       {
-         char s[255];
+         char s[MAXSTRLEN];
          sprintf(s, "variable's upper bound was not tightened: var <%s>, oldbound=%f, newbound=%f",
             var->name, oldbound, newbound);
          errorMessage(s);
@@ -1444,7 +1444,7 @@ void treeCheckPath(
    int ncols;
    int nrows;
    int d;
-   char s[255];
+   char s[MAXSTRLEN];
 
    assert(tree != NULL);
    assert(tree->path != NULL);

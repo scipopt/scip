@@ -987,7 +987,7 @@ RETCODE SCIPvarTransform(
    VAR*             origvar             /**< original problem variable */
    )
 {
-   char name[255];
+   char name[MAXSTRLEN];
    VARTYPE vartype;
 
    assert(origvar != NULL);
@@ -2457,7 +2457,7 @@ RETCODE SCIPvarAddToRow(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
       {
-         char s[255];
+         char s[MAXSTRLEN];
          sprintf(s, "Cannot add untransformed original variable <%s> to LP row <%s>", var->name, row->name);
          errorMessage(s);
          return SCIP_INVALIDDATA;
