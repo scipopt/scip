@@ -1371,7 +1371,7 @@ RETCODE SCIPcolChgObj(
    assert(col->var->data.col == col);
    assert(lp != NULL);
    
-   debugMessage("changing objective value of <%s> from %g to %g\n", col->var->name, col->obj, newobj);
+   debugMessage("changing objective value of <%s> from %f to %f\n", col->var->name, col->obj, newobj);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->obj, newobj) )
    {
@@ -1415,7 +1415,7 @@ RETCODE SCIPcolChgLb(
    assert(col->var->data.col == col);
    assert(lp != NULL);
    
-   debugMessage("changing lower bound of <%s> from %g to %g\n", col->var->name, col->lb, newlb);
+   debugMessage("changing lower bound of <%s> from %f to %f\n", col->var->name, col->lb, newlb);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
    {
@@ -1459,7 +1459,7 @@ RETCODE SCIPcolChgUb(
    assert(col->var->data.col == col);
    assert(lp != NULL);
    
-   debugMessage("changing upper bound of <%s> from %g to %g\n", col->var->name, col->ub, newub);
+   debugMessage("changing upper bound of <%s> from %f to %f\n", col->var->name, col->ub, newub);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
    {
@@ -4605,7 +4605,7 @@ RETCODE lpCleanupCols(
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
       if( lpicols[c]->removeable
-         && SCIPsetIsZero(set, lpicols[c]->primsol)
+         && lpicols[c]->primsol == 0.0 /* non-basic columns to remove are exactly at 0.0 */
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
@@ -4746,7 +4746,8 @@ RETCODE SCIPlpCleanupAll(
 /** initiates LP diving */
 RETCODE SCIPlpStartDive(
    LP*              lp,                 /**< actual LP data */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(lp != NULL);
@@ -4762,9 +4763,9 @@ RETCODE SCIPlpStartDive(
          assert(lp->cols[c]->var != NULL);
          assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
          assert(lp->cols[c]->var->data.col == lp->cols[c]);
-         assert(lp->cols[c]->var->obj == lp->cols[c]->obj);
-         assert(lp->cols[c]->var->dom.lb == lp->cols[c]->lb);
-         assert(lp->cols[c]->var->dom.ub == lp->cols[c]->ub);
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.lb, lp->cols[c]->lb));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.ub, lp->cols[c]->ub));
       }
    }
 #endif
@@ -4829,9 +4830,9 @@ RETCODE SCIPlpEndDive(
          assert(lp->cols[c]->var != NULL);
          assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
          assert(lp->cols[c]->var->data.col == lp->cols[c]);
-         assert(lp->cols[c]->var->obj == lp->cols[c]->obj);
-         assert(lp->cols[c]->var->dom.lb == lp->cols[c]->lb);
-         assert(lp->cols[c]->var->dom.ub == lp->cols[c]->ub);
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.lb, lp->cols[c]->lb));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.ub, lp->cols[c]->ub));
       }
    }
 #endif

@@ -1585,7 +1585,7 @@ RETCODE varProcessChgLb(
    assert(var != NULL);
    assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
 
-   debugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->dom.lb, newbound);
+   debugMessage("process changing lower bound of <%s> from %f to %f\n", var->name, var->dom.lb, newbound);
 
    /* change the bound */
    oldbound = var->dom.lb;
@@ -1663,7 +1663,7 @@ RETCODE varProcessChgUb(
    assert(var != NULL);
    assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
 
-   debugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->dom.ub, newbound);
+   debugMessage("process changing upper bound of <%s> from %f to %f\n", var->name, var->dom.ub, newbound);
 
    /* change the bound */
    oldbound = var->dom.ub;

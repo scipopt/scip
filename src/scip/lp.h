@@ -984,7 +984,8 @@ RETCODE SCIPlpCleanupAll(
 extern
 RETCODE SCIPlpStartDive(
    LP*              lp,                 /**< actual LP data */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** quits LP diving and resets bounds and objective values of columns to the actual node's values */

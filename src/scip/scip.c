@@ -2089,7 +2089,7 @@ RETCODE SCIPstartDive(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPlpStartDive(scip->lp, scip->mem->solvemem);
+   SCIPlpStartDive(scip->lp, scip->mem->solvemem, scip->set);
 
    return SCIP_OKAY;
 }

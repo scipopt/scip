@@ -188,38 +188,21 @@ RETCODE setcoverconsCreate(
       CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*setcovercons)->vars, vars, nvars) );
       (*setcovercons)->varssize = nvars;
       (*setcovercons)->nvars = nvars;
-
-      /* count the fixed variables */
-      (*setcovercons)->nfixedzeros = 0;
-      (*setcovercons)->nfixedones = 0;
-      for( v = 0; v < nvars; ++v )
-      {
-         var = vars[v];
-         assert(var != NULL);
-         assert(SCIPisLE(scip, 0.0, SCIPvarGetLb(var)));
-         assert(SCIPisLE(scip, SCIPvarGetLb(var), SCIPvarGetUb(var)));
-         assert(SCIPisLE(scip, SCIPvarGetUb(var), 1.0));
-         assert(SCIPisIntegral(scip, SCIPvarGetLb(var)));
-         assert(SCIPisIntegral(scip, SCIPvarGetUb(var)));
-
-         if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
-            (*setcovercons)->nfixedzeros++;
-         else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
-            (*setcovercons)->nfixedones++;
-      }
    }
    else
    {
       (*setcovercons)->vars = NULL;
       (*setcovercons)->varssize = 0;
       (*setcovercons)->nvars = 0;
-      (*setcovercons)->nfixedzeros = 0;
-      (*setcovercons)->nfixedones = 0;
    }
+   (*setcovercons)->nfixedzeros = 0;
+   (*setcovercons)->nfixedones = 0;
    (*setcovercons)->local = local;
    (*setcovercons)->modifiable = modifiable;
    (*setcovercons)->removeable = removeable;
    (*setcovercons)->transformed = FALSE;
+
+   debugMessage("created setcover %p  fixed zeros=%d  fixed ones=%d\n",*setcovercons, (*setcovercons)->nfixedzeros, (*setcovercons)->nfixedones);
 
    return SCIP_OKAY;
 }   
@@ -237,6 +220,7 @@ RETCODE setcoverconsCreateTransformed(
    )
 {
    EVENTHDLR* eventhdlr;
+   VAR* var;
    int v;
 
    assert(setcovercons != NULL);
@@ -255,17 +239,31 @@ RETCODE setcoverconsCreateTransformed(
 
    for( v = 0; v < (*setcovercons)->nvars; ++v )
    {
+      var = (*setcovercons)->vars[v];
+      assert(var != NULL);
+      assert(SCIPisLE(scip, 0.0, SCIPvarGetLb(var)));
+      assert(SCIPisLE(scip, SCIPvarGetLb(var), SCIPvarGetUb(var)));
+      assert(SCIPisLE(scip, SCIPvarGetUb(var), 1.0));
+      assert(SCIPisIntegral(scip, SCIPvarGetLb(var)));
+      assert(SCIPisIntegral(scip, SCIPvarGetUb(var)));
+
       /* use transformed variables in constraint instead original ones */
-      if( SCIPvarGetStatus((*setcovercons)->vars[v]) == SCIP_VARSTATUS_ORIGINAL )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
-         (*setcovercons)->vars[v] = SCIPvarGetTransformed((*setcovercons)->vars[v]);
-         assert((*setcovercons)->vars[v] != NULL);
+	 var = SCIPvarGetTransformed(var);
+         (*setcovercons)->vars[v] = var;
+         assert(var != NULL);
       }
-      assert(SCIPvarGetStatus((*setcovercons)->vars[v]) != SCIP_VARSTATUS_ORIGINAL);
+      assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
       
       /* catch bound change events on variables */
-      CHECK_OKAY( SCIPcatchVarEvent(scip, (*setcovercons)->vars[v], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
-                     (EVENTDATA*)(*setcovercons)) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)(*setcovercons)) );
+
+      /* count the fixed variables */
+      if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
+	(*setcovercons)->nfixedzeros++;
+      else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
+	(*setcovercons)->nfixedones++;
    }
 
    return SCIP_OKAY;
@@ -1144,7 +1142,7 @@ DECL_EVENTEXEC(eventExecSetcover)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   /*debugMessage("Exec method of bound change event handler for set covering constraints\n");*/
+   debugMessage("Exec method of bound change event handler for set covering constraints %p\n", eventdata);
 
    setcovercons = (SETCOVERCONS*)eventdata;
    assert(setcovercons != NULL);

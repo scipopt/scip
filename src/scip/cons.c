@@ -1159,7 +1159,6 @@ RETCODE SCIPconshdlrSeparate(
             firstcons, firstcons + nconss - 1, conshdlr->nsepaconss, conshdlr->name);
 
          conss = &(conshdlr->sepaconss[firstcons]);
-         conshdlr->lastnsepaconss = conshdlr->nsepaconss;
          
          /* because the during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1173,6 +1172,9 @@ RETCODE SCIPconshdlrSeparate(
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+
+         /* remember, that these constraints have already been processed */
+         conshdlr->lastnsepaconss = conshdlr->nsepaconss;
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_SEPARATED
@@ -1249,7 +1251,6 @@ RETCODE SCIPconshdlrEnforceLPSol(
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name);
 
          conss = &(conshdlr->enfoconss[firstcons]);
-         conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          /* because the during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1263,6 +1264,9 @@ RETCODE SCIPconshdlrEnforceLPSol(
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+
+         /* remember, that these constraints have already been processed */
+         conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
@@ -1341,7 +1345,6 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name);
 
          conss = &(conshdlr->enfoconss[firstcons]);
-         conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          /* because the during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1355,6 +1358,9 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+
+         /* remember, that these constraints have already been processed */
+         conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
