@@ -253,13 +253,6 @@ RETCODE solveNodeLP(
 
          /* if the LP is unbounded, we can stop pricing */
          mustprice &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
-#if 0
-         if( tree->actnode->depth == 0 )
-         {
-            /* display node information line for root node */
-            CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
-         }
-#endif
       }
       assert(lp->solved);
 
@@ -316,7 +309,7 @@ RETCODE solveNodeLP(
             /* separate LP, if the cut pool is less than half full */
             for( s = 0; s < set->nsepas && !cutoff && !separateagain && !enoughcuts; ++s )
             {
-               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, sepastore, tree->actnode->depth, &result) );
+               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, tree->actnode->depth, &result) );
                cutoff |= (result == SCIP_CUTOFF);
                separateagain |= (result == SCIP_CONSADDED);
                enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);

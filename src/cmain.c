@@ -197,6 +197,7 @@ main(
    todoMessage("implement reduced cost fixing");
    todoMessage("statistics: count domain reductions and constraint additions of constraint handlers");
    todoMessage("it's a bit ugly, that user call backs may be called before the nodequeue was processed");
+   todoMessage("unboundness detection in presolving -> convert problem into feasibility problem to decide unboundness/infeasibility");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

@@ -2577,6 +2577,14 @@ Bool SCIPisFeasible(
    Real             val                 /**< value to be compared against zero */
    );
 
+/** outputs a real number, or "+infinity", or "-infinity" to a file */
+extern
+void SCIPprintReal(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val,                /**< value to print */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
 /**@} */
 
 

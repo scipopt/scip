@@ -42,8 +42,11 @@ struct Sepa
    DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
    SEPADATA*        sepadata;           /**< separators local data */
    CLOCK*           clock;              /**< separation time */
+   Longint          lastsepanode;       /**< last node where this separator was called */
    Longint          ncalls;             /**< number of times, this separator was called */
    Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
+   int              ncallsatnode;       /**< number of times, this separator was called at the current node */
+   int              ncutsfoundatnode;   /**< number of cutting planes found at the current node */
    unsigned int     initialized:1;      /**< is separator initialized? */
 };
 
@@ -84,8 +87,11 @@ RETCODE SCIPsepaCreate(
    (*sepa)->sepaexec = sepaexec;
    (*sepa)->sepadata = sepadata;
    CHECK_OKAY( SCIPclockCreate(&(*sepa)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   (*sepa)->lastsepanode = -1;
    (*sepa)->ncalls = 0;
    (*sepa)->ncutsfound = 0;
+   (*sepa)->ncallsatnode = 0;
+   (*sepa)->ncutsfoundatnode = 0;
    (*sepa)->initialized = FALSE;
 
    /* add parameters */
@@ -146,8 +152,11 @@ RETCODE SCIPsepaInit(
 
    SCIPclockReset(sepa->clock);
 
+   sepa->lastsepanode = -1;
    sepa->ncalls = 0;
    sepa->ncutsfound = 0;
+   sepa->ncallsatnode = 0;
+   sepa->ncutsfoundatnode = 0;
    sepa->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -183,6 +192,7 @@ RETCODE SCIPsepaExit(
 RETCODE SCIPsepaExec(
    SEPA*            sepa,               /**< separator */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    SEPASTORE*       sepastore,          /**< separation storage */
    int              actdepth,           /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -193,16 +203,26 @@ RETCODE SCIPsepaExec(
    assert(sepa->freq >= -1);
    assert(set != NULL);
    assert(set->scip != NULL);
+   assert(stat != NULL);
    assert(actdepth >= 0);
    assert(result != NULL);
 
    if( (actdepth == 0 && sepa->freq == 0) || (sepa->freq > 0 && actdepth % sepa->freq == 0) )
    {
       int oldncutsfound;
+      int ncutsfound;
 
       debugMessage("executing separator <%s>\n", sepa->name);
 
       oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+
+      /* reset the statistics for current node */
+      if( sepa->lastsepanode != stat->nnodes )
+      {
+         sepa->lastsepanode = stat->nnodes;
+         sepa->ncallsatnode = 0;
+         sepa->ncutsfoundatnode = 0;
+      }
 
       /* start timing */
       SCIPclockStart(sepa->clock, set);
@@ -228,9 +248,14 @@ RETCODE SCIPsepaExec(
          return SCIP_INVALIDRESULT;
       }
       if( *result != SCIP_DIDNOTRUN )
+      {
          sepa->ncalls++;
+         sepa->ncallsatnode++;
+      }
 
-      sepa->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+      ncutsfound = SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+      sepa->ncutsfound += ncutsfound;
+      sepa->ncutsfoundatnode += ncutsfound;
    }
    else
       *result = SCIP_DIDNOTRUN;
@@ -290,7 +315,7 @@ Real SCIPsepaGetTime(
    return SCIPclockGetTime(sepa->clock);
 }
 
-/** gets the number of times, the separator was called and tried to find a solution */
+/** gets the total number of times, the separator was called */
 Longint SCIPsepaGetNCalls(
    SEPA*            sepa                /**< separator */
    )
@@ -300,7 +325,17 @@ Longint SCIPsepaGetNCalls(
    return sepa->ncalls;
 }
 
-/** gets the number of cutting planes found by this separator */
+/** gets the number of times, the separator was called at the current node */
+int SCIPsepaGetNCallsAtNode(
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncallsatnode;
+}
+
+/** gets the total number of cutting planes found by this separator */
 Longint SCIPsepaGetNCutsFound(
    SEPA*            sepa                /**< separator */
    )
@@ -308,6 +343,16 @@ Longint SCIPsepaGetNCutsFound(
    assert(sepa != NULL);
 
    return sepa->ncutsfound;
+}
+
+/** gets the number of cutting planes found by this separator at the current node */
+Longint SCIPsepaGetNCutsFoundAtNode(
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsfoundatnode;
 }
 
 /** is separator initialized? */

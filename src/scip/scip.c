@@ -3646,7 +3646,8 @@ RETCODE SCIPgetLPBranchCands(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
+   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL
+      && SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_UNBOUNDED )
    {
       errorMessage("LP not solved to optimality");
       return SCIP_INVALIDDATA;
@@ -4172,10 +4173,11 @@ RETCODE SCIPprintSol(
    if( file == NULL )
       file = stdout;
 
-   fprintf(file, "objective value:                 %f\n",
-      SCIPprobExternObjval(scip->origprob, scip->set, 
-         SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol))));
-   
+   fprintf(file, "objective value:                 ");
+   SCIPprintReal(scip, SCIPprobExternObjval(scip->origprob, scip->set, 
+                    SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol))), file);
+   fprintf(file, "\n");
+
    CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, file) );
 
    return SCIP_OKAY;
@@ -4193,8 +4195,10 @@ RETCODE SCIPprintTransSol(
    if( file == NULL )
       file = stdout;
 
-   fprintf(file, "transformed objective value:     %f\n", SCIPsolGetObj(sol));
-   
+   fprintf(file, "objective value:                 ");
+   SCIPprintReal(scip, SCIPsolGetObj(sol), file);
+   fprintf(file, "\n");
+
    CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, file) );
    
    return SCIP_OKAY;
@@ -5197,7 +5201,12 @@ void printSolutionStatistics(
    if( SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
    {
       if( scip->stage == SCIP_STAGE_SOLVED )
-         fprintf(file, "  Primal Bound     :   infeasible\n");
+      {
+         if( scip->primal->nsols == 0 )
+            fprintf(file, "  Primal Bound     :   infeasible\n");
+         else
+            fprintf(file, "  Primal Bound     :    unbounded\n");
+      }
       else
          fprintf(file, "  Primal Bound     :            -\n");
    }
@@ -5220,7 +5229,7 @@ void printSolutionStatistics(
             SCIPsolGetTime(scip->primal->sols[0]),
             SCIPsolGetDepth(scip->primal->sols[0]),
             SCIPsolGetHeur(scip->primal->sols[0]) != NULL
-            ? SCIPheurGetName(SCIPsolGetHeur(scip->primal->sols[0])) : "tree");
+            ? SCIPheurGetName(SCIPsolGetHeur(scip->primal->sols[0])) : "relaxation");
       }
    }
    if( SCIPsetIsInfinity(scip->set, ABS(dualbound)) )
@@ -5270,6 +5279,12 @@ RETCODE SCIPprintStatus(
       break;
    case SCIP_STAGE_SOLVED:
       fprintf(file, "problem is solved");
+      if( scip->primal->nsols == 0 )
+         fprintf(file, " [infeasible]");
+      else if( SCIPsetIsInfinity(scip->set, -scip->primal->upperbound) )
+         fprintf(file, " [unbounded]");
+      else
+         fprintf(file, " [optimal solution found]");
       break;
    case SCIP_STAGE_FREESOLVE:
       fprintf(file, "solving process deinitialization");
@@ -6052,6 +6067,26 @@ Bool SCIPisFeasible(
    assert(scip->set != NULL);
 
    return SCIPsetIsFeasible(scip->set, val);
+}
+
+/** outputs a real number, or "+infinity", or "-infinity" to a file */
+void SCIPprintReal(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val,                /**< value to print */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   assert(scip != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   if( SCIPsetIsInfinity(scip->set, val) )
+      fprintf(file, "+infinity");
+   else if( SCIPsetIsInfinity(scip->set, -val) )
+      fprintf(file, "-infinity");
+   else
+      fprintf(file, "%f", val);
 }
 
 

@@ -2824,6 +2824,9 @@ RETCODE SCIProwGetSolActivity(
       (*solactivity) += row->vals[i] * solval;
    }
 
+   *solactivity = MAX(*solactivity, -set->infinity);
+   *solactivity = MIN(*solactivity, +set->infinity);
+
    return SCIP_OKAY;
 }
 
@@ -4762,9 +4765,9 @@ RETCODE SCIPlpSolvePrimal(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
-      if( SCIPsetIsGT(set, lp->objval, lp->upperbound) )
+      if( SCIPsetIsRelGE(set, lp->objval, lp->upperbound) )
       {
-         /* the solver may return the optimal value, even if this is greater than the upper bound */
+         /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->objval = set->infinity;
       }
@@ -4899,9 +4902,9 @@ RETCODE SCIPlpSolveDual(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
-      if( SCIPsetIsGT(set, lp->objval, lp->upperbound) )
+      if( SCIPsetIsRelGE(set, lp->objval, lp->upperbound) )
       {
-         /* the solver may return the optimal value, even if this is greater than the upper bound */
+         /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->objval = set->infinity;
       }
@@ -5121,9 +5124,7 @@ RETCODE SCIPlpGetSol(
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &activity, lp->nlpirows) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &redcost, lp->nlpicols) );
    
-   CHECK_OKAY( SCIPlpiGetSol(lp->lpi, &lp->objval, primsol, dualsol, activity, redcost) );
-
-   debugMessage("LP solution: obj=%f\n", lp->objval);
+   CHECK_OKAY( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -5175,6 +5176,7 @@ RETCODE SCIPlpGetUnboundedSol(
    assert(lp->flushed);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDED);
+   assert(SCIPsetIsInfinity(set, -lp->objval));
    assert(set != NULL);
    assert(memhdr != NULL);
 
@@ -5184,7 +5186,7 @@ RETCODE SCIPlpGetUnboundedSol(
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ray, lp->nlpicols) );
 
    /* get primal feasible point */
-   CHECK_OKAY( SCIPlpiGetSol(lp->lpi, &lp->objval, primsol, NULL, activity, NULL) );
+   CHECK_OKAY( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
 
    /* get primal unbounded ray */
    CHECK_OKAY( SCIPlpiGetPrimalRay(lp->lpi, ray) );
@@ -5203,8 +5205,7 @@ RETCODE SCIPlpGetUnboundedSol(
    rayscale = -2*set->infinity/rayobjval;
 
    /* calculate the unbounded point: x' = x + rayscale * ray */
-   debugMessage("unbounded LP solution: baseobjval=%f, rayobjval=%f, rayscale=%f\n", lp->objval, rayobjval, rayscale);
-   lp->objval = -set->infinity;
+   debugMessage("unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
 
    for( c = 0; c < lp->nlpicols; ++c )
    {

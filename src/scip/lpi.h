@@ -483,11 +483,11 @@ RETCODE SCIPlpiGetObjval(
 extern 
 RETCODE SCIPlpiGetSol(
    LPI*             lpi,                /**< LP interface structure */
-   Real*            objval,             /**< stores the objective value */
-   Real*            primsol,            /**< primal solution vector */
-   Real*            dualsol,            /**< dual solution vector */
-   Real*            activity,           /**< row activity vector */
-   Real*            redcost             /**< reduced cost vector */
+   Real*            objval,             /**< stores the objective value, may be NULL if not needed */
+   Real*            primsol,            /**< primal solution vector, may be NULL if not needed */
+   Real*            dualsol,            /**< dual solution vector, may be NULL if not needed */
+   Real*            activity,           /**< row activity vector, may be NULL if not needed */
+   Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    );
 
 /** gets primal ray for unbounded LPs */

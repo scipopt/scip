@@ -692,7 +692,12 @@ RETCODE SCIPsolPrint(
       CHECK_OKAY( SCIPsolGetVal(sol, set, stat, prob->vars[v], &solval) );
       if( !SCIPsetIsZero(set, solval) )
       {
-         fprintf(file, "%-32s %f\n", prob->vars[v]->name, solval);
+         if( SCIPsetIsInfinity(set, solval) )
+            fprintf(file, "%-32s +infinity\n", prob->vars[v]->name);
+         else if( SCIPsetIsInfinity(set, -solval) )
+            fprintf(file, "%-32s -infinity\n", prob->vars[v]->name);
+         else
+            fprintf(file, "%-32s %f\n", prob->vars[v]->name, solval);
       }
    }
 

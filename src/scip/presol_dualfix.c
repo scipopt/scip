@@ -42,6 +42,7 @@ static
 DECL_PRESOLEXEC(presolExecDualfix)
 {
    VAR** vars;
+   Real bound;
    Bool infeasible;
    int nvars;
    int v;
@@ -64,32 +65,35 @@ DECL_PRESOLEXEC(presolExecDualfix)
        */
       if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, SCIPvarGetObj(vars[v])) )
       {
+         bound = SCIPvarGetLbGlobal(vars[v]);
          debugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
-            SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetLbGlobal(vars[v]));
-         CHECK_OKAY( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), &infeasible) );
-         if( infeasible )
-         {
-            debugMessage(" -> infeasible fixing\n");
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-         (*nfixedvars)++;
-         *result = SCIP_SUCCESS;
+            SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
       }
       else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, SCIPvarGetObj(vars[v])) )
       {
+         bound = SCIPvarGetUbGlobal(vars[v]);
          debugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
-            SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetUbGlobal(vars[v]));
-         CHECK_OKAY( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), &infeasible) );
-         if( infeasible )
-         {
-            debugMessage(" -> infeasible fixing\n");
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-         (*nfixedvars)++;
-         *result = SCIP_SUCCESS;
+            SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
       }
+      else
+         continue;
+      
+      /* apply the fixing */
+      if( SCIPisInfinity(scip, ABS(bound)) )
+      {
+         debugMessage(" -> unbounded fixing\n");
+         *result = SCIP_UNBOUNDED;
+         return SCIP_OKAY;
+      }
+      CHECK_OKAY( SCIPfixVar(scip, vars[v], bound, &infeasible) );
+      if( infeasible )
+      {
+         debugMessage(" -> infeasible fixing\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      (*nfixedvars)++;
+      *result = SCIP_SUCCESS;
    }
 
    return SCIP_OKAY;

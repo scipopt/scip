@@ -127,6 +127,7 @@ extern
 RETCODE SCIPsepaExec(
    SEPA*            sepa,               /**< separator */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    SEPASTORE*       sepastore,          /**< separation storage */
    int              actdepth,           /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -163,15 +164,27 @@ Real SCIPsepaGetTime(
    SEPA*            sepa                /**< separator */
    );
 
-/** gets the number of times, the separator was called and tried to find a solution */
+/** gets the total number of times, the separator was called */
 extern
 Longint SCIPsepaGetNCalls(
    SEPA*            sepa                /**< separator */
    );
 
-/** gets the number of cutting planes found by this separator */
+/** gets the number of times, the separator was called at the current node */
+extern
+int SCIPsepaGetNCallsAtNode(
+   SEPA*            sepa                /**< separator */
+   );
+
+/** gets the total number of cutting planes found by this separator */
 extern
 Longint SCIPsepaGetNCutsFound(
+   SEPA*            sepa                /**< separator */
+   );
+
+/** gets the number of cutting planes found by this separator at the current node */
+extern
+Longint SCIPsepaGetNCutsFoundAtNode(
    SEPA*            sepa                /**< separator */
    );
 

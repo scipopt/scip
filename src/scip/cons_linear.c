@@ -1237,6 +1237,7 @@ Real linconsGetActivity(
    )
 {
    Real activity;
+   Real infinity;
 
    assert(lincons != NULL);
    assert(lincons->transformed);
@@ -1262,6 +1263,10 @@ Real linconsGetActivity(
 
       debugMessage("activity of linear constraint: %g\n", activity);
    }
+
+   infinity = SCIPinfinity(scip);
+   activity = MAX(activity, -infinity);
+   activity = MIN(activity, +infinity);
 
    return activity;
 }
@@ -2084,7 +2089,7 @@ DECL_CONSCHECK(consCheckLinear)
    assert(scip != NULL);
    assert(result != NULL);
 
-   /*debugMessage("Enfops method of linear constraints\n");*/
+   /*debugMessage("Check method of linear constraints\n");*/
 
    /* check all linear constraints for feasibility */
    violated = FALSE;

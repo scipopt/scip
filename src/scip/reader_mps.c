@@ -776,7 +776,7 @@ RETCODE readCols(
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x <= 1, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER, dynamicvars) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, dynamicvars) );
          }
          else
          {
@@ -1130,12 +1130,21 @@ RETCODE readBounds(
             else
                val = atof(mpsinputField4(mpsi));
 
+            /* if a bound of a binary variable is given, the variable is converted into an integer variable
+             * with default bounds 0 <= x <= infinity
+             */
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            {
+               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+               CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+               CHECK_OKAY( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
+            }
+
             switch(*mpsinputField1(mpsi))
             {
             case 'L':
-               /* ILOG extension (Integer Lower Bound)
-                */
-               if (mpsinputField1(mpsi)[1] == 'I')
+               if (mpsinputField1(mpsi)[1] == 'I') /* ILOG extension (Integer Lower Bound) */
                {
                   CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
@@ -1143,9 +1152,7 @@ RETCODE readBounds(
                CHECK_OKAY( SCIPchgVarLb(scip, var, val) );
                break;
             case 'U':
-               /* ILOG extension (Integer Upper Bound)
-                */
-               if (mpsinputField1(mpsi)[1] == 'I')
+               if (mpsinputField1(mpsi)[1] == 'I') /* ILOG extension (Integer Upper Bound) */
                {
                   CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
@@ -1170,7 +1177,7 @@ RETCODE readBounds(
             case 'P':
                CHECK_OKAY( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
                break;
-            case 'B' : // Ilog extension (Binary)
+            case 'B' : /* Ilog extension (Binary) */
                CHECK_OKAY( SCIPchgVarLb(scip, var, 0.0) );
                CHECK_OKAY( SCIPchgVarUb(scip, var, 1.0) );
                CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );

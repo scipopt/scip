@@ -28,11 +28,21 @@
 #include "sepa_gomory.h"
 
 
-#define SEPA_NAME         "gomory"
-#define SEPA_DESC         "gomory cuts separator"
-#define SEPA_PRIORITY     0
-#define SEPA_FREQ         8
+#define SEPA_NAME          "gomory"
+#define SEPA_DESC          "gomory cuts separator"
+#define SEPA_PRIORITY                 0
+#define SEPA_FREQ                     8
 
+#define DEFAULT_MAXROUNDS             3 /**< maximal number of gomory separation rounds per node */
+#define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node */
+
+
+/** separator data */
+struct SepaData
+{
+   int              maxrounds;          /**< maximal number of gomory separation rounds per node */
+   int              maxroundsroot;      /**< maximal number of gomory separation rounds in the root node */
+};
 
 
 /*
@@ -40,8 +50,27 @@
  */
 
 static
+DECL_SEPAFREE(SCIPsepaFreeGomory)
+{
+   SEPADATA* sepadata;
+
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* free separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPfreeMemory(scip, &sepadata);
+
+   SCIPsepaSetData(sepa, NULL);
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_SEPAEXEC(SCIPsepaExecGomory)
 {
+   SEPADATA* sepadata;
    VAR** vars;
    COL** cols;
    ROW** rows;
@@ -55,6 +84,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    int nvars;
    int ncols;
    int nrows;
+   int ncalls;
    int actdepth;
    int maxdepth;
    int c;
@@ -66,6 +96,17 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   actdepth = SCIPgetActDepth(scip);
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+
+   /* only call the gomory cut separator a given number of times at each node */
+   if( (actdepth == 0 && ncalls >= sepadata->maxroundsroot)
+      || (actdepth > 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
 
    /* only call separator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -81,7 +122,6 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
       return SCIP_OKAY;
 
    /* set the maximal denominator in rational representation of gomory cut to avoid numerical instabilities */
-   actdepth = SCIPgetActDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
    if( actdepth == 0 )
       maxdnom = 1000000;
@@ -252,10 +292,27 @@ RETCODE SCIPincludeSepaGomory(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   SEPADATA* sepadata;
+
+   /* create separator data */
+   CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
+   sepadata->maxrounds = DEFAULT_MAXROUNDS;
+   sepadata->maxroundsroot = DEFAULT_MAXROUNDSROOT;
+
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-                  NULL, NULL, NULL, SCIPsepaExecGomory,
-                  NULL) );
+                  SCIPsepaFreeGomory, NULL, NULL, SCIPsepaExecGomory,
+                  sepadata) );
+
+   /* add separator parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "separator/gomory/maxrounds",
+                  "maximal number of gomory separation rounds per node",
+                  &sepadata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "separator/gomory/maxroundsroot",
+                  "maximal number of gomory separation rounds in the root node",
+                  &sepadata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
