@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.235 2004/12/10 12:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.236 2004/12/10 14:23:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11249,24 +11249,17 @@ void SCIPfreeBufferSize(
    SCIPsetFreeBufferSize(scip->set, ptr);
 }
 
-
-
-
-/*
- * debugging methods
- */
-
-#ifndef NDEBUG
-
 /** prints output about used memory */
-void SCIPdebugMemory(
+void SCIPprintMemoryDiagnostic(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
+#ifndef NDEBUG
    memoryDiagnostic();
+#endif
 
    printf("\nProblem Block Memory (%p):\n", scip->mem->probmem);
    blockMemoryDiagnostic(scip->mem->probmem);
@@ -11274,8 +11267,6 @@ void SCIPdebugMemory(
    printf("\nSolution Block Memory (%p):\n", scip->mem->solvemem);
    blockMemoryDiagnostic(scip->mem->solvemem);
 }
-
-#endif
 
 
 

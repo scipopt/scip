@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.19 2004/10/19 18:36:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.20 2004/12/10 14:23:01 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -62,6 +62,10 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols);
 /** dialog execution method for the display heuristics command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
+
+/** dialog execution method for the display memory command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
 
 /** dialog execution method for the display nodeselectors command */
 extern
@@ -170,12 +174,6 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 /** dialog execution method for the set limits objective command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
-
-#ifndef NDEBUG
-/** dialog execution method for the debug memory command */
-extern
-DECL_DIALOGEXEC(SCIPdialogExecDebugMemory);
-#endif
 
 /** includes or updates the default dialog menus in SCIP */
 extern

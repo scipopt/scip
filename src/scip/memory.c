@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.31 2004/09/28 09:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.32 2004/12/10 14:23:01 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -75,8 +75,8 @@ static MEMLIST *memlist = NULL;
 static long long memused = 0;
 
 #ifdef CHECKMEM
-static void
-memListCheck(void)
+static
+void memListCheck(void)
 {
    MEMLIST* list = memlist;
    long long used = 0;
@@ -92,8 +92,8 @@ memListCheck(void)
 #define memListCheck() /**/
 #endif
 
-static void
-memListAdd(void *ptr, size_t size, const char *filename, int line)
+static
+void memListAdd(void *ptr, size_t size, const char *filename, int line)
 {
    MEMLIST *list = (MEMLIST*)malloc(sizeof(MEMLIST));
 
@@ -110,8 +110,8 @@ memListAdd(void *ptr, size_t size, const char *filename, int line)
    memListCheck();
 }
 
-static void
-memListRemove(void *ptr, const char *filename, int line)
+static
+void memListRemove(void *ptr, const char *filename, int line)
 {
    MEMLIST *list = memlist;
    MEMLIST **listptr = &memlist;
@@ -134,8 +134,7 @@ memListRemove(void *ptr, const char *filename, int line)
    memListCheck();
 }
 
-size_t
-memorySize(void *ptr)
+size_t memorySize(void *ptr)
 {
    MEMLIST *list = memlist;
 
@@ -147,8 +146,7 @@ memorySize(void *ptr)
       return 0;
 }
 
-void
-memoryDiagnostic(void)
+void memoryDiagnostic(void)
 {
    MEMLIST   *list = memlist;
    long long used = 0;
@@ -167,8 +165,7 @@ memoryDiagnostic(void)
    memListCheck();
 }
 
-void
-memoryCheckEmpty(void)
+void memoryCheckEmpty(void)
 {
    if( memlist != NULL || memused > 0 )
    {
@@ -176,10 +173,32 @@ memoryCheckEmpty(void)
       memoryDiagnostic();
    }
 }
+
+#else
+
+/* these methods are implemented even in optimized mode, such that a program, that includes memory.h in debug mode
+ * but links the optimized version compiles
+ */
+
+size_t memorySize(void *ptr)
+{
+   return 0;
+}
+
+void memoryDiagnostic(void)
+{
+   printf("optimized version of memory shell linked - no memory diagnostics available\n");
+}
+
+void memoryCheckEmpty(void)
+{
+   printf("optimized version of memory shell linked - no memory leakage check available\n");
+}
+
 #endif
 
-void *
-allocMemory_call(size_t size, const char *filename, int line)
+
+void* allocMemory_call(size_t size, const char *filename, int line)
 {
    void   *ptr = NULL;
 
@@ -197,8 +216,7 @@ allocMemory_call(size_t size, const char *filename, int line)
    return ptr;
 }
 
-void *
-reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
+void* reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
 {
    void   *newptr = NULL;
 
@@ -220,23 +238,20 @@ reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
    return newptr;
 }
 
-void
-clearMemory_call(void* ptr, size_t size)
+void clearMemory_call(void* ptr, size_t size)
 {
    assert(ptr != NULL);
    memset(ptr, 0, size);
 }
 
-void
-copyMemory_call(void* ptr, const void* source, size_t size)
+void copyMemory_call(void* ptr, const void* source, size_t size)
 {
    assert(ptr != NULL);
    assert(source != NULL);
    memcpy(ptr, source, size);
 }
 
-void *
-duplicateMemory_call(const void* source, size_t size, const char *filename, int line)
+void* duplicateMemory_call(const void* source, size_t size, const char *filename, int line)
 {
    void   *ptr = NULL;
 
@@ -247,8 +262,7 @@ duplicateMemory_call(const void* source, size_t size, const char *filename, int 
    return ptr;
 }
 
-void
-freeMemory_call(void **ptr, const char *filename, int line)
+void freeMemory_call(void **ptr, const char *filename, int line)
 {
    if( *ptr != NULL )
    {
@@ -270,8 +284,7 @@ freeMemory_call(void **ptr, const char *filename, int line)
  * standard memory management via malloc
  */
 
-void *
-duplicateMemory_call(const void* source, size_t size)
+void* duplicateMemory_call(const void* source, size_t size)
 {
    void   *ptr = NULL;
 
@@ -363,8 +376,8 @@ struct memory_header
 };
 
 
-static void
-alignSize(size_t* size)
+static
+void alignSize(size_t* size)
 {
    if( *size < ALIGNMENT )
       *size = ALIGNMENT;
@@ -372,23 +385,21 @@ alignSize(size_t* size)
       *size = ((*size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
 }
 
-void
-alignMemsize(size_t* size)
+void alignMemsize(size_t* size)
 {
    assert(ALIGNMENT == sizeof(void*));
    alignSize(size);
 }
 
-int
-isAligned(size_t size)
+int isAligned(size_t size)
 {
    assert(ALIGNMENT == sizeof(void*));
    return( size >= ALIGNMENT && size % ALIGNMENT == 0 );
 }
 
 /* checks, if ptr belongs to chunk 'chk' */
-static int
-isPtrInChunk(const CHKHDR * chk, const void *ptr)
+static
+int isPtrInChunk(const CHKHDR * chk, const void *ptr)
 {
    assert(chk != NULL);
    assert(chk->store <= chk->storeend);
@@ -399,8 +410,8 @@ isPtrInChunk(const CHKHDR * chk, const void *ptr)
 /* Given a pointer, find the chunk this pointer points to
  * in the chunk array of the block. Binary search is used.
  */
-static CHKHDR *
-findChunk(BLKHDR * blk, const void *ptr)
+static
+CHKHDR* findChunk(BLKHDR * blk, const void *ptr)
 {
    CHKHDR* chk;
    int left;
@@ -432,8 +443,8 @@ findChunk(BLKHDR * blk, const void *ptr)
 }
 
 /* checks, if 'ptr' belongs to a chunk of block 'blk' */
-static int
-isPtrInBlock(BLKHDR * blk, const void *ptr)
+static
+int isPtrInBlock(BLKHDR * blk, const void *ptr)
 {
    assert(blk != NULL);
    return (findChunk(blk, ptr) != NULL);
@@ -445,8 +456,8 @@ isPtrInBlock(BLKHDR * blk, const void *ptr)
  * error (free gives an incorrect element size), we
  * want to identify and output the correct element size
  */
-static BLKHDR *
-findBlock(MEMHDR *mem, const void *ptr)
+static
+BLKHDR* findBlock(MEMHDR *mem, const void *ptr)
 {
    BLKHDR *blk = NULL;
    int     i;
@@ -465,8 +476,8 @@ findBlock(MEMHDR *mem, const void *ptr)
 /*
  * debugging methods
  */
-static void
-checkChunk(CHKHDR * chk)
+static
+void checkChunk(CHKHDR * chk)
 {
    FREELIST* eager;
    int eagerFreeSize;
@@ -498,8 +509,8 @@ checkChunk(CHKHDR * chk)
    assert(chk->eagerFreeSize == eagerFreeSize);
 }
 
-static void
-checkBlock(BLKHDR * blk)
+static
+void checkBlock(BLKHDR * blk)
 {
    CHKHDR* chk;
    FREELIST* lazy;
@@ -549,8 +560,8 @@ checkBlock(BLKHDR * blk)
    assert(blk->lazyFreeSize == lazyFreeSize);
 }
 
-static void
-checkMem(MEMHDR *mem)
+static
+void checkMem(MEMHDR *mem)
 {
    BLKHDR* blk;
    int i;
@@ -584,8 +595,8 @@ checkMem(MEMHDR *mem)
  *    TRUE  if successful
  *    FALSE otherwise
  */
-static int
-linkChunk(BLKHDR* blk, CHKHDR* chk)
+static
+int linkChunk(BLKHDR* blk, CHKHDR* chk)
 {
    CHKHDR* curchk;
    int left;
@@ -650,8 +661,8 @@ linkChunk(BLKHDR* blk, CHKHDR* chk)
 }
 
 /* unlinks chunk from the block's chunk list */
-static void
-unlinkChunk(CHKHDR* chk)
+static
+void unlinkChunk(CHKHDR* chk)
 {
    BLKHDR* blk;
    int i;
@@ -678,8 +689,8 @@ unlinkChunk(CHKHDR* chk)
 }
 
 /* links chunk to the block's eager chunk list */
-static void
-linkEagerChunk(BLKHDR * blk, CHKHDR * chk)
+static
+void linkEagerChunk(BLKHDR * blk, CHKHDR * chk)
 {
    assert(chk->block == blk);
    assert(chk->nextEager == NULL);
@@ -696,8 +707,8 @@ linkEagerChunk(BLKHDR * blk, CHKHDR * chk)
 }
 
 /* unlinks chunk from the block's eager chunk list */
-static void
-unlinkEagerChunk(CHKHDR * chk)
+static
+void unlinkEagerChunk(CHKHDR * chk)
 {
    assert(chk != NULL);
    assert(chk->eagerFreeSize == 0 || chk->eagerFreeSize == chk->storeSize);
@@ -724,8 +735,8 @@ unlinkEagerChunk(CHKHDR * chk)
  *    TRUE  if successful
  *    FALSE otherwise
  */
-static int
-createChunk(BLKHDR * blk)
+static
+int createChunk(BLKHDR * blk)
 {
    CHKHDR *newchunk;
    FREELIST *freeList;
@@ -797,8 +808,8 @@ createChunk(BLKHDR * blk)
  * Parameters:
  *    chk : Pointer to chunkheader of chunk to delete.
  */
-static void
-destroyChunk(CHKHDR * chk)
+static
+void destroyChunk(CHKHDR * chk)
 {
    assert(chk != NULL);
 
@@ -810,8 +821,8 @@ destroyChunk(CHKHDR * chk)
  * Parameters:
  *    chk : Pointer to chunkheader of chunk to delete.
  */
-static void
-freeChunk(CHKHDR * chk)
+static
+void freeChunk(CHKHDR * chk)
 {
    assert(chk != NULL);
    assert(chk->store != NULL);
@@ -838,8 +849,8 @@ freeChunk(CHKHDR * chk)
 /* returns an element of the eager free list and removes
  * it from the list
  */
-static void *
-allocChunkElement(CHKHDR * chk)
+static
+void* allocChunkElement(CHKHDR * chk)
 {
    FREELIST *ptr;
 
@@ -872,8 +883,8 @@ allocChunkElement(CHKHDR * chk)
 /* puts ptr in the eager free list and adds the chunk
  * to the eager list of its block, if necessary
  */
-static void
-freeChunkElement(CHKHDR * chk, void *ptr)
+static
+void freeChunkElement(CHKHDR * chk, void *ptr)
 {
    assert(chk != NULL);
    assert(chk->block != NULL);
@@ -904,8 +915,8 @@ freeChunkElement(CHKHDR * chk, void *ptr)
  * Returns   :
  *    Pointer to block header structure.
  */
-static BLKHDR *
-createBlock(MEMHDR *mem, int size)
+static
+BLKHDR* createBlock(MEMHDR *mem, int size)
 {
    BLKHDR *blk;
 
@@ -941,8 +952,8 @@ createBlock(MEMHDR *mem, int size)
 /* destroy all chunks of the block, but keep block
  * header structure
  */
-static void
-clearBlock(BLKHDR * blk)
+static
+void clearBlock(BLKHDR * blk)
 {
    int i;
 
@@ -967,8 +978,8 @@ clearBlock(BLKHDR * blk)
  * Parameters:
  *    blk : Pointer to block header of block to destroy.
  */
-static void
-destroyBlock(BLKHDR * blk)
+static
+void destroyBlock(BLKHDR * blk)
 {
    assert(blk != NULL);
 
@@ -988,8 +999,8 @@ destroyBlock(BLKHDR * blk)
  * Returns:
  *    A pointer to a memory block of the block's elements size.
  */
-static void *
-allocBlockElement(BLKHDR * blk)
+static
+void* allocBlockElement(BLKHDR * blk)
 {
    FREELIST *ptr;
 
@@ -1030,8 +1041,8 @@ allocBlockElement(BLKHDR * blk)
  *    ptr : Pointer to the block  of memory to free.
  */
 /*ARGSUSED*/
-static void
-freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
+static
+void freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
 {
    assert(blk != NULL);
    assert(ptr != NULL);
@@ -1071,8 +1082,8 @@ freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
  * Returns   :
  *    Hash number of size.
  */
-static int
-getHashNumber(int size)
+static
+int getHashNumber(int size)
 {
    assert(size % (int)ALIGNMENT == 0);
    return ((size / (int)ALIGNMENT) % BLOCKHASH_SIZE);
@@ -1090,8 +1101,7 @@ getHashNumber(int size)
  * Returns   :
  *    Pointer to memory header structure.
  */
-MEMHDR *
-createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
+MEMHDR* createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
    int garbageFactor, const char *filename, int line)
 {
    MEMHDR *mem;
@@ -1119,8 +1129,7 @@ createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
  * Parameters:
  *    mem : Pointer to memory header to clear.
  */
-void
-freeAllBlockMemory_call(MEMHDR *mem, const char *filename, int line)
+void freeAllBlockMemory_call(MEMHDR *mem, const char *filename, int line)
 {
    BLKHDR *blk;
    BLKHDR *nextblk;
@@ -1151,8 +1160,7 @@ freeAllBlockMemory_call(MEMHDR *mem, const char *filename, int line)
  * Parameters:
  *    mem : Pointer to memory header to destroy.
  */
-void
-destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
+void destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
 {
    assert(mem != NULL);
 
@@ -1175,8 +1183,7 @@ destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
  * Returns:
  *    Pointer to a new block of memory of size "size".
  */
-void *
-allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
+void* allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
 {
    BLKHDR **blkptr;
    int     hashNumber;
@@ -1219,8 +1226,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
    return ptr;
 }
 
-void *
-reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line)
+void* reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line)
 {
    void* newptr;
 
@@ -1245,8 +1251,7 @@ reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, 
    return newptr;
 }
 
-void *
-duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const char *filename, int line)
+void* duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const char *filename, int line)
 {
    void   *ptr = NULL;
 
@@ -1261,8 +1266,8 @@ duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const ch
 /* sort the lazy free list into the eager free lists,
  * and remove completely unused chunks
  */
-static void
-garbageCollection(BLKHDR * blk)
+static
+void garbageCollection(BLKHDR * blk)
 {
    CHKHDR *chk;
    CHKHDR *nextEager;
@@ -1323,8 +1328,7 @@ garbageCollection(BLKHDR * blk)
  *    ptr  : Pointer to memory to free.
  *    size : size of memory block.
  */
-void
-freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
+void freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
    const char *filename, int line)
 {
    BLKHDR *blk;
@@ -1378,17 +1382,14 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
    checkMem(mem);
 }
 
-long long
-getBlockMemoryUsed(MEMHDR *mem)
+long long getBlockMemoryUsed(MEMHDR *mem)
 {
    assert(mem != NULL);
 
    return mem->memused;
 }
 
-#ifndef NDEBUG
-size_t
-blockMemorySize(MEMHDR *mem, void *ptr)
+size_t blockMemorySize(MEMHDR *mem, void *ptr)
 {
    BLKHDR *blk;
 
@@ -1403,8 +1404,7 @@ blockMemorySize(MEMHDR *mem, void *ptr)
    return (size_t)(blk->elemSize);
 }
 
-void
-blockMemoryDiagnostic(MEMHDR *mem)
+void blockMemoryDiagnostic(MEMHDR *mem)
 {
    BLKHDR*   blk;
    int       numBlocks = 0;
@@ -1414,14 +1414,20 @@ blockMemoryDiagnostic(MEMHDR *mem)
    int       totalNumElems = 0;
    int       totalNumEagerElems = 0;
    int       totalNumLazyElems = 0;
+#ifndef NDEBUG
    int       totalNumGarbageCalls = 0;
    int       totalNumGarbageFrees = 0;
+#endif
    long long allocedMem = 0;
    long long freeMem = 0;
    int       i;
    int       c;
 
+#ifndef NDEBUG
    printf(" ElSize #Chk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
+#else
+   printf(" ElSize #Chk #Eag  #Elems  #EagFr  #LazFr  Free\n");
+#endif
 
    assert(mem != NULL);
 
@@ -1461,15 +1467,26 @@ blockMemoryDiagnostic(MEMHDR *mem)
 	    allocedMem += blk->elemSize * numElems;
 	    freeMem += blk->elemSize * (numEagerElems + blk->lazyFreeSize);
 
+#ifndef NDEBUG
 	    printf("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
 	       (long long)(blk->elemSize), numChunks, numEagerChunks, numElems,
 	       numEagerElems, blk->lazyFreeSize, blk->numGarbageCalls, blk->numGarbageFrees,
 	       100.0 * (double) (numEagerElems + blk->lazyFreeSize) / (double) (numElems), blk->filename, blk->line);
+#else
+	    printf("%7lld %4d %4d %7d %7d %7d %5.1f%%\n",
+	       (long long)(blk->elemSize), numChunks, numEagerChunks, numElems,
+	       numEagerElems, blk->lazyFreeSize,
+	       100.0 * (double) (numEagerElems + blk->lazyFreeSize) / (double) (numElems));
+#endif
 	 }
 	 else
 	 {
+#ifndef NDEBUG
 	    printf("%7lld <unused>                          %5d %4d        %s:%d\n",
 	       (long long)(blk->elemSize), blk->numGarbageCalls, blk->numGarbageFrees, blk->filename, blk->line);
+#else
+	    printf("%7lld <unused>\n", (long long)(blk->elemSize));
+#endif
 	    numUnusedBlocks++;
 	 }
          totalNumChunks += numChunks;
@@ -1477,15 +1494,23 @@ blockMemoryDiagnostic(MEMHDR *mem)
          totalNumElems += numElems;
          totalNumEagerElems += numEagerElems;
          totalNumLazyElems += blk->lazyFreeSize;
+#ifndef NDEBUG
          totalNumGarbageCalls += blk->numGarbageCalls;
          totalNumGarbageFrees += blk->numGarbageFrees;
+#endif
 	 blk = blk->next;
       }
    }
+#ifndef NDEBUG
    printf("  Total %4d %4d %7d %7d %7d %5d %4d %5.1f%%\n",
       totalNumChunks, totalNumEagerChunks, totalNumElems, totalNumEagerElems, totalNumLazyElems, 
       totalNumGarbageCalls, totalNumGarbageFrees,
       totalNumElems > 0 ? 100.0 * (double) (totalNumEagerElems + totalNumLazyElems) / (double) (totalNumElems) : 0.0);
+#else
+   printf("  Total %4d %4d %7d %7d %7d %5.1f%%\n",
+      totalNumChunks, totalNumEagerChunks, totalNumElems, totalNumEagerElems, totalNumLazyElems, 
+      totalNumElems > 0 ? 100.0 * (double) (totalNumEagerElems + totalNumLazyElems) / (double) (totalNumElems) : 0.0);
+#endif
    printf("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
       numBlocks + numUnusedBlocks, numUnusedBlocks, allocedMem, freeMem);
    if( allocedMem > 0 )
@@ -1493,8 +1518,7 @@ blockMemoryDiagnostic(MEMHDR *mem)
    printf("\n");
 }
 
-void
-blockMemoryCheckEmpty(MEMHDR *mem)
+void blockMemoryCheckEmpty(MEMHDR *mem)
 {
    BLKHDR*   blk;
    long long allocedMem = 0;
@@ -1536,10 +1560,18 @@ blockMemoryCheckEmpty(MEMHDR *mem)
 	    freeMem += blk->elemSize * (numEagerElems + blk->lazyFreeSize);
 
             if( numElems != numEagerElems + blk->lazyFreeSize )
+            {
+#ifndef NDEBUG
                printf("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
                   ((numElems - numEagerElems) - blk->lazyFreeSize) * (long long)(blk->elemSize),
                   (numElems - numEagerElems) - blk->lazyFreeSize, (long long)(blk->elemSize),
                   blk->filename, blk->line);
+#else
+               printf("%lld bytes (%d elements of size %lld) not freed.\n",
+                  ((numElems - numEagerElems) - blk->lazyFreeSize) * (long long)(blk->elemSize),
+                  (numElems - numEagerElems) - blk->lazyFreeSize, (long long)(blk->elemSize));
+#endif
+            }
 	 }
 	 blk = blk->next;
       }
@@ -1548,10 +1580,6 @@ blockMemoryCheckEmpty(MEMHDR *mem)
    if( allocedMem != freeMem )
       printf("%lld bytes not freed in total.\n", allocedMem - freeMem);
 }
-
-#endif
-
-
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.36 2004/10/29 10:38:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.37 2004/12/10 14:23:00 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -359,6 +359,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
       printf(SCIPheurGetDesc(heurs[i]));
       printf("\n");
    }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display memory command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory)
+{  /*lint --e{715}*/
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   SCIPprintMemoryDiagnostic(scip);
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1300,22 +1314,6 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    return SCIP_OKAY;
 }
 
-#ifndef NDEBUG
-/** dialog execution method for the debug memory command */
-DECL_DIALOGEXEC(SCIPdialogExecDebugMemory)
-{  /*lint --e{715}*/
-   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
-
-   printf("\n");
-   SCIPdebugMemory(scip);
-   printf("\n");
-
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** includes or updates the default dialog menus in SCIP */
 RETCODE SCIPincludeDialogDefault(
    SCIP*            scip                /**< SCIP data structure */
@@ -1401,6 +1399,15 @@ RETCODE SCIPincludeDialogDefault(
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* display memory */
+   if( !SCIPdialogHasEntry(submenu, "memory") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayMemory, NULL,
+            "memory", "display memory diagnostics", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* display nodeselectors */
    if( !SCIPdialogHasEntry(submenu, "nodeselectors") )
    {
@@ -1574,28 +1581,6 @@ RETCODE SCIPincludeDialogDefault(
 
    /* set */
    CHECK_OKAY( SCIPincludeDialogDefaultSet(scip) );
-
-#ifndef NDEBUG
-   /* debug */
-   if( !SCIPdialogHasEntry(root, "debug") )
-   {
-      CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-            "debug", "debugging information", TRUE, NULL) );
-      CHECK_OKAY( SCIPaddDialogEntry(scip, root, submenu) );
-      CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
-   }
-   if( SCIPdialogFindEntry(root, "debug", &submenu) != 1 )
-      return SCIP_PLUGINNOTFOUND;
-   
-   /* debug memory */
-   if( !SCIPdialogHasEntry(submenu, "memory") )
-   {
-      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDebugMemory, NULL,
-            "memory", "display memory diagnostics", FALSE, NULL) );
-      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
-      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
-   }
-#endif
 
    return SCIP_OKAY;
 }

@@ -27,6 +27,7 @@ interface:
 - new method SCIPaddConflictBd()
 - even in optimized mode, the simple functions that are implemented as defines in the include files exist in the library,
   s.t. one can include the include files without NDEBUG and use the optimized library
+- new method SCIPprintMemoryDiagnostic()
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm

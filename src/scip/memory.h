@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.20 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.21 2004/12/10 14:23:01 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -170,12 +170,6 @@ typedef struct memory_header MEMHDR;
 #define freeBlockMemorySizeNull(mem,ptr,size)  { if( *(ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) ); }
 
 
-#ifndef NDEBUG
-size_t blockMemorySize(MEMHDR *mem, void *ptr);
-void   blockMemoryDiagnostic(MEMHDR *mem);
-void   blockMemoryCheckEmpty(MEMHDR *mem);
-#endif
-
 void   alignMemsize(size_t* size);
 int    isAligned(size_t size);
 
@@ -228,6 +222,10 @@ void freeBlockMemory_call(MEMHDR* mem, void** ptr, size_t size, const char *file
 /* get the number of used bytes in block memory */
 long long getBlockMemoryUsed(MEMHDR *mem);
 
+size_t blockMemorySize(MEMHDR *mem, void *ptr);
+void   blockMemoryDiagnostic(MEMHDR *mem);
+void   blockMemoryCheckEmpty(MEMHDR *mem);
+
 
 
 
@@ -258,12 +256,9 @@ long long getBlockMemoryUsed(MEMHDR *mem);
 #define freeBlockMemorySizeNull(mem,ptr,size)             freeMemoryNull(ptr)
 
 #define getBlockMemoryUsed(mem)              0
-
-#ifndef NDEBUG
 #define blockMemorySize(mem,ptr)             0
 #define blockMemoryDiagnostic(mem)           /**/
 #define blockMemoryCheckEmpty(mem)           /**/
-#endif
 
 
 #endif

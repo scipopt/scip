@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.189 2004/12/10 12:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.190 2004/12/10 14:23:01 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4931,6 +4931,12 @@ void SCIPfreeBufferSize(
    int              dummysize           /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
    );
 
+/** prints output about used memory */
+extern
+void SCIPprintMemoryDiagnostic(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
@@ -5258,30 +5264,5 @@ int SCIPgetPtrarrayMaxIdx(
 #endif
 
 /**@} */
-
-
-
-
-#ifndef NDEBUG
-
-/*
- * debugging methods
- */
-
-/**@name Debugging Methods */
-/**@{ */
-
-/** prints output about used memory */
-extern
-void SCIPdebugMemory(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/**@} */
-
-#endif
-
-
-
 
 #endif
