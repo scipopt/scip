@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.4 2004/01/15 09:12:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.5 2004/01/15 14:33:21 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -101,6 +101,7 @@ struct Set
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
    Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
    Real             feastol;            /**< LP feasibility tolerance */
+   Real             boundstreps;        /**< minimal improve for strengthening bounds */
    Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
    Real             cutviolepsroot;     /**< epsilon for deciding if a cut is violated in the root node */
    Real             historyeps;         /**< minimal distance value to use for branching history updates */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.43 2004/01/07 13:14:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.44 2004/01/15 14:33:19 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -145,6 +145,7 @@
 #define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON  1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL     1e-06  /**< default LP feasibility tolerance */
+#define SCIP_DEFAULT_BOUNDSTREPS 1e-04  /**< default minimal improve for strengthening bounds */
 #define SCIP_DEFAULT_CUTVIOLEPS  5e-02  /**< default epsilon for deciding if a cut is violated */
 #define SCIP_DEFAULT_HISTORYEPS  1e-01  /**< default minimal distance value to use for branching history updates */
 #define SCIP_MAXEPSILON          1e-03  /**< maximum value for any numerical epsilon */

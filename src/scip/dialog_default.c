@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.12 2004/01/15 12:09:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.13 2004/01/15 14:33:19 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1272,7 +1272,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(root, "set") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &setmenu, SCIPdialogExecMenu, NULL,
-                     "set", "read/write/change parameters", TRUE, NULL) );
+                     "set", "load/save/change parameters", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, setmenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &setmenu) );
    }

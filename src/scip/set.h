@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.59 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.60 2004/01/15 14:33:21 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -731,6 +731,22 @@ Bool SCIPsetIsFeasNegative(
    Real             val                 /**< value to be compared against zero */
    );
 
+/** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+extern
+Bool SCIPsetIsLbBetter(
+   const SET*       set,                /**< global SCIP settings */
+   Real             lb1,                /**< first lower bound to compare */
+   Real             lb2                 /**< second lower bound to compare */
+   );
+
+/** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+extern
+Bool SCIPsetIsUbBetter(
+   const SET*       set,                /**< global SCIP settings */
+   Real             ub1,                /**< first upper bound to compare */
+   Real             ub2                 /**< second upper bound to compare */
+   );
+
 /** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
  *  both, the activity and the rhs, should be normed
  */
@@ -905,8 +921,10 @@ Real SCIPsetFrac(
 #define SCIPsetIsFeasPositive(set, val)    ( EPSP(val, (set)->feastol) )
 #define SCIPsetIsFeasNegative(set, val)    ( EPSN(val, (set)->feastol) )
 
-#define SCIPsetIsCutViolated(set, root, act,rhs) ( root ? EPSGT(act, rhs, (set)->cutviolepsroot) \
-                                                        : EPSGT(act, rhs, (set)->cutvioleps) )
+#define SCIPsetIsLbBetter(set, lb1, lb2)   ( EPSGT(lb1, lb2, (set)->boundstreps) )
+#define SCIPsetIsUbBetter(set, ub1, ub2)   ( EPSLT(ub1, ub2, (set)->boundstreps) )
+#define SCIPsetIsCutViolated(set, root, act, rhs) ( root ? EPSGT(act, rhs, (set)->cutviolepsroot) \
+                                                         : EPSGT(act, rhs, (set)->cutvioleps) )
 
 #define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
 #define SCIPsetIsRelLT(set, val1, val2)    ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )

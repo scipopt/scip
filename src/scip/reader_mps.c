@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.38 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.39 2004/01/15 14:33:20 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -310,6 +310,7 @@ void mpsinputSyntaxerror(
 
 static
 void mpsinputEntryIgnored(
+   SCIP*            scip,               /**< SCIP data structure */
    MPSINPUT*        mpsi, 
    const char*      what, 
    const char*      what_name, 
@@ -323,7 +324,7 @@ void mpsinputEntryIgnored(
    assert(entity      != NULL);
    assert(entity_name != NULL);
 
-   fprintf(stderr, "Warning line %d : %s \"%s\" for %s \"%s\" ignored\n",
+   SCIPmessage(scip, SCIP_VERBLEVEL_FULL, "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n",
       mpsi->lineno, what, what_name, entity, entity_name);
 }
 
@@ -797,7 +798,7 @@ RETCODE readCols(
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
+            mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else if( !SCIPisZero(scip, val) )
          {
             CHECK_OKAY( SCIPaddCoefLinear(scip, cons, var, val) );
@@ -817,7 +818,7 @@ RETCODE readCols(
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
-               mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
+               mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
             else if( !SCIPisZero(scip, val) )
             {
                CHECK_OKAY( SCIPaddCoefLinear(scip, cons, var, val) );
@@ -874,7 +875,7 @@ RETCODE readRhs(
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
+            mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else
          {
             val = atof(mpsinputField3(mpsi));
@@ -908,7 +909,7 @@ RETCODE readRhs(
       {
          cons = SCIPfindCons(scip, mpsinputField4(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
+            mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
          else
          {
             val = atof(mpsinputField5(mpsi));
@@ -995,7 +996,7 @@ RETCODE readRanges(
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
+            mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else
          {
             val = atof(mpsinputField3(mpsi));
@@ -1031,7 +1032,7 @@ RETCODE readRanges(
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
-               mpsinputEntryIgnored(mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
+               mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
             else
             {
                val = atof(mpsinputField5(mpsi));
@@ -1122,7 +1123,7 @@ RETCODE readBounds(
       {
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
          if( var == NULL )
-            mpsinputEntryIgnored(mpsi, "column", mpsinputField3(mpsi), "bound", bndname);
+            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname);
          else
          { 
             if( mpsinputField4(mpsi) == NULL )

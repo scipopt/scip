@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.118 2004/01/15 09:12:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.119 2004/01/15 14:33:20 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8080,6 +8080,30 @@ Bool SCIPisFeasNegative(
    assert(scip->set != NULL);
 
    return SCIPsetIsFeasNegative(scip->set, val);
+}
+
+/** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+Bool SCIPisLbBetter(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             lb1,                /**< first lower bound to compare */
+   Real             lb2                 /**< second lower bound to compare */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPsetIsLbBetter(scip->set, lb1, lb2);
+}
+
+/** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+Bool SCIPisUbBetter(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             ub1,                /**< first upper bound to compare */
+   Real             ub2                 /**< second upper bound to compare */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPsetIsUbBetter(scip->set, ub1, ub2);
 }
 
 /** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;

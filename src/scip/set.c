@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.82 2004/01/15 12:09:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.83 2004/01/15 14:33:21 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -292,6 +292,11 @@ RETCODE SCIPsetCreate(
                   "LP feasibility tolerance",
                   &(*set)->feastol, SCIP_DEFAULT_FEASTOL, machineeps*1e+03, SCIP_MAXEPSILON,
                   paramChgdFeastol, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "numerics/boundstreps",
+                  "minimal improve for strengthening bounds",
+                  &(*set)->boundstreps, SCIP_DEFAULT_BOUNDSTREPS, machineeps*1e+03, SCIP_INVALID/10.0,
+                  NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "numerics/cutvioleps",
                   "epsilon for deciding if a cut is violated",
@@ -2115,6 +2120,30 @@ Bool SCIPsetIsFeasNegative(
    assert(set != NULL);
 
    return EPSN(val, set->feastol);
+}
+
+/** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+Bool SCIPsetIsLbBetter(
+   const SET*       set,                /**< global SCIP settings */
+   Real             lb1,                /**< first lower bound to compare */
+   Real             lb2                 /**< second lower bound to compare */
+   )
+{
+   assert(set != NULL);
+
+   return EPSGT(lb1, lb2, set->boundstreps);
+}
+
+/** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+Bool SCIPsetIsUbBetter(
+   const SET*       set,                /**< global SCIP settings */
+   Real             ub1,                /**< first upper bound to compare */
+   Real             ub2                 /**< second upper bound to compare */
+   )
+{
+   assert(set != NULL);
+
+   return EPSLT(ub1, ub2, set->boundstreps);
 }
 
 /** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;

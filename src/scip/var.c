@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.64 2004/01/07 13:14:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.65 2004/01/15 14:33:21 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -811,6 +811,8 @@ Real adjustedLb(
       return -set->infinity;
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetCeil(set, lb);
+   else if( SCIPsetIsZero(set, lb) )
+      return 0.0;
    else
       return lb;
 }
@@ -827,6 +829,8 @@ Real adjustedUb(
       return set->infinity;
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFloor(set, ub);
+   else if( SCIPsetIsZero(set, ub) )
+      return 0.0;
    else
       return ub;
 }

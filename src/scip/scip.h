@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.99 2004/01/15 09:12:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.100 2004/01/15 14:33:20 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3274,6 +3274,22 @@ Bool SCIPisFeasNegative(
    Real             val                 /**< value to be compared against zero */
    );
 
+/** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+extern
+Bool SCIPisLbBetter(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             lb1,                /**< first lower bound to compare */
+   Real             lb2                 /**< second lower bound to compare */
+   );
+
+/** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+extern
+Bool SCIPisUbBetter(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             ub1,                /**< first upper bound to compare */
+   Real             ub2                 /**< second upper bound to compare */
+   );
+
 /** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
  *  both, the activity and the rhs, should be normed
  */
@@ -3446,6 +3462,8 @@ Real SCIPfrac(
 #define SCIPisFeasPositive(scip, val)    SCIPsetIsFeasPositive((scip)->set, val)    
 #define SCIPisFeasNegative(scip, val)    SCIPsetIsFeasNegative((scip)->set, val)    
                                                                            
+#define SCIPisLbBetter(scip, lb1, lb2)   SCIPsetIsLbBetter(scip->set, lb1, lb2)
+#define SCIPisUbBetter(scip, ub1, ub2)   SCIPsetIsUbBetter(scip->set, ub1, ub2)
 #define SCIPisCutViolated(scip, act,rhs) SCIPsetIsCutViolated((scip)->set, \
                                          (SCIPnodeGetDepth((scip)->tree->actnode) == 0), act, rhs)
                                                                            
