@@ -435,6 +435,7 @@ RETCODE priceProbVars(
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_MULTAGGR:
+      case SCIP_VARSTATUS_NEGATED:
          /* we don't have to price fixed or aggregated variables */
          break;
       }

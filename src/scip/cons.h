@@ -976,6 +976,12 @@ RETCODE SCIPconsResetAge(
    SET*             set                 /**< global SCIP settings */
    );
 
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** returns the name of the constraint */
 extern
 const char* SCIPconsGetName(
@@ -1029,6 +1035,24 @@ extern
 Bool SCIPconsIsOriginal(
    CONS*            cons                /**< constraint */
    );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPconsGetName(cons)           (cons)->name
+#define SCIPconsGetHdlr(cons)           (cons)->conshdlr
+#define SCIPconsGetData(cons)           (cons)->consdata
+#define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
+#define SCIPconsIsSeparated(cons)       (cons)->separate
+#define SCIPconsIsEnforced(cons)        (cons)->enforce
+#define SCIPconsIsChecked(cons)         (cons)->check
+#define SCIPconsIsPropagated(cons)      (cons)->propagate
+#define SCIPconsIsOriginal(cons)        (cons)->original
+
+#endif
 
 
 

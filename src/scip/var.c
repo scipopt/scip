@@ -738,13 +738,12 @@ RETCODE varCreate(
    (*var)->nlocksup = 0;
    (*var)->vartype = vartype;
    (*var)->removeable = removeable;
-   (*var)->negation = FALSE;
 
    return SCIP_OKAY;
 }
 
 /** creates and captures an original problem variable */
-RETCODE SCIPvarCreate(
+RETCODE SCIPvarCreateOriginal(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -873,7 +872,6 @@ RETCODE varFreeParents(
    /* release the parent variables and remove the link from the parent variable to the child */
    for( i = 0; i < (*var)->nparentvars; ++i )
    {
-      assert((*var)->varstatus != SCIP_VARSTATUS_ORIGINAL);
       assert((*var)->parentvars != NULL);
       parentvar = (*var)->parentvars[i];
       assert(parentvar != NULL);
@@ -885,11 +883,13 @@ RETCODE varFreeParents(
          assert(&parentvar->data.transvar != var);
          parentvar->data.transvar = NULL;
          break;
+
       case SCIP_VARSTATUS_AGGREGATED:
          assert(parentvar->data.aggregate.var == *var);
          assert(&parentvar->data.aggregate.var != var);
          parentvar->data.aggregate.var = NULL;
          break;
+
 #if 0
       case SCIP_VARSTATUS_MULTAGGR:
          assert(parentvar->data.multaggr.vars != NULL);
@@ -904,8 +904,16 @@ RETCODE varFreeParents(
          parentvar->data.multaggr.nvars--;
          break;
 #endif
+
+      case SCIP_VARSTATUS_NEGATED:
+         assert(parentvar->negatedvar == *var);
+         assert((*var)->negatedvar == parentvar);
+         parentvar->negatedvar = NULL;
+         (*var)->negatedvar = NULL;
+         break;
+
       default:
-         errorMessage("parent variable is neither ORIGINAL nor AGGREGATED");
+         errorMessage("parent variable is neither ORIGINAL, AGGREGATED nor NEGATED");
          return SCIP_INVALIDDATA;
       }
 
@@ -930,7 +938,7 @@ RETCODE varFree(
    assert(memhdr != NULL);
    assert(var != NULL);
    assert(*var != NULL);
-   assert((*var)->varstatus != SCIP_VARSTATUS_COLUMN || (VAR**)(&(*var)->data.col->var) != var);
+   assert((*var)->varstatus != SCIP_VARSTATUS_COLUMN || &(*var)->data.col->var != var);
    assert((*var)->nuses == 0);
    assert((*var)->probindex == -1);
 
@@ -938,7 +946,6 @@ RETCODE varFree(
    switch( (*var)->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      assert((*var)->nparentvars == 0); /* original variable cannot have a parent variable */
       assert((*var)->data.transvar == NULL);  /* cannot free variable, if transformed variable is still existing */
       break;
    case SCIP_VARSTATUS_LOOSE:
@@ -947,12 +954,13 @@ RETCODE varFree(
       CHECK_OKAY( SCIPcolFree(&(*var)->data.col, memhdr, set, lp) );  /* free corresponding LP column */
       break;
    case SCIP_VARSTATUS_FIXED:
-      break;
    case SCIP_VARSTATUS_AGGREGATED:
       break;
    case SCIP_VARSTATUS_MULTAGGR:
       freeBlockMemoryArray(memhdr, &(*var)->data.multaggr.vars, (*var)->data.multaggr.varssize);
       freeBlockMemoryArray(memhdr, &(*var)->data.multaggr.scalars, (*var)->data.multaggr.varssize);
+      break;
+   case SCIP_VARSTATUS_NEGATED:
       break;
    default:
       errorMessage("Unknown variable status");
@@ -963,10 +971,12 @@ RETCODE varFree(
    CHECK_OKAY( varFreeParents(var, memhdr, set, lp) );
 
    /* free event filter */
-   if( (*var)->varstatus != SCIP_VARSTATUS_ORIGINAL )
+   if( (*var)->eventfilter != NULL )
    {
+      assert((*var)->varstatus != SCIP_VARSTATUS_ORIGINAL);
       CHECK_OKAY( SCIPeventfilterFree(&(*var)->eventfilter, memhdr, set) );
    }
+   assert((*var)->eventfilter == NULL);
 
    /* free variable data structure */
    freeBlockMemoryArray(memhdr, &(*var)->name, strlen((*var)->name)+1);
@@ -1010,126 +1020,6 @@ RETCODE SCIPvarRelease(
    *var = NULL;
 
    return SCIP_OKAY;
-}
-
-/** copies original variable into loose transformed variable, that is captured */
-RETCODE SCIPvarTransform(
-   VAR**            transvar,           /**< pointer to store the transformed variable */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
-   VAR*             origvar             /**< original problem variable */
-   )
-{
-   char name[MAXSTRLEN];
-   VARTYPE vartype;
-
-   assert(origvar != NULL);
-   assert(origvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
-   assert(origvar->glbdom.lb == origvar->actdom.lb);
-   assert(origvar->glbdom.ub == origvar->actdom.ub);
-   assert(origvar->data.transvar == NULL);
-   assert(transvar != NULL);
-
-   /* convert 0/1 integer variables into binary variables */
-   vartype = (VARTYPE)(origvar->vartype);
-   if( vartype == SCIP_VARTYPE_INTEGER
-      && SCIPsetIsEQ(set, origvar->glbdom.lb, 0.0) && SCIPsetIsEQ(set, origvar->glbdom.ub, 1.0) )
-      vartype = SCIP_VARTYPE_BINARY;
-
-   /* create transformed variable */
-   sprintf(name, "t_%s", origvar->name);
-   CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
-                  name, origvar->glbdom.lb, origvar->glbdom.ub, objsense * origvar->obj, vartype, origvar->removeable) );
-
-   /* duplicate hole lists */
-   CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, memhdr, set, origvar->glbdom.holelist) );
-   CHECK_OKAY( holelistDuplicate(&(*transvar)->actdom.holelist, memhdr, set, origvar->actdom.holelist) );
-
-   /* link original and transformed variable */
-   origvar->data.transvar = *transvar;
-   CHECK_OKAY( varAddParent(*transvar, memhdr, set, origvar) );
-
-   /* copy rounding locks */
-   (*transvar)->nlocksdown = origvar->nlocksdown;
-   (*transvar)->nlocksup = origvar->nlocksup;
-
-   debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
-
-   return SCIP_OKAY;
-}
-
-/** gets negated variable x' = lb + ub - x of problem variable x */
-RETCODE SCIPvarNegate(
-   VAR**            negvar,             /**< pointer to store the negated variable */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             var                 /**< problem variable to negate */
-   )
-{
-   assert(negvar != NULL);
-   assert(var != NULL);
-
-   /* check, if we already created the negated variable */
-   if( var->negatedvar == NULL )
-   {
-      char negvarname[MAXSTRLEN];
-      Bool infeasible;
-
-      debugMessage("creating negated variable of <%s>\n", var->name);
-      
-      /* negation is only possible for bounded variables */
-      if( SCIPsetIsInfinity(set, -var->glbdom.lb) || SCIPsetIsInfinity(set, var->glbdom.ub) )
-      {
-         errorMessage("cannot negate unbounded variable");
-         return SCIP_INVALIDDATA;
-      }
-      
-      /* create negated variable */
-      sprintf(negvarname, "%s_neg", var->name);
-      CHECK_OKAY( SCIPvarCreateTransformed(negvar, memhdr, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub,
-                     0.0, var->vartype, var->removeable) );
-      
-      /* aggregate negated variable with x' = lb + ub - x */
-      CHECK_OKAY( SCIPvarAggregate(*negvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
-                     var, -1.0, var->glbdom.lb + var->glbdom.ub, &infeasible) );
-      assert(!infeasible);
-
-      /* link the variables together */
-      var->negatedvar = *negvar;
-      (*negvar)->negatedvar = var;
-      (*negvar)->negation = TRUE;
-
-      /* release the negated variable (it is now a parent of the problem variable, and is freed together with var) */
-      CHECK_OKAY( SCIPvarRelease(negvar, memhdr, set, lp) );
-
-   }
-   assert(var->negatedvar != NULL);
-
-   /* return the negated variable */
-   *negvar = var->negatedvar;
-
-   /* exactly one variable of the negation pair has to be marked as negation variable */
-   assert((*negvar)->negation ^ var->negation);
-
-   return SCIP_OKAY;
-}
-
-/** returns whether the variable was created by negation of a different variable */
-Bool SCIPvarIsNegation(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->negation;
 }
 
 /** increases lock numbers for rounding */
@@ -1183,6 +1073,13 @@ void varAddRoundLocks(
          else
             varAddRoundLocks(var->data.multaggr.vars[i], addnlocksup, addnlocksdown);
       }
+      break;
+
+   case SCIP_VARSTATUS_NEGATED:
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      varAddRoundLocks(var->negatedvar, addnlocksup, addnlocksdown);
       break;
 
    default:
@@ -1300,6 +1197,12 @@ int SCIPvarGetNLocksDown(
       }
       return nlocks;
 
+   case SCIP_VARSTATUS_NEGATED:
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return SCIPvarGetNLocksUp(var->negatedvar);
+
    default:
       errorMessage("unknown variable status");
       abort();
@@ -1348,6 +1251,12 @@ int SCIPvarGetNLocksUp(
       }
       return nlocks;
 
+   case SCIP_VARSTATUS_NEGATED:
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return SCIPvarGetNLocksDown(var->negatedvar);
+
    default:
       errorMessage("unknown variable status");
       abort();
@@ -1368,6 +1277,84 @@ Bool SCIPvarMayRoundUp(
    )
 {
    return (SCIPvarGetNLocksUp(var) == 0);
+}
+
+/** copies original variable into loose transformed variable, that is captured */
+RETCODE SCIPvarTransform(
+   VAR*             origvar,            /**< original problem variable */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
+   VAR**            transvar            /**< pointer to store the transformed variable */
+   )
+{
+   char name[MAXSTRLEN];
+   VARTYPE vartype;
+
+   assert(origvar != NULL);
+   assert(origvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
+   assert(origvar->glbdom.lb == origvar->actdom.lb);
+   assert(origvar->glbdom.ub == origvar->actdom.ub);
+   assert(origvar->data.transvar == NULL);
+   assert(transvar != NULL);
+
+   /* convert 0/1 integer variables into binary variables */
+   vartype = (VARTYPE)(origvar->vartype);
+   if( vartype == SCIP_VARTYPE_INTEGER
+      && SCIPsetIsEQ(set, origvar->glbdom.lb, 0.0) && SCIPsetIsEQ(set, origvar->glbdom.ub, 1.0) )
+      vartype = SCIP_VARTYPE_BINARY;
+
+   /* create transformed variable */
+   sprintf(name, "t_%s", origvar->name);
+   CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
+                  name, origvar->glbdom.lb, origvar->glbdom.ub, objsense * origvar->obj, vartype, origvar->removeable) );
+
+   /* duplicate hole lists */
+   CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, memhdr, set, origvar->glbdom.holelist) );
+   CHECK_OKAY( holelistDuplicate(&(*transvar)->actdom.holelist, memhdr, set, origvar->actdom.holelist) );
+
+   /* link original and transformed variable */
+   origvar->data.transvar = *transvar;
+   CHECK_OKAY( varAddParent(*transvar, memhdr, set, origvar) );
+
+   /* copy rounding locks */
+   (*transvar)->nlocksdown = origvar->nlocksdown;
+   (*transvar)->nlocksup = origvar->nlocksup;
+
+   debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
+
+   return SCIP_OKAY;
+}
+
+/** gets corresponding transformed variable of an original or negated original variable */
+RETCODE SCIPvarGetTransformed(
+   VAR*             origvar,            /**< original problem variable */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   VAR**            transvar            /**< pointer to store the transformed variable, or NULL if not existing yet */
+   )
+{
+   assert(origvar != NULL);
+   assert(origvar->varstatus == SCIP_VARSTATUS_ORIGINAL || origvar->varstatus == SCIP_VARSTATUS_NEGATED);
+
+   if( origvar->varstatus == SCIP_VARSTATUS_NEGATED )
+   {
+      assert(origvar->negatedvar != NULL);
+      assert(origvar->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
+
+      if( origvar->negatedvar->data.transvar == NULL )
+         *transvar = NULL;
+      else
+      {
+         CHECK_OKAY( SCIPvarGetNegated(origvar->negatedvar->data.transvar, memhdr, set, stat, transvar) );
+      }
+   }
+   else
+      *transvar = origvar->data.transvar;
+
+   return SCIP_OKAY;
 }
 
 /** converts loose transformed variable into column variable, creates LP column */
@@ -1475,6 +1462,16 @@ RETCODE SCIPvarFix(
    case SCIP_VARSTATUS_MULTAGGR:
       errorMessage("cannot fix a multiple aggregated variable");
       return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED:
+      /* fix negation variable x in x' = offset - x, instead of fixing x' directly */
+      assert(SCIPsetIsZero(set, var->obj));
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarFix(var->negatedvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
+                     var->data.negate.constant - fixedval, infeasible) );
+      break;
 
    default:
       errorMessage("Unknown variable status");
@@ -1765,6 +1762,18 @@ RETCODE SCIPvarAggregate(
       errorMessage("cannot aggregate a multiple aggregated variable");
       return SCIP_INVALIDDATA;
 
+   case SCIP_VARSTATUS_NEGATED:
+      /* aggregate negation variable x in x' = offset - x, instead of aggregating x' directly:
+       *   x' = a*y + c  ->  x = offset - x' = offset - a*y - c
+       */
+      assert(SCIPsetIsZero(set, var->obj));
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarAggregate(var->negatedvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
+                     aggvar, -scalar, var->data.negate.constant - constant, infeasible) );
+      break;
+
    default:
       errorMessage("Unknown variable status");
       abort();
@@ -1879,12 +1888,120 @@ RETCODE SCIPvarMultiaggregate(
       errorMessage("cannot multi-aggregate a multiple aggregated variable again");
       return SCIP_INVALIDDATA;
 
+   case SCIP_VARSTATUS_NEGATED:
+      /* aggregate negation variable x in x' = offset - x, instead of aggregating x' directly:
+       *   x' = a_1*y_1 + ... + a_n*y_n + c  ->  x = offset - x' = offset - a_1*y_1 - ... - a_n*y_n - c
+       */
+      assert(SCIPsetIsZero(set, var->obj));
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+
+      /* switch the signs of the aggregation scalars */
+      for( v = 0; v < naggvars; ++v )
+         scalars[v] *= -1.0;
+         
+      /* perform the multi aggregation on the negation variable */
+      CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
+                     naggvars, aggvars, scalars, var->data.negate.constant - constant,
+                     infeasible) );
+
+      /* switch the signs of the aggregation scalars again, to reset them to their original values */
+      for( v = 0; v < naggvars; ++v )
+         scalars[v] *= -1.0;
+      break;
+
    default:
       errorMessage("Unknown variable status");
       abort();
    }
    
    return SCIP_OKAY;
+}
+
+/** gets negated variable x' = offset - x of problem variable x, where offset is fixed to lb + ub when the negated
+ *  variable is created
+ */
+RETCODE SCIPvarGetNegated(
+   VAR*             var,                /**< problem variable to negate */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   VAR**            negvar              /**< pointer to store the negated variable */
+   )
+{
+   assert(var != NULL);
+   assert(negvar != NULL);
+
+   /* check, if we already created the negated variable */
+   if( var->negatedvar == NULL )
+   {
+      char negvarname[MAXSTRLEN];
+
+      assert(var->varstatus != SCIP_VARSTATUS_NEGATED);
+
+      debugMessage("creating negated variable of <%s>\n", var->name);
+      
+      /* negation is only possible for bounded variables */
+      if( SCIPsetIsInfinity(set, -var->glbdom.lb) || SCIPsetIsInfinity(set, var->glbdom.ub) )
+      {
+         errorMessage("cannot negate unbounded variable");
+         return SCIP_INVALIDDATA;
+      }
+
+      sprintf(negvarname, "%s_neg", var->name);
+
+      /* create negated variable */
+      CHECK_OKAY( varCreate(negvar, memhdr, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
+                     var->vartype, var->removeable) );
+      (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED;
+      (*negvar)->data.negate.constant = var->glbdom.lb + var->glbdom.ub;
+
+      /* create event filter, if the negated variable belongs to the transformed problem */
+      if( var->varstatus != SCIP_VARSTATUS_ORIGINAL )
+      {
+         CHECK_OKAY( SCIPeventfilterCreate(&(*negvar)->eventfilter, memhdr) );
+      }
+
+      /* link the variables together */
+      var->negatedvar = *negvar;
+      (*negvar)->negatedvar = var;
+
+      /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
+      CHECK_OKAY( varAddParent(var, memhdr, set, *negvar) );
+      assert((*negvar)->nuses == 1);
+   }
+   assert(var->negatedvar != NULL);
+
+   /* return the negated variable */
+   *negvar = var->negatedvar;
+
+   /* exactly one variable of the negation pair has to be marked as negated variable */
+   assert(((*negvar)->varstatus == SCIP_VARSTATUS_NEGATED) ^ (var->varstatus == SCIP_VARSTATUS_NEGATED));
+
+   return SCIP_OKAY;
+}
+
+/** gets the negation variable x of a negated variable x' = offset - x */
+VAR* SCIPvarGetNegationVar(
+   VAR*             var                 /**< negated problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+
+   return var->negatedvar;
+}
+
+/** gets the negation offset of a negated variable x' = offset - x */
+Real SCIPvarGetNegationConstant(
+   VAR*             var                 /**< negated problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+
+   return var->data.negate.constant;
 }
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -1904,7 +2021,9 @@ RETCODE SCIPvarChgType(
    }
    
    var->vartype = vartype;
-   
+   if( var->negatedvar != NULL )
+      var->negatedvar->vartype = vartype;
+
    return SCIP_OKAY;
 }
 
@@ -1987,7 +2106,8 @@ RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("cannot change objective value of a fixed, aggregated, or multi aggregated variable");
+      case SCIP_VARSTATUS_NEGATED:
+         errorMessage("cannot change objective value of a fixed, aggregated, multi-aggregated, or negated variable");
          return SCIP_INVALIDDATA;
 
       default:
@@ -2064,6 +2184,15 @@ RETCODE SCIPvarAddObj(
          }
          break;
 
+      case SCIP_VARSTATUS_NEGATED:
+         /* x' = offset - x  ->  add -addobj to obj. val. of x and offset*addobj to obj. offset of problem */
+         assert(var->negatedvar != NULL);
+         assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+         assert(var->negatedvar->negatedvar == var);
+         SCIPprobIncObjoffset(prob, set, var->data.negate.constant * addobj);
+         CHECK_OKAY( SCIPvarAddObj(var->negatedvar, memhdr, set, prob, tree, lp, branchcand, eventqueue, -addobj) );
+         break;
+
       default:
          errorMessage("unknown variable status");
          abort();
@@ -2096,7 +2225,6 @@ RETCODE varProcessChgLbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
 
    debugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
@@ -2116,6 +2244,7 @@ RETCODE varProcessChgLbGlobal(
       switch( parentvar->varstatus )
       {
       case SCIP_VARSTATUS_ORIGINAL:
+         /* do not change bounds across the border between transformed and original problem */
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -2148,6 +2277,13 @@ RETCODE varProcessChgLbGlobal(
          }
          break;
 
+      case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+         assert(parentvar->negatedvar != NULL);
+         assert(parentvar->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+         assert(parentvar->negatedvar->negatedvar == parentvar);
+         CHECK_OKAY( varProcessChgUbGlobal(parentvar, set, parentvar->data.negate.constant - newbound) );
+         break;
+
       default:
          errorMessage("unknown variable status");
          abort();
@@ -2170,7 +2306,6 @@ RETCODE varProcessChgUbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
 
    debugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
@@ -2222,6 +2357,13 @@ RETCODE varProcessChgUbGlobal(
          }
          break;
 
+      case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+         assert(parentvar->negatedvar != NULL);
+         assert(parentvar->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+         assert(parentvar->negatedvar->negatedvar == parentvar);
+         CHECK_OKAY( varProcessChgLbGlobal(parentvar, set, parentvar->data.negate.constant - newbound) );
+         break;
+
       default:
          errorMessage("unknown variable status");
          abort();
@@ -2259,7 +2401,7 @@ RETCODE SCIPvarChgLbGlobal(
       else
       {
          assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
-         var->glbdom.lb = newbound;
+         CHECK_OKAY( varProcessChgLbGlobal(var, set, newbound) );
       }
       break;
          
@@ -2304,6 +2446,13 @@ RETCODE SCIPvarChgLbGlobal(
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
 
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarChgUbGlobal(var->negatedvar, set,  var->data.negate.constant - newbound) );
+      break;
+
    default:
       errorMessage("unknown variable status");
       abort();
@@ -2340,7 +2489,7 @@ RETCODE SCIPvarChgUbGlobal(
       else
       {
          assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
-         var->glbdom.ub = newbound;
+         CHECK_OKAY( varProcessChgUbGlobal(var, set, newbound) );
       }
       break;
          
@@ -2384,6 +2533,13 @@ RETCODE SCIPvarChgUbGlobal(
       todoMessage("change the sides of the corresponding linear constraint");
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarChgLbGlobal(var->negatedvar, set,  var->data.negate.constant - newbound) );
+      break;
 
    default:
       errorMessage("unknown variable status");
@@ -2519,7 +2675,6 @@ RETCODE varProcessChgLbLocal(
    int i;
 
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
 
    debugMessage("process changing lower bound of <%s> from %f to %f\n", var->name, var->actdom.lb, newbound);
 
@@ -2531,7 +2686,11 @@ RETCODE varProcessChgLbLocal(
    var->actdom.lb = newbound;
 
    /* issue bound change event */
-   CHECK_OKAY( varEventLbChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldbound, newbound) );
+   if( var->eventfilter != NULL )
+   {
+      assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
+      CHECK_OKAY( varEventLbChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldbound, newbound) );
+   }
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
@@ -2542,6 +2701,7 @@ RETCODE varProcessChgLbLocal(
       switch( parentvar->varstatus )
       {
       case SCIP_VARSTATUS_ORIGINAL:
+         /* do not change bounds across the border between transformed and original problem */
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -2574,6 +2734,14 @@ RETCODE varProcessChgLbLocal(
          }
          break;
 
+      case SCIP_VARSTATUS_NEGATED: /* x = offset - x'  ->  x' = offset - x */
+         assert(parentvar->negatedvar != NULL);
+         assert(parentvar->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+         assert(parentvar->negatedvar->negatedvar == parentvar);
+         CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                        parentvar->data.negate.constant - newbound) );
+         break;
+
       default:
          errorMessage("unknown variable status");
          abort();
@@ -2602,7 +2770,6 @@ RETCODE varProcessChgUbLocal(
    int i;
 
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
 
    debugMessage("process changing upper bound of <%s> from %f to %f\n", var->name, var->actdom.ub, newbound);
 
@@ -2614,7 +2781,10 @@ RETCODE varProcessChgUbLocal(
    var->actdom.ub = newbound;
 
    /* issue bound change event */
-   CHECK_OKAY( varEventUbChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldbound, newbound) );
+   if( var->eventfilter != NULL )
+   {
+      CHECK_OKAY( varEventUbChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldbound, newbound) );
+   }
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
@@ -2625,6 +2795,7 @@ RETCODE varProcessChgUbLocal(
       switch( parentvar->varstatus )
       {
       case SCIP_VARSTATUS_ORIGINAL:
+         /* do not change bounds across the border between transformed and original problem */
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -2655,6 +2826,14 @@ RETCODE varProcessChgUbLocal(
             CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
+         break;
+
+      case SCIP_VARSTATUS_NEGATED: /* x = offset - x'  ->  x' = offset - x */
+         assert(parentvar->negatedvar != NULL);
+         assert(parentvar->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+         assert(parentvar->negatedvar->negatedvar == parentvar);
+         CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                        parentvar->data.negate.constant - newbound) );
          break;
 
       default:
@@ -2748,6 +2927,14 @@ RETCODE SCIPvarChgLbLocal(
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
 
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarChgUbLocal(var->negatedvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+                     var->data.negate.constant - newbound) );
+      break;
+         
    default:
       errorMessage("unknown variable status");
       abort();
@@ -2838,6 +3025,14 @@ RETCODE SCIPvarChgUbLocal(
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
 
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarChgLbLocal(var->negatedvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+                     var->data.negate.constant - newbound) );
+      break;
+         
    default:
       errorMessage("unknown variable status");
       abort();
@@ -2973,6 +3168,13 @@ RETCODE SCIPvarChgLbDive(
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
       
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarChgUbDive(var->negatedvar, set, lp, var->data.negate.constant - newbound) );
+      break;
+      
    default:
       errorMessage("unknown variable status");
       abort();
@@ -3043,6 +3245,13 @@ RETCODE SCIPvarChgUbDive(
       errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
       abort();
       
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarChgLbDive(var->negatedvar, set, lp, var->data.negate.constant - newbound) );
+      break;
+      
    default:
       errorMessage("unknown variable status");
       abort();
@@ -3067,6 +3276,8 @@ RETCODE SCIPvarAddHoleGlobal(
    CHECK_OKAY( domAddHole(&var->glbdom, memhdr, set, left, right) );
    CHECK_OKAY( domAddHole(&var->actdom, memhdr, set, left, right) );
 
+   todoMessage("add hole in parent and child variables (just like with bound changes)");
+
    return SCIP_OKAY;
 }
 
@@ -3085,57 +3296,9 @@ RETCODE SCIPvarAddHoleLocal(
 
    CHECK_OKAY( domAddHole(&var->actdom, memhdr, set, left, right) );
 
+   todoMessage("add hole in parent and child variables (just like with bound changes)");
+
    return SCIP_OKAY;
-}
-
-/** get name of variable */
-const char* SCIPvarGetName(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->name;
-}
-
-/** gets status of variable */
-VARSTATUS SCIPvarGetStatus(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (VARSTATUS)(var->varstatus);
-}
-
-/** gets type of variable */
-VARTYPE SCIPvarGetType(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (VARTYPE)(var->vartype);
-}
-
-/** gets unique index of variable */
-int SCIPvarGetIndex(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->index;
-}
-
-/** gets position of variable in problem, or -1 if variable is not active */
-int SCIPvarGetProbIndex(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->probindex;
 }
 
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
@@ -3158,17 +3321,6 @@ int SCIPvarCmp(
       assert(var1 == var2);
       return 0;
    }
-}
-
-/** gets corresponding transformed variable of an original variable */
-VAR* SCIPvarGetTransformed(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
-
-   return var->data.transvar;
 }
 
 /** gets corresponding active problem variable of a variable */
@@ -3204,6 +3356,9 @@ VAR* SCIPvarGetProbvar(
    case SCIP_VARSTATUS_MULTAGGR:
       errorMessage("multiple aggregated variable has no single corresponding active problem variable");
       return NULL;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetProbvar(var->negatedvar);
 
    default:
       errorMessage("unknown variable status");
@@ -3266,12 +3421,103 @@ RETCODE SCIPvarTransformBound(
       errorMessage("multiple aggregated variable has no single corresponding active problem variable");
       return SCIP_INVALIDDATA;
 
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert((*var)->negatedvar != NULL);
+      assert((*var)->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert((*var)->negatedvar->negatedvar == *var);
+      (*bound) = (*var)->data.negate.constant - *bound;
+      if( *boundtype == SCIP_BOUNDTYPE_LOWER )
+         *boundtype = SCIP_BOUNDTYPE_UPPER;
+      else
+         *boundtype = SCIP_BOUNDTYPE_LOWER;
+      *var = (*var)->negatedvar;
+      CHECK_OKAY( SCIPvarTransformBound(var, bound, boundtype) );
+      break;
+
    default:
       errorMessage("unknown variable status");
       abort();
    }
 
    return SCIP_OKAY;
+}
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** get name of variable */
+const char* SCIPvarGetName(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->name;
+}
+
+/** gets status of variable */
+VARSTATUS SCIPvarGetStatus(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (VARSTATUS)(var->varstatus);
+}
+
+/** returns whether the variable belongs to the transformed problem */
+Bool SCIPvarIsTransformed(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
+
+   return (var->varstatus != SCIP_VARSTATUS_ORIGINAL
+      && (var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL));
+}
+
+/** returns whether the variable was created by negation of a different variable */
+Bool SCIPvarIsNegated(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->varstatus == SCIP_VARSTATUS_NEGATED);
+}
+
+/** gets type of variable */
+VARTYPE SCIPvarGetType(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (VARTYPE)(var->vartype);
+}
+
+/** gets unique index of variable */
+int SCIPvarGetIndex(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->index;
+}
+
+/** gets position of variable in problem, or -1 if variable is not active */
+int SCIPvarGetProbIndex(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->probindex;
 }
 
 /** gets column of COLUMN variable */
@@ -3368,6 +3614,8 @@ Real SCIPvarGetUbLocal(
    return var->actdom.ub;
 }
 
+#endif
+
 /** gets lower bound of variable in current dive */
 Real SCIPvarGetLbDive(
    VAR*             var,                /**< problem variable */
@@ -3413,6 +3661,12 @@ Real SCIPvarGetLbDive(
       todoMessage("get the sides of the corresponding linear constraint");
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
       abort();
+      
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPvarGetUbDive(var->negatedvar, set);
       
    default:
       errorMessage("unknown variable status");
@@ -3465,6 +3719,12 @@ Real SCIPvarGetUbDive(
       todoMessage("get the sides of the corresponding linear constraint");
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
       abort();
+      
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPvarGetLbDive(var->negatedvar, set);
       
    default:
       errorMessage("unknown variable status");
@@ -3542,6 +3802,12 @@ Real SCIPvarGetLPSol(
          primsol += var->data.multaggr.scalars[i] * SCIPvarGetLPSol(var->data.multaggr.vars[i]);
       return primsol;
 
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPvarGetLPSol(var->negatedvar);
+      
    default:
       errorMessage("Unknown variable status");
       abort();
@@ -3588,6 +3854,12 @@ Real SCIPvarGetPseudoSol(
          pseudosol += var->data.multaggr.scalars[i] * SCIPvarGetPseudoSol(var->data.multaggr.vars[i]);
       return pseudosol;
 
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPvarGetPseudoSol(var->negatedvar);
+      
    default:
       errorMessage("Unknown variable status");
       abort();
@@ -3680,6 +3952,14 @@ RETCODE SCIPvarAddToRow(
                         var->data.multaggr.scalars[i] * val) );
       }
       CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, var->data.multaggr.constant * val) );
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(var->negatedvar->varstatus != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarAddToRow(var->negatedvar, memhdr, set, stat, lp, row, -val) );
+      CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, var->data.negate.constant * val) );
       return SCIP_OKAY;
 
    default:

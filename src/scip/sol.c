@@ -464,6 +464,9 @@ RETCODE SCIPsolSetVal(
       errorMessage("cannot set solution value for multiple aggregated variable");
       return SCIP_INVALIDDATA;
 
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPsolSetVal(sol, set, stat, tree, var->negatedvar, var->data.negate.constant - val);
+      
    default:
       errorMessage("unknown variable status");
       abort();
@@ -514,12 +517,14 @@ RETCODE SCIPsolIncVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      return SCIPsolIncVal(sol, set, stat, tree, var->data.aggregate.var,
-         (incval - var->data.aggregate.constant)/var->data.aggregate.scalar);
+      return SCIPsolIncVal(sol, set, stat, tree, var->data.aggregate.var, incval/var->data.aggregate.scalar);
 
    case SCIP_VARSTATUS_MULTAGGR:
       errorMessage("cannot set solution value for multiple aggregated variable");
       return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPsolIncVal(sol, set, stat, tree, var->negatedvar, -incval);
 
    default:
       errorMessage("unknown variable status");
@@ -580,6 +585,11 @@ RETCODE SCIPsolGetVal(
          CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.multaggr.vars[i], &val) );
          (*solval) += var->data.multaggr.scalars[i] * val;
       }
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_NEGATED:
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->negatedvar, solval) );
+      (*solval) = var->data.negate.constant - (*solval);
       return SCIP_OKAY;
 
    default:

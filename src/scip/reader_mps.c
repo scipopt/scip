@@ -1209,8 +1209,6 @@ RETCODE readBounds(
  *  This routine should read all valid MPS format files. 
  *  What it will not do, is find all cases where a file is ill formed. 
  *  If this happens it may complain and read nothing or read "something".
- *
- *  @return TRUE if the file was read correctly.
  */  
 static
 RETCODE readMPS(

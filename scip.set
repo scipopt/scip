@@ -168,6 +168,14 @@ global/catchctrlc = TRUE
 
 # should variables be added and removed dynamically to the problem?
 # [default: TRUE]
+reader/cnf/dynamicvars = TRUE
+
+# should constraints be added and removed dynamically to the problem?
+# [default: TRUE]
+reader/cnf/dynamicconss = TRUE
+
+# should variables be added and removed dynamically to the problem?
+# [default: TRUE]
 reader/mps/dynamicvars = TRUE
 
 # should constraints be added and removed dynamically to the problem?
@@ -273,6 +281,26 @@ conshdlr/linear/propfreq = 4
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
 # [default: 5]
 conshdlr/linear/tightenboundsfreq = 5
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [default: 4]
+conshdlr/logicor/sepafreq = 4
+
+# frequency for propagating domains (-1: never, 0: only in root node)
+# [default: 1]
+conshdlr/logicor/propfreq = 1
+
+# number of children created in pseudo branching
+# [default: 2]
+conshdlr/logicor/npseudobranches = 2
+
+# branching factor to weigh maximum of positive and negative variable uses
+# [default: 1]
+conshdlr/logicor/maxvarusefac = 1
+
+# branching factor to weigh minimum of positive and negative variable uses
+# [default: -0.2]
+conshdlr/logicor/minvarusefac = -0.2
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [default: 4]

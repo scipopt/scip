@@ -246,7 +246,7 @@ RETCODE SCIPprobTransform(
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
    for( v = 0; v < source->nvars; ++v )
    {
-      CHECK_OKAY( SCIPvarTransform(&targetvar, memhdr, set, stat, source->objsense, source->vars[v]) );
+      CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
       CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, tree, branchcand, targetvar) );
       CHECK_OKAY( SCIPvarRelease(&targetvar, memhdr, set, NULL) );
    }
@@ -506,6 +506,9 @@ RETCODE SCIPprobAddVar(
    assert(set != NULL);
    assert(var != NULL);
    assert(var->probindex == -1);
+   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL
+      || var->varstatus == SCIP_VARSTATUS_LOOSE
+      || var->varstatus == SCIP_VARSTATUS_COLUMN);
 
    /* allocate additional memory */
    CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
@@ -544,6 +547,9 @@ RETCODE SCIPprobChgVarType(
    assert(prob != NULL);
    assert(var != NULL);
    assert(var->probindex >= 0);
+   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL
+      || var->varstatus == SCIP_VARSTATUS_LOOSE
+      || var->varstatus == SCIP_VARSTATUS_COLUMN);
 
    if( (VARTYPE)(var->vartype) == vartype )
       return SCIP_OKAY;

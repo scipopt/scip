@@ -211,7 +211,7 @@ RETCODE solveNodeLP(
    assert(lp->solved);
 
    /* price-and-cut loop */
-   stat->nseparounds = 0;
+   assert(stat->nseparounds == 0);
    mustprice = TRUE;
    mustsepar = TRUE;
    cutoff = FALSE;
@@ -683,6 +683,8 @@ RETCODE SCIPsolveCIP(
    while( !SCIPsolveIsStopped(set, stat) )
    {
       assert(set->buffer->firstfree == 0);
+
+      stat->nseparounds = 0;
 
       /* update the memory saving flag, switch algorithms respectively */
       SCIPstatUpdateMemsaveMode(stat, set);

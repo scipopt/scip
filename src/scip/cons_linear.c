@@ -439,7 +439,7 @@ RETCODE linconsLockCoef(
    }
 
    /* catch bound change events on variable */
-   assert(SCIPvarGetStatus(lincons->vars[pos]) != SCIP_VARSTATUS_ORIGINAL);
+   assert(SCIPvarIsTransformed(lincons->vars[pos]));
    CHECK_OKAY( linconsCatchEvent(scip, lincons, eventhdlr, pos) );
    
    /* forbid rounding of variable */
@@ -476,7 +476,7 @@ RETCODE linconsUnlockCoef(
    }
    
    /* drop bound change events on variable */
-   assert(SCIPvarGetStatus(lincons->vars[pos]) != SCIP_VARSTATUS_ORIGINAL);
+   assert(SCIPvarIsTransformed(lincons->vars[pos]));
    CHECK_OKAY( linconsDropEvent(scip, lincons, eventhdlr, pos) );
 
    /* allow rounding of variable */
@@ -643,12 +643,12 @@ RETCODE linconsCreateTransformed(
    for( i = 0; i < (*lincons)->nvars; ++i )
    {
       (*lincons)->eventdatas[i] = NULL;
-      if( SCIPvarGetStatus((*lincons)->vars[i]) == SCIP_VARSTATUS_ORIGINAL )
+      if( !SCIPvarIsTransformed((*lincons)->vars[i]) )
       {
-         (*lincons)->vars[i] = SCIPvarGetTransformed((*lincons)->vars[i]);
+         CHECK_OKAY( SCIPgetTransformedVar(scip, (*lincons)->vars[i], &(*lincons)->vars[i]) );
          assert((*lincons)->vars[i] != NULL);
       }
-      assert(SCIPvarGetStatus((*lincons)->vars[i]) != SCIP_VARSTATUS_ORIGINAL);
+      assert(SCIPvarIsTransformed((*lincons)->vars[i]));
    }
 
    /* catch bound change events and lock the rounding of variables */
@@ -862,13 +862,13 @@ RETCODE linconsAddCoef(
    assert(scip != NULL);
    assert(var != NULL);
 
-   if( lincons->transformed && SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+   if( lincons->transformed && !SCIPvarIsTransformed(var) )
    {
-      var = SCIPvarGetTransformed(var);
+      CHECK_OKAY( SCIPgetTransformedVar(scip, var, &var) );
       assert(var != NULL);
    }
 
-   assert(lincons->transformed ^ (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL));
+   assert(lincons->transformed ^ !SCIPvarIsTransformed(var));
 
    CHECK_OKAY( linconsEnsureVarsSize(scip, lincons, lincons->nvars+1) );
    lincons->vars[lincons->nvars] = var;
@@ -914,7 +914,7 @@ RETCODE linconsDelCoefPos(
    var = lincons->vars[pos];
    val = lincons->vals[pos];
    assert(var != NULL);
-   assert(lincons->transformed ^ (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL));
+   assert(lincons->transformed ^ (!SCIPvarIsTransformed(lincons->vars[pos])));
 
    if( lincons->transformed )
    {
@@ -963,7 +963,7 @@ RETCODE linconsChgCoefPos(
    var = lincons->vars[pos];
    val = lincons->vals[pos];
    assert(var != NULL);
-   assert(lincons->transformed ^ (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL));
+   assert(lincons->transformed ^ (!SCIPvarIsTransformed(lincons->vars[pos])));
 
    if( lincons->transformed )
    {
@@ -2539,6 +2539,18 @@ RETCODE linconsApplyFixings(
          cleanup = TRUE;
          break;
 
+      case SCIP_VARSTATUS_NEGATED:
+         CHECK_OKAY( linconsAddCoef(scip, lincons, SCIPvarGetNegationVar(var), -val) );
+         aggrconst = SCIPvarGetNegationConstant(var);
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            linconsChgLhs(scip, lincons, lincons->lhs - val * aggrconst);
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            linconsChgRhs(scip, lincons, lincons->rhs - val * aggrconst);
+         CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
+         *conschanged = TRUE;
+         cleanup = TRUE;
+         break;
+
       default:
          errorMessage("unknown variable status");
          abort();
@@ -3044,7 +3056,7 @@ RETCODE linconsFixVariables(
       var = lincons->vars[v];
       varstatus = SCIPvarGetStatus(var);
 
-      if( varstatus != SCIP_VARSTATUS_FIXED && varstatus != SCIP_VARSTATUS_AGGREGATED )
+      if( varstatus != SCIP_VARSTATUS_FIXED )
       {
          lb = SCIPvarGetLbGlobal(var);
          ub = SCIPvarGetUbGlobal(var);

@@ -859,6 +859,20 @@ Bool SCIPsetIsFeasible(
    Real             val                 /**< value to be compared against zero */
    );
 
+/** checks, if value is integral within the LP feasibility bounds */
+extern
+Bool SCIPsetIsIntegral(
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if given fractional part is smaller than feastol */
+extern
+Bool SCIPsetIsFracIntegral(
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
 /** rounds value + feasibility tolerance down to the next integer */
 extern
 Real SCIPsetFloor(
@@ -878,20 +892,6 @@ extern
 Real SCIPsetFrac(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to return fractional part for */
-   );
-
-/** checks, if value is integral within the LP feasibility bounds */
-extern
-Bool SCIPsetIsIntegral(
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
-   );
-
-/** checks, if given fractional part is smaller than feastol */
-extern
-Bool SCIPsetIsFracIntegral(
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
    );
 
 #else
@@ -943,12 +943,12 @@ Bool SCIPsetIsFracIntegral(
 
 #define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->infinity )
 #define SCIPsetIsFeasible(set, val)        ( (val) >= -(set)->feastol )
+#define SCIPsetIsIntegral(set, val)        ( EPSISINT((val), (set)->feastol) )
+#define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->feastol) )
+
 #define SCIPsetFloor(set, val)             ( EPSFLOOR((val), (set)->feastol) )
 #define SCIPsetCeil(set, val)              ( EPSCEIL((val), (set)->feastol) )
 #define SCIPsetFrac(set, val)              ( EPSFRAC((val), (set)->feastol) )
-#define SCIPsetIsIntegral(set, val)        ( EPSISINT((val), (set)->feastol) )
-#define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->feastol) )
-#define SCIPsetIsFixed(set, lb, ub)        ( SCIPsetIsEQ(set, lb, ub) )
 
 #endif
 

@@ -34,7 +34,8 @@ enum Varstatus
    SCIP_VARSTATUS_COLUMN     = 2,       /**< variable is a column of the transformed problem */
    SCIP_VARSTATUS_FIXED      = 3,       /**< variable is fixed to specific value in the transformed problem */
    SCIP_VARSTATUS_AGGREGATED = 4,       /**< variable is aggregated to $x = a*y + c$ in the transformed problem */
-   SCIP_VARSTATUS_MULTAGGR   = 5        /**< variable is aggregated to $x = a_1*y_1 + ... + a_k*y_k + c$ */
+   SCIP_VARSTATUS_MULTAGGR   = 5,       /**< variable is aggregated to $x = a_1*y_1 + ... + a_k*y_k + c$ */
+   SCIP_VARSTATUS_NEGATED    = 6        /**< variable is the negation of an original or transformed variable */
 };
 typedef enum Varstatus VARSTATUS;
 
@@ -57,6 +58,7 @@ typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an int
 typedef struct Dom DOM;                 /**< datastructures for storing domains of variables */
 typedef struct Aggregate AGGREGATE;     /**< aggregation information */
 typedef struct Multaggr MULTAGGR;       /**< multiple aggregation information */
+typedef struct Negate NEGATE;           /**< negation information */
 typedef struct Var VAR;                 /**< variable of the problem */
 
 
@@ -107,6 +109,12 @@ struct Multaggr
    int              varssize;           /**< size of vars and scalars arrays */
 };
 
+/** negation information: $x' = c - x$ */
+struct Negate
+{
+   Real             constant;           /**< constant shift $c$ in negation */
+};
+
 /** variable of the problem */
 struct Var
 {
@@ -116,6 +124,7 @@ struct Var
       COL*          col;                /**< LP column (for column variables) */
       AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
       MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
+      NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
    char*            name;               /**< name of the variable */
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
@@ -138,7 +147,6 @@ struct Var
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
-   unsigned int     negation:1;         /**< TRUE iff variable was created by negation of a different variable */
 };
 
 
@@ -257,7 +265,7 @@ DOMCHG** SCIPdomchgdynGetDomchgPtr(
 
 /** creates and captures an original problem variable */
 extern
-RETCODE SCIPvarCreate(
+RETCODE SCIPvarCreateOriginal(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -298,38 +306,6 @@ RETCODE SCIPvarRelease(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
-   );
-
-/** copies original variable into loose transformed variable, that is captured */
-extern
-RETCODE SCIPvarTransform(
-   VAR**            transvar,           /**< pointer to store the transformed variable */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
-   VAR*             origvar             /**< original problem variable */
-   );
-
-/** gets negated variable x' = lb + ub - x of problem variable x */
-extern
-RETCODE SCIPvarNegate(
-   VAR**            negvar,             /**< pointer to store the negated variable */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             var                 /**< problem variable to negate */
-   );
-
-/** returns whether the variable was created by negation of a different variable */
-extern
-Bool SCIPvarIsNegation(
-   VAR*             var                 /**< problem variable */
    );
 
 /** increases lock number for rounding down; tells variable, that rounding its value down will make the solution
@@ -396,6 +372,27 @@ Bool SCIPvarMayRoundUp(
    VAR*             var                 /**< problem variable */
    );
 
+/** copies original variable into loose transformed variable, that is captured */
+extern
+RETCODE SCIPvarTransform(
+   VAR*             origvar,            /**< original problem variable */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
+   VAR**            transvar            /**< pointer to store the transformed variable */
+   );
+
+/** gets corresponding transformed variable of an original or negated original variable */
+extern
+RETCODE SCIPvarGetTransformed(
+   VAR*             origvar,            /**< original problem variable */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   VAR**            transvar            /**< pointer to store the transformed variable, or NULL if not existing yet */
+   );
+
 /** converts transformed variable into column variable and creates LP column */
 extern
 RETCODE SCIPvarColumn(
@@ -456,6 +453,30 @@ RETCODE SCIPvarMultiaggregate(
    Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   );
+
+/** gets negated variable x' = offset - x of problem variable x, where offset is fixed to lb + ub when the negated
+ *  variable is created
+ */
+extern
+RETCODE SCIPvarGetNegated(
+   VAR*             var,                /**< problem variable to negate */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   VAR**            negvar              /**< pointer to store the negated variable */
+   );
+
+/** gets the negation variable x of a negated variable x' = offset - x */
+extern
+VAR* SCIPvarGetNegationVar(
+   VAR*             var                 /**< negated problem variable */
+   );
+
+/** gets the negation offset of a negated variable x' = offset - x */
+extern
+Real SCIPvarGetNegationConstant(
+   VAR*             var                 /**< negated problem variable */
    );
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -614,6 +635,35 @@ RETCODE SCIPvarAddHoleLocal(
    Real             right               /**< right bound of open interval in new hole */
    );
 
+/** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
+ *  variable index; returns 0 if both indices are equal, which means both variables are equal
+ */
+extern
+int SCIPvarCmp(
+   VAR*             var1,               /**< first problem variable */
+   VAR*             var2                /**< second problem variable */
+   );
+
+/** gets corresponding active problem variable of a variable */
+extern
+VAR* SCIPvarGetProbvar(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** transforms given variable, boundtype and bound to the corresponding active variable values */
+extern
+RETCODE SCIPvarTransformBound(
+   VAR**            var,                /**< pointer to problem variable */
+   Real*            bound,              /**< pointer to bound value to transform */
+   BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
+   );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** get name of variable */
 extern
 const char* SCIPvarGetName(
@@ -623,6 +673,18 @@ const char* SCIPvarGetName(
 /** gets status of variable */
 extern
 VARSTATUS SCIPvarGetStatus(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether the variable belongs to the transformed problem */
+extern
+Bool SCIPvarIsTransformed(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether the variable was created by negation of a different variable */
+extern
+Bool SCIPvarIsNegated(
    VAR*             var                 /**< problem variable */
    );
 
@@ -642,35 +704,6 @@ int SCIPvarGetIndex(
 extern
 int SCIPvarGetProbIndex(
    VAR*             var                 /**< problem variable */
-   );
-
-/** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
- *  variable index; returns 0 if both indices are equal, which means both variables are equal
- */
-extern
-int SCIPvarCmp(
-   VAR*             var1,               /**< first problem variable */
-   VAR*             var2                /**< second problem variable */
-   );
-
-/** gets corresponding transformed variable of an original variable */
-extern
-VAR* SCIPvarGetTransformed(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** gets corresponding active problem variable of a variable */
-extern
-VAR* SCIPvarGetProbvar(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** transforms given variable, boundtype and bound to the corresponding active variable values */
-extern
-RETCODE SCIPvarTransformBound(
-   VAR**            var,                /**< pointer to problem variable */
-   Real*            bound,              /**< pointer to bound value to transform */
-   BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
    );
 
 /** gets column of COLUMN variable */
@@ -726,6 +759,32 @@ extern
 Real SCIPvarGetUbLocal(
    VAR*             var                 /**< problem variable */
    );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPvarGetName(var)             (var)->name
+#define SCIPvarGetStatus(var)           (VARSTATUS)((var)->varstatus)
+#define SCIPvarIsTransformed(var)       ((var)->varstatus != SCIP_VARSTATUS_ORIGINAL \
+      && ((var)->varstatus != SCIP_VARSTATUS_NEGATED || (var)->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL))
+#define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
+#define SCIPvarGetType(var)             (VARTYPE)((var)->vartype)
+#define SCIPvarGetIndex(var)            (var)->index
+#define SCIPvarGetProbIndex(var)        (var)->probindex
+#define SCIPvarGetCol(var)              (var)->data.col
+#define SCIPvarGetAggrVar(var)          (var)->data.aggregate.var
+#define SCIPvarGetAggrScalar(var)       (var)->data.aggregate.scalar
+#define SCIPvarGetAggrConstant(var)     (var)->data.aggregate.constant
+#define SCIPvarGetObj(var)              (var)->obj
+#define SCIPvarGetLbGlobal(var)         (var)->glbdom.lb
+#define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
+#define SCIPvarGetLbLocal(var)          (var)->actdom.lb
+#define SCIPvarGetUbLocal(var)          (var)->actdom.ub
+
+#endif
 
 /** gets lower bound of variable in current dive */
 extern

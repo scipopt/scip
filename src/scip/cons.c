@@ -3155,6 +3155,12 @@ RETCODE SCIPconsResetAge(
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
    CONS*            cons                /**< constraint */
@@ -3244,6 +3250,8 @@ Bool SCIPconsIsOriginal(
 
    return cons->original;
 }
+
+#endif
 
 
 

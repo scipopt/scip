@@ -126,7 +126,7 @@ typedef long long Longint;              /**< type used for long integer values *
 
 typedef double Real;                    /**< type used for floating point values */
 #define REAL_MAX               DBL_MAX
-#define REAL_MIN               DBL_MIN
+#define REAL_MIN              -DBL_MAX
 #define REAL_FORMAT              "%lf"
 
 #define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */

@@ -2123,6 +2123,30 @@ Bool SCIPsetIsFeasible(
    return (val >= -set->feastol);
 }
 
+/** checks, if value is integral within the LP feasibility bounds */
+Bool SCIPsetIsIntegral(
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(set != NULL);
+
+   return EPSISINT(val, set->feastol);
+}
+
+/** checks, if given fractional part is smaller than feastol */
+Bool SCIPsetIsFracIntegral(
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(set != NULL);
+   assert(val >= -set->feastol);
+   assert(val < 1.0);
+
+   return (val <= set->feastol);
+}
+
 /** rounds value + feasibility tolerance down to the next integer */
 Real SCIPsetFloor(
    const SET*       set,                /**< global SCIP settings */
@@ -2154,30 +2178,6 @@ Real SCIPsetFrac(
    assert(set != NULL);
 
    return EPSFRAC(val, set->feastol);
-}
-
-/** checks, if value is integral within the LP feasibility bounds */
-Bool SCIPsetIsIntegral(
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(set != NULL);
-
-   return EPSISINT(val, set->feastol);
-}
-
-/** checks, if given fractional part is smaller than feastol */
-Bool SCIPsetIsFracIntegral(
-   const SET*       set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(set != NULL);
-   assert(val >= -set->feastol);
-   assert(val < 1.0);
-
-   return (val <= set->feastol);
 }
 
 

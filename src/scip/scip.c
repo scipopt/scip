@@ -34,27 +34,14 @@
 #include "lpi.h"
 
 
-/** SCIP main data structure */
-struct Scip
-{
-   STAGE            stage;              /**< SCIP operation stage */
-   SET*             set;                /**< global SCIP settings */
-   MEM*             mem;                /**< block memory buffers */
-   INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
-   CLOCK*           totaltime;          /**< total SCIP running time */
-   PROB*            origprob;           /**< original problem data */
-   PROB*            transprob;          /**< transformed problem after presolve */
-   STAT*            stat;               /**< dynamic problem statistics */
-   TREE*            tree;               /**< branch and bound tree */
-   LP*              lp;                 /**< LP data */
-   PRICE*           price;              /**< storage for priced variables */
-   SEPASTORE*       sepastore;          /**< storage for separated cuts */
-   BRANCHCAND*      branchcand;         /**< storage for branching candidates */
-   CUTPOOL*         cutpool;            /**< global cut pool */
-   PRIMAL*          primal;             /**< primal data and solution storage */
-   EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
-   EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
-};
+/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
+ * this structure except the interface methods in scip.c.
+ * In optimized mode, the structure is included in scip.h, because some of the methods
+ * are implemented as defines for performance reasons (e.g. the numerical comparisons)
+ */
+#ifndef NDEBUG
+#include "scipstruct.h"
+#endif
 
 
 
@@ -1320,6 +1307,18 @@ RETCODE SCIPaddVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddVar", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   /* avoid inserting the same variable twice */
+   if( var->probindex != -1 )
+      return SCIP_OKAY;
+
+   /* insert the negation variable x instead of the negated variable x' in x' = offset - x */
+   if( var->varstatus == SCIP_VARSTATUS_NEGATED )
+   {
+      assert(var->negatedvar != NULL);
+      CHECK_OKAY( SCIPaddVar(scip, var->negatedvar) );
+      return SCIP_OKAY;
+   }
+
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -1334,9 +1333,12 @@ RETCODE SCIPaddVar(
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      if( var->varstatus != SCIP_VARSTATUS_LOOSE && var->varstatus != SCIP_VARSTATUS_COLUMN )
       {
-         errorMessage("Cannot add original variables to transformed problem");
+         if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+            errorMessage("Cannot add original variables to transformed problem");
+         else
+            errorMessage("Cannot add fixed or aggregated variables to transformed problem");
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->tree, scip->branchcand, var) );
@@ -2275,7 +2277,8 @@ RETCODE SCIPcreateVar(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarCreate(var, scip->mem->probmem, scip->set, scip->stat, name, lb, ub, obj, vartype, removeable) );
+      CHECK_OKAY( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat, 
+                     name, lb, ub, obj, vartype, removeable) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -2326,7 +2329,7 @@ RETCODE SCIPreleaseVar(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_FREESOLVE:
-      if( (*var)->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      if( !SCIPvarIsTransformed(*var) )
       {
          errorMessage("cannot release original variables while solving the problem");
          return SCIP_INVALIDCALL;
@@ -2340,17 +2343,42 @@ RETCODE SCIPreleaseVar(
    }
 }
 
+/** gets corresponding transformed variable of an original or negated original variable */
+RETCODE SCIPgetTransformedVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get transformed variable for */
+   VAR**            transvar            /**< pointer to store the transformed variable, or NULL if not existing yet */
+   )
+{
+   assert(var != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransformedVar", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPvarGetTransformed(var, scip->mem->solvemem, scip->set, scip->stat, transvar) );
+
+   return SCIP_OKAY;
+}
+
 /** gets negated variable x' = lb + ub - x of variable x */
 RETCODE SCIPgetNegatedVar(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to negate */
+   VAR*             var,                /**< variable to get negated variable for */
    VAR**            negvar              /**< pointer to store the negated variable */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPgetNegatedVar", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   assert(var != NULL);
 
-   CHECK_OKAY( SCIPvarNegate(negvar, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-                  scip->branchcand, scip->eventqueue, var) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetNegatedVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( !SCIPvarIsTransformed(var) )
+   {
+      CHECK_OKAY( SCIPvarGetNegated(var, scip->mem->probmem, scip->set, scip->stat, negvar) );
+   }
+   else
+   {
+      assert(scip->stage != SCIP_STAGE_PROBLEM);
+      CHECK_OKAY( SCIPvarGetNegated(var, scip->mem->solvemem, scip->set, scip->stat, negvar) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2405,18 +2433,13 @@ RETCODE SCIPchgVarObj(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->tree, scip->lp, scip->branchcand,
                      scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
-      {
-         errorMessage("cannot change objective value of original variables while presolving the problem");
-         return SCIP_INVALIDCALL;
-      }
       CHECK_OKAY( SCIPvarChgObj(var, scip->mem->solvemem, scip->set, scip->tree, scip->lp, scip->branchcand,
                      scip->eventqueue, newobj) );
       return SCIP_OKAY;
@@ -2441,18 +2464,13 @@ RETCODE SCIPaddVarObj(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->origprob, scip->tree, scip->lp,
                      scip->branchcand, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
-      {
-         errorMessage("cannot add value to objective value of original variables while presolving the problem");
-         return SCIP_INVALIDCALL;
-      }
       CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->transprob, scip->tree, scip->lp,
                      scip->branchcand, scip->eventqueue, addobj) );
       return SCIP_OKAY;
@@ -2488,22 +2506,12 @@ RETCODE SCIPchgVarLb(
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
-      {
-         errorMessage("cannot change bounds of original variables while presolving the problem");
-         return SCIP_INVALIDCALL;
-      }
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
                      scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
-      {
-         errorMessage("cannot change bounds of original variables while solving the problem");
-         return SCIP_INVALIDCALL;
-      }
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                      scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
       return SCIP_OKAY;
@@ -2537,22 +2545,12 @@ RETCODE SCIPchgVarUb(
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
-      {
-         errorMessage("cannot change bounds of original variables while presolving the problem");
-         return SCIP_INVALIDCALL;
-      }
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
                      scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
-      {
-         errorMessage("cannot change bounds of original variables while solving the problem");
-         return SCIP_INVALIDCALL;
-      }
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
                      scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
       return SCIP_OKAY;
@@ -2621,7 +2619,7 @@ RETCODE SCIPchgVarType(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      assert(!SCIPvarIsTransformed(var));
       if( var->probindex >= 0 )
       {
          CHECK_OKAY( SCIPprobChgVarType(scip->origprob, scip->set, scip->branchcand, var, vartype) );
@@ -2634,7 +2632,7 @@ RETCODE SCIPchgVarType(
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
-      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      if( !SCIPvarIsTransformed(var) )
       {
          errorMessage("cannot change type of original variables while solving the problem");
          return SCIP_INVALIDCALL;
@@ -2672,7 +2670,7 @@ RETCODE SCIPfixVar(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
       CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
       *infeasible = (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval));
@@ -4397,7 +4395,7 @@ RETCODE SCIPcatchVarEvent(
 
    CHECK_OKAY( checkStage(scip, "SCIPcatchVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+   if( !SCIPvarIsTransformed(var) )
    {
       errorMessage("cannot catch events for original variables");
       return SCIP_INVALIDDATA;
@@ -4426,7 +4424,7 @@ RETCODE SCIPdropVarEvent(
 
    CHECK_OKAY( checkStage(scip, "SCIPdropVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE) );
 
-   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+   if( !SCIPvarIsTransformed(var) )
    {
       errorMessage("cannot drop events for original variables");
       return SCIP_INVALIDDATA;
@@ -5576,6 +5574,12 @@ RETCODE SCIPsetFeastol(
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** checks, if values are in range of epsilon */
 Bool SCIPisEQ(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6036,6 +6040,42 @@ Bool SCIPisInfinity(
    return SCIPsetIsInfinity(scip->set, val);
 }
 
+/** checks, if value is non-negative within the LP feasibility bounds */
+Bool SCIPisFeasible(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasible(scip->set, val);
+}
+
+/** checks, if value is integral within the LP feasibility bounds */
+Bool SCIPisIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsIntegral(scip->set, val);
+}
+
+/** checks, if given fractional part is smaller than feastol */
+Bool SCIPisFracIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFracIntegral(scip->set, val);
+}
+
 /** rounds value + feasibility tolerance down to the next integer */
 Real SCIPfloor(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6060,29 +6100,19 @@ Real SCIPceil(
    return SCIPsetCeil(scip->set, val);
 }
 
-/** checks, if value is integral within the LP feasibility bounds */
-Bool SCIPisIntegral(
+/** returns fractional part of value, i.e. ceil(x) - x */
+Real SCIPfrac(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to return fractional part for */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsIntegral(scip->set, val);
+   return SCIPsetFrac(scip->set, val);
 }
 
-/** checks, if value is non-negative within the LP feasibility bounds */
-Bool SCIPisFeasible(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetIsFeasible(scip->set, val);
-}
+#endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */
 void SCIPprintReal(

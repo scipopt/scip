@@ -29,7 +29,7 @@
 #include "scip.h"
 
 
-/** creates the handler for the set partitioning / packing / covering constraint and includes it in SCIP */
+/** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP */
 extern
 RETCODE SCIPincludeConsHdlrSetppc(
    SCIP*            scip                /**< SCIP data structure */

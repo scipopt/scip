@@ -76,7 +76,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *
  *  possible return values:
  *  - value < 0: node1 comes before (is better than) node2
- *  - value = 0: both nodes are identical, i.e. the pointers are equal
+ *  - value = 0: both nodes are equally good
  *  - value > 0: node2 comes after (is worse than) node2
  */
 #define DECL_NODESELCOMP(x) int x (SCIP* scip, NODESEL* nodesel, NODE* node1, NODE* node2)

@@ -314,6 +314,7 @@ RETCODE SCIPbranchcandUpdateVar(
       || var->varstatus == SCIP_VARSTATUS_FIXED
       || var->varstatus == SCIP_VARSTATUS_AGGREGATED
       || var->varstatus == SCIP_VARSTATUS_MULTAGGR
+      || var->varstatus == SCIP_VARSTATUS_NEGATED
       || var->vartype == SCIP_VARTYPE_CONTINOUS
       || SCIPsetIsEQ(set, var->actdom.lb, var->actdom.ub) )
    {

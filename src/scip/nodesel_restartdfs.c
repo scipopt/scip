@@ -122,10 +122,6 @@ DECL_NODESELCOMP(nodeselCompRestartdfs)
          return -1;
       else if( lowerbound1 > lowerbound2 )
          return +1;
-      else if( node1 < node2 )  /* everything is equal -> compare the pointers themselves */
-         return -1;
-      else if( node1 > node2 )
-         return +1;
       else
          return 0;
    }

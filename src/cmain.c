@@ -27,10 +27,12 @@
 #include <assert.h>
 
 #include "scip.h"
+#include "reader_cnf.h"
 #include "reader_mps.h"
 #include "disp_default.h"
 #include "cons_integral.h"
 #include "cons_linear.h"
+#include "cons_logicor.h"
 #include "cons_setppc.h"
 #include "cons_knapsack.h"
 #include "cons_eqknapsack.h"
@@ -72,10 +74,12 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* include user defined callbacks */
+   CHECK_OKAY( SCIPincludeReaderCNF(scip) );
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrLogicOr(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetppc(scip) );
 
 #if 0
