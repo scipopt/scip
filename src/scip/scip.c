@@ -76,6 +76,8 @@ RETCODE checkStage(
    assert(scip->mem != NULL);
    assert(method != NULL);
 
+   debugMessage("called method <%s> at stage %d ------------------------------------------------\n", method, scip->stage);
+
    switch( scip->stage )
    {
    case SCIP_STAGE_INIT:

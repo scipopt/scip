@@ -1030,6 +1030,7 @@ RETCODE SCIPconshdlrFree(
    assert(*conshdlr != NULL);
    assert(!(*conshdlr)->initialized);
    assert(scip != NULL);
+   assert(SCIPstage(scip) == SCIP_STAGE_INIT);
 
    /* call destructor of constraint handler */
    if( (*conshdlr)->consfree != NULL )
