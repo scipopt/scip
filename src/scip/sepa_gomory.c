@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.22 2004/05/03 16:59:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.23 2004/06/03 09:42:42 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -52,6 +52,8 @@ struct SepaData
    int              maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
    Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
+
+
 
 
 /*

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.6 2004/05/03 08:13:08 bzfpfend Exp $
+# $Id: check.awk,v 1.7 2004/06/03 09:42:42 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -106,7 +106,7 @@ BEGIN {
 # solution
 #
 /solving was interrupted/  { timeout = 1; }
-/problem was solved/    { timeout = 0; }
+/problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ { pb = $4; }
 /^  Dual Bound       :/ { db = $4; }
 #

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.121 2004/06/02 07:39:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.122 2004/06/03 09:42:42 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3809,36 +3809,6 @@ RETCODE SCIProwMakeRational(
             }
          }
 
-#if 0 /*??????????????????????*/
-         /* convert the sides into a rational number, calculate the greatest common divisor of the nominators
-          * and the smallest common multiple of the denominators
-          */
-         if( rational && !SCIPsetIsInfinity(set, -row->lhs) )
-         {
-            rational = SCIPrealToRational(row->lhs - row->constant, RATIONALTOL, maxdnom, &nominator, &denominator);
-            if( rational && nominator != 0  )
-            {
-               assert(denominator > 0);
-               if( nominator != 0 )
-                  gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
-               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-               rational = ((Real)scm/(Real)gcd <= maxscale);
-            }
-         }
-         if( rational && !SCIPsetIsInfinity(set, row->rhs) )
-         {
-            rational = SCIPrealToRational(row->rhs - row->constant, RATIONALTOL, maxdnom, &nominator, &denominator);
-            if( rational && nominator != 0 )
-            {
-               assert(denominator > 0);
-               if( nominator != 0 )
-                  gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
-               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-               rational = ((Real)scm/(Real)gcd <= maxscale);
-            }
-         }
-#endif
-
          if( rational )
          {
             /* make row coefficients integral by multiplying them with the smallest common multiple of the denominators */
@@ -5834,7 +5804,7 @@ void sumMIRRow(
       assert(row->len == 0 || row->vals != NULL);
 
       /* modifiable rows cannot be part of a MIR row summation; close to zero weights are ignored */
-      if( !row->modifiable && !SCIPsetIsZero(set, weights[r]) )
+      if( !row->modifiable && !SCIPsetIsFeasZero(set, weights[r]) )
       {
          /* Decide, if we want to use the left or the right hand side of the row in the summation.
           * If the current row activity is closer to the left hand side, we use the  lhs <= a*x  part of the row,
@@ -5871,6 +5841,10 @@ void sumMIRRow(
             assert(0 <= idx && idx < nvars);
             mircoef[idx] += scale * weights[r] * row->vals[i];
          }
+         
+         debugMessage("MIR: %d: row <%s>, scale = %g, weight = %g, slacksign = %d\n",
+            r, SCIProwGetName(row), scale, weights[r], slacksign[r]);
+         debug(SCIProwPrint(row, NULL));
       }
       else
       {
@@ -5883,15 +5857,13 @@ void sumMIRRow(
 #define BOUNDSWITCH 0.5 /* 0.9999 */
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
  *    a'*x' == b, 0 <= x' <= ub'.
- *
- *  (lb or ub):
- *  Transform variables:
+ *  
+ *  Transform variables (lb or ub):
  *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       a'_j =  a_j,      if x^_j is closer to lb
  *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       a'_j = -a_j,      if x^_j is closer to ub
  *  and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
  *
- *  (vlb or vub):
- *  Transform variables:
+ *  Transform variables (vlb or vub):
  *  x'_j := x_j - (b_j * z_j + d_j),   trans  x_j <- x'_j + (b_j * z_j + d_j),      if x_j is closer to vlb
  *  x'_j := (b_j * z_j + d_j) - x_j,   trans  x_j <- (b_j * z_j + d_j) - x'_j,      if x_j is closer to vub
  *  and change
@@ -5917,7 +5889,6 @@ void transformMIRRow(
 {
    VAR* var;
    Real varsol;
-   
    Real lb;
    Real ub;
    int idx;
@@ -5933,6 +5904,15 @@ void transformMIRRow(
    VAR** zvub;
    Real* dvub;
 
+   Real bestlbdist;
+   Real bestlbsol;
+   Real bestubdist;
+   Real bestubsol;
+   int bestlbtype;
+   int bestubtype;
+   int i;
+   int zidx;
+
    assert(vars != NULL);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
@@ -5943,316 +5923,128 @@ void transformMIRRow(
    *freevariable = FALSE;
    
    /* substitute continuous variables with best bound (vlb, vub, lb or ub) */
-   for( v = nintvars; v < nvars; ++v )
+   for( v = 0; v < nvars; ++v )
    {
-      Real bestlbdist;
-      Real bestlbsol;
-      int bestlbtype;
-
-      Real bestubdist;
-      Real bestubsol;
-      int bestubtype;
-
-      int i;
-
       var = vars[v];
       assert(var != NULL);
-      assert(!SCIPvarIsIntegral(var));
+
+      idx = SCIPvarGetProbindex(var);
+      assert(0 <= idx && idx < nvars);
+
+      /* ignore variables that don't exist in the MIR row */
+      if( SCIPsetIsZero(set, mircoef[idx]) )
+      {
+         varsign[idx] = +1;
+         continue;
+      }
+
       varsol = SCIPvarGetLPSol(var);
-      idx = SCIPvarGetProbindex(var);
-      assert(0 <= idx && idx < nvars);
 
-      if( SCIPsetIsZero(set, mircoef[idx]) )
-      {
-         varsign[idx] = +1;
-         continue;
-      }
-
-      if( FALSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN ) /*????????????????????????????????*/
-      {
-         if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
-         {
-            varsign[idx] = +1;
-            boundtype[idx] = -1;
-            (*mirrhs) -= mircoef[idx] * lb;
-         }
-         else
-         {
-            varsign[idx] = -1;
-            boundtype[idx] = -1;
-            (*mirrhs) -= mircoef[idx] * ub;
-         }
-      }
-      else
-      {
-         nvlb = SCIPvarGetNVlbs(var);
-         bestlbdist = set->infinity;
-         bestlbsol = -set->infinity;
-         bestlbtype = -2;
-  
-         /* find variable lower bound vlb_i of variable x, which x is closest to */
-         if( nvlb != 0 )
-         {
-            zvlb = SCIPvarGetVlbVars(var);
-            bvlb = SCIPvarGetVlbCoefs(var);
-            dvlb = SCIPvarGetVlbConstants(var);
-
-            for( i = 0; i < nvlb && !SCIPsetIsZero(set, bestlbdist); i++ )
-            {
-               Real vlbsol;
-               Real vlbdist;
-               vlbsol = bvlb[i] * SCIPvarGetLPSol(zvlb[i]) + dvlb[i];
-
-               if( !SCIPsetIsInfinity(set, -vlbsol) )
-               {
-                  vlbdist = varsol - vlbsol;
-                          
-                  if( vlbdist < bestlbdist )
-                  {
-                     bestlbdist = vlbdist;
-                     bestlbsol = vlbsol;
-                     bestlbtype = i;
-                  }
-               } 
-
-            }
-         }
-         /* check if x is closer to lower bound than to best variable lower bound */
-         lb = SCIPvarGetLbLocal(var);
-         if( !SCIPsetIsInfinity(set, -lb) && varsol - lb < bestlbdist )
-         {
-            bestlbdist = varsol - lb;
-            bestlbsol = lb;
-            bestlbtype = -1;
-         }
-
-         nvub = SCIPvarGetNVubs(var);
-         bestubdist = set->infinity;
-         bestubsol = set->infinity;
-         bestubtype = -2;
-    
-         /* find variable upper bound ulb_i of variable x, which x is closest to */
-         if( nvub != 0 )
-         {   
-            zvub = SCIPvarGetVubVars(var);
-            bvub = SCIPvarGetVubCoefs(var);
-            dvub = SCIPvarGetVubConstants(var);
- 
-            for( i = 0; i < nvub && !SCIPsetIsZero(set, bestubdist); i++ )
-            {
-               Real vubsol;
-               Real vubdist;
-               
-               vubsol = bvub[i] * SCIPvarGetLPSol(zvub[i]) + dvub[i];
-               if( !SCIPsetIsInfinity(set, vubsol) )
-               {
-                  vubdist = vubsol - varsol;
-                  
-                  if( vubdist < bestubdist )
-                  {
-                     bestubdist = vubdist;
-                     bestubsol = vubsol;
-                     bestubtype = i;
-                  }
-               }
-            }
-         }
-
-         /* check if x is closer to upper bound than to best variable upper bound */
-         ub = SCIPvarGetUbLocal(var);
-         if( !SCIPsetIsInfinity(set, ub) && ub - varsol < bestubdist )
-         {
-            bestubdist = ub - varsol;
-            bestubsol = ub;
-            bestubtype = -1;
-         }
-         /* ????????????????????? */
-         if( bestlbtype >= 0 || bestubtype >= 0 )
-         {
-            //   printf("continuous var_%d, varsol = %g:\n", idx, varsol);
-            //printf("---> bestlbtype = %d, lbsol = %g\n", bestlbtype, bestlbsol);
-            //printf("---> bestubtype = %d, ubsol = %g\n", bestubtype, bestubsol);
-         }
-
-         if( !SCIPsetIsInfinity(set, -bestlbsol) && !SCIPsetIsInfinity(set, bestubsol) )
-         {
-            /* x is closer lb or vlb */
-            if( varsol <= (1.0 - BOUNDSWITCH) * bestlbsol + BOUNDSWITCH * bestubsol )
-            {
-               //printf("------> bestlb chosen\n");   /* ??????????????????? */
-
-               assert(bestlbtype != -2);
-               varsign[idx] = +1;
-               boundtype[idx] = bestlbtype;
-    
-               /* lb */
-               if( bestlbtype == -1 )
-                  (*mirrhs) -= mircoef[idx] * lb;
-               /* vlb */
-               else
-               {
-                  // printf("------> vlb chosen\n");   /* ??????????????????? */
-
-                  int zidx;
-                  zidx = SCIPvarGetProbindex(zvlb[bestlbtype]);
-                  assert(zidx >= 0);
-               
-                  (*mirrhs) -= mircoef[idx] * dvlb[bestlbtype];
-                  mircoef[zidx] += mircoef[idx] * bvlb[bestlbtype];
-               }
-               
-            }
-            /* x is closer ub or vub */
-            else
-            {
-               //printf("------> bestub chosen\n");   /* ??????????????????? */
-
-               assert(bestubtype != -2);
-               varsign[idx] = -1;
-               boundtype[idx] = bestubtype;
-
-               /* ub */
-               if( bestubtype == -1 )
-                  (*mirrhs) -= mircoef[idx] * ub;
-               /* vub */
-               else
-               {
-                  //printf("------> vub chosen\n");   /* ??????????????????? */
-
-                  assert(bestubtype >= 0);
-
-                  int zidx;
-                  zidx = SCIPvarGetProbindex(zvub[bestubtype]);
-                  assert(zidx >= 0);
-              
-                  (*mirrhs) -= mircoef[idx] * dvub[bestubtype];
-                  mircoef[zidx] += mircoef[idx] * bvub[bestubtype];
-               }
-            }
-         }
-         /* x is closer to lb or lvb */
-         else if( !SCIPsetIsInfinity(set, -bestlbsol) )
-         {
-            //printf("------> bestlb chosen\n");   /* ??????????????????? */
-
-            varsign[idx] = +1;
-            boundtype[idx] = bestlbtype;
-         
-            /* lb */
-            if( bestlbtype == -1 )
-               (*mirrhs) -= mircoef[idx] * lb;
-            /* vlb */
-            else
-            {
-               //printf("------> vlb chosen\n");   /* ??????????????????? */
-
-               int zidx;
-               zidx = SCIPvarGetProbindex(zvlb[bestlbtype]);
-               assert(zidx >= 0);
-
-               (*mirrhs) -= mircoef[idx] * dvlb[bestlbtype];
-               mircoef[zidx] += mircoef[idx] * bvlb[bestlbtype];
-            }
-         }
-         /* x is closer to ub or vub */
-         else if( !SCIPsetIsInfinity(set, bestubsol) )
-         {
-            //printf("------> bestub chosen\n");   /* ??????????????????? */
-
-            varsign[idx] = -1;
-            boundtype[idx] = bestubtype;
-
-            /* ub */
-            if( bestubtype == -1 )
-               (*mirrhs) -= mircoef[idx] * ub;
-            /* vub */
-            else
-            {
-               //               printf("------> vub chosen\n");   /* ??????????????????? */
-
-               int zidx;
-               zidx = SCIPvarGetProbindex(zvub[bestubtype]);
-               assert(zidx >= 0);
-               (*mirrhs) -= mircoef[idx] * dvub[bestubtype];
-               mircoef[zidx] += mircoef[idx] * bvub[bestubtype];
-            }
-         }
-         else
-         {
-            /* we found a free variable in the row with non-zero coefficient
-             *  -> the MIR row cannot be transformed in standard form
-             */
-            *freevariable = TRUE;
-            return;
-         }
-      }
-   }
-
-   /* substitute integer variables with best bound (lb or ub) */
-   for( v = 0; v < nintvars; ++v )
-   {     
-      var = vars[v];
-      assert(var != NULL);
-      assert(SCIPvarIsIntegral(var));
-      
-      idx = SCIPvarGetProbindex(var);
-      assert(0 <= idx && idx < nvars);
-
-      if( SCIPsetIsZero(set, mircoef[idx]) )
-      {
-         varsign[idx] = +1;
-         continue;
-      }
-
+      /* find closest lower bound in standard lower bound and variable lower bounds */
       lb = SCIPvarGetLbLocal(var);
+      bestlbdist = varsol - lb;
+      bestlbsol = lb;
+      bestlbtype = -1;
+      nvlb = SCIPvarGetNVlbs(var);
+      if( nvlb > 0 )
+      {
+         zvlb = SCIPvarGetVlbVars(var);
+         bvlb = SCIPvarGetVlbCoefs(var);
+         dvlb = SCIPvarGetVlbConstants(var);
+
+         for( i = 0; i < nvlb && !SCIPsetIsZero(set, bestlbdist); i++ )
+         {
+            Real vlbsol;
+            Real vlbdist;
+
+            vlbsol = bvlb[i] * SCIPvarGetLPSol(zvlb[i]) + dvlb[i];
+            vlbdist = varsol - vlbsol;
+            if( vlbdist < bestlbdist )
+            {
+               bestlbdist = vlbdist;
+               bestlbsol = vlbsol;
+               bestlbtype = i;
+            }
+         }
+      }
+
+      /* find closest upper bound in standard upper bound and variable upper bounds */
       ub = SCIPvarGetUbLocal(var);
-    
-      boundtype[idx] = -1;
-      
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-      {
-         if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+      bestubdist = ub - varsol;
+      bestubsol = ub;
+      bestubtype = -1;
+      nvub = SCIPvarGetNVubs(var);
+      if( nvub > 0 )
+      {   
+         zvub = SCIPvarGetVubVars(var);
+         bvub = SCIPvarGetVubCoefs(var);
+         dvub = SCIPvarGetVubConstants(var);
+ 
+         for( i = 0; i < nvub && !SCIPsetIsZero(set, bestubdist); i++ )
          {
-            varsign[idx] = +1;
-            (*mirrhs) -= mircoef[idx] * lb;
-         }
-         else
-         {
-            varsign[idx] = -1;
-            (*mirrhs) -= mircoef[idx] * ub;
-         }
-      }
-      else if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
-      {
-         if( SCIPvarGetCol(var)->primsol <= (1.0-BOUNDSWITCH)*lb + BOUNDSWITCH*ub )
-         {
-            varsign[idx] = +1;
-            (*mirrhs) -= mircoef[idx] * lb;
-         }
-         else
-         {
-            varsign[idx] = -1;
-            (*mirrhs) -= mircoef[idx] * ub;
+            Real vubsol;
+            Real vubdist;
+               
+            vubsol = bvub[i] * SCIPvarGetLPSol(zvub[i]) + dvub[i];
+            vubdist = vubsol - varsol;
+            if( vubdist < bestubdist )
+            {
+               bestubdist = vubdist;
+               bestubsol = vubsol;
+               bestubtype = i;
+            }
          }
       }
-      else if( !SCIPsetIsInfinity(set, -lb) )
-      {
-         varsign[idx] = +1;
-         (*mirrhs) -= mircoef[idx] * lb;
-      }
-      else if( !SCIPsetIsInfinity(set, ub) )
-      {
-         varsign[idx] = -1;
-         (*mirrhs) -= mircoef[idx] * ub;
-      }
-      else
+
+      /* check, if variable is free (has no finite bound) */
+      if( SCIPsetIsInfinity(set, -bestlbsol) && SCIPsetIsInfinity(set, bestubsol) )
       {
          /* we found a free variable in the row with non-zero coefficient
           *  -> the MIR row cannot be transformed in standard form
           */
          *freevariable = TRUE;
          return;
-      } 
+      }
+
+      /* select transformation bound */
+      if( varsol <= (1.0 - BOUNDSWITCH) * bestlbsol + BOUNDSWITCH * bestubsol )
+      {
+         /* use lower bound as transformation bound: x'_j := x_j - lb_j */
+         varsign[idx] = +1;
+         boundtype[idx] = bestlbtype;
+    
+         /* standard (bestlbtype == -1) or variable (bestlbtype >= 0) lower bound? */
+         if( bestlbtype == -1 )
+            (*mirrhs) -= mircoef[idx] * lb;
+         else
+         {
+            assert(bestlbtype >= 0);
+            zidx = SCIPvarGetProbindex(zvlb[bestlbtype]);
+            assert(zidx >= 0);
+               
+            (*mirrhs) -= mircoef[idx] * dvlb[bestlbtype];
+            mircoef[zidx] += mircoef[idx] * bvlb[bestlbtype];
+         }
+      }
+      else
+      {
+         /* use upper bound as transformation bound: x'_j := ub_j - x_j */
+         varsign[idx] = -1;
+         boundtype[idx] = bestubtype;
+         
+         /* standard (bestubtype == -1) or variable (bestubtype >= 0) upper bound? */
+         if( bestubtype == -1 )
+            (*mirrhs) -= mircoef[idx] * ub;
+         else
+         {
+            assert(bestubtype >= 0);
+            zidx = SCIPvarGetProbindex(zvub[bestubtype]);
+            assert(zidx >= 0);
+              
+            (*mirrhs) -= mircoef[idx] * dvub[bestubtype];
+            mircoef[zidx] += mircoef[idx] * bvub[bestubtype];
+         }
+      }
    }
 }
 
@@ -6596,6 +6388,27 @@ void substituteMIRRow(
       *mirrhs = 0.0;
 }
 
+#ifdef DEBUG
+static
+void printMIR(
+   int              nvars,              /**< number of active variables in the problem */
+   VAR**            vars,               /**< active variables in the problem */
+   Real*            mircoef,            /**< MIR coefficients */
+   Real             mirrhs              /**< right hand side of the MIR row */
+   )
+{
+   int i;
+
+   printf("MIR:");
+   for( i = 0; i < nvars; ++i )
+   {
+      if( mircoef[i] != 0.0 )
+         printf(" %+g<%s>", mircoef[i], SCIPvarGetName(vars[i]));
+   }
+   printf(" <= %g\n", mirrhs);
+}
+#endif
+
 /* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
  * rows cannot participate in a MIR cut.
  */
@@ -6648,6 +6461,8 @@ RETCODE SCIPlpCalcMIR(
    sumMIRRow(set, stat, lp, nvars, weights, scale, mircoef, &rhs, slacksign, &emptyrow);
    if( emptyrow )
       goto TERMINATE;
+
+   debug(printMIR(nvars, vars, mircoef, rhs));
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
     *   a*x' == b, 0 <= x' <= ub'.
