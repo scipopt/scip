@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.136 2004/12/06 14:11:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.137 2004/12/08 14:02:13 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2134,6 +2134,161 @@ RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
+/** for each variable in the linear constraint, except the inferred variable, adds one bound to the conflict analysis'
+ *  candidate store (bound depends on sign of coefficient and whether the left or right hand side was the reason for the
+ *  inference variable's bound change); the conflict analysis can be initialized with the linear constraint being the
+ *  conflict detecting constraint by using NULL as inferred variable
+ */
+static
+RETCODE addConflictBounds(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< xor constraint to be processed */
+   VAR*             infervar,           /**< variable that was deduced, or NULL */
+   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   Bool             reasonisrhs         /**< is the right hand side responsible for the bound change? */
+   )
+{
+   CONSDATA* consdata;
+   VAR** vars;
+   Real* vals;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   vars = consdata->vars;
+   vals = consdata->vals;
+   nvars = consdata->nvars;
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   /**@todo add only necessary conflict reason bounds in linear constraint handler resolving method:
+    *       - sort the constraint's variables by priority (binaries preceed non-binaries, larger differences
+    *         in residual activity for global and local bound preceed smaller ones)
+    *       - calculate residual activity for global bounds
+    *       - update residual activity for using local bounds one by one, until the residual activity
+    *         is small/large enough to infer the bound change
+    */
+
+   /* for each variable, add the bound to the conflict queue, that is responsible for the minimal or maximal
+    * residual value, depending on whether the left or right hand side is responsible for the bound change:
+    *  - if the right hand side is the reason, the minimal residual activity is responsible
+    *  - if the left hand side is the reason, the maximal residual activity is responsible
+    */
+   for( i = 0; i < nvars; ++i )
+   {
+      /* zero coefficients and the infered variable can be ignored */
+      if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
+         continue;
+
+      if( reasonisrhs == (vals[i] > 0.0) )
+      {
+         /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound is responsible */
+         CHECK_OKAY( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+      }
+      else
+      {
+         /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound is responsible */
+         CHECK_OKAY( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** resolves a conflict on the given variable by supplying the variables needed for applying the corresponding
+ *  propagation rule (see propagateCons()):
+ *   (1) activity residuals of all other variables tighten bounds of single variable
+ */
+static
+RETCODE resolveConflict(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< xor constraint to be processed */
+   VAR*             infervar,           /**< variable that was deduced */
+   PROPRULE         proprule,           /**< propagation rule that deduced the bound change */
+   BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{
+   CONSDATA* consdata;
+   VAR** vars;
+   Real* vals;
+   int nvars;
+   int inferpos;
+   Bool reasonisrhs;
+
+   assert(result != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   vars = consdata->vars;
+   vals = consdata->vals;
+   nvars = consdata->nvars;
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   switch( proprule )
+   {
+   case PROPRULE_1:
+      /* the bound of the variable was tightened, because the minimal or maximal residual activity of the linear
+       * constraint (only taking the other variables into account) didn't leave enough space for a larger
+       * domain
+       */
+
+      /* find inference variable in constraint */
+      /**@todo use a binary search here; the variables can be sorted by variable index */
+      for( inferpos = 0; inferpos < nvars && vars[inferpos] != infervar; ++inferpos )
+      {}
+      assert(inferpos < nvars);
+      assert(vars[inferpos] == infervar);
+      assert(!SCIPisZero(scip, vals[inferpos]));
+
+      /* if the total maximal activity would get larger, if the bound change would be undone, the reason for the
+       * bound change must be the right hand side; otherwise, the reason must be the left hand side;
+       * this means, the right hand side is responsible for the bound change, if the variable's coefficient is
+       * positive and the upper bound was changed, or if the variable's coefficient is negative and the lower
+       * bound was changed
+       */
+      reasonisrhs = ((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_UPPER));
+
+      CHECK_OKAY( addConflictBounds(scip, cons, infervar, bdchgidx, reasonisrhs) );
+
+      *result = SCIP_SUCCESS;
+      break;
+
+   default:
+      errorMessage("invalid inference information %d in linear constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** analyzes conflicting bounds on given constraint, and adds conflict clause to problem */
+static
+RETCODE analyzeConflict(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< xor constraint to be processed */
+   Bool             reasonisrhs         /**< is the right hand side responsible for the conflict? */
+   )
+{
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* initialize conflict analysis */
+   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+
+   /* add the conflicting bound for each variable of infeasible constraint to conflict candidate queue */
+   CHECK_OKAY( addConflictBounds(scip, cons, NULL, NULL, reasonisrhs) );
+   
+   /* analyze the conflict */
+   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
+   return SCIP_OKAY;
+}
+
 #define BOUNDSCALETOL 1e-5
 /** tightens bounds of a single variable due to activity bounds */
 static
@@ -2201,12 +2356,16 @@ RETCODE tightenVarBounds(
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+
+               /* analyze conflict */
+               CHECK_OKAY( analyzeConflict(scip, cons, TRUE) );
+
                *cutoff = TRUE;
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+               ub = SCIPvarGetUbLocal(var); /* get bound again: it may be additionally modified due to integrality */
                assert(SCIPisFeasLE(scip, ub, newub));
                (*nchgbds)++;
                debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
@@ -2230,12 +2389,16 @@ RETCODE tightenVarBounds(
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n", 
                   SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+
+               /* analyze conflict */
+               CHECK_OKAY( analyzeConflict(scip, cons, FALSE) );
+
                *cutoff = TRUE;
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+               lb = SCIPvarGetLbLocal(var); /* get bound again: it may be additionally modified due to integrality */
                assert(SCIPisFeasGE(scip, lb, newlb));
                (*nchgbds)++;
                debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
@@ -2263,12 +2426,16 @@ RETCODE tightenVarBounds(
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+
+               /* analyze conflict */
+               CHECK_OKAY( analyzeConflict(scip, cons, TRUE) );
+
                *cutoff = TRUE;
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+               lb = SCIPvarGetLbLocal(var); /* get bound again: it may be additionally modified due to integrality */
                assert(SCIPisFeasGE(scip, lb, newlb));
                (*nchgbds)++;
                debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
@@ -2292,12 +2459,16 @@ RETCODE tightenVarBounds(
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+
+               /* analyze conflict */
+               CHECK_OKAY( analyzeConflict(scip, cons, TRUE) );
+
                *cutoff = TRUE;
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+               ub = SCIPvarGetUbLocal(var); /* get bound again: it may be additionally modified due to integrality */
                assert(SCIPisFeasLE(scip, ub, newub));
                (*nchgbds)++;
                debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
@@ -2835,10 +3006,25 @@ RETCODE propagateCons(
       {
          consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
          
-         if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
+         if( SCIPisFeasGT(scip, minactivity, consdata->rhs) )
          {
-            debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
+            debugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%g,%g], sides=[%g,%g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+
+            /* analyze conflict */
+            CHECK_OKAY( analyzeConflict(scip, cons, TRUE) );
+
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            *cutoff = TRUE;
+         }
+         else if( SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+
+            /* analyze conflict */
+            CHECK_OKAY( analyzeConflict(scip, cons, FALSE) );
+
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
@@ -2853,104 +3039,6 @@ RETCODE propagateCons(
 
    /* mark constraint to be propagated */
    consdata->propagated = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** resolves a conflict on the given variable by supplying the variables needed for applying the corresponding
- *  propagation rule (see propagateCons()):
- *   (1) activity residuals of all other variables tighten bounds of single variable
- */
-static
-RETCODE resolveConflict(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< xor constraint to be processed */
-   VAR*             infervar,           /**< variable that was deduced */
-   PROPRULE         proprule,           /**< propagation rule that deduced the bound change */
-   BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
-   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
-   )
-{
-   CONSDATA* consdata;
-   VAR** vars;
-   Real* vals;
-   int nvars;
-   int inferpos;
-   int i;
-   Bool reasonisrhs;
-
-   assert(result != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   vars = consdata->vars;
-   vals = consdata->vals;
-   nvars = consdata->nvars;
-   assert(vars != NULL);
-   assert(vals != NULL);
-
-   switch( proprule )
-   {
-   case PROPRULE_1:
-      /* the bound of the variable was tightened, because the minimal or maximal residual activity of the linear
-       * constraint (only taking the other variables into account) didn't leave enough space for a larger
-       * domain
-       */
-
-      /* find inference variable in constraint */
-      /**@todo use a binary search here; the variables can be sorted by variable index */
-      for( inferpos = 0; inferpos < nvars && vars[inferpos] != infervar; ++inferpos )
-      {}
-      assert(inferpos < nvars);
-      assert(vars[inferpos] == infervar);
-      assert(!SCIPisZero(scip, vals[inferpos]));
-
-      /* if the total maximal activity would get larger, if the bound change would be undone, the reason for the
-       * bound change must be the right hand side; otherwise, the reason must be the left hand side;
-       * this means, the right hand side is responsible for the bound change, if the variable's coefficient is
-       * positive and the upper bound was changed, or if the variable's coefficient is negative and the lower
-       * bound was changed
-       */
-      reasonisrhs = ((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_UPPER));
-
-      /**@todo add only necessary conflict reason bounds in linear constraint handler resolving method:
-       *       - sort the constraint's variables by priority (binaries preceed non-binaries, larger differences
-       *         in residual activity for global and local bound preceed smaller ones)
-       *       - calculate residual activity for global bounds
-       *       - update residual activity for using local bounds one by one, until the residual activity
-       *         is small/large enough to infer the bound change
-       */
-
-      /* for each variable, add the bound to the conflict queue, that is responsible for the minimal or maximal
-       * residual value, depending on whether the left or right hand side is responsible for the bound change:
-       *  - if the right hand side is the reason, the minimal residual activity is responsible
-       *  - if the left hand side is the reason, the maximal residual activity is responsible
-       */
-      for( i = 0; i < nvars; ++i )
-      {
-         /* zero coefficients and the infered variable can be ignored */
-         if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
-            continue;
-
-         if( reasonisrhs == SCIPisPositive(scip, vals[i]) )
-         {
-            /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound is responsible */
-            CHECK_OKAY( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
-         }
-         else
-         {
-            /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound is responsible */
-            CHECK_OKAY( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
-         }
-      }
-      *result = SCIP_SUCCESS;
-      break;
-
-   default:
-      errorMessage("invalid inference information %d in linear constraint <%s>\n", proprule, SCIPconsGetName(cons));
-      return SCIP_INVALIDDATA;
-   }
 
    return SCIP_OKAY;
 }
