@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.107 2004/05/04 09:19:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.108 2004/05/04 10:52:13 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1292,6 +1292,8 @@ RETCODE solveNode(
    /* external node solving loop */
    initiallpsolved = FALSE;
    nlperrors = 0;
+   stat->npricerounds = 0;
+   stat->nseparounds = 0;
    do
    {
       Real pseudoobjval;
@@ -1300,9 +1302,6 @@ RETCODE solveNode(
       *infeasible = FALSE;
       solveagain = FALSE;
       lperror = FALSE;
-
-      stat->npricerounds = 0;
-      stat->nseparounds = 0;
 
       /* check, if we want to solve the LP at this node */
       if( tree->actnodehaslp )
