@@ -238,7 +238,7 @@ Real SCIPversion(
 
 /** prints a version information line to a file stream */
 void SCIPprintVersion(
-   FILE*            file                /**< file stream to write version information, or NULL for stdout */
+   FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
    if( file == NULL )
@@ -260,13 +260,13 @@ void SCIPprintVersion(
 
 /** prints error message for the given SCIP return code */
 void SCIPprintError(
-   FILE*            errout,             /**< file stream to write error message */
-   RETCODE          retcode             /**< SCIP return code causing the error */
+   RETCODE          retcode,            /**< SCIP return code causing the error */
+   FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   fprintf(errout, "SCIP Error (%d): ", retcode);
-   SCIPretcodePrint(errout, retcode);
-   fprintf(errout, "\n");
+   fprintf(file, "SCIP Error (%d): ", retcode);
+   SCIPretcodePrint(file, retcode);
+   fprintf(file, "\n");
 }
 
 
@@ -1370,9 +1370,30 @@ RETCODE SCIPsolve(
                      scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
-      todoMessage("detect, whether problem is solved");
-      scip->stage = SCIP_STAGE_SOLVED;
+      if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
+      {
+         char s[255];
+            
+         /* tree is empty, and no active node exists -> problem is solved */
+         scip->stage = SCIP_STAGE_SOLVED;
 
+         /* display most relevant statistics */
+         infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, "");
+         if( scip->primal->nsols == 0 )
+         {
+            sprintf(s, "Solution Status    : infeasible");
+         }
+         else
+            sprintf(s, "Solution Status    : optimal");
+         infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+         sprintf(s, "Solution Nodes     : %lld", scip->stat->nnodes);
+         infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+         if( scip->primal->nsols > 0 )
+         {
+            sprintf(s, "Objective          : %25.19e", SCIPgetPrimalBound(scip));
+            infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+         }
+      }
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVED:
@@ -3536,10 +3557,15 @@ Real SCIPgetDualBound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   Real lowerbound;
+
    CHECK_ABORT( checkStage(scip, "SCIPgetDualBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   return SCIPprobExternObjval(scip->origprob, 
-      SCIPprobExternObjval(scip->transprob, SCIPtreeGetLowerbound(scip->tree, scip->set)));
+   lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+   if( SCIPsetIsInfinity(scip->set, lowerbound) )
+      return SCIPgetPrimalBound(scip);
+   else
+      return SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, lowerbound));
    
    return SCIP_OKAY;
 }
@@ -3574,6 +3600,48 @@ Real SCIPgetTransUpperBound(
    return scip->primal->upperbound;
 }
 
+/** gets current gap |(primalbound - dualbound)/dualbound| */
+Real SCIPgetGap(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   Real primalbound;
+   Real dualbound;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   if( SCIPsetIsInfinity(scip->set, SCIPgetTransLowerBound(scip)) )
+      return 0.0;
+
+   primalbound = SCIPgetPrimalBound(scip);
+   dualbound = SCIPgetDualBound(scip);
+   if( SCIPsetIsZero(scip->set, dualbound) || SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
+      return scip->set->infinity;
+   else
+      return ABS((primalbound - dualbound)/dualbound);
+}
+
+/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem */
+Real SCIPgetTransGap(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   Real upperbound;
+   Real lowerbound;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetTransGap", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   upperbound = SCIPgetTransUpperBound(scip);
+   lowerbound = SCIPgetTransLowerBound(scip);
+
+   if( SCIPsetIsInfinity(scip->set, lowerbound) )
+      return 0.0;
+   else if( SCIPsetIsZero(scip->set, lowerbound) || SCIPsetIsInfinity(scip->set, upperbound) )
+      return scip->set->infinity;
+   else
+      return ABS((upperbound - lowerbound)/lowerbound);
+}
+
 /** gets number of feasible primal solutions found so far */
 int SCIPgetNSolsFound(
    SCIP*            scip                /**< SCIP data structure */
@@ -3582,6 +3650,209 @@ int SCIPgetNSolsFound(
    CHECK_ABORT( checkStage(scip, "SCIPgetNSolsFound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    return scip->primal->nsolsfound;
+}
+
+static
+void printConstraintStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(file != NULL);
+
+   fprintf(file, "Constraints        :         Cuts    #Separate      #EnfoLP      #EnfoPS   ActCons   MaxCons\n");
+
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   {
+      CONSHDLR* conshdlr;
+      int maxnactiveconss;
+      
+      conshdlr = scip->set->conshdlrs[i];
+      maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
+      if( maxnactiveconss > 0 )
+      {
+         fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
+         fprintf(file, " %12d %12d %12d %12d %9d %9d\n",
+            SCIPconshdlrGetNCutsFound(conshdlr), 
+            SCIPconshdlrGetNSepaCalls(conshdlr), 
+            SCIPconshdlrGetNEnfoLPCalls(conshdlr),
+            SCIPconshdlrGetNEnfoPSCalls(conshdlr),
+            SCIPconshdlrGetNActiveConss(conshdlr),
+            maxnactiveconss);
+      }
+   }
+}
+
+static
+void printSeparatorStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(file != NULL);
+
+   fprintf(file, "Separators         :         Cuts        Calls\n");
+   fprintf(file, "  cut pool         : %12d %12d   (maximal pool size: %d)\n",
+      SCIPcutpoolGetNCutsFound(scip->cutpool), SCIPcutpoolGetNCalls(scip->cutpool), SCIPcutpoolGetMaxNCuts(scip->cutpool));
+
+   todoMessage("statistics for LP separators");
+}
+
+static
+void printHeuristicStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->lp != NULL);
+   assert(file != NULL);
+
+   fprintf(file, "Primal Heuristics  :        Found        Calls\n");
+   fprintf(file, "  LP feasible      : %12d            -\n", scip->lp->nsolsfound);
+
+   for( i = 0; i < scip->set->nheurs; ++i )
+      fprintf(file, "  %-17.17s: %12d %12d\n", SCIPheurGetName(scip->set->heurs[i]),
+         SCIPheurGetNSolsFound(scip->set->heurs[i]), SCIPheurGetNCalls(scip->set->heurs[i]));
+}
+
+static
+void printSolutionStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   Real primalbound;
+   Real dualbound;
+   Real gap;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->primal != NULL);
+   assert(file != NULL);
+
+   primalbound = SCIPgetPrimalBound(scip);
+   dualbound = SCIPgetDualBound(scip);
+   gap = SCIPgetGap(scip);
+
+   fprintf(file, "Solution           :\n");
+   if( SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
+      fprintf(file, "  Primal Bound     :            -\n");
+   else
+      fprintf(file, "  Primal Bound     : %25.19e\n", primalbound);
+   if( SCIPsetIsInfinity(scip->set, ABS(dualbound)) )
+      fprintf(file, "  Dual Bound       :            -\n");
+   else
+      fprintf(file, "  Dual Bound       : %25.19e\n", dualbound);
+   if( SCIPsetIsInfinity(scip->set, gap) )
+      fprintf(file, "  Gap              :     infinite\n");
+   else
+      fprintf(file, "  Gap              : %10.4f %%\n", 100.0 * gap);
+   fprintf(file, "  Solutions found  : %12d\n", scip->primal->nsolsfound);
+}
+
+static
+void printTreeStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->tree != NULL);
+   assert(file != NULL);
+
+   fprintf(file, "B&B Tree           :\n");
+   fprintf(file, "  nodes            : %12lld\n", scip->stat->nnodes);
+   fprintf(file, "  max depth        : %12d\n", scip->stat->maxdepth);
+}
+
+static
+void printLPStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->lp != NULL);
+   assert(file != NULL);
+
+   fprintf(file, "LP                 :        Calls   Iterations   AvgIter\n");
+   fprintf(file, "  primal LP        : %12d %12d %9.1f\n", scip->stat->nprimallp, scip->stat->nprimallpiterations,
+      scip->stat->nprimallp > 0 ? (Real)scip->stat->nprimallpiterations/(Real)scip->stat->nprimallp : 0);
+   fprintf(file, "  dual LP          : %12d %12d %9.1f\n", scip->stat->nduallp, scip->stat->nduallpiterations,
+      scip->stat->nduallp > 0 ? (Real)scip->stat->nduallpiterations/(Real)scip->stat->nduallp : 0);
+   fprintf(file, "  total            : %12d %12d %9.1f\n", scip->stat->nlp, scip->stat->nlpiterations,
+      scip->stat->nlp > 0 ? (Real)scip->stat->nlpiterations/(Real)scip->stat->nlp : 0);
+   fprintf(file, "  strong branching : %12d            -         -\n", scip->stat->nstrongbranch);
+}
+
+/** outputs solving statistics */
+RETCODE SCIPprintStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintStatistics", TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   if( file == NULL )
+      file = stdout;
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_INIT:
+      fprintf(file, "SCIP Status        : initialization\n");
+      fprintf(file, "Original Problem   : no problem exists.\n");
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PROBLEM:
+      fprintf(file, "SCIP Status        : problem creation / modification\n");
+      fprintf(file, "Original Problem   :\n");
+      SCIPprobPrintStatistics(scip->origprob, file);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+      fprintf(file, "SCIP Status        : problem solving\n");
+      fprintf(file, "Original Problem   :\n");
+      SCIPprobPrintStatistics(scip->origprob, file);
+      fprintf(file, "Transformed Problem:\n");
+      SCIPprobPrintStatistics(scip->transprob, file);
+      printConstraintStatistics(scip, file);
+      printSeparatorStatistics(scip, file);
+      printHeuristicStatistics(scip, file);
+      printSolutionStatistics(scip, file);
+      printTreeStatistics(scip, file);
+      printLPStatistics(scip, file);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVED:
+      fprintf(file, "SCIP Status        : problem is solved\n");
+      fprintf(file, "Original Problem   :\n");
+      SCIPprobPrintStatistics(scip->origprob, file);
+      fprintf(file, "Transformed Problem:\n");
+      SCIPprobPrintStatistics(scip->transprob, file);
+      printConstraintStatistics(scip, file);
+      printSeparatorStatistics(scip, file);
+      printHeuristicStatistics(scip, file);
+      printSolutionStatistics(scip, file);
+      printTreeStatistics(scip, file);
+      printLPStatistics(scip, file);
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_INVALIDCALL;
+   }
 }
 
 

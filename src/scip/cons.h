@@ -275,6 +275,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 #include "lp.h"
 #include "sol.h"
 #include "tree.h"
+#include "sepa.h"
 
 
 
@@ -391,6 +392,7 @@ RETCODE SCIPconshdlrSeparate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   SEPA*            sepa,               /**< separation storage */
    int              actdepth,           /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -404,6 +406,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   SEPA*            sepa,               /**< separation storage */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -483,6 +486,36 @@ int SCIPconshdlrGetNActiveConss(
 /** gets number of enabled constraints of constraint handler */
 extern
 int SCIPconshdlrGetNEnabledConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's separation method */
+extern
+int SCIPconshdlrGetNSepaCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's LP enforcing method */
+extern
+int SCIPconshdlrGetNEnfoLPCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's pseudo enforcing method */
+extern
+int SCIPconshdlrGetNEnfoPSCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets total number of cuts found by this constraint handler */
+extern
+int SCIPconshdlrGetNCutsFound(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets maximum number of active constraints of constraint handler existing at the same time */
+extern
+int SCIPconshdlrGetMaxNActiveConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

@@ -86,6 +86,11 @@ int SCIPsepaGetNCuts(
    SEPA*            sepa                /**< separation storage */
    );
 
+/** get total number of cuts found so far */
+extern
+int SCIPsepaGetNCutsFound(
+   SEPA*            sepa                /**< separation storage */
+   );
 
 
 #endif

@@ -330,7 +330,8 @@ RETCODE solveNodeLP(
             separateagain = FALSE;
             for( h = 0; h < set->nconshdlrs && !cutoff && !enoughcuts; ++h )
             {
-               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, tree->actnode->depth, &result) );
+               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, sepa, tree->actnode->depth,
+                              &result) );
                separateagain |= (result == SCIP_CONSADDED);
                cutoff |= (result == SCIP_CUTOFF);
                enoughcuts |= (SCIPsepaGetNCuts(sepa) >= SCIPsetGetMaxsepacuts(set, root)/2);
@@ -502,7 +503,7 @@ RETCODE enforceConstraints(
 
          if( tree->actnodehaslp )
          {
-            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, prob, &result) );
+            CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, prob, sepa, &result) );
          }
          else
          {

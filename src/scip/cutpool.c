@@ -48,6 +48,9 @@ struct Cutpool
    int              agelimit;           /**< maximum age a cut can reach before it is deleted from the pool */
    int              processedlp;        /**< last LP that has been processed */
    int              firstunprocessed;   /**< first cut that has not been processed in the last LP */
+   int              ncalls;             /**< number of times, the cutpool was separated */
+   int              ncutsfound;         /**< total number of cuts that were separated from the pool */
+   int              maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
 };
 
 
@@ -252,6 +255,9 @@ RETCODE SCIPcutpoolCreate(
    (*cutpool)->agelimit = agelimit;
    (*cutpool)->processedlp = -1;
    (*cutpool)->firstunprocessed = 0;
+   (*cutpool)->ncalls = 0;
+   (*cutpool)->ncutsfound = 0;
+   (*cutpool)->maxncuts = 0;
 
    return SCIP_OKAY;
 }
@@ -332,6 +338,7 @@ RETCODE SCIPcutpoolAddNewRow(
    CHECK_OKAY( cutpoolEnsureCutsMem(cutpool, set, cutpool->ncuts+1) );
    cutpool->cuts[cutpool->ncuts] = cut;
    cutpool->ncuts++;
+   cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
 
    /* insert cut in the hash table */
    CHECK_OKAY( SCIPhashtableInsert(cutpool->hashtable, memhdr, (void*)cut) );
@@ -438,6 +445,7 @@ RETCODE SCIPcutpoolSeparate(
 {
    CUT* cut;
    Bool found;
+   int oldncutsfound;
    int c;
 
    assert(cutpool != NULL);
@@ -455,10 +463,16 @@ RETCODE SCIPcutpoolSeparate(
    }
 
    *result = SCIP_DIDNOTFIND;
+   cutpool->ncalls++;
    found = FALSE;
 
    debugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
       cutpool, cutpool->ncuts, cutpool->firstunprocessed);
+
+   /* remember the current total number of found cuts */
+   oldncutsfound = SCIPsepaGetNCutsFound(sepa);
+
+   /* process all unprocessed cuts in the pool */
    for( c = cutpool->firstunprocessed; c < cutpool->ncuts; ++c )
    {
       cut = cutpool->cuts[c];
@@ -503,6 +517,9 @@ RETCODE SCIPcutpoolSeparate(
    cutpool->processedlp = stat->nlp;
    cutpool->firstunprocessed = cutpool->ncuts;
 
+   /* update the number of found cuts */
+   cutpool->ncutsfound += SCIPsepaGetNCutsFound(sepa) - oldncutsfound;
+
    if( found )
       *result = SCIP_SEPARATED;
 
@@ -518,3 +535,34 @@ int SCIPcutpoolGetNCuts(
 
    return cutpool->ncuts;
 }
+
+/** get number of times, the cut pool was separated */
+int SCIPcutpoolGetNCalls(
+   CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return cutpool->ncalls;
+}
+
+/** get total number of cuts that were separated from the cut pool */
+int SCIPcutpoolGetNCutsFound(
+   CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return cutpool->ncutsfound;
+}
+
+/** get maximum number of cuts that were stored in the cut pool at the same time */
+int SCIPcutpoolGetMaxNCuts(
+   CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return cutpool->maxncuts;
+}
+

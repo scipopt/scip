@@ -159,6 +159,24 @@ int SCIPheurGetFreq(
    HEUR*            heur                /**< primal heuristic */
    );
 
+/** gets the number of times, the heuristic was called and tried to find a solution */
+extern
+int SCIPheurGetNCalls(
+   HEUR*            heur                /**< primal heuristic */
+   );
+
+/** increases the number of primal feasible solutions found by this heuristic */
+extern
+void SCIPheurIncNSolsFound(
+   HEUR*            heur                /**< primal heuristic */
+   );
+
+/** gets the number of primal feasible solutions found by this heuristic */
+extern
+int SCIPheurGetNSolsFound(
+   HEUR*            heur                /**< primal heuristic */
+   );
+
 /** is primal heuristic initialized? */
 extern
 Bool SCIPheurIsInitialized(

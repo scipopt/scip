@@ -103,14 +103,14 @@ Real SCIPversion(
 /** prints a version information line to a file stream */
 extern
 void SCIPprintVersion(
-   FILE*            file                /**< file stream to write version information, or NULL for stdout */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /** prints error message for the given SCIP return code */
 extern
 void SCIPprintError(
-   FILE*            errout,             /**< file stream to write error message */
-   RETCODE          retcode             /**< SCIP return code causing the error */
+   RETCODE          retcode,            /**< SCIP return code causing the error */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */
@@ -1575,10 +1575,29 @@ Real SCIPgetTransUpperBound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets current gap |(primalbound - dualbound)/dualbound| */
+extern
+Real SCIPgetGap(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem */
+extern
+Real SCIPgetTransGap(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets number of feasible primal solutions found so far */
 extern
 int SCIPgetNSolsFound(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** outputs solving statistics */
+extern
+RETCODE SCIPprintStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */

@@ -49,7 +49,7 @@ typedef enum Retcode RETCODE;           /**< return code for SCIP method */
 /** prints error message for return code */
 extern
 void SCIPretcodePrint(
-   FILE*            errout,             /**< file stream to write error message */
+   FILE*            file,               /**< file stream to write error message */
    RETCODE          retcode             /**< SCIP return code causing the error */
    );
 

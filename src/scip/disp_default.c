@@ -380,28 +380,20 @@ DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
 static
 DECL_DISPOUTPUT(SCIPdispOutputGap)
 {
-   Real dualbound;
-   Real primalbound;
    Real gap;
 
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_GAP) == 0);
    assert(scip != NULL);
 
-   dualbound = SCIPgetDualBound(scip);
-   primalbound = SCIPgetPrimalBound(scip);
+   gap = SCIPgetGap(scip);
 
-   if( SCIPisZero(scip, dualbound) || SCIPisInfinity(scip, ABS(primalbound)) )
+   if( SCIPisInfinity(scip, gap) )
       fprintf(file, "    Inf ");
+   else if( gap >= 10000.00 )
+      fprintf(file, "  Large ");
    else
-   {
-      gap = 100.0 * ABS((dualbound - primalbound)/dualbound);
-      
-      if( gap >= 10000.00 )
-         fprintf(file, "  Large ");
-      else
-         fprintf(file, "%7.2f%%", gap);
-   }
+      fprintf(file, "%7.2f%%", 100.0*gap);
 
    return SCIP_OKAY;
 }

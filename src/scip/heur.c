@@ -41,6 +41,8 @@ struct Heur
    DECL_HEUREXIT    ((*heurexit));      /**< deinitialise primal heuristic */
    DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    HEURDATA*        heurdata;           /**< primal heuristics local data */
+   int              ncalls;             /**< number of times, this heuristic was called */
+   int              nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
    unsigned int     pseudonodes:1;      /**< call heuristic at nodes where only a pseudo solution exist? */
    unsigned int     initialized:1;      /**< is primal heuristic initialized? */
 };
@@ -81,6 +83,8 @@ RETCODE SCIPheurCreate(
    (*heur)->heurexit = heurexit;
    (*heur)->heurexec = heurexec;
    (*heur)->heurdata = heurdata;
+   (*heur)->ncalls = 0;
+   (*heur)->nsolsfound = 0;
    (*heur)->initialized = FALSE;
 
    return SCIP_OKAY;
@@ -130,6 +134,8 @@ RETCODE SCIPheurInit(
    if( heur->heurinit != NULL )
    {
       CHECK_OKAY( heur->heurinit(scip, heur) );
+      heur->ncalls = 0;
+      heur->nsolsfound = 0;
    }
    heur->initialized = TRUE;
 
@@ -210,6 +216,8 @@ RETCODE SCIPheurExec(
          errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
+      if( *result != SCIP_DIDNOTRUN )
+         heur->ncalls++;
    }
    else
       *result = SCIP_DIDNOTRUN;
@@ -268,6 +276,36 @@ int SCIPheurGetFreq(
    assert(heur != NULL);
 
    return heur->freq;
+}
+
+/** gets the number of times, the heuristic was called and tried to find a solution */
+int SCIPheurGetNCalls(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->ncalls;
+}
+
+/** increases the number of primal feasible solutions found by this heuristic */
+void SCIPheurIncNSolsFound(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->nsolsfound++;
+}
+
+/** gets the number of primal feasible solutions found by this heuristic */
+int SCIPheurGetNSolsFound(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->nsolsfound;
 }
 
 /** is primal heuristic initialized? */

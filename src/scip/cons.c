@@ -74,6 +74,11 @@ struct ConsHdlr
    int              nenabledconss;      /**< total number of enabled constraints of the handler */
    int              lastnsepaconss;     /**< number of already separated constraints after last conshdlrResetSepa() call */
    int              lastnenfoconss;     /**< number of already enforced constraints after last conshdlrResetEnfo() call */
+   int              nsepacalls;         /**< number of times, the separator was called */
+   int              nenfolpcalls;       /**< number of times, the LP enforcer was called */
+   int              nenfopscalls;       /**< number of times, the pseudo enforcer was called */
+   int              ncutsfound;         /**< total number of cuts found by this constraint handler */
+   int              maxnactiveconss;    /**< maximal number of active constraints existing at the same time */
    unsigned int     needscons:1;        /**< should the constraint handler be skipped, if no constraints are available? */
    unsigned int     initialized:1;      /**< is constraint handler initialized? */
    unsigned int     delayupdates:1;     /**< must the updates of the constraint arrays be delayed until processUpdate()? */
@@ -651,6 +656,7 @@ RETCODE conshdlrActivateCons(
    /* activate constraint */
    cons->active = TRUE;
    conshdlr->nactiveconss++;
+   conshdlr->maxnactiveconss = MAX(conshdlr->maxnactiveconss, conshdlr->nactiveconss);
 
    /* add constraint to the check array */
    if( cons->check )
@@ -1013,6 +1019,11 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nenabledconss = 0;
    (*conshdlr)->lastnsepaconss = 0;
    (*conshdlr)->lastnenfoconss = 0;
+   (*conshdlr)->nsepacalls = 0;
+   (*conshdlr)->nenfolpcalls = 0;
+   (*conshdlr)->nenfopscalls = 0;
+   (*conshdlr)->ncutsfound = 0;
+   (*conshdlr)->maxnactiveconss = 0;
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->initialized = FALSE;
    (*conshdlr)->delayupdates = FALSE;
@@ -1070,6 +1081,11 @@ RETCODE SCIPconshdlrInit(
    if( conshdlr->consinit != NULL )
    {
       CHECK_OKAY( conshdlr->consinit(scip, conshdlr) );
+      conshdlr->nsepacalls = 0;
+      conshdlr->nenfolpcalls = 0;
+      conshdlr->nenfopscalls = 0;
+      conshdlr->ncutsfound = 0;
+      conshdlr->maxnactiveconss = conshdlr->nactiveconss;
    }
    conshdlr->initialized = TRUE;
 
@@ -1108,6 +1124,7 @@ RETCODE SCIPconshdlrSeparate(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   SEPA*            sepa,               /**< separation storage */
    int              actdepth,           /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -1154,12 +1171,16 @@ RETCODE SCIPconshdlrSeparate(
       if( !conshdlr->needscons || nconss > 0 )
       {
          CONS** conss;
-         
+         int oldncutsfound;
+
          debugMessage("separating constraints %d to %d of %d constraints of handler <%s>\n",
             firstcons, firstcons + nconss - 1, conshdlr->nsepaconss, conshdlr->name);
 
          conss = &(conshdlr->sepaconss[firstcons]);
          
+         /* remember the current total number of found cuts */
+         oldncutsfound = SCIPsepaGetNCutsFound(sepa);
+
          /* because the during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
           * external method; to avoid this, these changes will be buffered and processed after the method call
@@ -1176,6 +1197,9 @@ RETCODE SCIPconshdlrSeparate(
          /* remember, that these constraints have already been processed */
          conshdlr->lastnsepaconss = conshdlr->nsepaconss;
 
+         /* update the number of found cuts */
+         conshdlr->ncutsfound += SCIPsepaGetNCutsFound(sepa) - oldncutsfound;
+
          if( *result != SCIP_CUTOFF
             && *result != SCIP_SEPARATED
             && *result != SCIP_CONSADDED
@@ -1188,6 +1212,8 @@ RETCODE SCIPconshdlrSeparate(
             errorMessage(s);
             return SCIP_INVALIDRESULT;
          }
+         if( *result != SCIP_DIDNOTRUN )
+            conshdlr->nsepacalls++;
       }
    }
 
@@ -1202,6 +1228,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
+   SEPA*            sepa,               /**< separation storage */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -1246,11 +1273,15 @@ RETCODE SCIPconshdlrEnforceLPSol(
       if( !conshdlr->needscons || nconss > 0 )
       {
          CONS** conss;
-         
+         int oldncutsfound;
+
          debugMessage("enforcing constraints %d to %d of %d constraints of handler <%s>\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name);
 
          conss = &(conshdlr->enfoconss[firstcons]);
+
+         /* remember the current total number of found cuts */
+         oldncutsfound = SCIPsepaGetNCutsFound(sepa);
 
          /* because the during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1268,6 +1299,9 @@ RETCODE SCIPconshdlrEnforceLPSol(
          /* remember, that these constraints have already been processed */
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
+         /* update the number of found cuts */
+         conshdlr->ncutsfound += SCIPsepaGetNCutsFound(sepa) - oldncutsfound;
+
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
             && *result != SCIP_REDUCEDDOM
@@ -1282,6 +1316,8 @@ RETCODE SCIPconshdlrEnforceLPSol(
             errorMessage(s);
             return SCIP_INVALIDRESULT;
          }
+         if( *result != SCIP_DIDNOTRUN )
+            conshdlr->nenfolpcalls++;
       }
    }
 
@@ -1376,6 +1412,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
             errorMessage(s);
             return SCIP_INVALIDRESULT;
          }
+         if( *result != SCIP_DIDNOTRUN )
+            conshdlr->nenfopscalls++;
       }
    }
 
@@ -1563,6 +1601,56 @@ int SCIPconshdlrGetNEnabledConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nenabledconss;
+}
+
+/** gets number of calls to the constraint handler's separation method */
+int SCIPconshdlrGetNSepaCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nsepacalls;
+}
+
+/** gets number of calls to the constraint handler's LP enforcing method */
+int SCIPconshdlrGetNEnfoLPCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nenfolpcalls;
+}
+
+/** gets number of calls to the constraint handler's pseudo enforcing method */
+int SCIPconshdlrGetNEnfoPSCalls(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nenfopscalls;
+}
+
+/** gets total number of cuts found by this constraint handler */
+int SCIPconshdlrGetNCutsFound(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->ncutsfound;
+}
+
+/** gets maximum number of active constraints of constraint handler existing at the same time */
+int SCIPconshdlrGetMaxNActiveConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->maxnactiveconss;
 }
 
 /** gets checking priority of constraint handler */

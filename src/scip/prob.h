@@ -90,6 +90,7 @@ struct Prob
    int              ncont;              /**< number of continous variables */
    int              consssize;          /**< available slots in conss array */
    int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
+   int              maxnconss;          /**< maximum number of constraints existing at the same time */
 };
 
 
@@ -248,6 +249,13 @@ extern
 void SCIPprobPrintPseudoSol(
    PROB*            prob,               /**< problem data */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** outputs problem statistics */
+extern
+void SCIPprobPrintStatistics(
+   PROB*            prob,               /**< problem data */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 

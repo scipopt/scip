@@ -125,6 +125,7 @@ RETCODE SCIPprobCreate(
    (*prob)->ncont = 0;
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
+   (*prob)->maxnconss = 0;
 
    return SCIP_OKAY;
 }
@@ -188,6 +189,7 @@ RETCODE SCIPprobTransform(
 {
    VAR* targetvar;
    CONS* targetcons;
+   char transname[255];
    int v;
    int c;
 
@@ -199,7 +201,8 @@ RETCODE SCIPprobTransform(
    debugMessage("transform problem: original has %d variables\n", source->nvars);
 
    /* create target problem data (probtrans is not needed, probdata is set later) */
-   CHECK_OKAY( SCIPprobCreate(target, source->name, source->probdelete, NULL, NULL) );
+   sprintf(transname, "t_%s", source->name);
+   CHECK_OKAY( SCIPprobCreate(target, transname, source->probdelete, NULL, NULL) );
 
    /* transform and copy all variables to target problem */
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
@@ -527,6 +530,7 @@ RETCODE SCIPprobAddCons(
    CHECK_OKAY( probEnsureConssMem(prob, set, prob->nconss+1) );
    prob->conss[prob->nconss] = cons;
    prob->nconss++;
+   prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
 
    /* capture constraint */
    SCIPconsCapture(cons);
@@ -693,3 +697,21 @@ void SCIPprobPrintPseudoSol(
    }
    printf("\n");
 }
+
+/** outputs problem statistics */
+void SCIPprobPrintStatistics(
+   PROB*            prob,               /**< problem data */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   assert(prob != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   fprintf(file, "  Problem name     : %s\n", prob->name);
+   fprintf(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continous)\n",
+      prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
+   fprintf(file, "  Constraints      : %d actual, %d maximal\n", prob->nconss, prob->maxnconss);
+}
+

@@ -355,6 +355,16 @@ RETCODE runSCIP(
 #endif
 
 
+   /**************
+    * Statistics *
+    **************/
+
+   printf("\nStatistics\n");
+   printf("==========\n\n");
+
+   CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
+
+
    /********************
     * Deinitialization *
     ********************/
@@ -399,7 +409,7 @@ main(
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(stderr, retcode);
+      SCIPprintError(retcode, stderr);
       return -1;
    }
 

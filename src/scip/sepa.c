@@ -39,6 +39,7 @@ struct Sepa
    Real*            score;              /**< score for each separated cut (e.g. violation/(eucnorm * #nonzeros)) */
    int              cutssize;           /**< size of cuts and score arrays */
    int              ncuts;              /**< number of separated cuts (max. is set->maxsepacuts) */
+   int              ncutsfound;         /**< total number of cuts found so far */
 };
 
 
@@ -87,6 +88,7 @@ RETCODE SCIPsepaCreate(
    (*sepa)->score = NULL;
    (*sepa)->cutssize = 0;
    (*sepa)->ncuts = 0;
+   (*sepa)->ncutsfound = 0;
 
    return SCIP_OKAY;
 }
@@ -124,6 +126,10 @@ RETCODE SCIPsepaAddCut(
    assert(set != NULL);
    assert(cut != NULL);
 
+   /* update statistics of total number of found cuts */
+   sepa->ncutsfound++;
+
+   /* get maximum of separated cuts at this node */
    maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
    assert(sepa->ncuts <= maxsepacuts);
    if( maxsepacuts == 0 )
@@ -239,4 +245,14 @@ int SCIPsepaGetNCuts(
    assert(sepa != NULL);
 
    return sepa->ncuts;
+}
+
+/** get total number of cuts found so far */
+int SCIPsepaGetNCutsFound(
+   SEPA*            sepa                /**< separation storage */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsfound;
 }

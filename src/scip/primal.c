@@ -152,6 +152,7 @@ RETCODE primalAddSol(
    int              insertpos           /**< position in solution storage to add solution to */
    )
 {
+   HEUR* heur;
    EVENT event;
    int pos;
 
@@ -161,6 +162,13 @@ RETCODE primalAddSol(
 
    debugMessage("insert primal solution at position %d:", insertpos);
    debug( SCIPsolPrint(sol, set, stat, prob, NULL) );
+
+   /* count the solution in the heuristics or LP data */
+   heur = SCIPsolGetHeur(sol);
+   if( heur == NULL )
+      lp->nsolsfound++;
+   else
+      SCIPheurIncNSolsFound(heur);
 
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
    CHECK_OKAY( SCIPsolUnlink(sol, set, prob) );
