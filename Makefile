@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.56 2003/12/01 14:41:22 bzfpfend Exp $
+# $Id: Makefile,v 1.57 2003/12/02 11:50:38 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -263,7 +263,7 @@ doc:
 
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(TARGET).$(MACHINENAME) $(TIME);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME);
 
 testcplex:		
 		cd check; \

@@ -1,4 +1,4 @@
-# $Id: check.sh,v 1.3 2003/11/21 09:18:58 bzfpfend Exp $
+# $Id: check.sh,v 1.4 2003/12/02 11:50:38 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -23,13 +23,13 @@ do
     then
         echo @01 $i ===========
 	echo @01 $i ===========                >> $ERRFILE
-	echo read $i                           >  $TMPFILE
-	echo set load $SETFILE                 >> $TMPFILE
+	echo set load $SETFILE                 >  $TMPFILE
 	echo set limits nodelimit 10000000     >> $TMPFILE
 	echo set limits timelimit $TIMELIMIT   >> $TMPFILE
 	echo set timing clocktype 1            >> $TMPFILE
 	echo set display verblevel 4           >> $TMPFILE
 	echo set display dispfreq 10000        >> $TMPFILE
+	echo read $i                           >> $TMPFILE
 	echo optimize                          >> $TMPFILE
 	echo display statistics                >> $TMPFILE
 	echo quit                              >> $TMPFILE
