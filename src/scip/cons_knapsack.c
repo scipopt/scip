@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.37 2004/04/16 10:48:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.38 2004/04/16 12:37:48 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -47,7 +47,7 @@
 
 #define LINCONSUPGD_PRIORITY    +100000
 
-#define MAX_SEPA_CAPACITY         10000 /**< maximal capacity of knapsack to apply cover separation */
+#define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node */
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node */
@@ -419,7 +419,7 @@ RETCODE solveKnapsack(
    int*             nonsolitems,        /**< array to store items not in solution, or NULL */
    int*             nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*             nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
-   Real*            solval              /**< pointer to store optimal solution value */
+   Real*            solval              /**< pointer to store optimal solution value, or NULL */
 ) 
 {
    Real* optvalues;
@@ -428,7 +428,6 @@ RETCODE solveKnapsack(
 
    assert(weights != NULL);
    assert(profits != NULL);
-   assert(solval != NULL);
    assert(capacity >= 0);
    assert(nitems >= 0);
 
@@ -480,7 +479,8 @@ RETCODE solveKnapsack(
       assert(*nsolitems + *nnonsolitems == nitems);
    }
 
-   *solval = optvalues[IDX(nitems,capacity)];
+   if( solval != NULL )
+      *solval = optvalues[IDX(nitems,capacity)];
 
    CHECK_OKAY( SCIPfreeBufferArray(scip, &optvalues) );
 
@@ -587,200 +587,6 @@ RETCODE liftCardinality(
    return SCIP_OKAY;
 }
 
-#if 0
-/** lifts given knapsack cover */
-static
-RETCODE liftCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row,                /**< cover inequality */
-   CONS*            cons,               /**< knapsack constraint */
-   int*             covervars,          /**< cover elements */
-   int*             noncovervars,       /**< non-cover elements */
-   int              ncovervars,         /**< number of cover elements */
-   int              nnoncovervars       /**< number of non-cover elements */
-   )
-{
-   CHECK_OKAY( liftCardinality(scip, row, cons, covervars, noncovervars, ncovervars, nnoncovervars, ncovervars - 1) );
-
-   return SCIP_OKAY;
-}
-
-/** separates cover inequalities for given knapsack constraint */
-static
-RETCODE separateCovers(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   Bool*            separated           /**< pointer to store whether a cut was found */
-   )
-{
-   CONSDATA* consdata;
-   int* items;
-   Longint* weights;
-   Real* profits;
-   Longint capacity;
-   int i;
-   int nitems;
-   int* fixedones;
-   int nfixedones;
-   int* fixedzeros;
-   int nfixedzeros;
-   int* covervars;
-   int ncovervars;
-   int* noncovervars;
-   int nnoncovervars;
-   Real infeasibility;
-   Real solval;
-   Real solvalsum;
-   Real transsol;
-   Longint coverweight;
-   Longint fixedonesweightsum;
-
-   assert(separated != NULL);
-
-   debugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   *separated = FALSE;
-   
-   /* solve the following knapsack problem with dynamic programming:
-    * max SUM (1 - x_i^*) z_i
-    *     SUM w_i z_i >= SUM w_i - capacity - 1
-    */
-   
-   /* set up datastructures */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &items, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &weights, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &profits, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &fixedones, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &fixedzeros, consdata->nvars) );
-   
-   /* use all variables with fractional LP value */
-   nitems = 0;
-   nfixedones = 0;
-   nfixedzeros = 0;
-   solvalsum = 0.0;
-   capacity = -(int)(consdata->capacity+0.5) - 1;
-   fixedonesweightsum = 0;
-   for( i = 0; i < consdata->nvars; i++ )
-   {
-      solval = SCIPgetVarSol(scip, consdata->vars[i]);
-      solvalsum += solval;
-      if( !SCIPisIntegral(scip, solval) )
-      {
-         items[nitems] = i;
-         weights[nitems] = consdata->weights[i];
-         profits[nitems] = 1.0 - solval;
-         nitems++;
-         capacity += consdata->weights[i];
-      }
-      else if( solval > 0.5 )
-      {
-         fixedones[nfixedones] = i;
-         nfixedones++;
-         capacity += consdata->weights[i];
-         fixedonesweightsum += consdata->weights[i];
-      }
-      else
-      {
-         fixedzeros[nfixedzeros] = i;
-         nfixedzeros++;
-      }
-   }
-
-   if( capacity >= 0 && capacity <= MAX_SEPA_CAPACITY )
-   {
-      int* covervars;
-      int ncovervars;
-
-      /* solve separation knapsack with dynamic programming */
-      CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, consdata->nvars) );
-      CHECK_OKAY( SCIPallocBufferArray(scip, &noncovervars, consdata->nvars) );
-      CHECK_OKAY( solveKnapsack(scip, nitems, weights, profits, capacity, 
-                     items, noncovervars, covervars, &nnoncovervars, &ncovervars, &transsol) ); 
-      
-      /* generate cutting plane */
-      infeasibility = transsol - nitems - nfixedones + 1.0 + solvalsum;
-      if( SCIPisFeasPositive(scip, infeasibility) ) 
-      {
-         ROW* row;
-         char name[MAXSTRLEN];
-         Real cutnorm;
-         Real cutfeas;
-
-         /* remove unnecessary items from cover to get a minimal cover */
-         coverweight = 0;
-         for( i = 0; i < ncovervars; i++)
-            coverweight += consdata->weights[covervars[i]];
-                  
-         for( i = 0; i < nfixedones; i++)
-         {
-            fixedonesweightsum -= consdata->weights[fixedones[i]];
-            if( coverweight + fixedonesweightsum <= consdata->capacity )
-            {
-               covervars[ncovervars] = fixedones[i];
-               ncovervars++;
-               coverweight += consdata->weights[fixedones[i]];
-            }
-            else
-            {
-               noncovervars[nnoncovervars] = fixedones[i];
-               nnoncovervars++;
-            }
-         }
-         assert(coverweight > consdata->capacity);
-
-         /* add variables with LP value zero to non-cover vars */
-         for( i = 0; i < nfixedzeros; i++)
-         {
-            noncovervars[nnoncovervars] = fixedzeros[i];
-            nnoncovervars++;
-         }  
-
-         /* create LP row */
-         sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)ncovervars-1.0, 
-                        SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
-         for( i = 0; i < ncovervars; i++)
-         {
-            CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[covervars[i]], 1.0) );
-         }
-      
-         debugMessage("found cover cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
-         debug(SCIProwPrint(row, NULL));
-        
-         /* lift variables not in cover into inequality */
-         CHECK_OKAY( liftCover(scip, row, cons, covervars, noncovervars, ncovervars, nnoncovervars) ); 
-
-         /* check, if cut is violated enough */
-         cutnorm = SCIProwGetNorm(row);
-         cutfeas = SCIPgetRowLPFeasibility(scip, row);
-         if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
-         {         
-            debugMessage("lifted cover       cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
-            debug(SCIProwPrint(row, NULL));
-            CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
-            *separated = TRUE;
-         }
-         CHECK_OKAY( SCIPreleaseRow(scip, &row) );
-      }
-
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &noncovervars) );
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
-   }
-
-   /* free temporary data */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedzeros) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedones) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &items) );
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** separates lifted cardinality inequalities for given knapsack constraint */
 static
 RETCODE separateCardinality(
@@ -790,26 +596,29 @@ RETCODE separateCardinality(
    )
 {
    CONSDATA* consdata;
+   Real* solvals;
    int* items;
    Longint* weights;
    Real* profits;
    int* fixedones;
-   int nfixedones;
    int* fixedzeros;
-   int nfixedzeros;
    int* covervars;
-   int ncovervars;
    int* noncovervars;
-   int nnoncovervars;
-   Real infeasibility;
-   Real solval;
-   Real solvalsum;
-   Real transsol;
+   int* liftcoefs;
    Longint coverweight;
-   Longint maxweight;
    Longint capacity;
+   Real solval;
+   Real relslack;
+   Real activity;
+   Real liftlpval;
    int nitems;
+   int nfixedones;
+   int nfixedzeros;
+   int ncovervars;
+   int nnoncovervars;
    int i;
+   int j; 
+   int idx;
 
    assert(separated != NULL);
 
@@ -820,37 +629,44 @@ RETCODE separateCardinality(
 
    *separated = FALSE;
    
-   /* solve the following knapsack problem with dynamic programming:
-    * max SUM (1 - x_i^*) z_i
-    *     SUM w_i z_i >= SUM w_i - capacity - 1
-    */
-   
-   /* set up datastructures */
+   /* allocate temporary memory */
    CHECK_OKAY( SCIPallocBufferArray(scip, &items, consdata->nvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &weights, consdata->nvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &profits, consdata->nvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &fixedones, consdata->nvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &fixedzeros, consdata->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, consdata->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &noncovervars, consdata->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &solvals, consdata->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &liftcoefs, consdata->nvars) );
+   
+   /* get LP solution values */
+   CHECK_OKAY( SCIPgetVarSols(scip, consdata->nvars, consdata->vars, solvals) );
+      
+   /* solve the following knapsack problem with dynamic programming or greedy heuristic:
+    * max SUM (1 - x_i^*) z_i
+    *     SUM w_i z_i <= SUM w_i - capacity - 1
+    * with the meaning: i is member of cover <=> z_i == 0
+    */
    
    /* use all variables with fractional LP value */
    nitems = 0;
    nfixedones = 0;
    nfixedzeros = 0;
-   solvalsum = 0.0;
    capacity = -(int)(consdata->capacity+0.5) - 1;
    for( i = 0; i < consdata->nvars; i++ )
    {
-      solval = SCIPgetVarSol(scip, consdata->vars[i]);
-      solvalsum += solval;
-      if( !SCIPisIntegral(scip, solval) )
+      if( !SCIPisIntegral(scip, solvals[i]) )
       {
-         items[nitems] = i;
-         weights[nitems] = consdata->weights[i];
-         profits[nitems] = 1.0 - solval;
+         /* sort items by non-decreasing relative slack value (1-x_i^*)/w_i */
+         relslack = (1.0 - solvals[i])/consdata->weights[i];
+         for( j = nitems; j > 0 && relslack < (1.0 - solvals[j-1])/consdata->weights[j-1]; --j )
+            items[j] = items[j-1];
+         items[j] = i;
          nitems++;
          capacity += consdata->weights[i];
       }
-      else if( solval > 0.5 )
+      else if( solvals[i] > 0.5 )
       {
          fixedones[nfixedones] = i;
          nfixedones++;
@@ -863,33 +679,50 @@ RETCODE separateCardinality(
       }
    }
 
-   if( capacity >= 0 && capacity <= MAX_SEPA_CAPACITY )
+   /* get weights and slacks of items */
+   for( i = 0; i < nitems; ++i )
    {
-      Real* solvals;
-      int* covervars;
-      int* liftcoefs;
-      Real slack;
-      Real liftlpval;
-      int ncovervars;
-      int j; 
-      int idx;
+      weights[i] = consdata->weights[items[i]];
+      profits[i] = 1.0 - solvals[items[i]];
+   }
 
-      /* solve separation knapsack with dynamic programming */
-      CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, consdata->nvars) );
-      CHECK_OKAY( SCIPallocBufferArray(scip, &noncovervars, consdata->nvars) );
-      CHECK_OKAY( solveKnapsack(scip, nitems, weights, profits, capacity, 
-                     items, noncovervars, covervars, &nnoncovervars, &ncovervars, &transsol) ); 
-      
-      CHECK_OKAY( SCIPallocBufferArray(scip, &solvals, consdata->nvars) );
-      CHECK_OKAY( SCIPgetVarSols(scip, consdata->nvars, consdata->vars, solvals) );
-      CHECK_OKAY( SCIPallocBufferArray(scip, &liftcoefs, consdata->nvars) );
-      
+   /* if the right hand side of the separation knapsack is negative, there cannot be a cover and the knapsack inequality
+    * is redundant
+    */
+   if( capacity >= 0 )
+   {
+      /* if the right hand side is too large, solving the dynamic program would be too expensive in space and time */
+      if( capacity <= MAX_DYNPROG_CAPACITY )
+      {
+         /* solve separation knapsack with dynamic programming */
+         CHECK_OKAY( solveKnapsack(scip, nitems, weights, profits, capacity, 
+                        items, noncovervars, covervars, &nnoncovervars, &ncovervars, NULL) ); 
+      }
+      else
+      {
+         /* use greedy heuristic on separation knapsack */
+         nnoncovervars = 0;
+         ncovervars = 0;
+         for( i = nitems-1; i >= 0 && capacity - weights[i] >= 0; --i )
+         {
+            capacity -= weights[i];
+            noncovervars[nnoncovervars] = items[i];
+            nnoncovervars++;
+         }
+         for( ; i >= 0; --i )
+         {
+            covervars[ncovervars] = items[i];
+            ncovervars++;
+         }
+      }
+
+      /* calculate weight of cover and total LP activity of cover variables */
       coverweight = 0;
-      slack = 0.0;
+      activity = 0.0;
       for( i = 0; i < ncovervars; i++)
       {
          coverweight += consdata->weights[covervars[i]];
-         slack += 1 - solvals[covervars[i]];
+         activity += solvals[covervars[i]];
       }
 
       /* add all variables with LP value one to cover vars */
@@ -897,6 +730,7 @@ RETCODE separateCardinality(
       {
          covervars[ncovervars] = fixedones[i];
          coverweight += consdata->weights[fixedones[i]];
+         activity += 1.0;
          ncovervars++;
       }
       assert(coverweight > consdata->capacity);
@@ -907,14 +741,6 @@ RETCODE separateCardinality(
          noncovervars[nnoncovervars] = fixedzeros[i];
          nnoncovervars++;
       }  
-
-      /* get maximum weight of vars not in cover */
-      maxweight = 0;
-      for( i = 0; i < nnoncovervars; i++ )
-      {
-         if( consdata->weights[noncovervars[i]] > maxweight )
-            maxweight = consdata->weights[noncovervars[i]];
-      }
 
       /* sort cover vars and noncover vars by nonincreasing LP value */
       for( i = 0; i < ncovervars; i++ ) 
@@ -934,32 +760,48 @@ RETCODE separateCardinality(
          noncovervars[j + 1] = idx;
       }
 
-      /* generate lifted cardinality inequalities from cover */
+      /* generate lifted cardinality inequalities from cover, consecutively removing variables from the
+       * cardinality inequality, starting with the full cover
+       */
       for( i = ncovervars - 1; i >= 0; i-- )
       {
-         /* update coverweight and maxweight */
-         coverweight -= consdata->weights[covervars[i]];
-         if( consdata->weights[covervars[i]] > maxweight )
-            maxweight = consdata->weights[covervars[i]];
+         int n;
 
-         /* delete current var from set */
+         /* delete current var from covervars */
+         coverweight -= consdata->weights[covervars[i]];
          solval = solvals[covervars[i]];
+         activity -= solval;
+         ncovervars--;
+
+         /* add current var to noncovervars (sorted by non-increasing LP solution value) */
          for( j = nnoncovervars - 1; j >= 0 && solvals[noncovervars[j]] < solval; j-- )
             noncovervars[j + 1] = noncovervars[j];
          noncovervars[j + 1] = covervars[i];
-         slack -= 1 - solval;
          nnoncovervars++;
-         ncovervars--;
 
-         if( coverweight <= consdata->capacity - maxweight )
+         /* remove variables from noncovervars, that would fit into the knapsack together with all covervars;
+          * the corresponding lifting coefficients would be zero
+          */
+         for( j = 0, n = 0; j < nnoncovervars; j++ )
+         {
+            if( coverweight + consdata->weights[noncovervars[j]] > consdata->capacity )
+            {
+               noncovervars[n] = noncovervars[j];
+               n++;
+            }
+         }
+         nnoncovervars = n;
+
+         /* if no variable in noncovervar is left that does not fit in the knapsack, we can break the separation loop */
+         if( nnoncovervars == 0 )
             break;
         
          /* lift variables not in cover into cardinality inequality */
          CHECK_OKAY( liftCardinality(scip, liftcoefs, cons, covervars, noncovervars, ncovervars, 
                         nnoncovervars, ncovervars, &liftlpval) );
          
-         /* create LP row */
-         if( SCIPisFeasNegative(scip, (slack - liftlpval)/sqrt(ncovervars + 1)) )
+         /* check, if lifting yielded a violated cut */
+         if( SCIPisFeasNegative(scip, (ncovervars - activity - liftlpval)/sqrt(ncovervars + 1.0)) )
          {
             ROW* row;
             Real cutnorm;
@@ -967,6 +809,7 @@ RETCODE separateCardinality(
             char name[MAXSTRLEN];
             int v;
             
+            /* create LP row */
             sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
             CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)ncovervars, 
                            SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
@@ -999,176 +842,26 @@ RETCODE separateCardinality(
             CHECK_OKAY( SCIPreleaseRow(scip, &row) );
          }
          else
+         {
+            /* the lifting did not succeed to lift enough coefficients to the inequality
+             *  -> removing even more variables from the set will most likely not be successful either
+             */
             break;
+         }
       }
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &liftcoefs) );
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &solvals) );
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &noncovervars) );
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
    }
 
-   /* free temporary data */
+   /* free temporary memory */
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &liftcoefs) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &solvals) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &noncovervars) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedzeros) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedones) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &items) );
 
-   return SCIP_OKAY;
-}
-
-/** separates lifted cardinality inequalities for given knapsack constraint */
-static
-RETCODE separateCardinality2(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   Bool*            separated           /**< pointer to store whether a cut was found */
-   )
-{
-   CONSDATA* consdata;
-   Real* solvals;
-   int* perm;
-   Longint setweight;
-   int* setvars;
-   int* nonsetvars;   
-   int nsetvars;
-   int nnonsetvars;
-   int i;
-   int j;
-   int item;
-   Real slack;
-   Real liftlpval;
-   int* liftcoefs;
-
-   assert(separated != NULL);
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   /* set up datastructures */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &solvals, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &setvars, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &nonsetvars, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &liftcoefs, consdata->nvars) );
-
-   sortItems(consdata);
-  
-   /* sort items by nonincreasing LP solution value */
-   CHECK_OKAY( SCIPgetVarSols(scip, consdata->nvars, consdata->vars, solvals) );
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      for( j = i - 1; j >= 0 && solvals[perm[j]] <= solvals[i]; j-- )
-         perm[j + 1] = perm[j];
-      perm[j + 1] = i;
-   }
-
-   nsetvars = 0;
-   nnonsetvars = 0;
-   setweight = 0;
-   slack = 0.0;
-
-   while( nsetvars < consdata->nvars && setweight <= consdata->capacity && slack < 1.0 )
-   {
-      item = perm[nsetvars];
-      setweight += consdata->weights[item];
-      slack += 1.0 - solvals[item];
-      setvars[nsetvars] = item;
-      nsetvars++;
-   }
-
-   for( j = nsetvars; j < consdata->nvars; j++ )
-   {
-      nonsetvars[nnonsetvars] = perm[j];
-      nnonsetvars++;
-   }
-
-   while( nsetvars >= 2 )
-   {
-      int n;
-
-      item = setvars[nsetvars-1];
-
-      /* remove next item from set */
-      setweight -= consdata->weights[item];
-      slack -= 1.0 - solvals[item];
-      nsetvars--;
-
-      /* add item to nonsetvars (as the first element) */
-      for( j = nnonsetvars; j > 0; j-- )
-         nonsetvars[j] = nonsetvars[j - 1];
-      nonsetvars[j] = item;
-      nnonsetvars++;
-
-      /* remove all items from nonset that have too small capacity */
-      n = 0;
-      for( j = 0; j < nnonsetvars; ++j )
-      {
-         if( setweight + consdata->weights[nonsetvars[j]] > consdata->capacity )
-         {
-            nonsetvars[n] = nonsetvars[j];
-            n++;
-         }
-      }
-      nnonsetvars = n;
-
-      if( nnonsetvars == 0 )
-         break;
- 
-      /* lift variables not in set into inequality */
-      CHECK_OKAY( liftCardinality(scip, liftcoefs, cons, setvars, nonsetvars, nsetvars, 
-                     nnonsetvars, nsetvars, &liftlpval) );
-   
-      if( SCIPisFeasNegative(scip, (slack - liftlpval)/sqrt(nsetvars)) )
-      {
-         int v;
-         ROW* row;
-         char name[MAXSTRLEN];
-         Real cutnorm;
-         Real cutfeas;
-
-         /* create LP row */
-         sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)nsetvars, 
-                        SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
-
-         /* add set elements to cut */
-         for( v = 0; v < nsetvars; v++ )
-         {
-            CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[setvars[v]], 1.0) );
-         }
-         
-         /* add lifted non set elements to cut */
-         for( v = 0; v < nnonsetvars; v++ )
-         {
-            if( liftcoefs[v] > 0 )
-            {
-               CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[nonsetvars[v]], (Real)liftcoefs[v]) );
-            }
-         }
-                    
-         /* check, if cut is violated enough */
-         cutnorm = SCIProwGetNorm(row);
-         cutfeas = SCIPgetRowLPFeasibility(scip, row);
-         if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
-         {         
-            debugMessage("lifted cardinality2 cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
-            debug(SCIProwPrint(row, NULL));
-            CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
-            *separated = TRUE;
-         }
-         CHECK_OKAY( SCIPreleaseRow(scip, &row) );
-      }
-      else
-         break;
-   }
-      
-   /* free temporary data */   
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &liftcoefs) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &nonsetvars) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &setvars) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &perm) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &solvals) );
-  
    return SCIP_OKAY;
 }
 
@@ -1572,8 +1265,8 @@ DECL_CONSSEPA(consSepaKnapsack)
    Bool separated;
    int depth;
    int nrounds;
-   int maxsepacuts;
    int ncuts;
+   int maxsepacuts;
    int i;
 
    *result = SCIP_DIDNOTRUN;
@@ -1596,35 +1289,27 @@ DECL_CONSSEPA(consSepaKnapsack)
    maxsepacuts = depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
 
    *result = SCIP_DIDNOTFIND;
-
    ncuts = 0;
+
+   /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
    {
-#if 0
-      CHECK_OKAY( separateCovers(scip, conss[i], &separated) );
-      if( separated )
-      {
-         ncuts++;
-         *result = SCIP_SEPARATED;
-      }
-#endif
-
       CHECK_OKAY( separateCardinality(scip, conss[i], &separated) );
       if( separated )
-      {
          ncuts++;
-         *result = SCIP_SEPARATED;
-      }
-
-#if 0
-      CHECK_OKAY( separateCardinality2(scip, conss[i], &separated) );
-      if( separated )
-      {
-         ncuts++;
-         *result = SCIP_SEPARATED;
-      }
-#endif
    }
+   
+   /* separate remaining constraints until a cutting plane was found */
+   for( i = nusefulconss; i < nconss && ncuts == 0; i++ )
+   {
+      CHECK_OKAY( separateCardinality(scip, conss[i], &separated) );
+      if( separated )
+         ncuts++;
+   }
+
+   /* adjust return value */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
    
    return SCIP_OKAY;
 }
