@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.35 2004/04/05 15:48:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.36 2004/04/06 13:09:48 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1857,7 +1857,7 @@ RETCODE SCIPlpconflictAnalyze(
       /* temporarily remove cutoff bound, and continue solving LP */
       oldcutoffbound = lp->cutoffbound;
       CHECK_OKAY( SCIPlpSetCutoffbound(lp, set->infinity) );
-      CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE, &error) );
+      CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, &error) );
       CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
       lpconflict->nlpiterations += iterations;
       CHECK_OKAY( SCIPlpSetCutoffbound(lp, oldcutoffbound) );

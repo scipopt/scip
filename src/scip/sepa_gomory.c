@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.19 2004/04/05 15:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.20 2004/04/06 13:09:50 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -31,8 +31,8 @@
 #include "sepa_gomory.h"
 
 
-#define SEPA_NAME          "gomory"
-#define SEPA_DESC          "Gomory MIR cuts separator"
+#define SEPA_NAME              "gomory"
+#define SEPA_DESC              "Gomory MIR cuts separator"
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
 

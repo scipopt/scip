@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.106 2004/03/30 12:51:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.107 2004/04/06 13:09:49 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4348,6 +4348,7 @@ RETCODE SCIPlpCreate(
    (*lp)->lpifromscratch = FALSE;
    (*lp)->lpifastmip = TRUE;
    (*lp)->lpiscaling = TRUE;
+   (*lp)->lpiitlim = INT_MAX;
    (*lp)->lastwasprimal = FALSE;
 
    /* set objective sense */
@@ -4360,6 +4361,7 @@ RETCODE SCIPlpCreate(
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim) );
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, FALSE) );
 
@@ -5353,6 +5355,33 @@ RETCODE lpSetScaling(
    return SCIP_OKAY;
 }
 
+/** sets the iteration limit of the LP solver */
+static
+RETCODE lpSetIterationLimit(
+   LP*              lp,                 /**< current LP data */
+   int              itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
+   )
+{
+   assert(lp != NULL);
+   assert(itlim >= -1);
+
+   if( itlim == -1 )
+      itlim = INT_MAX;
+
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
+
+   if( itlim != lp->lpiitlim )
+   {
+      if( itlim > lp->lpiitlim )
+         lp->solved = FALSE;
+
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPITLIM, itlim) );
+      lp->lpiitlim = itlim;
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** sets the upper objective limit of the LP solver */
 RETCODE SCIPlpSetCutoffbound(
    LP*              lp,                 /**< current LP data */
@@ -5389,7 +5418,7 @@ RETCODE lpPrimalSimplex(
       stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
 #if 0 /*???????????????????????*/
-   if( stat->nnodes <= 1 && !lp->diving  )
+   if( stat->nnodes >= 8725 && !lp->diving  )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
@@ -5449,7 +5478,7 @@ RETCODE lpDualSimplex(
       stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
 #if 0 /*???????????????????????*/
-   if( stat->nnodes <= 1 && !lp->diving )
+   if( stat->nnodes >= 8725 && !lp->diving )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
@@ -5761,6 +5790,7 @@ RETCODE SCIPlpSolveAndEval(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
@@ -5771,6 +5801,8 @@ RETCODE SCIPlpSolveAndEval(
 
    debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d, diving=%d, cutoff=%g\n", 
       lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->cutoffbound);
+
+   CHECK_OKAY( lpSetIterationLimit(lp, itlim) );
 
    if( !lp->solved )
    {
@@ -5875,8 +5907,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_ITERLIMIT:
-         errorMessage("LP solver reached iteration limit -- this should not happen!\n");
-         return SCIP_ERROR;
+         break;
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
          /**@todo time limit exceeded processing */
@@ -5925,6 +5956,17 @@ Real SCIPlpGetObjval(
       return -set->infinity;
    else
       return lp->lpobjval + lp->looseobjval;
+}
+
+/** gets part of objective value of last solution that results from COLUMN variables only */
+Real SCIPlpGetColumnObjval(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->solved);
+
+   return lp->lpobjval;
 }
 
 /** gets part of objective value of last solution that results from LOOSE variables only */
@@ -7426,7 +7468,7 @@ RETCODE SCIPlpEndDive(
    assert(lp->divelpistate == NULL);
 
    /* resolve LP to reset solution */
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE, &lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, &lperror) );
    if( lperror )
    {
       infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,

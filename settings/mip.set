@@ -134,6 +134,10 @@ conflict/usepropconflict = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 conflict/uselpconflict = FALSE
 
+# should pseudo solution conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/usepseudoconflict = TRUE
+
 # maximal fraction of binary variables involved in a conflict clause
 # [type: real, range: [0,1.79769313486232e+308], default: 0.02]
 conflict/maxconfvarsfac = 0.02
@@ -329,6 +333,14 @@ constraints/knapsack/maxrounds = 5
 # maximal number of separation rounds per node in the root node
 # [type: int, range: [0,2147483647], default: 10]
 constraints/knapsack/maxroundsroot = 10
+
+# maximal number of cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 50]
+constraints/knapsack/maxsepacuts = 50
+
+# maximal number of cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 200]
+constraints/knapsack/maxsepacutsroot = 200
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -649,6 +661,14 @@ separating/gomory/maxsepacutsroot = 100
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/gomory/dynamiccuts = FALSE
+
+# priority of separator <intobj>
+# [type: int, range: [-2147483648,2147483647], default: -100]
+separating/intobj/priority = -100
+
+# frequency for calling separator <intobj> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/intobj/freq = -1
 
 # display activation status of display column <solfound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

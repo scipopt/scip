@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.98 2004/04/05 15:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.99 2004/04/06 13:09:51 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -417,7 +417,7 @@ RETCODE solveNodeInitialLP(
     * -> dual simplex is applicable as first solver
     */
    debugMessage("node: solve initial LP\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
    assert(lp->solved || *lperror);
 
    if( !(*lperror) )
@@ -484,7 +484,7 @@ RETCODE solveNodeLP(
 
    /* solve initial LP of price-and-cut loop */
    debugMessage("node: solve LP with price and cut\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
    assert(lp->solved);
 
    /* display node information line for root node */
@@ -549,7 +549,7 @@ RETCODE solveNodeLP(
           * if LP was infeasible, we have to use dual simplex
           */
          debugMessage("pricing: solve LP\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
          assert(lp->solved || *lperror);
 
          /* reset bounds temporarily set by pricer to their original values */
@@ -562,7 +562,7 @@ RETCODE solveNodeLP(
 
          /* solve LP again after resetting bounds (with dual simplex) */
          debugMessage("pricing: solve LP after resetting bounds\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE, lperror) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, lperror) );
          assert(lp->solved || *lperror);
 
          /* increase pricing round counter */
@@ -681,7 +681,7 @@ RETCODE solveNodeLP(
                {
                   /* solve LP (with dual simplex) */
                   debugMessage("separation: solve LP\n");
-                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
+                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
                }
             }
          }
@@ -849,6 +849,10 @@ RETCODE redcostStrengthening(
          }
          break;
 
+      case SCIP_BASESTAT_ZERO:
+         assert(SCIPsetIsFeasZero(set, SCIPcolGetRedcost(cols[c], stat, lp)));
+         break;
+
       default:
          errorMessage("invalid basis state\n");
          return SCIP_INVALIDDATA;
@@ -857,18 +861,6 @@ RETCODE redcostStrengthening(
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &cstat);
-
-   /**@todo check, if the resolve in next solveNodeLP() call is too expensive in contrast to resolving directly
-    *       after reduced cost fixing
-    */
-#if 0 /* resolving is done in the next solveNodeLP() call */
-   /* resolve the LP (the optimal solution should stay the same) */
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
-   assert(lp->solved);
-   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
-   assert(EPSZ(SCIPsetRelDiff(set, SCIPlpGetObjval(lp, set), lpobjval), 100.0*(set)->feastol));
-   /*assert(SCIPsetIsFeasEQ(set, SCIPlpGetObjval(lp, set), lpobjval));*/
-#endif
 
    /* stop redcost strengthening activation timer */
    SCIPclockStop(stat->redcoststrtime, set);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.2 2004/02/26 13:53:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.3 2004/04/06 13:09:50 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -1739,8 +1739,8 @@ RETCODE SCIPlpiGetBase(
             cstat[i] = SCIP_BASESTAT_UPPER;
             break;
          case SoPlex::ZERO:
-            errorMessage("variable has basis status ZERO (should not occur)\n");
-            return SCIP_LPERROR;
+            cstat[i] = SCIP_BASESTAT_ZERO;
+            break;
          default:
             errorMessage("invalid basis status\n");
             abort();
@@ -1783,6 +1783,9 @@ RETCODE SCIPlpiSetBase(
       case SCIP_BASESTAT_UPPER:
          spxrstat[i] = SoPlex::ON_UPPER;
          break;
+      case SCIP_BASESTAT_ZERO:
+         errorMessage("slack variable has basis status ZERO (should not occur)\n");
+         return SCIP_LPERROR;
       default:
          errorMessage("invalid basis status\n");
          abort();
@@ -1801,6 +1804,9 @@ RETCODE SCIPlpiSetBase(
          break;
       case SCIP_BASESTAT_UPPER:
          spxcstat[i] = SoPlex::ON_UPPER;
+         break;
+      case SCIP_BASESTAT_ZERO:
+         spxcstat[i] = SoPlex::ZERO;
          break;
       default:
          errorMessage("invalid basis status\n");

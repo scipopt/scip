@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.117 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.118 2004/04/06 13:09:50 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2121,6 +2121,7 @@ Real SCIPgetVarUbDive(
 extern
 RETCODE SCIPsolveDiveLP(
    SCIP*            scip,               /**< SCIP data structure */
+   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 

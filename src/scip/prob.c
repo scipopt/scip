@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.42 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.43 2004/04/06 13:09:50 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -30,6 +30,7 @@
 #include "message.h"
 #include "set.h"
 #include "misc.h"
+#include "event.h"
 #include "lp.h"
 #include "var.h"
 #include "prob.h"
@@ -250,6 +251,8 @@ RETCODE SCIPprobTransform(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    PROB**           target              /**< pointer to target problem data structure */
    )
 {
@@ -279,7 +282,7 @@ RETCODE SCIPprobTransform(
    for( v = 0; v < source->nvars; ++v )
    {
       CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
-      CHECK_OKAY( SCIPprobAddVar(*target, set, lp, branchcand, targetvar) );
+      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
       CHECK_OKAY( SCIPvarRelease(&targetvar, memhdr, set, NULL) );
    }
    assert((*target)->nvars == source->nvars);
@@ -501,12 +504,17 @@ void probRemoveVar(
 /** adds variable to the problem and captures it */
 RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable to add */
    )
 {
+   EVENT* event;
+
    assert(prob != NULL);
    assert(set != NULL);
    assert(var != NULL);
@@ -536,6 +544,13 @@ RETCODE SCIPprobAddVar(
 
    debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
       SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+
+   if( prob->transformed )
+   {
+      /* issue VARADDED event */
+      CHECK_OKAY( SCIPeventCreateVarAdded(&event, memhdr, var) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, eventfilter, &event) );
+   }
 
    return SCIP_OKAY;
 }

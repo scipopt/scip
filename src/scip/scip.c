@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.140 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.141 2004/04/06 13:09:50 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2078,7 +2078,8 @@ RETCODE SCIPaddVar(
          errorMessage("Cannot add transformed variables to original problem\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPprobAddVar(scip->origprob, scip->set, scip->lp, scip->branchcand, var) );
+      CHECK_OKAY( SCIPprobAddVar(scip->origprob, scip->mem->probmem, scip->set, scip->lp, scip->branchcand, 
+                     scip->eventfilter, scip->eventqueue, var) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -2097,7 +2098,8 @@ RETCODE SCIPaddVar(
          }
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->set, scip->lp, scip->branchcand, var) );
+      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
+                     scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
       return SCIP_OKAY;
 
    default:
@@ -2139,7 +2141,8 @@ RETCODE SCIPaddPricedVar(
          }
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->set, scip->lp, scip->branchcand, var) );
+      CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
+                     scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
    }
 
    /* add variable to pricing storage */
@@ -3006,8 +3009,8 @@ RETCODE SCIPpresolve(
                   SCIPsetGetNodesel(scip->set, scip->stat)) );
 
    /* copy problem in solve memory */
-   CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
-                  &scip->transprob) );
+   CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
+                  scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
 
    /* init callback methods */
    CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
@@ -4339,7 +4342,8 @@ RETCODE aggregateActiveIntVars(
                   aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
                   SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary),
                   SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary) ) );
-   CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->set, scip->lp, scip->branchcand, aggvar) );
+   CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
+                  scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
                   scip->lp, scip->branchcand, scip->eventqueue, aggvar, (Real)(-b), (Real)xsol, infeasible) );
    if( !(*infeasible) )
@@ -5423,6 +5427,7 @@ Real SCIPgetVarUbDive(
 /** solves the LP of the current dive */
 RETCODE SCIPsolveDiveLP(
    SCIP*            scip,               /**< SCIP data structure */
+   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
@@ -5434,7 +5439,8 @@ RETCODE SCIPsolveDiveLP(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, FALSE, lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
+                  itlim, FALSE, lperror) );
 
    return SCIP_OKAY;
 }
@@ -5532,14 +5538,11 @@ RETCODE SCIPchgRowLhs(
    Real             lhs                 /**< new left hand side */
    )
 {
-   errorMessage("sides of row must not be changed (not implemented yet)\n");
-   abort(); /*lint --e{527} --e{715}*/
-#if 0
    CHECK_OKAY( checkStage(scip, "SCIPchgRowLhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwChgLhs(row, scip->set, scip->lp, lhs) );
+
    return SCIP_OKAY;
-#endif
 }
 
 /** changes right hand side of LP row */
@@ -5549,14 +5552,11 @@ RETCODE SCIPchgRowRhs(
    Real             rhs                 /**< new right hand side */
    )
 {
-   errorMessage("sides of row must not be changed (not implemented yet)\n");
-   abort(); /*lint --e{527} --e{715}*/
-#if 0
    CHECK_OKAY( checkStage(scip, "SCIPchgRowRhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwChgRhs(row, scip->set, scip->lp, rhs) );
+
    return SCIP_OKAY;
-#endif
 }
 
 /** resolves variable to columns and adds them with the coefficient to the row */

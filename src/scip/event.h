@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.23 2004/02/05 14:12:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.24 2004/04/06 13:09:48 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -96,6 +96,14 @@ RETCODE SCIPeventhdlrExec(
 /*
  * Event methods
  */
+
+/** creates an event for an addition of a variable to the problem */
+extern
+RETCODE SCIPeventCreateVarAdded(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var                 /**< variable that was added to the problem */
+   );
 
 /** creates an event for a change in the objective value of a variable */
 extern

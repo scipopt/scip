@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.71 2004/03/30 12:51:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.72 2004/04/06 13:09:49 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -622,6 +622,7 @@ RETCODE SCIPlpSolveAndEval(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
@@ -637,6 +638,12 @@ extern
 Real SCIPlpGetObjval(
    LP*              lp,                 /**< current LP data */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets part of objective value of last solution that results from COLUMN variables only */
+extern
+Real SCIPlpGetColumnObjval(
+   LP*              lp                  /**< current LP data */
    );
 
 /** gets part of objective value of last solution that results from LOOSE variables only */

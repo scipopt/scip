@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.4 2004/02/04 17:27:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.5 2004/04/06 13:09:51 bzfpfend Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -68,7 +68,8 @@ enum BaseStat
 {
    SCIP_BASESTAT_LOWER = 0,             /**< (slack) variable is at its lower bound */
    SCIP_BASESTAT_BASIC = 1,             /**< (slack) variable is basic */
-   SCIP_BASESTAT_UPPER = 2              /**< (slack) variable is at its upper bound */
+   SCIP_BASESTAT_UPPER = 2,             /**< (slack) variable is at its upper bound */
+   SCIP_BASESTAT_ZERO  = 3              /**< free variable is and non-basic and set to zero */
 };
 typedef enum BaseStat BASESTAT;
 

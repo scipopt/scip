@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.15 2004/03/30 12:51:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.16 2004/04/06 13:09:50 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -57,6 +57,7 @@
 #include "reader_cnf.h"
 #include "reader_mps.h"
 #include "sepa_gomory.h"
+#include "sepa_intobj.h"
 #include "scipdefplugins.h"
 
 
@@ -103,6 +104,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
    CHECK_OKAY( SCIPincludeHeurSimplerounding(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
+   CHECK_OKAY( SCIPincludeSepaIntobj(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeDialogDefault(scip) );
 

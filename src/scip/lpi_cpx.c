@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.58 2004/03/30 12:51:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.59 2004/04/06 13:09:49 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -48,6 +48,7 @@
                       }
 
 #define NOTCALLED  -1
+#define CPX_INT_MAX 2100000000 /* CPLEX doesn't accept larger values in integer parameters */
 
 
 typedef DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -2046,6 +2047,7 @@ RETCODE SCIPlpiGetBase(
    assert(SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
    assert(SCIP_BASESTAT_BASIC == CPX_BASIC);
    assert(SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
+   assert(SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
    return SCIP_OKAY;
 }
@@ -2071,6 +2073,7 @@ RETCODE SCIPlpiSetBase(
    assert(SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
    assert(SCIP_BASESTAT_BASIC == CPX_BASIC);
    assert(SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
+   assert(SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
    CHECK_ZERO( CPXcopybase(cpxenv, lpi->cpxlp, cstat, rstat) );
 
@@ -2328,6 +2331,8 @@ RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = getIntParam(lpi, CPX_PARAM_ITLIM);
+      if( *ival >= CPX_INT_MAX )
+         *ival = INT_MAX;
       break;
    case SCIP_LPPAR_LPITER:
       *ival = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
@@ -2395,6 +2400,7 @@ RETCODE SCIPlpiSetIntpar(
 	 setIntParam(lpi, CPX_PARAM_SCRIND, CPX_OFF);
       break;
    case SCIP_LPPAR_LPITLIM:
+      ival = MIN(ival, CPX_INT_MAX);
       setIntParam(lpi, CPX_PARAM_ITLIM, ival);
       break;
    default:

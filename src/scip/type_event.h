@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.2 2004/02/04 17:27:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.3 2004/04/06 13:09:51 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -34,7 +34,7 @@
 #define SCIP_EVENTTYPE_DISABLED       0x00000000 /**< the event was disabled and has no effect any longer */
 
 /* variable events */
-#define SCIP_EVENTTYPE_VARCREATED     0x00000001 /**< ??? TODO: a variable has been created */
+#define SCIP_EVENTTYPE_VARADDED       0x00000001 /**< a variable has been added to the transformed problem */
 #define SCIP_EVENTTYPE_VARFIXED       0x00000002 /**< ??? TODO: a variable has been fixed, aggregated, or multiaggregated */
 #define SCIP_EVENTTYPE_OBJCHANGED     0x00000004 /**< the objective value of a variable has been changed */
 #define SCIP_EVENTTYPE_LBTIGHTENED    0x00000008 /**< the lower bound of a variable has been increased */
@@ -87,6 +87,7 @@ typedef unsigned int EVENTTYPE;         /**< type of event (bit field) */
 typedef struct Eventhdlr EVENTHDLR;     /**< event handler for a specific events */
 typedef struct EventhdlrData EVENTHDLRDATA; /**< event handler data */
 typedef struct Event EVENT;             /**< event data structure */
+typedef struct EventVarAdded EVENTVARADDED; /**< data for variable addition events */
 typedef struct EventObjChg EVENTOBJCHG; /**< data for objective value change events */
 typedef struct EventBdChg EVENTBDCHG;   /**< data for bound change events */
 typedef struct EventData EVENTDATA;     /**< locally defined event specific data */

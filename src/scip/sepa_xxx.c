@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.3 2004/02/04 17:27:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.4 2004/04/06 13:09:51 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -28,10 +28,10 @@
 #include "sepa_xxx.h"
 
 
-#define SEPA_NAME            "xxx"
-#define SEPA_DESC            "separator template"
-#define SEPA_PRIORITY        0
-#define SEPA_FREQ            8
+#define SEPA_NAME              "xxx"
+#define SEPA_DESC              "separator template"
+#define SEPA_PRIORITY                 0
+#define SEPA_FREQ                    10
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.30 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.31 2004/04/06 13:09:50 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -32,6 +32,7 @@
 #include "type_retcode.h"
 #include "type_set.h"
 #include "type_stat.h"
+#include "type_event.h"
 #include "type_lp.h"
 #include "type_var.h"
 #include "type_prob.h"
@@ -81,6 +82,8 @@ RETCODE SCIPprobTransform(
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    PROB**           target              /**< pointer to target problem data structure */
    );
 
@@ -102,9 +105,12 @@ void SCIPprobSetData(
 extern
 RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable to add */
    );
 

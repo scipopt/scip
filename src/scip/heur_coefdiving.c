@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.7 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.8 2004/04/06 13:09:48 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -434,7 +434,7 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       }
 
       /* resolve the diving LP */
-      CHECK_OKAY( SCIPsolveDiveLP(scip, &lperror) );
+      CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations, &lperror) );
       if( lperror )
          break;
 

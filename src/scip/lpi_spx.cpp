@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.17 2004/03/19 09:41:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.18 2004/04/06 13:09:49 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1761,8 +1761,8 @@ RETCODE SCIPlpiGetBase(
             cstat[i] = SCIP_BASESTAT_UPPER;
             break;
          case SPxSolver::ZERO:
-            errorMessage("variable has basis status ZERO (should not occur)\n");
-            return SCIP_LPERROR;
+            cstat[i] = SCIP_BASESTAT_ZERO;
+            break;
          default:
             errorMessage("invalid basis status\n");
             abort();
@@ -1805,6 +1805,9 @@ RETCODE SCIPlpiSetBase(
       case SCIP_BASESTAT_UPPER:
          spxrstat[i] = SPxSolver::ON_UPPER;
          break;
+      case SCIP_BASESTAT_ZERO:
+         errorMessage("slack variable has basis status ZERO (should not occur)\n");
+         return SCIP_LPERROR;
       default:
          errorMessage("invalid basis status\n");
          abort();
@@ -1823,6 +1826,9 @@ RETCODE SCIPlpiSetBase(
          break;
       case SCIP_BASESTAT_UPPER:
          spxcstat[i] = SPxSolver::ON_UPPER;
+         break;
+      case SCIP_BASESTAT_ZERO:
+         spxcstat[i] = SPxSolver::ZERO;
          break;
       default:
          errorMessage("invalid basis status\n");

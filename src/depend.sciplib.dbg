@@ -256,13 +256,13 @@ $(OBJDIR)/prob.o: src/prob.c src/def.h src/type_retcode.h src/message.h src/set.
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_sepa.h \
-  src/struct_set.h src/misc.h src/type_misc.h src/pub_misc.h src/lp.h \
-  src/type_lpi.h src/type_lp.h src/type_prob.h src/pub_lp.h \
-  src/struct_lp.h src/var.h src/pub_var.h src/struct_var.h \
-  src/type_history.h src/prob.h src/struct_prob.h src/tree.h \
-  src/pub_tree.h src/struct_tree.h src/branch.h src/type_sepastore.h \
-  src/pub_branch.h src/cons.h src/type_mem.h src/pub_cons.h \
-  src/struct_cons.h
+  src/struct_set.h src/misc.h src/type_misc.h src/pub_misc.h src/event.h \
+  src/type_lp.h src/pub_event.h src/struct_event.h src/lp.h \
+  src/type_lpi.h src/type_prob.h src/pub_lp.h src/struct_lp.h src/var.h \
+  src/pub_var.h src/struct_var.h src/type_history.h src/prob.h \
+  src/struct_prob.h src/tree.h src/pub_tree.h src/struct_tree.h \
+  src/branch.h src/type_sepastore.h src/pub_branch.h src/cons.h \
+  src/type_mem.h src/pub_cons.h src/struct_cons.h
 $(OBJDIR)/reader.o: src/reader.c src/def.h src/type_retcode.h src/memory.h \
   src/set.h src/message.h src/type_set.h src/type_stat.h src/buffer.h \
   src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \

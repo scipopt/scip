@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.70 2004/03/30 12:51:38 bzfpfend Exp $
+# $Id: Makefile,v 1.71 2004/04/06 13:09:47 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -239,7 +239,8 @@ SCIPLIBOBJ	=	branch.o \
 			presol_trivial.o \
 			reader_cnf.o \
 			reader_mps.o \
-			sepa_gomory.o
+			sepa_gomory.o \
+			sepa_intobj.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).a

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.28 2004/02/05 14:12:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.29 2004/04/06 13:09:48 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -213,6 +213,24 @@ Bool SCIPeventhdlrIsInitialized(
  * Event methods
  */
 
+/** creates an event for an addition of a variable to the problem */
+RETCODE SCIPeventCreateVarAdded(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var                 /**< variable that was added to the problem */
+   )
+{
+   assert(event != NULL);
+   assert(memhdr != NULL);
+
+   /* create event data */
+   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_VARADDED;
+   (*event)->data.eventvaradded.var = var;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for a change in the objective value of a variable */
 RETCODE SCIPeventCreateObjChanged(
    EVENT**          event,              /**< pointer to store the event */
@@ -345,9 +363,10 @@ VAR* SCIPeventGetVar(
 
    switch( event->eventtype )
    {  
-   case SCIP_EVENTTYPE_VARCREATED:
-      errorMessage("VARCREATED event not implemented yet\n");
-      abort();
+   case SCIP_EVENTTYPE_VARADDED:
+      assert(event->data.eventvaradded.var != NULL);
+      return event->data.eventvaradded.var;
+
    case SCIP_EVENTTYPE_VARFIXED:
       errorMessage("VARFIXED event not implemented yet\n");
       abort();
@@ -540,7 +559,7 @@ RETCODE SCIPeventProcess(
    {
    case SCIP_EVENTTYPE_DISABLED:
       break;
-   case SCIP_EVENTTYPE_VARCREATED:
+   case SCIP_EVENTTYPE_VARADDED:
    case SCIP_EVENTTYPE_VARFIXED:
    case SCIP_EVENTTYPE_NODEACTIVATED:
    case SCIP_EVENTTYPE_NODEFEASIBLE:
@@ -1077,7 +1096,7 @@ RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_DISABLED:
          errorMessage("cannot add a disabled event to the event queue\n");
          return SCIP_INVALIDDATA;
-      case SCIP_EVENTTYPE_VARCREATED:
+      case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARFIXED:
       case SCIP_EVENTTYPE_NODEACTIVATED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objhistdiving.c,v 1.6 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objhistdiving.c,v 1.7 2004/04/06 13:09:48 bzfpfend Exp $"
 
 /**@file   heur_objhistdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using history values as guide
@@ -462,7 +462,7 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
       }
 
       /* resolve the diving LP */
-      CHECK_OKAY( SCIPsolveDiveLP(scip, &lperror) );
+      CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations, &lperror) );
       if( lperror )
          break;
 
