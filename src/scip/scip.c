@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.158 2004/05/03 08:13:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.159 2004/05/03 09:21:41 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1911,7 +1911,7 @@ RETCODE SCIPfreeProb(
       assert(scip->set->nactivepricers == 0);
 
       /* free problem and problem statistics datastructures */
-      CHECK_OKAY( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->lp) );
+      CHECK_OKAY( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->lp) );
       CHECK_OKAY( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
       /* switch stage to INIT */
@@ -2561,22 +2561,22 @@ RETCODE SCIPaddCons(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->set, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->set, scip->stat, cons) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       if( SCIPconsIsGlobal(cons) )
       {
-         CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, cons) );
+         CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
       }
       else
       {
-         CHECK_OKAY( SCIPnodeAddCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
+         CHECK_OKAY( SCIPnodeAddCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
       }
       return SCIP_OKAY;
 
@@ -2602,7 +2602,7 @@ RETCODE SCIPdelCons(
    {
    case SCIP_STAGE_PROBLEM:
       assert(cons->addconssetchg == NULL);
-      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->stat, scip->origprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
@@ -2610,7 +2610,7 @@ RETCODE SCIPdelCons(
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
       return SCIP_OKAY;
 
    default:
@@ -2680,11 +2680,11 @@ RETCODE SCIPaddConsNode(
    {
       assert(node == scip->tree->root);
       cons->local = FALSE;
-      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
    }
    else
    {
-      CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
+      CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
    }
 
    return SCIP_OKAY;
@@ -2718,7 +2718,7 @@ RETCODE SCIPdisableConsNode(
 
    CHECK_OKAY( checkStage(scip, "SCIPdisableConsNode", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
+   CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
    
    return SCIP_OKAY;
 }
@@ -2739,19 +2739,19 @@ RETCODE SCIPdisableConsLocal(
    {
    case SCIP_STAGE_PROBLEM:
       assert(cons->addconssetchg == NULL);
-      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->origprob) );
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->stat, scip->origprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
       assert(cons->addconssetchg == NULL);
-      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
+      CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       assert(scip->tree->actnode != NULL);
       assert(SCIPnodeGetType(scip->tree->actnode) == SCIP_NODETYPE_ACTNODE);
-      CHECK_OKAY( SCIPnodeDisableCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
+      CHECK_OKAY( SCIPnodeDisableCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
       return SCIP_OKAY;
 
    default:
@@ -3034,8 +3034,8 @@ RETCODE presolve(
       /* call presolve methods of constraint handlers */
       for( i = 0; i < scip->set->nconshdlrs && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
       {
-         CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->transprob,
-                        nrounds,
+         CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat, 
+                        scip->transprob, nrounds,
                         &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
                         &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
       }
@@ -3268,7 +3268,7 @@ RETCODE freeTransform(
    CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
 
    /* free transformed problem data structures */
-   CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
+   CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
    CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
    CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
    CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
@@ -5342,7 +5342,7 @@ RETCODE SCIPaddConsAge(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddConsAge", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconsAddAge(cons, scip->mem->solvemem, scip->set, scip->transprob, deltaage) );
+   CHECK_OKAY( SCIPconsAddAge(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, deltaage) );
 
    return SCIP_OKAY;
 }
@@ -5360,7 +5360,7 @@ RETCODE SCIPincConsAge(
 {
    CHECK_OKAY( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconsIncAge(cons, scip->mem->solvemem, scip->set, scip->transprob) );
+   CHECK_OKAY( SCIPconsIncAge(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
 
    return SCIP_OKAY;
 }
@@ -7657,16 +7657,9 @@ int SCIPgetNActiveConss(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int nconss;
-   int h;
-
    CHECK_ABORT( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   nconss = 0;
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-      nconss += SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
-
-   return nconss;
+   return scip->stat->nactiveconss;
 }
 
 /** gets total number of enabled constraints at the current node */
@@ -7674,16 +7667,9 @@ int SCIPgetNEnabledConss(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int nenabledconss;
-   int h;
-
    CHECK_ABORT( checkStage(scip, "SCIPgetNEnabledConss", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   nenabledconss = 0;
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-      nenabledconss += SCIPconshdlrGetNEnabledConss(scip->set->conshdlrs[h]);
-
-   return nenabledconss;
+   return scip->stat->nenabledconss;
 }
 
 /** gets total number of globally valid constraints currently in the problem */
@@ -7993,7 +7979,7 @@ void printConstraintStatistics(
    assert(file != NULL);
 
    /**@todo add constraint statistics: how many constraints (instead of cuts) have been added? */
-   fprintf(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS    Cutoffs       Cuts    DomReds   Children\n");
+   fprintf(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -8007,7 +7993,7 @@ void printConstraintStatistics(
       if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %10d%c%10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld\n",
+         fprintf(file, " %10d%c%10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld\n",
             startnconss,
             maxnconss > startnconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr), 
@@ -8015,8 +8001,9 @@ void printConstraintStatistics(
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
             SCIPconshdlrGetNCutoffs(conshdlr), 
-            SCIPconshdlrGetNCutsFound(conshdlr), 
             SCIPconshdlrGetNDomredsFound(conshdlr), 
+            SCIPconshdlrGetNCutsFound(conshdlr), 
+            SCIPconshdlrGetNConssFound(conshdlr), 
             SCIPconshdlrGetNChildren(conshdlr));
       }
    }
@@ -8162,7 +8149,7 @@ void printBranchruleStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Branching Rules    :       Time      Calls    Cutoffs       Cuts    DomReds   Children\n");
+   fprintf(file, "Branching Rules    :       Time      Calls    Cutoffs    DomReds       Cuts   Children\n");
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
       fprintf(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld\n",
@@ -8170,8 +8157,8 @@ void printBranchruleStatistics(
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
          SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutoffs(scip->set->branchrules[i]),
-         SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i]),
+         SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.57 2004/04/29 15:20:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.58 2004/05/03 09:21:42 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -105,6 +105,7 @@ RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    CONS*            cons                /**< constraint to add */
    );
@@ -117,6 +118,7 @@ RETCODE SCIPnodeDisableCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    CONS*            cons                /**< constraint to disable */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.35 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.36 2004/05/03 09:21:41 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -712,6 +712,7 @@ RETCODE SCIPsolCheck(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -730,7 +731,8 @@ RETCODE SCIPsolCheck(
    *feasible = TRUE;
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, prob, sol, checkintegrality, checklprows, &result) );
+      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, stat, prob, sol, checkintegrality, checklprows,
+                     &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
    }
 

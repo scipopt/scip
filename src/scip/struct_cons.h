@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.8 2004/05/03 08:13:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.9 2004/05/03 09:21:42 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -94,6 +94,7 @@ struct Conshdlr
    Longint          npropcalls;         /**< number of times, the propagator was called */
    Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
+   Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
    Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    Longint          nchildren;          /**< number of children the constraint handler created during branching */
    char*            name;               /**< name of constraint handler */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.104 2004/04/30 11:16:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.105 2004/05/03 09:21:41 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -538,7 +538,7 @@ RETCODE initRootLP(
    debugMessage("init root LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], memhdr, set, prob) );
+      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], memhdr, set, stat, prob) );
    }
    CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 

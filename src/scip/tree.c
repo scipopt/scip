@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.92 2004/04/29 15:20:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.93 2004/05/03 09:21:42 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -803,6 +803,7 @@ RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    CONS*            cons                /**< constraint to add */
    )
@@ -818,7 +819,7 @@ RETCODE SCIPnodeAddCons(
    }
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
-   CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, cons, node->active) );
+   CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, stat, cons, node->active) );
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
    assert(!node->active || SCIPconsIsActive(cons));
@@ -833,6 +834,7 @@ RETCODE SCIPnodeDisableCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    CONS*            cons                /**< constraint to disable */
    )
@@ -851,7 +853,7 @@ RETCODE SCIPnodeDisableCons(
    /* disable constraint, if node is active */
    if( node->active && cons->enabled && !cons->updatedisable )
    {
-      CHECK_OKAY( SCIPconsDisable(cons, set) );
+      CHECK_OKAY( SCIPconsDisable(cons, set, stat) );
    }
 
    return SCIP_OKAY;
@@ -1331,7 +1333,7 @@ RETCODE treeSwitchPath(
       debugMessage("switch path: undo domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue) );
       debugMessage("switch path: undo constraint set changed in depth %d\n", i);
-      CHECK_OKAY( SCIPconssetchgUndo(tree->path[i]->conssetchg, memhdr, set) );
+      CHECK_OKAY( SCIPconssetchgUndo(tree->path[i]->conssetchg, memhdr, set, stat) );
    }
 
    /* shrink active path to the common fork and deactivate the corresponding nodes */
@@ -1356,7 +1358,7 @@ RETCODE treeSwitchPath(
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
    {
       debugMessage("switch path: apply constraint set changed in depth %d\n", i);
-      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set) );
+      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set, stat) );
       debugMessage("switch path: apply domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue, i) );
    }

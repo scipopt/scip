@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.7 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.8 2004/05/03 09:21:41 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -159,6 +159,12 @@ Longint SCIPconshdlrGetNCutoffs(
 /** gets total number of cuts found by this constraint handler */
 extern
 Longint SCIPconshdlrGetNCutsFound(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets total number of additional constraints added by this constraint handler */
+extern
+Longint SCIPconshdlrGetNConssFound(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

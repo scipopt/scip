@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.33 2004/04/29 15:20:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.34 2004/05/03 09:21:41 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -72,6 +72,7 @@ RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
    MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    );
 
@@ -142,6 +143,7 @@ extern
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to add */
    );
 
@@ -153,6 +155,7 @@ RETCODE SCIPprobDelCons(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to remove */
    );
 

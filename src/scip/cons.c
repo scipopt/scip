@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.74 2004/05/03 08:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.75 2004/05/03 09:21:40 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -417,6 +417,7 @@ static
 RETCODE conshdlrEnableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -428,6 +429,7 @@ RETCODE conshdlrEnableCons(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
@@ -441,6 +443,7 @@ RETCODE conshdlrEnableCons(
    /* enable constraint */
    cons->enabled = TRUE;
    conshdlr->nenabledconss++;
+   stat->nenabledconss++;
 
    /* add constraint to the separation array */
    if( cons->separate )
@@ -516,6 +519,7 @@ static
 RETCODE conshdlrDisableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to remove */
    )
 {
@@ -526,6 +530,8 @@ RETCODE conshdlrDisableCons(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(set != NULL);
+   assert(stat != NULL);
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
@@ -616,6 +622,7 @@ RETCODE conshdlrDisableCons(
    /* disable constraint */
    cons->enabled = FALSE;
    conshdlr->nenabledconss--;
+   stat->nenabledconss--;
 
    return SCIP_OKAY;
 }
@@ -665,6 +672,7 @@ static
 RETCODE conshdlrActivateCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -674,6 +682,7 @@ RETCODE conshdlrActivateCons(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
    assert(!cons->active);
@@ -693,6 +702,7 @@ RETCODE conshdlrActivateCons(
    conshdlr->conss[conshdlr->nconss] = cons;
    conshdlr->nconss++;
    conshdlr->maxnconss = MAX(conshdlr->maxnconss, conshdlr->nconss);
+   stat->nactiveconss++;
 
    /* add constraint to the check array */
    if( cons->check )
@@ -707,7 +717,7 @@ RETCODE conshdlrActivateCons(
    }
 
    /* enable separation, enforcement, and propagation of constraint */
-   CHECK_OKAY( conshdlrEnableCons(conshdlr, set, cons) );
+   CHECK_OKAY( conshdlrEnableCons(conshdlr, set, stat, cons) );
 
    return SCIP_OKAY;
 }
@@ -717,6 +727,7 @@ static
 RETCODE conshdlrDeactivateCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to remove */
    )
 {
@@ -728,6 +739,7 @@ RETCODE conshdlrDeactivateCons(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
@@ -739,7 +751,7 @@ RETCODE conshdlrDeactivateCons(
    /* disable constraint */
    if( cons->enabled )
    {
-      CHECK_OKAY( conshdlrDisableCons(conshdlr, set, cons) );
+      CHECK_OKAY( conshdlrDisableCons(conshdlr, set, stat, cons) );
    }
    assert(!cons->enabled);
 
@@ -782,6 +794,7 @@ RETCODE conshdlrDeactivateCons(
    conshdlr->nconss--;
    cons->consspos = -1;
    cons->active = FALSE;
+   stat->nactiveconss--;
 
    assert(cons->consspos == -1);
    assert(cons->sepaconsspos == -1);
@@ -804,6 +817,7 @@ RETCODE conshdlrProcessUpdates(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    )
 {
@@ -842,7 +856,7 @@ RETCODE conshdlrProcessUpdates(
          assert(!cons->updatedelete);
          assert(!cons->updateobsolete);
 
-         CHECK_OKAY( conshdlrActivateCons(conshdlr, set, cons) );
+         CHECK_OKAY( conshdlrActivateCons(conshdlr, set, stat, cons) );
          assert(cons->active);
          cons->updateactivate = FALSE;
       }
@@ -850,7 +864,7 @@ RETCODE conshdlrProcessUpdates(
       {
          assert(cons->active);
 
-         CHECK_OKAY( conshdlrDeactivateCons(conshdlr, set, cons) );
+         CHECK_OKAY( conshdlrDeactivateCons(conshdlr, set, stat, cons) );
          assert(!cons->active);
          cons->updatedeactivate = FALSE;
          cons->updateenable = FALSE;
@@ -863,7 +877,7 @@ RETCODE conshdlrProcessUpdates(
          assert(!cons->enabled);
          assert(!cons->updatedisable);
 
-         CHECK_OKAY( conshdlrEnableCons(conshdlr, set, cons) );
+         CHECK_OKAY( conshdlrEnableCons(conshdlr, set, stat, cons) );
          assert(cons->enabled);
          cons->updateenable = FALSE;
       }
@@ -871,14 +885,14 @@ RETCODE conshdlrProcessUpdates(
       {
          assert(cons->enabled);
 
-         CHECK_OKAY( conshdlrDisableCons(conshdlr, set, cons) );
+         CHECK_OKAY( conshdlrDisableCons(conshdlr, set, stat, cons) );
          assert(!cons->enabled);
          cons->updatedisable = FALSE;
       }
       if( cons->updatedelete )
       {
          assert(!cons->check);
-         CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, prob) );
+         CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, stat, prob) );
          cons->updatedelete = FALSE;
          cons->updateobsolete = FALSE;
       }
@@ -931,6 +945,7 @@ RETCODE conshdlrForceUpdates(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    )
 {
@@ -940,7 +955,7 @@ RETCODE conshdlrForceUpdates(
    debugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
    conshdlr->delayupdates = FALSE;
 
-   CHECK_OKAY( conshdlrProcessUpdates(conshdlr, memhdr, set, prob) );
+   CHECK_OKAY( conshdlrProcessUpdates(conshdlr, memhdr, set, stat, prob) );
    assert(conshdlr->nupdateconss == 0);
 
    return SCIP_OKAY;
@@ -1116,6 +1131,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->npropcalls = 0;
    (*conshdlr)->ncutoffs = 0;
    (*conshdlr)->ncutsfound = 0;
+   (*conshdlr)->nconssfound = 0;
    (*conshdlr)->ndomredsfound = 0;
    (*conshdlr)->nchildren = 0;
    (*conshdlr)->lastnfixedvars = 0;
@@ -1217,6 +1233,7 @@ RETCODE SCIPconshdlrInit(
    conshdlr->npropcalls = 0;
    conshdlr->ncutoffs = 0;
    conshdlr->ncutsfound = 0;
+   conshdlr->nconssfound = 0;
    conshdlr->ndomredsfound = 0;
    conshdlr->nchildren = 0;
    conshdlr->maxnconss = conshdlr->nconss;
@@ -1365,6 +1382,7 @@ RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    )
 {
@@ -1384,7 +1402,7 @@ RETCODE SCIPconshdlrInitLP(
       CHECK_OKAY( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
 
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
    }
 
    return SCIP_OKAY;
@@ -1446,6 +1464,7 @@ RETCODE SCIPconshdlrSeparate(
          CONS** conss;
          Longint oldndomchgs;
          int oldncutsfound;
+         int oldnactiveconss;
 
          debugMessage("separating constraints %d to %d of %d constraints of handler <%s>\n",
             firstcons, firstcons + nconss - 1, conshdlr->nsepaconss, conshdlr->name);
@@ -1454,6 +1473,7 @@ RETCODE SCIPconshdlrSeparate(
          
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+         oldnactiveconss = stat->nactiveconss;
 
          /* because during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1472,7 +1492,7 @@ RETCODE SCIPconshdlrSeparate(
          SCIPclockStop(conshdlr->sepatime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
          /* remember, that these constraints have already been processed */
          conshdlr->lastnsepaconss = conshdlr->nsepaconss;
@@ -1496,6 +1516,7 @@ RETCODE SCIPconshdlrSeparate(
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
+         conshdlr->nconssfound += stat->nactiveconss - oldnactiveconss;
          conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
       }
    }
@@ -1562,6 +1583,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          CONS** conss;
          Longint oldndomchgs;
          int oldncutsfound;
+         int oldnactiveconss;
 
          debugMessage("enforcing constraints %d to %d of %d constraints of handler <%s>\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name);
@@ -1569,6 +1591,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          conss = &(conshdlr->enfoconss[firstcons]);
 
          oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
+         oldnactiveconss = stat->nactiveconss;
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
 
          /* because during constraint processing, constraints of this handler may be activated, deactivated,
@@ -1588,7 +1611,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          SCIPclockStop(conshdlr->enfolptime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
          /* remember, that these constraints have already been processed */
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
@@ -1613,6 +1636,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
+         conshdlr->nconssfound += stat->nactiveconss - oldnactiveconss;
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
@@ -1709,7 +1733,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIPclockStop(conshdlr->enfopstime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
          /* remember, that these constraints have already been processed */
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
@@ -1757,6 +1781,7 @@ RETCODE SCIPconshdlrCheck(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
    Bool             checkintegrality,   /**< has integrality to be checked? */
@@ -1790,7 +1815,7 @@ RETCODE SCIPconshdlrCheck(
       debugMessage(" -> checking returned result <%d>\n", *result);
       
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
@@ -1854,7 +1879,7 @@ RETCODE SCIPconshdlrPropagate(
       SCIPclockStop(conshdlr->proptime, set);
 
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
       /* check result code of callback method */
       if( *result != SCIP_CUTOFF
@@ -1883,6 +1908,7 @@ RETCODE SCIPconshdlrPresolve(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
@@ -1984,7 +2010,7 @@ RETCODE SCIPconshdlrPresolve(
       conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
 
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
       /* check result code of callback method */
       if( *result != SCIP_CUTOFF
@@ -2201,6 +2227,16 @@ Longint SCIPconshdlrGetNCutsFound(
    assert(conshdlr != NULL);
 
    return conshdlr->ncutsfound;
+}
+
+/** gets total number of additional constraints added by this constraint handler */
+Longint SCIPconshdlrGetNConssFound(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nconssfound;
 }
 
 /** gets total number of domain reductions found by this constraint handler */
@@ -2554,6 +2590,7 @@ RETCODE SCIPconssetchgAddAddedCons(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons,               /**< added constraint */
    Bool             active              /**< is the constraint set change currently active? */
    )
@@ -2581,7 +2618,7 @@ RETCODE SCIPconssetchgAddAddedCons(
    /* activate constraint, if node is active */
    if( active && !SCIPconsIsActive(cons) )
    {
-      CHECK_OKAY( SCIPconsActivate(cons, set) );
+      CHECK_OKAY( SCIPconsActivate(cons, set, stat) );
       assert(SCIPconsIsActive(cons));
          
       /* remember, that this constraint set change data was resposible for the constraint's addition */
@@ -2699,7 +2736,8 @@ RETCODE conssetchgDelDisabledCons(
 RETCODE SCIPconssetchgApply(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
    MEMHDR*          memhdr,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    CONS* cons;
@@ -2732,7 +2770,7 @@ RETCODE SCIPconssetchgApply(
          assert(cons->addarraypos == -1);
 
          /* activate constraint */
-         CHECK_OKAY( SCIPconsActivate(cons, set) );
+         CHECK_OKAY( SCIPconsActivate(cons, set, stat) );
          assert(cons->active);
          assert(!cons->update);
          
@@ -2764,7 +2802,7 @@ RETCODE SCIPconssetchgApply(
          {
             assert(cons->addarraypos >= 0);
             assert(!cons->deleted); /* deleted constraints must not be enabled! */
-            CHECK_OKAY( SCIPconsDisable(conssetchg->disabledconss[i], set) );
+            CHECK_OKAY( SCIPconsDisable(conssetchg->disabledconss[i], set, stat) );
          }
          assert(!cons->update);
          assert(!cons->enabled);
@@ -2778,7 +2816,8 @@ RETCODE SCIPconssetchgApply(
 RETCODE SCIPconssetchgUndo(
    CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
    MEMHDR*          memhdr,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    CONS* cons;
@@ -2823,7 +2862,7 @@ RETCODE SCIPconssetchgUndo(
          {
             assert(cons->addarraypos >= 0);
             assert(!cons->deleted); /* deleted constraints must not be active! */
-            CHECK_OKAY( SCIPconsEnable(cons, set) );
+            CHECK_OKAY( SCIPconsEnable(cons, set, stat) );
          }
          assert(!cons->update);
          assert(!cons->active || cons->enabled);
@@ -2851,7 +2890,7 @@ RETCODE SCIPconssetchgUndo(
             assert(cons->addarraypos == i);
             
             /* deactivate constraint */
-            CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+            CHECK_OKAY( SCIPconsDeactivate(cons, set, stat) );
          
             /* unlink the constraint and the constraint set change */
             cons->addconssetchg = NULL;
@@ -3042,6 +3081,7 @@ RETCODE SCIPconsDelete(
    CONS*            cons,               /**< constraint to delete */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    )
 {
@@ -3053,7 +3093,7 @@ RETCODE SCIPconsDelete(
    /* deactivate constraint, if it is currently active */
    if( cons->active && !cons->updatedeactivate )
    {
-      CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+      CHECK_OKAY( SCIPconsDeactivate(cons, set, stat) );
    }
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
@@ -3067,7 +3107,7 @@ RETCODE SCIPconsDelete(
       if( cons->addconssetchg == NULL )
       {
          /* remove problem constraint from the problem */
-         CHECK_OKAY( SCIPprobDelCons(prob, memhdr, set, cons) );
+         CHECK_OKAY( SCIPprobDelCons(prob, memhdr, set, stat, cons) );
       }
       else
       {
@@ -3141,7 +3181,8 @@ CONS* SCIPconsGetTransformed(
 /** activates constraint or marks constraint to be activated in next update */
 RETCODE SCIPconsActivate(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(cons != NULL);
@@ -3162,7 +3203,7 @@ RETCODE SCIPconsActivate(
    }
    else
    {
-      CHECK_OKAY( conshdlrActivateCons(cons->conshdlr, set, cons) );
+      CHECK_OKAY( conshdlrActivateCons(cons->conshdlr, set, stat, cons) );
       assert(cons->active);
    }
 
@@ -3172,7 +3213,8 @@ RETCODE SCIPconsActivate(
 /** deactivates constraint or marks constraint to be deactivated in next update */
 RETCODE SCIPconsDeactivate(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(cons != NULL);
@@ -3189,7 +3231,7 @@ RETCODE SCIPconsDeactivate(
    }
    else
    {
-      CHECK_OKAY( conshdlrDeactivateCons(cons->conshdlr, set, cons) );
+      CHECK_OKAY( conshdlrDeactivateCons(cons->conshdlr, set, stat, cons) );
       assert(!cons->active);
    }
 
@@ -3199,7 +3241,8 @@ RETCODE SCIPconsDeactivate(
 /** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
 RETCODE SCIPconsEnable(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(cons != NULL);
@@ -3218,7 +3261,7 @@ RETCODE SCIPconsEnable(
    }
    else
    {
-      CHECK_OKAY( conshdlrEnableCons(cons->conshdlr, set, cons) );
+      CHECK_OKAY( conshdlrEnableCons(cons->conshdlr, set, stat, cons) );
       assert(cons->enabled);
    }
 
@@ -3228,7 +3271,8 @@ RETCODE SCIPconsEnable(
 /** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
 RETCODE SCIPconsDisable(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(cons != NULL);
@@ -3247,7 +3291,7 @@ RETCODE SCIPconsDisable(
    }
    else
    {
-      CHECK_OKAY( conshdlrDisableCons(cons->conshdlr, set, cons) );
+      CHECK_OKAY( conshdlrDisableCons(cons->conshdlr, set, stat, cons) );
       assert(!cons->enabled);
    }
 
@@ -3266,6 +3310,7 @@ RETCODE SCIPconsAddAge(
    CONS*            cons,               /**< constraint */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    Real             deltaage            /**< value to add to the constraint's age */
    )
@@ -3291,7 +3336,7 @@ RETCODE SCIPconsAddAge(
       }
       else
       {
-         CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, prob) );
+         CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, stat, prob) );
       }
    }
    else if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
@@ -3324,10 +3369,11 @@ RETCODE SCIPconsIncAge(
    CONS*            cons,               /**< constraint */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    )
 {
-   CHECK_OKAY( SCIPconsAddAge(cons, memhdr, set, prob, 1.0) );
+   CHECK_OKAY( SCIPconsAddAge(cons, memhdr, set, stat, prob, 1.0) );
 
    return SCIP_OKAY;
 }

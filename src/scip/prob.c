@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.46 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.47 2004/05/03 09:21:41 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -184,6 +184,7 @@ RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
    MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
@@ -213,7 +214,7 @@ RETCODE SCIPprobFree(
    while( (*prob)->nconss > 0 )
    {
       assert((*prob)->conss != NULL);
-      CHECK_OKAY( SCIPprobDelCons(*prob, memhdr, set, (*prob)->conss[0]) );
+      CHECK_OKAY( SCIPprobDelCons(*prob, memhdr, set, stat, (*prob)->conss[0]) );
    }
 
    freeMemoryArray(&(*prob)->name);
@@ -296,7 +297,7 @@ RETCODE SCIPprobTransform(
    for( c = 0; c < source->nconss; ++c )
    {
       CHECK_OKAY( SCIPconsTransform(source->conss[c], memhdr, set, &targetcons) );
-      CHECK_OKAY( SCIPprobAddCons(*target, set, targetcons) );
+      CHECK_OKAY( SCIPprobAddCons(*target, set, stat, targetcons) );
       CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
    }
 
@@ -660,6 +661,7 @@ RETCODE SCIPprobVarChangedStatus(
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -694,7 +696,7 @@ RETCODE SCIPprobAddCons(
    if( prob->transformed )
    {
       /* activate constraint */
-      CHECK_OKAY( SCIPconsActivate(cons, set) );
+      CHECK_OKAY( SCIPconsActivate(cons, set, stat) );
 
       /* if constraint is a check-constraint, lock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
@@ -713,6 +715,7 @@ RETCODE SCIPprobDelCons(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to remove */
    )
 {
@@ -738,7 +741,7 @@ RETCODE SCIPprobDelCons(
       /* deactivate constraint, if it is currently active */
       if( cons->active && !cons->updatedeactivate )
       {
-         CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+         CHECK_OKAY( SCIPconsDeactivate(cons, set, stat) );
       }
    }
    assert(!cons->active || cons->updatedeactivate);

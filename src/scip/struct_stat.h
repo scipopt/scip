@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.11 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.12 2004/05/03 09:21:42 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -87,6 +87,8 @@ struct Stat
    int              maxdepth;           /**< maximal depth of all processed nodes in current run */
    int              maxtotaldepth;      /**< maximal depth of all processed nodes over all runs */
    int              plungedepth;        /**< current plunging depth (successive times, a child was selected as next node) */
+   int              nactiveconss;       /**< total number of currently active constraints */
+   int              nenabledconss;      /**< total number of currently enabled constraints */
    Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.38 2004/05/03 08:13:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.39 2004/05/03 09:21:41 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -531,7 +531,7 @@ RETCODE SCIPprimalTrySol(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, checkintegrality, checklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -586,7 +586,7 @@ RETCODE SCIPprimalTrySolFree(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, prob, checkintegrality, checklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;

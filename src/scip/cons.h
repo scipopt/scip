@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.64 2004/05/03 08:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.65 2004/05/03 09:21:40 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -149,6 +149,7 @@ RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    );
 
@@ -201,6 +202,7 @@ RETCODE SCIPconshdlrCheck(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
    Bool             checkintegrality,   /**< has integrality to be checked? */
@@ -226,6 +228,7 @@ RETCODE SCIPconshdlrPresolve(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    int              nrounds,            /**< number of presolving rounds already done */
    int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
@@ -275,6 +278,7 @@ RETCODE SCIPconssetchgAddAddedCons(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons,               /**< added constraint */
    Bool             active              /**< is the constraint set change currently active? */
    );
@@ -293,7 +297,8 @@ extern
 RETCODE SCIPconssetchgApply(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
    MEMHDR*          memhdr,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** undoes constraint set change */
@@ -301,7 +306,8 @@ extern
 RETCODE SCIPconssetchgUndo(
    CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
    MEMHDR*          memhdr,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 
@@ -375,6 +381,7 @@ RETCODE SCIPconsDelete(
    CONS*            cons,               /**< constraint to delete */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    );
 
@@ -399,28 +406,32 @@ CONS* SCIPconsGetTransformed(
 extern
 RETCODE SCIPconsActivate(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** deactivates constraint or marks constraint to be deactivated in next update */
 extern
 RETCODE SCIPconsDeactivate(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
 extern
 RETCODE SCIPconsEnable(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
 extern
 RETCODE SCIPconsDisable(
    CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** adds given value to age of constraint, but age can never become negative;
@@ -436,6 +447,7 @@ RETCODE SCIPconsAddAge(
    CONS*            cons,               /**< constraint */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    Real             deltaage            /**< value to add to the constraint's age */
    );
@@ -453,6 +465,7 @@ RETCODE SCIPconsIncAge(
    CONS*            cons,               /**< constraint */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
    );
 
