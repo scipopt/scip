@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.11 2004/06/22 10:48:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.12 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -289,7 +289,7 @@ DECL_CONSCHECK(consCheckObj)
 
    /* call virtual method of conshdlr object */
    CHECK_OKAY( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol, 
-                  checkintegrality, checklprows, result) );
+         checkintegrality, checklprows, result) );
 
    return SCIP_OKAY;
 }
@@ -324,10 +324,10 @@ DECL_CONSPRESOL(consPresolObj)
 
    /* call virtual method of conshdlr object */
    CHECK_OKAY( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds,
-                  nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-                  nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
-                  nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-                  ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+         nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+         nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+         ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    return SCIP_OKAY;
 }
@@ -451,6 +451,22 @@ DECL_CONSDISABLE(consDisableObj)
    return SCIP_OKAY;
 }
 
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintObj)
+{  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   CHECK_OKAY( conshdlrdata->objconshdlr->scip_print(scip, conshdlr, cons, file) );
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -474,18 +490,19 @@ RETCODE SCIPincludeObjConshdlr(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 
-                  objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
-                  objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
-                  objconshdlr->scip_needscons_,
-                  consFreeObj, consInitObj, consExitObj, 
-                  consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
-                  consDeleteObj, consTransObj, consInitlpObj,
-                  consSepaObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
-                  consPropObj, consPresolObj, consRescvarObj,
-                  consLockObj, consUnlockObj,
-                  consActiveObj, consDeactiveObj, 
-                  consEnableObj, consDisableObj,
-                  conshdlrdata) );
+         objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
+         objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
+         objconshdlr->scip_needscons_,
+         consFreeObj, consInitObj, consExitObj, 
+         consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
+         consDeleteObj, consTransObj, consInitlpObj,
+         consSepaObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
+         consPropObj, consPresolObj, consRescvarObj,
+         consLockObj, consUnlockObj,
+         consActiveObj, consDeactiveObj, 
+         consEnableObj, consDisableObj,
+         consPrintObj,
+         conshdlrdata) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.21 2004/05/21 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.22 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -388,6 +388,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display problem command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayProblem)
+{  /*lint --e{715}*/
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   CHECK_OKAY( SCIPprintOrigProblem(scip, NULL) );
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display readers command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
 {  /*lint --e{715}*/
@@ -474,6 +488,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 
    printf("\n");
    CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display transproblem command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem)
+{  /*lint --e{715}*/
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   CHECK_OKAY( SCIPprintTransProblem(scip, NULL) );
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1113,6 +1141,15 @@ RETCODE SCIPincludeDialogDefault(
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* display problem */
+   if( !SCIPdialogHasEntry(submenu, "problem") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayProblem, NULL,
+                     "problem", "display original problem", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
    /* display readers */
    if( !SCIPdialogHasEntry(submenu, "readers") )
    {
@@ -1145,6 +1182,15 @@ RETCODE SCIPincludeDialogDefault(
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayStatistics, NULL,
                      "statistics", "display problem and optimization statistics", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display transproblem */
+   if( !SCIPdialogHasEntry(submenu, "transproblem") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayTransproblem, NULL,
+                     "transproblem", "display transformed/preprocessed problem", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

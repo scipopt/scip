@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.67 2004/05/21 20:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.68 2004/06/24 15:34:34 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -92,6 +92,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -374,6 +375,14 @@ RETCODE SCIPconsRelease(
    CONS**           cons,               /**< pointer to constraint */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
+   );
+
+/** outputs constraint information to file stream */
+extern
+RETCODE SCIPconsPrint(
+   CONS*            cons,               /**< constraint to print */
+   SET*             set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the

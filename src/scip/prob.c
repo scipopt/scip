@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.50 2004/06/01 16:40:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.51 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1159,3 +1159,47 @@ void SCIPprobPrintStatistics(
    fprintf(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
 }
 
+/** outputs problem to file stream */
+RETCODE SCIPprobPrint(
+   PROB*            prob,               /**< problem data */
+   SET*             set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
+
+   assert(prob != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   fprintf(file, "STATISTICS\n");
+   SCIPprobPrintStatistics(prob, file);
+
+   if( prob->nvars > 0 )
+   {
+      fprintf(file, "VARIABLES\n");
+      for( i = 0; i < prob->nvars; ++i )
+         SCIPvarPrint(prob->vars[i], set, file);
+   }
+
+   if( prob->nfixedvars > 0 )
+   {
+      fprintf(file, "FIXED\n");
+      for( i = 0; i < prob->nfixedvars; ++i )
+         SCIPvarPrint(prob->fixedvars[i], set, file);
+   }
+
+   if( prob->nconss > 0 )
+   {
+      fprintf(file, "CONSTRAINTS\n");
+      for( i = 0; i < prob->nconss; ++i )
+      {
+         CHECK_OKAY( SCIPconsPrint(prob->conss[i], set, file) );
+      }
+   }
+
+   fprintf(file, "END\n");
+
+   return SCIP_OKAY;
+}

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.4 2004/05/21 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.5 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -200,7 +200,7 @@ RETCODE createRelaxation(
    assert(consdata->row == NULL);
 
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->var, 1.0) );
    CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vbdvar, consdata->vbdcoef) );
 
@@ -541,13 +541,13 @@ DECL_CONSTRANS(consTransVarbound)
 
    /* create target constraint data */
    CHECK_OKAY( consdataCreate(scip, &targetdata, sourcedata->var, sourcedata->vbdvar, sourcedata->vbdcoef, 
-                  sourcedata->lhs, sourcedata->rhs) );
+         sourcedata->lhs, sourcedata->rhs) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -833,6 +833,25 @@ DECL_CONSUNLOCK(consUnlockVarbound)
 /** constraint disabling notification method of constraint handler */
 #define consDisableVarbound NULL
 
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintVarbound)
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+      fprintf(file, "%g <= ", consdata->lhs);
+   fprintf(file, "<%s> + %g<%s>", SCIPvarGetName(consdata->var), consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar));
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+      fprintf(file, " <= %g", consdata->rhs);
+   fprintf(file, "\n");
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -897,9 +916,9 @@ DECL_LINCONSUPGD(linconsUpgdVarbound)
       /* create the bin Varbound constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsVarbound(scip, upgdcons, SCIPconsGetName(cons), var, vbdvar, vbdcoef, vbdlhs, vbdrhs,
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -946,23 +965,24 @@ RETCODE SCIPincludeConshdlrVarbound(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeVarbound, consInitVarbound, consExitVarbound, 
-                  consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
-                  consDeleteVarbound, consTransVarbound, consInitlpVarbound,
-                  consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
-                  consPropVarbound, consPresolVarbound, consRescvarVarbound,
-                  consLockVarbound, consUnlockVarbound,
-                  consActiveVarbound, consDeactiveVarbound, 
-                  consEnableVarbound, consDisableVarbound,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeVarbound, consInitVarbound, consExitVarbound, 
+         consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
+         consDeleteVarbound, consTransVarbound, consInitlpVarbound,
+         consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
+         consPropVarbound, consPresolVarbound, consRescvarVarbound,
+         consLockVarbound, consUnlockVarbound,
+         consActiveVarbound, consDeactiveVarbound, 
+         consEnableVarbound, consDisableVarbound,
+         consPrintVarbound,
+         conshdlrdata) );
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-                  NULL, NULL, NULL, NULL, eventExecVarbound,
-                  eventhdlrdata) );
+         NULL, NULL, NULL, NULL, eventExecVarbound,
+         eventhdlrdata) );
 
    /* include the linear constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdVarbound, LINCONSUPGD_PRIORITY) );
@@ -1006,7 +1026,7 @@ RETCODE SCIPcreateConsVarbound(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

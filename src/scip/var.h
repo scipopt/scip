@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.68 2004/06/01 16:40:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.69 2004/06/24 15:34:37 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -736,6 +736,14 @@ Real SCIPvarGetAvgCutoffs(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** outputs variable information into file stream */
+extern
+void SCIPvarPrint(
+   VAR*             var,                /**< problem variable */
+   SET*             set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 

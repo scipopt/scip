@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.98 2004/06/22 10:48:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.99 2004/06/24 15:34:37 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -268,7 +268,7 @@ RETCODE SCIPboundchgApply(
       break;
 
    default:
-      errorMessage("Unknown bound type\n");
+      errorMessage("unknown bound type\n");
       abort();
    }
 
@@ -303,7 +303,7 @@ RETCODE SCIPboundchgUndo(
                      NULL, NULL, 0, -1, -1, SCIP_BOUNDCHGTYPE_BRANCHING) );
       break;
    default:
-      errorMessage("Unknown bound type\n");
+      errorMessage("unknown bound type\n");
       abort();
    }
 
@@ -1332,7 +1332,7 @@ RETCODE varFree(
    case SCIP_VARSTATUS_NEGATED:
       break;
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -1412,6 +1412,90 @@ RETCODE SCIPvarRelease(
    *var = NULL;
 
    return SCIP_OKAY;
+}
+
+/** outputs variable information into file stream */
+void SCIPvarPrint(
+   VAR*             var,                /**< problem variable */
+   SET*             set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
+
+   assert(var != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   switch( var->vartype )
+   {
+   case SCIP_VARTYPE_BINARY:
+      fprintf(file, "  [binary]");
+      break;
+   case SCIP_VARTYPE_INTEGER:
+      fprintf(file, "  [integer]");
+      break;
+   case SCIP_VARTYPE_IMPLINT:
+      fprintf(file, "  [implicit]");
+      break;
+   case SCIP_VARTYPE_CONTINUOUS:
+      fprintf(file, "  [continuous]");
+      break;
+   default:
+      errorMessage("unknown variable type\n");
+      abort();
+   }
+
+   fprintf(file, " <%s>: ", var->name);
+
+   if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
+      fprintf(file, " [-inf,");
+   else
+      fprintf(file, " [%g,", var->glbdom.lb);
+   if( SCIPsetIsInfinity(set, var->glbdom.ub) )
+      fprintf(file, "+inf]");
+   else
+      fprintf(file, "%g]", var->glbdom.ub);
+   
+   /**@todo print holes */
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      break;
+
+   case SCIP_VARSTATUS_FIXED:
+      fprintf(file, " == %g", var->glbdom.lb);
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      fprintf(file, " ==");
+      if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
+         fprintf(file, " %g", var->data.aggregate.constant);
+      fprintf(file, " %+g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      fprintf(file, " ==");
+      if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
+         fprintf(file, " %g", var->data.multaggr.constant);
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+         fprintf(file, " %+g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
+      break;
+
+   case SCIP_VARSTATUS_NEGATED:
+      fprintf(file, " == %g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
+      break;
+
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+
+   fprintf(file, "\n");
 }
 
 /** increases lock numbers for rounding */
@@ -1949,6 +2033,39 @@ RETCODE SCIPvarLoose(
    return SCIP_OKAY;
 }
 
+/** issues a VARFIXED event on the given variable and all its parents (except ORIGINAL parents);
+ *  the event issuing on the parents is necessary, because unlike with bound changes, the parent variables
+ *  are not informed about a fixing of an active variable they are pointing to
+ */
+static
+RETCODE varEventVarFixed(
+   VAR*             var,                /**< problem variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   EVENT* event;
+   int i;
+
+   assert(var != NULL);
+
+   /* issue VARFIXED event on variable */
+   CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
+
+   /* process all parents */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      if( var->parentvars[i]->varstatus != SCIP_VARSTATUS_ORIGINAL )
+      {
+         CHECK_OKAY( varEventVarFixed(var->parentvars[i], memhdr, set, eventqueue) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** converts variable into fixed variable */
 RETCODE SCIPvarFix(
    VAR*             var,                /**< problem variable */
@@ -1964,7 +2081,6 @@ RETCODE SCIPvarFix(
    Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    )
 {
-   EVENT* event;
    Real obj;
 
    assert(var != NULL);
@@ -2046,8 +2162,7 @@ RETCODE SCIPvarFix(
       }
 
       /* issue VARFIXED event */
-      CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
+      CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
 
       /* reset the objective value of the fixed variable, thus adjusting the problem's objective offset */
       CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
@@ -2084,7 +2199,7 @@ RETCODE SCIPvarFix(
       break;
 
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
    
@@ -2385,8 +2500,8 @@ RETCODE SCIPvarAggregate(
    /* update branching factors and priorities of both variables to be the maximum of both variables */
    branchfactor = MAX(aggvar->branchfactor, var->branchfactor);
    branchpriority = MAX(aggvar->branchpriority, var->branchpriority);
-   var->branchfactor = branchfactor - 1.0;   /* make sure, the change is actually performed */
-   var->branchpriority = branchpriority - 1; /* make sure, the change is actually performed */
+   SCIPvarChgBranchFactor(aggvar, set, branchfactor);
+   SCIPvarChgBranchPriority(aggvar, set, branchpriority);
    SCIPvarChgBranchFactor(var, set, branchfactor);
    SCIPvarChgBranchPriority(var, set, branchpriority);
 
@@ -2501,8 +2616,11 @@ RETCODE SCIPvarMultiaggregate(
          branchfactor = MAX(aggvars[v]->branchfactor, branchfactor);
          branchpriority = MAX(aggvars[v]->branchpriority, branchpriority);
       }
-      var->branchfactor = branchfactor - 1.0;   /* make sure, the change is actually performed */
-      var->branchpriority = branchpriority - 1; /* make sure, the change is actually performed */
+      for( v = 0; v < naggvars; ++v )
+      {
+         SCIPvarChgBranchFactor(aggvars[v], set, branchfactor);
+         SCIPvarChgBranchPriority(aggvars[v], set, branchpriority);
+      }
       SCIPvarChgBranchFactor(var, set, branchfactor);
       SCIPvarChgBranchPriority(var, set, branchpriority);
 
@@ -2562,7 +2680,7 @@ RETCODE SCIPvarMultiaggregate(
       break;
 
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
    
@@ -3313,7 +3431,7 @@ RETCODE SCIPvarSetBdGlobal(
    case SCIP_BOUNDTYPE_UPPER:
       return SCIPvarSetUbGlobal(var, set, newbound);
    default:
-      errorMessage("Unknown bound type\n");
+      errorMessage("unknown bound type\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -3908,7 +4026,7 @@ RETCODE SCIPvarChgBdLocal(
       return SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound, 
          infervar, infercons, inferinfo, fixdepth, fixindex, boundchgtype);
    default:
-      errorMessage("Unknown bound type\n");
+      errorMessage("unknown bound type\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -3978,7 +4096,7 @@ RETCODE SCIPvarSetBdLocal(
    case SCIP_BOUNDTYPE_UPPER:
       return SCIPvarSetUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound);
    default:
-      errorMessage("Unknown bound type\n");
+      errorMessage("unknown bound type\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -5581,7 +5699,7 @@ Real SCIPvarGetLPSol(
       return var->data.negate.constant - SCIPvarGetLPSol(var->negatedvar);
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -5631,7 +5749,7 @@ Real SCIPvarGetPseudoSol(
       return var->data.negate.constant - SCIPvarGetPseudoSol(var->negatedvar);
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -5706,7 +5824,7 @@ Real SCIPvarGetRootSol(
       return var->data.negate.constant - SCIPvarGetRootSol(var->negatedvar);
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -5790,7 +5908,7 @@ RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -5891,7 +6009,7 @@ RETCODE SCIPvarUpdatePseudocost(
       return SCIP_OKAY;
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -5937,7 +6055,7 @@ Real SCIPvarGetPseudocost(
       return SCIPvarGetPseudocost(var->negatedvar, stat, -solvaldelta);
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -5979,7 +6097,7 @@ Real SCIPvarGetPseudocostCount(
       return SCIPvarGetPseudocostCount(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -6037,7 +6155,7 @@ RETCODE SCIPvarIncNBranchings(
       return SCIP_OKAY;
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -6094,7 +6212,7 @@ RETCODE SCIPvarIncNInferences(
       return SCIP_OKAY;
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -6151,7 +6269,7 @@ RETCODE SCIPvarIncNCutoffs(
       return SCIP_OKAY;
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -6192,7 +6310,7 @@ Longint SCIPvarGetNBranchings(
       return SCIPvarGetNBranchings(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -6233,7 +6351,7 @@ Real SCIPvarGetAvgBranchdepth(
       return SCIPvarGetAvgBranchdepth(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -6274,7 +6392,7 @@ Longint SCIPvarGetNInferences(
       return SCIPvarGetNInferences(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -6319,7 +6437,7 @@ Real SCIPvarGetAvgInferences(
       return SCIPvarGetAvgInferences(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -6360,7 +6478,7 @@ Longint SCIPvarGetNCutoffs(
       return SCIPvarGetNCutoffs(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -6405,7 +6523,7 @@ Real SCIPvarGetAvgCutoffs(
       return SCIPvarGetAvgCutoffs(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
-      errorMessage("Unknown variable status\n");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.44 2004/06/01 18:04:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.45 2004/06/24 15:34:35 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -213,7 +213,7 @@ RETCODE consdataCatchEvent(
 
    /* catch bound tighten events on variable */
    CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
    
    return SCIP_OKAY;
 }
@@ -234,7 +234,7 @@ RETCODE consdataDropEvent(
 
    /* drop events on variable */
    CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
 
    return SCIP_OKAY;
 }
@@ -434,7 +434,7 @@ void consdataPrint(
       assert(consdata->vars[v] != NULL);
       if( v > 0 )
          fprintf(file, ", ");
-      fprintf(file, "%s", SCIPvarGetName(consdata->vars[v]));
+      fprintf(file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
    fprintf(file, ")\n");
 }
@@ -875,7 +875,7 @@ RETCODE createRow(
    assert(consdata->row == NULL);
 
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    
    CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
@@ -1153,9 +1153,9 @@ DECL_CONSTRANS(consTransLogicor)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1365,7 +1365,7 @@ RETCODE branchLP(
             sprintf(name, "LOB%lld", SCIPgetNTotalNodes(scip));
 
             CHECK_OKAY( SCIPcreateConsLogicor(scip, &newcons, name, nselcands, branchcands,
-                           FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
+                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
             CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
          }
@@ -1900,7 +1900,7 @@ DECL_CONSUNLOCK(consUnlockLogicor)
 
 /** constraint activation notification method of constraint handler */
 static
-DECL_CONSENABLE(consActiveLogicor)
+DECL_CONSACTIVE(consActiveLogicor)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
@@ -1931,7 +1931,7 @@ DECL_CONSENABLE(consActiveLogicor)
 
 /** constraint deactivation notification method of constraint handler */
 static
-DECL_CONSDISABLE(consDeactiveLogicor)
+DECL_CONSDEACTIVE(consDeactiveLogicor)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
@@ -1965,6 +1965,15 @@ DECL_CONSDISABLE(consDeactiveLogicor)
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableLogicor NULL
+
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintLogicor)
+{
+   consdataPrint(scip, SCIPconsGetData(cons), file);
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -2017,7 +2026,7 @@ RETCODE createNormalizedLogicor(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsLogicor(scip, cons, name, nvars, transvars,
-                  initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* free temporary memory */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
@@ -2055,9 +2064,9 @@ DECL_LINCONSUPGD(linconsUpgdLogicor)
       /* create the logic or constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( createNormalizedLogicor(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -2118,7 +2127,7 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
-                  FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
@@ -2143,49 +2152,50 @@ RETCODE SCIPincludeConshdlrLogicor(
 
    /* create event handler for bound tighten events on watched variables */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-                  NULL, NULL, NULL,
-                  NULL, eventExecLogicor,
-                  NULL) );
+         NULL, NULL, NULL,
+         NULL, eventExecLogicor,
+         NULL) );
 
    /* create conflict handler for logic or constraints */
    CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-                  NULL, NULL, NULL, conflictExecLogicor,
-                  NULL) );
+         NULL, NULL, NULL, conflictExecLogicor,
+         NULL) );
 
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeLogicor, consInitLogicor, consExitLogicor, 
-                  consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
-                  consDeleteLogicor, consTransLogicor, 
-                  consInitlpLogicor, consSepaLogicor, 
-                  consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
-                  consPropLogicor, consPresolLogicor, consRescvarLogicor,
-                  consLockLogicor, consUnlockLogicor,
-                  consActiveLogicor, consDeactiveLogicor,
-                  consEnableLogicor, consDisableLogicor,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeLogicor, consInitLogicor, consExitLogicor, 
+         consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
+         consDeleteLogicor, consTransLogicor, 
+         consInitlpLogicor, consSepaLogicor, 
+         consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
+         consPropLogicor, consPresolLogicor, consRescvarLogicor,
+         consLockLogicor, consUnlockLogicor,
+         consActiveLogicor, consDeactiveLogicor,
+         consEnableLogicor, consDisableLogicor,
+         consPrintLogicor,
+         conshdlrdata) );
 
    /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY) );
 
    /* logic or constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "constraints/logicor/npseudobranches", 
-                  "number of children created in pseudo branching (0: disable pseudo branching)",
-                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
+         "constraints/logicor/npseudobranches", 
+         "number of children created in pseudo branching (0: disable pseudo branching)",
+         &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "constraints/logicor/maxvarusefac", 
-                  "branching factor to weigh maximum of positive and negative variable uses",
-                  &conshdlrdata->maxvarusefac, DEFAULT_MAXVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
+         "constraints/logicor/maxvarusefac", 
+         "branching factor to weigh maximum of positive and negative variable uses",
+         &conshdlrdata->maxvarusefac, DEFAULT_MAXVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "constraints/logicor/minvarusefac", 
-                  "branching factor to weigh minimum of positive and negative variable uses",
-                  &conshdlrdata->minvarusefac, DEFAULT_MINVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
+         "constraints/logicor/minvarusefac", 
+         "branching factor to weigh minimum of positive and negative variable uses",
+         &conshdlrdata->minvarusefac, DEFAULT_MINVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }
@@ -2226,7 +2236,7 @@ RETCODE SCIPcreateConsLogicor(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

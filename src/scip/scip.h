@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.140 2004/06/22 10:48:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.141 2004/06/24 15:34:37 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -526,6 +526,7 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -3386,6 +3387,20 @@ Longint SCIPgetNSols(
 extern
 Bool SCIPisPrimalboundSol(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** outputs original problem to file stream */
+extern
+RETCODE SCIPprintOrigProblem(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/** outputs transformed problem to file stream */
+extern
+RETCODE SCIPprintTransProblem(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 /** outputs SCIP status */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.37 2004/06/01 16:40:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.38 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -334,6 +334,13 @@ void SCIPprobPrintStatistics(
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
+/** outputs problem to file stream */
+extern
+RETCODE SCIPprobPrint(
+   PROB*            prob,               /**< problem data */
+   SET*             set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
 
 
 #endif

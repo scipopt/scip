@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.12 2004/06/22 10:48:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.13 2004/06/24 15:34:37 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -578,6 +578,17 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  */
 #define DECL_CONSDISABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
 
+/** constraint display method of constraint handler
+ *
+ *  The constraint handler should store a representation of the constraint into the given text file.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that should be displayed
+ *  - file            : the text file to store the information into
+ */
+#define DECL_CONSPRINT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, FILE* file)
 
 
 #include "def.h"

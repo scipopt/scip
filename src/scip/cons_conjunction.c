@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.4 2004/05/21 20:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.5 2004/06/24 15:34:34 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -316,9 +316,9 @@ DECL_CONSTRANS(consTransConjunction)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -488,6 +488,28 @@ DECL_CONSUNLOCK(consUnlockConjunction)
 /** constraint disabling notification method of constraint handler */
 #define consDisableConjunction NULL
 
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintConjunction)
+{
+   CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   fprintf(file, "conjunction(");
+   for( i = 0; i < consdata->nconss; ++i )
+   {
+      if( i > 0 )
+         fprintf(file, ", ");
+      fprintf(file, "<%s>", SCIPconsGetName(consdata->conss[i]));
+   }
+   fprintf(file, ")\n");
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -507,17 +529,18 @@ RETCODE SCIPincludeConshdlrConjunction(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeConjunction, consInitConjunction, consExitConjunction, 
-                  consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
-                  consDeleteConjunction, consTransConjunction, consInitlpConjunction,
-                  consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
-                  consPropConjunction, consPresolConjunction, consRescvarConjunction,
-                  consLockConjunction, consUnlockConjunction,
-                  consActiveConjunction, consDeactiveConjunction, 
-                  consEnableConjunction, consDisableConjunction,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeConjunction, consInitConjunction, consExitConjunction, 
+         consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
+         consDeleteConjunction, consTransConjunction, consInitlpConjunction,
+         consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
+         consPropConjunction, consPresolConjunction, consRescvarConjunction,
+         consLockConjunction, consUnlockConjunction,
+         consActiveConjunction, consDeactiveConjunction, 
+         consEnableConjunction, consDisableConjunction,
+         consPrintConjunction,
+         conshdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -551,7 +574,7 @@ RETCODE SCIPcreateConsConjunction(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, enforce, check, FALSE,
-                  local, modifiable, FALSE) );
+         local, modifiable, FALSE) );
 
    return SCIP_OKAY;
 }

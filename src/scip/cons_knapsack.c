@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.49 2004/06/09 08:26:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.50 2004/06/24 15:34:35 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -129,8 +129,8 @@ RETCODE eventdataFree(
 /** sorts items in knapsack with nondecreasing weights */
 static 
 void sortItems(
-  CONSDATA*        consdata            /**< constraint data */
-  )
+   CONSDATA*        consdata            /**< constraint data */
+   )
 {
    int i;
    int j;
@@ -142,23 +142,23 @@ void sortItems(
    
    if( !consdata->sorted )
    {
-     for( i = 0; i < consdata->nvars; i++)
-     {
-        var = consdata->vars[i];
-        weight = consdata->weights[i];
-        eventdata = consdata->eventdatas[i];
+      for( i = 0; i < consdata->nvars; i++)
+      {
+         var = consdata->vars[i];
+         weight = consdata->weights[i];
+         eventdata = consdata->eventdatas[i];
         
-        for( j = i; j > 0 && weight < consdata->weights[j-1]; j--)
-        {
-           consdata->weights[j] = consdata->weights[j-1];
-           consdata->vars[j] = consdata->vars[j-1];
-           consdata->eventdatas[j] = consdata->eventdatas[j-1];
-        }
-        consdata->weights[j] = weight;
-        consdata->vars[j] = var;
-        consdata->eventdatas[j] = eventdata;
-     }
-     consdata->sorted = TRUE;
+         for( j = i; j > 0 && weight < consdata->weights[j-1]; j--)
+         {
+            consdata->weights[j] = consdata->weights[j-1];
+            consdata->vars[j] = consdata->vars[j-1];
+            consdata->eventdatas[j] = consdata->eventdatas[j-1];
+         }
+         consdata->weights[j] = weight;
+         consdata->vars[j] = var;
+         consdata->eventdatas[j] = eventdata;
+      }
+      consdata->sorted = TRUE;
    } 
 }
 
@@ -181,7 +181,7 @@ RETCODE catchEvents(
    {
       CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
-                     consdata->eventdatas[i]) );
+            consdata->eventdatas[i]) );
    }
 
    return SCIP_OKAY;
@@ -334,8 +334,8 @@ RETCODE createRelaxation(
    assert(consdata->row == NULL);
 
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons),
-                  -SCIPinfinity(scip), (Real)consdata->capacity,
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         -SCIPinfinity(scip), (Real)consdata->capacity,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
 
    CHECK_OKAY( SCIPcacheRowExtensions(scip, consdata->row) );
    for( i = 0; i < consdata->nvars; ++i )
@@ -712,7 +712,7 @@ RETCODE SCIPseparateKnapsackCardinality(
       {
          /* solve separation knapsack with dynamic programming */
          CHECK_OKAY( SCIPsolveKnapsack(scip, nitems, dpweights, dpprofits, dpcapacity, 
-                        items, noncovervars, covervars, &nnoncovervars, &ncovervars, NULL) ); 
+               items, noncovervars, covervars, &nnoncovervars, &ncovervars, NULL) ); 
       }
       else
       {
@@ -815,7 +815,7 @@ RETCODE SCIPseparateKnapsackCardinality(
         
          /* lift variables not in cover into cardinality inequality */
          CHECK_OKAY( SCIPliftKnapsackCardinality(scip, liftcoefs, solvals, weights, capacity,
-                        covervars, noncovervars, ncovervars, nnoncovervars, ncovervars, &liftlpval) );
+               covervars, noncovervars, ncovervars, nnoncovervars, ncovervars, &liftlpval) );
          
          /* check, if lifting yielded a violated cut */
          if( SCIPisFeasNegative(scip, (ncovervars - activity - liftlpval)/sqrt(ncovervars + 1.0)) )
@@ -829,7 +829,7 @@ RETCODE SCIPseparateKnapsackCardinality(
             /* create LP row */
             sprintf(name, "%s_card%lld_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), i);
             CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)ncovervars, 
-                           SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
+                  SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
             
             CHECK_OKAY( SCIPcacheRowExtensions(scip, row) );
 
@@ -919,7 +919,7 @@ RETCODE separateCons(
    {
       /* knapsack constraint itself was feasible: separate lifted cardinality inequalities */
       CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, consdata->nvars, consdata->vars, 
-                     consdata->weights, consdata->capacity, ncuts) );
+            consdata->weights, consdata->capacity, ncuts) );
    }
 
    return SCIP_OKAY;
@@ -1052,7 +1052,7 @@ RETCODE delCoefPos(
    {
       /* drop bound tighten events */
       CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
-                     consdata->eventdatas[pos]) );
+            consdata->eventdatas[pos]) );
       CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[pos]) );
    }
 
@@ -1327,13 +1327,13 @@ DECL_CONSTRANS(consTransKnapsack)
 
    /* create target constraint data */
    CHECK_OKAY( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->weights, 
-                  sourcedata->capacity) ); 
+         sourcedata->capacity) ); 
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1678,6 +1678,27 @@ DECL_CONSUNLOCK(consUnlockKnapsack)
 /** constraint disabling notification method of constraint handler */
 #define consDisableKnapsack NULL
 
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintKnapsack)
+{
+   CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      if( i > 0 )
+         fprintf(file, " ");
+      fprintf(file, "%+lld<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
+   }
+   fprintf(file, " <= %lld\n", consdata->capacity);
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -1756,7 +1777,7 @@ RETCODE createNormalizedKnapsack(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsKnapsack(scip, cons, name, nvars, transvars, weights, capacity,
-                  initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* free temporary memory */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
@@ -1789,9 +1810,9 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
       /* create the knapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( createNormalizedKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -1848,44 +1869,45 @@ RETCODE SCIPincludeConshdlrKnapsack(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeKnapsack, consInitKnapsack, consExitKnapsack, 
-                  consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
-                  consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
-                  consSepaKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
-                  consPropKnapsack, consPresolKnapsack, consRescvarKnapsack,
-                  consLockKnapsack, consUnlockKnapsack,
-                  consActiveKnapsack, consDeactiveKnapsack, 
-                  consEnableKnapsack, consDisableKnapsack,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeKnapsack, consInitKnapsack, consExitKnapsack, 
+         consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
+         consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
+         consSepaKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
+         consPropKnapsack, consPresolKnapsack, consRescvarKnapsack,
+         consLockKnapsack, consUnlockKnapsack,
+         consActiveKnapsack, consDeactiveKnapsack, 
+         consEnableKnapsack, consDisableKnapsack,
+         consPrintKnapsack,
+         conshdlrdata) );
   
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-                  NULL, NULL, NULL, NULL, eventExecKnapsack,
-                  eventhdlrdata) );
+         NULL, NULL, NULL, NULL, eventExecKnapsack,
+         eventhdlrdata) );
 
    /* include the linear constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY) );
 
    /* add knapsack constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "constraints/knapsack/maxrounds",
-                  "maximal number of separation rounds per node",
-                  &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+         "constraints/knapsack/maxrounds",
+         "maximal number of separation rounds per node",
+         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "constraints/knapsack/maxroundsroot",
-                  "maximal number of separation rounds per node in the root node",
-                  &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
+         "constraints/knapsack/maxroundsroot",
+         "maximal number of separation rounds per node in the root node",
+         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "constraints/knapsack/maxsepacuts",
-                  "maximal number of cuts separated per separation round",
-                  &conshdlrdata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         "constraints/knapsack/maxsepacuts",
+         "maximal number of cuts separated per separation round",
+         &conshdlrdata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "constraints/knapsack/maxsepacutsroot",
-                  "maximal number of cuts separated per separation round in the root node",
-                  &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         "constraints/knapsack/maxsepacutsroot",
+         "maximal number of cuts separated per separation round in the root node",
+         &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1925,31 +1947,7 @@ RETCODE SCIPcreateConsKnapsack(
         
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
-}
-
-/** output knapsack constraint to file stream */
-void SCIPprintConsKnapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   int i;
-
-   CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if( file == NULL )
-      file = stdout;
-
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      printf(" %lld<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
-   }
-   printf(" <= %lld\n", consdata->capacity);
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.15 2004/06/22 10:48:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.16 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -656,6 +656,21 @@ public:
       CONS*         cons                /**< the constraint that has been disabled */
       )
    {
+      return SCIP_OKAY;
+   }
+
+   /** constraint display method of constraint handler
+    *
+    *  The constraint handler should store a representation of the constraint into the given text file.
+    */
+   virtual RETCODE scip_print(
+      SCIP*         scip,               /**< SCIP data structure */
+      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      CONS*         cons,               /**< the constraint that should be displayed */
+      FILE*         file                /**< the text file to store the information into */
+      )
+   {
+      fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       return SCIP_OKAY;
    }
 };

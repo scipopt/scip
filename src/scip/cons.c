@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.81 2004/06/22 10:48:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.82 2004/06/24 15:34:34 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1049,6 +1049,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -1094,6 +1095,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consdeactive = consdeactive;
    (*conshdlr)->consenable = consenable;
    (*conshdlr)->consdisable = consdisable;
+   (*conshdlr)->consprint = consprint;
    (*conshdlr)->conshdlrdata = conshdlrdata;
    (*conshdlr)->conss = NULL;
    (*conshdlr)->consssize = 0;
@@ -3141,6 +3143,35 @@ RETCODE SCIPconsRelease(
       CHECK_OKAY( SCIPconsFree(cons, memhdr, set) );
    }
    *cons  = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** outputs constraint information to file stream */
+RETCODE SCIPconsPrint(
+   CONS*            cons,               /**< constraint to print */
+   SET*             set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   fprintf(file, "  [%s] <%s>: ", conshdlr->name, cons->name);
+   if( conshdlr->consprint != NULL )
+   {
+      CHECK_OKAY( conshdlr->consprint(set->scip, conshdlr, cons, file) );
+   }
+   else
+      fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", conshdlr->name);
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.11 2004/05/21 20:03:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.12 2004/06/24 15:34:37 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -122,6 +122,7 @@ struct Conshdlr
    DECL_CONSDEACTIVE((*consdeactive));  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
+   DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
    CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    CONS**           conss;              /**< array with all active constraints */
    CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */

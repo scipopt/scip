@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.175 2004/06/22 10:48:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.176 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1027,6 +1027,7 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -1035,10 +1036,11 @@ RETCODE SCIPincludeConshdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
-                  name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, needscons, 
-                  consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
-                  consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
-                  consrescvar, conslock, consunlock, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
+         name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, needscons, 
+         consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
+         consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
+         consrescvar, conslock, consunlock, consactive, consdeactive, consenable, consdisable, consprint,
+         conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
    
    return SCIP_OKAY;
@@ -2948,6 +2950,7 @@ RETCODE transformProb(
             " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
       }
    }
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
    return SCIP_OKAY;
 }
@@ -3325,6 +3328,10 @@ RETCODE SCIPpresolve(
 
    CHECK_OKAY( checkStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* capture the CTRL-C interrupt */
+   if( scip->set->catchctrlc )
+      SCIPinterruptCapture(scip->interrupt);
+
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -3398,6 +3405,10 @@ RETCODE SCIPpresolve(
       return SCIP_ERROR;
    }
 
+   /* release the CTRL-C interrupt */
+   if( scip->set->catchctrlc )
+      SCIPinterruptRelease(scip->interrupt);
+
    return SCIP_OKAY;
 }
 
@@ -3415,10 +3426,6 @@ RETCODE SCIPsolve(
       return SCIP_PLUGINNOTFOUND;
    }
    
-   /* capture the CTRL-C interrupt */
-   if( scip->set->catchctrlc )
-      SCIPinterruptCapture(scip->interrupt);
-
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
 
@@ -3446,10 +3453,18 @@ RETCODE SCIPsolve(
       /* reset display */
       SCIPstatResetDisplay(scip->stat);
 
+      /* capture the CTRL-C interrupt */
+      if( scip->set->catchctrlc )
+         SCIPinterruptCapture(scip->interrupt);
+
       /* continue solution process */
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob,
                      scip->primal, scip->tree, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool,
                      scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue) );
+
+      /* release the CTRL-C interrupt */
+      if( scip->set->catchctrlc )
+         SCIPinterruptRelease(scip->interrupt);
 
       /* detect, whether problem is solved */
       if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
@@ -3491,10 +3506,6 @@ RETCODE SCIPsolve(
 
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
-
-   /* release the CTRL-C interrupt */
-   if( scip->set->catchctrlc )
-      SCIPinterruptRelease(scip->interrupt);
 
    return SCIP_OKAY;
 }
@@ -8076,6 +8087,48 @@ Bool SCIPisPrimalboundSol(
    CHECK_ABORT( checkStage(scip, "SCIPisPrimalboundSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPprimalUpperboundIsSol(scip->primal);
+}
+
+/** outputs original problem to file stream */
+RETCODE SCIPprintOrigProblem(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintOrigProblem", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( file == NULL )
+      file = stdout;
+
+   if( scip->origprob == NULL )
+      fprintf(file, "no problem available\n");
+   else
+   {
+      CHECK_OKAY( SCIPprobPrint(scip->origprob, scip->set, file) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** outputs transformed problem to file stream */
+RETCODE SCIPprintTransProblem(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintTransProblem", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( file == NULL )
+      file = stdout;
+
+   if( scip->transprob == NULL )
+      fprintf(file, "no transformed problem available\n");
+   else
+   {
+      CHECK_OKAY( SCIPprobPrint(scip->transprob, scip->set, file) );
+   }
+
+   return SCIP_OKAY;
 }
 
 static

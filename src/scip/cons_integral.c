@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.26 2004/05/21 20:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.27 2004/06/24 15:34:34 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -197,6 +197,9 @@ DECL_CONSCHECK(consCheckIntegral)
 /** constraint disabling notification method of constraint handler */
 #define consDisableIntegral NULL
 
+/** constraint display method of constraint handler */
+#define consPrintIntegral NULL
+
 
 
 
@@ -216,17 +219,18 @@ RETCODE SCIPincludeConshdlrIntegral(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeIntegral, consInitIntegral, consExitIntegral, 
-                  consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
-                  consDeleteIntegral, consTransIntegral, consInitlpIntegral,
-                  consSepaIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
-                  consPropIntegral, consPresolIntegral, consRescvarIntegral,
-                  consLockIntegral, consUnlockIntegral,
-                  consActiveIntegral, consDeactiveIntegral, 
-                  consEnableIntegral, consDisableIntegral,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeIntegral, consInitIntegral, consExitIntegral, 
+         consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
+         consDeleteIntegral, consTransIntegral, consInitlpIntegral,
+         consSepaIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
+         consPropIntegral, consPresolIntegral, consRescvarIntegral,
+         consLockIntegral, consUnlockIntegral,
+         consActiveIntegral, consDeactiveIntegral, 
+         consEnableIntegral, consDisableIntegral,
+         consPrintIntegral,
+         conshdlrdata) );
 
    return SCIP_OKAY;
 }

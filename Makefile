@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.77 2004/06/01 16:53:25 bzfpfend Exp $
+# $Id: Makefile,v 1.78 2004/06/24 15:34:34 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -216,8 +216,8 @@ SCIPLIBOBJ	=	branch.o \
 			cons_binpack.o \
 			cons_conjunction.o \
 			cons_eqknapsack.o \
-			cons_invarknapsack.o \
 			cons_integral.o \
+			cons_invarknapsack.o \
 			cons_knapsack.o \
 			cons_linear.o \
 			cons_logicor.o \

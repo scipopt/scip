@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.8 2004/05/24 17:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.9 2004/06/24 15:34:35 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -78,13 +78,13 @@ struct ConshdlrData
  */
 
 enum Proprule
-{
-   PROPRULE_1,                          /**< v_i = TRUE                                   =>  r   = TRUE            */
-   PROPRULE_2,                          /**< r   = FALSE                                  =>  v_i = FALSE for all i */
-   PROPRULE_3,                          /**< v_i = FALSE for all i                        =>  r   = FALSE           */
-   PROPRULE_4,                          /**< r   = TRUE, v_i = FALSE for all i except j   =>  v_j = TRUE            */
-   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
-};
+   {
+      PROPRULE_1,                          /**< v_i = TRUE                                   =>  r   = TRUE            */
+      PROPRULE_2,                          /**< r   = FALSE                                  =>  v_i = FALSE for all i */
+      PROPRULE_3,                          /**< v_i = FALSE for all i                        =>  r   = FALSE           */
+      PROPRULE_4,                          /**< r   = TRUE, v_i = FALSE for all i except j   =>  v_j = TRUE            */
+      PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+   };
 typedef enum Proprule PROPRULE;
 
 
@@ -158,7 +158,7 @@ RETCODE consdataCatchLbEvent(
 
    /* catch lower bound tighten events on variable */
    CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
    
    return SCIP_OKAY;
 }
@@ -179,7 +179,7 @@ RETCODE consdataCatchUbEvent(
 
    /* catch upper bound tighten events on variable */
    CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
    
    return SCIP_OKAY;
 }
@@ -200,7 +200,7 @@ RETCODE consdataDropLbEvent(
 
    /* drop lower bound events on variable */
    CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
 
    return SCIP_OKAY;
 }
@@ -221,7 +221,7 @@ RETCODE consdataDropUbEvent(
 
    /* drop upper bound events on variable */
    CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
 
    return SCIP_OKAY;
 }
@@ -240,7 +240,7 @@ RETCODE consdataCatchEvents(
 
    /* catch tightening events for both bounds on resultant variable */
    CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
 
    /* catch tightening events for lower bound on operator variables */
    for( i = 0; i < consdata->nvars; ++i )
@@ -265,7 +265,7 @@ RETCODE consdataDropEvents(
 
    /* drop tightening events for both bounds on resultant variable */
    CHECK_OKAY( SCIPdropVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-                  (EVENTDATA*)consdata) );
+         (EVENTDATA*)consdata) );
 
    /* drop tightening events for lower bound on operator variables */
    for( i = 0; i < consdata->nvars; ++i )
@@ -496,12 +496,12 @@ void consdataPrint(
       file = stdout;
 
    /* print coefficients */
-   fprintf(file, "or(%s;", SCIPvarGetName(consdata->resvar));
+   fprintf(file, "<%s> == or(", SCIPvarGetName(consdata->resvar));
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( v > 0 )
          fprintf(file, ", ");
-      fprintf(file, "%s", SCIPvarGetName(consdata->vars[v]));
+      fprintf(file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
    fprintf(file, ")\n");
 }
@@ -629,7 +629,7 @@ RETCODE createRelaxation(
    {
       sprintf(rowname, "%s_%d", SCIPconsGetName(cons), i);
       CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, 0.0, SCIPinfinity(scip),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
       CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[i], consdata->vars[i], -1.0) );
    }
@@ -637,7 +637,7 @@ RETCODE createRelaxation(
    /* create additional row */
    sprintf(rowname, "%s_add", SCIPconsGetName(cons));
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -SCIPinfinity(scip), 0.0,
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
    CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->rows[nvars], nvars, consdata->vars, -1.0) );
 
@@ -1166,13 +1166,13 @@ DECL_CONSTRANS(consTransOr)
 
    /* create target constraint data */
    CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
-                  sourcedata->nvars, sourcedata->vars, sourcedata->resvar) );
+         sourcedata->nvars, sourcedata->vars, sourcedata->resvar) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1383,7 +1383,7 @@ DECL_CONSPRESOL(consPresolOr)
             
             /* aggregate variables: resultant - operand == 0 */
             CHECK_OKAY( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
-                           &cutoff, &redundant, &aggregated) );
+                  &cutoff, &redundant, &aggregated) );
             assert(redundant);
             if( aggregated )
                (*naggrvars)++;
@@ -1450,6 +1450,15 @@ DECL_CONSUNLOCK(consUnlockOr)
 /** constraint disabling notification method of constraint handler */
 #define consDisableOr NULL
 
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintOr)
+{
+   consdataPrint(scip, SCIPconsGetData(cons), file);
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -1494,26 +1503,27 @@ RETCODE SCIPincludeConshdlrOr(
 
    /* create event handler for bound tighten events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-                  NULL, NULL, NULL,
-                  NULL, eventExecOr,
-                  NULL) );
+         NULL, NULL, NULL,
+         NULL, eventExecOr,
+         NULL) );
 
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeOr, consInitOr, consExitOr, 
-                  consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
-                  consDeleteOr, consTransOr, consInitlpOr,
-                  consSepaOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
-                  consPropOr, consPresolOr, consRescvarOr,
-                  consLockOr, consUnlockOr,
-                  consActiveOr, consDeactiveOr, 
-                  consEnableOr, consDisableOr,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeOr, consInitOr, consExitOr, 
+         consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
+         consDeleteOr, consTransOr, consInitlpOr,
+         consSepaOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
+         consPropOr, consPresolOr, consRescvarOr,
+         consLockOr, consUnlockOr,
+         consActiveOr, consDeactiveOr, 
+         consEnableOr, consDisableOr,
+         consPrintOr,
+         conshdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -1556,7 +1566,7 @@ RETCODE SCIPcreateConsOr(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

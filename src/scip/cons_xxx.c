@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.17 2004/05/21 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.18 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -407,6 +407,20 @@ DECL_CONSDISABLE(consDisableXxx)
 #define consDisableXxx NULL
 #endif
 
+/** constraint display method of constraint handler */
+#if 0
+static
+DECL_CONSPRINT(consPrintXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consPrintXxx NULL
+#endif
+
 
 
 
@@ -434,9 +448,9 @@ DECL_LINCONSUPGD(linconsUpgdXxx)
       /* create the bin Xxx constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -463,17 +477,18 @@ RETCODE SCIPincludeConshdlrXxx(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeXxx, consInitXxx, consExitXxx, 
-                  consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
-                  consDeleteXxx, consTransXxx, consInitlpXxx,
-                  consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
-                  consPropXxx, consPresolXxx, consRescvarXxx,
-                  consLockXxx, consUnlockXxx,
-                  consActiveXxx, consDeactiveXxx, 
-                  consEnableXxx, consDisableXxx,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeXxx, consInitXxx, consExitXxx, 
+         consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
+         consDeleteXxx, consTransXxx, consInitlpXxx,
+         consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
+         consPropXxx, consPresolXxx, consRescvarXxx,
+         consLockXxx, consUnlockXxx,
+         consActiveXxx, consDeactiveXxx, 
+         consEnableXxx, consDisableXxx,
+         consPrintXxx,
+         conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
@@ -528,7 +543,7 @@ RETCODE SCIPcreateConsXxx(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

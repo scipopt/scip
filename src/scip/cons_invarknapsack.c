@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.14 2004/05/21 20:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.15 2004/06/24 15:34:35 bzfpfend Exp $"
 
 /**@file   cons_invarknapsack.c
  * @brief  constraint handler for invarknapsack constraints
@@ -386,6 +386,20 @@ DECL_CONSDISABLE(consDisableInvarknapsack)
 #define consDisableInvarknapsack NULL
 #endif
 
+/** constraint display method of constraint handler */
+#if 0
+static
+DECL_CONSPRINT(consPrintInvarknapsack)
+{  /*lint --e{715}*/
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consPrintInvarknapsack NULL
+#endif
+
 
 
 
@@ -417,9 +431,9 @@ DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
       /* create the bin Invarknapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsInvarknapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, lhs, rhs,
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -446,17 +460,18 @@ RETCODE SCIPincludeConshdlrInvarknapsack(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeInvarknapsack, consInitInvarknapsack, consExitInvarknapsack, 
-                  consInitpreInvarknapsack, consExitpreInvarknapsack, consInitsolInvarknapsack, consExitsolInvarknapsack,
-                  consDeleteInvarknapsack, consTransInvarknapsack, consInitlpInvarknapsack,
-                  consSepaInvarknapsack, consEnfolpInvarknapsack, consEnfopsInvarknapsack, consCheckInvarknapsack, 
-                  consPropInvarknapsack, consPresolInvarknapsack, consRescvarInvarknapsack,
-                  consLockInvarknapsack, consUnlockInvarknapsack,
-                  consActiveInvarknapsack, consDeactiveInvarknapsack, 
-                  consEnableInvarknapsack, consDisableInvarknapsack,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeInvarknapsack, consInitInvarknapsack, consExitInvarknapsack, 
+         consInitpreInvarknapsack, consExitpreInvarknapsack, consInitsolInvarknapsack, consExitsolInvarknapsack,
+         consDeleteInvarknapsack, consTransInvarknapsack, consInitlpInvarknapsack,
+         consSepaInvarknapsack, consEnfolpInvarknapsack, consEnfopsInvarknapsack, consCheckInvarknapsack, 
+         consPropInvarknapsack, consPresolInvarknapsack, consRescvarInvarknapsack,
+         consLockInvarknapsack, consUnlockInvarknapsack,
+         consActiveInvarknapsack, consDeactiveInvarknapsack, 
+         consEnableInvarknapsack, consDisableInvarknapsack,
+         consPrintInvarknapsack,
+         conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
@@ -508,7 +523,7 @@ RETCODE SCIPcreateConsInvarknapsack(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

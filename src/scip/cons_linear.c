@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.102 2004/06/22 10:48:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.103 2004/06/24 15:34:35 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -330,7 +330,7 @@ RETCODE consdataCatchEvent(
    consdata->eventdatas[pos]->varpos = pos;
 
    CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, 
-                  consdata->eventdatas[pos]) );
+         consdata->eventdatas[pos]) );
 
    return SCIP_OKAY;
 }
@@ -353,7 +353,7 @@ RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->varpos == pos);
    
    CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
-                  consdata->eventdatas[pos]) );
+         consdata->eventdatas[pos]) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
 
@@ -686,7 +686,7 @@ void consdataPrint(
    if( !SCIPisInfinity(scip, -consdata->lhs)
       && !SCIPisInfinity(scip, consdata->rhs)
       && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
-      fprintf(file, "%+g <= ", consdata->lhs);
+      fprintf(file, "%g <= ", consdata->lhs);
 
    /* print coefficients */
    if( consdata->nvars == 0 )
@@ -694,16 +694,16 @@ void consdataPrint(
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
-      fprintf(file, "%+g%s ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
+      fprintf(file, "%+g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
    }
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
-      fprintf(file, "= %+g\n", consdata->rhs);
+      fprintf(file, "== %g\n", consdata->rhs);
    else if( !SCIPisInfinity(scip, consdata->rhs) )
-      fprintf(file, "<= %+g\n", consdata->rhs);
+      fprintf(file, "<= %g\n", consdata->rhs);
    else if( !SCIPisInfinity(scip, -consdata->lhs) )
-      fprintf(file, ">= %+g\n", consdata->lhs);
+      fprintf(file, ">= %g\n", consdata->lhs);
    else
       fprintf(file, " [free]\n");
 }
@@ -2359,7 +2359,7 @@ RETCODE createRow(
    assert(consdata->row == NULL);
 
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    
    CHECK_OKAY( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals) );
 
@@ -2389,7 +2389,7 @@ RETCODE addCut(
    
    /* insert LP row as cut */
    CHECK_OKAY( SCIPaddCut(scip, consdata->row, 
-                  violation/SCIProwGetNorm(consdata->row)/(SCIProwGetNNonz(consdata->row)+1)) );
+         violation/SCIProwGetNorm(consdata->row)/(SCIProwGetNNonz(consdata->row)+1)) );
 
    return SCIP_OKAY;
 }
@@ -2633,13 +2633,13 @@ DECL_CONSTRANS(consTransLinear)
 
    /* create linear constraint data for target constraint */
    CHECK_OKAY( consdataCreateTransformed(scip, &targetdata, conshdlrdata->eventhdlr,
-                  sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+         sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -3157,7 +3157,7 @@ RETCODE convertBinaryEquality(
    
    /* aggregate the equality */
    CHECK_OKAY( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], consdata->vals[0], consdata->vals[1],
-                  consdata->rhs, &infeasible, &redundant, &aggregated) );
+         consdata->rhs, &infeasible, &redundant, &aggregated) );
 
    /* check for infeasibility of aggregation */
    if( infeasible )
@@ -3347,7 +3347,7 @@ RETCODE convertLongEquality(
 
       /* perform the multi-aggregation */
       CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, consdata->vars, scalars, aggrconst,
-                     &infeasible) );
+            &infeasible) );
 
       /* free temporary memory */
       CHECK_OKAY( SCIPfreeBufferArray(scip, &scalars) );
@@ -3716,9 +3716,9 @@ RETCODE aggregateConstraints(
 
       /* create the new linear constraint */
       CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newlhs, newrhs,
-                     SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
-                     SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
-                     SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
+            SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
+            SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
+            SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
 
       newconsdata = SCIPconsGetData(newcons);
       assert(newconsdata != NULL);
@@ -4023,6 +4023,7 @@ RETCODE preprocessConstraintPairs(
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          debug(consdataPrint(scip, consdata0, NULL));
          debug(consdataPrint(scip, consdata1, NULL));
+
          /* check for infeasibility */
          if( SCIPisFeasGT(scip, consdata1->lhs, consdata0->rhs) )
          {
@@ -4063,6 +4064,7 @@ RETCODE preprocessConstraintPairs(
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          debug(consdataPrint(scip, consdata0, NULL));
          debug(consdataPrint(scip, consdata1, NULL));
+
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata1->rhs, consdata0->lhs) )
          {
@@ -4083,6 +4085,7 @@ RETCODE preprocessConstraintPairs(
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
          debug(consdataPrint(scip, consdata1, NULL));
          debug(consdataPrint(scip, consdata0, NULL));
+
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata0->rhs, consdata1->lhs) )
          {
@@ -4134,15 +4137,15 @@ RETCODE preprocessConstraintPairs(
          {
             /* W_c > W_1: try to aggregate  consdata0 := a * consdata0 + b * consdata1 */
             CHECK_OKAY( aggregateConstraints(scip, cons0, cons1, commonidx0, commonidx1, diffidx0minus1, diffidx1minus0, 
-                           nvarscommon, commonidxweight, diffidx0minus1weight, diffidx1minus0weight, maxaggrnormscale,
-                           nupgdconss, nchgcoefs, result, &aggregated) );
+                  nvarscommon, commonidxweight, diffidx0minus1weight, diffidx1minus0weight, maxaggrnormscale,
+                  nupgdconss, nchgcoefs, result, &aggregated) );
          }
          if( !aggregated && cons0isequality && !consdata1->upgraded && commonidxweight > diffidx0minus1weight )
          {
             /* W_c > W_0: try to aggregate  consdata1 := a * consdata1 + b * consdata0 */
             CHECK_OKAY( aggregateConstraints(scip, cons1, cons0, commonidx1, commonidx0, diffidx1minus0, diffidx0minus1,
-                           nvarscommon, commonidxweight, diffidx1minus0weight, diffidx0minus1weight, maxaggrnormscale,
-                           nupgdconss, nchgcoefs, result, &aggregated) );
+                  nvarscommon, commonidxweight, diffidx1minus0weight, diffidx0minus1weight, maxaggrnormscale,
+                  nupgdconss, nchgcoefs, result, &aggregated) );
          }
       }
    }
@@ -4334,7 +4337,7 @@ DECL_CONSPRESOL(consPresolLinear)
 
       /* convert special equalities */
       CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
-                     &conschanged, &consdeleted) );
+            &conschanged, &consdeleted) );
       if( *result == SCIP_CUTOFF || consdeleted )
          continue;
 
@@ -4367,7 +4370,7 @@ DECL_CONSPRESOL(consPresolLinear)
          if( SCIPconsIsActive(conss[c]) )
          {
             CHECK_OKAY( preprocessConstraintPairs(scip, conss, firstchange, c, conshdlrdata->maxaggrnormscale,
-                           nfixedvars, naggrvars, ndelconss, nupgdconss, nchgsides, nchgcoefs, result) );
+                  nfixedvars, naggrvars, ndelconss, nupgdconss, nchgsides, nchgcoefs, result) );
          }
       }
       for( c = firstchange; c < nconss; ++c )
@@ -4424,6 +4427,15 @@ DECL_CONSUNLOCK(consUnlockLinear)
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableLinear NULL
+
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintLinear)
+{
+   consdataPrint(scip, SCIPconsGetData(cons), file);
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -4516,7 +4528,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
-                  FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 
    /* release the vals buffer */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &vals) );
@@ -4554,41 +4566,42 @@ RETCODE SCIPincludeConshdlrLinear(
 
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-                  NULL, NULL, NULL,
-                  NULL, eventExecLinear,
-                  NULL) );
+         NULL, NULL, NULL,
+         NULL, eventExecLinear,
+         NULL) );
 
    /* create conflict handler for linear constraints */
    CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-                  NULL, NULL, NULL, conflictExecLinear,
-                  NULL) );
+         NULL, NULL, NULL, conflictExecLinear,
+         NULL) );
 
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler in SCIP */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeLinear, consInitLinear, consExitLinear, 
-                  consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
-                  consDeleteLinear, consTransLinear, 
-                  consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
-                  consPropLinear, consPresolLinear, consRescvarLinear,
-                  consLockLinear, consUnlockLinear,
-                  consActiveLinear, consDeactiveLinear, 
-                  consEnableLinear, consDisableLinear,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeLinear, consInitLinear, consExitLinear, 
+         consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
+         consDeleteLinear, consTransLinear, 
+         consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
+         consPropLinear, consPresolLinear, consRescvarLinear,
+         consLockLinear, consUnlockLinear,
+         consActiveLinear, consDeactiveLinear, 
+         consEnableLinear, consDisableLinear,
+         consPrintLinear,
+         conshdlrdata) );
 
    /* add linear constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "constraints/linear/tightenboundsfreq",
-                  "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
-                  &conshdlrdata->tightenboundsfreq, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
+         "constraints/linear/tightenboundsfreq",
+         "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
+         &conshdlrdata->tightenboundsfreq, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "constraints/linear/maxaggrnormscale",
-                  "maximal allowed relative gain in maximum norm for constraint aggregation",
-                  &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, REAL_MAX, NULL, NULL) );
+         "constraints/linear/maxaggrnormscale",
+         "maximal allowed relative gain in maximum norm for constraint aggregation",
+         &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -4679,7 +4692,7 @@ RETCODE SCIPcreateConsLinear(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -4991,11 +5004,11 @@ RETCODE SCIPupgradeConsLinear(
    for( i = 0; i < conshdlrdata->nlinconsupgrades && *upgdcons == NULL; ++i )
    {
       CHECK_OKAY( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, cons, consdata->nvars, 
-                     consdata->vars, consdata->vals, consdata->lhs, consdata->rhs, 
-                     nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
-                     ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
-                     poscoeffsum, negcoeffsum, integral,
-                     upgdcons) );
+            consdata->vars, consdata->vals, consdata->lhs, consdata->rhs, 
+            nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
+            ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
+            poscoeffsum, negcoeffsum, integral,
+            upgdcons) );
    }
 
 #ifdef DEBUG

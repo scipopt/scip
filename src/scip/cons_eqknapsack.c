@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.14 2004/05/21 20:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.15 2004/06/24 15:34:34 bzfpfend Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -386,6 +386,20 @@ DECL_CONSDISABLE(consDisableEqknapsack)
 #define consDisableEqknapsack NULL
 #endif
 
+/** constraint display method of constraint handler */
+#if 0
+static
+DECL_CONSPRINT(consPrintEqknapsack)
+{  /*lint --e{715}*/
+   errorMessage("method of eqknapsack constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consPrintEqknapsack NULL
+#endif
+
 
 
 
@@ -417,9 +431,9 @@ DECL_LINCONSUPGD(linconsUpgdEqknapsack)
       /* create the bin Eqknapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsEqknapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, rhs,
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -446,17 +460,18 @@ RETCODE SCIPincludeConshdlrEqknapsack(
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, 
-                  consInitpreEqknapsack, consExitpreEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
-                  consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,
-                  consSepaEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
-                  consPropEqknapsack, consPresolEqknapsack, consRescvarEqknapsack,
-                  consLockEqknapsack, consUnlockEqknapsack,
-                  consActiveEqknapsack, consDeactiveEqknapsack, 
-                  consEnableEqknapsack, consDisableEqknapsack,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, 
+         consInitpreEqknapsack, consExitpreEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
+         consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,
+         consSepaEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
+         consPropEqknapsack, consPresolEqknapsack, consRescvarEqknapsack,
+         consLockEqknapsack, consUnlockEqknapsack,
+         consActiveEqknapsack, consDeactiveEqknapsack, 
+         consEnableEqknapsack, consDisableEqknapsack,
+         consPrintEqknapsack,
+         conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
@@ -508,7 +523,7 @@ RETCODE SCIPcreateConsEqknapsack(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

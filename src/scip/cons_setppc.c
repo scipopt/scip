@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.45 2004/06/01 18:04:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.46 2004/06/24 15:34:35 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -59,11 +59,11 @@
 
 /** type of setppc constraint: set partitioning, set packing, or set covering */
 enum SetppcType
-{
-   SCIP_SETPPCTYPE_PARTITIONING = 0,     /**< constraint is a set partitioning constraint: a*x == 1 */
-   SCIP_SETPPCTYPE_PACKING      = 1,     /**< constraint is a set packing constraint:      a*x <= 1 */
-   SCIP_SETPPCTYPE_COVERING     = 2      /**< constraint is a set covering constraint:     a*x >= 1 */
-};
+   {
+      SCIP_SETPPCTYPE_PARTITIONING = 0,     /**< constraint is a set partitioning constraint: a*x == 1 */
+      SCIP_SETPPCTYPE_PACKING      = 1,     /**< constraint is a set packing constraint:      a*x <= 1 */
+      SCIP_SETPPCTYPE_COVERING     = 2      /**< constraint is a set covering constraint:     a*x >= 1 */
+   };
 typedef enum SetppcType SETPPCTYPE;
 
 /** constraint handler data */
@@ -530,14 +530,14 @@ void consdataPrint(
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
-      fprintf(file, "+%s ", SCIPvarGetName(consdata->vars[v]));
+      fprintf(file, "+<%s> ", SCIPvarGetName(consdata->vars[v]));
    }
 
    /* print right hand side */
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      fprintf(file, "= 1\n");
+      fprintf(file, "== 1\n");
       break;
    case SCIP_SETPPCTYPE_PACKING:
       fprintf(file, ">= 1\n");
@@ -1045,7 +1045,7 @@ RETCODE createRow(
    }
 
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), lhs, rhs,
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
 
    CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
@@ -1322,13 +1322,13 @@ DECL_CONSTRANS(consTransSetppc)
 
    /* create constraint data for target constraint */
    CHECK_OKAY( consdataCreateTransformed(scip, &targetdata, conshdlrdata->eventhdlr,
-                  sourcedata->nvars, sourcedata->vars, (SETPPCTYPE)sourcedata->setppctype) );
+         sourcedata->nvars, sourcedata->vars, (SETPPCTYPE)sourcedata->setppctype) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1511,7 +1511,7 @@ RETCODE branchLP(
             sprintf(name, "BSB%lld", SCIPgetNTotalNodes(scip));
 
             CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
-                           FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
+                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
             CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
          }
@@ -2263,6 +2263,16 @@ DECL_CONSDEACTIVE(consDeactiveSetppc)
 /** constraint disabling notification method of constraint handler */
 #define consDisableSetppc NULL
 
+/** constraint display method of constraint handler */
+static
+DECL_CONSPRINT(consPrintSetppc)
+{
+   consdataPrint(scip, SCIPconsGetData(cons), file);
+
+   return SCIP_OKAY;
+}
+
+
 
 
 /** creates and captures a set partitioning / packing / covering constraint */
@@ -2318,7 +2328,7 @@ RETCODE createConsSetppc(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  local, modifiable, removeable) );
+         local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -2368,7 +2378,7 @@ RETCODE createNormalizedSetppc(
 
    /* create the constraint */
    CHECK_OKAY( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
-                  initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* release temporary memory */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
@@ -2410,10 +2420,10 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
          /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
          assert(!SCIPconsIsModifiable(cons));
          CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-                        SCIP_SETPPCTYPE_PARTITIONING,
-                        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                        SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+               SCIP_SETPPCTYPE_PARTITIONING,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
       else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0 - ncoeffsnone))
          || (SCIPisEQ(scip, lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, rhs)) )
@@ -2426,10 +2436,10 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
          /* create the set packing constraint (an automatically upgraded constraint is always unmodifiable) */
          assert(!SCIPconsIsModifiable(cons));
          CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-                        SCIP_SETPPCTYPE_PACKING,
-                        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                        SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+               SCIP_SETPPCTYPE_PACKING,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
       else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
@@ -2442,10 +2452,10 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
          /* create the set covering constraint (an automatically upgraded constraint is always unmodifiable) */
          assert(!SCIPconsIsModifiable(cons));
          CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-                        SCIP_SETPPCTYPE_COVERING,
-                        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-                        SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+               SCIP_SETPPCTYPE_COVERING,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
    }
 
@@ -2533,7 +2543,7 @@ DECL_CONFLICTEXEC(conflictExecSetppc)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-                  FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
@@ -2558,41 +2568,42 @@ RETCODE SCIPincludeConshdlrSetppc(
 
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-                  NULL, NULL, NULL,
-                  NULL, eventExecSetppc,
-                  NULL) );
+         NULL, NULL, NULL,
+         NULL, eventExecSetppc,
+         NULL) );
 
    /* create conflict handler for setppc constraints */
    CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-                  NULL, NULL, NULL, conflictExecSetppc,
-                  NULL) );
+         NULL, NULL, NULL, conflictExecSetppc,
+         NULL) );
 
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-                  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, 
-                  CONSHDLR_NEEDSCONS,
-                  consFreeSetppc, consInitSetppc, consExitSetppc, 
-                  consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
-                  consDeleteSetppc, consTransSetppc, 
-                  consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
-                  consPropSetppc, consPresolSetppc, consRescvarSetppc,
-                  consLockSetppc, consUnlockSetppc,
-                  consActiveSetppc, consDeactiveSetppc, 
-                  consEnableSetppc, consDisableSetppc,
-                  conshdlrdata) );
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, 
+         CONSHDLR_NEEDSCONS,
+         consFreeSetppc, consInitSetppc, consExitSetppc, 
+         consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
+         consDeleteSetppc, consTransSetppc, 
+         consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
+         consPropSetppc, consPresolSetppc, consRescvarSetppc,
+         consLockSetppc, consUnlockSetppc,
+         consActiveSetppc, consDeactiveSetppc, 
+         consEnableSetppc, consDisableSetppc,
+         consPrintSetppc,
+         conshdlrdata) );
 
    /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY) );
 
    /* set partitioning constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "constraints/setppc/npseudobranches", 
-                  "number of children created in pseudo branching (0: disable pseudo branching)",
-                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
+         "constraints/setppc/npseudobranches", 
+         "number of children created in pseudo branching (0: disable pseudo branching)",
+         &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

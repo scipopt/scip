@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.31 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.32 2004/06/24 15:34:36 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -243,7 +243,8 @@ RETCODE SCIPeventCreateVarFixed(
    assert(memhdr != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
 
    /* create event data */
    ALLOC_OKAY( allocBlockMemory(memhdr, event) );
