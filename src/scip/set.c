@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.80 2004/01/07 13:14:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.81 2004/01/15 09:12:15 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -89,6 +89,7 @@
 #define SCIP_DEFAULT_SCALING          TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LPSOLVEDEPTH       -1 /**< maximal depth for solving LPs (-1: no depth limit) */
+#define SCIP_DEFAULT_REDCOSTFREQ         4 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
 #define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a column can reach before it is deleted from the LP */
 #define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a row can reach before it is deleted from the LP */
 
@@ -440,6 +441,11 @@ RETCODE SCIPsetCreate(
                   "lp/lpsolvedepth",
                   "maximal depth for solving LP at the nodes (-1: no depth limit)",
                   &(*set)->lpsolvedepth, SCIP_DEFAULT_LPSOLVEDEPTH, -1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "lp/redcostfreq",
+                  "frequency for applying reduced cost fixing (-1: never; 0: only root LP)",
+                  &(*set)->redcostfreq, SCIP_DEFAULT_REDCOSTFREQ, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "lp/fastmip",

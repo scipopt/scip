@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.61 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.62 2004/01/15 09:12:14 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -182,6 +182,18 @@ RETCODE SCIPcolGetStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up                  /**< stores dual bound after branching column up */
+   );
+
+/** gets last strong branching information available for a column variable;
+ *  returns values of SCIP_INVALID, if strong branching was not yet called on the given column;
+ *  keep in mind, that the returned old values may have nothing to do with the current LP solution
+ */
+extern
+void SCIPcolGetStrongbranchLast(
+   COL*             col,                /**< LP column */
+   Real*            down,               /**< stores dual bound after branching column down, or NULL */
+   Real*            up,                 /**< stores dual bound after branching column up, or NULL */
+   Real*            solval              /**< stores LP solution value of column at last strong branching call, or NULL */
    );
 
 

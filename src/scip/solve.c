@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.80 2004/01/13 11:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.81 2004/01/15 09:12:15 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1270,7 +1270,10 @@ RETCODE SCIPsolveCIP(
                   assert(cutoff || lp->solved);
                   
                   /* reduced cost bound strengthening */
-                  if( !cutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+                  if( !cutoff
+                     && ((set->redcostfreq == 0 && actnode->depth == 0)
+                        || (set->redcostfreq >= 1 && (actnode->depth % set->redcostfreq) == 0))
+                     && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
                      && !SCIPsetIsInfinity(set, primal->upperbound)
                      && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->upperbound) )
                   {

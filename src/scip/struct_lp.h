@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.3 2003/12/15 17:45:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.4 2004/01/15 09:12:15 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -72,8 +72,10 @@ struct Col
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    Real             farkas;             /**< value in dual farkas infeasibility proof */
-   Real             strongdown;         /**< strong branching information for downwards branching */
-   Real             strongup;           /**< strong branching information for upwards branching */
+   Real             strongbranchdown;   /**< strong branching information for downwards branching */
+   Real             strongbranchup;     /**< strong branching information for upwards branching */
+   Real             strongbranchsolval; /**< LP solution value of column at last strong branching call */
+   Longint          strongbranchnode;   /**< node number of the last strong branching call on this column */
    Longint          obsoletenode;       /**< last node where this column was removed due to aging */
    int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
@@ -83,8 +85,8 @@ struct Col
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              validredcostlp;     /**< LP number for which reduced cost value is valid */
    int              validfarkaslp;      /**< LP number for which farkas value is valid */
-   int              validstronglp;      /**< LP number for which strong branching values are valid */
-   int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
+   int              validstrongbranchlp;/**< LP number for which strong branching values are valid */
+   int              strongbranchitlim;  /**< strong branching iteration limit used to get strongbranch values, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */

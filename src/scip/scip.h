@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.98 2004/01/13 11:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.99 2004/01/15 09:12:15 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1396,10 +1396,32 @@ Real SCIPgetVarSol(
 extern
 RETCODE SCIPgetVarStrongbranch(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to get solution value for */
+   VAR*             var,                /**< variable to get strong branching values for */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up                  /**< stores dual bound after branching column up */
+   );
+
+/** gets strong branching information on COLUMN variable of the last SCIPgetVarStrongbranch() call;
+ *  returns values of SCIP_INVALID, if strong branching was not yet called on the given variable;
+ *  keep in mind, that the returned old values may have nothing to do with the current LP solution
+ */
+extern
+RETCODE SCIPgetVarStrongbranchLast(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get last strong branching values for */
+   Real*            down,               /**< stores dual bound after branching column down, or NULL */
+   Real*            up,                 /**< stores dual bound after branching column up, or NULL */
+   Real*            solval              /**< stores LP solution value of variable at last strong branching call, or NULL */
+   );
+
+/** gets number of the last node where strong branching was used on the given COLUMN variable,
+ *  or -1 if strong branching was never applied to the variable
+ */
+extern
+Longint SCIPgetVarStrongbranchNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get last strong branching node for */
    );
 
 /** changes variable's objective value */

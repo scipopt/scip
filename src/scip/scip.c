@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.117 2004/01/13 11:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.118 2004/01/15 09:12:14 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3330,8 +3330,6 @@ RETCODE SCIPgetNegatedVar(
    VAR**            negvar              /**< pointer to store the negated variable */
    )
 {
-   assert(var != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPgetNegatedVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( !SCIPvarIsTransformed(var) )
@@ -3353,8 +3351,6 @@ Real SCIPgetVarSol(
    VAR*             var                 /**< variable to get solution value for */
    )
 {
-   assert(var != NULL);
-
    CHECK_ABORT( checkStage(scip, "SCIPgetVarSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPvarGetSol(var, scip->tree->actnodehaslp);
@@ -3363,14 +3359,12 @@ Real SCIPgetVarSol(
 /** gets strong branching information on COLUMN variable */
 RETCODE SCIPgetVarStrongbranch(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to get solution value for */
+   VAR*             var,                /**< variable to get strong branching values for */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up                  /**< stores dual bound after branching column up */
    )
 {
-   assert(var != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranch", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
@@ -3382,6 +3376,50 @@ RETCODE SCIPgetVarStrongbranch(
    CHECK_OKAY( SCIPcolGetStrongbranch(SCIPvarGetCol(var), scip->set, scip->stat, scip->lp, itlim, down, up) );
 
    return SCIP_OKAY;
+}
+
+/** gets strong branching information on COLUMN variable of the last SCIPgetVarStrongbranch() call;
+ *  returns values of SCIP_INVALID, if strong branching was not yet called on the given variable;
+ *  keep in mind, that the returned old values may have nothing to do with the current LP solution
+ */
+RETCODE SCIPgetVarStrongbranchLast(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get last strong branching values for */
+   Real*            down,               /**< stores dual bound after branching column down */
+   Real*            up,                 /**< stores dual bound after branching column up */
+   Real*            solval              /**< stores LP solution value of variable at the last strong branching call */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranchLast", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+   {
+      errorMessage("cannot get strong branching information on non-COLUMN variable\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIPcolGetStrongbranchLast(SCIPvarGetCol(var), down, up, solval);
+
+   return SCIP_OKAY;
+}
+
+/** gets number of the last node where strong branching was used on the given COLUMN variable,
+ *  or -1 if strong branching was never applied to the variable
+ */
+Longint SCIPgetVarStrongbranchNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get last strong branching node for */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranchNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+   {
+      errorMessage("cannot get strong branching information on non-COLUMN variable\n");
+      abort();
+   }
+
+   return SCIPcolGetStrongbranchNode(SCIPvarGetCol(var));
 }
 
 /** changes variable's objective value */

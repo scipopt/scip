@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.77 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.78 2004/01/15 09:12:14 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -891,6 +891,20 @@ void consdataUpdateDelCoef(
    }
 }
 
+/** updates minimum and maximum activity for coefficient change, invalidates maximum absolute value if necessary */
+static
+void consdataUpdateChgCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             oldval,             /**< old coefficient of constraint entry */
+   Real             newval              /**< new coefficient of constraint entry */
+   )
+{
+   consdataUpdateDelCoef(scip, consdata, var, oldval);
+   consdataUpdateAddCoef(scip, consdata, var, newval);
+}
+
 /** calculates maximum absolute value of coefficients */
 static
 void consdataCalcMaxAbsval(
@@ -1027,7 +1041,7 @@ void consdataGetActivityBounds(
 
 /** gets activity bounds for constraint after setting variable to zero */
 static
-RETCODE consdataGetActivityResiduals(
+void consdataGetActivityResiduals(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< linear constraint */
    VAR*             var,                /**< variable to calculate activity residual for */
@@ -1124,8 +1138,6 @@ RETCODE consdataGetActivityResiduals(
             *maxresactivity = consdata->maxactivity - val * lb;
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** invalidates pseudo activity and activity bounds, such that they are recalculated in next get */
@@ -1231,7 +1243,7 @@ RETCODE consdataTightenVarBounds(
 
    lhs = consdata->lhs;
    rhs = consdata->rhs;
-   CHECK_OKAY( consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity) );
+   consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
    assert(!SCIPisInfinity(scip, lhs));
    assert(!SCIPisInfinity(scip, -rhs));
    assert(!SCIPisInfinity(scip, minresactivity));
@@ -2820,6 +2832,176 @@ RETCODE tightenSides(
    return SCIP_OKAY;
 }
 
+/** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
+ *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continouos variable  li <= xi <= ui
+ *  let minact := min{a*x}, maxact := max{a*x}
+ *  (i) ai >= 0:
+ *      if  minact + ai >= lhs  and  maxact - ai <= rhs:
+ *       - a deviation from the lower/upper bound of xi would make the left/right hand side redundant
+ *       - ai, lhs and rhs can be changed to have the same redundancy effect and the same results for
+ *         xi fixed to its bounds, but with a reduced ai and tightened sides to tighten the LP relaxation
+ *       - change coefficients:
+ *           ai'  := max(lhs - minact, maxact - rhs)
+ *           lhs' := lhs - (ai - ai')*li
+ *           rhs' := rhs - (ai - ai')*ui
+ * (ii) ai < 0:
+ *      if  minact - ai >= lhs  and  maxact + ai <= rhs:
+ *       - a deviation from the upper/lower bound of xi would make the left/right hand side redundant
+ *       - ai, lhs and rhs can be changed to have the same redundancy effect and the same results for
+ *         xi fixed to its bounds, but with a reduced ai and tightened sides to tighten the LP relaxation
+ *       - change coefficients:
+ *           ai'  := min(rhs - maxact, minact - lhs)
+ *           lhs' := lhs - (ai - ai')*ui
+ *           rhs' := rhs - (ai - ai')*li
+ */
+static
+RETCODE consdataTightenCoefs(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   int*             nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*             nchgsides,          /**< pointer to count number of side changes */
+   Bool*            conschanged         /**< pointer to store TRUE, if changes were made to the constraint */
+   )
+{
+   CONSDATA* consdata;
+   VAR* var;
+   Real minactivity;
+   Real maxactivity;
+   Real val;
+   Real newval;
+   Real newlhs;
+   Real newrhs;
+   Real lb;
+   Real ub;
+   int i;
+
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(conschanged != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get the minimal and maximal activity of the constraint */
+   consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
+
+   /* try to tighten each coefficient */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      var = consdata->vars[i];
+
+      /* ignore continouos variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+
+      /* get coefficient and variable's bounds */
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+      val = consdata->vals[i];
+      assert(!SCIPisZero(scip, val));
+
+      /* check sign of coefficient */
+      if( val >= 0.0 )
+      {
+         /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
+         if( SCIPisGE(scip, minactivity + val, consdata->lhs) && SCIPisLE(scip, maxactivity - val, consdata->rhs) )
+         {
+            /* change coefficients:
+             *   ai'  := max(lhs - minact, maxact - rhs)
+             *   lhs' := lhs - (ai - ai')*li
+             *   rhs' := rhs - (ai - ai')*ui
+             */
+            newval = MAX(consdata->lhs - minactivity, maxactivity - consdata->rhs);
+            newlhs = consdata->lhs - (val - newval)*lb;
+            newrhs = consdata->rhs - (val - newval)*ub;
+            if( !SCIPisEQ(scip, newval, val) )
+            {
+               debugMessage("linear constraint <%s>: change coefficient %+g<%s> to %+g<%s>, act=[%g,%g], side=[%g,%g]\n",
+                  SCIPconsGetName(cons), val, SCIPvarGetName(var), newval, SCIPvarGetName(var), 
+                  minactivity, maxactivity, consdata->lhs, consdata->rhs);
+
+               /* update the coefficient and the activity bounds */
+               consdata->vals[i] = newval;
+               consdataUpdateChgCoef(scip, consdata, var, val, newval);
+               (*nchgcoefs)++;
+               *conschanged = TRUE;
+
+               /* get the new minimal and maximal activity of the constraint */
+               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
+            }
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+            {
+               debugMessage("linear constraint <%s>: change lhs %g to %g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
+
+               CHECK_OKAY( chgLhs(scip, cons, newlhs) );
+               (*nchgsides)++;
+               *conschanged = TRUE;
+               assert(SCIPisEQ(scip, consdata->lhs, newlhs));
+            }
+            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+            {
+               debugMessage("linear constraint <%s>: change rhs %g to %g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
+
+               CHECK_OKAY( chgRhs(scip, cons, newrhs) );
+               (*nchgsides)++;
+               *conschanged = TRUE;
+               assert(SCIPisEQ(scip, consdata->rhs, newrhs));
+            }
+         }
+      }
+      else
+      {
+         /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
+         if( SCIPisGE(scip, minactivity - val, consdata->lhs) && SCIPisLE(scip, maxactivity + val, consdata->rhs) )
+         {
+            /* change coefficients:
+             *   ai'  := min(rhs - maxact, minact - lhs)
+             *   lhs' := lhs - (ai - ai')*ui
+             *   rhs' := rhs - (ai - ai')*li
+             */
+            newval = MIN(consdata->rhs - maxactivity, minactivity - consdata->lhs);
+            newlhs = consdata->lhs - (val - newval)*ub;
+            newrhs = consdata->rhs - (val - newval)*lb;
+            if( !SCIPisEQ(scip, newval, val) )
+            {
+               debugMessage("linear constraint <%s>: change coefficient %+g<%s> to %+g<%s>, act=[%g,%g], side=[%g,%g]\n",
+                  SCIPconsGetName(cons), val, SCIPvarGetName(var), newval, SCIPvarGetName(var), 
+                  minactivity, maxactivity, consdata->lhs, consdata->rhs);
+
+               /* update the coefficient and the activity bounds */
+               consdata->vals[i] = newval;
+               consdataUpdateChgCoef(scip, consdata, var, val, newval);
+               (*nchgcoefs)++;
+               *conschanged = TRUE;
+
+               /* get the new minimal and maximal activity of the constraint */
+               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
+            }
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+            {
+               debugMessage("linear constraint <%s>: change lhs %g to %g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
+
+               CHECK_OKAY( chgLhs(scip, cons, newlhs) );
+               (*nchgsides)++;
+               *conschanged = TRUE;
+               assert(SCIPisEQ(scip, consdata->lhs, newlhs));
+            }
+            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+            {
+               debugMessage("linear constraint <%s>: change rhs %g to %g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
+
+               CHECK_OKAY( chgRhs(scip, cons, newrhs) );
+               (*nchgsides)++;
+               *conschanged = TRUE;
+               assert(SCIPisEQ(scip, consdata->rhs, newrhs));
+            }
+         }
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 /* processes equality with only one variable by fixing the variable and deleting the constraint */
 static
 RETCODE convertUnaryEquality(
@@ -3947,6 +4129,10 @@ DECL_CONSPRESOL(consPresolLinear)
       if( consdata->propagated )
          continue;
 
+      /* mark constraint being propagated/preprocessed */
+      assert(SCIPconsIsActive(cons));
+      consdata->propagated = TRUE;
+
       /* if inequality is already upgraded, delete it now; we only want to keep upgraded inequalities one presolving round
        * to help detecting redundancy of other linear constraints, but we want to keep equalities until the end of
        * presolving, because they may be used for aggregating other constraints
@@ -4031,12 +4217,6 @@ DECL_CONSPRESOL(consPresolLinear)
          continue;
       }
 
-      /* convert special equalities */
-      CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
-                     &conschanged, &consdeleted) );
-      if( *result == SCIP_CUTOFF || consdeleted )
-         continue;
-
       /* tighten variable's bounds */
       CHECK_OKAY( tightenBounds(scip, cons, nchgbds, result) );
       if( *result == SCIP_CUTOFF )
@@ -4087,6 +4267,15 @@ DECL_CONSPRESOL(consPresolLinear)
          conschanged = TRUE;
       }
 
+      /* reduce big-M coefficients, that make the constraint redundant if the variable is on a bound */
+      CHECK_OKAY( consdataTightenCoefs(scip, cons, nchgcoefs, nchgsides, &conschanged) );
+
+      /* convert special equalities */
+      CHECK_OKAY( convertEquality(scip, cons, nfixedvars, naggrvars, ndelconss, result,
+                     &conschanged, &consdeleted) );
+      if( *result == SCIP_CUTOFF || consdeleted )
+         continue;
+
       /* if constraint was changed, try again to upgrade linear constraint into more specific constraint */
       if( conschanged )
       {
@@ -4109,10 +4298,6 @@ DECL_CONSPRESOL(consPresolLinear)
             consdata->upgraded = TRUE;
          }
       }
-
-      /* mark constraint being propagated/preprocessed */
-      assert(SCIPconsIsActive(cons));
-      consdata->propagated = TRUE;
    }
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them */

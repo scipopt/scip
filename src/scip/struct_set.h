@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.3 2004/01/07 13:14:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.4 2004/01/15 09:12:15 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -136,6 +136,7 @@ struct Set
    Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
+   int              redcostfreq;        /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
    Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
    Bool             scaling;            /**< should scaling of LP solver be used? */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */

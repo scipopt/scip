@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.90 2004/01/13 11:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.91 2004/01/15 09:12:14 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1284,12 +1284,14 @@ RETCODE SCIPcolCreate(
    (*col)->primsol = 0.0;
    (*col)->redcost = SCIP_INVALID;
    (*col)->farkas = SCIP_INVALID;
-   (*col)->strongdown = SCIP_INVALID;
-   (*col)->strongup = SCIP_INVALID;
+   (*col)->strongbranchdown = SCIP_INVALID;
+   (*col)->strongbranchup = SCIP_INVALID;
+   (*col)->strongbranchsolval  = SCIP_INVALID;
+   (*col)->strongbranchnode = -1;
    (*col)->validredcostlp = -1;
    (*col)->validfarkaslp = -1;
-   (*col)->validstronglp = -1;
-   (*col)->strongitlim = -1;
+   (*col)->validstrongbranchlp = -1;
+   (*col)->strongbranchitlim = -1;
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
    (*col)->var_probindex = SCIPvarGetProbIndex(var);
@@ -1843,20 +1845,22 @@ RETCODE SCIPcolGetStrongbranch(
    assert(down != NULL);
    assert(up != NULL);
 
-   if( col->validstronglp != stat->lpcount || itlim > col->strongitlim )
+   if( col->validstrongbranchlp != stat->lpcount || itlim > col->strongbranchitlim )
    {
-      col->validstronglp = stat->lpcount;
+      col->validstrongbranchlp = stat->lpcount;
+      col->strongbranchsolval = col->primsol;
+      col->strongbranchnode = stat->nnodes;
 
       /* if a loose variables has an infinite best bound, the LP bound is -infinity and no gain can be achieved */
       if( lp->looseobjvalinf > 0 )
       {
-         col->strongdown = -set->infinity;
-         col->strongup = -set->infinity;
+         col->strongbranchdown = -set->infinity;
+         col->strongbranchup = -set->infinity;
       }
       else
       {
-         Real strongdown;
-         Real strongup;
+         Real strongbranchdown;
+         Real strongbranchup;
          int iter;
 
          debugMessage("calling strong branching for variable <%s>(%g) with %d iterations\n", 
@@ -1867,10 +1871,11 @@ RETCODE SCIPcolGetStrongbranch(
       
          /* call LPI strong branching */
          stat->nstrongbranchs++;
-         col->strongitlim = itlim;
-         CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim, &strongdown, &strongup, &iter) );
-         col->strongdown = MIN(strongdown + lp->looseobjval, lp->upperbound);
-         col->strongup = MIN(strongup + lp->looseobjval, lp->upperbound);
+         col->strongbranchitlim = itlim;
+         CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim,
+                        &strongbranchdown, &strongbranchup, &iter) );
+         col->strongbranchdown = MIN(strongbranchdown + lp->looseobjval, lp->upperbound);
+         col->strongbranchup = MIN(strongbranchup + lp->looseobjval, lp->upperbound);
 
          /* update strong branching statistics */
          if( iter == -1 )
@@ -1886,13 +1891,34 @@ RETCODE SCIPcolGetStrongbranch(
          SCIPclockStop(stat->strongbranchtime, set);
       }
    }
-   assert(col->strongdown < SCIP_INVALID);
-   assert(col->strongup < SCIP_INVALID);
+   assert(col->strongbranchdown < SCIP_INVALID);
+   assert(col->strongbranchup < SCIP_INVALID);
 
-   *down = col->strongdown;
-   *up = col->strongup;
+   *down = col->strongbranchdown;
+   *up = col->strongbranchup;
 
    return SCIP_OKAY;
+}
+
+/** gets last strong branching information available for a column variable;
+ *  returns values of SCIP_INVALID, if strong branching was not yet called on the given column;
+ *  keep in mind, that the returned old values may have nothing to do with the current LP solution
+ */
+void SCIPcolGetStrongbranchLast(
+   COL*             col,                /**< LP column */
+   Real*            down,               /**< stores dual bound after branching column down, or NULL */
+   Real*            up,                 /**< stores dual bound after branching column up, or NULL */
+   Real*            solval              /**< stores LP solution value of column at last strong branching call, or NULL */
+   )
+{
+   assert(col != NULL);
+
+   if( down != NULL )
+      *down = col->strongbranchdown;
+   if( up != NULL )
+      *up = col->strongbranchup;
+   if( solval != NULL )
+      *solval = col->strongbranchsolval;
 }
 
 /** output column to file stream */
@@ -2045,6 +2071,18 @@ Real* SCIPcolGetVals(
    assert(col != NULL);
 
    return col->vals;
+}
+
+/** gets number of the last node where strong branching was used on the given column,
+ *  or -1 if strong branching was never applied to the column
+ */
+Longint SCIPcolGetStrongbranchNode(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->strongbranchnode;
 }
 
 #endif
@@ -3475,11 +3513,11 @@ void markColDeleted(
    col->primsol = 0.0;
    col->redcost = SCIP_INVALID;
    col->farkas = SCIP_INVALID;
-   col->strongdown = SCIP_INVALID;
-   col->strongup = SCIP_INVALID;
+   col->strongbranchdown = SCIP_INVALID;
+   col->strongbranchup = SCIP_INVALID;
    col->validredcostlp = -1;
    col->validfarkaslp = -1;
-   col->strongitlim = -1;
+   col->strongbranchitlim = -1;
 }
 
 /** applies all cached column removals to the LP solver */
@@ -3606,11 +3644,11 @@ RETCODE lpFlushAddCols(
       col->primsol = SCIP_INVALID;
       col->redcost = SCIP_INVALID;
       col->farkas = SCIP_INVALID;
-      col->strongdown = SCIP_INVALID;
-      col->strongup = SCIP_INVALID;
+      col->strongbranchdown = SCIP_INVALID;
+      col->strongbranchup = SCIP_INVALID;
       col->validredcostlp = -1;
       col->validfarkaslp = -1;
-      col->strongitlim = -1;
+      col->strongbranchitlim = -1;
       col->objchanged = FALSE;
       col->lbchanged = FALSE;
       col->ubchanged = FALSE;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.11 2004/01/13 11:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.12 2004/01/15 09:12:14 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -44,18 +44,21 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 {  /*lint --e{715}*/
    VAR** lpcands;
    Real* lpcandssol;
+   Real* lpcandsfrac;
    Real upperbound;
    Real lowerbound;
    Real down;
    Real up;
+   Real downgain;
+   Real upgain;
    Real score;
    Real bestdown;
    Real bestup;
    Real bestscore;
    Bool allcolsinlp;
    int nlpcands;
-   int bestcand;
-   int i;
+   int bestlpcand;
+   int c;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -74,84 +77,105 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    allcolsinlp = SCIPallColsInLP(scip);
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
    assert(nlpcands > 0);
 
-   /* search the full strong candidate */
-   bestscore = -SCIPinfinity(scip);
-   bestcand = -1;
-   bestdown = 0.0;
-   bestup = 0.0;
-   for( i = 0; i < nlpcands && *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM; ++i )
+   if( nlpcands == 1 )
    {
-      assert(lpcands[i] != NULL);
-
-      CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[i], INT_MAX, &down, &up) );
-      down = MAX(down, lowerbound);
-      up = MAX(up, lowerbound);
-
-      if( allcolsinlp )
+      /* only one candidate: nothing has to be done */
+      bestlpcand = 0;
+      bestdown = lowerbound;
+      bestup = lowerbound;
+   }
+   else
+   {
+      /* search the full strong candidate */
+      bestscore = -SCIPinfinity(scip);
+      bestlpcand = -1;
+      bestdown = 0.0;
+      bestup = 0.0;
+      for( c = 0; c < nlpcands; ++c )
       {
-         Bool downinf;
-         Bool upinf;
+         assert(lpcands[c] != NULL);
 
-         /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-         downinf = SCIPisGE(scip, down, upperbound);
-         upinf = SCIPisGE(scip, up, upperbound);
+         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, &down, &up) );
+         down = MAX(down, lowerbound);
+         up = MAX(up, lowerbound);
+         downgain = down - lowerbound;
+         upgain = up - lowerbound;
 
-         if( downinf && upinf )
+         if( allcolsinlp )
          {
-            /* both roundings are infeasible -> node is infeasible */
-            *result = SCIP_CUTOFF;
-            debugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[i]));
-         }
-         else if( downinf )
-         {
-            /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-            CHECK_OKAY( SCIPchgVarLb(scip, lpcands[i], SCIPceil(scip, lpcandssol[i])) );
-            *result = SCIP_REDUCEDDOM;
-            debugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[i]));
-         }
-         else if( upinf )
-         {
-            /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
-            CHECK_OKAY( SCIPchgVarUb(scip, lpcands[i], SCIPfloor(scip, lpcandssol[i])) );
-            *result = SCIP_REDUCEDDOM;
-            debugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[i]));
-         }
-      }
+            Bool downinf;
+            Bool upinf;
 
-      score = SCIPgetBranchScore(scip, down - lowerbound, up - lowerbound) + 1e-6; /* no gain -> use fractionalities */
-      score *= SCIPvarGetBranchingPriority(lpcands[i]);
-      debugMessage("   -> var <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
-         SCIPvarGetName(lpcands[i]), lpcandssol[i], down, up, SCIPvarGetBranchingPriority(lpcands[i]), score);
+            /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
+            downinf = SCIPisGE(scip, down, upperbound);
+            upinf = SCIPisGE(scip, up, upperbound);
 
-      if( score > bestscore )
-      {
-         bestcand = i;
-         bestdown = down;
-         bestup = up;
-         bestscore = score;
+            if( downinf && upinf )
+            {
+               /* both roundings are infeasible -> node is infeasible */
+               *result = SCIP_CUTOFF;
+               debugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
+               break; /* terminate initialization loop, because node is infeasible */
+            }
+            else if( downinf )
+            {
+               /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
+               CHECK_OKAY( SCIPchgVarLb(scip, lpcands[c], SCIPceil(scip, lpcandssol[c])) );
+               *result = SCIP_REDUCEDDOM;
+               debugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
+               break; /* terminate initialization loop, because LP was changed */
+            }
+            else if( upinf )
+            {
+               /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
+               CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfloor(scip, lpcandssol[c])) );
+               *result = SCIP_REDUCEDDOM;
+               debugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
+               break; /* terminate initialization loop, because LP was changed */
+            }
+         }
+
+         /* check for a better score */
+         score = SCIPgetBranchScore(scip, downgain, upgain) + 1e-4; /* no gain -> use fractionalities */
+         score *= SCIPvarGetBranchingPriority(lpcands[c]);
+         if( score > bestscore )
+         {
+            bestlpcand = c;
+            bestdown = down;
+            bestup = up;
+            bestscore = score;
+         }
+
+         /* update history values */
+         CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
+         CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+
+         debugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, prio=%g, score=%g) -- best: <%s> (%g)\n",
+            SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, SCIPvarGetBranchingPriority(lpcands[c]), score,
+            SCIPvarGetName(lpcands[bestlpcand]), bestscore);
       }
    }
-   assert(bestcand >= 0);
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
    {
       NODE* node;
 
       assert(*result == SCIP_DIDNOTRUN);
+      assert(bestlpcand >= 0);
 
       /* perform the branching */
       debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
-         nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestdown, bestup, 
-         SCIPvarGetBranchingPriority(lpcands[bestcand]), bestscore);
+         nlpcands, bestlpcand, SCIPvarGetName(lpcands[bestlpcand]), lpcandssol[bestlpcand], bestdown, bestup, 
+         SCIPvarGetBranchingPriority(lpcands[bestlpcand]), bestscore);
 
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",
-         SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
+         SCIPvarGetName(lpcands[bestlpcand]), SCIPfloor(scip, lpcandssol[bestlpcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
-      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
+      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestlpcand], SCIPfloor(scip, lpcandssol[bestlpcand])) );
       if( allcolsinlp )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
@@ -160,9 +184,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", 
-         SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
+         SCIPvarGetName(lpcands[bestlpcand]), SCIPceil(scip, lpcandssol[bestlpcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
-      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestlpcand], SCIPceil(scip, lpcandssol[bestlpcand])) );
       if( allcolsinlp )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
