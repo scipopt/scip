@@ -9,5 +9,5 @@ $(OBJDIR)/cmain.o: src/cmain.c src/scip.h src/def.h src/type_retcode.h \
   src/type_cutpool.h src/pub_dialog.h src/pub_disp.h src/pub_event.h \
   src/pub_heur.h src/pub_lp.h src/type_set.h src/type_stat.h \
   src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h src/pub_presol.h \
-  src/pub_pricer.h src/pub_reader.h src/pub_sepa.h src/pub_tree.h \
-  src/pub_var.h src/scipdefplugins.h
+  src/pub_pricer.h src/pub_reader.h src/pub_sepa.h src/pub_sol.h \
+  src/pub_tree.h src/pub_var.h src/scipdefplugins.h

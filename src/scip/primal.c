@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.30 2004/03/10 17:00:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.31 2004/03/19 09:41:42 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -390,8 +390,12 @@ RETCODE SCIPprimalTrySol(
    int insertpos;
 
    assert(primal != NULL);
+   assert(set != NULL);
    assert(sol != NULL);
    assert(stored != NULL);
+
+   /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
+   checklprows = checklprows || set->exactsolve;
 
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.9 2004/03/16 13:41:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.10 2004/03/19 09:41:41 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -101,6 +101,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    Real bestsbup;
    Bool bestisstrongbranch;
    Bool allcolsinlp;
+   Bool exactsolve;
    int nlpcands;
    int bestcand;
 
@@ -116,6 +117,11 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
+
+   /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
+    * for cutting off sub problems and improving lower bounds of children
+    */
+   exactsolve = SCIPisExactSolve(scip);
 
    /* get current lower objective bound of the local sub problem and global cutoff bound */
    lowerbound = SCIPgetLocalLowerbound(scip);
@@ -307,7 +313,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          upgain = up - lowerbound;
 
          /* check for possible fixings */
-         if( allcolsinlp )
+         if( allcolsinlp && !exactsolve )
          {
             Bool downinf;
             Bool upinf;
@@ -419,7 +425,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
-      if( allcolsinlp && bestisstrongbranch )
+      if( allcolsinlp && !exactsolve && bestisstrongbranch )
       {
          assert(SCIPisLT(scip, bestsbdown, cutoffbound));
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestsbdown) );
@@ -431,7 +437,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
-      if( allcolsinlp && bestisstrongbranch )
+      if( allcolsinlp && !exactsolve && bestisstrongbranch )
       {
          assert(SCIPisLT(scip, bestsbup, cutoffbound));
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestsbup) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.104 2004/03/16 13:41:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.105 2004/03/19 09:41:41 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -38,6 +38,7 @@
 #include "message.h"
 #include "set.h"
 #include "stat.h"
+#include "intervalarith.h"
 #include "clock.h"
 #include "lpi.h"
 #include "misc.h"
@@ -5193,11 +5194,17 @@ RETCODE SCIPlpSetState(
 static
 RETCODE lpSetUobjlim(
    LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
    Real             uobjlim             /**< new feasibility tolerance */
    )
 {
    assert(lp != NULL);
-   
+   assert(set != NULL);
+
+   /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
+   if( set->exactsolve )
+      return SCIP_OKAY;
+
    CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
 
    if( uobjlim != lp->lpiuobjlim )
@@ -5514,7 +5521,7 @@ RETCODE lpSolveStable(
    *lperror = FALSE;
 
    /* solve with given settings (usually fast but unprecise) */
-   CHECK_OKAY( lpSetUobjlim(lp, lp->cutoffbound - lp->looseobjval) );
+   CHECK_OKAY( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
    CHECK_OKAY( lpSetFeastol(lp, set->feastol) );
    CHECK_OKAY( lpSetDualFeastol(lp, set->dualfeastol) );
    CHECK_OKAY( lpSetFromscratch(lp, fromscratch) );
@@ -5641,6 +5648,7 @@ RETCODE lpSolve(
       if( SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
+         debugMessage("optimal solution %g exceeds objective limit %g\n", lp->lpobjval, lp->lpiuobjlim);
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->lpobjval = set->infinity;
       }
@@ -5826,7 +5834,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         if( !SCIPprobAllColsInLP(prob, set, lp) )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->exactsolve )
          {
             CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set, stat) );
          }
@@ -5839,7 +5847,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         if( !SCIPprobAllColsInLP(prob, set, lp) )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->exactsolve )
          {
             CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, NULL) );
          }
@@ -5967,8 +5975,64 @@ Real SCIPlpGetModifiedPseudoObjval(
       return pseudoobjval;
 }
 
+/** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
+ *  perform calculations with interval arithmetic to get an exact lower bound
+ */
+Real SCIPlpGetModifiedProvedPseudoObjval(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable */
+   Real             oldbound,           /**< old value for bound */
+   Real             newbound,           /**< new value for bound */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   )
+{
+   Real pseudoobjval;
+   int pseudoobjvalinf;
+   
+   pseudoobjval = lp->pseudoobjval;
+   pseudoobjvalinf = lp->pseudoobjvalinf;
+   if( boundtype == SCIPvarGetBestBoundType(var) )
+   {
+      INTERVAL obj;
+      INTERVAL bd;
+      INTERVAL prod;
+      INTERVAL psval;
+
+      SCIPintervalSet(&psval, pseudoobjval);
+      SCIPintervalSet(&obj, SCIPvarGetObj(var));
+
+      if( SCIPsetIsInfinity(set, ABS(oldbound)) )
+         pseudoobjvalinf--;
+      else
+      {
+         SCIPintervalSet(&bd, oldbound);
+         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalSub(&psval, psval, prod);
+      }
+      assert(pseudoobjvalinf >= 0);
+      if( SCIPsetIsInfinity(set, ABS(newbound)) )
+         pseudoobjvalinf++;
+      else
+      {
+         SCIPintervalSet(&bd, newbound);
+         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalAdd(&psval, psval, prod);
+      }
+
+      pseudoobjval = SCIPintervalGetInf(psval);
+   }
+   assert(pseudoobjvalinf >= 0);
+
+   if( pseudoobjvalinf > 0 )
+      return -set->infinity;
+   else
+      return pseudoobjval;
+}
+
 /** updates current pseudo and loose objective values for a change in a variable's objective value or bounds */
-RETCODE SCIPlpUpdateVar(
+static
+RETCODE lpUpdateVar(
    LP*              lp,                 /**< current LP data */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
@@ -6052,6 +6116,122 @@ RETCODE SCIPlpUpdateVar(
    return SCIP_OKAY;
 }
 
+/** updates current pseudo and loose objective values for a change in a variable's objective value or bounds;
+ *  pseudo objective value is calculated with interval arithmetics to get a proved lower bound
+ */
+static
+RETCODE lpUpdateVarProved(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             oldlb,              /**< old objective value of variable */
+   Real             oldub,              /**< old objective value of variable */
+   Real             newobj,             /**< new objective value of variable */
+   Real             newlb,              /**< new objective value of variable */
+   Real             newub               /**< new objective value of variable */
+   )
+{
+   INTERVAL deltaval;
+   INTERVAL bd;
+   INTERVAL obj;
+   INTERVAL prod;
+   INTERVAL psval;
+   int deltainf;
+
+   assert(lp != NULL);
+   assert(lp->pseudoobjvalinf >= 0);
+   assert(lp->looseobjvalinf >= 0);
+   assert(!SCIPsetIsInfinity(set, ABS(oldobj)));
+   assert(!SCIPsetIsInfinity(set, oldlb));
+   assert(!SCIPsetIsInfinity(set, -oldub));
+   assert(!SCIPsetIsInfinity(set, ABS(newobj)));
+   assert(!SCIPsetIsInfinity(set, newlb));
+   assert(!SCIPsetIsInfinity(set, -newub));
+   assert(var != NULL);
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+   {
+      errorMessage("LP was informed of an objective change of a non-mutable variable\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   assert(SCIPvarGetProbindex(var) >= 0);
+
+   SCIPintervalSet(&deltaval, 0.0);
+   deltainf = 0;
+
+   /* subtract old pseudo objective value */
+   if( oldobj > 0.0 )
+   {
+      if( SCIPsetIsInfinity(set, -oldlb) )
+         deltainf--;
+      else
+      {
+         SCIPintervalSet(&bd, oldlb);
+         SCIPintervalSet(&obj, oldobj);
+         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldlb * oldobj; */
+      }
+   }
+   else if( oldobj < 0.0 )
+   {
+      if( SCIPsetIsInfinity(set, oldub) )
+         deltainf--;
+      else
+      {
+         SCIPintervalSet(&bd, oldub);
+         SCIPintervalSet(&obj, oldobj);
+         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldub * oldobj; */
+      }
+   }
+
+   /* add new pseudo objective value */
+   if( newobj > 0.0 )
+   {
+      if( SCIPsetIsInfinity(set, -newlb) )
+         deltainf++;
+      else
+      {
+         SCIPintervalSet(&bd, newlb);
+         SCIPintervalSet(&obj, newobj);
+         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newlb * newobj; */
+      }
+   }
+   else if( newobj < 0.0 )
+   {
+      if( SCIPsetIsInfinity(set, newub) )
+         deltainf++;
+      else
+      {
+         SCIPintervalSet(&bd, newub);
+         SCIPintervalSet(&obj, newobj);
+         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newub * newobj; */
+      }
+   }
+
+   /* update the pseudo and loose objective values */
+   SCIPintervalSet(&psval, lp->pseudoobjval);
+   SCIPintervalAdd(&psval, psval, deltaval);
+   lp->pseudoobjval = SCIPintervalGetInf(psval);
+   lp->pseudoobjvalinf += deltainf;
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   {
+      SCIPintervalSet(&psval, lp->looseobjval);
+      SCIPintervalAdd(&psval, psval, deltaval);
+      lp->looseobjval = SCIPintervalGetInf(psval);
+      lp->looseobjvalinf += deltainf;
+   }
+
+   assert(lp->pseudoobjvalinf >= 0);
+   assert(lp->looseobjvalinf >= 0);
+
+   return SCIP_OKAY;
+}
+
 /** updates current pseudo and loose objective value for a change in a variable's objective value */
 RETCODE SCIPlpUpdateVarObj(
    LP*              lp,                 /**< current LP data */
@@ -6061,14 +6241,26 @@ RETCODE SCIPlpUpdateVarObj(
    Real             newobj              /**< new objective value of variable */
    )
 {
+   assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPsetIsEQ(set, oldobj, newobj) )
+   if( set->exactsolve )
    {
-      CHECK_OKAY( SCIPlpUpdateVar(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-                     newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      if( oldobj != newobj )
+      {
+         CHECK_OKAY( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                        newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      }
    }
-
+   else
+   {
+      if( !SCIPsetIsEQ(set, oldobj, newobj) )
+      {
+         CHECK_OKAY( lpUpdateVar(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                        newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      }
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -6081,14 +6273,26 @@ RETCODE SCIPlpUpdateVarLb(
    Real             newlb               /**< new lower bound of variable */
    )
 {
+   assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+   if( set->exactsolve )
    {
-      CHECK_OKAY( SCIPlpUpdateVar(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
-                     SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+      if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 )
+      {
+         CHECK_OKAY( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
+                        SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+      }
    }
-
+   else
+   {
+      if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+      {
+         CHECK_OKAY( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
+                        SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+      }
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -6101,12 +6305,24 @@ RETCODE SCIPlpUpdateVarUb(
    Real             newub               /**< new upper bound of variable */
    )
 {
+   assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+   if( set->exactsolve )
    {
-      CHECK_OKAY( SCIPlpUpdateVar(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
-                     SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+      if( oldub != newub && SCIPvarGetObj(var) < 0.0 )
+      {
+         CHECK_OKAY( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
+                        SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+      }
+   }
+   else
+   {
+      if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+      {
+         CHECK_OKAY( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
+                        SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+      }
    }
 
    return SCIP_OKAY;
@@ -6134,7 +6350,8 @@ RETCODE SCIPlpUpdateAddVar(
 }
 
 /** informs LP, that given formerly loose problem variable is now a column variable */
-RETCODE SCIPlpUpdateVarColumn(
+static
+RETCODE lpUpdateVarColumn(
    LP*              lp,                 /**< current LP data */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
@@ -6180,6 +6397,95 @@ RETCODE SCIPlpUpdateVarColumn(
    return SCIP_OKAY;
 }
 
+/** informs LP, that given formerly loose problem variable is now a column variable
+ *  pseudo objective value is calculated with interval arithmetics to get a proved lower bound
+ */
+static
+RETCODE lpUpdateVarColumnProved(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
+   )
+{
+   INTERVAL bd;
+   INTERVAL ob;
+   INTERVAL prod;
+   INTERVAL loose;
+   Real obj;
+   Real lb;
+   Real ub;
+
+   assert(lp != NULL);
+   assert(lp->nloosevars > 0);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetProbindex(var) != -1);
+
+   obj = SCIPvarGetObj(var);
+
+   SCIPintervalSet(&loose, lp->looseobjval);
+
+   /* update loose objective value corresponding to the deletion of variable */
+   if( obj > 0.0 )
+   {
+      lb = SCIPvarGetLbLocal(var);
+      if( SCIPsetIsInfinity(set, -lb) )
+         lp->looseobjvalinf--;
+      else
+      {
+         SCIPintervalSet(&bd, lb);
+         SCIPintervalSet(&ob, obj);
+         SCIPintervalMul(&prod, bd, ob);
+         SCIPintervalSub(&loose, loose, prod);  /* lp->looseobjval -= lb * obj; */
+      }
+   }
+   else if( SCIPsetIsNegative(set, obj) )
+   {
+      ub = SCIPvarGetUbLocal(var);
+      if( SCIPsetIsInfinity(set, ub) )
+         lp->looseobjvalinf--;
+      else
+      {
+         SCIPintervalSet(&bd, ub);
+         SCIPintervalSet(&ob, obj);
+         SCIPintervalMul(&prod, bd, ob);
+         SCIPintervalSub(&loose, loose, prod);  /* lp->looseobjval -= ub * obj; */
+      }
+   }
+   lp->nloosevars--;
+
+   /* get rid of numerical problems: set loose objective value explicitly to zero, if no loose variables remain */
+   if( lp->nloosevars == 0 )
+   {
+      assert(lp->looseobjvalinf == 0);
+      lp->looseobjval = 0.0;
+   }
+   else
+      lp->looseobjval = SCIPintervalGetInf(loose);
+
+   return SCIP_OKAY;
+}
+
+/** informs LP, that given formerly loose problem variable is now a column variable */
+RETCODE SCIPlpUpdateVarColumn(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
+   )
+{
+   assert(set != NULL);
+
+   if( set->exactsolve )
+   {
+      CHECK_OKAY( lpUpdateVarColumnProved(lp, set, var) );
+   }
+   else
+   {
+      CHECK_OKAY( lpUpdateVarColumn(lp, set, var) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** stores the LP solution in the columns and rows */
 RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< current LP data */
@@ -6218,6 +6524,8 @@ RETCODE SCIPlpGetSol(
    if( lp->validsollp == stat->lpcount )
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
+
+   debugMessage("getting new LP solution\n");
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -6326,6 +6634,8 @@ RETCODE SCIPlpGetUnboundedSol(
    if( lp->validsollp == stat->lpcount )
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
+
+   debugMessage("getting new unbounded LP solution\n");
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -7123,6 +7433,142 @@ RETCODE SCIPlpEndDive(
       }
    }
 #endif
+
+   return SCIP_OKAY;
+}
+
+/** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
+ *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0
+ */
+static
+RETCODE provedBound(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   Bool             usefarkas,          /**< use y = dual farkas and c = 0 instead of y = dual solution and c = obj? */
+   Real*            bound               /**< result of interval arithmetic minimization */
+   )
+{
+   INTERVAL* yinter;
+   INTERVAL b;
+   INTERVAL ytb;
+   INTERVAL prod;
+   INTERVAL diff;
+   INTERVAL x;
+   INTERVAL minprod;
+   INTERVAL a;
+   ROW* row;
+   COL* col;
+   Real y;
+   Real c;
+   int i;
+   int j;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(set != NULL);
+   assert(bound != NULL);
+
+   /* allocate buffer for storing y in interval arithmetic */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &yinter, lp->nrows) );
+
+   /* create y vector in interval arithmetic, setting near zeros to zero; calculate y^Tb */
+   SCIPintervalSet(&ytb, 0.0);
+   for( j = 0; j < lp->nrows; ++j )
+   {
+      row = lp->rows[j];
+      assert(row != NULL);
+
+      y = usefarkas ? row->dualfarkas : row->dualsol;
+         
+      if( SCIPsetIsFeasPositive(set, y) )
+      {
+         SCIPintervalSet(&yinter[j], y);
+         SCIPintervalSet(&b, row->lhs);
+      }
+      else if( SCIPsetIsFeasNegative(set, y) )
+      {
+         SCIPintervalSet(&yinter[j], y);
+         SCIPintervalSet(&b, row->rhs);
+      }
+      else
+      {
+         SCIPintervalSet(&yinter[j], 0.0);
+         SCIPintervalSet(&b, 0.0);
+      }
+      
+      SCIPintervalMul(&prod, yinter[j], b);
+      SCIPintervalAdd(&ytb, ytb, prod);
+   }
+
+   /* calculate min{(c^T - y^TA)x} */
+   SCIPintervalSet(&minprod, 0.0);
+   for( j = 0; j < lp->ncols; ++j )
+   {
+      col = lp->cols[j];
+      assert(col != NULL);
+
+      SCIPintervalSetBounds(&x, SCIPcolGetLb(col), SCIPcolGetUb(col));
+
+      c = usefarkas ? 0.0 : col->obj;
+      SCIPintervalSet(&diff, c);
+
+      for( i = 0; i < col->len; ++i )
+      {
+         if( col->rows[i]->lppos >= 0 )
+         {
+            SCIPintervalSet(&a, col->vals[i]);
+            SCIPintervalMul(&prod, yinter[col->rows[i]->lppos], a);
+            SCIPintervalSub(&diff, diff, prod);
+         }
+      }
+
+      SCIPintervalSetBounds(&x, col->lb, col->ub);
+      SCIPintervalMul(&diff, diff, x);
+      SCIPintervalAdd(&minprod, minprod, diff);
+   }
+
+   /* add y^Tb */
+   SCIPintervalAdd(&minprod, minprod, ytb);
+
+   /* free buffer for storing y in interval arithmetic */
+   SCIPsetFreeBufferArray(set, &yinter);
+
+   *bound = SCIPintervalGetInf(minprod);
+
+   return SCIP_OKAY;
+}
+
+/** gets proven lower (dual) bound of last LP solution */
+RETCODE SCIPlpGetProvedLowerbound(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            bound               /**< pointer to store proven dual bound */
+   )
+{
+   CHECK_OKAY( provedBound(lp, set, FALSE, bound) );
+
+   debugMessage("proved lower bound of LP: %g\n", *bound);
+
+   return SCIP_OKAY;
+}
+
+/** gets proven dual bound of last LP solution */
+RETCODE SCIPlpIsInfeasibilityProved(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   Bool*            proved              /**< pointer to store whether infeasibility is proven */
+   )
+{
+   Real bound;
+
+   assert(proved != NULL);
+
+   CHECK_OKAY( provedBound(lp, set, TRUE, &bound) );
+
+   *proved = (bound > 0.0);
+
+   debugMessage("proved farkas value of LP: %g -> infeasibility %sproved\n", bound, *proved ? "" : "not ");
 
    return SCIP_OKAY;
 }

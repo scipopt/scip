@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.16 2004/02/26 13:53:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.17 2004/03/19 09:41:41 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1680,9 +1680,10 @@ RETCODE SCIPlpiGetDualfarkas(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   errorMessage("SCIPlpiGetDualfarkas() not supported by SOPLEX\n");
-   
-   return SCIP_LPERROR;
+   Vector tmp(lpi->spx->nRows(), dualfarkas);
+   lpi->spx->getDualfarkas(tmp);
+
+   return SCIP_OKAY;
 }
 
 /**@} */

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.67 2004/03/08 18:05:30 bzfpfend Exp $
+# $Id: Makefile,v 1.68 2004/03/19 09:41:40 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -180,6 +180,7 @@ SCIPLIBOBJ	=	branch.o \
 			heur.o \
 			history.o \
 			interrupt.o \
+			intervalarith.o \
 			lp.o \
 			mem.o \
 			memory.o \

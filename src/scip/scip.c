@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.133 2004/03/16 13:41:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.134 2004/03/19 09:41:42 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -428,6 +428,16 @@ Bool SCIPisTransformed(
    return (scip->stage != SCIP_STAGE_PROBLEM);
 }
 
+/** returns whether the solution process should be provably correct */
+Bool SCIPisExactSolve(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return (scip->set->exactsolve);
+}
 
 
 
@@ -1493,7 +1503,7 @@ RETCODE SCIPincludeBranchrule(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->set, scip->mem->setmem, name, desc, priority,
+   CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority,
                   branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
    CHECK_OKAY( SCIPsetIncludeBranchrule(scip->set, branchrule) );
    
@@ -2683,6 +2693,16 @@ Real SCIPgetLocalDualbound(
       : SCIP_INVALID;
 }
 
+/** gets lower bound of active node in transformed problem */
+Real SCIPgetLocalLowerbound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return scip->tree->actnode != NULL ? SCIPnodeGetLowerbound(scip->tree->actnode) : SCIP_INVALID;
+}
+
 /** gets dual bound of given node */
 Real SCIPgetNodeDualbound(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2695,17 +2715,7 @@ Real SCIPgetNodeDualbound(
       SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node)));
 }
 
-/** gets lower (dual) bound of active node in transformed problem */
-Real SCIPgetLocalLowerbound(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-
-   return scip->tree->actnode != NULL ? SCIPnodeGetLowerbound(scip->tree->actnode) : SCIP_INVALID;
-}
-
-/** gets lower (dual) bound of given node in transformed problem */
+/** gets lower bound of given node in transformed problem */
 Real SCIPgetNodeLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node                /**< node to get dual bound for */
@@ -2716,7 +2726,25 @@ Real SCIPgetNodeLowerbound(
    return SCIPnodeGetLowerbound(node);
 }
 
-/** if given value is larger than the active node's lower bound, sets the active node's lower bound to the new value */
+/** if given value is tighter (larger for minimization, smaller for maximization) than the active node's dual bound,
+ *  sets the active node's dual bound to the new value
+ */
+RETCODE SCIPupdateLocalDualbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPupdateLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   SCIPnodeUpdateLowerbound(scip->tree->actnode, SCIPprobInternObjval(scip->transprob, scip->set, 
+                               SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
+
+   return SCIP_OKAY;
+}
+
+/** if given value is larger than the active node's lower bound (in transformed problem), sets the active node's
+ *  lower bound to the new value
+ */
 RETCODE SCIPupdateLocalLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
@@ -2729,7 +2757,26 @@ RETCODE SCIPupdateLocalLowerbound(
    return SCIP_OKAY;
 }
 
-/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+/** if given value is tighter (larger for minimization, smaller for maximization) than the node's dual bound,
+ *  sets the node's dual bound to the new value
+ */
+RETCODE SCIPupdateNodeDualbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to update dual bound for */
+   Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPupdateNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   SCIPnodeUpdateLowerbound(node, SCIPprobInternObjval(scip->transprob, scip->set, 
+                               SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
+
+   return SCIP_OKAY;
+}
+
+/** if given value is larger than the node's lower bound (in transformed problem), sets the node's lower bound
+ *  to the new value
+ */
 RETCODE SCIPupdateNodeLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to update lower bound for */
@@ -4257,9 +4304,9 @@ RETCODE aggregateActiveVars(
       agg = 0;
    else if( SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT )
       agg = 1;
-   else if( SCIPisIntegral(scip, scalary/scalarx) )
+   else if( SCIPsetIsIntegral(scip->set, scalary/scalarx) )
       agg = 0;
-   else if( SCIPisIntegral(scip, scalarx/scalary) )
+   else if( SCIPsetIsIntegral(scip->set, scalarx/scalary) )
       agg = 1;
    if( agg == 1 )
    {
@@ -4290,7 +4337,7 @@ RETCODE aggregateActiveVars(
       /* check aggregation for integer feasibility */
       if( SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINUOUS
          && SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINUOUS
-         && SCIPisIntegral(scip, scalar) && !SCIPisIntegral(scip, constant) )
+         && SCIPsetIsIntegral(scip->set, scalar) && !SCIPsetIsIntegral(scip->set, constant) )
       {
          *infeasible = TRUE;
          return SCIP_OKAY;
@@ -5675,7 +5722,9 @@ RETCODE SCIPprintRow(
  * cutting plane methods
  */
 
-/** adds cut to separation storage */
+/** adds cut to separation storage;
+ *  if the cut should be forced to enter the LP, an infinite score has to be used
+ */
 RETCODE SCIPaddCut(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
@@ -5843,8 +5892,6 @@ RETCODE SCIPbranchVar(
    VAR*             var                 /**< variable to branch on */
    )
 {
-   assert(var != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
@@ -5871,55 +5918,10 @@ RETCODE SCIPbranchLP(
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
 {
-   VAR** lpcands;
-   int nlpcands;
-   int i;
-
-   assert(result != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   *result = SCIP_DIDNOTRUN;
-
-   /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
-   if( nlpcands == 0 )
-      return SCIP_OKAY;
-
-   /* sort the branching rules by priority */
-   SCIPsetSortBranchrules(scip->set);
-
-   /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < scip->set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
-   {
-      CHECK_OKAY( SCIPbranchruleExecLPSol(scip->set->branchrules[i], scip->set, scip->stat, scip->tree, scip->sepastore, 
-                     result) );
-   }
-
-   if( *result == SCIP_DIDNOTRUN )
-   {
-      Real priority;
-      Real bestpriority;
-      int bestcand;
-
-      /* no branching method succeeded in choosing a branching: just branch on the first fractional variable with maximal
-       * priority
-       */
-      bestcand = -1;
-      bestpriority = REAL_MIN;
-      for( i = 0; i < nlpcands; ++i )
-      {
-         priority = SCIPvarGetBranchingPriority(lpcands[i]);
-         if( priority > bestpriority )
-         {
-            bestcand = i;
-            bestpriority = priority;
-         }
-      }
-      assert(0 <= bestcand && bestcand < nlpcands);
-      CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand]) );
-      *result = SCIP_BRANCHED;
-   }
+   CHECK_OKAY( SCIPbranchExecLP(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
+                  scip->sepastore, scip->branchcand, scip->eventqueue, result) );
 
    return SCIP_OKAY;
 }
@@ -5930,54 +5932,10 @@ RETCODE SCIPbranchPseudo(
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
 {
-   VAR** pseudocands;
-   int npseudocands;
-   int i;
-
-   assert(result != NULL);
-
    CHECK_OKAY( checkStage(scip, "SCIPbranchPseudo", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   *result = SCIP_DIDNOTRUN;
-
-   /* get branching candidates */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands) );
-   if( npseudocands == 0 )
-      return SCIP_OKAY;
-
-   /* sort the branching rules by priority */
-   SCIPsetSortBranchrules(scip->set);
-
-   /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < scip->set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
-   {
-      CHECK_OKAY( SCIPbranchruleExecPseudoSol(scip->set->branchrules[i], scip->set, scip->stat, scip->tree, result) );
-   }
-
-   if( *result == SCIP_DIDNOTRUN )
-   {
-      Real priority;
-      Real bestpriority;
-      int bestcand;
-
-      /* no branching method succeeded in choosing a branching: just branch on the first unfixed variable with maximal
-       * priority
-       */
-      bestcand = -1;
-      bestpriority = REAL_MIN;
-      for( i = 0; i < npseudocands; ++i )
-      {
-         priority = SCIPvarGetBranchingPriority(pseudocands[i]);
-         if( priority > bestpriority )
-         {
-            bestcand = i;
-            bestpriority = priority;
-         }
-      }
-      assert(0 <= bestcand && bestcand < npseudocands);
-      CHECK_OKAY( SCIPbranchVar(scip, pseudocands[bestcand]) );
-      *result = SCIP_BRANCHED;
-   }
+   CHECK_OKAY( SCIPbranchExecPseudo(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
+                  scip->branchcand, scip->eventqueue, result) );
 
    return SCIP_OKAY;
 }
@@ -8602,7 +8560,10 @@ Bool SCIPisIntegral(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsIntegral(scip->set, val);
+   if( scip->set->exactsolve )
+      return (val == SCIPsetFloor(scip->set, val));
+   else
+      return SCIPsetIsIntegral(scip->set, val);
 }
 
 /** checks, if given fractional part is smaller than feastol */
@@ -8614,7 +8575,10 @@ Bool SCIPisFracIntegral(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsFracIntegral(scip->set, val);
+   if( scip->set->exactsolve )
+      return (val == 0.0);
+   else
+      return SCIPsetIsFracIntegral(scip->set, val);
 }
 
 /** rounds value + feasibility tolerance down to the next integer */

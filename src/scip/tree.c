@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.84 2004/03/16 13:41:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.85 2004/03/19 09:41:43 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -953,7 +953,10 @@ RETCODE SCIPnodeAddBoundinfer(
                      lpsolval, NULL, NULL, 0) );
       
       /* update the child's lower bound */
-      newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+      if( set->exactsolve )
+         newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+      else
+         newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, newpseudoobjval);
    }
    else

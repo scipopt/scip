@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.69 2004/03/16 13:41:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.70 2004/03/19 09:41:41 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -663,18 +663,17 @@ Real SCIPlpGetModifiedPseudoObjval(
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
-/** updates current pseudo and loose objective values for a change in a variable's objective value or bounds */
+/** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
+ *  perform calculations with interval arithmetic to get an exact lower bound
+ */
 extern
-RETCODE SCIPlpUpdateVar(
+Real SCIPlpGetModifiedProvedPseudoObjval(
    LP*              lp,                 /**< current LP data */
    const SET*       set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable that changed */
-   Real             oldobj,             /**< old objective value of variable */
-   Real             oldlb,              /**< old objective value of variable */
-   Real             oldub,              /**< old objective value of variable */
-   Real             newobj,             /**< new objective value of variable */
-   Real             newlb,              /**< new objective value of variable */
-   Real             newub               /**< new objective value of variable */
+   VAR*             var,                /**< problem variable */
+   Real             oldbound,           /**< old value for bound */
+   Real             newbound,           /**< new value for bound */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
 /** updates current pseudo and loose objective value for a change in a variable's objective value */
@@ -825,12 +824,29 @@ RETCODE SCIPlpEndDive(
    int              nvars               /**< number of active variables */
    );
 
+/** gets proven lower (dual) bound of last LP solution */
+extern
+RETCODE SCIPlpGetProvedLowerbound(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            bound               /**< pointer to store proven dual bound */
+   );
+
+/** gets proven dual bound of last LP solution */
+extern
+RETCODE SCIPlpIsInfeasibilityProved(
+   LP*              lp,                 /**< current LP data */
+   const SET*       set,                /**< global SCIP settings */
+   Bool*            proved              /**< pointer to store whether infeasibility is proven */
+   );
+
 /** writes LP to a file */
 extern 
 RETCODE SCIPlpWrite(
    LP*              lp,                 /**< current LP data */
    const char*      fname               /**< file name */
    );
+
 
 
 #ifndef NDEBUG

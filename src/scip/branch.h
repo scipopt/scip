@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.23 2004/02/05 14:12:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.24 2004/03/19 09:41:41 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -33,6 +33,7 @@
 #include "type_set.h"
 #include "type_stat.h"
 #include "type_misc.h"
+#include "type_event.h"
 #include "type_lp.h"
 #include "type_var.h"
 #include "type_prob.h"
@@ -41,6 +42,7 @@
 #include "type_scip.h"
 #include "type_branch.h"
 #include "pub_branch.h"
+
 
 
 
@@ -83,6 +85,12 @@ RETCODE SCIPbranchcandGetPseudoCands(
    int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
    );
 
+/** gets number of branching candidates for pseudo solution branching (nonfixed variables) */
+extern
+int SCIPbranchcandGetNPseudoCands(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
 /** updates branching candidate list for a given variable */
 extern
 RETCODE SCIPbranchcandUpdateVar(
@@ -102,8 +110,8 @@ RETCODE SCIPbranchcandUpdateVar(
 extern
 RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
-   SET*             set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
@@ -178,6 +186,33 @@ Real SCIPbranchGetScore(
    const SET*       set,                /**< global SCIP settings */
    Real             downgain,           /**< prediction of objective gain for branching downwards */
    Real             upgain              /**< prediction of objective gain for branching upwards */
+   );
+
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
+extern
+RETCODE SCIPbranchExecLP(
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   SEPASTORE*       sepastore,          /**< separation storage */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
+/** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
+extern
+RETCODE SCIPbranchExecPseudo(
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
 

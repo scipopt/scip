@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.91 2004/03/15 15:40:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.92 2004/03/19 09:41:42 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -86,6 +86,7 @@
 /* LP Solving */
 
 #define SCIP_DEFAULT_CHECKLPFEAS      TRUE /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
+#define SCIP_DEFAULT_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_FASTMIP          TRUE /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_SCALING          TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
@@ -505,6 +506,11 @@ RETCODE SCIPsetCreate(
                   "lp/checklpfeas",
                   "should LP solutions be checked, resolving LP when numerical troubles occur?",
                   &(*set)->checklpfeas, SCIP_DEFAULT_CHECKLPFEAS,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "lp/exactsolve",
+                  "should the problem be solved exactly (with proven dual bounds)?",
+                  &(*set)->exactsolve, SCIP_DEFAULT_EXACTSOLVE,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "lp/fastmip",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.14 2004/03/15 14:54:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.15 2004/03/19 09:41:42 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -160,7 +160,9 @@ void SCIPsepastoreEndInitialLP(
    sepastore->initiallp = FALSE;
 }
 
-/** adds cut stored as LP row to separation storage and captures it */
+/** adds cut stored as LP row to separation storage and captures it;
+ *  if the cut should be forced to enter the LP, an infinite score has to be used
+ */
 static
 RETCODE sepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
@@ -181,8 +183,12 @@ RETCODE sepastoreAddCut(
    assert(cut != NULL);
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
-   /* get maximum of separated cuts at this node */
-   if( sepastore->initiallp )
+   /* get maximum of separated cuts at this node:
+    *  - for root LP, use all cuts
+    *  - use all cuts that have infinite score
+    *  - the remaining cuts are only forwarded to the LP, if they fit into the maximal separation size
+    */
+   if( sepastore->initiallp || SCIPsetIsInfinity(set, score) )
       maxsepacuts = INT_MAX;
    else
       maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
@@ -258,7 +264,9 @@ RETCODE sepastoreAddBdchg(
    return SCIP_OKAY;
 }
 
-/** adds cut to separation storage and captures it */
+/** adds cut to separation storage and captures it;
+ *  if the cut should be forced to enter the LP, an infinite score has to be used
+ */
 RETCODE SCIPsepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */

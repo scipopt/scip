@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.37 2004/02/05 14:12:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.38 2004/03/19 09:41:41 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -31,6 +31,7 @@
 #include "stat.h"
 #include "clock.h"
 #include "paramset.h"
+#include "event.h"
 #include "lp.h"
 #include "var.h"
 #include "prob.h"
@@ -141,16 +142,13 @@ RETCODE SCIPbranchcandFree(
    return SCIP_OKAY;
 }
 
-/** gets branching candidates for LP solution branching (fractional variables) */
-RETCODE SCIPbranchcandGetLPCands(
+/** calculates branching candidates for LP solution branching (fractional variables) */
+static
+RETCODE branchcandCalcLPCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
-   Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
-   Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
-   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   LP*              lp                  /**< current LP data */
    )
 {
    assert(branchcand != NULL);
@@ -161,7 +159,8 @@ RETCODE SCIPbranchcandGetLPCands(
    assert(lp->flushed);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDED);
 
-   debugMessage("getting LP branching candidates: validlp=%d, lpcount=%d\n", branchcand->validlpcandslp, stat->lpcount);
+   debugMessage("calculating LP branching candidates: validlp=%d, lpcount=%d\n",
+      branchcand->validlpcandslp, stat->lpcount);
 
    /* check, if the current LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
@@ -222,6 +221,24 @@ RETCODE SCIPbranchcandGetLPCands(
    }
 
    debugMessage(" -> %d fractional variables\n", branchcand->nlpcands);
+
+   return SCIP_OKAY;
+}
+
+/** gets branching candidates for LP solution branching (fractional variables) */
+RETCODE SCIPbranchcandGetLPCands(
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
+   Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
+   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   )
+{
+   /* calculate branching candidates */
+   CHECK_OKAY( branchcandCalcLPCands(branchcand, set, stat, lp) );
 
    /* assign return values */
    if( lpcands != NULL )
@@ -292,6 +309,16 @@ RETCODE SCIPbranchcandGetPseudoCands(
       *npseudocands = branchcand->npseudocands;
 
    return SCIP_OKAY;
+}
+
+/** gets number of branching candidates for pseudo solution branching (nonfixed variables) */
+int SCIPbranchcandGetNPseudoCands(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npseudocands;
 }
 
 /** updates branching candidate list for a given variable */
@@ -465,8 +492,8 @@ DECL_PARAMCHGD(paramChgdBranchrulePriority)
 /** creates a branching rule */
 RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
-   SET*             set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
@@ -890,3 +917,146 @@ Real SCIPbranchGetScore(
    else
       return set->branchscorefac * upgain + (1.0-set->branchscorefac) * downgain;
 }
+
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
+RETCODE SCIPbranchExecLP(
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   SEPASTORE*       sepastore,          /**< separation storage */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   )
+{
+   int i;
+
+   assert(branchcand != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* calculate branching candidates */
+   CHECK_OKAY( branchcandCalcLPCands(branchcand, set, stat, lp) );
+
+   debugMessage("branching on LP solution with %d fractional variables\n", branchcand->nlpcands);
+
+   /* do nothing, if no fractional variables exist */
+   if( branchcand->nlpcands == 0 )
+      return SCIP_OKAY;
+
+   /* sort the branching rules by priority */
+   SCIPsetSortBranchrules(set);
+
+   /* try all branching rules until one succeeded to branch */
+   for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, result) );
+   }
+
+   if( *result == SCIP_DIDNOTRUN )
+   {
+      VAR* var;
+      Real priority;
+      Real bestpriority;
+      int bestcand;
+
+      /* no branching method succeeded in choosing a branching: just branch on the first fractional variable with maximal
+       * priority
+       */
+      bestcand = -1;
+      bestpriority = REAL_MIN;
+      for( i = 0; i < branchcand->nlpcands; ++i )
+      {
+         priority = SCIPvarGetBranchingPriority(branchcand->lpcands[i]);
+         if( priority > bestpriority )
+         {
+            bestcand = i;
+            bestpriority = priority;
+         }
+      }
+      assert(0 <= bestcand && bestcand < branchcand->nlpcands);
+
+      var = branchcand->lpcands[bestcand];
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+      CHECK_OKAY( SCIPtreeBranchVar(tree, memhdr, set, stat, lp, branchcand, eventqueue, var) );
+
+      *result = SCIP_BRANCHED;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
+RETCODE SCIPbranchExecPseudo(
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   )
+{
+   int i;
+   
+   assert(branchcand != NULL);
+   assert(result != NULL);
+
+   debugMessage("branching on pseudo solution with %d unfixed variables\n", branchcand->npseudocands);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* do nothing, if no unfixed variables exist */
+   if( branchcand->npseudocands == 0 )
+      return SCIP_OKAY;
+
+   /* sort the branching rules by priority */
+   SCIPsetSortBranchrules(set);
+
+   /* try all branching rules until one succeeded to branch */
+   for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, result) );
+   }
+
+   if( *result == SCIP_DIDNOTRUN )
+   {
+      VAR* var;
+      Real priority;
+      Real bestpriority;
+      int bestcand;
+
+      /* no branching method succeeded in choosing a branching: just branch on the first unfixed variable with maximal
+       * priority
+       */
+      bestcand = -1;
+      bestpriority = REAL_MIN;
+      for( i = 0; i < branchcand->npseudocands; ++i )
+      {
+         priority = SCIPvarGetBranchingPriority(branchcand->pseudocands[i]);
+         if( priority > bestpriority )
+         {
+            bestcand = i;
+            bestpriority = priority;
+         }
+      }
+      assert(0 <= bestcand && bestcand < branchcand->npseudocands);
+
+      var = branchcand->pseudocands[bestcand];
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+      CHECK_OKAY( SCIPtreeBranchVar(tree, memhdr, set, stat, lp, branchcand, eventqueue, var) );
+
+      *result = SCIP_BRANCHED;
+   }
+
+   return SCIP_OKAY;
+}
+

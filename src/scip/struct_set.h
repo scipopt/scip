@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.13 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.14 2004/03/19 09:41:42 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -144,6 +144,7 @@ struct Set
    Bool             usepropconflict;    /**< should propagation conflict analysis be used? */
    Bool             uselpconflict;      /**< should infeasible LP conflict analysis be used? */
    Bool             checklpfeas;        /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
+   Bool             exactsolve;         /**< should the problem be solved exactly (with proven dual bounds)? */
    Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
    Bool             scaling;            /**< should scaling of LP solver be used? */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */

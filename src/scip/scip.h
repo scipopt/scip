@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.112 2004/03/16 13:41:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.113 2004/03/19 09:41:42 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -161,6 +161,11 @@ STAGE SCIPstage(
 /** returns whether the current stage belongs to the transformed problem space */
 extern
 Bool SCIPisTransformed(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+/** returns whether the solution process should be provably correct */
+extern
+Bool SCIPisExactSolve(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -1248,6 +1253,12 @@ Real SCIPgetLocalDualbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets lower bound of active node in transformed problem */
+extern
+Real SCIPgetLocalLowerbound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets dual bound of given node */
 extern
 Real SCIPgetNodeDualbound(
@@ -1255,27 +1266,44 @@ Real SCIPgetNodeDualbound(
    NODE*            node                /**< node to get dual bound for */
    );
 
-/** gets lower (dual) bound of active node in transformed problem */
-extern
-Real SCIPgetLocalLowerbound(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** gets lower (dual) bound of given node in transformed problem */
+/** gets lower bound of given node in transformed problem */
 extern
 Real SCIPgetNodeLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node                /**< node to get dual bound for */
    );
 
-/** if given value is larger than the active node's lower bound, sets the active node's lower bound to the new value */
+/** if given value is tighter (larger for minimization, smaller for maximization) than the active node's dual bound,
+ *  sets the active node's dual bound to the new value
+ */
+extern
+RETCODE SCIPupdateLocalDualbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   );
+
+/** if given value is larger than the active node's lower bound (in transformed problem), sets the active node's
+ *  lower bound to the new value
+ */
 extern
 RETCODE SCIPupdateLocalLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
-/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+/** if given value is tighter (larger for minimization, smaller for maximization) than the node's dual bound,
+ *  sets the node's dual bound to the new value
+ */
+extern
+RETCODE SCIPupdateNodeDualbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to update dual bound for */
+   Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   );
+
+/** if given value is larger than the node's lower bound (in transformed problem), sets the node's lower bound
+ *  to the new value
+ */
 extern
 RETCODE SCIPupdateNodeLowerbound(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2265,7 +2293,9 @@ RETCODE SCIPprintRow(
 /**@name Cutting Plane Methods */
 /**@{ */
 
-/** adds cut to separation storage */
+/** adds cut to separation storage;
+ *  if the cut should be forced to enter the LP, an infinite score has to be used
+ */
 extern
 RETCODE SCIPaddCut(
    SCIP*            scip,               /**< SCIP data structure */

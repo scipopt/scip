@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.8 2004/03/08 18:05:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.9 2004/03/19 09:41:42 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -64,7 +64,9 @@ void SCIPsepastoreEndInitialLP(
    SEPASTORE*       sepastore           /**< separation storage */
    );
 
-/** adds cut to separation storage and captures it */
+/** adds cut to separation storage and captures it;
+ *  if the cut should be forced to enter the LP, an infinite score has to be used
+ */
 extern
 RETCODE SCIPsepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
