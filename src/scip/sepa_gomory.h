@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.h,v 1.3 2004/02/04 17:27:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.h,v 1.4 2004/02/06 11:53:50 bzfpfend Exp $"
 
 /**@file   sepa_gomory.h
- * @brief  Gomory Cuts
+ * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  */
 
@@ -30,7 +30,7 @@
 #include "scip.h"
 
 
-/** creates the gomory cut separator and includes it in SCIP */
+/** creates the Gomory MIR cut separator and includes it in SCIP */
 extern
 RETCODE SCIPincludeSepaGomory(
    SCIP*            scip                /**< SCIP data structure */

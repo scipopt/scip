@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.16 2004/02/05 14:12:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.17 2004/02/06 11:53:50 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
- * @brief  Gomory Cuts
+ * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  */
 
@@ -30,7 +30,7 @@
 
 
 #define SEPA_NAME          "gomory"
-#define SEPA_DESC          "gomory cuts separator"
+#define SEPA_DESC          "Gomory MIR cuts separator"
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
 
@@ -329,7 +329,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
  * separator specific interface methods
  */
 
-/** creates the gomory separator and includes it in SCIP */
+/** creates the Gomory MIR cut separator and includes it in SCIP */
 RETCODE SCIPincludeSepaGomory(
    SCIP*            scip                /**< SCIP data structure */
    )
