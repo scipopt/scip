@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.26 2004/08/10 14:18:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.27 2004/08/10 15:00:55 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -149,11 +149,12 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       int i;
       int c;
 
-      /* search the full strong candidate */
-      for( i = 0; i < nlpcands; ++i )
+      /* search the full strong candidate
+       * cycle through the candidates, starting with the position evaluated in the last run
+       */
+      for( i = 0, c = branchruledata->lastcand; i < nlpcands; ++i, ++c )
       {
-         /* cycle through the candidates, starting with the position evaluated in the last run */
-         c = (i+branchruledata->lastcand) % nlpcands;
+         c = c % nlpcands;
          assert(lpcands[c] != NULL);
 
          debugMessage("applying strong branching on variable <%s> with solution %g\n",

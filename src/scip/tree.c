@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.101 2004/08/10 14:19:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.102 2004/08/10 15:00:55 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2584,14 +2584,16 @@ NODE* SCIPtreeGetPrioChild(
    assert(tree != NULL);
 
    bestnode = NULL;
+   bestprio = REAL_MIN;
    for( i = 0; i < tree->nchildren; ++i )
    {
-      if( bestnode == NULL || tree->childrenprio[i] > bestprio )
+      if( tree->childrenprio[i] > bestprio )
       {
          bestnode = tree->children[i];
          bestprio = tree->childrenprio[i];
       }
    }
+   assert((tree->nchildren == 0) == (bestnode == NULL));
 
    return bestnode;
 }
@@ -2608,14 +2610,16 @@ NODE* SCIPtreeGetPrioSibling(
    assert(tree != NULL);
 
    bestnode = NULL;
+   bestprio = REAL_MIN;
    for( i = 0; i < tree->nsiblings; ++i )
    {
-      if( bestnode == NULL || tree->siblingsprio[i] > bestprio )
+      if( tree->siblingsprio[i] > bestprio )
       {
          bestnode = tree->siblings[i];
          bestprio = tree->siblingsprio[i];
       }
    }
+   assert((tree->nsiblings == 0) == (bestnode == NULL));
 
    return bestnode;
 }

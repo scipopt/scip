@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.6 2004/08/10 14:18:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.7 2004/08/10 15:00:55 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -112,11 +112,12 @@ RETCODE branch(
       int i;
       int c;
 
-      /* search the full strong candidate */
-      for( i = 0; i < npseudocands; ++i )
+      /* search the full strong candidate:
+       * cycle through the candidates, starting with the position evaluated in the last run
+       */
+      for( i = 0, c = branchruledata->lastcand; i < npseudocands; ++i, ++c )
       {
-         /* cycle through the candidates, starting with the position evaluated in the last run */
-         c = (i+branchruledata->lastcand) % npseudocands;
+         c = c % npseudocands;
          assert(pseudocands[c] != NULL);
 
          /* we can only apply strong branching on COLUMN variables */

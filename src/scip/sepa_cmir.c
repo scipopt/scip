@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.10 2004/08/03 16:02:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.11 2004/08/10 15:00:55 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -444,6 +444,7 @@ RETCODE aggregation(
       bestcol = NULL;
       maxbounddist = 0.0;
       bestrow = NULL;
+      aggrfact = 0.0;
       for( col = 0; col < ncols; col++ )
       {
          if( aggrcoefs[col] != 0.0 )
@@ -544,6 +545,7 @@ RETCODE aggregation(
             
       /* Step 3: add row to aggregation */
       assert(rowweights[SCIProwGetLPPos(bestrow)] == 0.0);
+      assert(!SCIPisZero(scip, aggrfact));
 
       /* change row's aggregation weight */
       rowweights[SCIProwGetLPPos(bestrow)] = aggrfact;
