@@ -743,8 +743,8 @@ branching/relpscost/initcand = 100
 branching/relpscost/inititer = 0
 
 # maximal number of bound tightenings before the node is reevaluated (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 20]
-branching/relpscost/maxbdchgs = 20
+# [type: int, range: [-1,2147483647], default: 5]
+branching/relpscost/maxbdchgs = 5
 
 # priority of heuristic <coefdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1001000]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.15 2004/10/20 10:55:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.16 2004/10/20 12:46:39 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -42,7 +42,7 @@
 #define DEFAULT_MAXLOOKAHEAD     4      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
-#define DEFAULT_MAXBDCHGS       20      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
+#define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 
 
 /** branching rule data */
@@ -266,6 +266,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       Longint maxnsblpiterations;
       int depth;
       int maxdepth;
+      int maxbdchgs;
       int nintvars;
       int reliable;
       int bestpscand;
@@ -280,12 +281,6 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcandscores, maxninitcands+1) );
       ninitcands = 0;
 
-      /* initialize bound change arrays */
-      bdchginds = NULL;
-      bdchgdowninfs = NULL;
-      nbdchgs = 0;
-      nbdconflicts = 0;
-
       /* get current node number, depth, maximal depth, and number of binary/integer variables */
       nodenum = SCIPgetNNodes(scip);
       depth = SCIPgetDepth(scip);
@@ -293,6 +288,13 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       maxdepth = MAX(maxdepth, MINMAXDEPTH);
       maxdepth = MIN(maxdepth, MAXMAXDEPTH);
       nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+
+      /* initialize bound change arrays */
+      bdchginds = NULL;
+      bdchgdowninfs = NULL;
+      nbdchgs = 0;
+      nbdconflicts = 0;
+      maxbdchgs = branchruledata->maxbdchgs;
 
       /* calculate value used as reliability */
       depthfac = 1.1 - (Real)depth/(Real)maxdepth;
@@ -415,7 +417,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          nlps = SCIPgetNNodeInitLPs(scip);
          inititer = 2*nlpiterations / MAX(1, nlps);
          inititer = MAX(inititer, 10);
-         inititer = MIN(inititer, 1000);
+         inititer = MIN(inititer, 10000);
       }
 
       debugMessage("applying strong branching on unreliable candidates (%d cands, %d uninit, maxlookahead=%g, inititer=%d)\n",
@@ -500,7 +502,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
                *result = SCIP_CONSADDED;
                nbdconflicts++;
                if( (downinf && upinf)
-                  || (branchruledata->maxbdchgs >= 0 && nbdchgs + nbdconflicts >= branchruledata->maxbdchgs) )
+                  || (maxbdchgs >= 0 && nbdchgs + nbdconflicts >= maxbdchgs) )
                   break; /* terminate initialization loop, because enough roundings are performed or a cutoff was found */
             }
             else if( downinf && upinf )
@@ -517,12 +519,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
                debugMessage(" -> variable <%s> is infeasible in %s branch (conflict: %d/%d)\n",
                   SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward", downconflict, upconflict);
                CHECK_OKAY( addBdchg(scip, &bdchginds, &bdchgdowninfs, &nbdchgs, c, downinf) );
-               if( branchruledata->maxbdchgs >= 0 && nbdchgs + nbdconflicts >= branchruledata->maxbdchgs )
+               if( maxbdchgs >= 0 && nbdchgs + nbdconflicts >= maxbdchgs )
                   break; /* terminate initialization loop, because enough roundings are performed */
             }
-
-            /* reset look ahead, because strong branching seems to be promising */
-            lookahead = 0.0;
          }
          else
          {
