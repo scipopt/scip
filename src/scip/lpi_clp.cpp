@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.17 2005/03/02 12:39:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.18 2005/03/10 17:38:37 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1174,6 +1174,24 @@ RETCODE SCIPlpiGetRows(
       assert(ind == 0);
       assert(val == 0);
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
+RETCODE SCIPlpiIgnoreInstability(
+   LPI*             lpi,                /**< LP interface structure */
+   Bool*            success             /**< pointer to store, whether the instability could be ignored */
+   )
+{
+   debugMessage("calling SCIPlpiIgnoreInstability()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* instable situations cannot be ignored */
+   *success = FALSE;
 
    return SCIP_OKAY;
 }

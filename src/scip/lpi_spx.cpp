@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.47 2005/02/23 16:40:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.48 2005/03/10 17:38:37 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2
@@ -1757,6 +1757,23 @@ int SCIPlpiGetInternalStatus(
    assert(lpi->spx != NULL);
 
    return lpi->spx->getStatus();
+}
+
+/** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
+RETCODE SCIPlpiIgnoreInstability(
+   LPI*             lpi,                /**< LP interface structure */
+   Bool*            success             /**< pointer to store, whether the instability could be ignored */
+   )
+{
+   debugMessage("calling SCIPlpiIgnoreInstability()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* instable situations cannot be ignored */
+   *success = FALSE;
+
+   return SCIP_OKAY;
 }
 
 /** gets objective value of solution */
