@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.63 2005/01/31 12:57:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.64 2005/01/31 15:34:33 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -309,6 +309,14 @@ RETCODE SCIPprobTransform(
    }
    assert((*target)->nvars == source->nvars);
 
+   /* call user data transformation */
+   if( source->probtrans != NULL )
+   {
+      CHECK_OKAY( source->probtrans(set->scip, source->probdata, &(*target)->probdata) );
+   }
+   else
+      (*target)->probdata = source->probdata;
+
    /* transform and copy all constraints to target problem */
    for( c = 0; c < source->nconss; ++c )
    {
@@ -328,14 +336,6 @@ RETCODE SCIPprobTransform(
 
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
-
-   /* call user data transformation */
-   if( source->probtrans != NULL )
-   {
-      CHECK_OKAY( source->probtrans(set->scip, source->probdata, &(*target)->probdata) );
-   }
-   else
-      (*target)->probdata = source->probdata;
 
    return SCIP_OKAY;
 }
