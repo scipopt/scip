@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.49 2004/08/12 14:31:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.50 2004/08/12 14:59:06 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1435,9 +1435,12 @@ RETCODE unfixBinariesDualfarkas(
          {
             Real lpilhs;
             Real lpirhs;
+
             CHECK_OKAY( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
-            assert(SCIPsetIsEQ(set, lpilhs, row->lhs - row->constant));
-            assert(SCIPsetIsEQ(set, lpirhs, row->rhs - row->constant));
+            assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
+               || SCIPsetIsEQ(set, lpilhs, row->lhs - row->constant));
+            assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
+               || SCIPsetIsEQ(set, lpirhs, row->rhs - row->constant));
          }
 #endif
 
