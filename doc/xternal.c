@@ -16,11 +16,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* $Id: xternal.c,v 1.9 2003/07/14 11:55:16 bzfpfend Exp $
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
- * @version  0.2
+ * @version  0.4
  * @author   Tobias Achterberg
  * @author   Thorsten Koch
  *
@@ -47,7 +46,7 @@
  * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
  *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPlpiIsOptimal().
  * - Make all functions that are not used outside the module 'static'. Naming should start with a lower case letter.
- * - Variable names should start with a lower case letter.
+ * - Variable names should be all lower case.
  * - For each structure there is a typedef with the name in all upper case.
  * - Defines should be named all upper case.
  * - Document functions, parameters and variables doxygen conform.
@@ -58,19 +57,19 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CONS How to add constraint handlers
  *
- * Here we explain how to add separation routines to SCIP.
+ * This page is not yet written. Here we will explain how to add constraint handlers to SCIP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page SEPAR How to add separators
  *
- * Here we explain how to add separation routines to SCIP.
+ * This page is not yet written. Here we will explain how to add separation routines to SCIP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page HEUR How to add heuristics
  *
- * Here we explain how to add a new primal heuristic to SCIP.
+ * This page is not yet written. Here we will explain how to add a new primal heuristic to SCIP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -95,10 +94,10 @@
  *
  *  The user may add own parameters to SCIP with a call to SCIPaddXxxParam(). Using
  *  these methods, he has two possibilities where to store the actual parameter value:
- *   - if the given valueptr is NULL, SCIP stores the parameter value internally, and
- *     the user can access the value only with the SCIPgetXxxParam() and
- *     SCIPsetXxxParam();
- *   - if the given valueptr is not NULL, SCIP stores the parameter value at the given
+ *   - If the given valueptr is NULL, SCIP stores the parameter value internally, and
+ *     the user can only access the value with the SCIPgetXxxParam() and
+ *     SCIPsetXxxParam() calls.
+ *   - If the given valueptr is not NULL, SCIP stores the parameter value at the given
  *     address, and the user can directly manipulate the value at this address.
  *     He has to be careful with memory management in string parameters: when the
  *     SCIPaddStringParam() method is called, the given address must hold a char*
@@ -110,3 +109,4 @@
  *     the string parameter through the given valueptr is okay as long it does not
  *     involve reallocating memory for the string.
  */
+
