@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.92 2004/10/29 12:42:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.93 2004/10/29 13:19:15 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -388,8 +388,6 @@ extern
 RETCODE SCIProwCalcIntegralScalar(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
    Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */

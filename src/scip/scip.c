@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.222 2004/10/29 12:42:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.223 2004/10/29 13:19:15 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7274,7 +7274,7 @@ RETCODE SCIPcalcRowIntegralScalar(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcalcRowIntegralScalar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwCalcIntegralScalar(row, scip->set, scip->stat, scip->lp, mindelta, maxdelta, maxdnom, maxscale, 
+   CHECK_OKAY( SCIProwCalcIntegralScalar(row, scip->set, mindelta, maxdelta, maxdnom, maxscale, 
          usecontvars, intscalar, success) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.157 2004/10/29 12:42:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.158 2004/10/29 13:19:15 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4112,8 +4112,6 @@ static const int nscalars = 9;
 RETCODE SCIProwCalcIntegralScalar(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
    Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
@@ -4176,7 +4174,6 @@ RETCODE SCIProwCalcIntegralScalar(
          fractional = TRUE;
          absval = REALABS(val);
          minval = MIN(minval, absval);
-         break;
       }
    }
 
@@ -4373,7 +4370,7 @@ RETCODE SCIProwMakeIntegral(
    assert(success != NULL);
 
    /* calculate scalar to make coefficients integral */
-   CHECK_OKAY( SCIProwCalcIntegralScalar(row, set, stat, lp, mindelta, maxdelta, maxdnom, maxscale, usecontvars,
+   CHECK_OKAY( SCIProwCalcIntegralScalar(row, set, mindelta, maxdelta, maxdnom, maxscale, usecontvars,
          &intscalar, success) );
 
    if( *success )
