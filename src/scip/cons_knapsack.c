@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.28 2004/03/16 13:41:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.29 2004/03/22 17:46:42 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -38,7 +38,7 @@
 #define CONSHDLR_SEPAPRIORITY   +600000
 #define CONSHDLR_ENFOPRIORITY   +600000
 #define CONSHDLR_CHECKPRIORITY  -850000
-#define CONSHDLR_SEPAFREQ             5
+#define CONSHDLR_SEPAFREQ            10
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
 
@@ -47,6 +47,7 @@
 
 #define LINCONSUPGD_PRIORITY    +100000
 
+#define MAX_SEPA_CAPACITY         10000 /**< maximal capacity of knapsack to apply cover separation */
 
 
 
@@ -58,14 +59,14 @@
 struct ConsData
 {
    VAR**            vars;               /**< variables in knapsack */
-   int*             weights;            /**< weights of knapsack items */
+   Longint*         weights;            /**< weights of knapsack items */
    EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    ROW*             row;                /**< corresponding LP row */
    int              nvars;              /**< number of variables in knapsack */
    int              varssize;           /**< size of vars, weights, and eventdatas arrays */
-   int              capacity;           /**< capacity of knapsack */
-   int              weightsum;          /**< sum of all weights */
-   int              onesweightsum;      /**< sum of weights of variables fixed to one */
+   Longint          capacity;           /**< capacity of knapsack */
+   Longint          weightsum;          /**< sum of all weights */
+   Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
    unsigned int     sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int     propagated:1;       /**< is the knapsack constraint already propagated? */
 };
@@ -74,7 +75,7 @@ struct ConsData
 struct EventData
 {
    CONSDATA*        consdata;           /**< knapsack constraint data to process the bound change for */
-   int              weight;             /**< weight of variable */
+   Longint          weight;             /**< weight of variable */
 };
 
 /** creates event data */
@@ -83,7 +84,7 @@ RETCODE eventdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
    EVENTDATA**      eventdata,          /**< pointer to store event data */
    CONSDATA*        consdata,           /**< constraint data */
-   int              weight              /**< weight of variable */
+   Longint          weight              /**< weight of variable */
    )
 {
    assert(eventdata != NULL);
@@ -118,7 +119,7 @@ void sortItems(
    int i;
    int j;
    VAR* var;
-   int weight;
+   Longint weight;
    EVENTDATA* eventdata;
 
    assert(consdata != NULL);
@@ -201,8 +202,8 @@ RETCODE consdataCreate(
    CONSDATA**       consdata,           /**< pointer to store constraint data */
    int              nvars,              /**< number of variables in knapsack */
    VAR**            vars,               /**< variables of knapsack */
-   int*             weights,            /**< weights of knapsack items */
-   int              capacity            /**< capacity of knapsack */
+   Longint*         weights,            /**< weights of knapsack items */
+   Longint          capacity            /**< capacity of knapsack */
    )
 {
    int i;
@@ -275,10 +276,10 @@ static
 void consdataChgWeight(
    CONSDATA*        consdata,           /**< knapsack constraint data */
    int              item,               /**< item number */
-   int              newweight           /**< new weight of item */
+   Longint          newweight           /**< new weight of item */
    )
 {
-   int oldweight;
+   Longint oldweight;
 
    assert(consdata != NULL);
    assert(0 <= item && item < consdata->nvars);
@@ -345,7 +346,7 @@ RETCODE addRelaxation(
    }
    assert(consdata->row != NULL);
 
-   debugMessage("adding relaxation of knapsack constraint <%s> (capacity %d): ", 
+   debugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
       SCIPconsGetName(cons), consdata->capacity);
    debug( SCIProwPrint(consdata->row, NULL) );
    CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(SCIProwGetNNonz(consdata->row)+1)) );
@@ -392,9 +393,9 @@ static
 RETCODE solveKnapsack(
    SCIP*            scip,               /**< SCIP data structure */
    int              nitems,             /**< number of available items */
-   int*             weights,            /**< item weights */
+   Longint*         weights,            /**< item weights */
    Real*            profits,            /**< item profits */
-   int              capacity,           /**< capacity of knapsack */
+   Longint          capacity,           /**< capacity of knapsack */
    int*             items,              /**< item numbers, or NULL */
    int*             solitems,           /**< array to store items in solution, or NULL */
    int*             nonsolitems,        /**< array to store items not in solution, or NULL */
@@ -481,10 +482,10 @@ RETCODE liftCover(
    )
 {
    CONSDATA* consdata;
-   int* minweight;
-   int* weights;
-   int weight;
-   int rescapacity;
+   Longint* minweight;
+   Longint* weights;
+   Longint weight;
+   Longint rescapacity;
    int beta;
    int i;
    int j;
@@ -572,15 +573,15 @@ RETCODE separateCovers(
 {
    CONSDATA* consdata;
    int* items;
-   int* weights;
+   Longint* weights;
    Real* profits;
+   Longint capacity;
    int i;
    int nitems;
    int* fixedones;
    int nfixedones;
    int* fixedzeros;
    int nfixedzeros;
-   int capacity;
    int* covervars;
    int ncovervars;
    int* noncovervars;
@@ -589,8 +590,8 @@ RETCODE separateCovers(
    Real solval;
    Real solvalsum;
    Real transsol;
-   int coverweight;
-   int fixedonesweightsum;
+   Longint coverweight;
+   Longint fixedonesweightsum;
 
    assert(separated != NULL);
 
@@ -644,7 +645,7 @@ RETCODE separateCovers(
       }
    }
 
-   if( capacity >= 0)
+   if( capacity >= 0 && capacity <= MAX_SEPA_CAPACITY )
    {
       int* covervars;
       int ncovervars;
@@ -736,7 +737,7 @@ RETCODE propagateCons(
    CONSDATA* consdata;
    Bool infeasible;
    Bool tightened;
-   int zerosweightsum;
+   Longint zerosweightsum;
    int i;
 
    assert(cutoff != NULL);
@@ -969,9 +970,9 @@ void tightenWeights(
    )
 {
    CONSDATA* consdata;
-   int weight;
-   int newweight;
-   int minweight;
+   Longint weight;
+   Longint newweight;
+   Longint minweight;
    int i;
 
    assert(nchgcoefs != NULL);
@@ -997,7 +998,7 @@ void tightenWeights(
       consdata->capacity -= (weight - newweight);
       (*nchgcoefs)++;
       (*nchgsides)++;
-      debugMessage("knapsack constraint <%s>: changed weight of <%s> from %d to %d, capacity from %d to %d\n",
+      debugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld, capacity from %lld to %lld\n",
          SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]),
          weight, newweight, consdata->capacity + (weight-newweight), consdata->capacity);
    }
@@ -1009,7 +1010,7 @@ void tightenWeights(
       weight = consdata->weights[i];
       if( minweight + weight > consdata->capacity && weight < consdata->capacity )
       {
-         debugMessage("knapsack constraint <%s>: changing weight of <%s> from %d to %d\n",
+         debugMessage("knapsack constraint <%s>: changing weight of <%s> from %lld to %lld\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, consdata->capacity);
          consdataChgWeight(consdata, i, consdata->capacity);
          (*nchgcoefs)++;
@@ -1460,9 +1461,9 @@ RETCODE createNormalizedKnapsack(
    )
 {
    VAR** transvars;
-   int* weights;
-   int capacity;
-   int weight;
+   Longint* weights;
+   Longint capacity;
+   Longint weight;
    int mult;
    int v;
 
@@ -1480,12 +1481,12 @@ RETCODE createNormalizedKnapsack(
    if( SCIPisInfinity(scip, rhs) )
    {
       mult = -1;
-      capacity = (int)SCIPfloor(scip, -lhs);
+      capacity = (Longint)SCIPfloor(scip, -lhs);
    }
    else
    {
       mult = +1;
-      capacity = (int)SCIPfloor(scip, rhs);
+      capacity = (Longint)SCIPfloor(scip, rhs);
    }
 
    /* negate positive or negative variables */
@@ -1623,8 +1624,8 @@ RETCODE SCIPcreateConsKnapsack(
    const char*      name,               /**< name of constraint */
    int              nvars,              /**< number of items in the knapsack */
    VAR**            vars,               /**< array with item variables */
-   int*             weights,            /**< array with item weights */
-   int              capacity,           /**< capacity of knapsack */
+   Longint*         weights,            /**< array with item weights */
+   Longint          capacity,           /**< capacity of knapsack */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */

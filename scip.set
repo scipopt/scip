@@ -303,8 +303,8 @@ constraints/setppc/propfreq = 1
 constraints/setppc/npseudobranches = 2
 
 # frequency for separating cuts of constraint handler <knapsack> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/knapsack/sepafreq = 5
+# [type: int, range: [-1,2147483647], default: 10]
+constraints/knapsack/sepafreq = 10
 
 # frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.93 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.94 2004/03/22 17:46:42 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1678,9 +1678,6 @@ RETCODE SCIPsolveCIP(
          CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
       }
 
-      /* call primal heuristics */
-      CHECK_OKAY( primalHeuristics(set, tree, primal, &foundsol) );
-
       /* if no branching was created, the node was not cut off, but it's lower bound is still smaller than
        * the cutoff bound, we have to branch on a non-fixed variable;
        * this can happen, if we want to solve exactly, the current solution was declared feasible by the
@@ -1713,6 +1710,9 @@ RETCODE SCIPsolveCIP(
          }
          while( result == SCIP_REDUCEDDOM );
       }
+
+      /* call primal heuristics */
+      CHECK_OKAY( primalHeuristics(set, tree, primal, &foundsol) );
 
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, (SCIPnodeGetDepth(actnode) == 0) && infeasible && !foundsol) );

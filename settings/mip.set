@@ -120,7 +120,7 @@ separating/cutagelimit = 100
 
 # maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
 # [type: int, range: [-1,2147483647], default: 200]
-constraints/consagelimit = 2000
+constraints/consagelimit = 200
 
 # age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete
 # [type: int, range: [-1,2147483647], default: 100]
@@ -176,7 +176,7 @@ lp/lpsolvedepth = -1
 
 # frequency for applying reduced cost fixing (-1: never; 0: only root LP)
 # [type: int, range: [-1,2147483647], default: 5]
-lp/redcostfreq = 1
+lp/redcostfreq = 5
 
 # should LP solutions be checked, resolving LP when numerical troubles occur?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -217,6 +217,10 @@ timing/clocksenabled = TRUE
 # should the CTRL-C interrupt be catched by SCIP?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/catchctrlc = TRUE
+
+# name of the VBC Tool output file, or - if no VBC Tool output should be created
+# [type: string, default: "-"]
+misc/vbcfilename = "-"
 
 # frequency for separating cuts of constraint handler <and> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -303,8 +307,8 @@ constraints/setppc/propfreq = 1
 constraints/setppc/npseudobranches = 2
 
 # frequency for separating cuts of constraint handler <knapsack> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/knapsack/sepafreq = 5
+# [type: int, range: [-1,2147483647], default: 10]
+constraints/knapsack/sepafreq = 10
 
 # frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
