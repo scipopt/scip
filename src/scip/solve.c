@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.153 2004/12/15 19:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.154 2005/01/11 14:33:23 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1145,7 +1145,7 @@ RETCODE solveNodeLP(
    if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
-      CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat) );
+      CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat, SCIPtreeGetFocusDepth(tree) == 0) );
       
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )

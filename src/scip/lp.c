@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.166 2004/12/10 12:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.167 2005/01/11 14:33:23 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9951,7 +9951,7 @@ RETCODE SCIPlpGetIterations(
    return SCIP_OKAY;
 }
 
-/** increases age of columns with solution value 0.0 and rows with activity not at its bounds,
+/** increases age of columns with solution value 0.0 and basic rows with activity not at its bounds,
  *  resets age of non-zero columns and sharp rows
  */
 RETCODE SCIPlpUpdateAges(
@@ -10169,7 +10169,7 @@ RETCODE lpDelRowset(
    return SCIP_OKAY;
 }
 
-/** removes all columns, that are too old, beginning with the given firstcol */
+/** removes all non-basic columns, that are too old, beginning with the given firstcol */
 static
 RETCODE lpRemoveObsoleteCols(
    LP*              lp,                 /**< current LP data */
@@ -10180,6 +10180,7 @@ RETCODE lpRemoveObsoleteCols(
 {
    COL** cols;
    COL** lpicols;
+   int* cstat;
    int* coldstat;
    int ncols;
    int ndelcols;
@@ -10201,7 +10202,11 @@ RETCODE lpRemoveObsoleteCols(
    lpicols = lp->lpicols;
 
    /* get temporary memory */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &coldstat, ncols) );
+
+   /* get columns' basis status */
+   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, NULL) );
 
    /* mark obsolete columns to be deleted */
    ndelcols = 0;
@@ -10214,6 +10219,7 @@ RETCODE lpRemoveObsoleteCols(
       if( cols[c]->removeable
          && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling) */
          && cols[c]->age > set->lp_colagelimit
+         && cstat[c] != SCIP_BASESTAT_BASIC
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
@@ -10235,11 +10241,12 @@ RETCODE lpRemoveObsoleteCols(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &coldstat);
+   SCIPsetFreeBufferArray(set, &cstat);
       
    return SCIP_OKAY;
 }
 
-/** removes all rows, that are too old, beginning with the given firstrow */
+/** removes all basic rows, that are too old, beginning with the given firstrow */
 static
 RETCODE lpRemoveObsoleteRows(
    LP*              lp,                 /**< current LP data */
@@ -10251,6 +10258,7 @@ RETCODE lpRemoveObsoleteRows(
 {
    ROW** rows;
    ROW** lpirows;
+   int* rstat;
    int* rowdstat;
    int nrows;
    int ndelrows;
@@ -10272,7 +10280,11 @@ RETCODE lpRemoveObsoleteRows(
    lpirows = lp->lpirows;
 
    /* get temporary memory */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rstat, nrows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
+
+   /* get rows' basis status */
+   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, NULL, rstat) );
 
    /* mark obsolete rows to be deleted */
    ndelrows = 0;
@@ -10284,7 +10296,8 @@ RETCODE lpRemoveObsoleteRows(
       assert(rows[r]->lpipos == r);
       if( rows[r]->removeable
          && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling) */
-         && rows[r]->age > set->lp_rowagelimit )
+         && rows[r]->age > set->lp_rowagelimit
+         && rstat[r] == SCIP_BASESTAT_BASIC )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -10305,11 +10318,12 @@ RETCODE lpRemoveObsoleteRows(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &rowdstat);
+   SCIPsetFreeBufferArray(set, &rstat);
       
    return SCIP_OKAY;
 }
 
-/** removes all columns and rows in the part of the LP created at the current node, that are too old */
+/** removes all non-basic columns and basic rows in the part of the LP created at the current node, that are too old */
 RETCODE SCIPlpRemoveNewObsoletes(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -10318,6 +10332,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
    )
 {
    assert(lp != NULL);
+   assert(lp->solved);
    assert(!lp->diving);
    assert(set != NULL);
 
@@ -10336,7 +10351,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
    return SCIP_OKAY;
 }
 
-/** removes all columns and rows in whole LP, that are too old */
+/** removes all non-basic columns and basic rows in whole LP, that are too old */
 RETCODE SCIPlpRemoveAllObsoletes(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -10345,6 +10360,7 @@ RETCODE SCIPlpRemoveAllObsoletes(
    )
 {
    assert(lp != NULL);
+   assert(lp->solved);
    assert(!lp->diving);
    assert(set != NULL);
 
@@ -10362,7 +10378,7 @@ RETCODE SCIPlpRemoveAllObsoletes(
    return SCIP_OKAY;
 }
 
-/** removes all columns at 0.0 beginning with the given firstcol */
+/** removes all non-basic columns at 0.0 beginning with the given firstcol */
 static
 RETCODE lpCleanupCols(
    LP*              lp,                 /**< current LP data */
@@ -10373,6 +10389,7 @@ RETCODE lpCleanupCols(
 {
    COL** cols;
    COL** lpicols;
+   int* cstat;
    int* coldstat;
    int ncols;
    int ndelcols;
@@ -10394,7 +10411,11 @@ RETCODE lpCleanupCols(
    lpicols = lp->lpicols;
 
    /* get temporary memory */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &coldstat, ncols) );
+
+   /* get columns' basis status */
+   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, NULL) );
 
    /* mark unused columns to be deleted */
    ndelcols = 0;
@@ -10405,6 +10426,7 @@ RETCODE lpCleanupCols(
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
       if( lpicols[c]->removeable
+         && cstat[c] != SCIP_BASESTAT_BASIC
          && lpicols[c]->primsol == 0.0 /* non-basic columns to remove are exactly at 0.0 */
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
@@ -10424,11 +10446,12 @@ RETCODE lpCleanupCols(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &coldstat);
+   SCIPsetFreeBufferArray(set, &cstat);
       
    return SCIP_OKAY;
 }
 
-/** removes all rows not at one of their bounds beginning with the given firstrow */
+/** removes all basic rows beginning with the given firstrow */
 static
 RETCODE lpCleanupRows(
    LP*              lp,                 /**< current LP data */
@@ -10440,6 +10463,7 @@ RETCODE lpCleanupRows(
 {
    ROW** rows;
    ROW** lpirows;
+   int* rstat;
    int* rowdstat;
    int nrows;
    int ndelrows;
@@ -10462,7 +10486,11 @@ RETCODE lpCleanupRows(
    lpirows = lp->lpirows;
 
    /* get temporary memory */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rstat, nrows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
+
+   /* get rows' basis status */
+   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, NULL, rstat) );
 
    /* mark unused rows to be deleted */
    ndelrows = 0;
@@ -10472,7 +10500,7 @@ RETCODE lpCleanupRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( lpirows[r]->removeable && lpirows[r]->dualsol == 0.0 ) /* basic rows to remove are exactly at 0.0 */
+      if( lpirows[r]->removeable && rstat[r] == SCIP_BASESTAT_BASIC )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -10490,31 +10518,40 @@ RETCODE lpCleanupRows(
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &rowdstat);
+   SCIPsetFreeBufferArray(set, &rstat);
 
    return SCIP_OKAY;
 }
 
-/** removes all columns at 0.0 and rows not at their bound in the part of the LP created at the current node */
+/** removes all non-basic columns at 0.0 and basic rows in the part of the LP created at the current node */
 RETCODE SCIPlpCleanupNew(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             root                /**< are we at the root node? */
    )
 {
+   Bool cleanupcols;
+   Bool cleanuprows;
+
    assert(lp != NULL);
    assert(lp->solved);
    assert(!lp->diving);
    assert(set != NULL);
 
-   debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d)\n",
-      lp->firstnewcol, lp->ncols, set->lp_cleanupcols, lp->firstnewrow, lp->nrows, set->lp_cleanuprows);
+   /* check, if we want to clean up the columns and rows */
+   cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
+   cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   if( set->lp_cleanupcols && lp->firstnewcol < lp->ncols )
+   debugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d)\n",
+      lp->firstnewcol, lp->ncols, cleanupcols, lp->firstnewrow, lp->nrows, cleanuprows);
+
+   if( cleanupcols && lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, set, stat, lp->firstnewcol) );
    }
-   if( set->lp_cleanuprows && lp->firstnewrow < lp->nrows )
+   if( cleanuprows && lp->firstnewrow < lp->nrows )
    {
       CHECK_OKAY( lpCleanupRows(lp, memhdr, set, stat, lp->firstnewrow) );
    }
@@ -10522,26 +10559,34 @@ RETCODE SCIPlpCleanupNew(
    return SCIP_OKAY;
 }
 
-/** removes all columns at 0.0 and rows not at their bound in the whole LP */
+/** removes all non-basic columns at 0.0 and basic rows in the whole LP */
 RETCODE SCIPlpCleanupAll(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             root                /**< are we at the root node? */
    )
 {
+   Bool cleanupcols;
+   Bool cleanuprows;
+
    assert(lp != NULL);
    assert(lp->solved);
    assert(!lp->diving);
    assert(set != NULL);
 
-   debugMessage("removing all unused columns and rows\n");
+   /* check, if we want to clean up the columns and rows */
+   cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
+   cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   if( /*set->lp_cleanupcols &&*/ 0 < lp->ncols )
+   debugMessage("removing all unused columns (%d) and rows (%d)\n", cleanupcols, cleanuprows);
+
+   if( cleanupcols && 0 < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, set, stat, 0) );
    }
-   if( /*set->lp_cleanuprows &&*/ 0 < lp->nrows )
+   if( cleanuprows && 0 < lp->nrows )
    {
       CHECK_OKAY( lpCleanupRows(lp, memhdr, set, stat, 0) );
    }

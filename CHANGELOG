@@ -1,3 +1,18 @@
+current version
+===============
+
+parameters:
+- new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distict cleanup settings between root node and other
+  nodes
+
+features:
+- aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
+  iterations
+
+fixed bugs:
+- fixed bug in MPS file reader
+
+
 SCIP version 0.78
 =================
 

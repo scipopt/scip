@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.128 2004/12/15 19:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.129 2005/01/11 14:33:23 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -117,7 +117,9 @@
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from LP
                                                  *   (-1: don't delete rows due to aging) */
 #define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPCOLSROOT   FALSE /**< should new non-basic columns be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
@@ -503,9 +505,19 @@ RETCODE SCIPsetCreate(
          &(*set)->lp_cleanupcols, SCIP_DEFAULT_LP_CLEANUPCOLS,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/cleanupcolsroot",
+         "should new non-basic columns be removed after root LP solving?",
+         &(*set)->lp_cleanupcolsroot, SCIP_DEFAULT_LP_CLEANUPCOLSROOT,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
          "lp/cleanuprows",
          "should new basic rows be removed after LP solving?",
          &(*set)->lp_cleanuprows, SCIP_DEFAULT_LP_CLEANUPROWS,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/cleanuprowsroot",
+         "should new basic rows be removed after root LP solving?",
+         &(*set)->lp_cleanuprowsroot, SCIP_DEFAULT_LP_CLEANUPROWSROOT,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
          "lp/checkfeas",

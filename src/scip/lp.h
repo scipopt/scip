@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.94 2004/11/17 15:53:58 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.95 2005/01/11 14:33:23 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -917,7 +917,7 @@ RETCODE SCIPlpUpdateAges(
    STAT*            stat                /**< problem statistics */
    );
 
-/** removes all columns and rows in the part of the LP created at the current node, that are too old */
+/** removes all non-basic columns and basic rows in the part of the LP created at the current node, that are too old */
 extern
 RETCODE SCIPlpRemoveNewObsoletes(
    LP*              lp,                 /**< current LP data */
@@ -926,7 +926,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
    STAT*            stat                /**< problem statistics */
    );
 
-/** removes all columns and rows in whole LP, that are too old */
+/** removes all non-basic columns and basic rows in whole LP, that are too old */
 extern
 RETCODE SCIPlpRemoveAllObsoletes(
    LP*              lp,                 /**< current LP data */
@@ -935,22 +935,24 @@ RETCODE SCIPlpRemoveAllObsoletes(
    STAT*            stat                /**< problem statistics */
    );
 
-/** removes all columns at 0.0 and rows not at their bound in the part of the LP created at the current node */
+/** removes all non-basic columns at 0.0 and basic rows in the part of the LP created at the current node */
 extern
 RETCODE SCIPlpCleanupNew(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             root                /**< are we at the root node? */
    );
 
-/** removes all columns at 0.0 and rows not at their bound in the whole LP */
+/** removes all non-basic columns at 0.0 and basic rows in the whole LP */
 extern
 RETCODE SCIPlpCleanupAll(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             root                /**< are we at the root node? */
    );
 
 /** initiates LP diving */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.124 2004/12/10 12:54:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.125 2005/01/11 14:33:23 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2352,7 +2352,7 @@ RETCODE focusnodeToFork(
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
-      CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat) );
+      CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat, (tree->focusnode->depth == 0)) );
 
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )
@@ -2450,7 +2450,7 @@ RETCODE focusnodeToSubroot(
 #if 0
       if( tree->focusnode->depth == 0 )
       {
-         CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
+         CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set, stat, (tree->focusnode->depth == 0)) );
       }
       else
 #endif

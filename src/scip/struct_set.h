@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.37 2004/11/17 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.38 2005/01/11 14:33:23 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -154,7 +154,9 @@ struct Set
    int              lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 
                                          *   (-1: don't delete rows due to aging) */
    Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after LP solving? */
+   Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root LP solving? */
    Bool             lp_cleanuprows;     /**< should new basic rows be removed after LP solving? */
+   Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root LP solving? */
    Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
    Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
    Bool             lp_scaling;         /**< should scaling of LP solver be used? */
