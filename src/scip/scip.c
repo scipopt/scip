@@ -2116,8 +2116,9 @@ RETCODE SCIPchgVarLb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree,
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree,
                      scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -2127,8 +2128,9 @@ RETCODE SCIPchgVarLb(
          errorMessage("cannot change bounds of original variables while presolving the problem");
          return SCIP_INVALIDCALL;
       }
-      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree,
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree,
                      scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
@@ -2163,8 +2165,9 @@ RETCODE SCIPchgVarUb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree,
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree,
                      scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -2174,8 +2177,9 @@ RETCODE SCIPchgVarUb(
          errorMessage("cannot change bounds of original variables while presolving the problem");
          return SCIP_INVALIDCALL;
       }
-      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree,
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree,
                      scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
@@ -3278,10 +3282,10 @@ RETCODE SCIPbranchVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   if( SCIPsetIsFixed(scip->set, var->dom.lb, var->dom.ub) )
+   if( SCIPsetIsFixed(scip->set, var->actdom.lb, var->actdom.ub) )
    {
       char s[MAXSTRLEN];
-      sprintf(s, "cannot branch on variable <%s> with fixed domain [%g,%g]", var->name, var->dom.lb, var->dom.ub);
+      sprintf(s, "cannot branch on variable <%s> with fixed domain [%g,%g]", var->name, var->actdom.lb, var->actdom.ub);
       errorMessage(s);
       return SCIP_INVALIDDATA;
    }

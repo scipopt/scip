@@ -119,7 +119,8 @@ struct Var
    char*            name;               /**< name of the variable */
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
-   DOM              dom;                /**< domain of variable */
+   DOM              glbdom;             /**< domain of variable in global problem */
+   DOM              actdom;             /**< domain of variable in actual subproblem */
    Real             obj;                /**< objective function value of variable */
    int              index;              /**< consecutively numbered variable identifier */
    int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
@@ -295,9 +296,19 @@ RETCODE SCIPvarRelease(
    LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
    );
 
-/** adds a hole to the variables domain */
+/** adds a hole to the variable's global domain and to its current local domain */
 extern
-RETCODE SCIPvarAddHole(
+RETCODE SCIPvarAddHoleGlobal(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   Real             left,               /**< left bound of open interval in new hole */
+   Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** adds a hole to the variable's current local domain */
+extern
+RETCODE SCIPvarAddHoleLocal(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -427,9 +438,34 @@ RETCODE SCIPvarChgObj(
    Real             newobj              /**< new objective value for variable */
    );
 
-/** changes lower bound of variable */
+/** changes global lower bound of variable */
 extern
-RETCODE SCIPvarChgLb(
+RETCODE SCIPvarChgLbGlobal(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   Real             newbound            /**< new bound for variable */
+   );
+
+/** changes global upper bound of variable */
+extern
+RETCODE SCIPvarChgUbGlobal(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   Real             newbound            /**< new bound for variable */
+   );
+
+/** changes global bound of variable */
+extern
+RETCODE SCIPvarChgBdGlobal(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   Real             newbound,           /**< new bound for variable */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
+/** changes current local lower bound of variable */
+extern
+RETCODE SCIPvarChgLbLocal(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -441,9 +477,9 @@ RETCODE SCIPvarChgLb(
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes upper bound of variable */
+/** changes current local upper bound of variable */
 extern
-RETCODE SCIPvarChgUb(
+RETCODE SCIPvarChgUbLocal(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -455,9 +491,9 @@ RETCODE SCIPvarChgUb(
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes bound of variable */
+/** changes current local bound of variable */
 extern
-RETCODE SCIPvarChgBd(
+RETCODE SCIPvarChgBdLocal(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -552,15 +588,27 @@ Real SCIPvarGetObj(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets lower bound of variable */
+/** gets global lower bound of variable */
 extern
-Real SCIPvarGetLb(
+Real SCIPvarGetLbGlobal(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets upper bound of variable */
+/** gets global upper bound of variable */
 extern
-Real SCIPvarGetUb(
+Real SCIPvarGetUbGlobal(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets current lower bound of variable */
+extern
+Real SCIPvarGetLbLocal(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets current upper bound of variable */
+extern
+Real SCIPvarGetUbLocal(
    VAR*             var                 /**< problem variable */
    );
 
@@ -578,7 +626,7 @@ Real SCIPvarGetUbDive(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** gets best bound of variable with respect to the objective function */
+/** gets best local bound of variable with respect to the objective function */
 extern
 Real SCIPvarGetBestBound(
    VAR*             var                 /**< problem variable */

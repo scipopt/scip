@@ -531,7 +531,10 @@ RETCODE SCIPsolGetVal(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      *solval = var->dom.lb;
+      assert(var->glbdom.lb == var->glbdom.ub);
+      assert(var->actdom.lb == var->actdom.ub);
+      assert(var->glbdom.lb == var->actdom.lb);
+      *solval = var->glbdom.lb;
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */

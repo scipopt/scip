@@ -925,11 +925,12 @@ RETCODE SCIPnodeAddBoundchg(
    assert(var != NULL);
    
    debugMessage("adding boundchange at node in depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
-      node->depth, var->name, var->dom.lb, var->dom.ub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
+      node->depth, var->name, var->actdom.lb, var->actdom.ub, 
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      oldbound = var->dom.lb;
+      oldbound = var->actdom.lb;
 
       if( SCIPsetIsLE(set, newbound, oldbound) )
       {
@@ -943,7 +944,7 @@ RETCODE SCIPnodeAddBoundchg(
    else
    {
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      oldbound = var->dom.ub;
+      oldbound = var->actdom.ub;
 
       if( SCIPsetIsGE(set, newbound, oldbound) )
       {
@@ -959,8 +960,17 @@ RETCODE SCIPnodeAddBoundchg(
    {
    case SCIP_NODETYPE_ACTNODE:
       assert(tree->actnode == node);
-      CHECK_OKAY( SCIPdomchgdynAddBoundchg(tree->actnodedomchg, memhdr, set, var, newbound, oldbound, boundtype) );
-      CHECK_OKAY( SCIPvarChgBd(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, newbound, boundtype) );
+      CHECK_OKAY( SCIPvarChgBdLocal(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, newbound, boundtype) );
+      if( node->depth == 0 )
+      {
+         /* changed bound in root node: update the global bound */
+         CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
+      }
+      else
+      {
+         /* changed bound in sub node: remember the bound change */
+         CHECK_OKAY( SCIPdomchgdynAddBoundchg(tree->actnodedomchg, memhdr, set, var, newbound, oldbound, boundtype) );
+      }
       return SCIP_OKAY;
 
    case SCIP_NODETYPE_SIBLING:
@@ -2358,13 +2368,13 @@ RETCODE SCIPtreeBranchVar(
    assert(var->vartype == SCIP_VARTYPE_BINARY
       || var->vartype == SCIP_VARTYPE_INTEGER
       || var->vartype == SCIP_VARTYPE_IMPLINT);
-   assert(SCIPsetIsIntegral(set, var->dom.lb));
-   assert(SCIPsetIsIntegral(set, var->dom.ub));
-   assert(!SCIPsetIsFixed(set, var->dom.lb, var->dom.ub));
+   assert(SCIPsetIsIntegral(set, var->actdom.lb));
+   assert(SCIPsetIsIntegral(set, var->actdom.ub));
+   assert(!SCIPsetIsFixed(set, var->actdom.lb, var->actdom.ub));
 
    solval = SCIPvarGetSol(var, tree);
-   assert(SCIPsetIsGE(set, solval, var->dom.lb));
-   assert(SCIPsetIsLE(set, solval, var->dom.ub));
+   assert(SCIPsetIsGE(set, solval, var->actdom.lb));
+   assert(SCIPsetIsLE(set, solval, var->actdom.ub));
    
    if( SCIPsetIsIntegral(set, solval) )
    {
@@ -2379,12 +2389,12 @@ RETCODE SCIPtreeBranchVar(
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", var->name, fixval);
       CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-      if( !SCIPsetIsEQ(set, var->dom.lb, fixval) )
+      if( !SCIPsetIsEQ(set, var->actdom.lb, fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval,
                         SCIP_BOUNDTYPE_LOWER) );
       }
-      if( !SCIPsetIsEQ(set, var->dom.ub, fixval) )
+      if( !SCIPsetIsEQ(set, var->actdom.ub, fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval,
                         SCIP_BOUNDTYPE_UPPER) );
@@ -2392,7 +2402,7 @@ RETCODE SCIPtreeBranchVar(
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x <= x'-1, if this would be feasible */
-      if( SCIPsetIsGE(set, fixval-1, var->dom.lb) )
+      if( SCIPsetIsGE(set, fixval-1, var->actdom.lb) )
       {
          debugMessage(" -> creating child: <%s> <= %g\n", var->name, fixval-1);
          CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
@@ -2402,7 +2412,7 @@ RETCODE SCIPtreeBranchVar(
       }
                   
       /* create child node with x >= x'+1, if this would be feasible */
-      if( SCIPsetIsLE(set, fixval+1, var->dom.ub) )
+      if( SCIPsetIsLE(set, fixval+1, var->actdom.ub) )
       {
          debugMessage(" -> creating child: <%s> >= %g\n", var->name, fixval+1);
          CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );

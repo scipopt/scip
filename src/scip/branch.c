@@ -283,10 +283,10 @@ RETCODE SCIPbranchcandGetPseudoCands(
          assert(var->vartype == SCIP_VARTYPE_BINARY
             || var->vartype == SCIP_VARTYPE_INTEGER
             || var->vartype == SCIP_VARTYPE_IMPLINT);
-         assert(SCIPsetIsIntegral(set, var->dom.lb));
-         assert(SCIPsetIsIntegral(set, var->dom.ub));
+         assert(SCIPsetIsIntegral(set, var->actdom.lb));
+         assert(SCIPsetIsIntegral(set, var->actdom.ub));
          
-         if( !SCIPsetIsFixed(set, var->dom.lb, var->dom.ub) )
+         if( !SCIPsetIsFixed(set, var->actdom.lb, var->actdom.ub) )
          {
             assert(0 <= var->pseudocandindex && var->pseudocandindex < branchcand->npseudocands);
             assert(branchcand->pseudocands[var->pseudocandindex] == var);
@@ -324,7 +324,7 @@ RETCODE SCIPbranchcandUpdateVar(
       || var->vartype == SCIP_VARTYPE_INTEGER
       || var->vartype == SCIP_VARTYPE_IMPLINT )
    {
-      if( SCIPsetIsFixed(set, var->dom.lb, var->dom.ub) )
+      if( SCIPsetIsFixed(set, var->actdom.lb, var->actdom.ub) )
       {
          /* variable is fixed: make sure it is not member of the pseudo branching candidate list */
          if( var->pseudocandindex >= 0 )

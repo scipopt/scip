@@ -262,7 +262,7 @@ DECL_HEUREXEC(SCIPheurExecDiving)
 
       var = lpcands[bestcand];
 
-      if( SCIPvarGetLb(var) >= SCIPvarGetUb(var) - 0.5 )
+      if( SCIPgetVarLbDive(scip, var) >= SCIPgetVarUbDive(scip, var) - 0.5 )
       {
          /* the variable is already fixed -> numerical troubles -> abort diving */
          break;

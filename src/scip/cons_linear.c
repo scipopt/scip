@@ -858,8 +858,8 @@ void linconsUpdateAddVar(
       assert(lincons->minactivity < SCIP_INVALID);
       assert(lincons->maxactivity < SCIP_INVALID);
 
-      linconsUpdateChgLb(scip, lincons, var, 0.0, SCIPvarGetLb(var), val);
-      linconsUpdateChgUb(scip, lincons, var, 0.0, SCIPvarGetUb(var), val);
+      linconsUpdateChgLb(scip, lincons, var, 0.0, SCIPvarGetLbLocal(var), val);
+      linconsUpdateChgUb(scip, lincons, var, 0.0, SCIPvarGetUbLocal(var), val);
    }
 }
 
@@ -986,8 +986,8 @@ RETCODE linconsGetActivityResiduals(
    assert(lincons->minactivityinf >= 0);
    assert(lincons->maxactivityinf >= 0);
 
-   lb = SCIPvarGetLb(var);
-   ub = SCIPvarGetUb(var);
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
    assert(!SCIPisInfinity(scip, lb));
    assert(!SCIPisInfinity(scip, -ub));
 
@@ -1168,8 +1168,8 @@ RETCODE linconsTightenVarBounds(
    assert(!SCIPisInfinity(scip, minresactivity));
    assert(!SCIPisInfinity(scip, -maxresactivity));
    
-   lb = SCIPvarGetLb(var);
-   ub = SCIPvarGetUb(var);
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
    assert(SCIPisLE(scip, lb, ub));
 
    *success = FALSE;
@@ -1192,7 +1192,7 @@ RETCODE linconsTightenVarBounds(
                return SCIP_OKAY;
             }
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
-            ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
+            ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             *success = TRUE;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
@@ -1213,7 +1213,7 @@ RETCODE linconsTightenVarBounds(
                return SCIP_OKAY;
             }
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
-            lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
+            lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             *success = TRUE;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
@@ -1238,7 +1238,7 @@ RETCODE linconsTightenVarBounds(
                return SCIP_OKAY;
             }
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
-            lb = SCIPvarGetLb(var); /* get bound again, because it may be additionally modified due to integrality */
+            lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             *success = TRUE;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
@@ -1259,7 +1259,7 @@ RETCODE linconsTightenVarBounds(
                return SCIP_OKAY;
             }
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
-            ub = SCIPvarGetUb(var); /* get bound again, because it may be additionally modified due to integrality */
+            ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             *success = TRUE;
             debugMessage("linear constraint: tighten <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, ub);
          }
@@ -2322,8 +2322,8 @@ RETCODE SCIPupgradeConsLinear(
    {
       var = lincons->vars[i];
       val = lincons->vals[i];
-      lb = SCIPvarGetLb(var);
-      ub = SCIPvarGetUb(var);
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
       assert(!SCIPisZero(scip, val));
 
       switch( SCIPvarGetType(var) )

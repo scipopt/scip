@@ -187,9 +187,9 @@ RETCODE setpackconsCatchEvent(
    CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)setpackcons) );
    
    /* update the fixed variables counters for this variable */
-   if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
+   if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
       setpackcons->nfixedzeros++;
-   else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
+   else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
       setpackcons->nfixedones++;
 
    return SCIP_OKAY;
@@ -217,9 +217,9 @@ RETCODE setpackconsDropEvent(
    CHECK_OKAY( SCIPdropVarEvent(scip, var, eventhdlr, (EVENTDATA*)setpackcons) );
 
    /* update the fixed variables counters for this variable */
-   if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
+   if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
       setpackcons->nfixedzeros--;
-   else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
+   else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
       setpackcons->nfixedones--;
 
    return SCIP_OKAY;
@@ -439,11 +439,11 @@ RETCODE setpackconsCreateTransformed(
    {
       var = (*setpackcons)->vars[i];
       assert(var != NULL);
-      assert(SCIPisLE(scip, 0.0, SCIPvarGetLb(var)));
-      assert(SCIPisLE(scip, SCIPvarGetLb(var), SCIPvarGetUb(var)));
-      assert(SCIPisLE(scip, SCIPvarGetUb(var), 1.0));
-      assert(SCIPisIntegral(scip, SCIPvarGetLb(var)));
-      assert(SCIPisIntegral(scip, SCIPvarGetUb(var)));
+      assert(SCIPisLE(scip, 0.0, SCIPvarGetLbLocal(var)));
+      assert(SCIPisLE(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+      assert(SCIPisLE(scip, SCIPvarGetUbLocal(var), 1.0));
+      assert(SCIPisIntegral(scip, SCIPvarGetLbLocal(var)));
+      assert(SCIPisIntegral(scip, SCIPvarGetUbLocal(var)));
 
       /* use transformed variables in constraint instead original ones */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
@@ -593,11 +593,11 @@ RETCODE processFixings(
       for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
-         assert(!fixedonefound || SCIPisZero(scip, SCIPvarGetLb(var)));
-         assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
-         if( SCIPvarGetLb(var) < 0.5 )
+         assert(!fixedonefound || SCIPisZero(scip, SCIPvarGetLbLocal(var)));
+         assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
+         if( SCIPvarGetLbLocal(var) < 0.5 )
          {
-            if( SCIPvarGetUb(var) > 0.5 )
+            if( SCIPvarGetUbLocal(var) > 0.5 )
             {
                CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
                fixed = TRUE;

@@ -187,9 +187,9 @@ RETCODE setpartconsCatchEvent(
    CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)setpartcons) );
    
    /* update the fixed variables counters for this variable */
-   if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
+   if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
       setpartcons->nfixedzeros++;
-   else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
+   else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
       setpartcons->nfixedones++;
 
    return SCIP_OKAY;
@@ -217,9 +217,9 @@ RETCODE setpartconsDropEvent(
    CHECK_OKAY( SCIPdropVarEvent(scip, var, eventhdlr, (EVENTDATA*)setpartcons) );
 
    /* update the fixed variables counters for this variable */
-   if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
+   if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
       setpartcons->nfixedzeros--;
-   else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
+   else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
       setpartcons->nfixedones--;
 
    return SCIP_OKAY;
@@ -445,11 +445,11 @@ RETCODE setpartconsCreateTransformed(
    {
       var = (*setpartcons)->vars[i];
       assert(var != NULL);
-      assert(SCIPisLE(scip, 0.0, SCIPvarGetLb(var)));
-      assert(SCIPisLE(scip, SCIPvarGetLb(var), SCIPvarGetUb(var)));
-      assert(SCIPisLE(scip, SCIPvarGetUb(var), 1.0));
-      assert(SCIPisIntegral(scip, SCIPvarGetLb(var)));
-      assert(SCIPisIntegral(scip, SCIPvarGetUb(var)));
+      assert(SCIPisLE(scip, 0.0, SCIPvarGetLbLocal(var)));
+      assert(SCIPisLE(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+      assert(SCIPisLE(scip, SCIPvarGetUbLocal(var), 1.0));
+      assert(SCIPisIntegral(scip, SCIPvarGetLbLocal(var)));
+      assert(SCIPisIntegral(scip, SCIPvarGetUbLocal(var)));
 
       /* use transformed variables in constraint instead original ones */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
@@ -601,11 +601,11 @@ RETCODE processFixings(
       for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
-         assert(!fixedonefound || SCIPisZero(scip, SCIPvarGetLb(var)));
-         assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
-         if( SCIPvarGetLb(var) < 0.5 )
+         assert(!fixedonefound || SCIPisZero(scip, SCIPvarGetLbLocal(var)));
+         assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
+         if( SCIPvarGetLbLocal(var) < 0.5 )
          {
-            if( SCIPvarGetUb(var) > 0.5 )
+            if( SCIPvarGetUbLocal(var) > 0.5 )
             {
                CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
                fixed = TRUE;
@@ -648,9 +648,9 @@ RETCODE processFixings(
       for( v = 0; v < nvars && !fixed; ++v )
       {
          var = vars[v];
-         assert(SCIPisZero(scip, SCIPvarGetLb(var)));
-         assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
-         if( SCIPvarGetUb(var) > 0.5 )
+         assert(SCIPisZero(scip, SCIPvarGetLbLocal(var)));
+         assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
+         if( SCIPvarGetUbLocal(var) > 0.5 )
          {
             CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
             fixed = TRUE;
@@ -1097,7 +1097,7 @@ RETCODE branchLP(
    CHECK_OKAY( SCIPcreateChild(scip, &node) );
    for( i = 0; i < nselcands; ++i )
    {
-      if( !SCIPisZero(scip, SCIPvarGetUb(sortcands[i])) )
+      if( !SCIPisZero(scip, SCIPvarGetUbLocal(sortcands[i])) )
       {
          CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
       }
@@ -1109,7 +1109,7 @@ RETCODE branchLP(
    /* all other variables of the constraint can be set to 0.0 */
    for( i = nselcands; i < setpartcons->nvars; ++i )
    {
-      if( !SCIPisZero(scip, SCIPvarGetUb(sortcands[i])) )
+      if( !SCIPisZero(scip, SCIPvarGetUbLocal(sortcands[i])) )
       {
          CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
       }
@@ -1119,7 +1119,7 @@ RETCODE branchLP(
    {
       /* only one candidate selected: fix it to 1.0 */
       debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(sortcands[0]));
-      assert(SCIPisZero(scip, SCIPvarGetLb(sortcands[0])));
+      assert(SCIPisZero(scip, SCIPvarGetLbLocal(sortcands[0])));
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, sortcands[0], 1.0) );
 
       /* if the constraint is unmodifiable, it can be disabled, because all other variables are already set to 0.0 */

@@ -1108,8 +1108,8 @@ RETCODE SCIPcolCreate(
 
    (*col)->var = var;
    (*col)->obj = var->obj;
-   (*col)->lb = var->dom.lb;
-   (*col)->ub = var->dom.ub;
+   (*col)->lb = var->actdom.lb;
+   (*col)->ub = var->actdom.ub;
    (*col)->index = stat->ncolidx++;
    (*col)->size = len;
    (*col)->len = len;
@@ -4270,17 +4270,17 @@ void transformMIRRow(
       assert(0 <= idx && idx < nvars);
 
       if( var->varstatus == SCIP_VARSTATUS_COLUMN
-         && !SCIPsetIsInfinity(set, var->dom.ub)
-         && var->data.col->primsol > (var->dom.lb + var->dom.ub)/2 )
+         && !SCIPsetIsInfinity(set, var->actdom.ub)
+         && var->data.col->primsol > (var->actdom.lb + var->actdom.ub)/2 )
       {
          varsign[idx] = -1;
-         *mirrhs -= mircoef[idx] * var->dom.ub;
+         *mirrhs -= mircoef[idx] * var->actdom.ub;
       }
       else
       {
          varsign[idx] = +1;
-         if( !SCIPsetIsInfinity(set, -var->dom.lb) )
-            *mirrhs -= mircoef[idx] * var->dom.lb;
+         if( !SCIPsetIsInfinity(set, -var->actdom.lb) )
+            *mirrhs -= mircoef[idx] * var->actdom.lb;
          else if( !SCIPsetIsZero(set, mircoef[idx]) )
          {
             /* we found a free variable in the row with non-zero coefficient
@@ -4375,13 +4375,13 @@ void roundMIRRow(
          /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
          if( varsign[idx] == +1 )
          {
-            assert(!SCIPsetIsInfinity(set, -var->dom.lb));
-            *mirrhs += cutaj * var->dom.lb;
+            assert(!SCIPsetIsInfinity(set, -var->actdom.lb));
+            *mirrhs += cutaj * var->actdom.lb;
          }
          else
          {
-            assert(!SCIPsetIsInfinity(set, var->dom.ub));
-            *mirrhs += cutaj * var->dom.ub;
+            assert(!SCIPsetIsInfinity(set, var->actdom.ub));
+            *mirrhs += cutaj * var->actdom.ub;
          }
       }
    }
@@ -5813,8 +5813,8 @@ RETCODE SCIPlpStartDive(
          assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
          assert(lp->cols[c]->var->data.col == lp->cols[c]);
          assert(SCIPsetIsEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.lb, lp->cols[c]->lb));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.ub, lp->cols[c]->ub));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.lb, lp->cols[c]->lb));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.ub, lp->cols[c]->ub));
       }
    }
 #endif
@@ -5855,8 +5855,8 @@ RETCODE SCIPlpEndDive(
       if( var->varstatus == SCIP_VARSTATUS_COLUMN )
       {
          CHECK_OKAY( SCIPcolChgObj(var->data.col, set, lp, var->obj) );
-         CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, var->dom.lb) );
-         CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, var->dom.ub) );
+         CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, var->actdom.lb) );
+         CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, var->actdom.ub) );
       }
    }
 
@@ -5881,8 +5881,8 @@ RETCODE SCIPlpEndDive(
          assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
          assert(lp->cols[c]->var->data.col == lp->cols[c]);
          assert(SCIPsetIsEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.lb, lp->cols[c]->lb));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->dom.ub, lp->cols[c]->ub));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.lb, lp->cols[c]->lb));
+         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.ub, lp->cols[c]->ub));
       }
    }
 #endif

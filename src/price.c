@@ -228,10 +228,10 @@ RETCODE SCIPpriceAddBdviolvar(
    assert(price != NULL);
    assert(set != NULL);
    assert(var != NULL);
-   assert(SCIPsetIsPositive(set, var->dom.lb) || SCIPsetIsNegative(set, var->dom.ub));
+   assert(SCIPsetIsPositive(set, var->actdom.lb) || SCIPsetIsNegative(set, var->actdom.ub));
    assert(price->naddedbdviolvars <= price->nbdviolvars);
 
-   debugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", var->name, var->dom.lb, var->dom.ub);
+   debugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", var->name, var->actdom.lb, var->actdom.ub);
 
    price->nfoundvars++;
 
@@ -244,8 +244,8 @@ RETCODE SCIPpriceAddBdviolvar(
 
    /* insert variable in bdviolvars arrays */
    price->bdviolvars[price->nbdviolvars] = var;
-   price->bdviolvarslb[price->nbdviolvars] = var->dom.lb;
-   price->bdviolvarsub[price->nbdviolvars] = var->dom.ub;
+   price->bdviolvarslb[price->nbdviolvars] = var->actdom.lb;
+   price->bdviolvarsub[price->nbdviolvars] = var->actdom.ub;
    price->nbdviolvars++;
 
    /* Temporarily set bounds, such that zero is feasible, because we don't want to destroy
@@ -253,13 +253,13 @@ RETCODE SCIPpriceAddBdviolvar(
     * at the same time.
     * The correct bounds must be reset with a call to SCIPpriceResetBounds().
     */
-   if( SCIPsetIsPositive(set, var->dom.lb) )
+   if( SCIPsetIsPositive(set, var->actdom.lb) )
    {
-      CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 0.0) );
    }
    else
    {
-      CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -317,27 +317,27 @@ RETCODE priceProbVars(
          /* A loose variable is a pricing candidate, if it can contribute negatively to the objective function.
           * In addition, we have to add all variables, where zero violates the bounds.
           */
-         /*debugMessage("price loose variable <%s> in bounds [%g,%g]\n", var->name, var->dom.lb, var->dom.ub);*/
-         if( SCIPsetIsNegative(set, var->dom.lb) )
+         /*debugMessage("price loose variable <%s> in bounds [%g,%g]\n", var->name, var->actdom.lb, var->actdom.ub);*/
+         if( SCIPsetIsNegative(set, var->actdom.lb) )
          {
-            if( SCIPsetIsNegative(set, var->dom.ub) )
+            if( SCIPsetIsNegative(set, var->actdom.ub) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
             }
             else if( SCIPsetIsPositive(set, var->obj) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.lb, root) );
+               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->actdom.lb, root) );
             }
          }
-         else if( SCIPsetIsPositive(set, var->dom.ub) )
+         else if( SCIPsetIsPositive(set, var->actdom.ub) )
          {
-            if( SCIPsetIsPositive(set, var->dom.lb) )
+            if( SCIPsetIsPositive(set, var->actdom.lb) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
             }
             else if( SCIPsetIsNegative(set, var->obj) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.ub, root) );
+               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->actdom.ub, root) );
             }
          }
          break;
@@ -351,7 +351,7 @@ RETCODE priceProbVars(
          assert(col->len >= 0);
             
          /*debugMessage("price column variable <%s> in bounds [%g,%g], col->lppos=%d\n", 
-           var->name, var->dom.lb, var->dom.ub, col->lppos);*/
+           var->name, var->actdom.lb, var->actdom.ub, col->lppos);*/
          if( col->lppos == -1 )
          {
             Real feasibility;
@@ -360,7 +360,7 @@ RETCODE priceProbVars(
             added = FALSE;
 
             /* add variable, if zero is not feasible within the bounds */
-            if( SCIPsetIsPositive(set, var->dom.lb) || SCIPsetIsNegative(set, var->dom.ub) )
+            if( SCIPsetIsPositive(set, var->actdom.lb) || SCIPsetIsNegative(set, var->actdom.ub) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
                added = TRUE;
@@ -373,7 +373,7 @@ RETCODE priceProbVars(
                bestbound = SCIPvarGetBestBound(var);
                if( !SCIPsetIsZero(set, bestbound) )
                {
-                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, var->obj * var->dom.lb, root) );
+                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, var->obj * var->actdom.lb, root) );
                   added = TRUE;
                }
             }
@@ -381,8 +381,8 @@ RETCODE priceProbVars(
             if( !added )
             {
                /* a column not in LP that doesn't have zero in its bounds was added by bound checking above */
-               assert(!SCIPsetIsPositive(set, col->var->dom.lb));
-               assert(!SCIPsetIsNegative(set, col->var->dom.ub));
+               assert(!SCIPsetIsPositive(set, col->var->actdom.lb));
+               assert(!SCIPsetIsNegative(set, col->var->actdom.ub));
                
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {
@@ -575,11 +575,11 @@ RETCODE SCIPpriceResetBounds(
    for( v = 0; v < price->nbdviolvars; ++v )
    {
       debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", price->bdviolvars[v]->name, 
-         price->bdviolvars[v]->dom.lb, price->bdviolvars[v]->dom.ub,
+         price->bdviolvars[v]->actdom.lb, price->bdviolvars[v]->actdom.ub,
          price->bdviolvarslb[v], price->bdviolvarsub[v]);
-      CHECK_OKAY( SCIPvarChgLb(price->bdviolvars[v], memhdr, set, stat, lp, tree, branchcand, eventqueue,
+      CHECK_OKAY( SCIPvarChgLbLocal(price->bdviolvars[v], memhdr, set, stat, lp, tree, branchcand, eventqueue,
                      price->bdviolvarslb[v]) );
-      CHECK_OKAY( SCIPvarChgUb(price->bdviolvars[v], memhdr, set, stat, lp, tree, branchcand, eventqueue,
+      CHECK_OKAY( SCIPvarChgUbLocal(price->bdviolvars[v], memhdr, set, stat, lp, tree, branchcand, eventqueue,
                      price->bdviolvarsub[v]) );
       CHECK_OKAY( SCIPvarRelease(&price->bdviolvars[v], memhdr, set, lp) );
    }
