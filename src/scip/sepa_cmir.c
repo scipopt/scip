@@ -14,8 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.2 2004/05/28 10:35:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.1 2004/05/28 10:34:20 bzfpfend Exp $"
 
+//#define DEBUG
 /**@file   sepa_cmir.c
  * @brief  cmir separator
  * @author Tobias Achterberg
@@ -29,7 +30,7 @@
 
 
 #define SEPA_NAME              "cmir"
-#define SEPA_DESC              "complemented mixed integer rounding cuts separator (Marchand's version)"
+#define SEPA_DESC              "separator template"
 #define SEPA_PRIORITY             -1000
 #define SEPA_FREQ                    10
 
