@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.159 2004/11/01 13:48:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.160 2004/11/03 13:14:44 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3494,89 +3494,68 @@ RETCODE rowScale(
    mindeltainf = FALSE;
    maxdeltainf = FALSE;
 
-   /* don't scale the row, if the scalar is 1.0 */
-   if( SCIPsetIsEQ(set, scaleval, 1.0) )
+   /* scale the row coefficients, thereby recalculating whether the row's activity is always integral;
+    * if the row coefficients are rounded to the nearest integer value, calculate the maximal activity difference,
+    * this rounding can lead to
+    */
+   row->integral = TRUE;
+   for( c = 0; c < row->len; ++c )
    {
-      scaleval = 1.0;
+      col = row->cols[c];
+      val = row->vals[c];
+      assert(!SCIPsetIsZero(set, val));
 
-      /* only check row for integrality */
-      row->integral = TRUE;
-      for( c = 0; c < row->len; ++c )
+      /* get local or global bounds for column, depending on the local or global feasibility of the row */
+      if( row->local )
       {
-         col = row->cols[c];
-         val = row->vals[c];
-         if( !SCIPcolIsIntegral(col) || !SCIPsetIsIntegral(set, val) )
-         {
-            row->integral = FALSE;
-            break;
-         }
+         lb = col->lb;
+         ub = col->ub;
       }
-   }
-   else
-   {
-      /* scale the row coefficients, thereby recalculating whether the row's activity is always integral;
-       * if the row coefficients are rounded to the nearest integer value, calculate the maximal activity difference,
-       * this rounding can lead to
-       */
-      row->integral = TRUE;
-      for( c = 0; c < row->len; ++c )
+      else
       {
-         col = row->cols[c];
-         val = row->vals[c];
-         assert(!SCIPsetIsZero(set, val));
+         lb = SCIPvarGetLbGlobal(col->var);
+         ub = SCIPvarGetUbGlobal(col->var);
+      }
 
-         /* get local or global bounds for column, depending on the local or global feasibility of the row */
-         if( row->local )
+      /* calculate scaled coefficient */
+      newval = val * scaleval;
+      if( ((integralcontvars || SCIPcolIsIntegral(col))
+            && isIntegralScalar(val, scaleval, minrounddelta, maxrounddelta))
+         || SCIPsetIsIntegral(set, newval) )
+      {
+         intval = EPSFLOOR(newval, -minrounddelta);
+         if( intval < newval )
          {
-            lb = col->lb;
-            ub = col->ub;
+            mindelta += (intval - newval)*ub;
+            maxdelta += (intval - newval)*lb;
+            mindeltainf = mindeltainf || SCIPsetIsInfinity(set, ub);
+            maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, -lb);
          }
          else
          {
-            lb = SCIPvarGetLbGlobal(col->var);
-            ub = SCIPvarGetUbGlobal(col->var);
+            mindelta += (intval - newval)*lb;
+            maxdelta += (intval - newval)*ub;
+            mindeltainf = mindeltainf || SCIPsetIsInfinity(set, -lb);
+            maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, ub);
          }
+         newval = intval;
+      }
 
-         /* calculate scaled coefficient */
-         newval = val * scaleval;
-         if( ((integralcontvars || SCIPcolIsIntegral(col))
-               && isIntegralScalar(val, scaleval, minrounddelta, maxrounddelta))
-            || SCIPsetIsIntegral(set, newval) )
+      if( !SCIPsetIsEQ(set, val, newval) )
+      {
+         /* if column knows of the row, change the corresponding coefficient in the column */
+         if( row->linkpos[c] >= 0 )
          {
-            intval = EPSFLOOR(newval, -minrounddelta);
-            if( intval < newval )
-            {
-               mindelta += (intval - newval)*ub;
-               maxdelta += (intval - newval)*lb;
-               mindeltainf = mindeltainf || SCIPsetIsInfinity(set, ub);
-               maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, -lb);
-            }
-            else
-            {
-               mindelta += (intval - newval)*lb;
-               maxdelta += (intval - newval)*ub;
-               mindeltainf = mindeltainf || SCIPsetIsInfinity(set, -lb);
-               maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, ub);
-            }
-            newval = intval;
+            assert(col->rows[row->linkpos[c]] == row);
+            assert(SCIPsetIsEQ(set, col->vals[row->linkpos[c]], row->vals[c]));
+            CHECK_OKAY( colChgCoefPos(col, set, lp, row->linkpos[c], newval) );
          }
-
-         if( !SCIPsetIsEQ(set, val, newval) )
-         {
-            /* if column knows of the row, change the corresponding coefficient in the column */
-            if( row->linkpos[c] >= 0 )
-            {
-               assert(col->rows[row->linkpos[c]] == row);
-               assert(SCIPsetIsEQ(set, col->vals[row->linkpos[c]], row->vals[c]));
-               CHECK_OKAY( colChgCoefPos(col, set, lp, row->linkpos[c], newval) );
-            }
             
-            /* change the coefficient in the row, and update the norms and integrality status */
-            CHECK_OKAY( rowChgCoefPos(row, set, lp, c, newval) );
-         }
-         else
-            row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+         /* change the coefficient in the row, and update the norms and integrality status */
+         CHECK_OKAY( rowChgCoefPos(row, set, lp, c, newval) );
       }
+      else
+         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    }
 
    /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
