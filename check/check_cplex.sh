@@ -1,37 +1,40 @@
-# $Id: check_cplex.sh,v 1.1 2002/10/23 14:31:35 bzfpfend Exp $
-CPLEXBIN=cplex75
+# $Id: check_cplex.sh,v 1.2 2003/11/21 09:18:58 bzfpfend Exp $
+CPLEXBIN=cplex
+TSTNAME=$1
 BINNAME=$CPLEXBIN.$2
-TSTNAME=`basename $1 .test`
+TIMELIMIT=$3
 
 OUTFILE=results/check.$TSTNAME.$BINNAME.out
 ERRFILE=results/check.$TSTNAME.$BINNAME.err
 TEXFILE=results/check.$TSTNAME.$BINNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINNAME.tmp
 
-date >$OUTFILE
-date >$ERRFILE
+uname -a >$OUTFILE
+uname -a >$ERRFILE
+date >>$OUTFILE
+date >>$ERRFILE
 
-for i in `cat $1`
+for i in `cat $TSTNAME.test`
 do
-    echo @01 $i ===========
-    echo @01 $i =========== >>$ERRFILE
     if [ -f $i ]
     then
-	echo read $i                          > $TMPFILE
-	echo set mip limits nodes 10000000      >> $TMPFILE
-	echo set timelimit 3600                 >> $TMPFILE
+	echo @01 $i ===========
+	echo @01 $i ===========                 >> $ERRFILE
+	echo read $i                             > $TMPFILE
+	echo set timelimit $TIMELIMIT           >> $TMPFILE
 	echo set clocktype 1                    >> $TMPFILE
 	echo set mip interval 10000             >> $TMPFILE
 	echo set mip tolerances absmipgap 1e-10 >> $TMPFILE
 	echo set mip tolerances mipgap 0.0      >> $TMPFILE
+	echo set mip limit treememory 2000      >> $TMPFILE
 	echo optimize                           >> $TMPFILE
 	echo quit                               >> $TMPFILE
 	$CPLEXBIN < $TMPFILE 2>>$ERRFILE
+	echo =ready=
     else
-	echo FILE NOT FOUND
-	echo FILE NOT FOUND >>$ERRFILE
+	echo @02 FILE NOT FOUND: $i ===========
+	echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
     fi
-    echo =ready=
 done | tee -a $OUTFILE
 
 rm $TMPFILE
@@ -39,5 +42,4 @@ rm $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-awk -f check_cplex.awk $OUTFILE > $TEXFILE
- 
+gawk -f check_cplex.awk $OUTFILE > $TEXFILE

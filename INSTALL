@@ -18,9 +18,6 @@
 In the following, some of the names depend on your machine and your
 compilation settings:
 
-- $(PAR):    sequential or parallel version
-             always "seq", parallel version is not yet implemented
-
 - $(OSTYPE): the operating system
              the string returned by "uname -s" in lower case
 
@@ -39,10 +36,8 @@ compilation settings:
 - $(OPT):    the optimization level of compilation
              "dbg", "opt", or "prf"
 
-For example, if you want to install sequential SCIP on a Linux system
-with a x86 processor using the gnu compiler in debug mode, you would have
-the following names:
-- $(PAR)    = seq
+For example, if you want to install SCIP on a Linux system with a x86 processor
+using the gnu compiler in debug mode, you would have the following names:
 - $(OSTYPE) = linux
 - $(ARCH)   = x86
 - $(COMP)   = gnu
@@ -75,8 +70,8 @@ Here is what you have to do to get SCIP running:
    - "COMP=gnu" to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
-3. To run the program enter "bin/scip.$(PAR).$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
-   (e.g. "bin/scip.seq.linux.x86.gnu.dbg.cpx")
+3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
+   (e.g. "bin/scip.linux.x86.gnu.dbg.cpx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "gmake doc"

@@ -1,4 +1,4 @@
-#--- $Id: make.seq.linux.x86.gnu.opt,v 1.2 2003/01/28 16:25:14 bzfpfend Exp $
+#--- $Id: make.linux.x86.gnu.opt,v 1.1 2003/11/21 09:18:58 bzfpfend Exp $
 CPPFLAGS	+=	-DNDEBUG -DWITH_READLINE
 CFLAGS		=	-O3 -march=pentiumpro -g
 CXXFLAGS	=	-O3 -march=pentiumpro -g

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.49 2003/11/20 17:42:00 bzfpfend Exp $
+# $Id: Makefile,v 1.50 2003/11/21 09:18:57 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -47,7 +47,8 @@ OSTYPE		:=	$(shell uname -s | tr A-Z a-z)
 
 OPT		=	dbg
 LPS		=	cpx
-PAR		=	seq
+TIME     	=  	3600
+TEST		=	miplib
 
 COMP		=	gnu
 CC		=	gcc
@@ -85,7 +86,7 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wbad-function-cast \
 			-Woverloaded-virtual -Wsign-promo -Wsynth -Wundef \
 			-Wcast-qual -Wold-style-cast -Wshadow 
 
-BASE		=	$(PAR).$(OSTYPE).$(ARCH).$(COMP).$(OPT)
+BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 
 
@@ -246,11 +247,11 @@ doc:
 
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST).test $(BINARY) $(SETTINGS);
+		/bin/sh ./check.sh $(TEST) $(BINARY) $(SETTINGS) $(TARGET).$(MACHINENAME) $(TIME);
 
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST).test $(OSTYPE).$(ARCH);
+		/bin/sh ./check_cplex.sh $(TEST) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME);
 
 $(OBJDIR):	
 		-mkdir -p $(OBJDIR)
