@@ -98,7 +98,7 @@ public:
       setSolver(&m_slu);
       setTester(&m_ratio);
       setPricer(&m_price);
-      /* no starter, no simplifier */
+      /* no starter, no simplifier, no scaler */
 
       m_slu.setUtype(SLUFactor::ETA);
 

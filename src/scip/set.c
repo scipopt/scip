@@ -943,6 +943,26 @@ RETCODE SCIPsetWriteParams(
    return SCIP_OKAY;
 }
 
+/** returns the array of all available SCIP parameters */
+PARAM** SCIPsetGetParams(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return SCIPparamsetGetParams(set->paramset);
+}
+
+/** returns the total number of all available SCIP parameters */
+int SCIPsetGetNParams(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return SCIPparamsetGetNParams(set->paramset);
+}
+
 /** inserts file reader in file reader list */
 RETCODE SCIPsetIncludeReader(
    SET*             set,                /**< global SCIP settings */

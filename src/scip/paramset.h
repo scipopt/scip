@@ -105,15 +105,51 @@ int SCIPparamGetInt(
    PARAM*           param               /**< parameter */
    );
 
+/** returns minimal value of int parameter */
+extern
+int SCIPparamGetIntMin(
+   PARAM*           param               /**< parameter */
+   );
+
+/** returns maximal value of int parameter */
+extern
+int SCIPparamGetIntMax(
+   PARAM*           param               /**< parameter */
+   );
+
 /** returns value of Longint parameter */
 extern
 Longint SCIPparamGetLongint(
    PARAM*           param               /**< parameter */
    );
 
+/** returns minimal value of longint parameter */
+extern
+Longint SCIPparamGetLongintMin(
+   PARAM*           param               /**< parameter */
+   );
+
+/** returns maximal value of longint parameter */
+extern
+Longint SCIPparamGetLongintMax(
+   PARAM*           param               /**< parameter */
+   );
+
 /** returns value of Real parameter */
 extern
 Real SCIPparamGetReal(
+   PARAM*           param               /**< parameter */
+   );
+
+/** returns minimal value of real parameter */
+extern
+Real SCIPparamGetRealMin(
+   PARAM*           param               /**< parameter */
+   );
+
+/** returns maximal value of real parameter */
+extern
+Real SCIPparamGetRealMax(
    PARAM*           param               /**< parameter */
    );
 
@@ -127,6 +163,53 @@ char SCIPparamGetChar(
 extern
 char* SCIPparamGetString(
    PARAM*           param               /**< parameter */
+   );
+
+/** sets value of Bool parameter */
+RETCODE SCIPparamSetBool(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   Bool             value               /**< new value of the parameter */
+   );
+
+/** sets value of int parameter */
+extern
+RETCODE SCIPparamSetInt(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   int              value               /**< new value of the parameter */
+   );
+
+/** sets value of Longint parameter */
+extern
+RETCODE SCIPparamSetLongint(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   Longint          value               /**< new value of the parameter */
+   );
+
+/** sets value of Real parameter */
+extern
+RETCODE SCIPparamSetReal(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   Real             value               /**< new value of the parameter */
+   );
+
+/** sets value of char parameter */
+extern
+RETCODE SCIPparamSetChar(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   char             value               /**< new value of the parameter */
+   );
+
+/** sets value of string parameter */
+extern
+RETCODE SCIPparamSetString(
+   PARAM*           param,              /**< parameter */
+   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   const char*      value               /**< new value of the parameter */
    );
 
 
@@ -348,6 +431,18 @@ RETCODE SCIPparamsetWrite(
    PARAMSET*        paramset,           /**< parameter set */
    const char*      filename,           /**< file name, or NULL for stdout */
    Bool             comments            /**< should parameter descriptions be written as comments? */
+   );
+
+/** returns the array of parameters */
+extern
+PARAM** SCIPparamsetGetParams(
+   PARAMSET*        paramset            /**< parameter set */
+   );
+
+/** returns the number of parameters in the parameter set */
+extern
+int SCIPparamsetGetNParams(
+   PARAMSET*        paramset            /**< parameter set */
    );
 
 #endif

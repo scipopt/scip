@@ -368,6 +368,28 @@ int SCIPparamGetInt(
       return param->data.intparam.actvalue;
 }
 
+/** returns minimal value of int parameter */
+int SCIPparamGetIntMin(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_INT);
+
+   return param->data.intparam.minvalue;
+}
+
+/** returns maximal value of int parameter */
+int SCIPparamGetIntMax(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_INT);
+
+   return param->data.intparam.maxvalue;
+}
+
 /** returns value of Longint parameter */
 Longint SCIPparamGetLongint(
    PARAM*           param               /**< parameter */
@@ -382,6 +404,28 @@ Longint SCIPparamGetLongint(
       return param->data.longintparam.actvalue;
 }
 
+/** returns minimal value of longint parameter */
+Longint SCIPparamGetLongintMin(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+
+   return param->data.longintparam.minvalue;
+}
+
+/** returns maximal value of longint parameter */
+Longint SCIPparamGetLongintMax(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+
+   return param->data.longintparam.maxvalue;
+}
+
 /** returns value of Real parameter */
 Real SCIPparamGetReal(
    PARAM*           param               /**< parameter */
@@ -394,6 +438,28 @@ Real SCIPparamGetReal(
       return *param->data.realparam.valueptr;
    else
       return param->data.realparam.actvalue;
+}
+
+/** returns minimal value of real parameter */
+Real SCIPparamGetRealMin(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+
+   return param->data.realparam.minvalue;
+}
+
+/** returns maximal value of real parameter */
+Real SCIPparamGetRealMax(
+   PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+
+   return param->data.realparam.maxvalue;
 }
 
 /** returns value of char parameter */
@@ -425,8 +491,7 @@ char* SCIPparamGetString(
 }
 
 /** sets value of Bool parameter */
-static
-RETCODE paramSetBool(
+RETCODE SCIPparamSetBool(
    PARAM*           param,              /**< parameter */
    SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    Bool             value               /**< new value of the parameter */
@@ -453,8 +518,7 @@ RETCODE paramSetBool(
 }
 
 /** sets value of int parameter */
-static
-RETCODE paramSetInt(
+RETCODE SCIPparamSetInt(
    PARAM*           param,              /**< parameter */
    SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    int              value               /**< new value of the parameter */
@@ -481,8 +545,7 @@ RETCODE paramSetInt(
 }
 
 /** sets value of Longint parameter */
-static
-RETCODE paramSetLongint(
+RETCODE SCIPparamSetLongint(
    PARAM*           param,              /**< parameter */
    SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    Longint          value               /**< new value of the parameter */
@@ -509,8 +572,7 @@ RETCODE paramSetLongint(
 }
 
 /** sets value of Real parameter */
-static
-RETCODE paramSetReal(
+RETCODE SCIPparamSetReal(
    PARAM*           param,              /**< parameter */
    SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    Real             value               /**< new value of the parameter */
@@ -537,8 +599,7 @@ RETCODE paramSetReal(
 }
 
 /** sets value of char parameter */
-static
-RETCODE paramSetChar(
+RETCODE SCIPparamSetChar(
    PARAM*           param,              /**< parameter */
    SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    char             value               /**< new value of the parameter */
@@ -565,8 +626,7 @@ RETCODE paramSetChar(
 }
 
 /** sets value of string parameter */
-static
-RETCODE paramSetString(
+RETCODE SCIPparamSetString(
    PARAM*           param,              /**< parameter */
    SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    const char*      value               /**< new value of the parameter */
@@ -646,7 +706,7 @@ RETCODE paramCreateBool(
    (*param)->data.boolparam.valueptr = valueptr;
    (*param)->data.boolparam.defaultvalue = defaultvalue;
 
-   CHECK_OKAY( paramSetBool(*param, NULL, defaultvalue) );
+   CHECK_OKAY( SCIPparamSetBool(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -677,7 +737,7 @@ RETCODE paramCreateInt(
    (*param)->data.intparam.minvalue = minvalue;
    (*param)->data.intparam.maxvalue = maxvalue;
 
-   CHECK_OKAY( paramSetInt(*param, NULL, defaultvalue) );
+   CHECK_OKAY( SCIPparamSetInt(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -708,7 +768,7 @@ RETCODE paramCreateLongint(
    (*param)->data.longintparam.minvalue = minvalue;
    (*param)->data.longintparam.maxvalue = maxvalue;
 
-   CHECK_OKAY( paramSetLongint(*param, NULL, defaultvalue) );
+   CHECK_OKAY( SCIPparamSetLongint(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -739,7 +799,7 @@ RETCODE paramCreateReal(
    (*param)->data.realparam.minvalue = minvalue;
    (*param)->data.realparam.maxvalue = maxvalue;
 
-   CHECK_OKAY( paramSetReal(*param, NULL, defaultvalue) );
+   CHECK_OKAY( SCIPparamSetReal(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -773,7 +833,7 @@ RETCODE paramCreateChar(
    else
       (*param)->data.charparam.allowedvalues = NULL;
 
-   CHECK_OKAY( paramSetChar(*param, NULL, defaultvalue) );
+   CHECK_OKAY( SCIPparamSetChar(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -803,7 +863,7 @@ RETCODE paramCreateString(
    ALLOC_OKAY( duplicateMemoryArray(&(*param)->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
    (*param)->data.stringparam.actvalue = NULL;
 
-   CHECK_OKAY( paramSetString(*param, NULL, defaultvalue) );
+   CHECK_OKAY( SCIPparamSetString(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -863,11 +923,11 @@ RETCODE paramParseBool(
 
    if( strcasecmp(valuestr, "TRUE") == 0 )
    {
-      CHECK_OKAY( paramSetBool(param, scip, TRUE) );
+      CHECK_OKAY( SCIPparamSetBool(param, scip, TRUE) );
    }
    else if( strcasecmp(valuestr, "FALSE") == 0 )
    {
-      CHECK_OKAY( paramSetBool(param, scip, FALSE) );
+      CHECK_OKAY( SCIPparamSetBool(param, scip, FALSE) );
    }
    else
    {
@@ -896,7 +956,7 @@ RETCODE paramParseInt(
 
    if( sscanf(valuestr, "%d", &value) == 1 )
    {
-      CHECK_OKAY( paramSetInt(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetInt(param, scip, value) );
    }
    else
    {
@@ -925,7 +985,7 @@ RETCODE paramParseLongint(
 
    if( sscanf(valuestr, LONGINT_FORMAT, &value) == 1 )
    {
-      CHECK_OKAY( paramSetLongint(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetLongint(param, scip, value) );
    }
    else
    {
@@ -954,7 +1014,7 @@ RETCODE paramParseReal(
 
    if( sscanf(valuestr, REAL_FORMAT, &value) == 1 )
    {
-      CHECK_OKAY( paramSetReal(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetReal(param, scip, value) );
    }
    else
    {
@@ -983,7 +1043,7 @@ RETCODE paramParseChar(
 
    if( sscanf(valuestr, "%c", &value) == 1 )
    {
-      CHECK_OKAY( paramSetChar(param, scip, value) );
+      CHECK_OKAY( SCIPparamSetChar(param, scip, value) );
    }
    else
    {
@@ -1024,7 +1084,7 @@ RETCODE paramParseString(
    /* remove the quotes */
    valuestr[len-1] = '\0';
    valuestr++;
-   CHECK_OKAY( paramSetString(param, scip, valuestr) );
+   CHECK_OKAY( SCIPparamSetString(param, scip, valuestr) );
    
    return SCIP_OKAY;
 }
@@ -1515,8 +1575,8 @@ RETCODE SCIPparamsetSetBool(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the actual parameter's value */
-   CHECK_OKAY( paramSetBool(param, scip, value) );
-
+   CHECK_OKAY( SCIPparamSetBool(param, scip, value) );
+   
    return SCIP_OKAY;
 }
 
@@ -1540,7 +1600,7 @@ RETCODE SCIPparamsetSetInt(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the actual parameter's value */
-   CHECK_OKAY( paramSetInt(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetInt(param, scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1565,7 +1625,7 @@ RETCODE SCIPparamsetSetLongint(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the actual parameter's value */
-   CHECK_OKAY( paramSetLongint(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetLongint(param, scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1590,7 +1650,7 @@ RETCODE SCIPparamsetSetReal(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the actual parameter's value */
-   CHECK_OKAY( paramSetReal(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetReal(param, scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1615,7 +1675,7 @@ RETCODE SCIPparamsetSetChar(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the actual parameter's value */
-   CHECK_OKAY( paramSetChar(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetChar(param, scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1640,7 +1700,7 @@ RETCODE SCIPparamsetSetString(
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the actual parameter's value */
-   CHECK_OKAY( paramSetString(param, scip, value) );
+   CHECK_OKAY( SCIPparamSetString(param, scip, value) );
 
    return SCIP_OKAY;
 }
@@ -1862,3 +1922,22 @@ RETCODE SCIPparamsetWrite(
    return SCIP_OKAY;
 }
 
+/** returns the array of parameters */
+PARAM** SCIPparamsetGetParams(
+   PARAMSET*        paramset            /**< parameter set */
+   )
+{
+   assert(paramset != NULL);
+
+   return paramset->params;
+}
+
+/** returns the number of parameters in the parameter set */
+int SCIPparamsetGetNParams(
+   PARAMSET*        paramset            /**< parameter set */
+   )
+{
+   assert(paramset != NULL);
+
+   return paramset->nparams;
+}

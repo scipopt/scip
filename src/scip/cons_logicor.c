@@ -523,11 +523,11 @@ RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** analyses conflicting assignment on given constraint, and adds conflict clause to problem */
+/** analyzes conflicting assignment on given constraint, and adds conflict clause to problem */
 static
-RETCODE analyseConflict(
+RETCODE analyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< logic or constraint to be analysed */
+   CONSDATA*        consdata            /**< logic or constraint to be analyzed */
    )
 {
    int v;
@@ -541,8 +541,8 @@ RETCODE analyseConflict(
       CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
    }
 
-   /* analyse the conflict */
-   CHECK_OKAY( SCIPanalyseConflict(scip, NULL) );
+   /* analyze the conflict */
+   CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
 
    return SCIP_OKAY;
 }
@@ -736,7 +736,7 @@ RETCODE processWatchedVars(
          if( SCIPconsIsGlobal(cons) )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-            CHECK_OKAY( analyseConflict(scip, consdata) );
+            CHECK_OKAY( analyzeConflict(scip, consdata) );
          }
 
          /* mark the node to be cut off */
@@ -1430,7 +1430,7 @@ RETCODE branchPseudo(
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &branchcands, maxnbranchcands) );
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &usescores, maxnbranchcands) );
    
-   /* sort fractional variables by number of uses in enabled logic or constraints */
+   /* sort unfixed variables by number of uses in enabled logic or constraints */
    nbranchcands = 0;
    for( i = 0; i < npseudocands; ++i )
    {

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.47 2003/11/03 14:18:58 bzfpfend Exp $
+# $Id: Makefile,v 1.48 2003/11/17 17:52:54 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -143,6 +143,7 @@ SCIPOBJ		=	branch.o \
 			conflict.o \
 			cons.o \
 			cutpool.o \
+			dialog.o \
 			disp.o \
 			event.o \
 			heur.o \
@@ -184,6 +185,7 @@ SCIPOBJ		=	branch.o \
 			cons_setppc.o \
 			cons_varlb.o \
 			cons_varub.o \
+			dialog_default.o \
 			disp_default.o \
 			heur_diving.o \
 			heur_rounding.o \

@@ -363,6 +363,18 @@ RETCODE SCIPsetWriteParams(
    Bool             comments            /**< should parameter descriptions be written as comments? */
    );
 
+/** returns the array of all available SCIP parameters */
+extern
+PARAM** SCIPsetGetParams(
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns the total number of all available SCIP parameters */
+extern
+int SCIPsetGetNParams(
+   SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts file reader in file reader list */
 extern
 RETCODE SCIPsetIncludeReader(

@@ -607,11 +607,11 @@ RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** analyses conflicting assignment on given constraint where all of the variables where assigned to zero,
+/** analyzes conflicting assignment on given constraint where all of the variables where assigned to zero,
  *  and adds conflict clause to problem
  */
 static
-RETCODE analyseConflictZero(
+RETCODE analyzeConflictZero(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
@@ -629,17 +629,17 @@ RETCODE analyseConflictZero(
       CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
    }
 
-   /* analyse the conflict */
-   CHECK_OKAY( SCIPanalyseConflict(scip, NULL) );
+   /* analyze the conflict */
+   CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
 
    return SCIP_OKAY;
 }
 
-/** analyses conflicting assignment on given constraint where two of the variables where assigned to one,
+/** analyzes conflicting assignment on given constraint where two of the variables where assigned to one,
  *  and adds conflict clause to problem
  */
 static
-RETCODE analyseConflictOne(
+RETCODE analyzeConflictOne(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
@@ -664,8 +664,8 @@ RETCODE analyseConflictOne(
    }
    assert(n == 2);
 
-   /* analyse the conflict */
-   CHECK_OKAY( SCIPanalyseConflict(scip, NULL) );
+   /* analyze the conflict */
+   CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
 
    return SCIP_OKAY;
 }
@@ -716,7 +716,7 @@ RETCODE processFixings(
          if( SCIPconsIsGlobal(cons) )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-            CHECK_OKAY( analyseConflictOne(scip, consdata) );
+            CHECK_OKAY( analyzeConflictOne(scip, consdata) );
          }
          *cutoff = TRUE;
       }
@@ -806,7 +806,7 @@ RETCODE processFixings(
             if( SCIPconsIsGlobal(cons) )
             {
                /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-               CHECK_OKAY( analyseConflictZero(scip, consdata) );
+               CHECK_OKAY( analyzeConflictZero(scip, consdata) );
             }
             *cutoff = TRUE;
          }
@@ -1467,7 +1467,7 @@ RETCODE branchPseudo(
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &branchcands, maxnbranchcands) );
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &canduses, maxnbranchcands) );
    
-   /* sort fractional variables by number of uses in enabled set partitioning / packing / covering constraints */
+   /* sort unfixed variables by number of uses in enabled set partitioning / packing / covering constraints */
    nbranchcands = 0;
    for( i = 0; i < npseudocands; ++i )
    {

@@ -41,6 +41,7 @@
 #include "conflict.h"
 #include "primal.h"
 #include "event.h"
+#include "dialog.h"
 
 
 /** SCIP main data structure */
@@ -65,6 +66,7 @@ struct Scip
    PRIMAL*          primal;             /**< primal data and solution storage */
    EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
+   DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
 };
 
 

@@ -43,7 +43,7 @@ Bool SCIPsolveIsStopped(
       || SCIPclockGetTime(stat->solvingtime) >= set->timelimit
       || (set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit)
       || (SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit))
-      || (set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_SOLVING &&
+      || (set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED &&
          SCIPgetNSolsFound(set->scip) >= set->sollimit));
 }
 
@@ -67,7 +67,7 @@ void SCIPsolvePrintStopReason(
       fprintf(file, "memory limit reached");
    else if( SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit) )
       fprintf(file, "gap limit reached");
-   else if( set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_SOLVING
+   else if( set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_PRESOLVED
       && SCIPgetNSolsFound(set->scip) >= set->sollimit )
       fprintf(file, "solution limit reached");
 }
@@ -447,11 +447,11 @@ RETCODE solveNodeLP(
    }
    debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
 
-   /* analyse an infeasible LP */
+   /* analyze an infeasible LP */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
       || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
    {
-      CHECK_OKAY( SCIPlpconflictAnalyse(lpconflict, set, prob, lp, NULL) );
+      CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, set, prob, lp, NULL) );
    }
 
    return SCIP_OKAY;

@@ -1,6 +1,6 @@
 # verbosity level of output
 # [type: int, range: [0,4], default: 2]
-global/display/verblevel = 4 # ??? 2
+global/display/verblevel = 4
 
 # maximal number of characters in a node information line
 # [type: int, range: [0,2147483647], default: 139]
@@ -31,11 +31,11 @@ global/numerics/sumepsilon = 1e-06
 global/numerics/feastol = 1e-06
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.1]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
 global/numerics/cutvioleps = 0.1
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.005]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
 global/numerics/cutviolepsroot = 0.005
 
 # fraction of maximal memory usage resulting in switch to memory saving mode
@@ -72,7 +72,7 @@ global/nodeselection/stdnodeselector = ""
 
 # memory saving mode node selection method
 # [type: string, default: ""]
-global/nodeselection/memsavenodeselector = "dfs" # ???
+global/nodeselection/memsavenodeselector = "dfs"
 
 # branching score factor to weigh downward and upward gain prediction
 # [type: real, range: [0,1], default: 0.167]
@@ -113,6 +113,14 @@ global/separating/cutagelimit = 128
 # maximum age an unnecessary constraint can reach before it is deleted
 # [type: int, range: [1,2147483647], default: 128]
 global/constraints/consagelimit = 128
+
+# maximal fraction of binary variables involved in a conflict clause
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
+global/pricing/maxconfvarsfac = 0.02
+
+# minimal absolute maximum of variables involved in a conflict clause
+# [type: int, range: [0,2147483647], default: 20]
+global/solutions/minmaxconfvars = 20
 
 # maximal number of solutions to store in the solution storage
 # [type: int, range: [1,2147483647], default: 256]
@@ -174,101 +182,13 @@ global/timing/clocksenabled = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 global/catchctrlc = TRUE
 
-# should columns be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reader/cnf/dynamiccols = FALSE
+# frequency for separating cuts of constraint handler <and> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+conshdlr/and/sepafreq = -1
 
-# should rows be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reader/cnf/dynamicrows = FALSE
-
-# should columns be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reader/mps/dynamiccols = FALSE
-
-# should rows be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reader/mps/dynamicrows = FALSE
-
-# display activation status of display column <solfound> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/solfound/active = 1
-
-# display activation status of display column <time> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/time/active = 1
-
-# display activation status of display column <nodenum> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/nodenum/active = 1
-
-# display activation status of display column <nodesleft> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/nodesleft/active = 1
-
-# display activation status of display column <lpiterations> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/lpiterations/active = 1
-
-# display activation status of display column <memused> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/memused/active = 1
-
-# display activation status of display column <actdepth> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/actdepth/active = 1
-
-# display activation status of display column <maxdepth> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/maxdepth/active = 1
-
-# display activation status of display column <actvars> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/actvars/active = 1
-
-# display activation status of display column <actconss> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/actconss/active = 1
-
-# display activation status of display column <actcols> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/actcols/active = 1
-
-# display activation status of display column <actrows> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/actrows/active = 1
-
-# display activation status of display column <cuts> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/cuts/active = 1
-
-# display activation status of display column <separounds> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/separounds/active = 1
-
-# display activation status of display column <poolsize> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/poolsize/active = 1
-
-# display activation status of display column <actdualbound> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/actdualbound/active = 1
-
-# display activation status of display column <avgdualbound> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/avgdualbound/active = 1
-
-# display activation status of display column <dualbound> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/dualbound/active = 1
-
-# display activation status of display column <primalbound> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/primalbound/active = 1
-
-# display activation status of display column <gap> (0: off, 1: auto, 2:on)
-# [type: int, range: [0,2], default: 1]
-display/gap/active = 1
+# frequency for propagating domains of constraint handler <and> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+conshdlr/and/propfreq = -1
 
 # frequency for separating cuts of constraint handler <integral> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -289,6 +209,10 @@ conshdlr/linear/propfreq = 4
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 5]
 conshdlr/linear/tightenboundsfreq = 5
+
+# maximal allowed relative gain in maximum norm for constraint aggregation
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
+conshdlr/linear/maxaggrnormscale = 4
 
 # frequency for separating cuts of constraint handler <logicor> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 4]
@@ -321,6 +245,22 @@ conshdlr/setppc/propfreq = 1
 # number of children created in pseudo branching
 # [type: int, range: [2,2147483647], default: 2]
 conshdlr/setppc/npseudobranches = 2
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/cnf/dynamiccols = FALSE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/cnf/dynamicrows = FALSE
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/mps/dynamiccols = FALSE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/mps/dynamicrows = FALSE
 
 # minimal plunging depth, before new best node may be selected
 # [type: int, range: [0,2147483647], default: 10]
@@ -401,4 +341,88 @@ separator/gomory/maxsepacuts = 32
 # maximal number of gomory cuts separated per separation round in the root node
 # [type: int, range: [0,2147483647], default: 128]
 separator/gomory/maxsepacutsroot = 128
+
+# display activation status of display column <solfound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/solfound/active = 1
+
+# display activation status of display column <time> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/time/active = 1
+
+# display activation status of display column <nodenum> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nodenum/active = 1
+
+# display activation status of display column <nodesleft> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nodesleft/active = 1
+
+# display activation status of display column <lpiterations> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/lpiterations/active = 1
+
+# display activation status of display column <memused> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/memused/active = 1
+
+# display activation status of display column <actdepth> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actdepth/active = 1
+
+# display activation status of display column <maxdepth> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/maxdepth/active = 1
+
+# display activation status of display column <actvars> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actvars/active = 1
+
+# display activation status of display column <actconss> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actconss/active = 1
+
+# display activation status of display column <actcols> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actcols/active = 1
+
+# display activation status of display column <actrows> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actrows/active = 1
+
+# display activation status of display column <cuts> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/cuts/active = 1
+
+# display activation status of display column <separounds> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/separounds/active = 1
+
+# display activation status of display column <poolsize> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/poolsize/active = 1
+
+# display activation status of display column <conflicts> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/conflicts/active = 1
+
+# display activation status of display column <actdualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actdualbound/active = 1
+
+# display activation status of display column <avgdualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/avgdualbound/active = 1
+
+# display activation status of display column <dualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/dualbound/active = 1
+
+# display activation status of display column <primalbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/primalbound/active = 1
+
+# display activation status of display column <gap> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/gap/active = 1
 

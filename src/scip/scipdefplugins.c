@@ -25,7 +25,6 @@
 #include "scipdefplugins.h"
 #include "reader_cnf.h"
 #include "reader_mps.h"
-#include "disp_default.h"
 #include "cons_and.h"
 #include "cons_binpack.h"
 #include "cons_eqknapsack.h"
@@ -48,6 +47,8 @@
 #include "heur_diving.h"
 #include "heur_rounding.h"
 #include "sepa_gomory.h"
+#include "disp_default.h"
+#include "dialog_default.h"
 
 
 
@@ -74,7 +75,6 @@ RETCODE SCIPincludeDefaultPlugins(
 
    CHECK_OKAY( SCIPincludeReaderCnf(scip) );
    CHECK_OKAY( SCIPincludeReaderMps(scip) );
-   CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludePresolDualfix(scip) );
    CHECK_OKAY( SCIPincludePresolTrivial(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
@@ -86,6 +86,9 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeHeurDiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
+   CHECK_OKAY( SCIPincludeDispDefault(scip) );
+   CHECK_OKAY( SCIPincludeDialogDefault(scip) );
+   CHECK_OKAY( SCIPincludeDialogParams(scip) );
 
    return SCIP_OKAY;
 }

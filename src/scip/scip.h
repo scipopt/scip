@@ -33,9 +33,10 @@ enum Stage
    SCIP_STAGE_PROBLEM    = 1,           /**< the problem is being created and modified */
    SCIP_STAGE_INITSOLVE  = 2,           /**< the solving process data is being initialized */
    SCIP_STAGE_PRESOLVING = 3,           /**< the problem is being presolved */
-   SCIP_STAGE_SOLVING    = 4,           /**< the problem is being solved */
-   SCIP_STAGE_SOLVED     = 5,           /**< the problem was solved */
-   SCIP_STAGE_FREESOLVE  = 6            /**< the solving process data is being freed */
+   SCIP_STAGE_PRESOLVED  = 4,           /**< the problem was presolved */
+   SCIP_STAGE_SOLVING    = 5,           /**< the problem is being solved */
+   SCIP_STAGE_SOLVED     = 6,           /**< the problem was solved */
+   SCIP_STAGE_FREESOLVE  = 7            /**< the solving process data is being freed */
 };
 typedef enum Stage STAGE;
 
@@ -68,6 +69,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "misc.h"
 #include "paramset.h"
 #include "clock.h"
+#include "dialog.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -352,6 +354,18 @@ RETCODE SCIPwriteParams(
    Bool             comments            /**< should parameter descriptions be written as comments? */
    );
 
+/** returns the array of all available SCIP parameters */
+extern
+PARAM** SCIPgetParams(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the total number of all available SCIP parameters */
+extern
+int SCIPgetNParams(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
@@ -632,6 +646,71 @@ DISP* SCIPfindDisp(
    const char*      name                /**< name of event handler */
    );
 
+/**@} */
+
+
+
+
+/*
+ * user interactive dialog methods
+ */
+
+/**@name User Interactive Dialog Methods */
+/**@{ */
+
+/** creates and captures a dialog */
+extern
+RETCODE SCIPcreateDialog(
+   SCIP*            scip,               /**< SCIP data structure */
+   DIALOG**         dialog,             /**< pointer to store the dialog */
+   DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
+   DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
+   const char*      name,               /**< name of dialog: command name appearing in parent's dialog menu */
+   const char*      desc,               /**< description of dialog used if description output method is NULL */
+   DIALOGDATA*      dialogdata          /**< user defined dialog data */
+   );
+
+/** captures a dialog */
+extern
+RETCODE SCIPcaptureDialog(
+   SCIP*            scip,               /**< SCIP data structure */
+   DIALOG*          dialog              /**< dialog */
+   );
+
+/** releases a dialog */
+extern
+RETCODE SCIPreleaseDialog(
+   SCIP*            scip,               /**< SCIP data structure */
+   DIALOG**         dialog              /**< pointer to the dialog */
+   );
+
+/** makes given dialog the root dialog of SCIP's interactive user shell; captures dialog and releases former root dialog */
+extern
+RETCODE SCIPsetRootDialog(
+   SCIP*            scip,               /**< SCIP data structure */
+   DIALOG*          dialog              /**< dialog to be the root */
+   );
+
+/** returns the root dialog of SCIP's interactive user shell */
+extern
+DIALOG* SCIPgetRootDialog(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** adds a sub dialog to the given dialog as menu entry and captures it */
+extern
+RETCODE SCIPaddDialogEntry(
+   SCIP*            scip,               /**< SCIP data structure */
+   DIALOG*          dialog,             /**< dialog to extend, or NULL for root dialog */
+   DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
+   );
+
+/** starts interactive mode of SCIP by executing the root dialog */
+extern
+RETCODE SCIPstartInteraction(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+   
 /**@} */
 
 
@@ -1229,7 +1308,7 @@ RETCODE SCIPinitConflictAnalysis(
 
 /** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
  *  one of the following two cases:
- *   1. Before calling the SCIPanalyseConflict() method, SCIPaddConflictVar() should be called for each variable,
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
  *      whose current assignment lead to the conflict (i.e. the infeasibility of a globally valid constraint).
  *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
  *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
@@ -1240,13 +1319,13 @@ RETCODE SCIPaddConflictVar(
    VAR*             var                 /**< conflict variable to add to conflict candidate queue */
    );
 
-/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set; the conflict analysis
  *  should only be called if a globally valid constraint was violated -- otherwise, the resulting conflict
  *  constraint wouldn't be globally valid
  */
 extern
-RETCODE SCIPanalyseConflict(
+RETCODE SCIPanalyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );

@@ -87,7 +87,7 @@
  *     1. call SCIPinitConflictAnalysis() to initialize the conflict queue,
  *     2. call SCIPaddConflictVar() for each variable in the infeasible
  *        constraint,
- *     3. call SCIPanalyseConflict() to analyse the conflict and add an
+ *     3. call SCIPanalyzeConflict() to analyze the conflict and add an
  *        appropriate conflict constraint.
  */
 
@@ -119,7 +119,7 @@ struct ConflictHdlr
 /** conflict analysis data structure for propagation conflicts */
 struct Conflict
 {
-   CLOCK*           analysetime;        /**< time used for propagation conflict analysis */
+   CLOCK*           analyzetime;        /**< time used for propagation conflict analysis */
    PQUEUE*          varqueue;           /**< unprocessed conflict variables */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
    int              conflictvarssize;   /**< size of conflictvars array */
@@ -134,7 +134,7 @@ struct LPConflict
    /* ????? MARC: hier kannst Du Deine "permanent" gehaltenen Daten unterbringen, z.B. wie das folgende;
     *             beachte, dass Du das in SCIPlpconflictCreate() und SCIPlpconflictFree() initialisierst bzw. freigibst
     */
-   CLOCK*           analysetime;        /**< time used for infeasible LP conflict analysis */
+   CLOCK*           analyzetime;        /**< time used for infeasible LP conflict analysis */
    LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
    int              conflictvarssize;   /**< size of conflictvars array */
@@ -445,7 +445,7 @@ RETCODE SCIPconflictCreate(
 
    ALLOC_OKAY( allocMemory(conflict) );
 
-   CHECK_OKAY( SCIPclockCreate(&(*conflict)->analysetime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*conflict)->analyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->varqueue, set->memgrowinit, set->memgrowfac, conflictVarCmp) );
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvarssize = 0;
@@ -464,7 +464,7 @@ RETCODE SCIPconflictFree(
    assert(conflict != NULL);
    assert(*conflict != NULL);
 
-   SCIPclockFree(&(*conflict)->analysetime);
+   SCIPclockFree(&(*conflict)->analyzetime);
    SCIPpqueueFree(&(*conflict)->varqueue);
    freeMemoryArrayNull(&(*conflict)->conflictvars);
    freeMemory(conflict);
@@ -528,11 +528,11 @@ RETCODE SCIPconflictAddVar(
    return SCIP_OKAY;
 }
 
-/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and creates a conflict set in the
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and creates a conflict set in the
  *  conflict analysis data structure
  */
 static
-RETCODE conflictAnalyse(
+RETCODE conflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    int              maxsize,            /**< maximal size of conflict set */
@@ -551,10 +551,10 @@ RETCODE conflictAnalyse(
 
    *success = FALSE;
 
-   /* check, if there is something to analyse */
+   /* check, if there is something to analyze */
    if( SCIPpqueueNElems(conflict->varqueue) == 0 )
    {
-      errorMessage("no conflict variables to analyse");
+      errorMessage("no conflict variables to analyze");
       return SCIP_INVALIDDATA;
    }
 
@@ -633,10 +633,10 @@ RETCODE conflictAnalyse(
    return SCIP_OKAY;
 }
 
-/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
-RETCODE SCIPconflictAnalyse(
+RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
@@ -664,12 +664,12 @@ RETCODE SCIPconflictAnalyse(
       return SCIP_OKAY;
 
    /* start timing */
-   SCIPclockStart(conflict->analysetime, set);
+   SCIPclockStart(conflict->analyzetime, set);
 
    conflict->ncalls++;
 
-   /* analyse conflict */
-   CHECK_OKAY( conflictAnalyse(conflict, set, maxsize, &valid) );
+   /* analyze conflict */
+   CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, &valid) );
 
    /* if a valid conflict set was found, call the conflict handlers */
    if( valid )
@@ -700,7 +700,7 @@ RETCODE SCIPconflictAnalyse(
    }
 
    /* stop timing */
-   SCIPclockStop(conflict->analysetime, set);
+   SCIPclockStop(conflict->analyzetime, set);
 
    return SCIP_OKAY;
 }
@@ -712,7 +712,7 @@ Real SCIPconflictGetTime(
 {
    assert(conflict != NULL);
 
-   return SCIPclockGetTime(conflict->analysetime);
+   return SCIPclockGetTime(conflict->analyzetime);
 }
 
 /** gets number of calls to propagation conflict analysis */
@@ -757,7 +757,7 @@ RETCODE SCIPlpconflictCreate(
 
    ALLOC_OKAY( allocMemory(lpconflict) );
 
-   CHECK_OKAY( SCIPclockCreate(&(*lpconflict)->analysetime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*lpconflict)->analyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPlpiCreate(&(*lpconflict)->lpi, "LPconflict") );
    (*lpconflict)->conflictvars = NULL;
    (*lpconflict)->conflictvarssize = 0;
@@ -776,7 +776,7 @@ RETCODE SCIPlpconflictFree(
    assert(lpconflict != NULL);
    assert(*lpconflict != NULL);
 
-   SCIPclockFree(&(*lpconflict)->analysetime);
+   SCIPclockFree(&(*lpconflict)->analyzetime);
    CHECK_OKAY( SCIPlpiFree(&(*lpconflict)->lpi) );
    freeMemoryArrayNull(&(*lpconflict)->conflictvars);
    freeMemory(lpconflict);
@@ -784,9 +784,9 @@ RETCODE SCIPlpconflictFree(
    return SCIP_OKAY;
 }
 
-/** analyses an infeasible LP trying to create a conflict set in the LP conflict analysis data structure */
+/** analyzes an infeasible LP trying to create a conflict set in the LP conflict analysis data structure */
 static
-RETCODE lpconflictAnalyse(
+RETCODE lpconflictAnalyze(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
@@ -810,20 +810,20 @@ RETCODE lpconflictAnalyse(
     *               CHECK_OKAY( lpconflictEnsureConflictvarsMem(lpconflict, set, num) );
     *             wobei num die gewuenschte Mindestgroesse ist.
     *             Das LPI interface kennst Du ja schon ein bisschen. Fuer den Anfang wuerde ich
-    *             die Analyse erst mal mit nem 
+    *             die Analyze erst mal mit nem 
     *               CHECK_OKAY( SCIPlpiClear(lpi) );
     *             beginnen. Wie man das macht, dass das LP nur upgedated werden muss, koennen wir
     *             uns ja spaeter noch ueberlegen.
     */
-   /*printf("LP infeasible: analyse LP conflict\n");*/ /*??????????????????????*/
+   /*printf("LP infeasible: analyze LP conflict\n");*/ /*??????????????????????*/
 
    return SCIP_OKAY;
 }
 
-/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
-RETCODE SCIPlpconflictAnalyse(
+RETCODE SCIPlpconflictAnalyze(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
@@ -851,12 +851,12 @@ RETCODE SCIPlpconflictAnalyse(
       return SCIP_OKAY;
 
    /* start timing */
-   SCIPclockStart(lpconflict->analysetime, set);
+   SCIPclockStart(lpconflict->analyzetime, set);
 
    lpconflict->ncalls++;
 
-   /* analyse conflict */
-   CHECK_OKAY( lpconflictAnalyse(lpconflict, set, lp, maxsize, &valid) );
+   /* analyze conflict */
+   CHECK_OKAY( lpconflictAnalyze(lpconflict, set, lp, maxsize, &valid) );
 
    /* if a valid conflict set was found, call the conflict handlers */
    if( valid )
@@ -887,7 +887,7 @@ RETCODE SCIPlpconflictAnalyse(
    }
 
    /* stop timing */
-   SCIPclockStop(lpconflict->analysetime, set);
+   SCIPclockStop(lpconflict->analyzetime, set);
 
    return SCIP_OKAY;
 }
@@ -899,7 +899,7 @@ Real SCIPlpconflictGetTime(
 {
    assert(lpconflict != NULL);
 
-   return SCIPclockGetTime(lpconflict->analysetime);
+   return SCIPclockGetTime(lpconflict->analyzetime);
 }
 
 /** gets number of calls to infeasible LP conflict analysis */

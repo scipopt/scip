@@ -38,33 +38,23 @@ RETCODE runSCIP(
    SCIP* scip = NULL;
 
 
-   /****************************************
-    * Version information and syntax check *
-    ****************************************/
+   /***********************
+    * Version information *
+    ***********************/
 
    SCIPprintVersion(NULL);
-
-   if( argc < 2 )
-   {
-      printf("syntax: %s <problem> [parameter file]\n", argv[0]);
-      return SCIP_OKAY;
-   }
-
+   printf("\n");
 
 
    /*********
     * Setup *
     *********/
 
-   printf("\nsetup SCIP\n");
-   printf("==========\n\n");
-
    /* initialize SCIP */
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* include default SCIP plugins */
    CHECK_OKAY( SCIPincludeDefaultPlugins(scip) );
-
 
 
    /**************
@@ -89,7 +79,21 @@ RETCODE runSCIP(
    /*CHECK_OKAY( SCIPwriteParams(scip, "scip.set", TRUE) );*/
 
 
+   /********************
+    * Interactive mode *
+    ********************/
 
+   if( argc < 2 )
+   {
+      printf("\n");
+
+      /* start user interactive mode */
+      CHECK_OKAY( SCIPstartInteraction(scip) );
+
+      return SCIP_OKAY;
+   }
+
+   
    /********************
     * Problem Creation *
     ********************/
@@ -108,7 +112,7 @@ RETCODE runSCIP(
    printf("=============\n\n");
    CHECK_OKAY( SCIPsolve(scip) );
 
-#if 1
+#if 0
    printf("\ntransformed primal solution:\n");
    printf("============================\n\n");
    CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
@@ -139,10 +143,6 @@ RETCODE runSCIP(
     * Deinitialization *
     ********************/
 
-   printf("\nfree SCIP\n");
-   printf("=========\n\n");
-
-   /* free SCIP */
    CHECK_OKAY( SCIPfree(&scip) );
 
 

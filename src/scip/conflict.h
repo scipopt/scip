@@ -213,11 +213,11 @@ RETCODE SCIPconflictAddVar(
    VAR*             var                 /**< problem variable */
    );
 
-/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
 extern
-RETCODE SCIPconflictAnalyse(
+RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
@@ -262,11 +262,11 @@ RETCODE SCIPlpconflictFree(
    LPCONFLICT**     lpconflict          /**< pointer to LP conflict analysis data */
    );
 
-/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
 extern
-RETCODE SCIPlpconflictAnalyse(
+RETCODE SCIPlpconflictAnalyze(
    LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
