@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.134 2004/08/04 15:29:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.135 2004/08/06 08:18:02 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -968,7 +968,7 @@ void checkLinks(
       col = lp->cols[i];
       ASSERT(col != NULL);
       ASSERT(!lp->flushed || col->lppos >= 0 || col->primsol == 0.0);
-      ASSERT(!lp->flushed || col->lppos >= 0 || col->farkas == 0.0);
+      ASSERT(!lp->flushed || col->lppos >= 0 || col->farkascoef == 0.0);
       ASSERT(col->nlprows <= col->len);
       ASSERT(col->lppos == -1 || col->lppos >= lp->lpifirstchgcol || col->nunlinked == 0);
 
@@ -2193,7 +2193,7 @@ RETCODE SCIPcolCreate(
    (*col)->lpipos = -1;
    (*col)->primsol = 0.0;
    (*col)->redcost = SCIP_INVALID;
-   (*col)->farkas = SCIP_INVALID;
+   (*col)->farkascoef = SCIP_INVALID;
    (*col)->minprimsol = (*col)->ub;
    (*col)->maxprimsol = (*col)->lb;
    (*col)->strongbranchdown = SCIP_INVALID;
@@ -2559,59 +2559,109 @@ RETCODE SCIPcolChgUb(
    return SCIP_OKAY;
 }
 
-/** calculates the reduced costs of a column */
-static
-void colCalcRedcost(
+/** calculates the reduced costs of a column using the given dual solution vector */
+Real SCIPcolCalcRedcost(
    COL*             col,                /**< LP column */
-   STAT*            stat                /**< problem statistics */
+   Real*            dualsol             /**< dual solution vector for current LP rows */
    )
 {
    ROW* row;
-   int r;
-
+   Real redcost;
+   int i;
+   
    assert(col != NULL);
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
-   assert(stat != NULL);
+   assert(dualsol != NULL);
 
-   col->redcost = col->obj;
-   for( r = 0; r < col->nlprows; ++r )
+   redcost = col->obj;
+   for( i = 0; i < col->nlprows; ++i )
    {
-      row = col->rows[r];
+      row = col->rows[i];
       assert(row != NULL);
-      assert(row->dualsol < SCIP_INVALID);
       assert(row->lppos >= 0);
-      assert(col->linkpos[r] >= 0);
-      col->redcost -= col->vals[r] * row->dualsol;
+      redcost -= col->vals[i] * dualsol[row->lppos];
    }
 
    if( col->nunlinked > 0 )
    {
-      for( r = col->nlprows; r < col->len; ++r )
+      for( i = col->nlprows; i < col->len; ++i )
       {
-         row = col->rows[r];
+         row = col->rows[i];
          assert(row != NULL);
-         assert(row->lppos >= 0 || row->dualsol == 0.0);
-         assert(row->lppos == -1 || col->linkpos[r] == -1);
+         assert(row->lppos == -1 || col->linkpos[i] == -1);
          if( row->lppos >= 0 )
-            col->redcost -= col->vals[r] * row->dualsol;
+            redcost -= col->vals[i] * dualsol[row->lppos];
       }
    }
 #ifndef NDEBUG
    else
    {
-      for( r = col->nlprows; r < col->len; ++r )
+      for( i = col->nlprows; i < col->len; ++i )
       {
-         row = col->rows[r];
+         row = col->rows[i];
          assert(row != NULL);
-         assert(row->dualsol == 0.0);
          assert(row->lppos == -1);
-         assert(col->linkpos[r] >= 0);
+         assert(col->linkpos[i] >= 0);
       }
    }
 #endif
 
-   col->validredcostlp = stat->lpcount;
+   return redcost;
+}
+
+/** calculates the reduced costs of a column using the dual solution stored in the rows */
+static
+Real colCalcInternalRedcost(
+   COL*             col                 /**< LP column */
+   )
+{
+   ROW* row;
+   Real redcost;
+   int i;
+
+   assert(col != NULL);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
+
+   redcost = col->obj;
+   for( i = 0; i < col->nlprows; ++i )
+   {
+      row = col->rows[i];
+      assert(row != NULL);
+      assert(row->dualsol < SCIP_INVALID);
+      assert(row->lppos >= 0);
+      assert(col->linkpos[i] >= 0);
+      redcost -= col->vals[i] * row->dualsol;
+   }
+
+   if( col->nunlinked > 0 )
+   {
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         row = col->rows[i];
+         assert(row != NULL);
+         assert(row->lppos >= 0 || row->dualsol == 0.0);
+         assert(row->lppos == -1 || col->linkpos[i] == -1);
+         if( row->lppos >= 0 )
+            redcost -= col->vals[i] * row->dualsol;
+      }
+   }
+#ifndef NDEBUG
+   else
+   {
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         row = col->rows[i];
+         assert(row != NULL);
+         assert(row->dualsol == 0.0);
+         assert(row->lppos == -1);
+         assert(col->linkpos[i] >= 0);
+      }
+   }
+#endif
+
+   return redcost;
 }
 
 /** gets the reduced costs of a column in last LP or after recalculation */
@@ -2628,7 +2678,10 @@ Real SCIPcolGetRedcost(
    assert(lp->validsollp == stat->lpcount);
 
    if( col->validredcostlp < stat->lpcount )
-      colCalcRedcost(col, stat);
+   {
+      col->redcost = colCalcInternalRedcost(col);
+      col->validredcostlp = stat->lpcount;
+   }
    assert(col->validredcostlp == stat->lpcount);
    assert(col->redcost < SCIP_INVALID);
 
@@ -2689,68 +2742,113 @@ Real SCIPcolGetFeasibility(
    }
 }
 
-/** calculates the farkas value of a column */
-static
-void colCalcFarkas(
+/** calculates the farkas coefficient y^T A_i of a column i using the given dual farkas vector y */
+Real SCIPcolCalcFarkasCoef(
    COL*             col,                /**< LP column */
-   STAT*            stat                /**< problem statistics */
+   Real*            dualfarkas          /**< dense dual farkas vector for current LP rows */
    )
 {
    ROW* row;
-   int r;
+   Real farkas;
+   int i;
 
    assert(col != NULL);
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
-   assert(stat != NULL);
+   assert(dualfarkas != NULL);
 
-   col->farkas = 0.0;
-   for( r = 0; r < col->nlprows; ++r )
+   farkas = 0.0;
+   for( i = 0; i < col->nlprows; ++i )
    {
-      row = col->rows[r];
+      row = col->rows[i];
       assert(row != NULL);
-      assert(row->dualfarkas < SCIP_INVALID);
       assert(row->lppos >= 0);
-      assert(col->linkpos[r] >= 0);
-      col->farkas += col->vals[r] * row->dualfarkas;
+      farkas += col->vals[i] * dualfarkas[row->lppos];
    }
 
    if( col->nunlinked > 0 )
    {
-      for( r = col->nlprows; r < col->len; ++r )
+      for( i = col->nlprows; i < col->len; ++i )
       {
-         row = col->rows[r];
+         row = col->rows[i];
          assert(row != NULL);
-         assert(row->lppos >= 0 || row->dualfarkas == 0.0);
-         assert(row->lppos == -1 || col->linkpos[r] == -1);
+         assert(row->lppos == -1 || col->linkpos[i] == -1);
          if( row->lppos >= 0 )
-            col->farkas += col->vals[r] * row->dualfarkas;
+            farkas += col->vals[i] * dualfarkas[row->lppos];
       }
    }
 #ifndef NDEBUG
    else
    {
-      for( r = col->nlprows; r < col->len; ++r )
+      for( i = col->nlprows; i < col->len; ++i )
       {
-         row = col->rows[r];
+         row = col->rows[i];
          assert(row != NULL);
-         assert(row->dualfarkas == 0.0);
          assert(row->lppos == -1);
-         assert(col->linkpos[r] >= 0);
+         assert(col->linkpos[i] >= 0);
       }
    }
 #endif
 
-   if( col->farkas > 0.0 )
-      col->farkas *= col->ub;
-   else
-      col->farkas *= col->lb;
-
-   col->validfarkaslp = stat->lpcount;
+   return farkas;
 }
 
-/** gets the farkas value of a column in last LP (which must be infeasible) */
-Real SCIPcolGetFarkas(
+/** gets the farkas coefficient y^T A_i of a column i in last LP (which must be infeasible) */
+static
+Real colCalcInternalFarkasCoef(
+   COL*             col                 /**< LP column */
+   )
+{
+   ROW* row;
+   Real farkas;
+   int i;
+
+   assert(col != NULL);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
+
+   farkas = 0.0;
+   for( i = 0; i < col->nlprows; ++i )
+   {
+      row = col->rows[i];
+      assert(row != NULL);
+      assert(row->dualfarkas < SCIP_INVALID);
+      assert(row->lppos >= 0);
+      assert(col->linkpos[i] >= 0);
+      farkas += col->vals[i] * row->dualfarkas;
+   }
+
+   if( col->nunlinked > 0 )
+   {
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         row = col->rows[i];
+         assert(row != NULL);
+         assert(row->lppos >= 0 || row->dualfarkas == 0.0);
+         assert(row->lppos == -1 || col->linkpos[i] == -1);
+         if( row->lppos >= 0 )
+            farkas += col->vals[i] * row->dualfarkas;
+      }
+   }
+#ifndef NDEBUG
+   else
+   {
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         row = col->rows[i];
+         assert(row != NULL);
+         assert(row->dualfarkas == 0.0);
+         assert(row->lppos == -1);
+         assert(col->linkpos[i] >= 0);
+      }
+   }
+#endif
+
+   return farkas;
+}
+
+/** gets the farkas coefficient of a column in last LP (which must be infeasible) */
+Real SCIPcolGetFarkasCoef(
    COL*             col,                /**< LP column */
    STAT*            stat,               /**< problem statistics */
    LP*              lp                  /**< current LP data */
@@ -2763,11 +2861,35 @@ Real SCIPcolGetFarkas(
    assert(lp->validfarkaslp == stat->lpcount);
 
    if( col->validfarkaslp < stat->lpcount )
-      colCalcFarkas(col, stat);
+   {
+      col->farkascoef = colCalcInternalFarkasCoef(col);
+      col->validfarkaslp = stat->lpcount;
+   }
    assert(col->validfarkaslp == stat->lpcount);
-   assert(col->farkas < SCIP_INVALID);
+   assert(col->farkascoef < SCIP_INVALID);
 
-   return col->farkas;
+   return col->farkascoef;
+}
+
+/** gets the farkas value of a column in last LP (which must be infeasible), i.e. the farkas coefficient y^T A_i times
+ *  the best bound for this coefficient, i.e. max{y^T A_i x_i | lb <= x_i <= ub}
+ */
+Real SCIPcolGetFarkasValue(
+   COL*             col,                /**< LP column */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   Real farkascoef;
+
+   assert(col != NULL);
+
+   farkascoef = SCIPcolGetFarkasCoef(col, stat, lp);
+
+   if( farkascoef > 0.0 )
+      return col->ub * farkascoef;
+   else
+      return col->lb * farkascoef;
 }
 
 /** actually performs strong branching on the given variable */
@@ -4700,7 +4822,7 @@ void markColDeleted(
    col->lpipos = -1;
    col->primsol = 0.0;
    col->redcost = SCIP_INVALID;
-   col->farkas = SCIP_INVALID;
+   col->farkascoef = SCIP_INVALID;
    col->strongbranchdown = SCIP_INVALID;
    col->strongbranchup = SCIP_INVALID;
    col->validredcostlp = -1;
@@ -4831,7 +4953,7 @@ RETCODE lpFlushAddCols(
       col->lpipos = c;
       col->primsol = SCIP_INVALID;
       col->redcost = SCIP_INVALID;
-      col->farkas = SCIP_INVALID;
+      col->farkascoef = SCIP_INVALID;
       col->strongbranchdown = SCIP_INVALID;
       col->strongbranchup = SCIP_INVALID;
       col->validredcostlp = -1;
@@ -9120,6 +9242,13 @@ RETCODE SCIPlpEndDive(
 
 /** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
  *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0
+ *  Calculating this value in interval arithmetics gives a proved lower LP bound for the following reason (assuming,
+ *  we have only left hand sides):
+ *           min{cx       |  b <=  Ax, lb <= x <= ub}
+ *   >=      min{cx       | yb <= yAx, lb <= x <= ub}   (restriction in minimum is relaxed)
+ *   == yb + min{cx - yb  | yb <= yAx, lb <= x <= ub}   (added yb - yb == 0)
+ *   >= yb + min{cx - yAx | yb <= yAx, lb <= x <= ub}   (because yAx >= yb inside minimum)
+ *   >= yb + min{cx - yAx |            lb <= x <= ub}   (restriction in minimum is relaxed)
  */
 static
 RETCODE provedBound(
@@ -9164,12 +9293,12 @@ RETCODE provedBound(
       if( SCIPsetIsFeasPositive(set, y) )
       {
          SCIPintervalSet(&yinter[j], y);
-         SCIPintervalSet(&b, row->lhs);
+         SCIPintervalSet(&b, row->lhs - row->constant);
       }
       else if( SCIPsetIsFeasNegative(set, y) )
       {
          SCIPintervalSet(&yinter[j], y);
-         SCIPintervalSet(&b, row->rhs);
+         SCIPintervalSet(&b, row->rhs - row->constant);
       }
       else
       {

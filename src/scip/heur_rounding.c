@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.30 2004/07/13 15:03:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.31 2004/08/06 08:18:01 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -623,9 +623,10 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
       /* check solution for feasibility, and add it to solution store if possible
        * neither integrality nor feasibility of LP rows has to be checked, because this is already
-       * done in the rounding heuristic itself
+       * done in the rounding heuristic itself; however, be better check feasibility of LP rows,
+       * because of numerical problems with activity updating
        */
-      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, FALSE, &stored) );
+      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, TRUE, &stored) );
 
       if( stored )
       {

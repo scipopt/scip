@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.6 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.7 2004/08/06 08:18:02 bzfpfend Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -116,7 +116,7 @@ public:
     *  Searches for variables that can contribute to the feasibility of the current LP.
     *  In standard branch-and-price, these are variables with positive farkas values:
     *
-    *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
+    *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
     *  With the values of y, an implicit inequality  y^T A x >= y^T b  is associated, with b given
     *  by the sides of the LP rows and the sign of y:
     *   - if y_i is positive, b_i is the left hand side of the row,

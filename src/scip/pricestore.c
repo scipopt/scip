@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.15 2004/07/09 08:11:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.16 2004/08/06 08:18:02 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -419,15 +419,14 @@ RETCODE SCIPpricestoreAddProbVars(
                
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {
-                  /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
+                  /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
                    * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
                    * inequality most feasible solution) x' defined by 
                    *    x'_i = ub_i, if y^T A_i > 0
-                   *    x'_i = 0   , if y^T A_i = 0
-                   *    x'_i = lb_i, if y^T A_i < 0.
+                   *    x'_i = lb_i, if y^T A_i <= 0.
                    * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
                    */
-                  feasibility = -SCIPcolGetFarkas(col, stat, lp);
+                  feasibility = -SCIPcolGetFarkasValue(col, stat, lp);
                   debugMessage("  <%s> farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
                else

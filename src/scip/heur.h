@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.28 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.29 2004/08/06 08:18:01 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -80,6 +80,12 @@ extern
 RETCODE SCIPheurExit(
    HEUR*            heur,               /**< primal heuristic */
    SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** initializes solution process data of primal heuristic */
+extern
+RETCODE SCIPheurInitsol(
+   HEUR*            heur                /**< primal heuristic */
    );
 
 /** calls execution method of primal heuristic */

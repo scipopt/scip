@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.65 2004/06/02 11:05:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.66 2004/08/06 08:18:03 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -901,7 +901,7 @@ Real SCIPsetFrac(
  * speed up the algorithms.
  */
 
-#define SCIPsetRelDiff(set, val1, val2)    ( (val1-val2)/(MAX3(1.0,ABS(val1),ABS(val2))) )
+#define SCIPsetRelDiff(set, val1, val2)    ( ((val1)-(val2))/(MAX3(1.0,ABS(val1),ABS(val2))) )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->epsilon) )
@@ -948,12 +948,12 @@ Real SCIPsetFrac(
 
 #define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->infinity )
 #define SCIPsetIsFeasible(set, val)        ( (val) >= -(set)->feastol )
-#define SCIPsetIsIntegral(set, val)        ( EPSISINT((val), (set)->feastol) )
+#define SCIPsetIsIntegral(set, val)        ( EPSISINT(val, (set)->feastol) )
 #define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->feastol) )
 
-#define SCIPsetFloor(set, val)             ( EPSFLOOR((val), (set)->feastol) )
-#define SCIPsetCeil(set, val)              ( EPSCEIL((val), (set)->feastol) )
-#define SCIPsetFrac(set, val)              ( EPSFRAC((val), (set)->feastol) )
+#define SCIPsetFloor(set, val)             ( EPSFLOOR(val, (set)->feastol) )
+#define SCIPsetCeil(set, val)              ( EPSCEIL(val, (set)->feastol) )
+#define SCIPsetFrac(set, val)              ( EPSFRAC(val, (set)->feastol) )
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.20 2004/08/03 16:02:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.21 2004/08/06 08:18:03 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -73,7 +73,7 @@ struct Col
    Real             ub;                 /**< current upper bound of column in LP */
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
-   Real             farkas;             /**< value in dual farkas infeasibility proof */
+   Real             farkascoef;         /**< coefficient in dual farkas infeasibility proof (== dualfarkas^T A_c) */
    Real             minprimsol;         /**< minimal LP solution value, this column ever assumed */
    Real             maxprimsol;         /**< maximal LP solution value, this column ever assumed */
    Real             strongbranchdown;   /**< strong branching information for downwards branching */
@@ -94,7 +94,7 @@ struct Col
    int              lppos;              /**< column position number in current LP, or -1 if not in current LP */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              validredcostlp;     /**< LP number for which reduced cost value is valid */
-   int              validfarkaslp;      /**< LP number for which farkas value is valid */
+   int              validfarkaslp;      /**< LP number for which farkas coefficient is valid */
    int              validstrongbranchlp;/**< LP number for which strong branching values are valid */
    int              strongbranchitlim;  /**< strong branching iteration limit used to get strongbranch values, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
@@ -208,7 +208,7 @@ struct Lp
    int              nloosevars;         /**< number of loose variables in LP */
    int              pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
    int              validsollp;         /**< LP number for which the currently stored solution values are valid */
-   int              validfarkaslp;      /**< LP number for which the currently stored farkas values are valid */
+   int              validfarkaslp;      /**< LP number for which the currently stored farkas row multipliers are valid */
    int              lpiitlim;           /**< current iteration limit setting in LPI */
    LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */

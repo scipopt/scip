@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.34 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.35 2004/08/06 08:18:01 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -225,6 +225,18 @@ RETCODE SCIPheurExit(
       CHECK_OKAY( heur->heurexit(scip, heur) );
    }
    heur->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** initializes solution process data of primal heuristic */
+RETCODE SCIPheurInitsol(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->delaypos = -1;
 
    return SCIP_OKAY;
 }

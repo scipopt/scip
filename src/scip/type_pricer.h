@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.5 2004/04/27 15:50:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.6 2004/08/06 08:18:03 bzfpfend Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -79,7 +79,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  Searches for variables that can contribute to the feasibility of the current LP.
  *  In standard branch-and-price, these are variables with positive farkas values:
  *
- *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
+ *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
  *  With the values of y, an implicit inequality  y^T A x >= y^T b  is associated, with b given
  *  by the sides of the LP rows and the sign of y:
  *   - if y_i is positive, b_i is the left hand side of the row,

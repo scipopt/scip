@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.82 2004/08/03 16:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.83 2004/08/06 08:18:02 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -148,6 +148,13 @@ RETCODE SCIPcolChgUb(
    Real             newub               /**< new upper bound value */
    );
 
+/** calculates the reduced costs of a column using the given dual solution vector */
+extern
+Real SCIPcolCalcRedcost(
+   COL*             col,                /**< LP column */
+   Real*            dualsol             /**< dual solution vector for current LP rows */
+   );
+
 /** gets the reduced costs of a column in last LP or after recalculation */
 extern
 Real SCIPcolGetRedcost(
@@ -165,9 +172,26 @@ Real SCIPcolGetFeasibility(
    LP*              lp                  /**< current LP data */
    );
 
-/** gets the farkas value of a column in last LP (which must be infeasible) */
+/** calculates the farkas coefficient y^T A_i of a column i using the given dual farkas vector y */
 extern
-Real SCIPcolGetFarkas(
+Real SCIPcolCalcFarkasCoef(
+   COL*             col,                /**< LP column */
+   Real*            dualfarkas          /**< dense dual farkas vector for current LP rows */
+   );
+
+/** gets the farkas coefficient y^T A_i of a column i in last LP (which must be infeasible) */
+extern
+Real SCIPcolGetFarkasCoef(
+   COL*             col,                /**< LP column */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** gets the farkas value of a column in last LP (which must be infeasible), i.e. the farkas coefficient y^T A_i times
+ *  the best bound for this coefficient, i.e. max{y^T A_i x_i | lb <= x_i <= ub}
+ */
+extern
+Real SCIPcolGetFarkasValue(
    COL*             col,                /**< LP column */
    STAT*            stat,               /**< problem statistics */
    LP*              lp                  /**< current LP data */

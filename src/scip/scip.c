@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.191 2004/08/03 16:02:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.192 2004/08/06 08:18:02 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3230,6 +3230,12 @@ RETCODE initSolve(
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
       CHECK_OKAY( SCIPconshdlrInitsol(scip->set->conshdlrs[h], scip) );
+   }
+   
+   /* inform primal heuristics that the branch and bound process starts now */
+   for( h = 0; h < scip->set->nheurs; ++h )
+   {
+      CHECK_OKAY( SCIPheurInitsol(scip->set->heurs[h]) );
    }
    
    /* remember number of constraints */
