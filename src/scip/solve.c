@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.130 2004/08/31 14:42:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.131 2004/09/01 17:04:46 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1190,6 +1190,19 @@ RETCODE enforceConstraints(
             result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
          return SCIP_INVALIDRESULT;
       }  /*lint !e788*/
+
+      /* the enforcement method may add a primal solution, after which the LP status could be set to
+       * objective limit reached
+       */
+      if( tree->actnodehaslp && lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
+      {
+         *cutoff = TRUE;
+         *infeasible = TRUE;
+         *solvelpagain = FALSE;
+         *propagateagain = FALSE;
+         resolved = TRUE;
+      }
+
       assert(!(*cutoff) || (resolved && *infeasible && !(*solvelpagain) && !(*propagateagain)));
       assert(!(*solvelpagain) || (resolved && *infeasible));
       assert(!(*propagateagain) || (resolved && *infeasible));
