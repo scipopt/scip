@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.267 2005/02/11 13:37:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.268 2005/02/11 13:49:15 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2369,6 +2369,16 @@ RETCODE SCIPsetProbData(
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
+}
+
+/** gets name of the current problem instance */
+const char* SCIPgetProbName(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetProbName", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPprobGetName(scip->origprob);
 }
 
 /** gets objective sense of original problem */
