@@ -810,8 +810,8 @@ RETCODE SCIPlpiChgBounds(
 
    CHECK_OKAY( ensureBoundchgMem(lpi, n) );
 
-   CHECK_ZERO( CPXtightenbds(cpxenv, lpi->cpxlp, n, ind, lpi->larray, (Real*)lb) );
-   CHECK_ZERO( CPXtightenbds(cpxenv, lpi->cpxlp, n, ind, lpi->uarray, (Real*)ub) );
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->larray, (Real*)lb) );
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, ind, lpi->uarray, (Real*)ub) );
 
    return SCIP_OKAY;
 }
@@ -1501,16 +1501,16 @@ RETCODE SCIPlpiGetNCols(
 }
 
 /** gets the number of nonzero elements in the LP constraint matrix */
-RETCODE SCIPlpiGetNNonzeros(
+RETCODE SCIPlpiGetNNonz(
    LPI*             lpi,                /**< LP interface structure */
-   int*             nnonzeros           /**< pointer to store the number of nonzeros */
+   int*             nnonz               /**< pointer to store the number of nonzeros */
    )
 {
    assert(cpxenv != NULL);
    assert(lpi != NULL);
-   assert(nnonzeros != NULL);
+   assert(nnonz != NULL);
 
-   *nnonzeros = CPXgetnumnz(cpxenv, lpi->cpxlp);
+   *nnonz = CPXgetnumnz(cpxenv, lpi->cpxlp);
 
    return SCIP_OKAY;
 }

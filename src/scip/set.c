@@ -110,7 +110,7 @@ int calcGrowSize(
    assert(initsize >= 0);
    assert(growfac >= 1.0);
 
-   /* calculate the size with this loop, such that the resulting numbers are allways the same (-> block memory) */
+   /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
    size = initsize;
    while( size < num )
       size = growfac * size + 1;

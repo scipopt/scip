@@ -43,7 +43,7 @@ enum Vartype
 {
    SCIP_VARTYPE_BINARY    = 0,          /**< binary variable: $x \in \{0,1\}$ */
    SCIP_VARTYPE_INTEGER   = 1,          /**< integer variable: $x \in \{lb, \ldots, \ub\}$ */
-   SCIP_VARTYPE_IMPLINT   = 2,          /**< implicit integer variable: continous variable, that is allways integral */
+   SCIP_VARTYPE_IMPLINT   = 2,          /**< implicit integer variable: continous variable, that is always integral */
    SCIP_VARTYPE_CONTINOUS = 3           /**< continous variable: $x \in [lb,ub] */
 };
 typedef enum Vartype VARTYPE;
