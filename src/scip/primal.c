@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.24 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.25 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -222,7 +222,7 @@ RETCODE primalAddSol(
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
    }
    CHECK_OKAY( SCIPeventChgSol(&event, sol) );
-   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
 
    /* check, if the global upper bound has to be updated */
    if( SCIPsolGetObj(sol) < primal->upperbound )

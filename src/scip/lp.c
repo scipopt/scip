@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.88 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.89 2003/12/15 17:45:32 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -536,7 +536,7 @@ void coefChanged(
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->primalfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
@@ -1065,7 +1065,7 @@ RETCODE rowSideChanged(
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
       assert(lp->nchgrows > 0);
@@ -1545,7 +1545,7 @@ RETCODE SCIPcolChgObj(
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
    
-   debugMessage("changing objective value of <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
+   debugMessage("changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->obj, newobj) )
    {
@@ -1564,7 +1564,7 @@ RETCODE SCIPcolChgObj(
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
       assert(lp->nchgcols > 0);
@@ -1589,7 +1589,7 @@ RETCODE SCIPcolChgLb(
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
    
-   debugMessage("changing lower bound of <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
+   debugMessage("changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
    {
@@ -1608,7 +1608,7 @@ RETCODE SCIPcolChgLb(
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
       assert(lp->nchgcols > 0);
@@ -1633,7 +1633,7 @@ RETCODE SCIPcolChgUb(
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
    
-   debugMessage("changing upper bound of <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
+   debugMessage("changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
    {
@@ -1652,7 +1652,7 @@ RETCODE SCIPcolChgUb(
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
       assert(lp->nchgcols > 0);
@@ -1691,12 +1691,15 @@ void colCalcRedcost(
 /** gets the reduced costs of a column in last LP or after recalculation */
 Real SCIPcolGetRedcost(
    COL*             col,                /**< LP column */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(col != NULL);
    assert(stat != NULL);
+   assert(lp != NULL);
    assert(col->validredcostlp <= stat->lpcount);
+   assert(lp->validsollp == stat->lpcount);
 
    if( col->validredcostlp < stat->lpcount )
       colCalcRedcost(col, stat);
@@ -1710,11 +1713,15 @@ Real SCIPcolGetRedcost(
 Real SCIPcolGetFeasibility(
    COL*             col,                /**< LP column */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(col != NULL);
    assert(set != NULL);
+   assert(stat != NULL);
+   assert(lp != NULL);
+   assert(lp->validsollp == stat->lpcount);
 
    /* A column's reduced cost is defined as
     *   redcost  = obj - activity,  activity = y^T * col.   (activity = obj - redcost)
@@ -1736,7 +1743,7 @@ Real SCIPcolGetFeasibility(
       Real redcost;
 
       /* calculate reduced costs */
-      redcost = SCIPcolGetRedcost(col, stat);
+      redcost = SCIPcolGetRedcost(col, stat, lp);
    
       if( !SCIPsetIsNegative(set, col->lb) )
       {
@@ -1788,12 +1795,15 @@ void colCalcFarkas(
 /** gets the farkas value of a column in last LP (which must be infeasible) */
 Real SCIPcolGetFarkas(
    COL*             col,                /**< LP column */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(col != NULL);
    assert(stat != NULL);
+   assert(lp != NULL);
    assert(col->validfarkaslp <= stat->lpcount);
+   assert(lp->validfarkaslp == stat->lpcount);
 
    if( col->validfarkaslp < stat->lpcount )
       colCalcFarkas(col, stat);
@@ -1809,14 +1819,11 @@ RETCODE SCIPcolGetStrongbranch(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   Real             upperbound,         /**< actual global upper bound */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up                  /**< stores dual bound after branching column up */
    )
 {
-   int iter;
-
    assert(col != NULL);
    assert(col->var != NULL);
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
@@ -1829,6 +1836,7 @@ RETCODE SCIPcolGetStrongbranch(
    assert(stat != NULL);
    assert(lp != NULL);
    assert(lp->solved);
+   assert(lp->validsollp == stat->lpcount);
    assert(col->lppos < lp->ncols);
    assert(lp->cols[col->lppos] == col);
    assert(itlim >= 1);
@@ -1837,33 +1845,46 @@ RETCODE SCIPcolGetStrongbranch(
 
    if( col->validstronglp != stat->lpcount || itlim > col->strongitlim )
    {
-      debugMessage("calling strong branching for variable <%s>(%g) with %d iterations\n", 
-         SCIPvarGetName(col->var), col->primsol, itlim);
-
-      /* start timing */
-      SCIPclockStart(stat->strongbranchtime, set);
-      
-      /* call LPI strong branching */
-      stat->nstrongbranch++;
       col->validstronglp = stat->lpcount;
-      col->strongitlim = itlim;
-      CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim,
-                     &col->strongdown, &col->strongup, &iter) );
-      col->strongdown = MIN(col->strongdown, upperbound);
-      col->strongup = MIN(col->strongup, upperbound);
 
-      /* update strong branching statistics */
-      if( iter == -1 )
+      /* if a loose variables has an infinite best bound, the LP bound is -infinity and no gain can be achieved */
+      if( lp->looseobjvalinf > 0 )
       {
-         /* calculate avergate iteration number */
-         iter = stat->nlps > 0 ? (int)(2*stat->nlpiterations / stat->nlps) : 0;
-         if( iter/2 >= itlim )
-            iter = 2*itlim;
+         col->strongdown = -set->infinity;
+         col->strongup = -set->infinity;
       }
-      stat->nsblpiterations += iter;
+      else
+      {
+         Real strongdown;
+         Real strongup;
+         int iter;
 
-      /* start timing */
-      SCIPclockStop(stat->strongbranchtime, set);
+         debugMessage("calling strong branching for variable <%s>(%g) with %d iterations\n", 
+            SCIPvarGetName(col->var), col->primsol, itlim);
+
+         /* start timing */
+         SCIPclockStart(stat->strongbranchtime, set);
+      
+         /* call LPI strong branching */
+         stat->nstrongbranch++;
+         col->strongitlim = itlim;
+         CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim, &strongdown, &strongup, &iter) );
+         col->strongdown = MIN(strongdown + lp->looseobjval, lp->upperbound);
+         col->strongup = MIN(strongup + lp->looseobjval, lp->upperbound);
+
+         /* update strong branching statistics */
+         if( iter == -1 )
+         {
+            /* calculate avergate iteration number */
+            iter = stat->nlps > 0 ? (int)(2*stat->nlpiterations / stat->nlps) : 0;
+            if( iter/2 >= itlim )
+               iter = 2*itlim;
+         }
+         stat->nsblpiterations += iter;
+
+         /* start timing */
+         SCIPclockStop(stat->strongbranchtime, set);
+      }
    }
    assert(col->strongdown < SCIP_INVALID);
    assert(col->strongup < SCIP_INVALID);
@@ -2966,12 +2987,15 @@ void rowCalcLPActivity(
 /** returns the activity of a row in the actual LP solution */
 Real SCIProwGetLPActivity(
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(row != NULL);
    assert(stat != NULL);
+   assert(lp != NULL);
    assert(row->validactivitylp <= stat->lpcount);
+   assert(lp->validsollp == stat->lpcount);
 
    if( row->validactivitylp != stat->lpcount )
       rowCalcLPActivity(row, stat);
@@ -2984,14 +3008,15 @@ Real SCIProwGetLPActivity(
 /** returns the feasibility of a row in the actual LP solution */
 Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    )
 {
    Real activity;
 
    assert(row != NULL);
 
-   activity = SCIProwGetLPActivity(row, stat);
+   activity = SCIProwGetLPActivity(row, stat, lp);
 
    return MIN(row->rhs - activity, activity - row->lhs);
 }
@@ -4044,6 +4069,7 @@ RETCODE lpFlush(
 
 
 
+
 /*
  * LP methods
  */
@@ -4072,7 +4098,12 @@ RETCODE SCIPlpCreate(
    (*lp)->cols = NULL;
    (*lp)->rows = NULL;
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   (*lp)->objval = 0.0;
+   (*lp)->lpobjval = 0.0;
+   (*lp)->pseudoobjval = 0.0;
+   (*lp)->pseudoobjvalinf = 0;
+   (*lp)->looseobjval = 0.0;
+   (*lp)->looseobjvalinf = 0;
+   (*lp)->nloosevars = 0;
    (*lp)->upperbound = set->infinity;
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
@@ -4092,6 +4123,8 @@ RETCODE SCIPlpCreate(
    (*lp)->firstnewrow = 0;
    (*lp)->nremoveablecols = 0;
    (*lp)->nremoveablerows = 0;
+   (*lp)->validsollp = -1;
+   (*lp)->validfarkaslp = -1;
    (*lp)->flushdeletedcols = FALSE;
    (*lp)->flushaddedcols = FALSE;
    (*lp)->flushdeletedrows = FALSE;
@@ -4101,6 +4134,7 @@ RETCODE SCIPlpCreate(
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
    (*lp)->diving = FALSE;
+   (*lp)->lpiuobjlim = set->infinity;
    (*lp)->lpifeastol = set->feastol;
    (*lp)->lpifromscratch = FALSE;
    (*lp)->lpifastmip = TRUE;
@@ -4111,6 +4145,7 @@ RETCODE SCIPlpCreate(
    CHECK_OKAY( SCIPlpiChgObjsen((*lp)->lpi, SCIP_OBJSEN_MINIMIZE) );
 
    /* set default parameters in LP solver */
+   CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim) );
    CHECK_OKAY( SCIPlpiSetRealpar((*lp)->lpi, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
@@ -4174,7 +4209,7 @@ RETCODE SCIPlpAddCol(
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
-   lp->objval = SCIP_INVALID;
+   lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
    return SCIP_OKAY;
@@ -4205,7 +4240,7 @@ RETCODE SCIPlpAddRow(
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
-   lp->objval = SCIP_INVALID;
+   lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
    return SCIP_OKAY;
@@ -4247,7 +4282,7 @@ RETCODE SCIPlpShrinkCols(
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
    assert(lp->nremoveablecols <= lp->ncols);
@@ -4288,7 +4323,7 @@ RETCODE SCIPlpShrinkRows(
       lp->flushed = FALSE;
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
    assert(lp->nremoveablerows <= lp->nrows);
@@ -4530,7 +4565,7 @@ void sumMIRRow(
              * has.
              */
             *emptyrow = FALSE;
-            rowactivity = SCIProwGetLPActivity(row, stat);
+            rowactivity = SCIProwGetLPActivity(row, stat, lp);
             assert(SCIPsetIsFeasGE(set, rowactivity, row->lhs));
             assert(SCIPsetIsFeasLE(set, rowactivity, row->rhs));
             
@@ -4933,6 +4968,36 @@ RETCODE SCIPlpSetState(
    return SCIP_OKAY;
 }
 
+/** sets the upper objective limit of the LP solver */
+static
+RETCODE lpSetUobjlim(
+   LP*              lp,                 /**< actual LP data */
+   Real             uobjlim             /**< new feasibility tolerance */
+   )
+{
+   assert(lp != NULL);
+   
+#ifndef NDEBUG
+   {
+      Real olduobjlim;
+      
+      CHECK_OKAY( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_UOBJLIM, &olduobjlim) );
+      assert(olduobjlim == lp->lpiuobjlim);
+   }
+#endif
+
+   if( uobjlim != lp->lpiuobjlim )
+   {
+      CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_UOBJLIM, uobjlim) );
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->primalfeasible = FALSE;
+      lp->lpiuobjlim = uobjlim;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** sets the feasibility tolerance of the LP solver */
 static
 RETCODE lpSetFeastol(
@@ -5057,7 +5122,6 @@ RETCODE SCIPlpSetUpperbound(
    assert(lp != NULL);
 
    debugMessage("setting LP upper objective limit from %g to %g\n", lp->upperbound, upperbound);
-   CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_UOBJLIM, upperbound) );
    lp->upperbound = upperbound;
 
    return SCIP_OKAY;
@@ -5081,13 +5145,13 @@ RETCODE lpPrimalSimplex(
       stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
 #if 0 /*???????????????????????*/
-   if( stat->nnodes >= 7480 )
+   if( stat->nnodes >= 3200 )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s> (primal simplex, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
-         fname, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+      printf("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
    }
 #endif
 
@@ -5138,13 +5202,13 @@ RETCODE lpDualSimplex(
       stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
 #if 0 /*???????????????????????*/
-   if( stat->nnodes >= 7480 )
+   if( stat->nnodes >= 3200 )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s> (dual simplex, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
-         fname, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+      printf("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
    }
 #endif
 
@@ -5217,10 +5281,12 @@ RETCODE lpSolveStable(
 {
    assert(lp != NULL);
    assert(lp->flushed);
+   assert(lp->looseobjvalinf == 0);
    assert(set != NULL);
    assert(stat != NULL);
 
    /* solve with fast but unprecise settings (if columns have been added to or deleted from the LPI, turn FASTMIP off) */
+   CHECK_OKAY( lpSetUobjlim(lp, lp->upperbound - lp->looseobjval) );
    CHECK_OKAY( lpSetFeastol(lp, set->feastol) );
    CHECK_OKAY( lpSetFromscratch(lp, fromscratch) );
    CHECK_OKAY( lpSetFastmip(lp, set->fastmip && !fromscratch && !lp->flushaddedcols && !lp->flushdeletedcols) );
@@ -5313,12 +5379,12 @@ RETCODE lpSolve(
       assert(lp->primalfeasible);
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
-      if( SCIPsetIsRelGE(set, lp->objval, lp->upperbound) )
+      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+      if( SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-         lp->objval = set->infinity;
+         lp->lpobjval = set->infinity;
       }
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
@@ -5327,31 +5393,31 @@ RETCODE lpSolve(
       {
          errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
          lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-         lp->objval = -set->infinity;
+         lp->lpobjval = -set->infinity;
          return SCIP_LPERROR;
       }
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-      lp->objval = set->infinity;
+      lp->lpobjval = set->infinity;
    }
    else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
-      lp->objval = set->infinity;
+      lp->lpobjval = set->infinity;
    }
    else if( SCIPlpiIsPrimalUnbounded(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
-      lp->objval = -set->infinity;
+      lp->lpobjval = -set->infinity;
    }
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
-      lp->objval = -set->infinity;
+      lp->lpobjval = -set->infinity;
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
-      lp->objval = -set->infinity;
+      lp->lpobjval = -set->infinity;
    }
    else
    {
@@ -5432,7 +5498,7 @@ RETCODE SCIPlpSolveAndEval(
          if( primalfeasible && dualfeasible && aging && !lp->diving )
          {
             /* update ages and remove obsolete columns and rows from LP */
-            CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
+            CHECK_OKAY( SCIPlpUpdateAges(lp, set, stat) );
             CHECK_OKAY( SCIPlpRemoveNewObsoletes(lp, memhdr, set, stat) );
             
             if( !lp->solved )
@@ -5459,13 +5525,14 @@ RETCODE SCIPlpSolveAndEval(
                warningMessage("(node %lld) unresolved numerical troubles in LP %d\n", stat->nnodes, stat->nlps);
             }
          }
-         debugMessage(" -> LP objective value: %g\n", lp->objval);
+         debugMessage(" -> LP objective value: %g + %g = %g\n",
+            lp->lpobjval, lp->looseobjval, lp->lpobjval + lp->looseobjval);
          break;
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         if( set->npricers > 0 || prob->nvars > lp->ncols )
+         if( !SCIPprobAllColsInLP(prob, set, lp) )
          {
-            CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set) );
+            CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set, stat) );
          }
          debugMessage(" -> LP infeasible\n");
          break;
@@ -5476,7 +5543,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         if( set->npricers > 0 || prob->nvars > lp->ncols )
+         if( !SCIPprobAllColsInLP(prob, set, lp) )
          {
             CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, NULL) );
          }
@@ -5519,13 +5586,285 @@ LPSOLSTAT SCIPlpGetSolstat(
 
 /** gets objective value of last solution */
 Real SCIPlpGetObjval(
-   LP*              lp                  /**< actual LP data */
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(lp != NULL);
    assert(lp->solved);
+   assert((lp->nloosevars > 0) || (lp->looseobjvalinf == 0 && lp->looseobjval == 0.0));
+   assert(set != NULL);
 
-   return lp->objval;
+   if( SCIPsetIsInfinity(set, lp->lpobjval) )
+      return lp->lpobjval;
+   else if( lp->looseobjvalinf > 0 )
+      return -set->infinity;
+   else
+      return lp->lpobjval + lp->looseobjval;
+}
+
+/** gets current pseudo objective value */
+Real SCIPlpGetPseudoObjval(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->pseudoobjvalinf >= 0);
+   assert(set != NULL);
+
+   if( lp->pseudoobjvalinf > 0 )
+      return -set->infinity;
+   else
+      return lp->pseudoobjval;
+}
+
+/** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
+Real SCIPlpGetModifiedPseudoObjval(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable */
+   Real             oldbound,           /**< old value for bound */
+   Real             newbound,           /**< new value for bound */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   )
+{
+   Real pseudoobjval;
+   int pseudoobjvalinf;
+   
+   pseudoobjval = lp->pseudoobjval;
+   pseudoobjvalinf = lp->pseudoobjvalinf;
+   if( boundtype == SCIPvarGetBestBoundType(var) )
+   {
+      if( SCIPsetIsInfinity(set, ABS(oldbound)) )
+         pseudoobjvalinf--;
+      else
+         pseudoobjval -= oldbound * SCIPvarGetObj(var);
+      assert(pseudoobjvalinf >= 0);
+      if( SCIPsetIsInfinity(set, ABS(newbound)) )
+         pseudoobjvalinf++;
+      else
+         pseudoobjval += newbound * SCIPvarGetObj(var);
+   }
+   assert(pseudoobjvalinf >= 0);
+
+   if( pseudoobjvalinf > 0 )
+      return -set->infinity;
+   else
+      return pseudoobjval;
+}
+
+/** updates actual pseudo and loose objective values for a change in a variable's objective value or bounds */
+RETCODE SCIPlpUpdateVar(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             oldlb,              /**< old objective value of variable */
+   Real             oldub,              /**< old objective value of variable */
+   Real             newobj,             /**< new objective value of variable */
+   Real             newlb,              /**< new objective value of variable */
+   Real             newub               /**< new objective value of variable */
+   )
+{
+   Real deltaval;
+   int deltainf;
+
+   assert(lp != NULL);
+   assert(lp->pseudoobjvalinf >= 0);
+   assert(lp->looseobjvalinf >= 0);
+   assert(!SCIPsetIsInfinity(set, ABS(oldobj)));
+   assert(!SCIPsetIsInfinity(set, oldlb));
+   assert(!SCIPsetIsInfinity(set, -oldub));
+   assert(!SCIPsetIsInfinity(set, ABS(newobj)));
+   assert(!SCIPsetIsInfinity(set, newlb));
+   assert(!SCIPsetIsInfinity(set, -newub));
+   assert(var != NULL);
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+   {
+      errorMessage("LP was informed of an objective change of a non-mutable variable\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   assert(SCIPvarGetProbIndex(var) >= 0);
+
+   deltaval = 0.0;
+   deltainf = 0;
+
+   /* subtract old pseudo objective value */
+   if( SCIPsetIsPositive(set, oldobj) )
+   {
+      if( SCIPsetIsInfinity(set, -oldlb) )
+         deltainf--;
+      else
+         deltaval -= oldlb * oldobj;
+   }
+   else if( SCIPsetIsNegative(set, oldobj) )
+   {
+      if( SCIPsetIsInfinity(set, oldub) )
+         deltainf--;
+      else
+         deltaval -= oldub * oldobj;
+   }
+
+   /* add new pseudo objective value */
+   if( SCIPsetIsPositive(set, newobj) )
+   {
+      if( SCIPsetIsInfinity(set, -newlb) )
+         deltainf++;
+      else
+         deltaval += newlb * newobj;
+   }
+   else if( SCIPsetIsNegative(set, newobj) )
+   {
+      if( SCIPsetIsInfinity(set, newub) )
+         deltainf++;
+      else
+         deltaval += newub * newobj;
+   }
+
+   /* update the pseudo and loose objective values */
+   lp->pseudoobjval += deltaval;
+   lp->pseudoobjvalinf += deltainf;
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   {
+      lp->looseobjval += deltaval;
+      lp->looseobjvalinf += deltainf;
+   }
+
+   assert(lp->pseudoobjvalinf >= 0);
+   assert(lp->looseobjvalinf >= 0);
+
+   return SCIP_OKAY;
+}
+
+/** updates actual pseudo and loose objective value for a change in a variable's objective value */
+RETCODE SCIPlpUpdateVarObj(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             newobj              /**< new objective value of variable */
+   )
+{
+   assert(var != NULL);
+
+   if( !SCIPsetIsEQ(set, oldobj, newobj) )
+   {
+      CHECK_OKAY( SCIPlpUpdateVar(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                     newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** updates actual pseudo and loose objective value for a change in a variable's lower bound */
+RETCODE SCIPlpUpdateVarLb(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldlb,              /**< old lower bound of variable */
+   Real             newlb               /**< new lower bound of variable */
+   )
+{
+   assert(var != NULL);
+
+   if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+   {
+      CHECK_OKAY( SCIPlpUpdateVar(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
+                     SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** updates actual pseudo objective value for a change in a variable's upper bound */
+RETCODE SCIPlpUpdateVarUb(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldub,              /**< old upper bound of variable */
+   Real             newub               /**< new upper bound of variable */
+   )
+{
+   assert(var != NULL);
+
+   if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+   {
+      CHECK_OKAY( SCIPlpUpdateVar(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
+                     SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs LP, that given variable was added to the problem */
+RETCODE SCIPlpUpdateAddVar(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable that is now a LOOSE problem variable */
+   )
+{
+   assert(lp != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetProbIndex(var) != -1);
+
+   /* add the variable to the loose objective value sum */
+   CHECK_OKAY( SCIPlpUpdateVarObj(lp, set, var, 0.0, SCIPvarGetObj(var)) );
+
+   /* update the loose variables counter */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      lp->nloosevars++;
+
+   return SCIP_OKAY;
+}
+
+/** informs LP, that given formerly loose problem variable is now a column variable */
+RETCODE SCIPlpUpdateVarColumn(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
+   )
+{
+   Real obj;
+   Real lb;
+   Real ub;
+
+   assert(lp != NULL);
+   assert(lp->nloosevars > 0);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetProbIndex(var) != -1);
+
+   obj = SCIPvarGetObj(var);
+
+   /* update loose objective value corresponding to the deletion of variable */
+   if( SCIPsetIsPositive(set, obj) )
+   {
+      lb = SCIPvarGetLbLocal(var);
+      if( SCIPsetIsInfinity(set, -lb) )
+         lp->looseobjvalinf--;
+      else
+         lp->looseobjval -= lb * obj;
+   }
+   else if( SCIPsetIsNegative(set, obj) )
+   {
+      ub = SCIPvarGetUbLocal(var);
+      if( SCIPsetIsInfinity(set, ub) )
+         lp->looseobjvalinf--;
+      else
+         lp->looseobjval -= ub * obj;
+   }
+   lp->nloosevars--;
+
+   /* get rid of numerical problems: set loose objective value explicitly to zero, if no loose variables remain */
+   if( lp->nloosevars == 0 )
+   {
+      assert(lp->looseobjvalinf == 0);
+      lp->looseobjval = 0.0;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** stores the LP solution in the columns and rows */
@@ -5554,12 +5893,18 @@ RETCODE SCIPlpGetSol(
    assert(lp->flushed);
    assert(lp->solved);
    assert(set != NULL);
-   assert(memhdr != NULL);
+   assert(stat != NULL);
+   assert(lp->validsollp <= stat->lpcount);
 
    if( primalfeasible != NULL )
       *primalfeasible = TRUE;
    if( dualfeasible != NULL )
       *dualfeasible = TRUE;
+
+   /* check if the values are already calculated */
+   if( lp->validsollp == stat->lpcount )
+      return SCIP_OKAY;
+   lp->validsollp = stat->lpcount;
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -5658,9 +6003,15 @@ RETCODE SCIPlpGetUnboundedSol(
    assert(lp->flushed);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDED);
-   assert(SCIPsetIsInfinity(set, -lp->objval));
+   assert(SCIPsetIsInfinity(set, -lp->lpobjval));
    assert(set != NULL);
-   assert(memhdr != NULL);
+   assert(stat != NULL);
+   assert(lp->validsollp <= stat->lpcount);
+
+   /* check if the values are already calculated */
+   if( lp->validsollp == stat->lpcount )
+      return SCIP_OKAY;
+   lp->validsollp = stat->lpcount;
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -5724,7 +6075,8 @@ RETCODE SCIPlpGetUnboundedSol(
 RETCODE SCIPlpGetDualfarkas(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    )
 {
    ROW** lpirows;
@@ -5737,7 +6089,13 @@ RETCODE SCIPlpGetDualfarkas(
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
    assert(set != NULL);
-   assert(memhdr != NULL);
+   assert(stat != NULL);
+   assert(lp->validfarkaslp <= stat->lpcount);
+
+   /* check if the values are already calculated */
+   if( lp->validfarkaslp == stat->lpcount )
+      return SCIP_OKAY;
+   lp->validfarkaslp = stat->lpcount;
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
@@ -5758,7 +6116,7 @@ RETCODE SCIPlpGetDualfarkas(
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &dualfarkas);
-   
+
    return SCIP_OKAY;
 }
 
@@ -5781,7 +6139,8 @@ RETCODE SCIPlpGetIterations(
  */
 RETCODE SCIPlpUpdateAges(
    LP*              lp,                 /**< actual LP data */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    )
 {
    COL** lpicols;
@@ -5796,6 +6155,8 @@ RETCODE SCIPlpUpdateAges(
    assert(lp->solved);
    assert(lp->nlpicols == lp->ncols);
    assert(lp->nlpirows == lp->nrows);
+   assert(stat != NULL);
+   assert(lp->validsollp == stat->lpcount);
 
    debugMessage("updating LP ages\n");
 
@@ -5888,7 +6249,7 @@ RETCODE lpDelColset(
       lp->lpifirstchgcol = lp->nlpicols;
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
@@ -5957,7 +6318,7 @@ RETCODE lpDelRowset(
       lp->lpifirstchgrow = lp->nlpirows;
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
-      lp->objval = SCIP_INVALID;
+      lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
@@ -6162,6 +6523,7 @@ static
 RETCODE lpCleanupCols(
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    int              firstcol            /**< first column to check for clean up */
    )
 {
@@ -6176,7 +6538,8 @@ RETCODE lpCleanupCols(
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
    assert(!lp->diving);
-   assert(set != NULL);
+   assert(stat != NULL);
+   assert(lp->validsollp == stat->lpcount);
    assert(0 <= firstcol && firstcol < lp->ncols);
 
    if( lp->nremoveablecols == 0 )
@@ -6227,6 +6590,7 @@ RETCODE lpCleanupRows(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    int              firstrow            /**< first row to check for clean up */
    )
 {
@@ -6242,6 +6606,8 @@ RETCODE lpCleanupRows(
    assert(lp->ncols == lp->nlpicols);
    assert(lp->nrows == lp->nlpirows);
    assert(!lp->diving);
+   assert(stat != NULL);
+   assert(lp->validsollp == stat->lpcount);
    assert(0 <= firstrow && firstrow < lp->nrows);
 
    if( lp->nremoveablerows == 0 )
@@ -6290,7 +6656,8 @@ RETCODE lpCleanupRows(
 RETCODE SCIPlpCleanupNew(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(lp != NULL);
@@ -6303,11 +6670,11 @@ RETCODE SCIPlpCleanupNew(
 
    if( set->cleanupcols && lp->firstnewcol < lp->ncols )
    {
-      CHECK_OKAY( lpCleanupCols(lp, set, lp->firstnewcol) );
+      CHECK_OKAY( lpCleanupCols(lp, set, stat, lp->firstnewcol) );
    }
    if( set->cleanuprows && lp->firstnewrow < lp->nrows )
    {
-      CHECK_OKAY( lpCleanupRows(lp, memhdr, set, lp->firstnewrow) );
+      CHECK_OKAY( lpCleanupRows(lp, memhdr, set, stat, lp->firstnewrow) );
    }
 
    return SCIP_OKAY;
@@ -6317,7 +6684,8 @@ RETCODE SCIPlpCleanupNew(
 RETCODE SCIPlpCleanupAll(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(lp != NULL);
@@ -6329,11 +6697,11 @@ RETCODE SCIPlpCleanupAll(
 
    if( /*set->cleanupcols &&*/ 0 < lp->ncols )
    {
-      CHECK_OKAY( lpCleanupCols(lp, set, 0) );
+      CHECK_OKAY( lpCleanupCols(lp, set, stat, 0) );
    }
    if( /*set->cleanuprows &&*/ 0 < lp->nrows )
    {
-      CHECK_OKAY( lpCleanupRows(lp, memhdr, set, 0) );
+      CHECK_OKAY( lpCleanupRows(lp, memhdr, set, stat, 0) );
    }
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.4 2003/12/01 16:14:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.5 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   pricestore.h
  * @brief  internal methods for storing priced variables
@@ -54,6 +54,18 @@ RETCODE SCIPpricestoreFree(
    PRICESTORE**     pricestore          /**< pointer to store pricing storage */
    );
 
+/** informs pricing storage, that the setup of the initial LP starts now */
+extern
+void SCIPpricestoreStartInitialLP(
+   PRICESTORE*      pricestore          /**< pricing storage */
+   );
+
+/** informs pricing storage, that the setup of the initial LP is now finished */
+extern
+void SCIPpricestoreEndInitialLP(
+   PRICESTORE*      pricestore          /**< pricing storage */
+   );
+
 /** adds variable to pricing storage and capture it */
 extern
 RETCODE SCIPpricestoreAddVar(
@@ -73,7 +85,6 @@ RETCODE SCIPpricestoreAddBdviolvar(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -99,7 +110,7 @@ extern
 RETCODE SCIPpricestoreApplyVars(
    PRICESTORE*      pricestore,         /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
@@ -113,7 +124,6 @@ RETCODE SCIPpricestoreResetBounds(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_diving.c,v 1.11 2003/12/01 16:14:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_diving.c,v 1.12 2003/12/15 17:45:32 bzfpfend Exp $"
 
 /**@file   heur_diving.c
  * @brief  LP diving heuristic
@@ -166,17 +166,17 @@ DECL_HEUREXEC(SCIPheurExecDiving) /*lint --e{715}*/
    nsolsfound = SCIPgetNSolsFound(scip);
    if( nsolsfound == 0 )
    {
-      searchubbound = SCIPgetTransLowerbound(scip)
-         + heurdata->maxdiveubquotnosol * (SCIPgetTransUpperbound(scip) - SCIPgetTransLowerbound(scip));
-      searchavgbound = SCIPgetTransLowerbound(scip)
-         + heurdata->maxdiveavgquotnosol * (SCIPgetAvgTransLowerbound(scip) - SCIPgetTransLowerbound(scip));
+      searchubbound = SCIPgetLowerbound(scip)
+         + heurdata->maxdiveubquotnosol * (SCIPgetUpperbound(scip) - SCIPgetLowerbound(scip));
+      searchavgbound = SCIPgetLowerbound(scip)
+         + heurdata->maxdiveavgquotnosol * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
    }
    else
    {
-      searchubbound = SCIPgetTransLowerbound(scip)
-         + heurdata->maxdiveubquot * (SCIPgetTransUpperbound(scip) - SCIPgetTransLowerbound(scip));
-      searchavgbound = SCIPgetTransLowerbound(scip)
-         + heurdata->maxdiveavgquot * (SCIPgetAvgTransLowerbound(scip) - SCIPgetTransLowerbound(scip));
+      searchubbound = SCIPgetLowerbound(scip)
+         + heurdata->maxdiveubquot * (SCIPgetUpperbound(scip) - SCIPgetLowerbound(scip));
+      searchavgbound = SCIPgetLowerbound(scip)
+         + heurdata->maxdiveavgquot * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
    }
    searchbound = MIN(searchubbound, searchavgbound);
 
@@ -194,7 +194,7 @@ DECL_HEUREXEC(SCIPheurExecDiving) /*lint --e{715}*/
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
    debugMessage("executing diving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
-      SCIPgetActDepth(scip), nlpcands, SCIPgetDualBound(scip), SCIPretransformObj(scip, searchbound));
+      SCIPgetActDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective limits and fractional variables exist
     * if the last rounding was in a direction, that never destroys feasibility, we continue in any case

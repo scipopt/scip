@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.2 2003/12/04 15:11:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.3 2003/12/15 17:45:35 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch-and-bound tree
@@ -116,19 +116,16 @@ struct Tree
    NODE*            actlpfork;          /**< fork/subroot node defining the LP state of the active node */
    NODE*            actsubroot;         /**< root of the active subtree */
    NODE**           children;           /**< array with children of the active node */
+   int              childrensize;       /**< available slots in children vector */
+   int              nchildren;          /**< actual number of children (number of used slots in children vector) */
    NODE**           siblings;           /**< array with siblings of the active node */
+   int              siblingssize;       /**< available slots in siblings vector */
+   int              nsiblings;          /**< actual number of siblings (number of used slots in siblings vector) */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
-   Real             actpseudoobjval;    /**< actual pseudo solution value with all variables set to their best bounds,
-                                         *   ignoring variables, with infinite best bound */
-   int              actpseudoobjvalinf; /**< number of variables with infinite best bound in actual pseudo solution */
    int              pathlen;            /**< length of the actual path (== depth of the current node + 1) */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
-   int              childrensize;       /**< available slots in children vector */
-   int              nchildren;          /**< actual number of children (number of used slots in children vector) */
-   int              siblingssize;       /**< available slots in siblings vector */
-   int              nsiblings;          /**< actual number of siblings (number of used slots in siblings vector) */
    Bool             actnodehaslp;       /**< is LP being processed in the active node? */
    Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };

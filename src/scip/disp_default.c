@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.31 2003/12/03 18:08:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.32 2003/12/15 17:45:31 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -216,7 +216,7 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
    sol = SCIPgetBestSol(scip);
    if( sol != NULL
       && SCIPgetSolNodenum(scip, sol) == SCIPgetNodenum(scip)
-      && SCIPisEQ(scip, SCIPgetSolObj(scip, sol), SCIPgetPrimalBound(scip)) )
+      && SCIPisEQ(scip, SCIPgetSolObj(scip, sol), SCIPgetPrimalbound(scip)) )
    {
       fprintf(file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
    }
@@ -413,7 +413,7 @@ DECL_DISPOUTPUT(SCIPdispOutputActdualbound)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTDUALBOUND) == 0);
    assert(scip != NULL);
 
-   fprintf(file, "%13.6e ", SCIPgetActDualBound(scip));
+   fprintf(file, "%13.6e ", SCIPgetLocalDualbound(scip));
 
    return SCIP_OKAY;
 }
@@ -425,7 +425,7 @@ DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_AVGDUALBOUND) == 0);
    assert(scip != NULL);
 
-   fprintf(file, "%13.6e ", SCIPgetAvgDualBound(scip));
+   fprintf(file, "%13.6e ", SCIPgetAvgDualbound(scip));
 
    return SCIP_OKAY;
 }
@@ -437,7 +437,7 @@ DECL_DISPOUTPUT(SCIPdispOutputDualbound)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_DUALBOUND) == 0);
    assert(scip != NULL);
 
-   fprintf(file, "%13.6e ", SCIPgetDualBound(scip));
+   fprintf(file, "%13.6e ", SCIPgetDualbound(scip));
 
    return SCIP_OKAY;
 }
@@ -451,11 +451,12 @@ DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PRIMALBOUND) == 0);
    assert(scip != NULL);
 
-   primalbound = SCIPgetPrimalBound(scip);
+   primalbound = SCIPgetPrimalbound(scip);
    if( SCIPisInfinity(scip, ABS(primalbound)) )
       fprintf(file, "      --      ");
    else
-      fprintf(file, "%13.6e ", primalbound);
+      fprintf(file, "%13.6e%c", primalbound, SCIPgetNSolsFound(scip) == 0 ? '*' : ' ');
+
    return SCIP_OKAY;
 }
 

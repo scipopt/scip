@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.21 2003/12/01 16:14:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.22 2003/12/15 17:45:31 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -480,7 +480,7 @@ RETCODE SCIPcutpoolSeparate(
          {         
             Real feasibility;
             
-            feasibility = SCIProwGetLPFeasibility(row, stat);
+            feasibility = SCIProwGetLPFeasibility(row, stat, lp);
             debugMessage("  cut feasibility = %g\n", feasibility);
             if( !SCIPsetIsFeasible(set, feasibility) )
             {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.1 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.2 2003/12/15 17:45:35 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -172,6 +172,7 @@ struct Var
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
    unsigned int     inferdepth:16;      /**< depth in the tree, where this bound change took place */
    unsigned int     infernum:15;        /**< bound change index for each node representing the order of changes */
+   unsigned int     initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */

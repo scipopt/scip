@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.1 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.2 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   scipstruct.h
  * @brief  SCIP main data structure
@@ -50,25 +50,33 @@
 struct Scip
 {
    STAGE            stage;              /**< SCIP operation stage */
-   SET*             set;                /**< global SCIP settings */
+
+   /* INIT */
    MEM*             mem;                /**< block memory buffers */
+   SET*             set;                /**< global SCIP settings */
    INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
+   DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
    CLOCK*           totaltime;          /**< total SCIP running time */
-   PROB*            origprob;           /**< original problem data */
-   PROB*            transprob;          /**< transformed problem after presolve */
+
+   /* PROBLEM */
    STAT*            stat;               /**< dynamic problem statistics */
+   PROB*            origprob;           /**< original problem data */
+
+   /* INITSOLVE */
+   EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
+   BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    TREE*            tree;               /**< branch and bound tree */
    LP*              lp;                 /**< LP data */
+   PROB*            transprob;          /**< transformed problem after presolve */
+
+   /* PRESOLVED */
    PRICESTORE*      pricestore;         /**< storage for priced variables */
    SEPASTORE*       sepastore;          /**< storage for separated cuts */
-   BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    CUTPOOL*         cutpool;            /**< global cut pool */
    CONFLICT*        conflict;           /**< conflict analysis data for propagation conflicts */
    LPCONFLICT*      lpconflict;         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal;             /**< primal data and solution storage */
-   EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
-   EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
-   DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
 };
 
 

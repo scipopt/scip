@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.9 2003/12/01 14:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.10 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -114,6 +114,7 @@ RETCODE SCIPsepastoreCreate(
    (*sepastore)->nbdchgs = 0;
    (*sepastore)->ncutsfound = 0;
    (*sepastore)->ncutsapplied = 0;
+   (*sepastore)->initiallp = FALSE;
 
    return SCIP_OKAY;
 }
@@ -133,6 +134,30 @@ RETCODE SCIPsepastoreFree(
    freeMemory(sepastore);
 
    return SCIP_OKAY;
+}
+
+/** informs separation storage, that the setup of the initial LP starts now */
+void SCIPsepastoreStartInitialLP(
+   SEPASTORE*       sepastore           /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+   assert(!sepastore->initiallp);
+   assert(sepastore->ncuts == 0);
+
+   sepastore->initiallp = TRUE;
+}
+
+/** informs separation storage, that the setup of the initial LP is now finished */
+void SCIPsepastoreEndInitialLP(
+   SEPASTORE*       sepastore           /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+   assert(sepastore->initiallp);
+   assert(sepastore->ncuts == 0);
+
+   sepastore->initiallp = FALSE;
 }
 
 /** adds cut stored as LP row to separation storage and captures it */
@@ -156,7 +181,10 @@ RETCODE sepastoreAddCut(
    assert(cut != NULL);
 
    /* get maximum of separated cuts at this node */
-   maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
+   if( sepastore->initiallp )
+      maxsepacuts = INT_MAX;
+   else
+      maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
    assert(sepastore->ncuts <= maxsepacuts);
    if( maxsepacuts == 0 )
       return SCIP_OKAY;
@@ -243,7 +271,8 @@ RETCODE SCIPsepastoreAddCut(
    assert(cut != NULL);
 
    /* update statistics of total number of found cuts */
-   sepastore->ncutsfound++;
+   if( !sepastore->initiallp )
+      sepastore->ncutsfound++;
 
    /* check, if the cut is a bound change (i.e. a row with only one variable) */
    if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
@@ -358,9 +387,11 @@ RETCODE SCIPsepastoreApplyCuts(
             debugMessage("apply bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val, SCIPvarGetUbLocal(var));
 
-            sepastore->ncutsapplied++;
-            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, lp, branchcand, eventqueue,
                            var, val, SCIP_BOUNDTYPE_LOWER, NULL) );
+
+            if( !sepastore->initiallp )
+               sepastore->ncutsapplied++;
          }
       }
       else
@@ -370,9 +401,11 @@ RETCODE SCIPsepastoreApplyCuts(
             debugMessage("apply bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), val);
 
-            sepastore->ncutsapplied++;
-            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, lp, branchcand, eventqueue,
                            var, val, SCIP_BOUNDTYPE_UPPER, NULL) );
+
+            if( !sepastore->initiallp )
+               sepastore->ncutsapplied++;
          }
       }
    }
@@ -383,13 +416,14 @@ RETCODE SCIPsepastoreApplyCuts(
       debugMessage("apply cut: ");
       debug( SCIProwPrint(sepastore->cuts[i], NULL) );
 
-      sepastore->ncutsapplied++;
-
       /* add cut to the LP and capture it */
       CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[i]) );
 
       /* release the row */
       CHECK_OKAY( SCIProwRelease(&sepastore->cuts[i], memhdr, set, lp) );
+
+      if( !sepastore->initiallp )
+         sepastore->ncutsapplied++;
    }
 
    /* clear the separation storage */

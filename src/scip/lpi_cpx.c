@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.48 2003/12/04 15:11:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.49 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0
@@ -700,6 +700,9 @@ RETCODE SCIPlpiCreate(
       assert(numlp == 0);
       cpxenv = CPXopenCPLEX(&restat);
       CHECK_ZERO( restat );
+
+      /* turn presolve off, s.t. for an infeasible problem, a ray is always available ???????????????????????? */
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
 
       /* get default parameter values */
       getParameterValues(&defparam);

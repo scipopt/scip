@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.20 2003/12/01 14:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.21 2003/12/15 17:45:32 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -35,7 +35,6 @@
 #include "type_lp.h"
 #include "type_var.h"
 #include "type_sol.h"
-#include "type_tree.h"
 #include "type_branch.h"
 #include "pub_event.h"
 
@@ -161,7 +160,6 @@ extern
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
    LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
    BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
    EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for BOUNDCHANGED events */
@@ -242,7 +240,6 @@ RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
    LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
    BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for BOUNDCHANGED events */
    EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for BOUNDCHANGED events */
@@ -261,7 +258,6 @@ RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */

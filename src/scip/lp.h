@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.60 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.61 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -151,7 +151,8 @@ RETCODE SCIPcolChgUb(
 extern
 Real SCIPcolGetRedcost(
    COL*             col,                /**< LP column */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** gets the feasibility of (the dual row of) a column in last LP or after recalculation */
@@ -159,14 +160,16 @@ extern
 Real SCIPcolGetFeasibility(
    COL*             col,                /**< LP column */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** gets the farkas value of a column in last LP (which must be infeasible) */
 extern
 Real SCIPcolGetFarkas(
    COL*             col,                /**< LP column */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** gets strong branching information on a column variable */
@@ -176,7 +179,6 @@ RETCODE SCIPcolGetStrongbranch(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   Real             upperbound,         /**< actual global upper bound */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up                  /**< stores dual bound after branching column up */
@@ -354,14 +356,16 @@ RETCODE SCIProwMakeRational(
 extern
 Real SCIProwGetLPActivity(
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** returns the feasibility of a row in the actual LP solution */
 extern
 Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** returns the pseudo activity of a row in the actual pseudo solution */
@@ -614,7 +618,86 @@ LPSOLSTAT SCIPlpGetSolstat(
 /** gets objective value of last solution */
 extern
 Real SCIPlpGetObjval(
-   LP*              lp                  /**< actual LP data */
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets current pseudo objective value */
+extern
+Real SCIPlpGetPseudoObjval(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
+extern
+Real SCIPlpGetModifiedPseudoObjval(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable */
+   Real             oldbound,           /**< old value for bound */
+   Real             newbound,           /**< new value for bound */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
+/** updates actual pseudo and loose objective values for a change in a variable's objective value or bounds */
+extern
+RETCODE SCIPlpUpdateVar(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             oldlb,              /**< old objective value of variable */
+   Real             oldub,              /**< old objective value of variable */
+   Real             newobj,             /**< new objective value of variable */
+   Real             newlb,              /**< new objective value of variable */
+   Real             newub               /**< new objective value of variable */
+   );
+
+/** updates actual pseudo and loose objective value for a change in a variable's objective value */
+extern
+RETCODE SCIPlpUpdateVarObj(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             newobj              /**< new objective value of variable */
+   );
+
+/** updates actual pseudo and loose objective value for a change in a variable's lower bound */
+extern
+RETCODE SCIPlpUpdateVarLb(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldlb,              /**< old lower bound of variable */
+   Real             newlb               /**< new lower bound of variable */
+   );
+
+/** updates actual pseudo objective value for a change in a variable's upper bound */
+extern
+RETCODE SCIPlpUpdateVarUb(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldub,              /**< old upper bound of variable */
+   Real             newub               /**< new upper bound of variable */
+   );
+
+/** informs LP, that given variable was added to the problem */
+extern
+RETCODE SCIPlpUpdateAddVar(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable that is now a LOOSE problem variable */
+   );
+
+/** informs LP, that given formerly loose problem variable is now a column variable */
+extern
+RETCODE SCIPlpUpdateVarColumn(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
    );
 
 /** stores the LP solution in the columns and rows */
@@ -642,7 +725,8 @@ extern
 RETCODE SCIPlpGetDualfarkas(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** get number of iterations used in last LP solve */
@@ -658,7 +742,8 @@ RETCODE SCIPlpGetIterations(
 extern
 RETCODE SCIPlpUpdateAges(
    LP*              lp,                 /**< actual LP data */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** removes all columns and rows in the part of the LP created at the current node, that are too old */
@@ -684,7 +769,8 @@ extern
 RETCODE SCIPlpCleanupNew(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** removes all columns at 0.0 and rows not at their bound in the whole LP */
@@ -692,7 +778,8 @@ extern
 RETCODE SCIPlpCleanupAll(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** initiates LP diving */

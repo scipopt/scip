@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.25 2003/12/01 14:41:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.26 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -106,6 +106,7 @@ RETCODE SCIPsolCopy(
 RETCODE SCIPsolCreateLPSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< actual LP data */
@@ -120,7 +121,7 @@ RETCODE SCIPsolCreateLPSol(
    debugMessage("creating solution from LP\n");
 
    CHECK_OKAY( SCIPsolCreate(sol, memhdr, stat, tree, heur) );
-   CHECK_OKAY( SCIPsolLinkLPSol(*sol, memhdr, stat, tree, lp) );
+   CHECK_OKAY( SCIPsolLinkLPSol(*sol, memhdr, set, stat, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -132,6 +133,7 @@ RETCODE SCIPsolCreatePseudoSol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -140,7 +142,7 @@ RETCODE SCIPsolCreatePseudoSol(
    debugMessage("creating solution from pseudo solution\n");
 
    CHECK_OKAY( SCIPsolCreate(sol, memhdr, stat, tree, heur) );
-   CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, memhdr, set, stat, tree) );
+   CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, memhdr, set, stat, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -162,11 +164,11 @@ RETCODE SCIPsolCreateActSol(
 
    if( tree->actnodehaslp )
    {
-      CHECK_OKAY( SCIPsolCreateLPSol(sol, memhdr, stat, tree, lp, heur) );
+      CHECK_OKAY( SCIPsolCreateLPSol(sol, memhdr, set, stat, tree, lp, heur) );
    }
    else
    {
-      CHECK_OKAY( SCIPsolCreatePseudoSol(sol, memhdr, set, stat, tree, heur) );
+      CHECK_OKAY( SCIPsolCreatePseudoSol(sol, memhdr, set, stat, tree, lp, heur) );
    }
 
    return SCIP_OKAY;
@@ -196,6 +198,7 @@ RETCODE SCIPsolFree(
 RETCODE SCIPsolLinkLPSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< actual LP data */
@@ -224,7 +227,7 @@ RETCODE SCIPsolLinkLPSol(
    }
 
    /* link solution to LP solution */
-   sol->obj = SCIPlpGetObjval(lp);
+   sol->obj = SCIPlpGetObjval(lp, set);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
@@ -241,7 +244,8 @@ RETCODE SCIPsolLinkPseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(sol != NULL);
@@ -264,7 +268,7 @@ RETCODE SCIPsolLinkPseudoSol(
    }
 
    /* link solution to pseudo solution */
-   sol->obj = SCIPtreeGetActPseudoobjval(tree, set);
+   sol->obj = SCIPlpGetPseudoObjval(lp, set);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
@@ -291,11 +295,11 @@ RETCODE SCIPsolLinkActSol(
 
    if( tree->actnodehaslp )
    {
-      CHECK_OKAY( SCIPsolLinkLPSol(sol, memhdr, stat, tree, lp) );
+      CHECK_OKAY( SCIPsolLinkLPSol(sol, memhdr, set, stat, tree, lp) );
    }
    else
    {
-      CHECK_OKAY( SCIPsolLinkPseudoSol(sol, memhdr, set, stat, tree) );
+      CHECK_OKAY( SCIPsolLinkPseudoSol(sol, memhdr, set, stat, tree, lp) );
    }
 
    return SCIP_OKAY;

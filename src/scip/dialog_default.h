@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.7 2003/11/24 12:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.8 2003/12/15 17:45:31 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -78,6 +78,10 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
 /** dialog execution method for the display statistics command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
+
+/** dialog execution method for the display transsolution command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution);
 
 /** dialog execution method for the help command */
 extern

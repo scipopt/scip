@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.36 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.37 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -30,6 +30,7 @@
 #include "message.h"
 #include "set.h"
 #include "misc.h"
+#include "lp.h"
 #include "var.h"
 #include "prob.h"
 #include "tree.h"
@@ -154,6 +155,7 @@ RETCODE SCIPprobCreate(
    (*prob)->nint = 0;
    (*prob)->nimpl = 0;
    (*prob)->ncont = 0;
+   (*prob)->ncolvars = 0;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->conss = NULL;
@@ -244,7 +246,7 @@ RETCODE SCIPprobTransform(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PROB**           target              /**< pointer to target problem data structure */
    )
@@ -275,7 +277,7 @@ RETCODE SCIPprobTransform(
    for( v = 0; v < source->nvars; ++v )
    {
       CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
-      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, tree, branchcand, targetvar) );
+      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, lp, branchcand, targetvar) );
       CHECK_OKAY( SCIPvarRelease(&targetvar, memhdr, set, NULL) );
    }
    assert((*target)->nvars == source->nvars);
@@ -396,6 +398,11 @@ void probInsertVar(
 
    prob->vars[insertpos] = var;
    var->probindex = insertpos;
+
+   /* update number of column variables in problem */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      prob->ncolvars++;
+   assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
 }
 
 /** removes variable from vars array */
@@ -479,6 +486,11 @@ void probRemoveVar(
    var->probindex = -1;
 
    assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
+
+   /* update number of column variables in problem */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      prob->ncolvars--;
+   assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
 }
 
 /** adds variable to the problem and captures it */
@@ -486,7 +498,7 @@ RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var                 /**< variable to add */
    )
@@ -511,12 +523,11 @@ RETCODE SCIPprobAddVar(
    /* add variable's name to the namespace */
    CHECK_OKAY( SCIPhashtableInsert(prob->varnames, memhdr, (void*)var) );
 
-   /* update branching candidates and pseudo objective value in the tree */
+   /* update branching candidates and pseudo and loose objective value in the LP */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
    {
       CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
-      CHECK_OKAY( SCIPtreeUpdateVar(tree, set, var, 0.0, 0.0, 0.0, 
-                     SCIPvarGetObj(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      CHECK_OKAY( SCIPlpUpdateAddVar(lp, set, var) );
    }
 
    debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
@@ -563,34 +574,54 @@ RETCODE SCIPprobChgVarType(
    return SCIP_OKAY;
 }
 
-/** informs problem, that the given variable was fixed */
-RETCODE SCIPprobVarFixed(
+/** informs problem, that the given loose problem variable changed its status */
+RETCODE SCIPprobVarChangedStatus(
    PROB*            prob,               /**< problem data */
    const SET*       set,                /**< global SCIP settings */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   VAR*             var                 /**< variable to add */
+   VAR*             var                 /**< problem variable */
    )
 {
    assert(prob != NULL);
    assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPvarGetProbIndex(var) != -1);
 
-   if( var->probindex == -1 )
-      return SCIP_OKAY;
+   /* get current status of variable */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+      errorMessage("variables cannot switch to ORIGINAL or LOOSE status\n");
+      return SCIP_INVALIDDATA;
 
-   /* remove variable from problem */
-   probRemoveVar(prob, var);
+   case SCIP_VARSTATUS_COLUMN:
+      /* variable switched from non-column to column */
+      prob->ncolvars++;
+      break;
 
-   /* insert variable in fixedvars array */
-   CHECK_OKAY( probEnsureFixedvarsMem(prob, set, prob->nfixedvars+1) );
-   prob->fixedvars[prob->nfixedvars] = var;
-   prob->nfixedvars++;
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
+   case SCIP_VARSTATUS_NEGATED:
+      /* variable switched from unfixed to fixed (if it was fixed before, probindex would have been -1) */
 
-   /* update branching candidates */
-   CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
+      /* remove variable from problem */
+      probRemoveVar(prob, var);
+      
+      /* insert variable in fixedvars array */
+      CHECK_OKAY( probEnsureFixedvarsMem(prob, set, prob->nfixedvars+1) );
+      prob->fixedvars[prob->nfixedvars] = var;
+      prob->nfixedvars++;
+
+      /* update branching candidates */
+      CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
+      break;
+
+   default:
+      errorMessage("invalid variable status <%d>\n", SCIPvarGetStatus(var));
+      return SCIP_INVALIDDATA;
+   }
+   assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
 
    return SCIP_OKAY;
 }
@@ -705,8 +736,9 @@ RETCODE SCIPprobDelCons(
    return SCIP_OKAY;
 }
 
-/** resets maximum number of constraints to current number of constraints, remembers actual number of constraints
- *  as starting number of constraints
+/** informs problem, that the solution process is about to beginn;
+ *  - resets maximum number of constraints to current number of constraints
+ *  - remembers actual number of constraints as starting number of constraints
  */
 void SCIPprobSolvingStarts(
    PROB*            prob                /**< problem data */
@@ -714,6 +746,7 @@ void SCIPprobSolvingStarts(
 {
    assert(prob != NULL);
 
+   /* remember number of constraints for statistic */
    prob->maxnconss = prob->nconss;
    prob->startnconss = prob->nconss;
 }
@@ -868,6 +901,20 @@ CONS* SCIPprobFindCons(
    assert(name != NULL);
 
    return (CONS*)(SCIPhashtableRetrieve(prob->consnames, (void*)name));
+}
+
+/** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
+ *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
+ */
+Bool SCIPprobAllColsInLP(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(SCIPlpGetNCols(lp) <= prob->ncolvars && prob->ncolvars <= prob->nvars);
+
+   return (SCIPlpGetNCols(lp) == prob->ncolvars && set->nactivepricers == 0);
 }
 
 /** displays actual pseudo solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.22 2003/11/26 16:09:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.23 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -103,9 +103,9 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    assert(nodeseldata != NULL);
 
    /* check, if we want to plunge once more */
-   actlowerbound = SCIPgetActTransLowerbound(scip);
-   avglowerbound = SCIPgetAvgTransLowerbound(scip);
-   lowerbound = SCIPgetTransLowerbound(scip);
+   actlowerbound = SCIPgetLocalLowerbound(scip);
+   avglowerbound = SCIPgetAvgLowerbound(scip);
+   lowerbound = SCIPgetLowerbound(scip);
    plungedepth = SCIPgetPlungeDepth(scip);
    if( plungedepth < nodeseldata->minplungedepth
       || (plungedepth < nodeseldata->maxplungedepth

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.9 2003/12/01 16:14:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.10 2003/12/15 17:45:31 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -447,6 +447,20 @@ DECL_DIALOGEXEC(SCIPdialogExecHelp)
    printf("\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display transsolution command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
+{  /*lint --e{715}*/
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
 }
@@ -981,6 +995,15 @@ RETCODE SCIPincludeDialogDefault(
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayStatistics, NULL,
                      "statistics", "display problem and optimization statistics", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display transsolution */
+   if( !SCIPdialogHasEntry(submenu, "transsolution") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayTranssolution, NULL,
+                     "transsolution", "display best primal solution in transformed variables", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

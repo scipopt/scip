@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.93 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.94 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1215,6 +1215,47 @@ RETCODE SCIPdisableConsNode(
    CONS*            cons                /**< constraint to disable */
    );
 
+/** gets dual bound of active node */
+extern
+Real SCIPgetLocalDualbound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets dual bound of given node */
+extern
+Real SCIPgetNodeDualbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node                /**< node to get dual bound for */
+   );
+
+/** gets lower (dual) bound of active node in transformed problem */
+extern
+Real SCIPgetLocalLowerbound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets lower (dual) bound of given node in transformed problem */
+extern
+Real SCIPgetNodeLowerbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node                /**< node to get dual bound for */
+   );
+
+/** if given value is larger than the active node's lower bound, sets the active node's lower bound to the new value */
+extern
+RETCODE SCIPupdateLocalLowerbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+extern
+RETCODE SCIPupdateNodeLowerbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to update lower bound for */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
 /**@} */
 
 
@@ -1267,6 +1308,7 @@ RETCODE SCIPcreateVar(
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
+   Bool             initial,            /**< should var's column be present in the initial root LP? */
    Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    );
 
@@ -1329,7 +1371,7 @@ RETCODE SCIPgetTransformedVars(
    VAR**            transvars           /**< array to store the transformed variables */
    );
 
-/** gets negated variable x' = lb + ub - x of variable x */
+/** gets negated variable x' = lb + ub - x of variable x; negated variable is created, if not yet existing */
 extern
 RETCODE SCIPgetNegatedVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1746,9 +1788,15 @@ LPSOLSTAT SCIPgetLPSolstat(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets objective value of actual LP, or SCIP_INVALID if LP is not solved yet */
+/** gets objective value of actual LP */
 extern
 Real SCIPgetLPObjval(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets pseudo objective value of the actual LP */
+extern
+Real SCIPgetPseudoObjval(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -1792,11 +1840,11 @@ int SCIPgetNLPRows(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** returns TRUE iff all potential variables exist as columns in the LP, and FALSE, if there may be additional columns,
- *  that will be added in pricing and improve the objective value
+/** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
+ *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
  */
 extern
-Bool SCIPallVarsInLP(
+Bool SCIPallColsInLP(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2609,16 +2657,8 @@ NODE* SCIPgetBestNode(
 
 /** gets the node with smallest lower bound from the tree (child, sibling, or leaf) */
 extern
-NODE* SCIPgetLowerboundNode(
+NODE* SCIPgetBestboundNode(
    SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
-extern
-RETCODE SCIPupdateNodeLowerbound(
-   SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to update lower bound for */
-   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
 /**@} */
@@ -2760,51 +2800,39 @@ int SCIPgetNEnabledConss(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets dual bound of active node */
-extern
-Real SCIPgetActDualBound(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** gets lower (dual) bound of active node in transformed problem */
-extern
-Real SCIPgetActTransLowerbound(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
 /** gets average dual bound of all unprocessed nodes */
 extern
-Real SCIPgetAvgDualBound(
+Real SCIPgetAvgDualbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
 extern
-Real SCIPgetAvgTransLowerbound(
+Real SCIPgetAvgLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets global dual bound */
 extern
-Real SCIPgetDualBound(
+Real SCIPgetDualbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets global lower (dual) bound in transformed problem */
 extern
-Real SCIPgetTransLowerbound(
+Real SCIPgetLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets global primal bound */
 extern
-Real SCIPgetPrimalBound(
+Real SCIPgetPrimalbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
 /** gets global upper (primal) bound in transformed problem */
 extern
-Real SCIPgetTransUpperbound(
+Real SCIPgetUpperbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 

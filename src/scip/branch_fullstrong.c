@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.8 2003/12/01 14:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.9 2003/12/15 17:45:31 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -51,7 +51,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    Real bestdown;
    Real bestup;
    Real bestscore;
-   Bool allvarsinlp;
+   Bool allcolsinlp;
    int nlpcands;
    int bestcand;
    int i;
@@ -63,11 +63,11 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    debugMessage("Execlp method of fullstrong branching\n");
 
-   /* get current lower objective bound */
-   lowerbound = SCIPgetActTransLowerbound(scip);
+   /* get current lower objective bound of the local sub problem */
+   lowerbound = SCIPgetLocalLowerbound(scip);
 
-   /* check, if all variables are in LP, and thus the strong branching results give lower bounds */
-   allvarsinlp = SCIPallVarsInLP(scip);
+   /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
+   allcolsinlp = SCIPallColsInLP(scip);
 
    /* get branching candidates */
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands) );
@@ -86,14 +86,14 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       down = MAX(down, lowerbound);
       up = MAX(up, lowerbound);
 
-      if( allvarsinlp )
+      if( allcolsinlp )
       {
          Real upperbound;
          Bool downinf;
          Bool upinf;
 
-         /* because all variables are in LP, the strong branching bounds are feasible lower bounds */
-         upperbound = SCIPgetTransUpperbound(scip);
+         /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
+         upperbound = SCIPgetUpperbound(scip);
          downinf = SCIPisGE(scip, down, upperbound);
          upinf = SCIPisGE(scip, up, upperbound);
 
@@ -150,7 +150,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
-      if( allvarsinlp )
+      if( allcolsinlp )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
       }
@@ -161,7 +161,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
-      if( allvarsinlp )
+      if( allcolsinlp )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
       }

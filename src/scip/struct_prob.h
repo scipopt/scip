@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.3 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.4 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -53,6 +53,7 @@ struct Prob
    int              nint;               /**< number of general integer variables */
    int              nimpl;              /**< number of implicit integer variables */
    int              ncont;              /**< number of continuous variables */
+   int              ncolvars;           /**< number of variables with attached column information */
    HASHTABLE*       consnames;          /**< hash table storing constraints' names */
    CONS**           conss;              /**< array with constraints of the problem */
    int              consssize;          /**< available slots in conss array */

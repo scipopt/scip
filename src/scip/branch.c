@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.31 2003/12/03 18:08:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.32 2003/12/15 17:45:31 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -166,6 +166,7 @@ RETCODE SCIPbranchcandGetLPCands(
       COL** cols;
       VAR* var;
       COL* col;
+      Real primsol;
       Real frac;
       int ncols;
       int c;
@@ -183,9 +184,11 @@ RETCODE SCIPbranchcandGetLPCands(
       {
          col = cols[c];
          assert(col != NULL);
-         assert(col->primsol < SCIP_INVALID);
          assert(col->lppos == c);
          assert(col->lpipos >= 0);
+
+         primsol = SCIPcolGetPrimsol(col);
+         assert(primsol < SCIP_INVALID);
 
          var = col->var;
          assert(var != NULL);
@@ -195,15 +198,15 @@ RETCODE SCIPbranchcandGetLPCands(
          /* LP branching candidates are fractional binary and integer variables */
          if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
          {
-            frac = SCIPsetFrac(set, col->primsol);
+            frac = SCIPsetFrac(set, primsol);
             if( !SCIPsetIsFracIntegral(set, frac) )
             {
                debugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g\n", 
-                  branchcand->nlpcands, SCIPvarGetName(var), col->primsol, frac);
+                  branchcand->nlpcands, SCIPvarGetName(var), primsol, frac);
 
                assert(branchcand->nlpcands < branchcand->lpcandssize);
                branchcand->lpcands[branchcand->nlpcands] = var;
-               branchcand->lpcandssol[branchcand->nlpcands] = col->primsol;
+               branchcand->lpcandssol[branchcand->nlpcands] = primsol;
                branchcand->lpcandsfrac[branchcand->nlpcands] = frac;
                branchcand->nlpcands++;
             }
@@ -425,6 +428,7 @@ RETCODE SCIPbranchcandUpdateVar(
 
    return SCIP_OKAY;
 }
+
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.18 2003/12/01 14:41:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.19 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -66,6 +66,7 @@ extern
 RETCODE SCIPsolCreateLPSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< actual LP data */
@@ -80,6 +81,7 @@ RETCODE SCIPsolCreatePseudoSol(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -107,6 +109,7 @@ extern
 RETCODE SCIPsolLinkLPSol(
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< actual LP data */
@@ -119,7 +122,8 @@ RETCODE SCIPsolLinkPseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** copies actual solution (LP or pseudo solution) into CIP solution by linking */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.45 2003/12/01 14:41:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.46 2003/12/15 17:45:35 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -37,7 +37,6 @@
 #include "type_lp.h"
 #include "type_var.h"
 #include "type_prob.h"
-#include "type_tree.h"
 #include "type_branch.h"
 #include "type_cons.h"
 #include "pub_var.h"
@@ -60,7 +59,6 @@ RETCODE SCIPboundchgApply(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -73,7 +71,6 @@ RETCODE SCIPboundchgUndo(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -102,7 +99,6 @@ RETCODE SCIPdomchgApply(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -115,7 +111,6 @@ RETCODE SCIPdomchgUndo(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -165,6 +160,7 @@ RETCODE SCIPvarCreateOriginal(
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
+   Bool             initial,            /**< should var's column be present in the initial root LP? */
    Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    );
 
@@ -179,6 +175,7 @@ RETCODE SCIPvarCreateTransformed(
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
+   Bool             initial,            /**< should var's column be present in the initial root LP? */
    Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    );
 
@@ -226,7 +223,9 @@ RETCODE SCIPvarColumn(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** converts variable into fixed variable */
@@ -237,7 +236,6 @@ RETCODE SCIPvarFix(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -253,7 +251,6 @@ RETCODE SCIPvarAggregate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -271,7 +268,6 @@ RETCODE SCIPvarMultiaggregate(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -308,7 +304,6 @@ RETCODE SCIPvarChgObj(
    VAR*             var,                /**< variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -322,7 +317,6 @@ RETCODE SCIPvarAddObj(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -361,7 +355,6 @@ RETCODE SCIPvarChgLbLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -379,7 +372,6 @@ RETCODE SCIPvarChgUbLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -397,7 +389,6 @@ RETCODE SCIPvarChgBdLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -487,15 +478,6 @@ Real SCIPvarGetUbDive(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** gets solution value of variable at actual node: if LP was solved at the node, the method returns the LP primal
- *  solution value, otherwise the pseudo solution
- */
-extern
-Real SCIPvarGetSol(
-   VAR*             var,                /**< problem variable */
-   TREE*            tree                /**< branch-and-bound tree */
-   );
-
 /** resolves variable to columns and adds them with the coefficient to the row */
 extern
 RETCODE SCIPvarAddToRow(
@@ -503,6 +485,7 @@ RETCODE SCIPvarAddToRow(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< actual LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.1 2003/12/01 14:41:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.2 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -257,6 +257,12 @@ VARTYPE SCIPvarGetType(
    VAR*             var                 /**< problem variable */
    );
 
+/** returns whether variable's column should be present in the initial root LP */
+extern
+Bool SCIPvarIsInitial(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
 extern
 Bool SCIPvarIsRemoveable(
@@ -327,6 +333,12 @@ Real* SCIPvarGetMultaggrScalars(
 extern
 Real SCIPvarGetMultaggrConstant(
    VAR*             var                 /**< problem variable */
+   );
+
+/** gets the negation of the given variable; may return NULL, if no negation is existing yet */
+extern
+VAR* SCIPvarGetNegatedVar(
+   VAR*             var                 /**< negated problem variable */
    );
 
 /** gets the negation variable x of a negated variable x' = offset - x */
@@ -417,6 +429,7 @@ Real SCIPvarGetBranchingPriority(
       && ((var)->varstatus != SCIP_VARSTATUS_NEGATED || (var)->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL))
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
 #define SCIPvarGetType(var)             ((VARTYPE)((var)->vartype))
+#define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemoveable(var)        (var)->removeable
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbIndex(var)        (var)->probindex
@@ -429,6 +442,7 @@ Real SCIPvarGetBranchingPriority(
 #define SCIPvarGetMultaggrVars(var)     (var)->data.multaggr.vars
 #define SCIPvarGetMultaggrScalars(var)  (var)->data.multaggr.scalars
 #define SCIPvarGetMultaggrConstant(var) (var)->data.multaggr.constant
+#define SCIPvarGetNegatedVar(var)       (var)->negatedvar
 #define SCIPvarGetNegationVar(var)      (var)->negatedvar
 #define SCIPvarGetNegationConstant(var) (var)->data.negate.constant
 #define SCIPvarGetObj(var)              (var)->obj
@@ -450,9 +464,21 @@ Real SCIPvarGetBestBound(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets worst local bound of variable with respect to the objective function */
+extern
+Real SCIPvarGetWorstBound(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** gets type (lower or upper) of best bound of variable with respect to the objective function */
 extern
 BOUNDTYPE SCIPvarGetBestBoundType(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
+extern
+BOUNDTYPE SCIPvarGetWorstBoundType(
    VAR*             var                 /**< problem variable */
    );
 

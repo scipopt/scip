@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricestore.h,v 1.1 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricestore.h,v 1.2 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   struct_pricestore.h
  * @brief  datastructures for storing priced variables
@@ -51,6 +51,7 @@ struct Pricestore
    int              nprobvarsfound;     /**< total number of problem variables, that were added (and evtl. thrown away) */
    int              nvarsfound;         /**< total number of variables, that were added (and evtl. thrown away) */
    int              nvarsapplied;       /**< total number of variables, that were added to the LP */
+   Bool             initiallp;          /**< is the pricing storage currently being filled with the initial LP columns? */
 };
 
 

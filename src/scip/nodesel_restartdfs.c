@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.9 2003/11/26 16:09:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.10 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -93,7 +93,7 @@ DECL_NODESELSELECT(nodeselSelectRestartdfs)
 
    /* decide if we want to select the node with lowest bound or the deepest node */
    if( nodeseldata->selectbestfreq >= 1 && SCIPgetNodenum(scip) % nodeseldata->selectbestfreq == 0 )
-      *selnode = SCIPgetLowerboundNode(scip);
+      *selnode = SCIPgetBestboundNode(scip);
    else
       *selnode = SCIPgetBestNode(scip);
 

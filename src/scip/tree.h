@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.43 2003/12/01 14:41:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.44 2003/12/15 17:45:35 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -131,7 +131,6 @@ RETCODE SCIPnodeAddBoundchg(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -223,50 +222,6 @@ RETCODE SCIPtreeBranchVar(
    VAR*             var                 /**< variable to branch on */
    );
 
-/** updates actual pseudo objective value for a change in a variable's objective value or bounds */
-extern
-RETCODE SCIPtreeUpdateVar(
-   TREE*            tree,               /**< branch-and-bound tree */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable that changed */
-   Real             oldobj,             /**< old objective value of variable */
-   Real             oldlb,              /**< old objective value of variable */
-   Real             oldub,              /**< old objective value of variable */
-   Real             newobj,             /**< new objective value of variable */
-   Real             newlb,              /**< new objective value of variable */
-   Real             newub               /**< new objective value of variable */
-   );
-
-/** updates actual pseudo objective value for a change in a variable's objective value */
-extern
-RETCODE SCIPtreeUpdateVarObj(
-   TREE*            tree,               /**< branch-and-bound tree */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable that changed */
-   Real             oldobj,             /**< old objective value of variable */
-   Real             newobj              /**< new objective value of variable */
-   );
-
-/** updates actual pseudo objective value for a change in a variable's lower bound */
-extern
-RETCODE SCIPtreeUpdateVarLb(
-   TREE*            tree,               /**< branch-and-bound tree */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable that changed */
-   Real             oldlb,              /**< old lower bound of variable */
-   Real             newlb               /**< new lower bound of variable */
-   );
-
-/** updates actual pseudo objective value for a change in a variable's upper bound */
-extern
-RETCODE SCIPtreeUpdateVarUb(
-   TREE*            tree,               /**< branch-and-bound tree */
-   const SET*       set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable that changed */
-   Real             oldub,              /**< old upper bound of variable */
-   Real             newub               /**< new upper bound of variable */
-   );
-
 /** gets number of leaves */
 extern
 int SCIPtreeGetNLeaves(
@@ -320,24 +275,11 @@ NODE* SCIPtreeGetLowerboundNode(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** gets the lower bound of the active node */
-extern
-Real SCIPtreeGetActLowerbound(
-   TREE*            tree                /**< branch-and-bound tree */
-   );
-
 /** gets the average lower bound of all nodes in the tree */
 extern
 Real SCIPtreeGetAvgLowerbound(
    TREE*            tree,               /**< branch-and-bound tree */
    Real             upperbound          /**< global upper bound */
-   );
-
-/** gets the pseudo objective value of the active node */
-extern
-Real SCIPtreeGetActPseudoobjval(
-   TREE*            tree,               /**< branch-and-bound tree */
-   const SET*       set                 /**< global SCIP settings */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.25 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.26 2003/12/15 17:45:33 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -78,7 +78,7 @@ RETCODE SCIPprobTransform(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PROB**           target              /**< pointer to target problem data structure */
    );
@@ -103,7 +103,7 @@ RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var                 /**< variable to add */
    );
@@ -118,13 +118,13 @@ RETCODE SCIPprobChgVarType(
    VARTYPE          vartype             /**< new type of variable */
    );
 
-/** informs problem, that the given variable was fixed */
+/** informs problem, that the given loose problem variable changed its status */
 extern
-RETCODE SCIPprobVarFixed(
+RETCODE SCIPprobVarChangedStatus(
    PROB*            prob,               /**< problem data */
    const SET*       set,                /**< global SCIP settings */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   VAR*             var                 /**< variable to add */
+   VAR*             var                 /**< problem variable */
    );
 
 /** adds constraint to the problem and captures it; a local constraint is automatically upgraded into a global constraint */
@@ -244,6 +244,16 @@ extern
 CONS* SCIPprobFindCons(
    PROB*            prob,               /**< problem data */
    const char*      name                /**< name of variable to find */
+   );
+
+/** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
+ *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
+ */
+extern
+Bool SCIPprobAllColsInLP(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** displays actual pseudo solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.3 2003/12/15 17:45:34 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -81,9 +81,9 @@ struct Col
    int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
    int              lppos;              /**< column position number in actual LP, or -1 if not in actual LP */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
-   int              validredcostlp;     /**< lp number for which reduced cost value is valid */
-   int              validfarkaslp;      /**< lp number for which farkas value is valid */
-   int              validstronglp;      /**< lp number for which strong branching values are valid */
+   int              validredcostlp;     /**< LP number for which reduced cost value is valid */
+   int              validfarkaslp;      /**< LP number for which farkas value is valid */
+   int              validstronglp;      /**< LP number for which strong branching values are valid */
    int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
@@ -129,7 +129,7 @@ struct Row
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int              numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
-   int              validactivitylp;    /**< lp number for which activity value is valid */
+   int              validactivitylp;    /**< LP number for which activity value is valid */
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
    unsigned int     delaysort:1;        /**< should the row sorting be delayed and done in a lazy fashion? */
@@ -149,32 +149,41 @@ struct Lp
    LPI*             lpi;                /**< LP solver interface */
    LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    COL**            lpicols;            /**< array with columns actually stored in the LP solver */
-   ROW**            lpirows;            /**< array with rows actually stored in the LP solver */
-   COL**            chgcols;            /**< array of changed columns not yet applied to the LP solver */
-   ROW**            chgrows;            /**< array of changed rows not yet applied to the LP solver */
-   COL**            cols;               /**< array with actual LP columns in correct order */
-   ROW**            rows;               /**< array with actual LP rows in correct order */
-   LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
-   Real             objval;             /**< objective value of LP, or SCIP_INVALID */
-   Real             upperbound;         /**< upper objective limit of LP solver (copy of primal->upperbound) */
    int              lpicolssize;        /**< available slots in lpicols vector */
    int              nlpicols;           /**< number of columns in the LP solver */
+   int              lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
+   ROW**            lpirows;            /**< array with rows actually stored in the LP solver */
    int              lpirowssize;        /**< available slots in lpirows vector */
    int              nlpirows;           /**< number of rows in the LP solver */
-   int              lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
    int              lpifirstchgrow;     /**< first row of the LP which differs from the row in the LP solver */
+   COL**            chgcols;            /**< array of changed columns not yet applied to the LP solver */
    int              chgcolssize;        /**< available slots in chgcols vector */
    int              nchgcols;           /**< actual number of chgcols (number of used slots in chgcols vector) */
+   ROW**            chgrows;            /**< array of changed rows not yet applied to the LP solver */
    int              chgrowssize;        /**< available slots in chgrows vector */
    int              nchgrows;           /**< actual number of chgrows (number of used slots in chgrows vector) */
+   COL**            cols;               /**< array with actual LP columns in correct order */
    int              colssize;           /**< available slots in cols vector */
    int              ncols;              /**< actual number of LP columns (number of used slots in cols vector) */
+   int              nremoveablecols;    /**< number of removeable columns in the LP */
+   int              firstnewcol;        /**< first column added at the active node */
+   ROW**            rows;               /**< array with actual LP rows in correct order */
    int              rowssize;           /**< available slots in rows vector */
    int              nrows;              /**< actual number of LP rows (number of used slots in rows vector) */
-   int              firstnewcol;        /**< first column added at the active node */
-   int              firstnewrow;        /**< first row added at the active node */
-   int              nremoveablecols;    /**< number of removeable columns in the LP */
    int              nremoveablerows;    /**< number of removeable rows in the LP */
+   int              firstnewrow;        /**< first row added at the active node */
+   LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
+   Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
+   Real             looseobjval;        /**< actual solution value of all loose variables set to their best bounds,
+                                         *   ignoring variables, with infinite best bound */
+   int              looseobjvalinf;     /**< number of loose variables with infinite best bound in actual solution */
+   int              nloosevars;         /**< number of loose variables in LP */
+   Real             pseudoobjval;       /**< actual pseudo solution value with all variables set to their best bounds,
+                                         *   ignoring variables, with infinite best bound */
+   int              pseudoobjvalinf;    /**< number of variables with infinite best bound in actual pseudo solution */
+   Real             upperbound;         /**< upper objective limit of LP (copy of primal->upperbound) */
+   int              validsollp;         /**< LP number for which the currently stored solution values are valid */
+   int              validfarkaslp;      /**< LP number for which the currently stored farkas values are valid */
    Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */
    Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
    Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */
@@ -184,6 +193,7 @@ struct Lp
    Bool             primalfeasible;     /**< is actual LP basis primal feasible? */
    Bool             dualfeasible;       /**< is actual LP basis dual feasible? */
    Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
+   Real             lpiuobjlim;         /**< current upper objective limit in LPI */
    Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    Bool             lpifastmip;         /**< current FASTMIP setting in LPI */
