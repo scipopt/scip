@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.162 2004/05/03 16:59:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.163 2004/05/04 19:45:13 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3209,9 +3209,9 @@ RETCODE freeSolve(
    CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
                   scip->branchcand, scip->eventqueue, scip->primal->cutoffbound) );
    
-   /* clear the LP, and solve it to flush the changes and clear the LP of the solver */
+   /* clear the LP, and flush the changes to clear the LP of the solver */
    CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
-   CHECK_OKAY( SCIPlpSolve(scip->lp, scip->mem->solvemem, scip->set, scip->stat, FALSE, TRUE, &lperror) );
+   CHECK_OKAY( SCIPlpFlush(scip->lp, scip->mem->solvemem, scip->set) );
    if( lperror )
    {
       errorMessage("error while solving empty LP\n");

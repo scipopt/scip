@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.40 2004/05/03 11:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.41 2004/05/04 19:45:12 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -960,24 +960,37 @@ RETCODE generateAltLP(
    /**@todo Check for equality constraints and add only one column corr. to unbounded variable */
    for( i = 0; i < nrows; ++i )
    {
+      COL** rowcols;
+      Real* rowvals;
+      Real rowlhs;
+      Real rowrhs;
+      int rowlen;
+
       row = rows[i];
-      assert( row != NULL );
+      assert(row != NULL);
+
+      rowlen = SCIProwGetNLPNonz(row);
+      rowcols = SCIProwGetCols(row);
+      rowvals = SCIProwGetVals(row);
+      rowlhs = SCIProwGetLhs(row);
+      rowrhs = SCIProwGetRhs(row);
 
       /* left hand side */
-      if( !SCIPsetIsInfinity(set, -row->lhs) )
+      if( !SCIPsetIsInfinity(set, -rowlhs) )
       {
          cnt = 0;
-         for( j = 0; j < row->len; ++j )
+         for( j = 0; j < rowlen; ++j )
          {
-            inds[cnt] = row->cols[j]->lppos;
-            vals[cnt] = -row->vals[j];
+            assert(SCIPcolIsInLP(rowcols[j]));
+            inds[cnt] = SCIPcolGetLPPos(rowcols[j]);
+            vals[cnt] = -rowvals[j];
             ++cnt;
          }
-         if( !SCIPsetIsZero(set, row->lhs) )
+         if( !SCIPsetIsZero(set, rowlhs) )
          {
             inds[cnt] = ncols;
-            vals[cnt] = -(row->lhs - row->constant);
-            sum_rhs += ABS(row->lhs);
+            vals[cnt] = -(rowlhs - SCIProwGetConstant(row));
+            sum_rhs += ABS(rowlhs);
             ++cnt;
          }
          if( row->local )
@@ -992,20 +1005,21 @@ RETCODE generateAltLP(
       }
 
       /* right hand side */
-      if( !SCIPsetIsInfinity(set, row->rhs) )
+      if( !SCIPsetIsInfinity(set, rowrhs) )
       {
          cnt = 0;
-         for( j = 0; j < row->len; ++j )
+         for( j = 0; j < rowlen; ++j )
          {
-            inds[cnt] = row->cols[j]->lppos;
-            vals[cnt] = row->vals[j];
+            assert(SCIPcolIsInLP(rowcols[j]));
+            inds[cnt] = SCIPcolGetLPPos(rowcols[j]);
+            vals[cnt] = rowvals[j];
             ++cnt;
          }
-         if( !SCIPsetIsZero(set, row->rhs) )
+         if( !SCIPsetIsZero(set, rowrhs) )
          {
             inds[cnt] = ncols;
-            vals[cnt] = row->rhs - row->constant;
-            sum_rhs += ABS(row->rhs);
+            vals[cnt] = rowrhs - SCIProwGetConstant(row);
+            sum_rhs += ABS(rowrhs);
             ++cnt;
          }
          if( row->local )
@@ -1050,27 +1064,36 @@ RETCODE generateAltLP(
    /* set up part for bounds */
    for( j = 0; j < ncols; ++j )
    {
+      VAR* colvar;
+      Real collb;
+      Real colub;
+
       col = cols[j];
       assert( col != NULL);
+
+      colvar = SCIPcolGetVar(col);
+      collb = SCIPcolGetLb(col);
+      colub = SCIPcolGetUb(col);
+
       /* lower bounds */
-      if( !SCIPsetIsInfinity(set, -col->lb) )
+      if( !SCIPsetIsInfinity(set, -collb) )
       {
          cnt = 0;
          inds[cnt] = j;
          vals[cnt] = -1.0;
          ++cnt;
 
-         if( !SCIPsetIsZero(set, col->lb) )
+         if( !SCIPsetIsZero(set, collb) )
          {
             inds[cnt] = ncols;
-            vals[cnt] = -col->lb;
-            sum_rhs += ABS(col->lb);
+            vals[cnt] = -collb;
+            sum_rhs += ABS(collb);
             ++cnt;
          }
-         if( !SCIPsetIsEQ(set, SCIPvarGetLbGlobal(col->var), col->lb) )
+         if( !SCIPsetIsEQ(set, SCIPvarGetLbGlobal(colvar), collb) )
          {
-            if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
-               obj = 1.0 + SCIPvarGetFixDepth(col->var);
+            if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
+               obj = 1.0 + SCIPvarGetFixDepth(colvar);
             else
                obj = 1000.0;
          }
@@ -1085,24 +1108,24 @@ RETCODE generateAltLP(
       }
 
       /* upper bounds */
-      if( !SCIPsetIsInfinity(set, col->ub) )
+      if( !SCIPsetIsInfinity(set, colub) )
       {
          cnt = 0;
          inds[cnt] = j;
          vals[cnt] = 1.0;
          ++cnt;
 
-         if( !SCIPsetIsZero(set, col->ub) )
+         if( !SCIPsetIsZero(set, colub) )
          {
             inds[cnt] = ncols;
-            vals[cnt] = col->ub;
-            sum_rhs += ABS(col->ub);
+            vals[cnt] = colub;
+            sum_rhs += ABS(colub);
             ++cnt;
          }
-         if( !SCIPsetIsEQ(set, SCIPvarGetUbGlobal(col->var), col->ub) )
+         if( !SCIPsetIsEQ(set, SCIPvarGetUbGlobal(colvar), colub) )
          {
-            if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
-               obj = 1.0 + SCIPvarGetFixDepth(col->var);
+            if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
+               obj = 1.0 + SCIPvarGetFixDepth(colvar);
             else
                obj = 1000.0;
          }
@@ -1290,7 +1313,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
    ROW* row;
    VAR* var;
    Real* dualfarkas;
-   Real* farkascoef;
+   Real* farkascoefs;
    Real farkaslhs;
    Real farkasact;
    Real bd;
@@ -1298,7 +1321,6 @@ RETCODE conflictAnalyzeLPDualfarkas(
    int r;
    int v;
    int i;
-   int nremoved;
 
    assert(lp != NULL);
    assert(lp->flushed);
@@ -1320,13 +1342,13 @@ RETCODE conflictAnalyzeLPDualfarkas(
 
    /* allocate temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &farkascoef, prob->nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &farkascoefs, prob->nvars) );
 
    /* get dual farkas values of rows */
    CHECK_OKAY( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
 
    /* calculate the farkas row */
-   clearMemoryArray(farkascoef, prob->nvars);
+   clearMemoryArray(farkascoefs, prob->nvars);
    farkaslhs = 0.0;
    for( r = 0; r < nrows; ++r )
    {
@@ -1344,7 +1366,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
          {
             v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
             assert(0 <= v && v < prob->nvars);
-            farkascoef[v] += dualfarkas[r] * row->vals[i];
+            farkascoefs[v] += dualfarkas[r] * row->vals[i];
          }
 
          /* add row side to farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
@@ -1369,9 +1391,9 @@ RETCODE conflictAnalyzeLPDualfarkas(
       assert(SCIPvarGetProbindex(var) == v);
 
       /* ignore coefs close to 0.0 */
-      if( SCIPsetIsZero(set, farkascoef[v]) )
+      if( SCIPsetIsZero(set, farkascoefs[v]) )
       {
-         farkascoef[v] = 0.0;
+         farkascoefs[v] = 0.0;
          continue;
       }
 
@@ -1379,7 +1401,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
          /* use the current local bounds for binary variables, selecting the bound that leads to largest activity */
-         if( farkascoef[v] > 0.0 )
+         if( farkascoefs[v] > 0.0 )
             bd = getUbLocal(var);
          else
             bd = getLbLocal(var);
@@ -1389,7 +1411,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
          /* because we cannot include non-binary variables in the conflict set, we have to use global bounds for
           * non-binary variables
           */
-         if( farkascoef[v] > 0.0 )
+         if( farkascoefs[v] > 0.0 )
          {
             bd = SCIPvarGetUbGlobal(var);
 
@@ -1407,17 +1429,54 @@ RETCODE conflictAnalyzeLPDualfarkas(
          }
       }
       assert(!SCIPsetIsInfinity(set, ABS(bd)));
-      farkasact += farkascoef[v] * bd;
+      farkasact += farkascoefs[v] * bd;
    }
    debugMessage("farkaslhs=%g, farkasact=%g (%s)\n", farkaslhs, farkasact, v == prob->nvars ? "valid" : "invalid");
 
    /* check, if the farkas row is still violated (using global bounds for non-binary variables and ignoring local rows) */
    if( SCIPsetIsFeasLT(set, farkasact, farkaslhs) )
    {
+      VAR** binvars;
+      Real* binvarscores;
+      Real score;
+      Real farkascoef;
+      int nfixings;
+      int nremoved;
+
+      /* calculate the order in which the binary variables are tried to unfix:
+       *  - prefer variables that have been fixed deeper in the tree, to get a more global conflict
+       *  - prefer variables with small farkas coefficient to get rid of as many variables as possible
+       */
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvars, prob->nbinvars) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvarscores, prob->nbinvars) );
+      nfixings = 0;
+      for( v = 0; v < prob->nbinvars; ++v )
+      {
+         var = prob->vars[v];
+
+         /* ignore already unfixed variables */
+         if( getLbLocal(var) < 0.5 && getUbLocal(var) > 0.5 )
+            continue;
+
+         /* calculate score of variable fixing */
+         farkascoef = ABS(farkascoefs[v]);
+         score = 1.0 - farkascoef/(farkaslhs - farkasact);
+         score = MAX(score, 0.0) + 1e-6;
+         score *= SCIPvarGetFixDepth(var);
+
+         /* insert fixed variable in candidate list */
+         for( i = nfixings; i > 0 && score > binvarscores[i-1]; --i )
+         {
+            binvars[i] = binvars[i-1];
+            binvarscores[i] = binvarscores[i-1];
+         }
+         binvars[i] = var;
+         binvarscores[i] = score;
+         nfixings++;
+      }
+
       /* initialize conflict data */
       CHECK_OKAY( SCIPconflictInit(conflict) );
-
-      /**@todo choose a different ordering of the variables to unfix them in the conflict (e.g. fixing depth) */
 
       /* try to unfix binary variables and still keep the farkas row violated:
        * binaries fixed to 0.0 can be unfixed
@@ -1428,23 +1487,25 @@ RETCODE conflictAnalyzeLPDualfarkas(
        *  - if farkas value is non-negative (because 1.0 is best farkas bound anyways)
        */
       nremoved = 0;
-      for( v = 0; v < prob->nbinvars; ++v )
+      for( i = 0; i < nfixings; ++i )
       {
-         var = prob->vars[v];
+         var = binvars[i];
+         v = SCIPvarGetProbindex(var);
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+         assert(0 <= v && v < prob->nbinvars);
 
          debugMessage(" <%s> [%g,%g]: farkascoef=%g, %g <= %g\n",
-            SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), farkascoef[v], farkaslhs, farkasact);
+            SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), farkascoefs[v], farkaslhs, farkasact);
 
          if( getUbLocal(var) < 0.5 )
          {
             /* variable is fixed to 0.0 */
-            if( SCIPsetIsPositive(set, farkascoef[v]) )
+            if( SCIPsetIsPositive(set, farkascoefs[v]) )
             {
-               if( SCIPsetIsFeasLT(set, farkasact + farkascoef[v], farkaslhs) )
+               if( SCIPsetIsFeasLT(set, farkasact + farkascoefs[v], farkaslhs) )
                {
                   /* we can unfix the variable but have to increase the farkas activity */
-                  farkasact += farkascoef[v];
+                  farkasact += farkascoefs[v];
                   nremoved++;
                   debugMessage("  -> unfixed variable -> %g <= %g\n", farkaslhs, farkasact);
                }
@@ -1461,12 +1522,12 @@ RETCODE conflictAnalyzeLPDualfarkas(
          else if( getLbLocal(var) > 0.5 )
          {
             /* variable is fixed to 1.0 */
-            if( SCIPsetIsNegative(set, farkascoef[v]) )
+            if( SCIPsetIsNegative(set, farkascoefs[v]) )
             {
-               if( SCIPsetIsFeasLT(set, farkasact - farkascoef[v], farkaslhs) )
+               if( SCIPsetIsFeasLT(set, farkasact - farkascoefs[v], farkaslhs) )
                {
                   /* we can unfix the variable but have to increase the farkas activity */
-                  farkasact -= farkascoef[v];
+                  farkasact -= farkascoefs[v];
                   nremoved++;
                   debugMessage("  -> unfixed variable -> %g <= %g\n", farkaslhs, farkasact);
                }
@@ -1485,12 +1546,16 @@ RETCODE conflictAnalyzeLPDualfarkas(
 
       /* analyze the conflict set, and create a conflict constraint on success */
       CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, FALSE, success) );
+
+      /* free the buffer for the sorted binary variables */
+      SCIPsetFreeBufferArray(set, &binvarscores);
+      SCIPsetFreeBufferArray(set, &binvars);
    }
 
  TERMINATE:
 
    /* free temporary memory */
-   SCIPsetFreeBufferArray(set, &farkascoef);
+   SCIPsetFreeBufferArray(set, &farkascoefs);
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;
@@ -1516,9 +1581,6 @@ RETCODE conflictAnalyzeLPDualsol(
    ROW* row;
    COL* col;
    VAR* var;
-   VAR** binvars;
-   Real* binvarscores;
-   Real score;
    Real* primsols;
    Real* dualsols;
    Real* redcosts;
@@ -1528,17 +1590,13 @@ RETCODE conflictAnalyzeLPDualsol(
    Real duallhsdelta;
    Real dualactdelta;
    Real bd;
-   Real redcost;
    Bool havelocal;
    int nrows;
    int ncols;
-   int sign;
    int r;
    int c;
    int v;
    int i;
-   int nfixings;
-   int nremoved;
 
    assert(lp != NULL);
    assert(lp->flushed);
@@ -1743,12 +1801,20 @@ RETCODE conflictAnalyzeLPDualsol(
    /* check, if the dual row is still violated (using global bounds for non-binary variables and ignoring local rows) */
    if( SCIPsetIsFeasLT(set, dualact, duallhs) )
    {
+      VAR** binvars;
+      Real* binvarscores;
+      Real score;
+      Real redcost;
+      int nfixings;
+      int nremoved;
+      int sign;
+
       /* calculate the order in which the binary variables are tried to unfix:
        *  - prefer variables that have been fixed deeper in the tree, to get a more global conflict
        *  - prefer variables with small reduced costs to get rid of as many variables as possible
        */
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvars, prob->nbinvars+1) );
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvarscores, prob->nbinvars+1) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvars, prob->nbinvars) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvarscores, prob->nbinvars) );
       nfixings = 0;
       for( v = 0; v < prob->nbinvars; ++v )
       {
@@ -1768,7 +1834,7 @@ RETCODE conflictAnalyzeLPDualsol(
          }
          else
             redcost = 0.0;
-         score = (1.0 - redcost/(duallhs - dualact));
+         score = 1.0 - redcost/(duallhs - dualact);
          score = MAX(score, 0.0) + 1e-6;
          score *= SCIPvarGetFixDepth(var);
 

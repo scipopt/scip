@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.27 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.28 2004/05/04 19:45:12 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -78,9 +78,11 @@ DECL_HASHKEYEQ(hashKeyEqCut)
    /* sort the column indices of a row */
    SCIProwSort(row1);
    SCIProwSort(row2);
-   assert(row1->sorted);
+   assert(row1->lpcolssorted);
+   assert(row1->nonlpcolssorted);
    assert(row1->validminmaxidx);
-   assert(row2->sorted);
+   assert(row2->lpcolssorted);
+   assert(row2->nonlpcolssorted);
    assert(row2->validminmaxidx);
 
    /* compare the trivial characteristics of the rows */

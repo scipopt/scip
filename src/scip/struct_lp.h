@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.14 2004/05/03 16:59:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.15 2004/05/04 19:45:13 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -82,6 +82,7 @@ struct Col
    int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
+   int              nlprows;            /**< number of rows in column, that belong to the current LP */
    int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
    int              lppos;              /**< column position number in current LP, or -1 if not in current LP */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
@@ -91,13 +92,14 @@ struct Col
    int              strongbranchitlim;  /**< strong branching iteration limit used to get strongbranch values, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
-   unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
-   unsigned int     objchanged:1;       /**< TRUE iff objective value changed, and data of LP solver has to be updated */
-   unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
-   unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
-   unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
-   unsigned int     integral:1;         /**< TRUE iff associated variable is of integral type */
-   unsigned int     removeable:1;       /**< TRUE iff column is removeable from the LP (due to aging or cleanup) */
+   unsigned int     lprowssorted:1;     /**< are the LP rows in the rows array sorted by non-decreasing index? */
+   unsigned int     nonlprowssorted:1;  /**< are the non-LP rows in the rows array sorted by non-decreasing index? */
+   unsigned int     objchanged:1;       /**< has objective value changed, and has data of LP solver to be updated? */
+   unsigned int     lbchanged:1;        /**< has lower bound changed, and has data of LP solver to be updated? */
+   unsigned int     ubchanged:1;        /**< has upper bound changed, and has data of LP solver to be updated? */
+   unsigned int     coefchanged:1;      /**< has the coefficient vector changed, and has LP solver to be updated? */
+   unsigned int     integral:1;         /**< is associated variable of integral type? */
+   unsigned int     removeable:1;       /**< is column removeable from the LP (due to aging or cleanup)? */
 };
 
 /** row of the LP */
@@ -126,6 +128,7 @@ struct Row
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
+   int              nlpcols;            /**< number of columns in row, that belong to the current LP */
    int              nunlinked;          /**< number of row entries, where the columns don't know about the row */
    int              nuses;              /**< number of times, this row is referenced */
    int              lppos;              /**< row position number in current LP, or -1 if not in current LP */
@@ -136,7 +139,8 @@ struct Row
    int              numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int              validactivitylp;    /**< LP number for which activity value is valid */
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
-   unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
+   unsigned int     lpcolssorted:1;     /**< are the LP columns in the cols array sorted by non-decreasing index? */
+   unsigned int     nonlpcolssorted:1;  /**< are the non-LP columns in the cols array sorted by non-decreasing index? */
    unsigned int     delaysort:1;        /**< should the row sorting be delayed and done in a lazy fashion? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
    unsigned int     lhschanged:1;       /**< was left hand side or constant changed, and has LP solver to be updated? */
@@ -145,7 +149,7 @@ struct Row
    unsigned int     integral:1;         /**< is activity (without constant) of row always integral in feasible solution? */
    unsigned int     local:1;            /**< is row only valid locally? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int     removeable:1;       /**< TRUE iff row is removeable from the LP (due to aging or cleanup) */
+   unsigned int     removeable:1;       /**< is row removeable from the LP (due to aging or cleanup)? */
    unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.76 2004/05/03 16:59:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.77 2004/05/04 19:45:12 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -58,8 +58,8 @@ RETCODE SCIPcolCreate(
    STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
-   ROW**            row,                /**< array with rows of column entries */
-   Real*            val,                /**< array with coefficients of column entries */
+   ROW**            rows,               /**< array with rows of column entries */
+   Real*            vals,               /**< array with coefficients of column entries */
    Bool             removeable          /**< should the column be removed from the LP due to aging or cleanup? */
    );
 
@@ -72,7 +72,8 @@ RETCODE SCIPcolFree(
    LP*              lp                  /**< current LP data */
    );
 
-/** sorts column entries by row index */
+/** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
+ */
 extern
 void SCIPcolSort(
    COL*             col                 /**< column to be sorted */
@@ -255,7 +256,9 @@ RETCODE SCIProwRelease(
    LP*              lp                  /**< current LP data */
    );
 
-/** sorts row entries by column index */
+/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
+ *  higher ones
+ */
 extern
 void SCIProwSort(
    ROW*             row                 /**< row to be sorted */
@@ -603,6 +606,14 @@ RETCODE SCIPlpSetCutoffbound(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
    Real             cutoffbound         /**< new upper objective limit */
+   );
+
+/** applies all cached changes to the LP solver */
+extern
+RETCODE SCIPlpFlush(
+   LP*              lp,                 /**< current LP data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.108 2004/05/04 10:52:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.109 2004/05/04 19:45:13 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -502,7 +502,6 @@ RETCODE initRootLP(
    VAR* var;
    int v;
    int h;
-   Bool lperror;
 
    assert(lp != NULL);
    assert(SCIPlpGetNCols(lp) == 0);
@@ -514,12 +513,7 @@ RETCODE initRootLP(
    *cutoff = FALSE;
 
    /* make sure, the empty LP is flushed to the LP solver */
-   CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, FALSE, TRUE, &lperror) );
-   if( lperror )
-   {
-      errorMessage("error while solving empty LP\n");
-      return SCIP_LPERROR;
-   }
+   CHECK_OKAY( SCIPlpFlush(lp, memhdr, set) );
 
    /* inform pricing and separation storage, that LP is now filled with initial data */
    SCIPpricestoreStartInitialLP(pricestore);

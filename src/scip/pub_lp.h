@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.8 2004/05/03 16:59:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.9 2004/05/04 19:45:13 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -126,6 +126,12 @@ int SCIPcolGetNNonz(
    COL*             col                 /**< LP column */
    );
 
+/** get number of nonzero entries in column vector, that correspond to rows currently in the LP */
+extern
+int SCIPcolGetNLPNonz(
+   COL*             col                 /**< LP column */
+   );
+
 /** gets array with rows of nonzero entries */
 extern
 ROW** SCIPcolGetRows(
@@ -163,6 +169,7 @@ Longint SCIPcolGetStrongbranchNode(
 #define SCIPcolGetLPPos(col)            ((col)->lppos)
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
 #define SCIPcolGetNNonz(col)            ((col)->len)
+#define SCIPcolGetNLPNonz(col)          ((col)->nlprows)
 #define SCIPcolGetRows(col)             ((col)->rows)
 #define SCIPcolGetVals(col)             ((col)->vals)
 #define SCIPcolGetStrongbranchNode(col) ((col)->strongbranchnode)
@@ -204,6 +211,12 @@ void SCIProwPrint(
 /** get number of nonzero entries in row vector */
 extern
 int SCIProwGetNNonz(
+   ROW*             row                 /**< LP row */
+   );
+
+/** get number of nonzero entries in row vector, that correspond to columns currently in the LP */
+extern
+int SCIProwGetNLPNonz(
    ROW*             row                 /**< LP row */
    );
 
@@ -304,6 +317,7 @@ Bool SCIProwIsInLP(
  */
 
 #define SCIProwGetNNonz(row)            ((row)->len)
+#define SCIProwGetNLPNonz(row)          ((row)->nlpcols)
 #define SCIProwGetCols(row)             ((row)->cols)
 #define SCIProwGetVals(row)             ((row)->vals)
 #define SCIProwGetConstant(row)         ((row)->constant)

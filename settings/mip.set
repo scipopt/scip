@@ -106,6 +106,14 @@ pricing/maxpricevarsroot = 2000
 # [type: real, range: [1,1.79769313486232e+308], default: 2]
 pricing/abortpricevarsfac = 2
 
+# maximal number of propagation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 100]
+propagating/maxproprounds = 100
+
+# maximal number of propagation rounds in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 1000]
+propagating/maxproproundsroot = 1000
+
 # maximal number of cuts separated per separation round
 # [type: int, range: [1,2147483647], default: 100]
 separating/maxsepacuts = 100
@@ -659,8 +667,8 @@ heuristics/pscostdiving/maxdiveavgquotnosol = 8
 heuristics/rounding/priority = -1000
 
 # frequency for calling primal heuristic <rounding> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-heuristics/rounding/freq = 5
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/rounding/freq = 1
 
 # frequency offset for calling primal heuristic <rounding>
 # [type: int, range: [0,2147483647], default: 0]
