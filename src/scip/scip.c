@@ -14,11 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.221 2004/10/29 10:38:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.222 2004/10/29 12:42:53 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
  * @author Tobias Achterberg
+ * @author Thorsten Koch
+ * @author Alexander Martin
+ * @author Kati Wolter
  */
 /**@todo check all checkStage() calls, use bit flags instead of the Bool parameters */
 /**@todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE */
@@ -6985,6 +6988,34 @@ RETCODE SCIPcalcMIR(
    CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
+         boundswitch, usevbds, allowlocal, maxweightrange, minfrac, weights, scale,
+         mircoef, mirrhs, cutactivity, success, cutislocal) );
+
+   return SCIP_OKAY;
+}
+
+/* calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ * rows cannot participate in a MIR cut.
+ */
+RETCODE SCIPcalcStrongCG(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
+   Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   Real             scale,              /**< additional scaling factor multiplied to all rows */
+   Real*            mircoef,            /**< array to store strong CG coefficients: must be of size SCIPgetNVars() */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the strong CG row */
+   Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
+   Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
+   Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcalcStrongCG", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPlpCalcStrongCG(scip->lp, scip->set, scip->stat, scip->transprob,
          boundswitch, usevbds, allowlocal, maxweightrange, minfrac, weights, scale,
          mircoef, mirrhs, cutactivity, success, cutislocal) );
 

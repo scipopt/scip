@@ -14,11 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.177 2004/10/29 10:39:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.178 2004/10/29 12:42:54 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
  * @author Tobias Achterberg
+ * @author Thorsten Koch
+ * @author Alexander Martin
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2593,6 +2596,27 @@ RETCODE SCIPcalcMIR(
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   );
+
+
+/* calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ * rows cannot participate in a MIR cut.
+ */
+extern
+RETCODE SCIPcalcStrongCG(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
+   Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   Real             scale,              /**< additional scaling factor multiplied to all rows */
+   Real*            mircoef,            /**< array to store strong CG coefficients: must be of size SCIPgetNVars() */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the strong CG row */
+   Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
+   Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
    Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    );
 

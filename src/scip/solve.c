@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.142 2004/10/29 10:39:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.143 2004/10/29 12:42:54 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1115,6 +1115,24 @@ RETCODE solveNodeLP(
    stat->nnodelps += stat->nlps - nlps;
    stat->nnodelpiterations += stat->nlpiterations - nlpiterations;
 
+#if 0 /**@todo check if this is valid and useful (faster (but not so well?) strong branching -> see 10teams.mps) */
+   /* clean up newly created part of LP to keep only necessary columns and rows */
+   CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat) );
+   
+   /* resolve LP after cleaning up */
+   if( !lp->solved || !lp->flushed )
+   {
+      debugMessage("resolving LP after cleanup\n");
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->lp_fastmip, FALSE, lperror) );
+      
+      /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
+      if( lp->validsollp == stat->lpcount-1 )
+         lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
+   }
+#endif
+   
    return SCIP_OKAY;
 }
 

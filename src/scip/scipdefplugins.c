@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.28 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.29 2004/10/29 12:42:54 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -66,6 +66,7 @@
 #include "reader_mps.h"
 #include "sepa_cmir.h"
 #include "sepa_gomory.h"
+#include "sepa_strongcg.h"
 #include "sepa_intobj.h"
 #include "scipdefplugins.h"
 
@@ -122,6 +123,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludePropPseudoobj(scip) );
    CHECK_OKAY( SCIPincludeSepaCmir(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
+   CHECK_OKAY( SCIPincludeSepaStrongcg(scip) );
    CHECK_OKAY( SCIPincludeSepaIntobj(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeDialogDefault(scip) );
