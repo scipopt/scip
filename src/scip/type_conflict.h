@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.3 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.4 2004/03/31 14:52:59 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -31,7 +31,7 @@ typedef struct Conflicthdlr CONFLICTHDLR; /**< conflict handler to process confl
 typedef struct ConflicthdlrData CONFLICTHDLRDATA; /**< conflict handler data */
 typedef struct Conflict CONFLICT;       /**< conflict analysis data structure for propagation conflicts */
 typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure for infeasible LP conflicts */
-
+typedef struct PseudoConflict PSEUDOCONFLICT; /** conflict analysis data structure for pseudo solution conflicts */
 
 /** destructor of conflict handler to free conflict handler data (called when SCIP is exiting)
  *

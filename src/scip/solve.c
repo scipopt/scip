@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.96 2004/03/31 13:41:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.97 2004/03/31 14:52:59 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1247,6 +1247,7 @@ RETCODE solveNode(
    CUTPOOL*         cutpool,            /**< global cut pool */
    CONFLICT*        conflict,           /**< conflict analysis data */
    LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
+   PSEUDOCONFLICT*  pseudoconflict,     /**< conflict analysis data for pseudo solution conflicts */
    PRIMAL*          primal,             /**< primal data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -1348,7 +1349,13 @@ RETCODE solveNode(
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
       SCIPnodeUpdateLowerbound(tree->actnode, pseudoobjval);
       debugMessage(" -> new lower bound: %g (pseudoobj: %g)\n", tree->actnode->lowerbound, pseudoobjval);
-            
+
+      /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
+      if( pseudoobjval >= primal->cutoffbound )
+      {
+         CHECK_OKAY( SCIPpseudoconflictAnalyze(pseudoconflict, memhdr, set, stat, prob, tree, lp, conflict, NULL) );
+      }
+      
       /* check for infeasible node by bounding */
       if( *cutoff
          || tree->actnode->lowerbound >= primal->cutoffbound
@@ -1521,6 +1528,7 @@ RETCODE SCIPsolveCIP(
    CUTPOOL*         cutpool,            /**< global cut pool */
    CONFLICT*        conflict,           /**< conflict analysis data */
    LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
+   PSEUDOCONFLICT*  pseudoconflict,     /**< conflict analysis data for pseudo solution conflicts */
    PRIMAL*          primal,             /**< primal data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -1635,8 +1643,8 @@ RETCODE SCIPsolveCIP(
       else
       {
          CHECK_OKAY( solveNode(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, cutpool,
-                        conflict, lpconflict, primal, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo,
-                        &cutoff, &infeasible) );
+                        conflict, lpconflict, pseudoconflict, primal, eventfilter, eventqueue,
+                        conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible) );
       }
       assert(!cutoff || infeasible);
 

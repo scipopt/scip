@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.4 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.5 2004/03/31 14:52:59 bzfpfend Exp $"
 
 /**@file   scipstruct.h
  * @brief  SCIP main data structure
@@ -74,6 +74,7 @@ struct Scip
    CUTPOOL*         cutpool;            /**< global cut pool */
    CONFLICT*        conflict;           /**< conflict analysis data for propagation conflicts */
    LPCONFLICT*      lpconflict;         /**< conflict analysis data for infeasible LP conflicts */
+   PSEUDOCONFLICT*  pseudoconflict;     /**< conflict analysis data for pseudo solution conflicts */
    PRIMAL*          primal;             /**< primal data and solution storage */
 
    STAGE            stage;              /**< SCIP operation stage */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.33 2004/03/30 12:51:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.34 2004/03/31 14:52:58 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -538,6 +538,7 @@ RETCODE conflictAnalyze(
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
    int              maxsize,            /**< maximal size of conflict set */
+   Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
    Bool*            success             /**< pointer to store whether the conflict set is valid */
    )
 {
@@ -545,6 +546,7 @@ RETCODE conflictAnalyze(
    VAR* nextvar;
    VAR* infervar;
    CONS* infercons;
+   Bool resolved;
 
    assert(conflict != NULL);
    assert(tree != NULL);
@@ -567,6 +569,7 @@ RETCODE conflictAnalyze(
 
    /* clear the conflict set */
    conflict->nconflictvars = 0;
+   resolved = FALSE;
 
    /* process all variables in the conflict candidate queue */
    var = (VAR*)(SCIPpqueueRemove(conflict->varqueue));
@@ -614,6 +617,7 @@ RETCODE conflictAnalyze(
                SCIPvarGetName(var), SCIPconsGetName(infercons), SCIPvarGetName(infervar), SCIPvarGetLbLocal(infervar),
                SCIPvarGetInferDepth(var), SCIPvarGetInferIndex(var));
             CHECK_OKAY( SCIPconsResolveConflictVar(infercons, set, SCIPvarGetInferVar(var)) );
+            resolved = TRUE;
          }
          else
          {
@@ -636,8 +640,8 @@ RETCODE conflictAnalyze(
       var = (VAR*)(SCIPpqueueRemove(conflict->varqueue));
    }
 
-   /* if a valid conflict set was found, call the conflict handlers */
-   if( var == NULL )
+   /* if a valid conflict set was found (where at least one resolution was applied), call the conflict handlers */
+   if( var == NULL && (!mustresolve || resolved) )
    {
       NODE* node;
       BOUNDCHG* boundchgs;
@@ -765,7 +769,7 @@ RETCODE SCIPconflictAnalyze(
    conflict->ncalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, &valid) );
+   CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, TRUE, &valid) );
 
    /* check, if a conflict constraint was created */
    if( valid )
@@ -1204,7 +1208,7 @@ RETCODE lpconflictAnalyzeAltLP(
          if( valid )
          {
             /* analyze the conflict set, and create a conflict constraint on success */
-            CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, success) );
+            CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, FALSE, success) );
          }
       }
       
@@ -1427,7 +1431,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
          debugMessage("farkas conflict analysis removed %d fixings\n", nremoved);
 
          /* analyze the conflict set, and create a conflict constraint on success */
-         CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, success) );
+         CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, FALSE, success) );
       }
    }
 
@@ -1764,7 +1768,7 @@ RETCODE lpconflictAnalyzeDualsol(
          debugMessage("dual conflict analysis removed %d of %d fixings\n", nremoved, nfixings);
 
          /* analyze the conflict set, and create a conflict constraint on success */
-         CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, success) );
+         CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, FALSE, success) );
 
          /* free the buffer for the sorted binary variables */
          SCIPsetFreeBufferArray(set, &binvarscores);
@@ -1778,7 +1782,8 @@ RETCODE lpconflictAnalyzeDualsol(
    return SCIP_OKAY;
 }
 
-/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the infeasibility;
+/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the
+ *  infeasibility;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;
  *  updates statistics for infeasible LP conflict analysis
@@ -1866,7 +1871,7 @@ RETCODE SCIPlpconflictAnalyze(
    }
 #endif
       
-   /* check, if a valid conflict have been found */
+   /* check, if a valid conflict was found */
    if( !error && valid )
    {
       lpconflict->nconflicts++;
@@ -1919,3 +1924,201 @@ Longint SCIPlpconflictGetNLPIterations(
 
    return lpconflict->nlpiterations;
 }
+
+
+
+
+/*
+ * pseudo solution conflict analysis
+ */
+
+/** creates conflict analysis data for pseudo solution conflicts */
+RETCODE SCIPpseudoconflictCreate(
+   PSEUDOCONFLICT** pseudoconflict      /**< pointer to pseudo solution conflict analysis data */
+   )
+{
+   assert(pseudoconflict != NULL);
+
+   ALLOC_OKAY( allocMemory(pseudoconflict) );
+
+   CHECK_OKAY( SCIPclockCreate(&(*pseudoconflict)->analyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+   (*pseudoconflict)->ncalls = 0;
+   (*pseudoconflict)->nconflicts = 0;
+   
+   return SCIP_OKAY;
+}
+
+/** frees conflict analysis data for pseudo solution conflicts */
+RETCODE SCIPpseudoconflictFree(
+   PSEUDOCONFLICT** pseudoconflict      /**< pointer to pseudo solution conflict analysis data */
+   )
+{
+   assert(pseudoconflict != NULL);
+   assert(*pseudoconflict != NULL);
+
+   SCIPclockFree(&(*pseudoconflict)->analyzetime);
+   freeMemory(pseudoconflict);
+
+   return SCIP_OKAY;
+}
+
+/** analyzes a pseudo solution with objective value exceeding the current cutoff to find out the bound changes on binary
+ *  variables that were responsible for the objective value degradation;
+ *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
+ *  a conflict constraint out of the resulting conflict set;
+ *  updates statistics for pseudo solution conflict analysis
+ */
+RETCODE SCIPpseudoconflictAnalyze(
+   PSEUDOCONFLICT*  pseudoconflict,     /**< pseudo solution conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< LP data */
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   )
+{
+   VAR* var;
+   Real pseudoobjval;
+   Real obj;
+   Bool valid;
+   int maxsize;
+   int v;
+
+   assert(pseudoconflict != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(prob != NULL);
+   assert(lp != NULL);
+
+   if( success != NULL )
+      *success = FALSE;
+
+   /* check, if pseudo solution conflict analysis is enabled */
+   if( !set->usepseudoconflict )
+      return SCIP_OKAY;
+
+   /* check, if there are any conflict handlers to use a conflict set */
+   if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* if the root LP was infeasible, nothing has to be done */
+   if( stat->nnodes == 1 )
+      return SCIP_OKAY;
+
+   /* calculate the maximal size of the conflict set */
+   maxsize = (int)(set->maxconfvarsfac * prob->nbinvars);
+   maxsize = MAX(maxsize, set->minmaxconfvars);
+   if( maxsize < 2 )
+      return SCIP_OKAY;
+
+   /* start timing */
+   SCIPclockStart(pseudoconflict->analyzetime, set);
+
+   pseudoconflict->ncalls++;
+   valid = FALSE;
+
+   /* if any non-binary variable is not on its best bound in current pseudo solution, we have to abort */
+   for( v = prob->nbinvars; v < prob->nvars; ++v )
+   {
+      var = prob->vars[v];
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+      obj = SCIPvarGetObj(var);
+      if( (obj > 0.0 && SCIPvarGetLbLocal(var) != SCIPvarGetLbGlobal(var))
+         || (obj < 0.0 && SCIPvarGetUbLocal(var) != SCIPvarGetUbGlobal(var)) )
+         break;
+   }
+
+   if( v == prob->nvars )
+   {
+      pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
+      assert(pseudoobjval >= lp->cutoffbound);
+
+      debugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
+         pseudoobjval, lp->cutoffbound);
+
+      /* initialize conflict data */
+      CHECK_OKAY( SCIPconflictInit(conflict) );
+      
+      /* add all binary variables, that are not on their best bound in current pseudo solution;
+       * however, the variable need not to be added, if after unfixing the pseudo objective value is still too large
+       */
+      for( v = 0; v < prob->nbinvars; ++v )
+      {
+         var = prob->vars[v];
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+         obj = SCIPvarGetObj(var);
+         if( obj > 0.0 && SCIPvarGetLbLocal(var) > 0.5 )
+         {
+            if( pseudoobjval - obj >= lp->cutoffbound )
+               pseudoobjval -= obj;
+            else
+            {
+               debugMessage("adding <%s>[%g,%g] (obj=%g) to conflict set\n", 
+                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), obj);
+               CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+            }
+         }
+         else if( obj < 0.0 && SCIPvarGetUbLocal(var) < 0.5 )
+         {
+            if( pseudoobjval + obj >= lp->cutoffbound )
+               pseudoobjval += obj;
+            else
+            {
+               debugMessage("adding <%s>[%g,%g] (obj=%g) to conflict set\n", 
+                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), obj);
+               CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+            }
+         }
+      }
+      
+      /* analyze the conflict set, and create a conflict constraint on success */
+      CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, TRUE, &valid) );
+      
+      /* check, if a valid conflict was found */
+      if( valid )
+      {
+         pseudoconflict->nconflicts++;
+         if( success != NULL )
+            *success = TRUE;
+      }
+   }
+
+   /* stop timing */
+   SCIPclockStop(pseudoconflict->analyzetime, set);
+
+   return SCIP_OKAY;
+}
+
+/** gets time in seconds used for analyzing pseudo solution conflicts */
+Real SCIPpseudoconflictGetTime(
+   PSEUDOCONFLICT*  pseudoconflict      /**< pseudo solution conflict analysis data */
+   )
+{
+   assert(pseudoconflict != NULL);
+
+   return SCIPclockGetTime(pseudoconflict->analyzetime);
+}
+
+/** gets number of calls to pseudo solution conflict analysis */
+Longint SCIPpseudoconflictGetNCalls(
+   PSEUDOCONFLICT*  pseudoconflict      /**< pseudo solution conflict analysis data */
+   )
+{
+   assert(pseudoconflict != NULL);
+
+   return pseudoconflict->ncalls;
+}
+
+/** gets number of valid conflicts detected in pseudo solution conflict analysis */
+Longint SCIPpseudoconflictGetNConflicts(
+   PSEUDOCONFLICT*  pseudoconflict      /**< pseudo solution conflict analysis data */
+   )
+{
+   assert(pseudoconflict != NULL);
+
+   return pseudoconflict->nconflicts;
+}
+

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.137 2004/03/31 13:41:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.138 2004/03/31 14:52:59 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -115,6 +115,7 @@ RETCODE checkStage(
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
       assert(scip->lpconflict == NULL);
+      assert(scip->pseudoconflict == NULL);
       assert(scip->primal == NULL);
 
       if( !init )
@@ -138,6 +139,7 @@ RETCODE checkStage(
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
       assert(scip->lpconflict == NULL);
+      assert(scip->pseudoconflict == NULL);
       assert(scip->primal == NULL);
 
       if( !problem )
@@ -161,6 +163,7 @@ RETCODE checkStage(
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
       assert(scip->lpconflict == NULL);
+      assert(scip->pseudoconflict == NULL);
       assert(scip->primal == NULL);
 
       if( !initsolve )
@@ -184,6 +187,7 @@ RETCODE checkStage(
       assert(scip->cutpool == NULL);
       assert(scip->conflict == NULL);
       assert(scip->lpconflict == NULL);
+      assert(scip->pseudoconflict == NULL);
       assert(scip->primal == NULL);
 
       if( !presolving )
@@ -207,6 +211,7 @@ RETCODE checkStage(
       assert(scip->cutpool != NULL);
       assert(scip->conflict != NULL);
       assert(scip->lpconflict != NULL);
+      assert(scip->pseudoconflict != NULL);
       assert(scip->primal != NULL);
 
       if( !presolved )
@@ -230,6 +235,7 @@ RETCODE checkStage(
       assert(scip->cutpool != NULL);
       assert(scip->conflict != NULL);
       assert(scip->lpconflict != NULL);
+      assert(scip->pseudoconflict != NULL);
       assert(scip->primal != NULL);
 
       if( !solving )
@@ -253,6 +259,7 @@ RETCODE checkStage(
       assert(scip->cutpool != NULL);
       assert(scip->conflict != NULL);
       assert(scip->lpconflict != NULL);
+      assert(scip->pseudoconflict != NULL);
       assert(scip->primal != NULL);
 
       if( !solved )
@@ -364,6 +371,7 @@ RETCODE SCIPcreate(
    (*scip)->cutpool = NULL;
    (*scip)->conflict = NULL;
    (*scip)->lpconflict = NULL;
+   (*scip)->pseudoconflict = NULL;
    (*scip)->primal = NULL;
 
    return SCIP_OKAY;
@@ -3036,6 +3044,7 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
    CHECK_OKAY( SCIPlpconflictCreate(&scip->lpconflict) );
+   CHECK_OKAY( SCIPpseudoconflictCreate(&scip->pseudoconflict) );
    CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp) );
 
    /* inform problem, that presolving is finished and the branch and bound process starts now */
@@ -3163,7 +3172,8 @@ RETCODE SCIPsolve(
       /* continue solution process */
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob, scip->tree, 
                      scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->cutpool, 
-                     scip->conflict, scip->lpconflict, scip->primal, scip->eventfilter, scip->eventqueue) );
+                     scip->conflict, scip->lpconflict, scip->pseudoconflict, scip->primal,
+                     scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
       if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
@@ -3240,6 +3250,7 @@ RETCODE SCIPfreeSolve(
 
       /* free solution process data structures */
       CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
+      CHECK_OKAY( SCIPpseudoconflictFree(&scip->pseudoconflict) );
       CHECK_OKAY( SCIPlpconflictFree(&scip->lpconflict) );
       CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
       CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
@@ -7073,7 +7084,9 @@ Longint SCIPgetNConflictsFound(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNConflictsFound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   return SCIPconflictGetNConflicts(scip->conflict) + SCIPlpconflictGetNConflicts(scip->lpconflict);
+   return SCIPconflictGetNConflicts(scip->conflict)
+      + SCIPlpconflictGetNConflicts(scip->lpconflict)
+      + SCIPpseudoconflictGetNConflicts(scip->pseudoconflict);
 }
 
 /** gets depth of active node, or -1 if no active node exists */
@@ -7520,6 +7533,10 @@ void printConflictStatistics(
       SCIPlpconflictGetNCalls(scip->lpconflict),
       SCIPlpconflictGetNConflicts(scip->lpconflict),
       SCIPlpconflictGetNLPIterations(scip->lpconflict));
+   fprintf(file, "  pseudo solution  : %10.2f %10lld %10lld\n",
+      SCIPpseudoconflictGetTime(scip->pseudoconflict),
+      SCIPpseudoconflictGetNCalls(scip->pseudoconflict),
+      SCIPpseudoconflictGetNConflicts(scip->pseudoconflict));
 }
 
 static

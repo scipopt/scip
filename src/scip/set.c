@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.93 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.94 2004/03/31 14:52:59 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -64,101 +64,102 @@
 
 /* Dynamic Memory */
 
-#define SCIP_DEFAULT_MEMLIMIT        1e+20 /**< maximal memory usage in MB */
-#define SCIP_DEFAULT_MEMSAVEFAC        0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
-#define SCIP_DEFAULT_MEMGROWFAC        1.2 /**< memory growing factor for dynamically allocated arrays */
-#define SCIP_DEFAULT_MEMGROWINIT         4 /**< initial size of dynamically allocated arrays */
-#define SCIP_DEFAULT_TREEGROWFAC       2.0 /**< memory growing factor for tree array */
-#define SCIP_DEFAULT_TREEGROWINIT    65536 /**< initial size of tree array */
-#define SCIP_DEFAULT_PATHGROWFAC       2.0 /**< memory growing factor for path array */
-#define SCIP_DEFAULT_PATHGROWINIT      256 /**< initial size of path array */
+#define SCIP_DEFAULT_MEMLIMIT         1e+20 /**< maximal memory usage in MB */
+#define SCIP_DEFAULT_MEMSAVEFAC         0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
+#define SCIP_DEFAULT_MEMGROWFAC         1.2 /**< memory growing factor for dynamically allocated arrays */
+#define SCIP_DEFAULT_MEMGROWINIT          4 /**< initial size of dynamically allocated arrays */
+#define SCIP_DEFAULT_TREEGROWFAC        2.0 /**< memory growing factor for tree array */
+#define SCIP_DEFAULT_TREEGROWINIT     65536 /**< initial size of tree array */
+#define SCIP_DEFAULT_PATHGROWFAC        2.0 /**< memory growing factor for path array */
+#define SCIP_DEFAULT_PATHGROWINIT       256 /**< initial size of path array */
 
 
 /* Branching */
-#define SCIP_DEFAULT_BRANCHSCOREFAC  0.167 /**< branching score factor to weigh downward and upward gain prediction */
+#define SCIP_DEFAULT_BRANCHSCOREFAC   0.167 /**< branching score factor to weigh downward and upward gain prediction */
 
 
 /* Presolving */
-#define SCIP_DEFAULT_MAXPRESOLROUNDS    -1 /**< maximal number of presolving rounds (-1: unlimited) */
-#define SCIP_DEFAULT_PRESOLABORTFAC  1e-04 /**< abort presolve, if l.t. frac of the problem was changed in last round */
+#define SCIP_DEFAULT_MAXPRESOLROUNDS     -1 /**< maximal number of presolving rounds (-1: unlimited) */
+#define SCIP_DEFAULT_PRESOLABORTFAC   1e-04 /**< abort presolve, if l.t. frac of the problem was changed in last round */
 
 
 /* LP Solving */
 
-#define SCIP_DEFAULT_CHECKLPFEAS      TRUE /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
-#define SCIP_DEFAULT_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
-#define SCIP_DEFAULT_FASTMIP          TRUE /**< should FASTMIP setting of LP solver be used? */
-#define SCIP_DEFAULT_SCALING          TRUE /**< should scaling of LP solver be used? */
-#define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
-#define SCIP_DEFAULT_LPSOLVEDEPTH       -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_REDCOSTFREQ         5 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
-#define SCIP_DEFAULT_COLAGELIMIT        10 /**< maximum age a dynamic column can reach before it is deleted from the LP */
-#define SCIP_DEFAULT_ROWAGELIMIT        10 /**< maximum age a dynamic row can reach before it is deleted from the LP */
+#define SCIP_DEFAULT_CHECKLPFEAS       TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
+#define SCIP_DEFAULT_EXACTSOLVE       FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#define SCIP_DEFAULT_FASTMIP           TRUE /**< should FASTMIP setting of LP solver be used? */
+#define SCIP_DEFAULT_SCALING           TRUE /**< should scaling of LP solver be used? */
+#define SCIP_DEFAULT_LPSOLVEFREQ          1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
+#define SCIP_DEFAULT_LPSOLVEDEPTH        -1 /**< maximal depth for solving LPs (-1: no depth limit) */
+#define SCIP_DEFAULT_REDCOSTFREQ          5 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
+#define SCIP_DEFAULT_COLAGELIMIT         10 /**< maximum age a dynamic column can reach before it is deleted from the LP */
+#define SCIP_DEFAULT_ROWAGELIMIT         10 /**< maximum age a dynamic row can reach before it is deleted from the LP */
 
 
 /* Pricing */
 
-#define SCIP_DEFAULT_MAXPRICEVARS      100 /**< maximal number of variables priced in per pricing round */
-#define SCIP_DEFAULT_MAXPRICEVARSROOT 2000 /**< maximal number of priced variables at the root node */
-#define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
-#define SCIP_DEFAULT_CLEANUPCOLS     FALSE /**< should new non-basic columns be removed after LP solving? */
+#define SCIP_DEFAULT_MAXPRICEVARS       100 /**< maximal number of variables priced in per pricing round */
+#define SCIP_DEFAULT_MAXPRICEVARSROOT  2000 /**< maximal number of priced variables at the root node */
+#define SCIP_DEFAULT_ABORTPRICEVARSFAC  2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+#define SCIP_DEFAULT_CLEANUPCOLS      FALSE /**< should new non-basic columns be removed after LP solving? */
 
 
 /* Cut Separation */
 
-#define SCIP_DEFAULT_MAXSEPACUTS       100 /**< maximal number of cuts separated per separation round */
-#define SCIP_DEFAULT_MAXSEPACUTSROOT  2000 /**< maximal separated cuts at the root node */
-#define SCIP_DEFAULT_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global pool, or -1 */
-#define SCIP_DEFAULT_CLEANUPROWS      TRUE /**< should new basic rows be removed after LP solving? */
+#define SCIP_DEFAULT_MAXSEPACUTS        100 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_MAXSEPACUTSROOT   2000 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_CUTAGELIMIT        100 /**< maximum age a cut can reach before it is deleted from global pool, or -1 */
+#define SCIP_DEFAULT_CLEANUPROWS       TRUE /**< should new basic rows be removed after LP solving? */
 
 
 /* Constraint Settings */
 
-#define SCIP_DEFAULT_CONSAGELIMIT      200 /**< maximum age an unnecessary constr. can reach before it is deleted, or -1 */
-#define SCIP_DEFAULT_CONSOBSOLETEAGE   100 /**< age of a constraint after which it is marked obsolete */
+#define SCIP_DEFAULT_CONSAGELIMIT       200 /**< maximum age an unnecessary constr. can reach before it is deleted, or -1 */
+#define SCIP_DEFAULT_CONSOBSOLETEAGE    100 /**< age of a constraint after which it is marked obsolete */
 
 
 /* History Settings */
 
-#define SCIP_DEFAULT_HISTORYEPS      1e-01 /**< default minimal variable distance value to use for history updates */
-#define SCIP_DEFAULT_HISTORYDELTA    1e-04 /**< default minimal objective distance value to use for history updates */
+#define SCIP_DEFAULT_HISTORYEPS       1e-01 /**< default minimal variable distance value to use for history updates */
+#define SCIP_DEFAULT_HISTORYDELTA     1e-04 /**< default minimal objective distance value to use for history updates */
 
 
 /* Conflict Analysis */
-#define SCIP_DEFAULT_USEPROPCONFLICT  TRUE /**< should propagation conflict analysis be used? */
-#define SCIP_DEFAULT_USELPCONFLICT   FALSE /**< should infeasible LP conflict analysis be used? */
-#define SCIP_DEFAULT_MAXCONFVARSFAC   0.02 /**< maximal fraction of binary variables involved in a conflict clause */
-#define SCIP_DEFAULT_MINMAXCONFVARS     20 /**< minimal absolute maximum of variables involved in a conflict clause */
+#define SCIP_DEFAULT_USEPROPCONFLICT   TRUE /**< should propagation conflict analysis be used? */
+#define SCIP_DEFAULT_USELPCONFLICT    FALSE /**< should infeasible LP conflict analysis be used? */
+#define SCIP_DEFAULT_USEPSEUDOCONFLICT TRUE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
+#define SCIP_DEFAULT_MINMAXCONFVARS      20 /**< minimal absolute maximum of variables involved in a conflict clause */
 
 
 /* Primal Solutions */
 
-#define SCIP_DEFAULT_GAPLIMIT          0.0 /**< solving stops, if the gap is below the given value */
-#define SCIP_DEFAULT_SOLLIMIT           -1 /**< solving stops, if the given number of solutions were found (-1: no limit) */
-#define SCIP_DEFAULT_MAXSOL            100 /**< maximal number of solutions to store in the solution storage */
+#define SCIP_DEFAULT_GAPLIMIT           0.0 /**< solving stops, if the gap is below the given value */
+#define SCIP_DEFAULT_SOLLIMIT            -1 /**< solving stops, if given number of solutions were found (-1: no limit) */
+#define SCIP_DEFAULT_MAXSOL             100 /**< maximal number of solutions to store in the solution storage */
 
 
 /* Tree */
 
-#define SCIP_DEFAULT_NODELIMIT        -1LL /**< maximal number of nodes to process (-1: no limit) */
+#define SCIP_DEFAULT_NODELIMIT         -1LL /**< maximal number of nodes to process (-1: no limit) */
 
 
 /* Display */
 
-#define SCIP_DEFAULT_DISPWIDTH         139 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ          100 /**< frequency for displaying node information lines */
-#define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
+#define SCIP_DEFAULT_DISPWIDTH          139 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPFREQ           100 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPHEADERFREQ      15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
 /* Timing */
 
 #define SCIP_DEFAULT_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
-#define SCIP_DEFAULT_CLOCKSENABLED    TRUE /**< is timing enabled? */
-#define SCIP_DEFAULT_TIMELIMIT       1e+20 /**< maximal time in seconds to run */
+#define SCIP_DEFAULT_CLOCKSENABLED     TRUE /**< is timing enabled? */
+#define SCIP_DEFAULT_TIMELIMIT        1e+20 /**< maximal time in seconds to run */
 
 
 /* VBC Tool output */
-#define SCIP_DEFAULT_VBCFILENAME       "-" /**< name of the VBC Tool output file, or - if no output should be created */
+#define SCIP_DEFAULT_VBCFILENAME        "-" /**< name of the VBC Tool output file, or - if no output should be created */
 
 
 
@@ -450,6 +451,11 @@ RETCODE SCIPsetCreate(
                   "conflict/uselpconflict",
                   "should infeasible LP conflict analysis be used?",
                   &(*set)->uselpconflict, SCIP_DEFAULT_USELPCONFLICT,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "conflict/usepseudoconflict",
+                  "should pseudo solution conflict analysis be used?",
+                  &(*set)->usepseudoconflict, SCIP_DEFAULT_USEPSEUDOCONFLICT,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "conflict/maxconfvarsfac",

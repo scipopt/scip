@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.13 2004/02/25 16:49:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.14 2004/03/31 14:52:58 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -190,7 +190,8 @@ RETCODE SCIPlpconflictFree(
    LPCONFLICT**     lpconflict          /**< pointer to LP conflict analysis data */
    );
 
-/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the infeasibility;
+/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the 
+ *  infeasibility;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;
  *  updates statistics for infeasible LP conflict analysis
@@ -231,6 +232,63 @@ extern
 Longint SCIPlpconflictGetNLPIterations(
    LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
    );
+
+
+
+
+/*
+ * pseudo solution conflict analysis
+ */
+
+/** creates conflict analysis data for pseudo solution conflicts */
+extern
+RETCODE SCIPpseudoconflictCreate(
+   PSEUDOCONFLICT** pseudoconflict      /**< pointer to pseudo solution conflict analysis data */
+   );
+
+/** frees conflict analysis data for pseudo solution conflicts */
+extern
+RETCODE SCIPpseudoconflictFree(
+   PSEUDOCONFLICT** pseudoconflict      /**< pointer to pseudo solution conflict analysis data */
+   );
+
+/** analyzes a pseudo solution with objective value exceeding the current cutoff to find out the bound changes on binary
+ *  variables that were responsible for the objective value degradation;
+ *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
+ *  a conflict constraint out of the resulting conflict set;
+ *  updates statistics for pseudo solution conflict analysis
+ */
+extern
+RETCODE SCIPpseudoconflictAnalyze(
+   PSEUDOCONFLICT*  pseudoconflict,     /**< pseudo solution conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< LP data */
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   );
+
+/** gets time in seconds used for analyzing pseudo solution conflicts */
+extern
+Real SCIPpseudoconflictGetTime(
+   PSEUDOCONFLICT*  pseudoconflict      /**< pseudo solution conflict analysis data */
+   );
+
+/** gets number of calls to pseudo solution conflict analysis */
+extern
+Longint SCIPpseudoconflictGetNCalls(
+   PSEUDOCONFLICT*  pseudoconflict      /**< pseudo solution conflict analysis data */
+   );
+
+/** gets number of valid conflicts detected in pseudo solution conflict analysis */
+extern
+Longint SCIPpseudoconflictGetNConflicts(
+   PSEUDOCONFLICT*  pseudoconflict      /**< pseudo solution conflict analysis data */
+   );
+
 
 
 #endif

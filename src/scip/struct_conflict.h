@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.5 2004/03/31 14:52:59 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -71,6 +71,14 @@ struct LPConflict
    Longint          nlpiterations;      /**< total number of iterations used for solving alternative LPs */
    CLOCK*           analyzetime;        /**< time used for infeasible LP conflict analysis */
    LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
+};
+
+/** conflict analysis data structure for pseudo solution conflicts */
+struct PseudoConflict
+{
+   Longint          ncalls;             /**< number of calls to pseudo solution conflict analysis */
+   Longint          nconflicts;         /**< number of valid conflicts detected in pseudo solution conflict analysis */
+   CLOCK*           analyzetime;        /**< time used for pseudo solution conflict analysis */
 };
 
 
