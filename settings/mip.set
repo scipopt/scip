@@ -19,35 +19,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
+# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal variable distance value to use for branching history updates
-# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
+# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
 numerics/historyeps = 0.1
 
 # minimal objective distance value to use for branching history updates
@@ -395,12 +395,16 @@ branching/mostinf/priority = 100
 branching/leastinf/priority = 50
 
 # priority of heuristic <coefdiving>
-# [type: int, range: [-2147483648,2147483647], default: -1002000]
-heuristics/coefdiving/priority = -1002000
+# [type: int, range: [-2147483648,2147483647], default: -1001000]
+heuristics/coefdiving/priority = -1001000
 
 # frequency for calling primal heuristic <coefdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/coefdiving/freq = 10
+
+# frequency offset for calling primal heuristic <coefdiving>
+# [type: int, range: [0,2147483647], default: 2]
+heuristics/coefdiving/freqofs = 2
 
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
@@ -434,6 +438,10 @@ heuristics/fracdiving/priority = -1000000
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/fracdiving/freq = 10
 
+# frequency offset for calling primal heuristic <fracdiving>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/fracdiving/freqofs = 0
+
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
 heuristics/fracdiving/divestartdepth = 0.5
@@ -459,12 +467,16 @@ heuristics/fracdiving/maxdiveubquotnosol = 0.1
 heuristics/fracdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <histdiving>
-# [type: int, range: [-2147483648,2147483647], default: -1001000]
-heuristics/histdiving/priority = -1001000
+# [type: int, range: [-2147483648,2147483647], default: -1002000]
+heuristics/histdiving/priority = -1002000
 
 # frequency for calling primal heuristic <histdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/histdiving/freq = 10
+
+# frequency offset for calling primal heuristic <histdiving>
+# [type: int, range: [0,2147483647], default: 4]
+heuristics/histdiving/freqofs = 4
 
 # minimal relative depth to start diving
 # [type: real, range: [0,1], default: 0.5]
@@ -490,6 +502,34 @@ heuristics/histdiving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1e+99], default: 8]
 heuristics/histdiving/maxdiveavgquotnosol = 8
 
+# priority of heuristic <objhistdiving>
+# [type: int, range: [-2147483648,2147483647], default: -1003000]
+heuristics/objhistdiving/priority = -1003000
+
+# frequency for calling primal heuristic <objhistdiving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/objhistdiving/freq = 10
+
+# frequency offset for calling primal heuristic <objhistdiving>
+# [type: int, range: [0,2147483647], default: 6]
+heuristics/objhistdiving/freqofs = 6
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristics/objhistdiving/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.1]
+heuristics/objhistdiving/maxlpiterquot = 0.1
+
+# maximal diving depth: number of binary/integer variables times depthfac
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+heuristics/objhistdiving/depthfac = 0.5
+
+# maximal diving depth factor if no feasible solution was found yet
+# [type: real, range: [0,1.79769313486232e+308], default: 2]
+heuristics/objhistdiving/depthfacnosol = 2
+
 # priority of heuristic <rounding>
 # [type: int, range: [-2147483648,2147483647], default: -1000]
 heuristics/rounding/priority = -1000
@@ -498,6 +538,10 @@ heuristics/rounding/priority = -1000
 # [type: int, range: [-1,2147483647], default: 5]
 heuristics/rounding/freq = 5
 
+# frequency offset for calling primal heuristic <rounding>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/rounding/freqofs = 0
+
 # priority of heuristic <simplerounding>
 # [type: int, range: [-2147483648,2147483647], default: 0]
 heuristics/simplerounding/priority = 0
@@ -505,6 +549,10 @@ heuristics/simplerounding/priority = 0
 # frequency for calling primal heuristic <simplerounding> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 heuristics/simplerounding/freq = 1
+
+# frequency offset for calling primal heuristic <simplerounding>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/simplerounding/freqofs = 0
 
 # priority of separator <gomory>
 # [type: int, range: [-2147483648,2147483647], default: 0]
