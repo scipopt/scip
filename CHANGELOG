@@ -60,6 +60,11 @@ interface:
 - new methods SCIPgetAvgPseudocost(), SCIPgetAvgPseudocostCurrentRun(), SCIPgetAvgPseudocostCount(),
   SCIPgetAvgPseudocostCountCurrentRun(), SCIPgetAvgInferences(), SCIPgetAvgInferencesCurrentRun(),
   SCIPgetAvgCutoffs(), SCIPgetAvgCutoffsCurrentRun(), 
+- new methods SCIPgetNPrimalLPs(), SCIPgetNPrimalLPIterations(), SCIPgetNDualLPs(), SCIPgetNDualLPIterations(),
+  SCIPgetNBarrierLPs(), SCIPgetNBarrierLPIterations()
+- new methods SCIPgetNPrimalResolveLPs(), SCIPgetNPrimalResolveLPIterations(),
+  SCIPgetNDualResolveLPs(), SCIPgetNDualResolveLPIterations()
+- new methods SCIPgetVarNStrongbranchs(), SCIPcolGetNStrongbranchs()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -70,7 +75,9 @@ plugins:
 - new plugin: clique separator for clique cuts with at least 3 elements
 - changed implementation of reliability value calculation in reliability branching; slightly modified influence
   of maximal total number of strong branching LP iterations in reliability branching
+- changed implementation of maximal strong branching iterations calculation in reliability branching
 - modified the automatic objfactor setting of feaspump heuristic to let the objective function have stronger influence
+- changed implementation of automatic minplungedepth and maxplungedepth calculation in bfs node selector
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other

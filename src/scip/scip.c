@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.281 2005/03/21 16:42:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.282 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4773,7 +4773,8 @@ RETCODE SCIPgetVarStrongbranch(
    }
 
    /* call strong branching for column */
-   CHECK_OKAY( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim, down, up, downvalid, upvalid, lperror) );
+   CHECK_OKAY( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim, 
+         down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough
     * declare the sub nodes infeasible
@@ -4841,22 +4842,33 @@ RETCODE SCIPgetVarStrongbranchLast(
 }
 
 /** gets node number of the last node in current branch and bound run, where strong branching was used on the
- *  given column, or -1 if strong branching was never applied to the column in current run
+ *  given variable, or -1 if strong branching was never applied to the variable in current run
  */
 Longint SCIPgetVarStrongbranchNode(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to get last strong branching node for */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarStrongbranchNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarStrongbranchNode", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-   {
-      errorMessage("cannot get strong branching information on non-COLUMN variable\n");
-      abort();
-   }
+      return -1;
 
    return SCIPcolGetStrongbranchNode(SCIPvarGetCol(var));
+}
+
+/** gets number of times, strong branching was applied in current run on the given variable */
+int SCIPgetVarNStrongbranchs(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get last strong branching node for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarNStrongbranchs", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      return 0;
+
+   return SCIPcolGetNStrongbranchs(SCIPvarGetCol(var));
 }
 
 /** adds given values to lock numbers of variable for rounding */
@@ -10435,7 +10447,7 @@ int SCIPgetNLPs(
    return scip->stat->nlps;
 }
 
-/** gets total number of simplex iterations used so far in primal and dual simplex */
+/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm */
 Longint SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -10445,6 +10457,66 @@ Longint SCIPgetNLPIterations(
    return scip->stat->nlpiterations;
 }
 
+/** gets total number of primal LPs solved so far */
+int SCIPgetNPrimalLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrimalLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nprimallps;
+}
+
+/** gets total number of iterations used so far in primal simplex */
+Longint SCIPgetNPrimalLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrimalLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nprimallpiterations;
+}
+
+/** gets total number of dual LPs solved so far */
+int SCIPgetNDualLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNDualLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nduallps;
+}
+
+/** gets total number of iterations used so far in dual simplex */
+Longint SCIPgetNDualLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNDualLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nduallpiterations;
+}
+
+/** gets total number of barrier LPs solved so far */
+int SCIPgetNBarrierLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNBarrierLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nbarrierlps;
+}
+
+/** gets total number of iterations used so far in barrier algorithm */
+Longint SCIPgetNBarrierLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNBarrierLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nbarrierlpiterations;
+}
+
 /** gets total number of LPs solved so far that were resolved from an advanced start basis */
 int SCIPgetNResolveLPs(
    SCIP*            scip                /**< SCIP data structure */
@@ -10452,7 +10524,7 @@ int SCIPgetNResolveLPs(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNResolveLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   return scip->stat->nresolvelps;
+   return scip->stat->nprimalresolvelps + scip->stat->ndualresolvelps;
 }
 
 /** gets total number of simplex iterations used so far in primal and dual simplex calls where an advanced start basis
@@ -10464,7 +10536,51 @@ Longint SCIPgetNResolveLPIterations(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNResolveLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   return scip->stat->nresolvelpiterations;
+   return scip->stat->nprimalresolvelpiterations + scip->stat->ndualresolvelpiterations;
+}
+
+/** gets total number of primal LPs solved so far that were resolved from an advanced start basis */
+int SCIPgetNPrimalResolveLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrimalResolveLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nprimalresolvelps;
+}
+
+/** gets total number of simplex iterations used so far in primal simplex calls where an advanced start basis
+ *  was available
+ */
+Longint SCIPgetNPrimalResolveLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrimalResolveLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nprimalresolvelpiterations;
+}
+
+/** gets total number of dual LPs solved so far that were resolved from an advanced start basis */
+int SCIPgetNDualResolveLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNDualResolveLPs", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->ndualresolvelps;
+}
+
+/** gets total number of simplex iterations used so far in dual simplex calls where an advanced start basis
+ *  was available
+ */
+Longint SCIPgetNDualResolveLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNDualResolveLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->ndualresolvelpiterations;
 }
 
 /** gets total number of LPs solved so far for node relaxations */
@@ -11806,30 +11922,31 @@ RETCODE SCIPprintBranchingStatistics(
          depths[i] = depth;
       }
 
-      fprintf(file, "                                                  branchings        inferences         cutoffs               LP gain         locks \n");
-      fprintf(file, " variable        priority   factor    depth     down       up     down       up     down       up       down         up  down    up\n");
+      fprintf(file, "                                      locks              branchings              inferences      cutoffs            LP gain   \n");
+      fprintf(file, "variable          prio   factor   down     up  depth    down      up    sb     down       up   down     up      down        up\n");
 
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
-            fprintf(file, " %-16s %7d %8.1f %8.1f %8lld %8lld %8.1f %8.1f %7.1f%% %7.1f%% %10.1f %10.1f %6d %6d\n",
+            fprintf(file, "%-16s %5d %8.1f %6d %6d %6.1f %7lld %7lld %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
                SCIPvarGetBranchFactor(vars[v]),
+               SCIPvarGetNLocksDown(vars[v]),
+               SCIPvarGetNLocksUp(vars[v]),
                (SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS)
                   + SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS))/2.0 - 1.0,
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS),
+               SCIPgetVarNStrongbranchs(scip, vars[v]),
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
                100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
                100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
                SCIPvarGetPseudocost(vars[v], scip->stat, -1.0),
-               SCIPvarGetPseudocost(vars[v], scip->stat, +1.0),
-               SCIPvarGetNLocksDown(vars[v]),
-               SCIPvarGetNLocksUp(vars[v]));
+               SCIPvarGetPseudocost(vars[v], scip->stat, +1.0));
          }
       }
       SCIPfreeBufferArray(scip, &depths);

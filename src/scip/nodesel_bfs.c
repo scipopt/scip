@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.40 2005/02/14 13:35:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.41 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -109,6 +109,7 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    int minplungedepth;
    int maxplungedepth;
    int plungedepth;
+   Real maxplungequot;
 
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
@@ -124,21 +125,15 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    /* calculate minimal and maximal plunging depth */
    minplungedepth = nodeseldata->minplungedepth;
    maxplungedepth = nodeseldata->maxplungedepth;
-   if( minplungedepth == -1 || maxplungedepth == -1 )
+   maxplungequot = nodeseldata->maxplungequot;
+   if( minplungedepth == -1 )
    {
-      Longint nnodes;
-      Longint n;
-      int logdepth;
-
-      nnodes = SCIPgetNNodes(scip);
-      logdepth = 0;
-      for( n = nnodes; n > 0; n >>= 1 )
-         logdepth++;
-      if( minplungedepth == -1 )
-         minplungedepth = logdepth/2;
-      if( maxplungedepth == -1 )
-         maxplungedepth = logdepth*2;
+      minplungedepth = SCIPgetMaxDepth(scip)/10;
+      if( SCIPgetNStrongbranchLPIterations(scip) > 2*SCIPgetNNodeLPIterations(scip) )
+        minplungedepth += 10;
    }
+   if( maxplungedepth == -1 )
+      maxplungedepth = SCIPgetMaxDepth(scip)/2;
 
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);
@@ -173,7 +168,7 @@ DECL_NODESELSELECT(nodeselSelectBfs)
       else
       {
          /* calculate maximal plunging bound */
-         maxbound = lowerbound + nodeseldata->maxplungequot * (cutoffbound - lowerbound);
+         maxbound = lowerbound + maxplungequot * (cutoffbound - lowerbound);
       }
 
       debugMessage("plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
@@ -306,9 +301,6 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
-   nodeseldata->maxplungequot = MAXPLUNGEQUOT;
-   nodeseldata->minplungedepth = MINPLUNGEDEPTH;
-   nodeseldata->maxplungedepth = MAXPLUNGEDEPTH;
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
@@ -319,17 +311,17 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "nodeselection/bfs/minplungedepth",
-                  "minimal plunging depth, before new best node may be selected (-1 for dynamic setting)",
-                  &nodeseldata->minplungedepth, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         "nodeselection/bfs/minplungedepth",
+         "minimal plunging depth, before new best node may be selected (-1 for dynamic setting)",
+         &nodeseldata->minplungedepth, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "nodeselection/bfs/maxplungedepth",
-                  "maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)",
-                  &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         "nodeselection/bfs/maxplungedepth",
+         "maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)",
+         &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "nodeselection/bfs/maxplungequot",
-                  "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
-                  &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, REAL_MAX, NULL, NULL) );
+         "nodeselection/bfs/maxplungequot",
+         "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
+         &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

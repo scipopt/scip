@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.32 2005/03/22 18:42:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.33 2005/03/24 09:47:42 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -323,11 +323,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
       /* calculate value used as reliability */
       nsblpiterations = SCIPgetNStrongbranchLPIterations(scip);
-#if 0
-      prio = (maxnsblpiterations - nsblpiterations)/(maxnsblpiterations + 1.0);
-#else
       prio = (maxnsblpiterations - nsblpiterations)/(nsblpiterations + 1.0);
-#endif
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
@@ -346,6 +342,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
          /* get pseudo cost score of candidate */
          score = SCIPgetVarPseudocostScoreCurrentRun(scip, lpcands[c], lpcandssol[c]);
+         usesb = FALSE;
 
          /* don't use strong branching on variables that have already been initialized at the current node */
          if( SCIPgetVarStrongbranchNode(scip, lpcands[c]) == nodenum )
@@ -361,12 +358,11 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
             score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
-            usesb = FALSE;
 
             debugMessage(" -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), score=%g)\n",
                SCIPvarGetName(lpcands[c]), down, downgain, up, upgain, score);
          }
-         else
+         else if( maxninitcands > 0 )
          {
             Real downsize;
             Real upsize;
@@ -378,10 +374,10 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             size = MIN(downsize, upsize);
 
             /* use strong branching on variables with unreliable pseudo cost scores */
-            usesb = (size < reliable && maxninitcands > 0);
+            usesb = (size < reliable);
 
             /* count the number of variables that are completely uninitialized */
-            if( size == 0 )
+            if( size < 0.1 )
                nuninitcands++;
          }
 
@@ -433,14 +429,30 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          Longint nlpiterations;
          int nlps;
 
-         nlpiterations = SCIPgetNNodeInitLPIterations(scip);
-         nlps = SCIPgetNNodeInitLPs(scip);
-         inititer = 2*nlpiterations / MAX(1, nlps);
+         /* iteration limit is set to twice the average number of iterations spent to resolve a dual feasible LP;
+          * at the first few nodes, this average is not very exact, so we better increase the iteration limit on
+          * these very important nodes
+          */
+         nlpiterations = SCIPgetNDualResolveLPIterations(scip);
+         nlps = SCIPgetNDualResolveLPs(scip);
+         if( nlps == 0 )
+         {
+            nlpiterations = SCIPgetNNodeInitLPIterations(scip);
+            nlps = SCIPgetNNodeInitLPs(scip);
+            if( nlps == 0 )
+            {
+               nlpiterations = 1000;
+               nlps = 1;
+            }
+         }
+         assert(nlps >= 1);
+         inititer = 2*nlpiterations / nlps;
+         inititer *= (1.0 + 20.0/nodenum);
          inititer = MAX(inititer, 10);
          inititer = MIN(inititer, 10000);
       }
-
-      debugMessage("applying strong branching on unreliable candidates (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%lld/%lld, basic:%d)\n",
+      
+      debugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%lld/%lld, basic:%d)\n",
          reliable, ninitcands, nlpcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
          SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.28 2005/02/14 13:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.29 2005/03/24 09:47:44 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -87,6 +87,7 @@ struct BoundChg
    unsigned int     boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int     inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
+   unsigned int     applied:1;          /**< was this bound change applied at least once? */
 };
 
 /** bound change index representing the time of the bound change in path from root to current node */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.139 2005/03/21 11:37:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.140 2005/03/24 09:47:44 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1358,10 +1358,6 @@ RETCODE SCIPnodeAddBoundinfer(
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, stat, newpseudoobjval);
-
-      /* update the branching history */
-      CHECK_OKAY( SCIPvarIncNBranchings(var, stat, node->depth, 
-            boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS) );
    }
    else
    {
@@ -1369,13 +1365,6 @@ RETCODE SCIPnodeAddBoundinfer(
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER, 
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
-
-      /* update the inference history */
-      if( stat->lastbranchvar != NULL )
-      {
-         CHECK_OKAY( SCIPvarIncNInferences(stat->lastbranchvar, stat, stat->lastbranchdir) );
-      }
-      /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
    }
 
    assert(node->domchg != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.35 2005/03/02 12:39:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.36 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -101,6 +101,7 @@ struct Col
    int              validfarkaslp;      /**< LP number for which farkas coefficient is valid */
    int              validsblp;          /**< LP number for which strong branching values are valid */
    int              sbitlim;            /**< strong branching iteration limit used to get strongbranch values, or -1 */
+   int              nsbcalls;           /**< number of times, strong branching was applied on the column */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
    unsigned int     basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */

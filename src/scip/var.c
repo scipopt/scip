@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.153 2005/03/15 13:43:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.154 2005/03/24 09:47:44 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -560,6 +560,25 @@ RETCODE SCIPboundchgApply(
    default:
       errorMessage("unknown bound type\n");
       return SCIP_INVALIDDATA;
+   }
+
+   /* update the branching and inference history */
+   if( !boundchg->applied && boundchg->var != NULL )
+   {
+      assert(var == boundchg->var);
+      
+      if( (BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+      {
+         CHECK_OKAY( SCIPvarIncNBranchings(var, stat, depth, 
+               (BOUNDTYPE)boundchg->boundtype == SCIP_BOUNDTYPE_LOWER
+               ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS) );
+      }
+      else if( stat->lastbranchvar != NULL )
+      {
+         /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
+         CHECK_OKAY( SCIPvarIncNInferences(stat->lastbranchvar, stat, stat->lastbranchdir) );
+      }
+      boundchg->applied = TRUE;
    }
 
    return SCIP_OKAY;
@@ -1199,6 +1218,7 @@ RETCODE SCIPdomchgAddBoundchg(
    boundchg->boundchgtype = boundchgtype; /*lint !e641*/
    boundchg->boundtype = boundtype; /*lint !e641*/
    boundchg->inferboundtype = inferboundtype; /*lint !e641*/
+   boundchg->applied = FALSE;
    (*domchg)->domchgdyn.nboundchgs++;
 
    /* capture branching and inference data associated with the bound changes */

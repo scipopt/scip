@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.220 2005/03/21 16:42:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.221 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1743,10 +1743,17 @@ RETCODE SCIPgetVarStrongbranchLast(
    );
 
 /** gets node number of the last node in current branch and bound run, where strong branching was used on the
- *  given column, or -1 if strong branching was never applied to the column in current run
+ *  given variable, or -1 if strong branching was never applied to the variable in current run
  */
 extern
 Longint SCIPgetVarStrongbranchNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get last strong branching node for */
+   );
+
+/** gets number of times, strong branching was applied in current run on the given variable */
+extern
+int SCIPgetVarNStrongbranchs(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to get last strong branching node for */
    );
@@ -4093,9 +4100,45 @@ int SCIPgetNLPs(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets total number of simplex iterations used so far in primal and dual simplex */
+/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm */
 extern
 Longint SCIPgetNLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of primal LPs solved so far */
+extern
+int SCIPgetNPrimalLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of iterations used so far in primal simplex */
+extern
+Longint SCIPgetNPrimalLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of dual LPs solved so far */
+extern
+int SCIPgetNDualLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of iterations used so far in dual simplex */
+extern
+Longint SCIPgetNDualLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of barrier LPs solved so far */
+extern
+int SCIPgetNBarrierLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of iterations used so far in barrier algorithm */
+extern
+Longint SCIPgetNBarrierLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -4110,6 +4153,34 @@ int SCIPgetNResolveLPs(
  */
 extern
 Longint SCIPgetNResolveLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of primal LPs solved so far that were resolved from an advanced start basis */
+extern
+int SCIPgetNPrimalResolveLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far in primal simplex calls where an advanced start basis
+ *  was available
+ */
+extern
+Longint SCIPgetNPrimalResolveLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of dual LPs solved so far that were resolved from an advanced start basis */
+extern
+int SCIPgetNDualResolveLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far in dual simplex calls where an advanced start basis
+ *  was available
+ */
+extern
+Longint SCIPgetNDualResolveLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 

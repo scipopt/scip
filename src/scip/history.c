@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.19 2005/02/16 17:46:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.20 2005/03/24 09:47:42 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -278,6 +278,7 @@ void SCIPhistoryIncNInferences(
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
+   assert(history->nbranchings[dir] >= 1);
 
    history->ninferences[dir]++;
 }
@@ -291,6 +292,7 @@ void SCIPhistoryIncNCutoffs(
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
+   assert(history->nbranchings[dir] >= 1);
 
    history->ncutoffs[dir]++;
 }
@@ -370,5 +372,5 @@ Real SCIPhistoryGetAvgBranchdepth(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   return history->nbranchings[dir] > 0 ? (Real)history->branchdepthsum[dir]/(Real)history->nbranchings[dir] : 0;
+   return history->nbranchings[dir] > 0 ? (Real)history->branchdepthsum[dir]/(Real)history->nbranchings[dir] : 1;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.23 2005/02/22 19:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.24 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -170,6 +170,12 @@ Longint SCIPcolGetStrongbranchNode(
    COL*             col                 /**< LP column */
    );
 
+/** gets number of times, strong branching was applied in current run on the given column */
+extern
+int SCIPcolGetNStrongbranchs(
+   COL*             col                 /**< LP column */
+   );
+
 /** gets opposite bound type of given bound type */
 extern
 BOUNDTYPE SCIPboundtypeOpposite(
@@ -199,6 +205,7 @@ BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetRows(col)             (col)->rows
 #define SCIPcolGetVals(col)             (col)->vals
 #define SCIPcolGetStrongbranchNode(col) (col)->sbnode
+#define SCIPcolGetNStrongbranchs(col)   (col)->nsbcalls
 #define SCIPboundtypeOpposite(boundtype) \
    ((boundtype) == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)
 

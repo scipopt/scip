@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.32 2005/02/22 19:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.33 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -38,10 +38,11 @@
 struct Stat
 {
    Longint          nlpiterations;      /**< total number of LP iterations */
-   Longint          nresolvelpiterations; /**< number of LP iterations with advanced start basis */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
    Longint          nbarrierlpiterations;/**< number of iterations in barrier algorithm */
+   Longint          nprimalresolvelpiterations;  /**< number of primal LP iterations with advanced start basis */
+   Longint          ndualresolvelpiterations;    /**< number of dual LP iterations with advanced start basis */
    Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    Longint          ndivinglpiterations;/**< number of iterations in diving */
@@ -97,10 +98,11 @@ struct Stat
    int              marked_nrowidx;     /**< number of used row indices before solving started */
    int              lpcount;            /**< internal counter, where all simplex calls are counted */
    int              nlps;               /**< total number of LPs solved with at least 1 iteration */
-   int              nresolvelps;        /**< number of LPs solved with advanced start basis and at least 1 iteration */
    int              nprimallps;         /**< number of primal LPs solved */
    int              nduallps;           /**< number of dual LPs solved */
    int              nbarrierlps;        /**< number of barrier LPs solved */
+   int              nprimalresolvelps;  /**< number of primal LPs solved with advanced start basis and at least 1 iteration */
+   int              ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
    int              nnodelps;           /**< number of LPs solved for node relaxations */
    int              ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    int              ndivinglps;         /**< number of LPs solved during diving */

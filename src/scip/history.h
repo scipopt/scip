@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.15 2005/02/14 13:35:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.16 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -207,7 +207,7 @@ Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryGetAvgCutoffs(history,dir)      ((history)->nbranchings[dir] > 0 \
       ? (Real)(history)->ncutoffs[dir]/(Real)(history)->nbranchings[dir] : 0)
 #define SCIPhistoryGetAvgBranchdepth(history,dir)  ((history)->nbranchings[dir] > 0 \
-      ? (Real)(history)->branchdepthsum[dir]/(Real)(history)->nbranchings[dir] : 0)
+      ? (Real)(history)->branchdepthsum[dir]/(Real)(history)->nbranchings[dir] : 1)
 
 #endif
 

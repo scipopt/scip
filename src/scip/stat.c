@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.59 2005/02/22 19:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.60 2005/03/24 09:47:43 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -152,10 +152,11 @@ void SCIPstatReset(
    SCIPhistoryReset(stat->glbhistory);
 
    stat->nlpiterations = 0;
-   stat->nresolvelpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
    stat->nbarrierlpiterations = 0;
+   stat->nprimalresolvelpiterations = 0;
+   stat->ndualresolvelpiterations = 0;
    stat->nnodelpiterations = 0;
    stat->ninitlpiterations = 0;
    stat->ndivinglpiterations = 0;
@@ -179,10 +180,11 @@ void SCIPstatReset(
    stat->nrowidx = stat->marked_nrowidx;
    stat->lpcount = 0;
    stat->nlps = 0;
-   stat->nresolvelps = 0;
    stat->nprimallps = 0;
    stat->nduallps = 0;
    stat->nbarrierlps = 0;
+   stat->nprimalresolvelps = 0;
+   stat->ndualresolvelps = 0;
    stat->nnodelps = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
