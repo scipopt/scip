@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.123 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.124 2004/07/06 11:55:31 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4764,7 +4764,9 @@ void markRowDeleted(
 /** applies all cached row removals to the LP solver */
 static
 RETCODE lpFlushDelRows(
-   LP*              lp                  /**< current LP data */
+   LP*              lp,                 /**< current LP data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
    )
 {
    assert(lp != NULL);
@@ -4792,6 +4794,7 @@ RETCODE lpFlushDelRows(
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
       {
          markRowDeleted(lp->lpirows[i]);
+         CHECK_OKAY( SCIProwRelease(&lp->lpirows[i], memhdr, set, lp) );
       }
       lp->nlpirows = lp->lpifirstchgrow;
       lp->flushdeletedrows = TRUE;
@@ -4874,6 +4877,7 @@ RETCODE lpFlushAddRows(
        */
       CHECK_OKAY( rowLink(row, memhdr, set, lp) );
 
+      SCIProwCapture(row);
       lp->lpirows[r] = row;
       row->lpipos = r;
       row->dualsol = SCIP_INVALID;
@@ -5148,7 +5152,7 @@ RETCODE SCIPlpFlush(
    lp->flushaddedrows = FALSE;
 
    CHECK_OKAY( lpFlushDelCols(lp) );
-   CHECK_OKAY( lpFlushDelRows(lp) );
+   CHECK_OKAY( lpFlushDelRows(lp, memhdr, set) );
    CHECK_OKAY( lpFlushChgCols(lp, memhdr, set) );
    CHECK_OKAY( lpFlushChgRows(lp, memhdr, set) );
    CHECK_OKAY( lpFlushAddCols(lp, memhdr, set) );
@@ -5385,10 +5389,18 @@ RETCODE SCIPlpFree(
    SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(lp != NULL);
    assert(*lp != NULL);
    
    CHECK_OKAY( SCIPlpClear(*lp, memhdr, set) );
+
+   /* release LPI rows */
+   for( i = 0; i < (*lp)->nlpirows; ++i )
+   {
+      CHECK_OKAY( SCIProwRelease(&(*lp)->lpirows[i], memhdr, set, *lp) );
+   }
 
    if( (*lp)->lpi != NULL )
    {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.98 2004/07/01 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.99 2004/07/06 11:55:32 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1374,6 +1374,9 @@ RETCODE treeSwitchPath(
    CHECK_OKAY( treeShrinkPath(tree, memhdr, set, lp, commonforkdepth) );
    assert(tree->pathlen == commonforkdepth+1);
 
+   /* install node as new active node in the tree */
+   tree->actnode = node;
+
    /* create the new active path */
    CHECK_OKAY( treeEnsurePathMem(tree, set, nodedepth+1) );
    tree->pathlen = nodedepth+1;
@@ -1388,15 +1391,6 @@ RETCODE treeSwitchPath(
    /* count the new LP sizes of the path */
    treeUpdatePathLPSize(tree, commonforkdepth+1);
 
-   /* apply domain and constraint set changes of the new path */
-   for( i = commonforkdepth+1; i < tree->pathlen; ++i )
-   {
-      debugMessage("switch path: apply constraint set changed in depth %d\n", i);
-      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set, stat) );
-      debugMessage("switch path: apply domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue, i) );
-   }
-
    /* if the LP fork changed, the lpcount information for the new LP fork is unknown */
    if( tree->actlpfork != lpfork )
       tree->actlpforklpcount = -1;
@@ -1406,6 +1400,15 @@ RETCODE treeSwitchPath(
    tree->actlpfork = lpfork;
    tree->actsubroot = subroot;
    
+   /* apply domain and constraint set changes of the new path */
+   for( i = commonforkdepth+1; i < tree->pathlen; ++i )
+   {
+      debugMessage("switch path: apply constraint set changed in depth %d\n", i);
+      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set, stat) );
+      debugMessage("switch path: apply domain changes in depth %d\n", i);
+      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue, i) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2220,13 +2223,15 @@ RETCODE SCIPnodeActivate(
       node->nodetype = SCIP_NODETYPE_ACTNODE; /*lint !e641*/
    }
 
-   /* track the path from the old active node to the new node, and perform domain changes */
+   /* track the path from the old active node to the new node, perform domain changes, and install new active
+    * node as active node of the tree
+    */
    CHECK_OKAY( treeSwitchPath(tree, memhdr, set, stat, lp, branchcand, eventqueue, node) );
    assert(node == NULL || tree->pathlen > 0);
    assert(node != NULL || tree->pathlen == 0);
    assert(node == NULL || tree->path[tree->pathlen-1] == node);
    assert(tree->nchildren == 0);
-   tree->actnode = node;
+   assert(tree->actnode == node);
 
    return SCIP_OKAY;
 }   

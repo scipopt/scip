@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.180 2004/07/01 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.181 2004/07/06 11:55:31 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3511,8 +3511,8 @@ RETCODE SCIPsolve(
          if( restart )
          {
             SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
-               "\nrestarting after %d root node bound changes in current run %d\n\n",
-               scip->stat->nrootboundchgsrun, scip->stat->nruns);
+               "(run %d) restarting after %d root node bound changes\n\n",
+               scip->stat->nruns, scip->stat->nrootboundchgsrun);
             CHECK_OKAY( SCIPfreeSolve(scip) );
             assert(scip->stage == SCIP_STAGE_TRANSFORMED);
          }
