@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.15 2004/03/10 10:16:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.16 2004/03/10 10:19:01 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -266,7 +266,7 @@ RETCODE separateCovers(
    )
 {
    VAR** items;
-   int*  weights;
+   int* weights;
    Real* profits;
    CONSDATA* consdata;
    int i;
@@ -277,13 +277,14 @@ RETCODE separateCovers(
    VAR** covervars;
    int ncovervars;
    Real infeasibility;
+   Real solval;
    Real solvalsum;
    Real transsol;
 
-   assert(separated!=NULL);
+   assert(separated != NULL);
 
    consdata = SCIPconsGetData(cons);
-   assert(consdata!=NULL);
+   assert(consdata != NULL);
 
    *separated = FALSE;
    
@@ -303,19 +304,15 @@ RETCODE separateCovers(
    nfixedones = 0;
    solvalsum = 0.0;
    capacity = -(int)(consdata->capacity+0.5) - 1;
-
    for( i = 0; i < consdata->nvars; i++ )
    {
-      Real solval;
       solval = SCIPgetVarSol(scip, consdata->vars[i]);
       solvalsum += solval;
-      printf("<%s>: sol = %g, sum = %g\n", SCIPvarGetName(consdata->vars[i]), solval, solvalsum); /* ??????????????????*/
       if( !SCIPisIntegral(scip, solval) )
       {
          items[nitems] = consdata->vars[i];
          weights[nitems] = (int)(consdata->weights[i]+0.5);
          profits[nitems] = 1.0 - solval;
-         printf("  weight = %d, profit = %g\n", weights[nitems], profits[nitems]); /* ??????????????????*/
          nitems++;
          capacity += (int)(consdata->weights[i]+0.5);
       }
@@ -326,7 +323,6 @@ RETCODE separateCovers(
          capacity += (int)(consdata->weights[i]+0.5);
       }
    }
-   printf("capacity = %d\n", capacity); /* ??????????????????*/
 
    if( capacity >= 0)
    {
@@ -334,7 +330,6 @@ RETCODE separateCovers(
       CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, nitems+nfixedones) );
       CHECK_OKAY( dynProgKnapsack(scip, nitems, items, weights, profits, capacity, 
                      covervars, &ncovervars, &transsol) ); 
-      printf("ncovervars = %d, transsol = %g\n", ncovervars, transsol); /* ??????????????????*/ 
       
       /* generate cutting plane */
       infeasibility = transsol - nitems - nfixedones + 1.0 + solvalsum;
@@ -342,6 +337,7 @@ RETCODE separateCovers(
       {
          ROW* row;
          char name[MAXSTRLEN];
+
          sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
          CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), ncovervars+nfixedones-1.0, 
                         SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
@@ -369,6 +365,9 @@ RETCODE separateCovers(
 
    return SCIP_OKAY;
 }
+
+
+
 
 /*
  * Callback methods of constraint handler
