@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.5 2004/09/07 18:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.6 2004/10/05 13:28:23 bzfpfend Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -42,7 +42,7 @@ struct SepaStore
    ROW**            cuts;               /**< array with separated cuts sorted by score */
    Real*            efficacies;         /**< efficacy for each separated cut: euclidean distance of hyperplane to LP sol */
    Real*            orthogonalities;    /**< minimal orthogonality of cut with all other cuts of larger score */
-   Real*            scores;             /**< score for each separated cut: sum of efficacy and orthogonality */
+   Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and orthogonality */
    VAR**            bdchgvars;          /**< variables to change bound for */
    Real*            bdchgvals;          /**< new bounds of variables */
    BOUNDTYPE*       bdchgtypes;         /**< type of bounds to change */

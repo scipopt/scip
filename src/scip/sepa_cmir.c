@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.21 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.22 2004/10/05 13:28:22 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -256,6 +256,31 @@ void decreaseRowScore(
       rowrhsscores[rowidx] *= 1.1;
 }
 
+/** (approxamitely) calculates efficacy of the given cut */
+static
+Real calcEfficacy(
+   int              nvars,              /**< number of variables in the problem */
+   Real*            cutcoefs,           /**< dense vector of cut coefficients */
+   Real             cutrhs,             /**< right hand side of cut */
+   Real             cutact              /**< activity of cut */
+   )
+{
+#if 0
+   Real sqrnorm;
+   int i;
+   
+   assert(cutcoefs != NULL);
+
+   sqrnorm = 0;
+   for( i = 0; i < nvars; ++i )
+      sqrnorm += SQR(cutcoefs[i]);
+   sqrnorm = MIN(sqrnorm, 1e-06);
+   return (cutact - cutrhs)/SQRT(sqrnorm);
+#else
+   return cutact - cutrhs;
+#endif
+}
+
 /** aggregates different single mixed integer constraints by taking linear combinations of the rows of the LP  */
 static
 RETCODE aggregation(
@@ -366,7 +391,7 @@ RETCODE aggregation(
    while( nactiveconts <= maxconts && naggrs <= maxaggrs )
    {
       Real bestdelta;
-      Real bestviolation; 
+      Real bestefficacy; 
       int ntesteddeltas;
 
       ROW* bestrow;          
@@ -392,12 +417,12 @@ RETCODE aggregation(
 
       /* Step 1: try to generate a MIR cut out of the current aggregation */
 
-      /* search delta for generating a cut with maximum violation: 
+      /* search delta for generating a cut with maximum efficacy: 
        * delta = coefficient of integer variable, which lies between its bounds
        */ 
       ntesteddeltas = 0;
       bestdelta = 0.0;
-      bestviolation = 0.0;
+      bestefficacy = 0.0;
       for( c = 0; c < ncols && ntesteddeltas < maxtestdelta; c++ )
       {
          VAR* var;
@@ -406,7 +431,7 @@ RETCODE aggregation(
          Real ub;
          Real delta;
          Real cutact;
-         Real violation;
+         Real efficacy;
          Bool tested;
          int i;
 
@@ -453,22 +478,22 @@ RETCODE aggregation(
          /* delta generates cut which is more violated */
          if( success )
          {
-            violation = cutact - cutrhs;
-            debugMessage("act = %g  rhs = %g  viol = %g, old bestviol = %g\n", 
-               cutact, cutrhs, violation, bestviolation);
-            if( violation > bestviolation )
+            efficacy = calcEfficacy(nvars, cutcoefs, cutrhs, cutact);
+            debugMessage("act = %g  rhs = %g  eff = %g, old besteff = %g\n", 
+               cutact, cutrhs, efficacy, bestefficacy);
+            if( efficacy > bestefficacy )
             {
                bestdelta = delta;
-               bestviolation = violation;
+               bestefficacy = efficacy;
             }
          }
       }
   
       /* delta found */
-      if( SCIPisFeasPositive(scip, bestviolation) )
+      if( SCIPisEfficacious(scip, bestefficacy) )
       {
          Real cutact;
-         Real violation;
+         Real efficacy;
          Real delta;
          Bool tested;
          int i;
@@ -477,7 +502,7 @@ RETCODE aggregation(
 
          assert(bestdelta != 0.0);
 
-         /* Try to improve violation by multiplying delta with 2, 4 and 8 */
+         /* Try to improve efficacy by multiplying delta with 2, 4 and 8 */
          for( i = 0, delta = bestdelta; i < 3; i++, delta *= 2.0 )
          {
             /* check, if delta was already tested */
@@ -494,11 +519,11 @@ RETCODE aggregation(
             debugMessage("delta = %g -> success: %d\n", delta, success);
             if( success )
             {
-               violation = cutact - cutrhs;
-               if( violation > bestviolation )
+               efficacy = calcEfficacy(nvars, cutcoefs, cutrhs, cutact);
+               if( efficacy > bestefficacy )
                {
                   bestdelta = delta;
-                  bestviolation = violation;
+                  bestefficacy = efficacy;
                }
             }
          }
