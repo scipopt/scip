@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.115 2004/05/04 19:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.116 2004/05/05 12:47:45 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -249,7 +249,7 @@ RETCODE SCIProwEnsureSize(
 
 
 /*
- * Sorting of rows and columns
+ * Sorting and searching rows and columns
  */
 
 /** bubble sort part of rows in a column */
@@ -461,10 +461,10 @@ void colSortLP(
    /* update links */
    for( i = 0; i < col->nlprows; ++i )
    {
-      if( col->linkpos[i] != -1 )
+      if( col->linkpos[i] >= 0 )
       {
          assert(col->rows[i]->cols[col->linkpos[i]] == col);
-         assert(col->rows[i]->linkpos[col->linkpos[i]] != -1);
+         assert(col->rows[i]->linkpos[col->linkpos[i]] >= 0);
          col->rows[i]->linkpos[col->linkpos[i]] = i;
       }
    }
@@ -492,10 +492,10 @@ void colSortNonLP(
    /* update links */
    for( i = col->nlprows; i < col->len; ++i )
    {
-      if( col->linkpos[i] != -1 )
+      if( col->linkpos[i] >= 0 )
       {
          assert(col->rows[i]->cols[col->linkpos[i]] == col);
-         assert(col->rows[i]->linkpos[col->linkpos[i]] != -1);
+         assert(col->rows[i]->linkpos[col->linkpos[i]] >= 0);
          col->rows[i]->linkpos[col->linkpos[i]] = i;
       }
    }
@@ -523,10 +523,10 @@ void rowSortLP(
    /* update links */
    for( i = 0; i < row->nlpcols; ++i )
    {
-      if( row->linkpos[i] != -1 )
+      if( row->linkpos[i] >= 0 )
       {
          assert(row->cols[i]->rows[row->linkpos[i]] == row);
-         assert(row->cols[i]->linkpos[row->linkpos[i]] != -1);
+         assert(row->cols[i]->linkpos[row->linkpos[i]] >= 0);
          row->cols[i]->linkpos[row->linkpos[i]] = i;
       }
    }
@@ -554,10 +554,10 @@ void rowSortNonLP(
    /* update links */
    for( i = row->nlpcols; i < row->len; ++i )
    {
-      if( row->linkpos[i] != -1 )
+      if( row->linkpos[i] >= 0 )
       {
          assert(row->cols[i]->rows[row->linkpos[i]] == row);
-         assert(row->cols[i]->linkpos[row->linkpos[i]] != -1);
+         assert(row->cols[i]->linkpos[row->linkpos[i]] >= 0);
          row->cols[i]->linkpos[row->linkpos[i]] = i;
       }
    }
@@ -565,10 +565,364 @@ void rowSortNonLP(
    row->nonlpcolssorted = TRUE;
 }
 
+/** searches coefficient in part of the column, returns position in col vector or -1 if not found */
+static
+int colSearchCoeffPart(
+   COL*             col,                /**< column to be searched in */
+   const ROW*       row,                /**< coefficient to be searched for */
+   int              minpos,             /**< first position of search range */
+   int              maxpos              /**< last position of search range */
+   )
+{
+   int pos;
+   int idx;
+   int searchidx;
+
+   assert(col != NULL);
+   assert(row != NULL);
+
+   /* binary search */
+   searchidx = row->index;
+   while(minpos <= maxpos)
+   {
+      pos = (minpos + maxpos)/2;
+      assert(0 <= pos && pos < col->len);
+      assert(col->rows[pos] != NULL);
+      assert((pos < col->nlprows) == (col->rows[pos]->lppos >= 0 && col->linkpos[pos] >= 0));
+      idx = col->rows[pos]->index;
+      if( searchidx == idx )
+         return pos;
+      else if( searchidx < idx )
+         maxpos = pos-1;
+      else
+         minpos = pos+1;
+   }
+
+   return -1;
+}
+
+/** searches coefficient in column, returns position in col vector or -1 if not found */
+static
+int colSearchCoeff(
+   COL*             col,                /**< column to be searched in */
+   const ROW*       row                 /**< coefficient to be searched for */
+   )
+{
+   int pos;
+
+   assert(col != NULL);
+   assert(row != NULL);
+
+   pos = -1;
+
+   /* search in the linked LP rows */
+   if( row->lppos >= 0 )
+   {
+      /* column has to be sorted, such that binary search works */
+      colSortLP(col);
+      assert(col->lprowssorted);
+
+      pos = colSearchCoeffPart(col, row, 0, col->nlprows-1);
+      if( pos >= 0 )
+         return pos;
+   }
+
+   /* search in the non-LP/unlinked rows */
+   if( row->lppos == -1 || col->nunlinked > 0 )
+   {
+      /* column has to be sorted, such that binary search works */
+      colSortNonLP(col);
+      assert(col->nonlprowssorted);
+
+      pos = colSearchCoeffPart(col, row, col->nlprows, col->len-1);
+   }
+
+   return pos;
+}
+
+/** searches coefficient in part of the row, returns position in col vector or -1 if not found */
+static
+int rowSearchCoeffPart(
+   ROW*             row,                /**< row to be searched in */
+   const COL*       col,                /**< coefficient to be searched for */
+   int              minpos,             /**< first position of search range */
+   int              maxpos              /**< last position of search range */
+   )
+{
+   int pos;
+   int idx;
+   int searchidx;
+
+   assert(row != NULL);
+   assert(col != NULL);
+
+   /* binary search */
+   searchidx = col->index;
+   while(minpos <= maxpos)
+   {
+      pos = (minpos + maxpos)/2;
+      assert(0 <= pos && pos < row->len);
+      assert(row->cols[pos] != NULL);
+      assert((pos < row->nlpcols) == (row->cols[pos]->lppos >= 0 && row->linkpos[pos] >= 0));
+      idx = row->cols[pos]->index;
+      if( searchidx == idx )
+         return pos;
+      else if( searchidx < idx )
+         maxpos = pos-1;
+      else
+         minpos = pos+1;
+   }
+
+   return -1;
+}
+
+/** searches coefficient in row, returns position in row vector or -1 if not found;
+ *  if the sorting of the row is delayed, returns -1
+ */
+static
+int rowSearchCoeff(
+   ROW*             row,                /**< row to be searched in */
+   const COL*       col                 /**< coefficient to be searched for */
+   )
+{
+   int pos;
+
+   assert(row != NULL);
+   assert(col != NULL);
+
+   if( row->delaysort )
+      return -1;
+
+   pos = -1;
+
+   /* search in the linked LP columns */
+   if( col->lppos >= 0 )
+   {
+      /* row has to be sorted, such that binary search works */
+      rowSortLP(row);
+      assert(row->lpcolssorted);
+
+      pos = rowSearchCoeffPart(row, col, 0, row->nlpcols-1);
+      if( pos >= 0 )
+         return pos;
+   }
+
+   /* search in the non-LP/unlinked columns */
+   if( col->lppos == -1 || row->nunlinked > 0 )
+   {
+      /* row has to be sorted, such that binary search works */
+      rowSortNonLP(row);
+      assert(row->nonlpcolssorted);
+
+      pos = rowSearchCoeffPart(row, col, row->nlpcols, row->len-1);
+   }
+
+   return pos;
+}
+
+/** moves a coefficient in a column to a different place, and updates all corresponding data structures */
+static
+void colMoveCoeff(
+   COL*             col,                /**< LP column */
+   int              oldpos,             /**< old position of coefficient */
+   int              newpos              /**< new position of coefficient */
+   )
+{
+   assert(col != NULL);
+   assert(0 <= oldpos && oldpos < col->len);
+   assert(0 <= newpos && newpos < col->len);
+   assert(col->rows[oldpos] != NULL);
+
+   if( oldpos == newpos )
+      return;
+
+   col->rows[newpos] = col->rows[oldpos];
+   col->vals[newpos] = col->vals[oldpos];
+   col->linkpos[newpos] = col->linkpos[oldpos];
+
+   /* update link position in row */
+   if( col->linkpos[newpos] >= 0 )
+   {
+      assert(col->rows[newpos]->cols[col->linkpos[newpos]] == col);
+      assert(col->rows[newpos]->linkpos[col->linkpos[newpos]] == oldpos);
+
+      col->rows[newpos]->linkpos[col->linkpos[newpos]] = newpos;
+   }
+
+   /* update sorted flags */
+   if( col->rows[newpos]->lppos >= 0 && col->linkpos[newpos] >= 0 )
+      col->lprowssorted = FALSE;
+   else
+      col->nonlprowssorted = FALSE;
+}
+
+/** swaps two coefficients in a column, and updates all corresponding data structures */
+static
+void colSwapCoeffs(
+   COL*             col,                /**< LP column */
+   int              pos1,               /**< position of first coefficient */
+   int              pos2                /**< position of second coefficient */
+   )
+{
+   ROW* tmprow;
+   Real tmpval;
+   int tmplinkpos;
+   
+   assert(col != NULL);
+   assert(0 <= pos1 && pos1 < col->len);
+   assert(0 <= pos2 && pos2 < col->len);
+   assert(col->rows[pos1] != NULL);
+
+   if( pos1 == pos2 )
+      return;
+
+   /* swap coefficients */
+   tmprow = col->rows[pos2];
+   tmpval = col->vals[pos2];
+   tmplinkpos = col->linkpos[pos2];
+
+   col->rows[pos2] = col->rows[pos1];
+   col->vals[pos2] = col->vals[pos1];
+   col->linkpos[pos2] = col->linkpos[pos1];
+
+   col->rows[pos1] = tmprow;
+   col->vals[pos1] = tmpval;
+   col->linkpos[pos1] = tmplinkpos;
+
+   /* update link position in rowumns */
+   if( col->linkpos[pos1] >= 0 )
+   {
+      assert(col->rows[pos1]->cols[col->linkpos[pos1]] == col);
+      assert(col->rows[pos1]->linkpos[col->linkpos[pos1]] == pos2);
+
+      col->rows[pos1]->linkpos[col->linkpos[pos1]] = pos1;
+   }
+   if( col->linkpos[pos2] >= 0 )
+   {
+      assert(col->rows[pos2]->cols[col->linkpos[pos2]] == col);
+      assert(col->rows[pos2]->linkpos[col->linkpos[pos2]] == pos1);
+
+      col->rows[pos2]->linkpos[col->linkpos[pos2]] = pos2;
+   }
+
+   /* update sorted flags */
+   if( col->rows[pos1]->lppos >= 0 && col->linkpos[pos1] >= 0 )
+      col->lprowssorted = FALSE;
+   else
+      col->nonlprowssorted = FALSE;
+   if( col->rows[pos2]->lppos >= 0 && col->linkpos[pos2] >= 0 )
+      col->lprowssorted = FALSE;
+   else
+      col->nonlprowssorted = FALSE;
+}
+
+/** moves a coefficient in a row to a different place, and updates all corresponding data structures */
+static
+void rowMoveCoeff(
+   ROW*             row,                /**< LP row */
+   int              oldpos,             /**< old position of coefficient */
+   int              newpos              /**< new position of coefficient */
+   )
+{
+   assert(row != NULL);
+   assert(0 <= oldpos && oldpos < row->len);
+   assert(0 <= newpos && newpos < row->len);
+   assert(row->cols[oldpos] != NULL);
+
+   if( oldpos == newpos )
+      return;
+
+   row->cols[newpos] = row->cols[oldpos];
+   row->cols_probindex[newpos] = row->cols_probindex[oldpos];
+   row->vals[newpos] = row->vals[oldpos];
+   row->linkpos[newpos] = row->linkpos[oldpos];
+
+   /* update link position in column */
+   if( row->linkpos[newpos] >= 0 )
+   {
+      assert(row->cols[newpos]->rows[row->linkpos[newpos]] == row);
+      assert(row->cols[newpos]->linkpos[row->linkpos[newpos]] == oldpos);
+
+      row->cols[newpos]->linkpos[row->linkpos[newpos]] = newpos;
+   }
+
+   /* update sorted flags */
+   if( row->cols[newpos]->lppos >= 0 )
+      row->lpcolssorted = FALSE;
+   else
+      row->nonlpcolssorted = FALSE;
+}
+
+/** swaps two coefficients in a row, and updates all corresponding data structures */
+static
+void rowSwapCoeffs(
+   ROW*             row,                /**< LP row */
+   int              pos1,               /**< position of first coefficient */
+   int              pos2                /**< position of second coefficient */
+   )
+{
+   COL* tmpcol;
+   Real tmpval;
+   int tmpprobindex;
+   int tmplinkpos;
+   
+   assert(row != NULL);
+   assert(0 <= pos1 && pos1 < row->len);
+   assert(0 <= pos2 && pos2 < row->len);
+   assert(row->cols[pos1] != NULL);
+
+   if( pos1 == pos2 )
+      return;
+
+   /* swap coefficients */
+   tmpcol = row->cols[pos2];
+   tmpprobindex = row->cols_probindex[pos2];
+   tmpval = row->vals[pos2];
+   tmplinkpos = row->linkpos[pos2];
+
+   row->cols[pos2] = row->cols[pos1];
+   row->cols_probindex[pos2] = row->cols_probindex[pos1];
+   row->vals[pos2] = row->vals[pos1];
+   row->linkpos[pos2] = row->linkpos[pos1];
+
+   row->cols[pos1] = tmpcol;
+   row->cols_probindex[pos1] = tmpprobindex;
+   row->vals[pos1] = tmpval;
+   row->linkpos[pos1] = tmplinkpos;
+
+   /* update link position in columns */
+   if( row->linkpos[pos1] >= 0 )
+   {
+      assert(row->cols[pos1]->rows[row->linkpos[pos1]] == row);
+      assert(row->cols[pos1]->linkpos[row->linkpos[pos1]] == pos2);
+
+      row->cols[pos1]->linkpos[row->linkpos[pos1]] = pos1;
+   }
+   if( row->linkpos[pos2] >= 0 )
+   {
+      assert(row->cols[pos2]->rows[row->linkpos[pos2]] == row);
+      assert(row->cols[pos2]->linkpos[row->linkpos[pos2]] == pos1);
+
+      row->cols[pos2]->linkpos[row->linkpos[pos2]] = pos2;
+   }
+
+   /* update sorted flags */
+   if( row->cols[pos1]->lppos >= 0 )
+      row->lpcolssorted = FALSE;
+   else
+      row->nonlpcolssorted = FALSE;
+   if( row->cols[pos2]->lppos >= 0 )
+      row->lpcolssorted = FALSE;
+   else
+      row->nonlpcolssorted = FALSE;
+}
+
 
 
 
 #if 0
+static Bool msgdisp = FALSE;
+
 static
 void checkLinks(
    LP*              lp                  /**< current LP data */
@@ -581,10 +935,19 @@ void checkLinks(
 
    assert(lp != NULL);
 
+   if( !msgdisp )
+   {
+      warningMessage("LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      msgdisp = TRUE;
+   }
+
    for( i = 0; i < lp->ncols; ++i )
    {
       col = lp->cols[i];
       assert(col != NULL);
+      assert(col->lppos >= 0 || col->primsol == 0.0);
+      assert(col->lppos >= 0 || col->farkas == 0.0);
+      assert(col->nlprows <= col->len);
 
       for( j = 0; j < col->len; ++j )
       {
@@ -593,6 +956,7 @@ void checkLinks(
          assert(!lp->flushed || col->lppos == -1 || col->linkpos[j] >= 0);
          assert(col->linkpos[j] == -1 || row->cols[col->linkpos[j]] == col);
          assert(col->linkpos[j] == -1 || EPSEQ(row->vals[col->linkpos[j]], col->vals[j], 1e-6));
+         assert((j < col->nlprows) == (col->linkpos[j] >= 0 && row->lppos >= 0));
       }
    }
 
@@ -600,7 +964,10 @@ void checkLinks(
    {
       row = lp->rows[i];
       assert(row != NULL);
-
+      assert(row->lppos >= 0 || row->dualsol == 0.0);
+      assert(row->lppos >= 0 || row->dualfarkas == 0.0);
+      assert(row->nlpcols <= row->len);
+      
       for( j = 0; j < row->len; ++j )
       {
          col = row->cols[j];
@@ -608,6 +975,7 @@ void checkLinks(
          assert(!lp->flushed || row->lppos == -1 || row->linkpos[j] >= 0);
          assert(row->linkpos[j] == -1 || col->rows[row->linkpos[j]] == row);
          assert(row->linkpos[j] == -1 || EPSEQ(col->vals[row->linkpos[j]], row->vals[j], 1e-6));
+         assert((j < row->nlpcols) == (row->linkpos[j] >= 0 && col->lppos >= 0));
       }
    }
 }
@@ -670,164 +1038,12 @@ void coefChanged(
    row->validactivitybdsbdchg = -1;
 }
 
-   
+
 
 
 /*
  * local column changing methods
  */
-
-/** searches coefficient in column, returns position in col vector or -1 */
-static
-int colSearchCoeff(
-   COL*             col,                /**< column to be searched in */
-   const ROW*       row                 /**< coefficient to be searched for */
-   )
-{
-   int pos;
-   int minpos;
-   int maxpos;
-   int idx;
-   int searchidx;
-
-   assert(col != NULL);
-   assert(row != NULL);
-
-   /* decide whether to search in the LP rows or the non-LP rows */
-   if( row->lppos >= 0 )
-   {
-      /* column has to be sorted, such that binary search works */
-      colSortLP(col);
-      assert(col->lprowssorted);
-
-      minpos = 0;
-      maxpos = col->nlprows-1;
-   }
-   else
-   {
-      /* column has to be sorted, such that binary search works */
-      colSortNonLP(col);
-      assert(col->nonlprowssorted);
-
-      minpos = col->nlprows;
-      maxpos = col->len-1;
-   }
-
-   /* binary search */
-   searchidx = row->index;
-   while(minpos <= maxpos)
-   {
-      pos = (minpos + maxpos)/2;
-      assert(0 <= pos && pos < col->len);
-      assert(col->rows[pos] != NULL);
-      assert((col->rows[pos]->lppos >= 0) == (row->lppos >= 0));
-      idx = col->rows[pos]->index;
-      if( searchidx == idx )
-         return pos;
-      else if( searchidx < idx )
-         maxpos = pos-1;
-      else
-         minpos = pos+1;
-   }
-
-   return -1;
-}
-
-/** moves a coefficient in a column to a different place, and updates all corresponding data structures */
-static
-void colMoveCoeff(
-   COL*             col,                /**< LP column */
-   int              oldpos,             /**< old position of coefficient */
-   int              newpos              /**< new position of coefficient */
-   )
-{
-   assert(col != NULL);
-   assert(0 <= oldpos && oldpos < col->len);
-   assert(0 <= newpos && newpos < col->len);
-   assert(col->rows[oldpos] != NULL);
-
-   if( oldpos == newpos )
-      return;
-
-   col->rows[newpos] = col->rows[oldpos];
-   col->vals[newpos] = col->vals[oldpos];
-   col->linkpos[newpos] = col->linkpos[oldpos];
-
-   /* update link position in row */
-   if( col->linkpos[newpos] != -1 )
-   {
-      assert(col->rows[newpos]->cols[col->linkpos[newpos]] == col);
-      assert(col->rows[newpos]->linkpos[col->linkpos[newpos]] == oldpos);
-
-      col->rows[newpos]->linkpos[col->linkpos[newpos]] = newpos;
-   }
-
-   /* update sorted flags */
-   if( col->rows[newpos]->lppos >= 0 )
-      col->lprowssorted = FALSE;
-   else
-      col->nonlprowssorted = FALSE;
-}
-
-/** swaps two coefficients in a column, and updates all corresponding data structures */
-static
-void colSwapCoeffs(
-   COL*             col,                /**< LP column */
-   int              pos1,               /**< position of first coefficient */
-   int              pos2                /**< position of second coefficient */
-   )
-{
-   ROW* tmprow;
-   Real tmpval;
-   int tmplinkpos;
-   
-   assert(col != NULL);
-   assert(0 <= pos1 && pos1 < col->len);
-   assert(0 <= pos2 && pos2 < col->len);
-   assert(col->rows[pos1] != NULL);
-
-   if( pos1 == pos2 )
-      return;
-
-   /* swap coefficients */
-   tmprow = col->rows[pos2];
-   tmpval = col->vals[pos2];
-   tmplinkpos = col->linkpos[pos2];
-
-   col->rows[pos2] = col->rows[pos1];
-   col->vals[pos2] = col->vals[pos1];
-   col->linkpos[pos2] = col->linkpos[pos1];
-
-   col->rows[pos1] = tmprow;
-   col->vals[pos1] = tmpval;
-   col->linkpos[pos1] = tmplinkpos;
-
-   /* update link position in rowumns */
-   if( col->linkpos[pos1] != -1 )
-   {
-      assert(col->rows[pos1]->cols[col->linkpos[pos1]] == col);
-      assert(col->rows[pos1]->linkpos[col->linkpos[pos1]] == pos2);
-
-      col->rows[pos1]->linkpos[col->linkpos[pos1]] = pos1;
-   }
-   if( col->linkpos[pos2] != -1 )
-   {
-      assert(col->rows[pos2]->cols[col->linkpos[pos2]] == col);
-      assert(col->rows[pos2]->linkpos[col->linkpos[pos2]] == pos1);
-
-      col->rows[pos2]->linkpos[col->linkpos[pos2]] = pos2;
-   }
-
-   /* update sorted flags */
-   if( col->rows[pos1]->lppos >= 0 )
-      col->lprowssorted = FALSE;
-   else
-      col->nonlprowssorted = FALSE;
-   if( col->rows[pos2]->lppos >= 0 )
-      col->lprowssorted = FALSE;
-   else
-      col->nonlprowssorted = FALSE;
-}
 
 /** adds a previously non existing coefficient to an LP column */
 static
@@ -838,8 +1054,7 @@ RETCODE colAddCoeff(
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
    Real             val,                /**< value of coefficient */
-   int              linkpos,            /**< position of column in the row's col array, or -1 */
-   int*             rowpos              /**< pointer to store the position of the row in the column's row array, or NULL */
+   int              linkpos             /**< position of column in the row's col array, or -1 */
    )
 {
    int pos;
@@ -860,10 +1075,12 @@ RETCODE colAddCoeff(
    pos = col->len;
    col->len++;
 
-   /* if the row is in current LP, we have to insert it at the end of the LP rows part of the column's arrays */
-   if( row->lppos >= 0 )
+   /* if the row is in current LP and is linked to the column, we have to insert it at the end of the linked LP rows
+    * part of the column's arrays
+    */
+   if( row->lppos >= 0 && linkpos >= 0 )
    {
-      /* move the first non-LP row to the end */
+      /* move the first non-LP/not linked row to the end */
       if( col->nlprows < pos )
       {
          colMoveCoeff(col, col->nlprows, pos);
@@ -875,15 +1092,31 @@ RETCODE colAddCoeff(
    debugMessage("adding coefficient %g * <%s> at position %d (%d/%d) to column <%s>\n",
       val, row->name, pos, col->nlprows, col->len, SCIPvarGetName(col->var));
 
-   /* insert the row at the correct position */
+   /* insert the row at the correct position and update the links */
    col->rows[pos] = row;
    col->vals[pos] = val;
    col->linkpos[pos] = linkpos;
    if( linkpos == -1 )
       col->nunlinked++;
+   else
+   {
+      assert(row->linkpos[linkpos] == -1);
+      assert(row->nunlinked > 0);
+      row->linkpos[linkpos] = pos;
+      row->nunlinked--;
+
+      /* if the column is in current LP, now both conditions, row->cols[linkpos]->lppos >= 0 and row->linkpos[linkpos] >= 0
+       * hold, so we have to move the column to the linked LP-cols part of the row's cols array
+       */
+      if( col->lppos >= 0 )
+      {
+         row->nlpcols++;
+         rowSwapCoeffs(row, linkpos, row->nlpcols-1);
+      }
+   }
 
    /* update the sorted flags */
-   if( row->lppos >= 0 )
+   if( row->lppos >= 0 && linkpos >= 0 )
    {
       if( col->nlprows > 1 )
          col->lprowssorted = col->lprowssorted && (col->rows[col->nlprows-2]->index < row->index);
@@ -894,9 +1127,6 @@ RETCODE colAddCoeff(
          col->nonlprowssorted = col->nonlprowssorted && (col->rows[col->len-2]->index < row->index);
    }
    
-   if( rowpos != NULL )
-      *rowpos = pos;
-      
    coefChanged(row, col, lp);
 
    return SCIP_OKAY;
@@ -919,6 +1149,7 @@ RETCODE colDelCoeffPos(
    assert(0 <= pos && pos < col->len);
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
+   assert((pos < col->nlprows) == (col->linkpos[pos] >= 0 && col->rows[pos]->lppos >= 0));
 
    row = col->rows[pos];
    assert((row->lppos >= 0) == (pos < col->nlprows));
@@ -929,7 +1160,7 @@ RETCODE colDelCoeffPos(
    if( col->linkpos[pos] == -1 )
       col->nunlinked--;
 
-   /* if row is an LP row, move last LP coefficient to position of empty slot (deleted coefficient) */
+   /* if row is a linked LP row, move last linked LP coefficient to position of empty slot (deleted coefficient) */
    if( pos < col->nlprows )
    {
       colMoveCoeff(col, col->nlprows-1, pos);
@@ -984,172 +1215,10 @@ RETCODE colChgCoeffPos(
 
 
 
+
 /*
  * local row changing methods
  */
-
-/** searches coefficient in row, returns position in row vector or -1 if not found;
- *  if the row is unsorted, and the sorting of the row is delayed, returns -1
- */
-static
-int rowSearchCoeff(
-   ROW*             row,                /**< row to be searched in */
-   const COL*       col                 /**< coefficient to be searched for */
-   )
-{
-   int pos;
-   int minpos;
-   int maxpos;
-   int idx;
-   int searchidx;
-
-   assert(row != NULL);
-   assert(col != NULL);
-
-   /* decide whether to search in the LP columns or the non-LP columns */
-   if( col->lppos >= 0 )
-   {
-      /* row has to be sorted, such that binary search works */
-      rowSortLP(row);
-      assert(row->lpcolssorted || row->delaysort);
-      if( !row->lpcolssorted )
-         return -1;
-
-      minpos = 0;
-      maxpos = row->nlpcols-1;
-   }
-   else
-   {
-      /* row has to be sorted, such that binary search works */
-      rowSortNonLP(row);
-      assert(row->nonlpcolssorted || row->delaysort);
-      if( !row->nonlpcolssorted )
-         return -1;
-
-      minpos = row->nlpcols;
-      maxpos = row->len-1;
-   }
-
-   /* binary search */
-   searchidx = col->index;
-   while(minpos <= maxpos)
-   {
-      pos = (minpos + maxpos)/2;
-      assert(0 <= pos && pos < row->len);
-      assert(row->cols[pos] != NULL);
-      assert((row->cols[pos]->lppos >= 0) == (col->lppos >= 0));
-      idx = row->cols[pos]->index;
-      if( searchidx == idx )
-         return pos;
-      else if( searchidx < idx )
-         maxpos = pos-1;
-      else
-         minpos = pos+1;
-   }
-
-   return -1;
-}
-
-/** moves a coefficient in a row to a different place, and updates all corresponding data structures */
-static
-void rowMoveCoeff(
-   ROW*             row,                /**< LP row */
-   int              oldpos,             /**< old position of coefficient */
-   int              newpos              /**< new position of coefficient */
-   )
-{
-   assert(row != NULL);
-   assert(0 <= oldpos && oldpos < row->len);
-   assert(0 <= newpos && newpos < row->len);
-   assert(row->cols[oldpos] != NULL);
-
-   if( oldpos == newpos )
-      return;
-
-   row->cols[newpos] = row->cols[oldpos];
-   row->cols_probindex[newpos] = row->cols_probindex[oldpos];
-   row->vals[newpos] = row->vals[oldpos];
-   row->linkpos[newpos] = row->linkpos[oldpos];
-
-   /* update link position in column */
-   if( row->linkpos[newpos] != -1 )
-   {
-      assert(row->cols[newpos]->rows[row->linkpos[newpos]] == row);
-      assert(row->cols[newpos]->linkpos[row->linkpos[newpos]] == oldpos);
-
-      row->cols[newpos]->linkpos[row->linkpos[newpos]] = newpos;
-   }
-
-   /* update sorted flags */
-   if( row->cols[newpos]->lppos >= 0 )
-      row->lpcolssorted = FALSE;
-   else
-      row->nonlpcolssorted = FALSE;
-}
-
-/** swaps two coefficients in a row, and updates all corresponding data structures */
-static
-void rowSwapCoeffs(
-   ROW*             row,                /**< LP row */
-   int              pos1,               /**< position of first coefficient */
-   int              pos2                /**< position of second coefficient */
-   )
-{
-   COL* tmpcol;
-   Real tmpval;
-   int tmpprobindex;
-   int tmplinkpos;
-   
-   assert(row != NULL);
-   assert(0 <= pos1 && pos1 < row->len);
-   assert(0 <= pos2 && pos2 < row->len);
-   assert(row->cols[pos1] != NULL);
-
-   if( pos1 == pos2 )
-      return;
-
-   /* swap coefficients */
-   tmpcol = row->cols[pos2];
-   tmpprobindex = row->cols_probindex[pos2];
-   tmpval = row->vals[pos2];
-   tmplinkpos = row->linkpos[pos2];
-
-   row->cols[pos2] = row->cols[pos1];
-   row->cols_probindex[pos2] = row->cols_probindex[pos1];
-   row->vals[pos2] = row->vals[pos1];
-   row->linkpos[pos2] = row->linkpos[pos1];
-
-   row->cols[pos1] = tmpcol;
-   row->cols_probindex[pos1] = tmpprobindex;
-   row->vals[pos1] = tmpval;
-   row->linkpos[pos1] = tmplinkpos;
-
-   /* update link position in columns */
-   if( row->linkpos[pos1] != -1 )
-   {
-      assert(row->cols[pos1]->rows[row->linkpos[pos1]] == row);
-      assert(row->cols[pos1]->linkpos[row->linkpos[pos1]] == pos2);
-
-      row->cols[pos1]->linkpos[row->linkpos[pos1]] = pos1;
-   }
-   if( row->linkpos[pos2] != -1 )
-   {
-      assert(row->cols[pos2]->rows[row->linkpos[pos2]] == row);
-      assert(row->cols[pos2]->linkpos[row->linkpos[pos2]] == pos1);
-
-      row->cols[pos2]->linkpos[row->linkpos[pos2]] = pos2;
-   }
-
-   /* update sorted flags */
-   if( row->cols[pos1]->lppos >= 0 )
-      row->lpcolssorted = FALSE;
-   else
-      row->nonlpcolssorted = FALSE;
-   if( row->cols[pos2]->lppos >= 0 )
-      row->lpcolssorted = FALSE;
-   else
-      row->nonlpcolssorted = FALSE;
-}
 
 /** update row norms after addition of new coefficient */
 static
@@ -1166,12 +1235,13 @@ void rowAddNorms(
    assert(row->nummaxval >= 0);
    assert(row->numminval >= 0);
    assert(set != NULL);
+   assert(colidx >= -1);
 
    absval = ABS(val);
    assert(!SCIPsetIsZero(set, absval));
 
    /* update min/maxidx */
-   if( colidx != -1 )
+   if( colidx >= 0 )
    {
       row->minidx = MIN(row->minidx, colidx);
       row->maxidx = MAX(row->maxidx, colidx);
@@ -1218,6 +1288,7 @@ void rowDelNorms(
    assert(row->nummaxval >= 0);
    assert(row->numminval >= 0);
    assert(set != NULL);
+   assert(colidx >= -1);
 
    absval = ABS(val);
    assert(!SCIPsetIsZero(set, absval));
@@ -1225,7 +1296,7 @@ void rowDelNorms(
    assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
 
    /* update min/maxidx validity */
-   if( colidx != -1 )
+   if( colidx >= 0 )
    {
       if( colidx == row->minidx || colidx == row->maxidx )
          row->validminmaxidx = FALSE;
@@ -1257,8 +1328,7 @@ RETCODE rowAddCoeff(
    LP*              lp,                 /**< current LP data */
    COL*             col,                /**< LP column */
    Real             val,                /**< value of coefficient */
-   int              linkpos,            /**< position of row in the column's row array, or -1 */
-   int*             colpos              /**< pointer to store the position of the column in the row's col array, or NULL */
+   int              linkpos             /**< position of row in the column's row array, or -1 */
    )
 {
    int pos;
@@ -1285,10 +1355,12 @@ RETCODE rowAddCoeff(
    pos = row->len;
    row->len++;
 
-   /* if the column is in current LP, we have to insert it at the end of the LP cols part of the row's arrays */
-   if( col->lppos >= 0 )
+   /* if the column is in current LP and is linked to the row, we have to insert it at the end of the linked LP columns
+    * part of the row's arrays
+    */
+   if( col->lppos >= 0 && linkpos >= 0 )
    {
-      /* move the first non-LP column to the end */
+      /* move the first non-LP/not linked column to the end */
       if( row->nlpcols < pos )
       {
          rowMoveCoeff(row, row->nlpcols, pos);
@@ -1300,7 +1372,7 @@ RETCODE rowAddCoeff(
    debugMessage("adding coefficient %g * <%s> at position %d (%d/%d) to row <%s>\n",
       val, SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->name);
 
-   /* insert the column at the correct position */
+   /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
    row->cols_probindex[pos] = col->var_probindex;
    row->vals[pos] = val;
@@ -1308,6 +1380,22 @@ RETCODE rowAddCoeff(
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    if( linkpos == -1 )
       row->nunlinked++;
+   else
+   {
+      assert(col->linkpos[linkpos] == -1);
+      assert(col->nunlinked > 0);
+      col->linkpos[linkpos] = pos;
+      col->nunlinked--;
+
+      /* if the row is in current LP, now both conditions, col->rows[linkpos]->lppos >= 0 and col->linkpos[linkpos] >= 0
+       * hold, so we have to move the row to the linked LP-rows part of the column's rows array
+       */
+      if( row->lppos >= 0 )
+      {
+         col->nlprows++;
+         colSwapCoeffs(col, linkpos, col->nlprows-1);
+      }
+   }
 
    /* update the sorted flags */
    if( col->lppos >= 0 )
@@ -1321,9 +1409,6 @@ RETCODE rowAddCoeff(
          row->nonlpcolssorted = row->nonlpcolssorted && (row->cols[row->len-2]->index < col->index);
    }
    
-   if( colpos != NULL )
-      *colpos = pos;
-
    rowAddNorms(row, set, col->index, val);
 
    coefChanged(row, col, lp);
@@ -1348,6 +1433,7 @@ RETCODE rowDelCoeffPos(
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] != NULL);
    assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
+   assert((pos < row->nlpcols) == (row->linkpos[pos] >= 0 && row->cols[pos]->lppos >= 0));
 
    col = row->cols[pos];
    val = row->vals[pos];
@@ -1365,7 +1451,7 @@ RETCODE rowDelCoeffPos(
    if( row->linkpos[pos] == -1 )
       row->nunlinked--;
    
-   /* if column is an LP column, move last LP coefficient to position of empty slot (deleted coefficient) */
+   /* if column is a linked LP column, move last linked LP coefficient to position of empty slot (deleted coefficient) */
    if( pos < row->nlpcols )
    {
       rowMoveCoeff(row, row->nlpcols-1, pos);
@@ -1503,19 +1589,25 @@ RETCODE colLink(
    if( col->nunlinked > 0 )
    {
       debugMessage("linking column <%s>\n", SCIPvarGetName(col->var));
-      for( i = 0; i < col->len; ++i )
+
+      /* unlinked rows can only be in the non-LP/unlinked rows part of the rows array */
+      for( i = col->nlprows; i < col->len; ++i )
       {
          assert(!SCIPsetIsZero(set, col->vals[i]));
          if( col->linkpos[i] == -1 )
          {
-            CHECK_OKAY( rowAddCoeff(col->rows[i], memhdr, set, lp, col, col->vals[i], i, &col->linkpos[i]) );
-            col->nunlinked--;
+            /* this call might swap the current row with the first non-LP/not linked row, but this is of no harm */
+            CHECK_OKAY( rowAddCoeff(col->rows[i], memhdr, set, lp, col, col->vals[i], i) );
          }
          assert(col->rows[i]->cols[col->linkpos[i]] == col);
          assert(col->rows[i]->linkpos[col->linkpos[i]] == i);
+         assert(col->nlprows == 0 || col->rows[col->nlprows-1]->cols[col->linkpos[col->nlprows-1]] == col);
+         assert(col->nlprows == 0 || col->rows[col->nlprows-1]->linkpos[col->linkpos[col->nlprows-1]] == col->nlprows-1);
       }
    }
    assert(col->nunlinked == 0);
+
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -1542,7 +1634,7 @@ RETCODE colUnlink(
       debugMessage("unlinking column <%s>\n", SCIPvarGetName(col->var));
       for( i = 0; i < col->len; ++i )
       {
-         if( col->linkpos[i] != -1 )
+         if( col->linkpos[i] >= 0 )
          {
             assert(col->rows[i]->cols[col->linkpos[i]] == col);
             CHECK_OKAY( rowDelCoeffPos(col->rows[i], set, lp, col->linkpos[i]) );
@@ -1552,6 +1644,8 @@ RETCODE colUnlink(
       }
    }
    assert(col->nunlinked == col->len);
+
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -1575,19 +1669,25 @@ RETCODE rowLink(
    if( row->nunlinked > 0 )
    {
       debugMessage("linking row <%s>\n", row->name);
-      for( i = 0; i < row->len; ++i )
+
+      /* unlinked columns can only be in the non-LP/unlinked columns part of the cols array */
+      for( i = row->nlpcols; i < row->len; ++i )
       {
          assert(!SCIPsetIsZero(set, row->vals[i]));
          if( row->linkpos[i] == -1 )
          {
-            CHECK_OKAY( colAddCoeff(row->cols[i], memhdr, set, lp, row, row->vals[i], i, &row->linkpos[i]) );
-            row->nunlinked--;
+            /* this call might swap the current column with the first non-LP/not linked column, but this is of no harm */
+            CHECK_OKAY( colAddCoeff(row->cols[i], memhdr, set, lp, row, row->vals[i], i) );
          }
          assert(row->cols[i]->rows[row->linkpos[i]] == row);
          assert(row->cols[i]->linkpos[row->linkpos[i]] == i);
+         assert(row->nlpcols == 0 || row->cols[row->nlpcols-1]->rows[row->linkpos[row->nlpcols-1]] == row);
+         assert(row->nlpcols == 0 || row->cols[row->nlpcols-1]->linkpos[row->linkpos[row->nlpcols-1]] == row->nlpcols-1);
       }
    }
    assert(row->nunlinked == 0);
+
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -1613,7 +1713,7 @@ RETCODE rowUnlink(
       debugMessage("unlinking row <%s>\n", row->name);
       for( i = 0; i < row->len; ++i )
       {
-         if( row->linkpos[i] != -1 )
+         if( row->linkpos[i] >= 0 )
          {
             assert(row->cols[i]->rows[row->linkpos[i]] == row);
             CHECK_OKAY( colDelCoeffPos(row->cols[i], set, lp, row->linkpos[i]) );
@@ -1622,6 +1722,8 @@ RETCODE rowUnlink(
       }
    }
    assert(row->nunlinked == row->len);
+
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -1921,8 +2023,6 @@ RETCODE SCIPcolCreate(
    Bool             removeable          /**< should the column be removed from the LP due to aging or cleanup? */
    )
 {
-   int nlprows;
-   int nnonlprows;
    int i;
 
    assert(col != NULL);
@@ -1937,47 +2037,22 @@ RETCODE SCIPcolCreate(
 
    if( len > 0 )
    {
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*col)->rows, len) );
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*col)->vals, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*col)->rows, rows, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*col)->vals, vals, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*col)->linkpos, len) );
 
-      /* copy the rows and vals array, such that the LP rows precede the non-LP rows */
-      nlprows = 0;
-      nnonlprows = 0;
       for( i = 0; i < len; ++i )
       {
          assert(rows[i] != NULL);
          assert(!SCIPsetIsZero(set, vals[i]));
-
-         if( rows[i]->lppos >= 0 )
-         {
-            /* fill the LP rows from the front */
-            (*col)->rows[nlprows] = rows[i];
-            (*col)->vals[nlprows] = vals[i];
-            nlprows++;
-         }
-         else
-         {
-            /* fill the non-LP rows from the back */
-            (*col)->rows[len-1 - nnonlprows] = rows[i];
-            (*col)->vals[len-1 - nnonlprows] = vals[i];
-            nnonlprows++;
-         }
          (*col)->linkpos[i] = -1;
       }
-      assert(nlprows + nnonlprows == len);
-      (*col)->nlprows = nlprows;
-      (*col)->lprowssorted = (nlprows <= 1);
-      (*col)->nonlprowssorted = (nnonlprows <= 1);
    }
    else
    {
       (*col)->rows = NULL;
       (*col)->vals = NULL;
       (*col)->linkpos = NULL;
-      (*col)->nlprows = 0;
-      (*col)->lprowssorted = TRUE;
-      (*col)->nonlprowssorted = TRUE;
    }
 
    (*col)->var = var;
@@ -1987,6 +2062,7 @@ RETCODE SCIPcolCreate(
    (*col)->index = stat->ncolidx++;
    (*col)->size = len;
    (*col)->len = len;
+   (*col)->nlprows = 0;
    (*col)->nunlinked = len;
    (*col)->lppos = -1;
    (*col)->lpipos = -1;
@@ -2006,6 +2082,8 @@ RETCODE SCIPcolCreate(
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
    (*col)->var_probindex = SCIPvarGetProbindex(var);
+   (*col)->lprowssorted = TRUE;
+   (*col)->nonlprowssorted = (len <= 1);
    (*col)->objchanged = FALSE;
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
@@ -2070,7 +2148,7 @@ RETCODE SCIPcolAddCoeff(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, val, -1, NULL) );
+   CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, val, -1) );
 
    checkLinks(lp);
 
@@ -2104,7 +2182,7 @@ RETCODE SCIPcolDelCoeff(
    assert(col->rows[pos] == row);
 
    /* if row knows of the column, remove the column from the row's col vector */
-   if( col->linkpos[pos] != -1 )
+   if( col->linkpos[pos] >= 0 )
    {
       assert(row->cols[col->linkpos[pos]] == col);
       assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
@@ -2144,7 +2222,7 @@ RETCODE SCIPcolChgCoeff(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, val, -1, NULL) );
+      CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, val, -1) );
    }
    else
    {
@@ -2153,7 +2231,7 @@ RETCODE SCIPcolChgCoeff(
       assert(col->rows[pos] == row);
 
       /* if row knows of the column, change the corresponding coefficient in the row */
-      if( col->linkpos[pos] != -1 )
+      if( col->linkpos[pos] >= 0 )
       {
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
@@ -2197,7 +2275,7 @@ RETCODE SCIPcolIncCoeff(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, incval, -1, NULL) );
+      CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, incval, -1) );
    }
    else
    {
@@ -2206,7 +2284,7 @@ RETCODE SCIPcolIncCoeff(
       assert(col->rows[pos] == row);
 
       /* if row knows of the column, change the corresponding coefficient in the row */
-      if( col->linkpos[pos] != -1 )
+      if( col->linkpos[pos] >= 0 )
       {
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
@@ -2375,8 +2453,9 @@ void colCalcRedcost(
    {
       row = col->rows[r];
       assert(row != NULL);
-      assert(row->lppos >= 0);
       assert(row->dualsol < SCIP_INVALID);
+      assert(row->lppos >= 0);
+      assert(col->linkpos[r] >= 0);
       col->redcost -= col->vals[r] * row->dualsol;
    }
 
@@ -2388,7 +2467,8 @@ void colCalcRedcost(
          assert(row != NULL);
          assert(row->lppos >= 0 || row->dualsol == 0.0);
          assert(row->lppos == -1 || col->linkpos[r] == -1);
-         col->redcost -= col->vals[r] * row->dualsol;
+         if( row->lppos >= 0 )
+            col->redcost -= col->vals[r] * row->dualsol;
       }
    }
 #ifndef NDEBUG
@@ -2398,8 +2478,8 @@ void colCalcRedcost(
       {
          row = col->rows[r];
          assert(row != NULL);
-         assert(row->lppos == -1);
          assert(row->dualsol == 0.0);
+         assert(row->lppos == -1);
          assert(col->linkpos[r] >= 0);
       }
    }
@@ -2503,8 +2583,9 @@ void colCalcFarkas(
    {
       row = col->rows[r];
       assert(row != NULL);
-      assert(row->lppos >= 0);
       assert(row->dualfarkas < SCIP_INVALID);
+      assert(row->lppos >= 0);
+      assert(col->linkpos[r] >= 0);
       col->farkas += col->vals[r] * row->dualfarkas;
    }
 
@@ -2516,7 +2597,8 @@ void colCalcFarkas(
          assert(row != NULL);
          assert(row->lppos >= 0 || row->dualfarkas == 0.0);
          assert(row->lppos == -1 || col->linkpos[r] == -1);
-         col->farkas += col->vals[r] * row->dualfarkas;
+         if( row->lppos >= 0 )
+            col->farkas += col->vals[r] * row->dualfarkas;
       }
    }
 #ifndef NDEBUG
@@ -2526,8 +2608,8 @@ void colCalcFarkas(
       {
          row = col->rows[r];
          assert(row != NULL);
-         assert(row->lppos == -1);
          assert(row->dualfarkas == 0.0);
+         assert(row->lppos == -1);
          assert(col->linkpos[r] >= 0);
       }
    }
@@ -2867,12 +2949,16 @@ int SCIPcolGetNNonz(
    return col->len;
 }
 
-/** get number of nonzero entries in column vector, that correspond to rows currently in the LP */
+/** get number of nonzero entries in column vector, that correspond to rows currently in the LP;
+ *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
+ *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
+ */
 int SCIPcolGetNLPNonz(
    COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
+   assert(col->nunlinked == 0);
 
    return col->nlprows;
 }
@@ -2948,6 +3034,9 @@ void rowCalcNorms(
    {
       assert(row->cols[i] != NULL);
       assert(!SCIPsetIsZero(set, row->vals[i]));
+      assert(row->cols[i]->lppos >= 0);
+      assert(row->linkpos[i] >= 0);
+
       rowAddNorms(row, set, row->cols[i]->index, row->vals[i]);
       if( i > 0 )
          row->lpcolssorted = row->lpcolssorted && (row->cols[i-1]->index < row->cols[i]->index);
@@ -2956,6 +3045,8 @@ void rowCalcNorms(
    {
       assert(row->cols[i] != NULL);
       assert(!SCIPsetIsZero(set, row->vals[i]));
+      assert(row->cols[i]->lppos == -1 || row->linkpos[i] == -1);
+
       rowAddNorms(row, set, row->cols[i]->index, row->vals[i]);
       if( i > row->nlpcols )
          row->nonlpcolssorted = row->nonlpcolssorted && (row->cols[i-1]->index < row->cols[i]->index);
@@ -3063,9 +3154,6 @@ RETCODE SCIProwCreate(
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
-   int nlpcols;
-   int nnonlpcols;
-
    assert(row != NULL);
    assert(memhdr != NULL);
    assert(stat != NULL);
@@ -3081,14 +3169,11 @@ RETCODE SCIProwCreate(
       VAR* var;
       int i;
 
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->cols, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->cols, cols, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->vals, vals, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->cols_probindex, len) );
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->vals, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->linkpos, len) );
 
-      /* copy the cols and vals array, such that the LP columns precede the non-LP columns */
-      nlpcols = 0;
-      nnonlpcols = 0;
       for( i = 0; i < len; ++i )
       {
          assert(cols[i] != NULL);
@@ -3097,29 +3182,10 @@ RETCODE SCIProwCreate(
          var = cols[i]->var;
          assert(cols[i]->var_probindex == SCIPvarGetProbindex(var));
 
-         if( cols[i]->lppos >= 0 )
-         {
-            /* fill the LP columns from the front */
-            (*row)->cols[nlpcols] = cols[i];
-            (*row)->vals[nlpcols] = vals[i];
-            (*row)->cols_probindex[nlpcols] = cols[i]->var_probindex;
-            nlpcols++;
-         }
-         else
-         {
-            /* fill the non-LP columns from the back */
-            (*row)->cols[len-1 - nnonlpcols] = cols[i];
-            (*row)->vals[len-1 - nnonlpcols] = vals[i];
-            (*row)->cols_probindex[len-1 - nnonlpcols] = cols[i]->var_probindex;
-            nnonlpcols++;
-         }
+         (*row)->cols_probindex[i] = cols[i]->var_probindex;
          (*row)->linkpos[i] = -1;
          (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, vals[i]);
       }
-      assert(nlpcols + nnonlpcols == len);
-      (*row)->nlpcols = nlpcols;
-      (*row)->lpcolssorted = (nlpcols <= 1);
-      (*row)->nonlpcolssorted = (nnonlpcols <= 1);
    }
    else
    {
@@ -3127,9 +3193,6 @@ RETCODE SCIProwCreate(
       (*row)->cols_probindex = NULL;
       (*row)->vals = NULL;
       (*row)->linkpos = NULL;
-      (*row)->nlpcols = 0;
-      (*row)->lpcolssorted = TRUE;
-      (*row)->nonlpcolssorted = TRUE;
    }
    
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->name, name, strlen(name)+1) );
@@ -3148,6 +3211,7 @@ RETCODE SCIProwCreate(
    (*row)->index = stat->nrowidx++;
    (*row)->size = len;
    (*row)->len = len;
+   (*row)->nlpcols = 0;
    (*row)->nunlinked = len;
    (*row)->nuses = 0;
    (*row)->lppos = -1;
@@ -3161,6 +3225,8 @@ RETCODE SCIProwCreate(
    (*row)->validactivitybdsbdchg = -1;
    (*row)->age = 0;
    (*row)->obsoletenode = -1;
+   (*row)->lpcolssorted = TRUE;
+   (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
    (*row)->validminmaxidx = FALSE;
    (*row)->lhschanged = FALSE;
@@ -3308,7 +3374,7 @@ RETCODE SCIProwAddCoeff(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, val, -1, NULL) );
+   CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, val, -1) );
 
    checkLinks(lp);
 
@@ -3344,7 +3410,7 @@ RETCODE SCIProwDelCoeff(
    assert(row->cols_probindex[pos] == col->var_probindex);
 
    /* if column knows of the row, remove the row from the column's row vector */
-   if( row->linkpos[pos] != -1 )
+   if( row->linkpos[pos] >= 0 )
    {
       assert(col->rows[row->linkpos[pos]] == row);
       assert(SCIPsetIsEQ(set, col->vals[row->linkpos[pos]], row->vals[pos]));
@@ -3384,7 +3450,7 @@ RETCODE SCIProwChgCoeff(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, val, -1, NULL) );
+      CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, val, -1) );
    }
    else
    {
@@ -3394,7 +3460,7 @@ RETCODE SCIProwChgCoeff(
       assert(row->cols_probindex[pos] == col->var_probindex);
 
       /* if column knows of the row, change the corresponding coefficient in the column */
-      if( row->linkpos[pos] != -1 )
+      if( row->linkpos[pos] >= 0 )
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(SCIPsetIsEQ(set, col->vals[row->linkpos[pos]], row->vals[pos]));
@@ -3437,7 +3503,7 @@ RETCODE SCIProwIncCoeff(
    if( pos == -1 )
    {
       /* coefficient doesn't exist, or sorting is delayed: add coefficient to the end of the row's arrays */
-      CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, incval, -1, NULL) );
+      CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, incval, -1) );
    }
    else
    {
@@ -3447,7 +3513,7 @@ RETCODE SCIProwIncCoeff(
       assert(row->cols_probindex[pos] == col->var_probindex);
 
       /* if column knows of the row, change the corresponding coefficient in the column */
-      if( row->linkpos[pos] != -1 )
+      if( row->linkpos[pos] >= 0 )
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(SCIPsetIsEQ(set, col->vals[row->linkpos[pos]], row->vals[pos]));
@@ -3823,7 +3889,8 @@ void rowMerge(
    assert(row != NULL);
    assert(!row->delaysort);
    assert(row->nunlinked == row->len);
-   
+   assert(row->nlpcols == 0);
+
    /* do nothing on empty rows; if row is sorted, nothing has to be done */
    if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )
    {
@@ -3848,8 +3915,9 @@ void rowMerge(
       
       t = 0;
       row->integral = TRUE;
-      row->nlpcols = 0;
       assert(!SCIPsetIsZero(set, vals[0]));
+      assert(row->linkpos[0] == -1);
+
       for( s = 1; s < row->len; ++s )
       {
          assert(!SCIPsetIsZero(set, vals[s]));
@@ -3866,8 +3934,6 @@ void rowMerge(
             if( !SCIPsetIsZero(set, vals[t]) )
             {
                row->integral = row->integral && SCIPvarIsIntegral(cols[t]->var) && SCIPsetIsIntegral(set, vals[t]);
-               if( cols[t]->lppos >= 0 )
-                  row->nlpcols++;
                t++;
             }
             cols[t] = cols[s];
@@ -3878,8 +3944,6 @@ void rowMerge(
       if( !SCIPsetIsZero(set, vals[t]) )
       {
          row->integral = row->integral && SCIPvarIsIntegral(cols[t]->var) && SCIPsetIsIntegral(set, vals[t]);
-         if( cols[t]->lppos >= 0 )
-            row->nlpcols++;
          t++;
       }
       assert(t <= row->len);
@@ -3930,8 +3994,9 @@ void rowCalcLPActivity(
    {
       col = row->cols[c];
       assert(col != NULL);
-      assert(col->lppos >= 0);
       assert(col->primsol < SCIP_INVALID);
+      assert(col->lppos >= 0);
+      assert(row->linkpos[c] >= 0);
       row->activity += row->vals[c] * col->primsol;
    }
 
@@ -3943,7 +4008,8 @@ void rowCalcLPActivity(
          assert(col != NULL);
          assert(col->lppos >= 0 || col->primsol == 0.0);
          assert(col->lppos == -1 || row->linkpos[c] == -1);
-         row->activity += row->vals[c] * col->primsol;
+         if( col->lppos >= 0 )
+            row->activity += row->vals[c] * col->primsol;
       }
    }
 #ifndef NDEBUG
@@ -3953,8 +4019,8 @@ void rowCalcLPActivity(
       {
          col = row->cols[c];
          assert(col != NULL);
-         assert(col->lppos == -1);
          assert(col->primsol == 0.0);
+         assert(col->lppos == -1);
          assert(row->linkpos[c] >= 0);
       }
    }
@@ -4018,7 +4084,7 @@ void rowCalcPseudoActivity(
    {
       col = row->cols[i];
       assert(col != NULL);
-      assert((col->lppos >= 0) == (i < row->nlpcols));
+      assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && col->lppos >= 0));
       assert(col->var != NULL);
       assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
 
@@ -4082,7 +4148,7 @@ RETCODE SCIProwGetSolActivity(
    {
       col = row->cols[i];
       assert(col != NULL);
-      assert((col->lppos >= 0) == (i < row->nlpcols));
+      assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && col->lppos >= 0));
       (*solactivity) += row->vals[i] * SCIPsolGetVal(sol, stat, col->var);
    }
 
@@ -4140,7 +4206,7 @@ void rowCalcActivityBounds(
    {
       col = row->cols[i];
       assert(col != NULL);
-      assert((col->lppos >= 0) == (i < row->nlpcols));
+      assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && col->lppos >= 0));
       val = row->vals[i];
       if( val >= 0.0 )
       {
@@ -4299,12 +4365,16 @@ int SCIProwGetNNonz(
    return row->len;
 }
 
-/** get number of nonzero entries in row vector, that correspond to columns currently in the LP */
+/** get number of nonzero entries in row vector, that correspond to columns currently in the LP;
+ *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
+ *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
+ */
 int SCIProwGetNLPNonz(
    ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
+   assert(row->nunlinked == 0);
 
    return row->nlpcols;
 }
@@ -4635,9 +4705,9 @@ RETCODE lpFlushAddCols(
       beg[pos] = nnonz;
       name[pos] = (char*)SCIPvarGetName(col->var);
 
-      /**@todo can this loop go only up to col->nlprows? (is col->rows[i]->lpipos == col->rows[i]->lppos?) */
-      for( i = 0; i < col->len; ++i )
+      for( i = 0; i < col->nlprows; ++i )
       {
+         assert(col->rows[i] != NULL);
          lpipos = col->rows[i]->lpipos;
          if( lpipos >= 0 )
          {
@@ -4648,6 +4718,13 @@ RETCODE lpFlushAddCols(
             nnonz++;
          }
       }
+#ifndef NDEBUG
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         assert(col->rows[i] != NULL);
+         assert(col->rows[i]->lpipos == -1); /* because the row deletions are already performed */
+      }
+#endif
    }
 
    /* call LP interface */
@@ -4818,10 +4895,10 @@ RETCODE lpFlushAddRows(
       beg[pos] = nnonz;
       name[pos] = row->name;
 
-      /**@todo can this loop go only up to row->nlpcols? (is row->cols[i]->lpipos == row->cols[i]->lppos?) */
       debugMessage("flushing added row (LPI): %+g <=", lhs[pos]);
-      for( i = 0; i < row->len; ++i )
+      for( i = 0; i < row->nlpcols; ++i )
       {
+         assert(row->cols[i] != NULL);
          lpipos = row->cols[i]->lpipos;
          if( lpipos >= 0 )
          {
@@ -4834,6 +4911,13 @@ RETCODE lpFlushAddRows(
          }
       }
       debug( printf(" <= %+g\n", rhs[pos]) );
+#ifndef NDEBUG
+      for( i = row->nlpcols; i < row->len; ++i )
+      {
+         assert(row->cols[i] != NULL);
+         assert(row->cols[i]->lpipos == -1); /* because the column deletions are already performed */
+      }
+#endif
    }
 
    /* call LP interface */
@@ -5412,7 +5496,7 @@ RETCODE SCIPlpShrinkCols(
    {
       assert(!lp->diving);
 
-      for( c = newncols; c < lp->ncols; ++c )
+      for( c = lp->ncols-1; c >= newncols; --c )
       {
          col = lp->cols[c];
          assert(col != NULL);
@@ -5424,7 +5508,8 @@ RETCODE SCIPlpShrinkCols(
          
          /* mark column to be removed from the LP */
          col->lppos = -1;
-         
+         lp->ncols--;
+
          /* count removeable columns */
          if( col->removeable )
             lp->nremoveablecols--;
@@ -5432,7 +5517,7 @@ RETCODE SCIPlpShrinkCols(
          /* update column arrays of all linked rows */
          colUpdateDelLP(col);
       }
-      lp->ncols = newncols;
+      assert(lp->ncols == newncols);
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
       lp->flushed = FALSE;
       lp->solved = FALSE;
@@ -5464,7 +5549,7 @@ RETCODE SCIPlpShrinkRows(
    {
       assert(!lp->diving);
 
-      for( r = newnrows; r < lp->nrows; ++r )
+      for( r = lp->nrows-1; r >= newnrows; --r )
       {
          row = lp->rows[r];
          assert(row != NULL);
@@ -5473,6 +5558,7 @@ RETCODE SCIPlpShrinkRows(
 
          /* mark row to be removed from the LP */
          row->lppos = -1;
+         lp->nrows--;
 
          /* count removeable rows */
          if( row->removeable )
@@ -5483,7 +5569,7 @@ RETCODE SCIPlpShrinkRows(
 
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
       }
-      lp->nrows = newnrows;
+      assert(lp->nrows == newnrows);
       lp->lpifirstchgrow = MIN(lp->lpifirstchgrow, newnrows);
       lp->flushed = FALSE;
       lp->solved = FALSE;
@@ -7266,7 +7352,7 @@ RETCODE SCIPlpUpdateAddVar(
 {
    assert(lp != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetProbindex(var) != -1);
+   assert(SCIPvarGetProbindex(var) >= 0);
 
    /* add the variable to the loose objective value sum */
    CHECK_OKAY( SCIPlpUpdateVarObj(lp, set, var, 0.0, SCIPvarGetObj(var)) );
@@ -7293,7 +7379,7 @@ RETCODE lpUpdateVarColumn(
    assert(lp != NULL);
    assert(lp->nloosevars > 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetProbindex(var) != -1);
+   assert(SCIPvarGetProbindex(var) >= 0);
 
    obj = SCIPvarGetObj(var);
 
@@ -7347,7 +7433,7 @@ RETCODE lpUpdateVarColumnProved(
    assert(lp != NULL);
    assert(lp->nloosevars > 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetProbindex(var) != -1);
+   assert(SCIPvarGetProbindex(var) >= 0);
 
    obj = SCIPvarGetObj(var);
 
@@ -7429,7 +7515,7 @@ RETCODE lpUpdateVarLoose(
 
    assert(lp != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetProbindex(var) != -1);
+   assert(SCIPvarGetProbindex(var) >= 0);
 
    obj = SCIPvarGetObj(var);
 
@@ -7475,7 +7561,7 @@ RETCODE lpUpdateVarLooseProved(
 
    assert(lp != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetProbindex(var) != -1);
+   assert(SCIPvarGetProbindex(var) >= 0);
 
    obj = SCIPvarGetObj(var);
 
@@ -7899,10 +7985,11 @@ RETCODE lpDelColset(
       col->lppos = coldstat[c];
       if( coldstat[c] == -1 )
       {
+         assert(col != NULL);
          assert(col->removeable);
-         markColDeleted(col);
 
-         /* update column arrays of all linked rows */
+         /* mark column to be deleted from the LPI and update column arrays of all linked rows */
+         markColDeleted(col);
          colUpdateDelLP(col);
 
          lp->cols[c] = NULL;
@@ -7973,10 +8060,11 @@ RETCODE lpDelRowset(
       row->lppos = rowdstat[r];
       if( rowdstat[r] == -1 )
       {
+         assert(row != NULL);
          assert(row->removeable);
-         markRowDeleted(row);
 
-         /* update row arrays of all linked columns */
+         /* mark row to be deleted from the LPI and update row arrays of all linked columns */
+         markRowDeleted(row);
          rowUpdateDelLP(row);
 
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
@@ -8545,7 +8633,7 @@ RETCODE provedBound(
       row = lp->rows[j];
       assert(row != NULL);
 
-      y = usefarkas ? row->dualfarkas : row->dualsol;
+      y = (usefarkas ? row->dualfarkas : row->dualsol);
          
       if( SCIPsetIsFeasPositive(set, y) )
       {
@@ -8573,6 +8661,7 @@ RETCODE provedBound(
    {
       col = lp->cols[j];
       assert(col != NULL);
+      assert(col->nunlinked == 0);
 
       SCIPintervalSetBounds(&x, SCIPcolGetLb(col), SCIPcolGetUb(col));
 
@@ -8581,9 +8670,9 @@ RETCODE provedBound(
 
       for( i = 0; i < col->nlprows; ++i )
       {
-         assert(col->linkpos[i] >= 0);
          assert(col->rows[i] != NULL);
          assert(col->rows[i]->lppos >= 0);
+         assert(col->linkpos[i] >= 0);
          SCIPintervalSet(&a, col->vals[i]);
          SCIPintervalMul(&prod, yinter[col->rows[i]->lppos], a);
          SCIPintervalSub(&diff, diff, prod);
@@ -8596,6 +8685,7 @@ RETCODE provedBound(
          assert(col->rows[i]->lppos == -1);
          assert(col->rows[i]->dualsol == 0.0);
          assert(col->rows[i]->dualfarkas == 0.0);
+         assert(col->linkpos[i] >= 0);
       }
 #endif
 

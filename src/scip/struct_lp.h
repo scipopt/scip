@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.15 2004/05/04 19:45:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.16 2004/05/05 12:47:46 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -59,7 +59,13 @@
 
 
 
-/** variable of the problem and corresponding LP column */
+/** LP column;
+ *  The row vector of the LP column is partitioned into two parts: The first col->nlprows rows in the rows array
+ *  are the ones that belong to the current LP (col->rows[j]->lppos >= 0) and that are linked to the column
+ *  (col->linkpos[j] >= 0). The remaining col->len - col->nlprows rows in the rows array are the ones that
+ *  don't belong to the current LP (col->rows[j]->lppos == -1) or that are not linked to the column
+ *  (col->linkpos[j] == -1).
+ */
 struct Col
 {
    Real             obj;                /**< current objective value of column in LP */
@@ -92,8 +98,8 @@ struct Col
    int              strongbranchitlim;  /**< strong branching iteration limit used to get strongbranch values, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
-   unsigned int     lprowssorted:1;     /**< are the LP rows in the rows array sorted by non-decreasing index? */
-   unsigned int     nonlprowssorted:1;  /**< are the non-LP rows in the rows array sorted by non-decreasing index? */
+   unsigned int     lprowssorted:1;     /**< are the linked LP rows in the rows array sorted by non-decreasing index? */
+   unsigned int     nonlprowssorted:1;  /**< are the non-LP/not linked rows sorted by non-decreasing index? */
    unsigned int     objchanged:1;       /**< has objective value changed, and has data of LP solver to be updated? */
    unsigned int     lbchanged:1;        /**< has lower bound changed, and has data of LP solver to be updated? */
    unsigned int     ubchanged:1;        /**< has upper bound changed, and has data of LP solver to be updated? */
@@ -102,7 +108,13 @@ struct Col
    unsigned int     removeable:1;       /**< is column removeable from the LP (due to aging or cleanup)? */
 };
 
-/** row of the LP */
+/** LP row
+ *  The column vector of the LP row is partitioned into two parts: The first row->nlpcols columns in the cols array
+ *  are the ones that belong to the current LP (row->cols[j]->lppos >= 0) and that are linked to the row   
+ *  (row->linkpos[j] >= 0). The remaining row->len - row->nlpcols columns in the cols array are the ones that
+ *  don't belong to the current LP (row->cols[j]->lppos == -1) or that are not linked to the row   
+ *  (row->linkpos[j] == -1).
+ */
 struct Row
 {
    Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
@@ -139,8 +151,8 @@ struct Row
    int              numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int              validactivitylp;    /**< LP number for which activity value is valid */
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
-   unsigned int     lpcolssorted:1;     /**< are the LP columns in the cols array sorted by non-decreasing index? */
-   unsigned int     nonlpcolssorted:1;  /**< are the non-LP columns in the cols array sorted by non-decreasing index? */
+   unsigned int     lpcolssorted:1;     /**< are the linked LP columns in the cols array sorted by non-decreasing index? */
+   unsigned int     nonlpcolssorted:1;  /**< are the non-LP/not linked columns sorted by non-decreasing index? */
    unsigned int     delaysort:1;        /**< should the row sorting be delayed and done in a lazy fashion? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
    unsigned int     lhschanged:1;       /**< was left hand side or constant changed, and has LP solver to be updated? */

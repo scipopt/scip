@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.9 2004/05/04 19:45:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.10 2004/05/05 12:47:46 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -126,7 +126,10 @@ int SCIPcolGetNNonz(
    COL*             col                 /**< LP column */
    );
 
-/** get number of nonzero entries in column vector, that correspond to rows currently in the LP */
+/** get number of nonzero entries in column vector, that correspond to rows currently in the LP;
+ *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
+ *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
+ */
 extern
 int SCIPcolGetNLPNonz(
    COL*             col                 /**< LP column */
@@ -214,7 +217,10 @@ int SCIProwGetNNonz(
    ROW*             row                 /**< LP row */
    );
 
-/** get number of nonzero entries in row vector, that correspond to columns currently in the LP */
+/** get number of nonzero entries in row vector, that correspond to columns currently in the LP;
+ *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
+ *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
+ */
 extern
 int SCIProwGetNLPNonz(
    ROW*             row                 /**< LP row */

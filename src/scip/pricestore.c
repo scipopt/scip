@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.13 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.14 2004/05/05 12:47:46 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -483,8 +483,8 @@ RETCODE SCIPpricestoreApplyVars(
    assert(set != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
-   assert(lp->flushed);
-   assert(lp->solved);
+   assert(lp->flushed || pricestore->initiallp);
+   assert(lp->solved || pricestore->initiallp);
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(tree->actnodehaslp);
