@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.148 2004/04/15 10:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.149 2004/04/15 11:50:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4189,12 +4189,12 @@ RETCODE SCIPfixVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       *infeasible = FALSE;
-      if( SCIPsetIsGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
+      if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
       {
          CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
          *fixed = TRUE;
       }
-      if( SCIPsetIsLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+      if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
          CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
          *fixed = TRUE;
